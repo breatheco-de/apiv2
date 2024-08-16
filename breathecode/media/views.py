@@ -453,7 +453,7 @@ class MeChunkUploadView(ChunkUploadMixin):
 
 class AcademyChunkUploadView(ChunkUploadMixin):
 
-    @capable_of("crud_file")
+    @acapable_of("crud_file")
     async def put(self, request, academy_id=None):
         return await self.upload(academy_id)
 

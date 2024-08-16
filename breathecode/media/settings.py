@@ -5,9 +5,13 @@ from typing import Any, Awaitable, Callable, Optional, Type, TypedDict
 from adrf.requests import AsyncRequest
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 
-from breathecode.media.models import File
+from breathecode.media.models import Chunk, File
 from breathecode.services.google_cloud.storage import Storage
 from capyc.rest_framework.exceptions import ValidationException
+
+type TypeValidator = Callable[[str, Any], None]
+type TypeValidatorWrapper = Callable[[Type[Any]], TypeValidator]
+type Schema = dict[str, type | TypeValidatorWrapper]
 
 
 class MediaSettings(TypedDict):
@@ -16,7 +20,8 @@ class MediaSettings(TypedDict):
     is_quota_exceeded: Callable[[AsyncRequest, Optional[int]], Awaitable[bool]]
     is_authorized: Callable[[AsyncRequest, Optional[int]], Awaitable[bool]]
     is_mime_supported: Callable[[InMemoryUploadedFile | TemporaryUploadedFile, Optional[int]], Awaitable[bool]]
-    schema = Optional[Callable[[dict[str, Any]], dict[str, Callable]]]
+    get_schema = Optional[Callable[[AsyncRequest, Optional[int]], Awaitable[Schema]]]
+    # this callback is sync because it'll be called within celery what doesn't support async operations properly
     process = Optional[Callable[[File, dict[str, Any], Optional[int]], None]]
 
 
@@ -82,18 +87,21 @@ async def no_schema(schema: Any) -> None:
 
 
 def array(t: Type) -> Any:
-    def wrapper(l: list[Any]) -> list[Any]:
-        for item in l:
+    def wrapper(key, l: list[Any]) -> list[Any]:
+        for index in range(len(l)):
+            item = l[index]
+
             if not isinstance(item, t):
-                raise ValidationException(f"Invalid item type, expected {t.__name__}, got {type(item).__name__}")
+                raise ValidationException(
+                    f"Invalid item type, expected {key}[{index}]{t.__name__}, got {key}[{index}]{type(item).__name__}"
+                )
 
     return wrapper
 
 
-async def media_schema(schema: Any) -> None:
+async def media_schema(request: AsyncRequest, academy_id: Optional[int] = None) -> Schema:
     return {
         "slug": str,
-        # "mime": file.content_type,
         "name": str,
         "categories": array(str),
         "academy": int,
@@ -102,7 +110,7 @@ async def media_schema(schema: Any) -> None:
 
 def transfer(file: File, new_bucket, suffix=""):
     storage = Storage()
-    uploaded_file = storage.file(file.bucket, file.name)
+    uploaded_file = storage.file(file.bucket, file.file_name)
     if uploaded_file.exists() is False:
         raise Exception("File does not exists")
 
@@ -110,27 +118,52 @@ def transfer(file: File, new_bucket, suffix=""):
     uploaded_file.download(f)
 
     new_file = storage.file(new_bucket, file.hash + suffix)
-    new_file.upload(f, content_type=file.mime, public=True)
+    new_file.upload(f, content_type=file.mime)
     url = new_file.url()
     return url
 
 
-def process_media(file: File, meta: dict[str, Any], academy_id: Optional[int] = None) -> None:
-    from .models import Media
+def del_temp_file(file: File | Chunk):
+    storage = Storage()
+    uploaded_file = storage.file(file.bucket, file.file_name)
 
-    url = transfer(file, os.getenv("MEDIA_GALLERY_BUCKET"))
-    Media.objects.create(
+    if uploaded_file.exists() is False:
+        raise Exception("File does not exists")
+
+    uploaded_file.delete()
+
+
+def process_media(file: File) -> None:
+    from .models import Category, Media
+
+    academy_id = file.academy.id if file.academy else None
+    meta = file.meta
+
+    if Media.objects.filter(hash=file.hash, academy__id=academy_id).exists():
+        del_temp_file(file)
+        return
+
+    if url := Media.objects.filter(hash=file.hash).values_list("url", flat=True).first():
+        del_temp_file(file)
+
+    if url is None:
+        url = transfer(file, os.getenv("MEDIA_GALLERY_BUCKET"))
+
+    media = Media.objects.create(
         hash=file.hash,
         slug=meta["slug"],
         name=meta["name"] or file.name,
         mime=file.mime,
-        categories=meta["categories"] or [],
         academy_id=academy_id,
         url=url,
         thumbnail=url + "-thumbnail",
     )
 
+    categories = Category.objects.filter(slug__in=meta["categories"])
+    media.categories.set(categories)
 
+
+# disabled
 # def process_profile(file: File, meta: dict[str, Any]) -> None:
 #     url = transfer(file, os.getenv("MEDIA_GALLERY_BUCKET"))
 #     storage = Storage()
@@ -152,7 +185,7 @@ MEDIA_SETTINGS: dict[str, MediaSettings] = {
         "is_quota_exceeded": no_quota_limit,
         "is_authorized": allow_any,
         "is_mime_supported": media_is_mime_supported,
-        "schema": media_schema,
+        "get_schema": media_schema,
         "process": process_media,
     },
     "proof-of-payment": {
@@ -161,7 +194,7 @@ MEDIA_SETTINGS: dict[str, MediaSettings] = {
         "is_quota_exceeded": no_quota_limit,
         "is_authorized": allow_any,
         "is_mime_supported": proof_of_payment_is_mime_supported,
-        "schema": None,
+        "get_schema": None,
         "process": None,
     },
     # disabled

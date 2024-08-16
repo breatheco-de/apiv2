@@ -53,7 +53,12 @@ class Chunk(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User who uploaded the file")
     academy = models.ForeignKey(
-        Academy, on_delete=models.CASCADE, null=True, blank=True, help_text="Academy where the file was uploaded"
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Academy where the file was uploaded",
     )
     name = models.CharField(max_length=255)
     mime = models.CharField(max_length=60)
@@ -84,9 +89,17 @@ class File(models.Model):
         CREATED = "CREATED", "Created"
         TRANSFERRING = "TRANSFERRING", "Transferring"
         TRANSFERRED = "TRANSFERRED", "Transferred"
+        ERROR = "ERROR", "Error"
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User who uploaded the file")
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy where the file was uploaded")
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Academy where the file was uploaded",
+    )
 
     name = models.CharField(max_length=255)
     mime = models.CharField(max_length=60)
@@ -105,6 +118,7 @@ class File(models.Model):
         help_text="Metadata associated with the file, used for schedule the transfer",
     )
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.CREATED)
+    status_message = models.CharField(max_length=255, null=True, blank=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

@@ -1,8 +1,9 @@
 import hashlib
+import json
 import os
 from copy import copy
 from io import BytesIO
-from typing import Optional, Tuple, overload
+from typing import Any, Optional, Tuple, overload
 
 from adrf.views import APIView
 from rest_framework import status
@@ -16,7 +17,7 @@ from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
-from .settings import MEDIA_MIME_ALLOWED, MEDIA_SETTINGS, MediaSettings
+from .settings import MEDIA_MIME_ALLOWED, MEDIA_SETTINGS, MediaSettings, Schema
 
 __all__ = ["ChunkedUploadMixin", "ChunkUploadMixin", "media_settings"]
 
@@ -270,18 +271,114 @@ class ChunkedUploadMixin(UploadMixin):
 
 
 class ChunkUploadMixin(UploadMixin):
+    async def validate_meta(self, schema: Schema, meta: dict[str, Any]):
+        lang = self.lang
+        to_delete = []
+
+        for key, _ in schema.items():
+            if key not in meta:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Missing required meta key: {key}",
+                        es=f"Falta la clave de metadatos requerida: {key}",
+                        slug="missing-required-meta-key",
+                    ),
+                    code=400,
+                )
+
+        for key, value in meta.items():
+            if key not in schema:
+                to_delete.append(key)
+                continue
+
+            validator = schema[key]
+
+            if isinstance(validator, type) is True:
+                if isinstance(value, validator) is False:
+                    expected_type_name = validator.__name__
+                    current_type_name = type(value).__name__
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Meta value for key '{key}' must be of type {expected_type_name}, got {current_type_name}",
+                            es=f'Valor de metadatos para la clave "{key}" debe ser de tipo {expected_type_name}, obtenido {current_type_name}',
+                            slug="invalid-meta-value-type",
+                        ),
+                        code=400,
+                    )
+
+            else:
+                validator(key, value)
+
+        for key in to_delete:
+            del meta[key]
+
     async def upload(self, academy_id: Optional[int] = None):
-        super().upload(academy_id)
+        from breathecode.media.tasks import process_file
+
+        await super().upload(academy_id)
         request = self.request
-        # chunk = request.FILES.get("chunk")
-        total_chunks = request.data.get("total_chunks")
+
+        total_chunks = self.total_chunks
         file_name = request.data.get("filename")
         mime = request.data.get("mime")
 
-        # query = {}
+        try:
+            meta = json.loads(request.data.get("meta", "{}"))
+
+        except Exception:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="Invalid JSON in meta field",
+                    es="JSON inválido en el campo meta",
+                    slug="invalid-json-in-meta-field",
+                ),
+                code=400,
+            )
+
+        if not file_name:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="filename is required",
+                    es="filename es requerido",
+                    slug="filename-required",
+                ),
+                code=400,
+            )
+
+        if not mime:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="mime is required",
+                    es="mime es requerido",
+                    slug="mime-required",
+                ),
+                code=400,
+            )
+
+        ####
+        if isinstance(meta, dict) is False:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="meta must be a dictionary",
+                    es="meta debe ser un diccionario",
+                    slug="meta-must-be-dictionary",
+                ),
+                code=400,
+            )
+
+        get_schema = MEDIA_SETTINGS[self.op_type]["get_schema"]
+        if get_schema:
+            schema = await get_schema(meta)
+            await self.validate_meta(schema, meta)
 
         if academy_id:
-            academy = Academy.objects.filter(id=academy_id).first()
+            academy = await Academy.objects.filter(id=academy_id).afirst()
 
         else:
             academy = None
@@ -304,23 +401,27 @@ class ChunkUploadMixin(UploadMixin):
                 code=400,
             )
 
-        chunks = Chunk.objects.filter(
-            academy=academy,
-            user=request.user,
-            name=file_name,
-            operation_type=self.op_type,
-            total_chunks=total_chunks,
-            mime=mime,
-        ).order_by("chunk_index")
+        chunks = (
+            Chunk.objects.filter(
+                academy=academy,
+                user=request.user,
+                name=file_name,
+                operation_type=self.op_type,
+                total_chunks=total_chunks,
+                mime=mime,
+            )
+            .prefetch_related("user", "academy")
+            .order_by("chunk_index")
+        )
 
-        if (n := chunks.count()) < total_chunks:
+        if (n := await chunks.acount()) < total_chunks:
             missing_chunks = total_chunks - n
             raise ValidationException(
                 translation(
                     self.lang,
                     en=f"{missing_chunks}/{total_chunks} chunks are missing",
                     es=f"{missing_chunks}/{total_chunks} chunks están faltando",
-                    slug="chunk-not-found",
+                    slug="some-chunks-not-found",
                 ),
                 code=400,
             )
@@ -337,9 +438,9 @@ class ChunkUploadMixin(UploadMixin):
 
             res.write(f.getvalue())
 
-            schedule_deletion.delay(instance=self, sender=self.__class__)
+            await schedule_deletion.adelay(instance=chunk, sender=chunk.__class__)
 
-        bucket = storage.bucket(os.getenv("UPLOAD_BUCKET", "upload-bucket"))
+        bucket = os.getenv("UPLOAD_BUCKET", "upload-bucket")
         size = res.tell()
         res.seek(0)
 
@@ -347,7 +448,7 @@ class ChunkUploadMixin(UploadMixin):
         res.seek(0)
 
         new_file = storage.file(bucket, hash)
-        new_file.upload(res, content_type=mime, public=True)
+        new_file.upload(res, content_type=mime)
 
         file = await File.objects.acreate(
             academy=academy,
@@ -359,11 +460,18 @@ class ChunkUploadMixin(UploadMixin):
             hash=hash,
             bucket=bucket,
         )
+        if MEDIA_SETTINGS[self.op_type]["process"]:
+            file.status = File.Status.TRANSFERRING
+            await file.asave()
+
+            process_file.delay(file.id)
 
         return Response(
             {
+                "id": file.id,
                 "academy": academy.slug if academy else None,
                 "user": request.user.id,
+                "status": file.status,
                 "name": file.file_name,
                 "operation_type": self.op_type,
                 "mime": mime,
