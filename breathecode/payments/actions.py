@@ -920,6 +920,17 @@ def validate_and_create_proof_of_payment(
 
         set_proof_of_payment_confirmation_url.delay(file.id, x.id)
 
+    elif file_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid file id",
+                es="ID de archivo inválido",
+                slug="invalid-file-id",
+            ),
+            code=400,
+        )
+
     else:
         x.status = ProofOfPayment.Status.DONE
         x.save()

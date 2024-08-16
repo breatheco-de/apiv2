@@ -108,7 +108,7 @@ async def media_schema(request: AsyncRequest, academy_id: Optional[int] = None) 
     }
 
 
-def transfer(file: File, new_bucket, suffix=""):
+def transfer(file: File, new_bucket: str, suffix: str = ""):
     storage = Storage()
     uploaded_file = storage.file(file.bucket, file.file_name)
     if uploaded_file.exists() is False:
