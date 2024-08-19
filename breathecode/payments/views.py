@@ -1106,11 +1106,14 @@ class ConsumeView(APIView):
     def put(self, request, service_slug, hash=None):
         lang = get_user_language(request)
 
-        session = ConsumptionSession.get_session(request)
-        if session:
-            return Response({"status": "ok"}, status=status.HTTP_200_OK)
+        force_create = hash is None
 
-        consumable = Consumable.get(user=request.user, lang=lang, service=service_slug)
+        if force_create is False:
+            session = ConsumptionSession.get_session(request)
+            if session:
+                return Response({"id": session.id, "status": "ok"}, status=status.HTTP_200_OK)
+
+        consumable = Consumable.get(user=request.user, lang=lang, service=service_slug, service_type="VOID")
         if consumable is None:
             raise PaymentException(
                 translation(lang, en="Insuficient credits", es="Créditos insuficientes", slug="insufficient-credits")
@@ -1118,22 +1121,28 @@ class ConsumeView(APIView):
 
         session_duration = consumable.service_item.service.session_duration or timedelta(minutes=1)
         session = ConsumptionSession.build_session(
-            request, consumable, session_duration, operation_code="unsafe-consume-service-set"
+            request,
+            consumable,
+            session_duration,
+            operation_code="unsafe-consume-service-set",
+            force_create=force_create,
         )
 
         session.will_consume(1)
 
-        return Response({"status": "ok"}, status=status.HTTP_201_CREATED)
+        return Response({"id": session.id, "status": "ok"}, status=status.HTTP_201_CREATED)
 
 
 class CancelConsumptionView(APIView):
 
-    def put(self, request, service_slug, hash=None):
+    def put(self, request, service_slug, consumptionsession_id):
         lang = get_user_language(request)
 
         session = (
             ConsumptionSession.objects.filter(
-                consumable__user=request.user, consumable__service_item__service__type=Service.Type.VOID
+                id=consumptionsession_id,
+                consumable__user=request.user,
+                consumable__service_item__service__type=Service.Type.VOID,
             )
             .exclude(status="CANCELLED")
             .first()
@@ -1148,7 +1157,7 @@ class CancelConsumptionView(APIView):
         consumable = session.consumable
         reimburse_service_units.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
-        return Response({"status": "reversed"}, status=status.HTTP_200_OK)
+        return Response({"id": session.id, "status": "reversed"}, status=status.HTTP_200_OK)
 
 
 class PlanOfferView(APIView):

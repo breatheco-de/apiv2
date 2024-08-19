@@ -1355,8 +1355,9 @@ class Consumable(AbstractServiceItem):
         user: User | str | int,
         lang: str = "en",
         service: Optional[Service | str | int] = None,
+        service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
-        extra: dict = None,
+        extra: Optional[dict] = None,
     ) -> QuerySet[Consumable]:
 
         if extra is None:
@@ -1401,6 +1402,9 @@ class Consumable(AbstractServiceItem):
         elif isinstance(service, Service):
             param["service_item__service"] = service
 
+        if service_type and isinstance(service_type, str):
+            param["service_item__service__type"] = service_type.upper()
+
         # Permission
         if permission and isinstance(permission, str) and not permission.isdigit():
             param["service_item__service__groups__permissions__codename"] = permission
@@ -1428,11 +1432,14 @@ class Consumable(AbstractServiceItem):
         user: User | str | int,
         lang: str = "en",
         service: Optional[Service | str | int] = None,
+        service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: dict = None,
     ) -> QuerySet[Consumable]:
 
-        return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra)
+        return cls.list(
+            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+        )
 
     @classmethod
     def get(
@@ -1441,6 +1448,7 @@ class Consumable(AbstractServiceItem):
         user: User | str | int,
         lang: str = "en",
         service: Optional[Service | str | int] = None,
+        service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: Optional[dict] = None,
     ) -> Consumable | None:
@@ -1448,7 +1456,9 @@ class Consumable(AbstractServiceItem):
         if extra is None:
             extra = {}
 
-        return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
+        return cls.list(
+            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+        ).first()
 
     @classmethod
     @sync_to_async
@@ -1458,10 +1468,13 @@ class Consumable(AbstractServiceItem):
         user: User | str | int,
         lang: str = "en",
         service: Optional[Service | str | int] = None,
+        service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: Optional[dict] = None,
     ) -> Consumable | None:
-        return cls.get(user=user, lang=lang, service=service, permission=permission, extra=extra)
+        return cls.get(
+            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+        )
 
     def clean(self) -> None:
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
@@ -1571,6 +1584,7 @@ class ConsumptionSession(models.Model):
         delta: timedelta,
         user: Optional[User] = None,
         operation_code: Optional[str] = None,
+        force_create: bool = False,
     ) -> "ConsumptionSession":
         assert request, "You must provide a request"
         assert consumable, "You must provide a consumable"
@@ -1581,7 +1595,12 @@ class ConsumptionSession(models.Model):
 
         utc_now = timezone.now()
 
-        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort_set
+        resource = (
+            consumable.mentorship_service_set
+            or consumable.event_type_set
+            or consumable.cohort_set
+            or consumable.service_item.service
+        )
         id = resource.id if resource else 0
         slug = resource.slug if resource else ""
 
@@ -1605,20 +1624,22 @@ class ConsumptionSession(models.Model):
         # assert path, 'You must provide a path'
         assert delta, "You must provide a delta"
 
-        session = (
-            cls.objects.filter(
-                eta__gte=utc_now,
-                request=data,
-                path=path,
-                duration=delta,
-                related_id=id,
-                related_slug=slug,
-                operation_code=operation_code,
-                user=user,
+        session = None
+        if force_create is False:
+            session = (
+                cls.objects.filter(
+                    eta__gte=utc_now,
+                    request=data,
+                    path=path,
+                    duration=delta,
+                    related_id=id,
+                    related_slug=slug,
+                    operation_code=operation_code,
+                    user=user,
+                )
+                .exclude(eta__lte=utc_now)
+                .first()
             )
-            .exclude(eta__lte=utc_now)
-            .first()
-        )
 
         if session:
             return session
