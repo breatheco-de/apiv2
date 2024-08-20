@@ -36,6 +36,7 @@ MEDIA_MIME_ALLOWED = [
     "application/pdf",
     "image/jpg",
     "application/octet-stream",
+    "application/x-pka",
 ]
 
 PROOF_OF_PAYMENT_MIME_ALLOWED = [

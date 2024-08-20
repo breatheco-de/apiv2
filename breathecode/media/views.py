@@ -49,6 +49,7 @@ MIME_ALLOWED = [
     "application/pdf",
     "image/jpg",
     "application/octet-stream",
+    "application/x-pka",
 ]
 
 
