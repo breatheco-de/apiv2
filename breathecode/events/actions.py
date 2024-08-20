@@ -131,51 +131,6 @@ def get_my_event_types(_user):
         process_i_owe_you(subscriptions)
         process_i_owe_you(plan_financings)
 
-        print(
-            -11,
-            [
-                {
-                    "id": x.id,
-                    "slug": x.slug,
-                    "name": x.name,
-                }
-                for x in academies
-            ],
-        )
-
-        print(
-            -22,
-            [
-                {
-                    "id": x.id,
-                    "slug": x.slug,
-                    "name": x.name,
-                }
-                for x in cohorts
-            ],
-        )
-
-        print(
-            -33,
-            [
-                {
-                    "syllabus": {
-                        "id": x["syllabus"].id,
-                        "slug": x["syllabus"].slug,
-                        "name": x["syllabus"].name,
-                    },
-                    "academy": {
-                        "id": x["academy"].id,
-                        "slug": x["academy"].slug,
-                        "name": x["academy"].name,
-                    },
-                }
-                for x in syllabus
-            ],
-        )
-        print(-44, subscriptions)
-        print(-55, plan_financings)
-
         return academies, cohorts, syllabus, ids
 
     def my_events():
