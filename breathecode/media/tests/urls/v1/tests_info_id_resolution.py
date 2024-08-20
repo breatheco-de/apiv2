@@ -3,15 +3,18 @@ Test /answer
 """
 
 from unittest.mock import patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
 )
-from ..mixins import MediaTestCase
+
+from ...mixins import MediaTestCase
 
 
 class MediaTestSuite(MediaTestCase):

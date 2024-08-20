@@ -5,7 +5,7 @@ QuerySet fixtures.
 from typing import Any, Generator, final
 
 import pytest
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet as DjangoQuerySet
 
 __all__ = ["QuerySet", "queryset"]
 
@@ -16,7 +16,7 @@ class QuerySet:
     QuerySet utils.
     """
 
-    def with_pks(self, query: QuerySet, pks: list[int]) -> None:
+    def with_pks(self, query: DjangoQuerySet, pks: list[int]) -> None:
         """
         Assert that the queryset has the following primary keys.
 
@@ -36,11 +36,11 @@ class QuerySet:
         ```
         """
 
-        assert isinstance(query, QuerySet), "The first argument is not a QuerySet"
+        assert isinstance(query, DjangoQuerySet), "The first argument is not a QuerySet"
 
         assert [x.pk for x in query] == pks
 
-    def get_pks(self, queryset) -> list[Any]:
+    def get_pks(self, queryset: DjangoQuerySet) -> list[Any]:
         """
         Get the queryset pks.
 

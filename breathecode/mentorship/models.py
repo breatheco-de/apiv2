@@ -267,7 +267,7 @@ class MentorProfile(models.Model):
         help_text="Only use this if the user does not exist on breathecode already",
     )
 
-    availability_report = models.JSONField(blank=True, null=False, default=[], help_text="Mentor availability report")
+    availability_report = models.JSONField(blank=True, null=False, default=list, help_text="Mentor availability report")
 
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, help_text="If the user does not exist, you can use the email field instead"

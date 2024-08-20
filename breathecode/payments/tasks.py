@@ -1,5 +1,6 @@
 import ast
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
@@ -12,6 +13,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
@@ -31,6 +33,7 @@ from .models import (
     PlanFinancing,
     PlanServiceItem,
     PlanServiceItemHandler,
+    ProofOfPayment,
     Service,
     ServiceStockScheduler,
     Subscription,
@@ -264,6 +267,30 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
     logger.info(f"Starting charge_subscription for subscription {subscription_id}")
 
+    def alert_payment_issue(message: str, button: str) -> None:
+        subject = translation(
+            settings.lang,
+            en="Your 4Geeks subscription could not be renewed",
+            es="Tu suscripción 4Geeks no pudo ser renovada",
+        )
+
+        notify_actions.send_email_message(
+            "message",
+            subscription.user.email,
+            {
+                "SUBJECT": subject,
+                "MESSAGE": message,
+                "BUTTON": button,
+                "LINK": f"{get_app_url()}/subscription/{subscription.id}",
+            },
+            academy=subscription.academy,
+        )
+
+        bag.delete()
+
+        subscription.status = "PAYMENT_ISSUE"
+        subscription.save()
+
     client = None
     if IS_DJANGO_REDIS:
         client = get_redis_connection("default")
@@ -283,53 +310,60 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             settings = get_user_settings(subscription.user.id)
 
-            try:
-                bag = actions.get_bag_from_subscription(subscription, settings)
-            except Exception as e:
-                subscription.status = "ERROR"
-                subscription.status_message = str(e)
-                subscription.save()
-                raise AbortTask(f"Error getting bag from subscription {subscription_id}: {e}")
-
-            amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
-
-            try:
-                s = Stripe()
-                s.set_language_from_settings(settings)
-                invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
-
-            except Exception:
-                subject = translation(
-                    settings.lang,
-                    en="Your 4Geeks subscription could not be renewed",
-                    es="Tu suscripción 4Geeks no pudo ser renovada",
+            if subscription.externally_managed:
+                invoice = (
+                    subscription.invoices.filter(paid_at__lte=utc_now, bag__was_delivered=False)
+                    .order_by("-paid_at")
+                    .first()
                 )
 
-                message = translation(
-                    settings.lang, en="Please update your payment methods", es="Por favor actualiza tus métodos de pago"
-                )
+                if invoice is None:
+                    message = translation(
+                        settings.lang,
+                        en="Please make your payment in your academy",
+                        es="Por favor realiza tu pago en tu academia",
+                    )
 
-                button = translation(
-                    settings.lang, en="Please update your payment methods", es="Por favor actualiza tus métodos de pago"
-                )
+                    button = translation(
+                        settings.lang,
+                        en="Please make your payment in your academy",
+                        es="Por favor realiza tu pago en tu academia",
+                    )
+                    alert_payment_issue(message, button)
+                    return
 
-                notify_actions.send_email_message(
-                    "message",
-                    subscription.user.email,
-                    {
-                        "SUBJECT": subject,
-                        "MESSAGE": message,
-                        "BUTTON": button,
-                        "LINK": f"{get_app_url()}/subscription/{subscription.id}",
-                    },
-                    academy=subscription.academy,
-                )
+                bag = invoice.bag
 
-                bag.delete()
+            else:
+                try:
+                    bag = actions.get_bag_from_subscription(subscription, settings)
+                except Exception as e:
+                    subscription.status = "ERROR"
+                    subscription.status_message = str(e)
+                    subscription.save()
+                    raise AbortTask(f"Error getting bag from subscription {subscription_id}: {e}")
 
-                subscription.status = "PAYMENT_ISSUE"
-                subscription.save()
-                return
+                amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
+
+                try:
+                    s = Stripe()
+                    s.set_language_from_settings(settings)
+                    invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
+
+                except Exception:
+                    message = translation(
+                        settings.lang,
+                        en="Please update your payment methods",
+                        es="Por favor actualiza tus métodos de pago",
+                    )
+
+                    button = translation(
+                        settings.lang,
+                        en="Please update your payment methods",
+                        es="Por favor actualiza tus métodos de pago",
+                    )
+                    alert_payment_issue(message, button)
+                    return
 
             subscription.paid_at = utc_now
             delta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
@@ -366,6 +400,9 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 },
                 academy=subscription.academy,
             )
+
+            bag.was_delivered = True
+            bag.save()
 
             renew_subscription_consumables.delay(subscription.id)
 
@@ -406,6 +443,30 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
     logger.info(f"Starting charge_plan_financing for id {plan_financing_id}")
 
+    def alert_payment_issue(message: str, button: str) -> None:
+        subject = translation(
+            settings.lang,
+            en="Your 4Geeks subscription could not be renewed",
+            es="Tu suscripción 4Geeks no pudo ser renovada",
+        )
+
+        notify_actions.send_email_message(
+            "message",
+            plan_financing.user.email,
+            {
+                "SUBJECT": subject,
+                "MESSAGE": message,
+                "BUTTON": button,
+                "LINK": f"{get_app_url()}/plan-financing/{plan_financing.id}",
+            },
+            academy=plan_financing.academy,
+        )
+
+        bag.delete()
+
+        plan_financing.status = "PAYMENT_ISSUE"
+        plan_financing.save()
+
     client = None
     if IS_DJANGO_REDIS:
         client = get_redis_connection("default")
@@ -426,20 +487,19 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             settings = get_user_settings(plan_financing.user.id)
 
-            try:
-                bag = actions.get_bag_from_plan_financing(plan_financing, settings)
-            except Exception as e:
-                plan_financing.status = "ERROR"
-                plan_financing.status_message = str(e)
-                plan_financing.save()
-
-                raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
-
             amount = plan_financing.monthly_price
 
             invoices = plan_financing.invoices.order_by("created_at")
             first_invoice = invoices.first()
             last_invoice = invoices.last()
+
+            if first_invoice is None:
+                msg = f"No invoices found for PlanFinancing with id {plan_financing_id}"
+                plan_financing.status = "ERROR"
+                plan_financing.status_message = msg
+                plan_financing.save()
+
+                raise AbortTask(msg)
 
             installments = first_invoice.bag.how_many_installments
 
@@ -449,48 +509,60 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             remaining_installments = installments - invoices.count()
 
             if remaining_installments > 0:
-                try:
-                    s = Stripe()
-                    s.set_language_from_settings(settings)
-
-                    invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
-
-                except Exception:
-                    subject = translation(
-                        settings.lang,
-                        en="Your 4Geeks subscription could not be renewed",
-                        es="Tu suscripción 4Geeks no pudo ser renovada",
+                if plan_financing.externally_managed:
+                    invoice = (
+                        plan_financing.invoices.filter(paid_at__lte=utc_now, bag__was_delivered=False)
+                        .order_by("-paid_at")
+                        .first()
                     )
 
-                    message = translation(
-                        settings.lang,
-                        en="Please update your payment methods",
-                        es="Por favor actualiza tus métodos de pago",
-                    )
+                    if invoice is None:
+                        message = translation(
+                            settings.lang,
+                            en="Please make your payment in your academy",
+                            es="Por favor realiza tu pago en tu academia",
+                        )
 
-                    button = translation(
-                        settings.lang,
-                        en="Please update your payment methods",
-                        es="Por favor actualiza tus métodos de pago",
-                    )
+                        button = translation(
+                            settings.lang,
+                            en="Please make your payment in your academy",
+                            es="Por favor realiza tu pago en tu academia",
+                        )
+                        alert_payment_issue(message, button)
+                        return
 
-                    notify_actions.send_email_message(
-                        "message",
-                        plan_financing.user.email,
-                        {
-                            "SUBJECT": subject,
-                            "MESSAGE": message,
-                            "BUTTON": button,
-                            "LINK": f"{get_app_url()}/plan-financing/{plan_financing.id}",
-                        },
-                        academy=plan_financing.academy,
-                    )
+                    bag = invoice.bag
 
-                    bag.delete()
+                else:
+                    try:
+                        bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+                    except Exception as e:
+                        plan_financing.status = "ERROR"
+                        plan_financing.status_message = str(e)
+                        plan_financing.save()
 
-                    plan_financing.status = "PAYMENT_ISSUE"
-                    plan_financing.save()
-                    return
+                        raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
+
+                    try:
+                        s = Stripe()
+                        s.set_language_from_settings(settings)
+
+                        invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
+
+                    except Exception:
+                        message = translation(
+                            settings.lang,
+                            en="Please update your payment methods",
+                            es="Por favor actualiza tus métodos de pago",
+                        )
+
+                        button = translation(
+                            settings.lang,
+                            en="Please update your payment methods",
+                            es="Por favor actualiza tus métodos de pago",
+                        )
+                        alert_payment_issue(message, button)
+                        return
 
                 if utc_now > plan_financing.valid_until:
                     remaining_installments -= 1
@@ -529,6 +601,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             plan_financing.next_payment_at += delta
             plan_financing.save()
+
+            bag.was_delivered = True
+            bag.save()
 
             renew_plan_financing_consumables.delay(plan_financing.id)
 
@@ -776,8 +851,6 @@ def build_plan_financing(
         event_type_set = None
         mentorship_service_set = None
 
-    print("conversion_info")
-    print(conversion_info)
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info != "" else None
     financing = PlanFinancing.objects.create(
         user=bag.user,
@@ -1094,3 +1167,22 @@ def update_service_stock_schedulers(plan_id: int, **_: Any):
 
     for plan_financing in PlanFinancing.objects.filter(plans__id=plan_id).only("id"):
         update_plan_financing_service_stock_schedulers.delay(plan_id, plan_financing.id)
+
+
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def set_proof_of_payment_confirmation_url(file_id: int, proof_of_payment_id: int, **_: Any):
+    from breathecode.media.settings import transfer
+
+    file = File.objects.filter(id=file_id, status=File.Status.TRANSFERRING).first()
+    if not file:
+        raise RetryTask(f"File with id {file_id} not found or is not transferring")
+
+    proof = ProofOfPayment.objects.filter(id=proof_of_payment_id).first()
+    if not proof:
+        raise RetryTask(f"Proof of Payment with id {proof_of_payment_id} not found")
+
+    url = transfer(file, os.getenv("PROOF_OF_PAYMENT_BUCKET"))
+
+    proof.confirmation_image_url = url
+    proof.status = ProofOfPayment.Status.DONE
+    proof.save()

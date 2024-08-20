@@ -2,12 +2,15 @@
 Test /answer
 """
 
-from breathecode.tests.mocks.requests import apply_requests_request_mock
 from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from breathecode.tests.mocks import REQUESTS_PATH, apply_requests_get_mock
-from ..mixins import MediaTestCase
+from breathecode.tests.mocks.requests import apply_requests_request_mock
+
+from ...mixins import MediaTestCase
 
 RESIZE_IMAGE_URL = "https://us-central1-labor-day-story.cloudfunctions.net/resize-image"
 

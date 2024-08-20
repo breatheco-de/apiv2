@@ -10,9 +10,9 @@ from unittest.mock import MagicMock, PropertyMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from breathecode.media.views import MIME_ALLOW
+from breathecode.media.views import MIME_ALLOWED
 
-from ..mixins import MediaTestCase
+from ...mixins import MediaTestCase
 
 
 class MediaTestSuite(MediaTestCase):
@@ -807,7 +807,7 @@ class MediaTestSuite(MediaTestCase):
             self.assertHash(hash)
 
             expected = {
-                "detail": f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}, got text/plain',
+                "detail": f'You can upload only files on the following formats: {",".join(MIME_ALLOWED)}, got text/plain',
                 "status_code": 400,
             }
 

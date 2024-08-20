@@ -3,8 +3,10 @@ import datetime
 import hashlib
 import logging
 import os
-from slugify import slugify
+
 import requests
+from adrf.views import APIView
+from adrf.viewsets import ViewSet
 from circuitbreaker import CircuitBreakerError
 from django.db.models import Q
 from django.http import StreamingHttpResponse
@@ -13,8 +15,7 @@ from rest_framework import status
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.viewsets import ViewSet
+from slugify import slugify
 
 from breathecode.authenticate.actions import get_user_language
 from breathecode.media.models import Category, Media, MediaResolution
@@ -27,14 +28,17 @@ from breathecode.media.serializers import (
     MediaPUTSerializer,
     MediaSerializer,
 )
+from breathecode.media.utils import ChunkedUploadMixin, ChunkUploadMixin, media_settings
 from breathecode.services.google_cloud import FunctionV1
 from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
+from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
-MIME_ALLOW = [
+MIME_ALLOWED = [
     "image/png",
     "image/svg+xml",
     "image/jpeg",
@@ -45,6 +49,7 @@ MIME_ALLOW = [
     "application/pdf",
     "image/jpg",
     "application/octet-stream",
+    "application/x-pka",
 ]
 
 
@@ -426,6 +431,54 @@ class CategoryView(ViewSet):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+class MeChunkView(ChunkedUploadMixin):
+
+    @has_permission("upload_media")
+    async def put(self, request):
+        return await self.upload()
+
+
+class AcademyChunkView(ChunkedUploadMixin):
+
+    @acapable_of("crud_file")
+    async def put(self, request, academy_id=None):
+        return await self.upload(academy_id)
+
+
+class MeChunkUploadView(ChunkUploadMixin):
+
+    @has_permission("upload_media")
+    async def put(self, request):
+        return await self.upload()
+
+
+class AcademyChunkUploadView(ChunkUploadMixin):
+
+    @acapable_of("crud_file")
+    async def put(self, request, academy_id=None):
+        return await self.upload(academy_id)
+
+
+class OperationTypeView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, op_type=None):
+        if op_type:
+            settings = media_settings(op_type)
+            if settings is None:
+                raise ValidationException("Invalid operation type", code=404)
+
+            return Response(
+                {
+                    "chunk_size": settings["chunk_size"],
+                    "max_chunks": settings["max_chunks"],
+                }
+            )
+
+        op_types = media_settings()
+        return Response(op_types)
+
+
 class UploadView(APIView):
     """
     put:
@@ -467,9 +520,9 @@ class UploadView(APIView):
         # files validation below
         for index in range(0, len(files)):
             file = files[index]
-            if file.content_type not in MIME_ALLOW:
+            if file.content_type not in MIME_ALLOWED:
                 raise ValidationException(
-                    f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}, got {file.content_type}',
+                    f'You can upload only files on the following formats: {",".join(MIME_ALLOWED)}, got {file.content_type}',
                     code=400,
                 )
 
