@@ -16,9 +16,8 @@ class Meta(TypedDict):
     type: FeatureType
 
 
-# feature
 class Feature:
-    _flags: dict[FeatureType, dict[str, Tuple[Callable[..., str | bool], list[str]]]] = {
+    _flags: dict[FeatureType, dict[str, Tuple[Callable[..., str | bool], list[str], Meta]]] = {
         "availability": {},
         "variant": {},
     }
@@ -36,7 +35,7 @@ class Feature:
         ]
 
     @classmethod
-    def availability(cls, name: str, frontend=True, default: bool = False) -> bool:
+    def availability(cls, name: str, frontend=True, default: Optional[bool] = None) -> bool:
 
         def decorator(fn: Callable[..., bool]) -> Callable[..., bool]:
             meta = {"frontend": frontend, "default": default, "name": name, "type": "availability"}
@@ -45,7 +44,7 @@ class Feature:
         return decorator
 
     @classmethod
-    def variant(cls, name: str, frontend=True, default: str = "unknown") -> str:
+    def variant(cls, name: str, frontend=True, default: Optional[str] = None) -> str:
 
         def decorator(fn: Callable[..., str]) -> Callable[..., str]:
             meta = {"frontend": frontend, "default": default, "name": name, "type": "variant"}
@@ -54,11 +53,11 @@ class Feature:
         return decorator
 
     @classmethod
-    def is_enabled(cls, name: str, context: Optional[dict[str, Any]] = None, default: bool = False) -> bool:
+    def is_enabled(cls, name: str, context: Optional[dict[str, Any]] = None, default: Optional[bool] = None) -> bool:
         return cls._get("availability", name, context, default)
 
     @classmethod
-    def get_variant(cls, name: str, context: Optional[dict[str, Any]] = None, default: str = False) -> str:
+    def get_variant(cls, name: str, context: Optional[dict[str, Any]] = None, default: Optional[str] = None) -> str:
         return cls._get("variant", name, context, default)
 
     @classmethod
@@ -69,7 +68,7 @@ class Feature:
                 return
 
             params = cls.parameters(fn)
-            cls._flags[meta["type"]][meta["name"]] = (fn, params)
+            cls._flags[meta["type"]][meta["name"]] = (fn, params, meta)
 
     @classmethod
     def context(cls, **context: Any) -> dict[str, Any]:
@@ -89,7 +88,11 @@ class Feature:
 
     @classmethod
     def _get(
-        cls, type: FeatureType, name: str, context: Optional[dict[str, Any]] = None, default: str | bool = False
+        cls,
+        type: FeatureType,
+        name: str,
+        context: Optional[dict[str, Any]] = None,
+        default: Optional[str | bool] = None,
     ) -> str | bool:
         if context is None:
             context = {}
@@ -97,7 +100,7 @@ class Feature:
         info = cls._flags[type].get(name)
         if info:
             extra = {}
-            fn, params = info
+            fn, params, meta = info
             for param in params:
                 if param not in context:
                     logger.debug(f"Missing required parameter '{param}', using None as default")
@@ -106,7 +109,14 @@ class Feature:
             try:
                 value = fn(**context, **extra)
                 if value is None:
-                    return default
+                    v = False if type == "availability" else "unknown"
+                    if default is not None:
+                        v = default
+
+                    elif meta["default"] is not None:
+                        v = meta["default"]
+
+                    return v
 
                 return value
 
