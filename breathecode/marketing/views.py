@@ -7,7 +7,7 @@ import os
 import re
 from datetime import timedelta
 from urllib import parse
-
+from slugify import slugify
 import pandas as pd
 import pytz
 from circuitbreaker import CircuitBreakerError
@@ -486,7 +486,7 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = items.filter(slug__icontains=like)
+            items = items.filter(slug__icontains=slugify(like))
 
         status = request.GET.get("status", None)
         if status is not None:
@@ -550,7 +550,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = items.filter(Q(slug__icontains=like) | Q(name__icontains=like))
+            items = items.filter(Q(slug__icontains=slugify(like)) | Q(name__icontains=like))
 
         status = request.GET.get("status", None)
         if status is not None:
@@ -635,7 +635,7 @@ class UTMView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            utms = utms.filter(slug__icontains=like)
+            utms = utms.filter(slug__icontains=slugify(like))
 
         types = request.GET.get("type", None)
         if types is not None:
@@ -969,7 +969,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = items.filter(slug__icontains=like)
+            items = items.filter(slug__icontains=slugify(like))
 
         page = self.paginate_queryset(items, request)
         serializer = ShortlinkSmallSerializer(page, many=True)

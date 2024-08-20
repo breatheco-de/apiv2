@@ -127,7 +127,7 @@ class MediaView(ViewSet, GenerateLookupsMixin):
 
         like = request.GET.get("like")
         if like:
-            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
 
         items = handler.queryset(items)
         serializer = GetMediaSerializer(items, many=True)
