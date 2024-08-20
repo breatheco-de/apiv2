@@ -10,11 +10,13 @@ ports:
 tasks:
   - command: redis-server
   - init: |
-      python -m scripts.install
+      pyenv global 3.12.2 &&
+      python -m scripts.install &&
       gp sync-done deps
-    command: pipenv run celery
+    command: pyenv global 3.12.2 && pipenv run celery
   - init: gp sync-await deps
     command: >
+      pyenv global 3.12.2 &&
       (psql -U gitpod -c 'CREATE DATABASE breathecode;' || true) &&
       (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
       pipenv run migrate &&

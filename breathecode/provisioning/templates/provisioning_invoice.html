@@ -188,7 +188,7 @@
                     {{ consumption.kind.product_name }} ({{ consumption.kind.sku }})
                     {% if consumption.status_text %}
                     <small> - </small>
-                    <a onclick="alert('{{consumption.status_text}}')" type="button" class="btn-link">
+                    <a onclick="alert(`{{consumption.status_text}}`)" type="button" class="btn-link">
                         show errors
                     </a>
                     {% endif %}

@@ -3,7 +3,7 @@ import datetime
 import hashlib
 import logging
 import os
-
+from slugify import slugify
 import requests
 from circuitbreaker import CircuitBreakerError
 from django.db.models import Q
@@ -15,7 +15,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
-from slugify import slugify
 
 from breathecode.authenticate.actions import get_user_language
 from breathecode.media.models import Category, Media, MediaResolution
@@ -123,7 +122,7 @@ class MediaView(ViewSet, GenerateLookupsMixin):
 
         like = request.GET.get("like")
         if like:
-            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
 
         items = handler.queryset(items)
         serializer = GetMediaSerializer(items, many=True)

@@ -5,6 +5,7 @@ from adrf.decorators import api_view
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
 from django.utils import timezone
+from slugify import slugify
 from rest_framework import status
 from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
@@ -188,7 +189,7 @@ def get_public_syllabus(request, id=None):
 
     like = request.GET.get("like", None)
     if like is not None:
-        items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+        items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
 
     serializer = GetSyllabusSmallSerializer(items, many=True)
     return Response(serializer.data)
@@ -271,7 +272,7 @@ class PublicCohortView(APIView):
 
         syllabus_slug_like = request.GET.get("syllabus_slug_like", "")
         if syllabus_slug_like:
-            items = items.filter(syllabus_version__syllabus__slug__icontains=syllabus_slug_like)
+            items = items.filter(syllabus_version__syllabus__slug__icontains=slugify(syllabus_slug_like))
 
         plan = request.GET.get("plan", "")
         if plan == "true":
@@ -1144,7 +1145,7 @@ class CohortMeView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
 
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)
@@ -1202,7 +1203,7 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
 
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)
@@ -1514,7 +1515,7 @@ class SyllabusView(APIView):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
 
         items = handler.queryset(items)
         serializer = GetSyllabusSerializer(items, many=True)

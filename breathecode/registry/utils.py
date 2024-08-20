@@ -1,5 +1,5 @@
 import logging
-
+import re
 import requests
 from bs4 import BeautifulSoup
 
@@ -7,6 +7,18 @@ from breathecode.authenticate.models import CredentialsGithub
 from breathecode.services.github import Github, GithubAuthException
 
 logger = logging.getLogger(__name__)
+
+
+def is_url(value):
+    url_pattern = re.compile(
+        r"^(https?://)?"  # optional http or https scheme
+        r"(([A-Za-z0-9-]+\.)+[A-Za-z]{2,})"  # domain name
+        r"(:\d+)?"  # optional port
+        r"(\/[-A-Za-z0-9@:%._\+~#=]*)*"  # path
+        r"(\?[;&A-Za-z0-9%_.~+=-]*)?"  # query string
+        r"(#[-A-Za-z0-9_]*)?$"  # fragment locator
+    )
+    return re.match(url_pattern, value) is not None
 
 
 def get_urls_from_html(html_content):
