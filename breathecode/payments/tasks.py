@@ -780,7 +780,7 @@ def build_subscription(
 
     subscription_start_at = start_date or invoice.paid_at
 
-    parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info != "" else None
+    parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     subscription = Subscription.objects.create(
         user=bag.user,
         paid_at=invoice.paid_at,
@@ -851,7 +851,7 @@ def build_plan_financing(
         event_type_set = None
         mentorship_service_set = None
 
-    parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info != "" else None
+    parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     financing = PlanFinancing.objects.create(
         user=bag.user,
         next_payment_at=invoice.paid_at + relativedelta(months=1),
@@ -939,7 +939,7 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info:
                 "valid_until": until,
             }
 
-        parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info != "" else None
+        parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
         subscription = Subscription.objects.create(
             user=bag.user,
             paid_at=invoice.paid_at,
