@@ -3,20 +3,25 @@ import re
 from functools import lru_cache
 from typing import Optional, Type
 
+from adrf.requests import AsyncRequest
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import QuerySet, Sum
 from django.db.models.query_utils import Q
+from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
 from rest_framework.request import Request
 
-from breathecode.admissions.models import Cohort, CohortUser, Syllabus
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
+from breathecode.media.models import File
+from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
+from breathecode.utils.validate_conversion_info import validate_conversion_info
 from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
@@ -25,8 +30,11 @@ from .models import (
     Consumable,
     Coupon,
     Currency,
+    Invoice,
+    PaymentMethod,
     Plan,
     PlanFinancing,
+    ProofOfPayment,
     Service,
     ServiceItem,
     Subscription,
@@ -859,3 +867,233 @@ def get_discounted_price(price: float, coupons: list[Coupon]) -> float:
         price = 0
 
     return price
+
+
+def validate_and_create_proof_of_payment(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
+    staff_user: User,
+    academy_id: int,
+    lang: Optional[str] = None,
+):
+    from .tasks import set_proof_of_payment_confirmation_url
+
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
+        data = request.data
+
+    else:
+        data = request
+
+    if lang is None:
+        settings = get_user_settings(staff_user.id)
+        lang = settings.lang
+
+    provided_payment_details = data.get("provided_payment_details")
+    reference = data.get("reference")
+    file_id = data.get("file")
+
+    if not file_id and not reference:
+        raise ValidationException(
+            translation(
+                lang,
+                en="At least one of 'file' or'reference' must be provided",
+                es="Debe proporcionar al menos un 'file' o'reference'",
+                slug="at-least-one-of-file-or-reference-must-be-provided",
+            ),
+            code=400,
+        )
+
+    x = ProofOfPayment()
+    x.provided_payment_details = provided_payment_details
+    x.reference = reference
+    x.created_by = staff_user
+
+    if file_id and (
+        file := File.objects.filter(
+            Q(user__id=staff_user.id) | Q(academy__id=academy_id), id=file_id, status=File.Status.CREATED
+        ).first()
+    ):
+        file.status = File.Status.TRANSFERRING
+        file.save()
+
+        x.status = ProofOfPayment.Status.PENDING
+        x.save()
+
+        set_proof_of_payment_confirmation_url.delay(file.id, x.id)
+
+    elif file_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid file id",
+                es="ID de archivo inválido",
+                slug="invalid-file-id",
+            ),
+            code=400,
+        )
+
+    else:
+        x.status = ProofOfPayment.Status.DONE
+        x.save()
+
+    return x
+
+
+def validate_and_create_subscriptions(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
+    staff_user: User,
+    proof_of_payment: ProofOfPayment,
+    academy_id: int,
+    lang: Optional[str] = None,
+):
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
+        data = request.data
+
+    else:
+        data = request
+
+    if lang is None:
+        settings = get_user_settings(staff_user.id)
+        lang = settings.lang
+
+    how_many_installments = 1
+
+    plans = data.get("plans", [])
+    plans = Plan.objects.filter(slug__in=plans)
+    if plans.count() != 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Exactly one plan must be provided",
+                es="Debe proporcionar exactamente un plan",
+                slug="exactly-one-plan-must-be-provided",
+            ),
+            code=400,
+        )
+
+    if "coupons" in data and not isinstance(data["coupons"], list):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Coupons must be a list of strings",
+                es="Cupones debe ser una lista de cadenas",
+                slug="invalid-coupons",
+            ),
+            code=400,
+        )
+
+    if "coupons" in data and len(data["coupons"]) > (max := max_coupons_allowed()):
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Too many coupons (max {max})",
+                es=f"Demasiados cupones (max {max})",
+                slug="too-many-coupons",
+            ),
+            code=400,
+        )
+
+    plan = plans[0]
+    coupons = get_available_coupons(plan, data.get("coupons", []))
+
+    if (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Financing option not found for {how_many_installments} installments",
+                es=f"Opción de financiamiento no encontrada para {how_many_installments} cuotas",
+                slug="financing-option-not-found",
+            ),
+            code=404,
+        )
+
+    conversion_info = data["conversion_info"] if "conversion_info" in data else None
+    validate_conversion_info(conversion_info, lang)
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if academy is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy not found",
+                es="Academia no encontrada",
+                slug="academy-not-found",
+            ),
+            code=404,
+        )
+
+    user_pk = data.get("user", None)
+    if user_pk is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="user must be provided",
+                es="user debe ser proporcionado",
+                slug="user-must-be-provided",
+            ),
+            code=400,
+        )
+
+    payment_method = data.get("payment_method")
+    if not payment_method or (payment_method := PaymentMethod.objects.filter(id=payment_method).first()) is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method not provided",
+                es="Método de pago no proporcionado",
+                slug="payment-method-not-provided",
+            ),
+            code=400,
+        )
+
+    args = []
+    kwargs = {}
+    if isinstance(user_pk, int):
+        kwargs["id"] = user_pk
+    else:
+        args.append(Q(email=user_pk) | Q(username=user_pk))
+
+    if (user := User.objects.filter(*args, **kwargs).first()) is None:
+        ValidationException(
+            translation(
+                lang,
+                en=f"User not found: {user_pk}",
+                es=f"Usuario no encontrado: {user_pk}",
+                slug="user-not-found",
+            ),
+            code=404,
+        )
+
+    bag = Bag()
+    bag.type = Bag.Type.BAG
+    bag.user = user
+    bag.currency = academy.main_currency
+    bag.status = Bag.Status.PAID
+    bag.academy = academy
+    bag.is_recurrent = True
+
+    bag.how_many_installments = how_many_installments
+    amount = get_discounted_price(option.monthly_price, coupons)
+    bag.monthly_price = option.monthly_price
+
+    bag.save()
+    bag.plans.set(plans)
+
+    utc_now = timezone.now()
+
+    invoice = Invoice(
+        amount=amount,
+        paid_at=utc_now,
+        user=user,
+        bag=bag,
+        academy=bag.academy,
+        status="FULFILLED",
+        currency=bag.academy.main_currency,
+        externally_managed=True,
+        proof=proof_of_payment,
+        payment_method=payment_method,
+    )
+    invoice.save()
+
+    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+
+    return invoice, coupons

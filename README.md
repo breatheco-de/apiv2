@@ -13,23 +13,8 @@
   </a>
 
   <a href="https://github.com/breatheco-de/apiv2/actions/workflows/dockerhub.yml">
-    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/dockerhub.yml/badge.svg"
-         alt="Docker Hub">
-  </a>
-
-  <a href="https://github.com/breatheco-de/apiv2/actions/workflows/linter.yml">
-    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/linter.yml/badge.svg"
-         alt="Linter">
-  </a>
-
-  <a href="https://github.com/breatheco-de/apiv2/actions/workflows/test.yml">
-    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/test.yml/badge.svg"
-         alt="Test">
-  </a>
-
-  <a href="https://github.com/breatheco-de/apiv2/actions/workflows/github-pages.yml">
-    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/github-pages.yml/badge.svg"
-         alt="Test">
+    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/checks.yml/badge.svg"
+         alt="Checks">
   </a>
 </p>
 

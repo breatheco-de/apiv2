@@ -154,6 +154,7 @@ CAPABILITIES = [
     {"slug": "delete_calendly_organization", "description": "Delete calendly integration"},
     {"slug": "crud_assessment", "description": "Manage student quizzes and assessments"},
     {"slug": "read_user_assessment", "description": "Read user assessment submissions"},
+    {"slug": "crud_subscription", "description": "Create, update or delete subscriptions and plan financings of other users"},
 ]
 
 ROLES = [
@@ -194,6 +195,7 @@ ROLES = [
             "crud_event",
             "crud_mentorship_session",
             "read_calendly_organization",
+            "crud_subscription",
         ],
     },
     {
@@ -584,6 +586,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "generate_temporal_token",
                 "read_organization",
                 "crud_provisioning_bill",
+                "crud_subscription",
             ],
         }
     )

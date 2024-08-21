@@ -78,7 +78,7 @@ from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
-from breathecode.utils.shorteners import C
+from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = getLogger(__name__)
@@ -1049,6 +1049,11 @@ class AcademyInvoiceView(APIView):
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    # @capable_of("crud_invoice")
+    # def post(self, request, academy_id=None):
+    #     add_invoice_externally_managed(request, request.user, academy_id)
+    #     return Response({"status": "ok"})
 
 
 class CardView(APIView):
@@ -2064,6 +2069,28 @@ class PayView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+class AcademyPlanSubscriptionView(APIView):
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_subscription")
+    def post(self, request, plan_slug: str, academy_id: int):
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+
+        request.data["plans"] = [plan_slug]
+
+        invoice, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+
+        s1 = GetInvoiceSerializer(invoice, many=False)
+        s2 = GetCouponSerializer(coupons, many=True)
+
+        data = s1.data
+        data["coupons"] = s2.data
+
+        return Response(data)
 
 
 class PaymentMethodView(APIView):
