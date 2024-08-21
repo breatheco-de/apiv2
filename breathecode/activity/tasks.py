@@ -200,6 +200,9 @@ def upload_activities(self, task_manager_id: int, **_):
 
             worker += 1
 
+    if feature.is_enabled("activity.logs") is False:
+        raise AbortTask("Activity is disabled")
+
     utc_now = timezone.now()
     limit = utc_now - timedelta(seconds=get_activity_sampling_rate())
 

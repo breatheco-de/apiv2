@@ -1,5 +1,7 @@
 from typing import TypedDict
+
 from django.core.management.base import BaseCommand
+
 from ...models import Capability, Role
 
 CAPABILITIES = [
@@ -154,6 +156,8 @@ CAPABILITIES = [
     {"slug": "delete_calendly_organization", "description": "Delete calendly integration"},
     {"slug": "crud_assessment", "description": "Manage student quizzes and assessments"},
     {"slug": "read_user_assessment", "description": "Read user assessment submissions"},
+    {"slug": "read_subscription", "description": "Read subscriptions"},
+    {"slug": "crud_subscription", "description": "Create, update or delete subscriptions"},
 ]
 
 ROLES = [
