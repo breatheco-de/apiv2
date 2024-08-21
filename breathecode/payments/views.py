@@ -2082,7 +2082,12 @@ class AcademyPlanSubscriptionView(APIView):
 
         request.data["plans"] = [plan_slug]
 
-        invoice, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+        try:
+            invoice, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+
+        except Exception as e:
+            proof.delete()
+            raise e
 
         s1 = GetInvoiceSerializer(invoice, many=False)
         s2 = GetCouponSerializer(coupons, many=True)
