@@ -167,6 +167,7 @@ class Service(AbstractAsset):
         EVENT_JOIN = ("EVENT_JOIN", "Event join")
         JOIN_MENTORSHIP = ("JOIN_MENTORSHIP", "Join mentorship")
         READ_LESSON = ("READ_LESSON", "Read lesson")
+        AI_INTERACTION = ("AI_INTERACTION", "AI Interaction")
         NO_SET = ("NO_SET", "No set")
 
     groups = models.ManyToManyField(
