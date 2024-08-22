@@ -182,6 +182,7 @@ def test_cancelled(bc: Breathecode, client: rfx.Client, utc_now, fake):
             data={
                 "duration": duration,
                 "eta": utc_now + duration,
+                "status": "CANCELLED",
             },
         )
     ]

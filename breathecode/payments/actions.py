@@ -1063,6 +1063,17 @@ def validate_and_create_subscriptions(
             code=404,
         )
 
+    if PlanFinancing.objects.filter(plans=plan, user=user, valid_until__gt=timezone.now()).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"User already has a valid subscription for this plan: {user_pk}",
+                es=f"Usuario ya tiene una suscripción válida para este plan: {user_pk}",
+                slug="user-already-has-valid-subscription",
+            ),
+            code=409,
+        )
+
     bag = Bag()
     bag.type = Bag.Type.BAG
     bag.user = user
