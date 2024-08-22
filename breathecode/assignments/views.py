@@ -983,7 +983,7 @@ class CompletionJob(APIView):
 
         asset = await Asset.objects.filter(slug=task.associated_slug).afirst()
         if asset is None:
-            raise ValidationException("Task not found")
+            raise ValidationException("Asset not found")
 
         syllabus_name = await self.get_task_syllabus(task)
 
