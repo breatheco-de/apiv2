@@ -14,33 +14,6 @@ from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from capyc.rest_framework import pytest as capy
 
 
-def credentials_github_serializer(credentials_github):
-    return {
-        "avatar_url": credentials_github.avatar_url,
-        "name": credentials_github.name,
-        "username": credentials_github.username,
-    }
-
-
-def profile_serializer(credentials_github):
-    return {
-        "avatar_url": credentials_github.avatar_url,
-    }
-
-
-def get_serializer(user, credentials_github=None, profile=None, **data):
-    return {
-        "email": user.email,
-        "username": user.username,
-        "first_name": user.first_name,
-        "github": credentials_github_serializer(credentials_github) if credentials_github else None,
-        "id": user.id,
-        "last_name": user.last_name,
-        "profile": profile_serializer(profile) if profile else None,
-        **data,
-    }
-
-
 @pytest.fixture(autouse=True)
 def setup(db, monkeypatch):
     from linked_services.django.actions import reset_app_cache
@@ -62,6 +35,30 @@ def test_no_auth(bc: Breathecode, client: capy.Client):
 
     assert json == expected
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert bc.database.list_of("authenticate.Token") == []
+
+
+def test_external_app(bc: Breathecode, client: capy.Client, sign_jwt_link: Callable[..., None]):
+    app = {"require_an_agreement": True, "slug": "rigobot"}
+    model = bc.database.create(
+        app=app,
+        first_party_credentials={
+            "app": {
+                "rigobot": 1,
+            },
+        },
+    )
+
+    sign_jwt_link(client, model.app)
+
+    url = reverse_lazy("authenticate:app_token")
+    response = client.post(url)
+
+    json = response.json()
+    expected = {"detail": "from-external-app", "status_code": 400}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert bc.database.list_of("authenticate.Token") == []
 
 

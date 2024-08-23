@@ -2717,7 +2717,6 @@ class AppSync(APIView):
             return await s.post("/v1/auth/app/user", data)
 
 
-# app/user/:id
 class AppTokenView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(paginate=True)
@@ -2725,6 +2724,16 @@ class AppTokenView(APIView):
     @scope(["read:token"])
     def post(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, user_id=None):
         lang = get_user_language(request)
+
+        if app.require_an_agreement:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Can't get tokens from an external app",
+                    es="No se puede obtener tokens desde una aplicación externa",
+                    slug="from-external-app",
+                ),
+            )
 
         hash = request.data.get("token")
         if not hash:
