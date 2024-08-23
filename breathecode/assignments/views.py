@@ -1,7 +1,7 @@
 import hashlib
 import logging
 import os
-
+from slugify import slugify
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
 from circuitbreaker import CircuitBreakerError
@@ -15,7 +15,6 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
-from slugify import slugify
 
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
@@ -474,7 +473,7 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
-            items = items.filter(Q(associated_slug__icontains=like) | Q(title__icontains=like))
+            items = items.filter(Q(associated_slug__icontains=slugify(like)) | Q(title__icontains=like))
 
         # tasks from users that belong to these cohort
         student = request.GET.get("student", None)

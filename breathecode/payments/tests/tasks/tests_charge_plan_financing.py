@@ -72,6 +72,9 @@ def invoice_item(data={}):
         "user_id": 0,
         "refund_stripe_id": None,
         "refunded_at": None,
+        "externally_managed": False,
+        "payment_method_id": None,
+        "proof_id": None,
         **data,
     }
 
@@ -172,9 +175,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         )
         self.assertEqual(
             logging.Logger.error.call_args_list,
-            [
-                call("Error getting bag from plan financing 1: plan-financing-has-no-invoices", exc_info=True),
-            ],
+            [call("No invoices found for PlanFinancing with id 1", exc_info=True)],
         )
 
         self.assertEqual(self.bc.database.list_of("payments.Bag"), [])
@@ -187,7 +188,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                     **self.bc.format.to_dict(model.plan_financing),
                     # 'status': 'PAYMENT_ISSUE',,
                     "status": "ERROR",
-                    "status_message": "plan-financing-has-no-invoices",
+                    "status_message": "No invoices found for PlanFinancing with id 1",
                 },
             ],
         )
@@ -333,6 +334,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "is_recurrent": True,
                         "status": "RENEWAL",
                         "user_id": 1,
+                        "was_delivered": True,
                     }
                 ),
             ],
@@ -448,22 +450,19 @@ class PaymentsTestSuite(PaymentsTestCase):
         )
         from breathecode.admissions.models import Academy
 
-        self.assertEqual(
-            notify_actions.send_email_message.call_args_list,
-            [
-                call(
-                    "message",
-                    model.user.email,
-                    {
-                        "SUBJECT": "Your 4Geeks subscription could not be renewed",
-                        "MESSAGE": "Please update your payment methods",
-                        "BUTTON": "Please update your payment methods",
-                        "LINK": os.getenv("APP_URL")[:-1] + "/plan-financing/1",
-                    },
-                    academy=model.academy,
-                )
-            ],
-        )
+        assert notify_actions.send_email_message.call_args_list == [
+            call(
+                "message",
+                model.user.email,
+                {
+                    "SUBJECT": "Your 4Geeks subscription could not be renewed",
+                    "MESSAGE": "Please update your payment methods",
+                    "BUTTON": "Please update your payment methods",
+                    "LINK": os.getenv("APP_URL")[:-1] + "/plan-financing/1",
+                },
+                academy=model.academy,
+            )
+        ]
         self.bc.check.calls(
             activity_tasks.add_activity.delay.call_args_list,
             [

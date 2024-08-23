@@ -1863,7 +1863,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             template_data["URL_BACK"] = "https://4geeks.com/choose-program"
             template_data["BUTTON"] = "Get more consumables"
             template_data["LINK"] = (
-                f"https://4geeks.com/checkout?mentorship_service_set={base.mentorship_service_set.slug}&token={base.token.key}"
+                f"https://4geeks.com/checkout/mentorship/{base.mentorship_service_set.slug}?token={base.token.key}"
             )
             expected = render("with-consumer-not-enough-consumables", data=template_data, academy=None)
 

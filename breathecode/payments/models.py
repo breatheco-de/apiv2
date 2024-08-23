@@ -167,6 +167,7 @@ class Service(AbstractAsset):
         EVENT_JOIN = ("EVENT_JOIN", "Event join")
         JOIN_MENTORSHIP = ("JOIN_MENTORSHIP", "Join mentorship")
         READ_LESSON = ("READ_LESSON", "Read lesson")
+        AI_INTERACTION = ("AI_INTERACTION", "AI Interaction")
         NO_SET = ("NO_SET", "No set")
 
     groups = models.ManyToManyField(
@@ -868,48 +869,36 @@ def limit_coupon_choices():
     )
 
 
-RENEWAL = "RENEWAL"
-CHECKING = "CHECKING"
-PAID = "PAID"
-BAG_STATUS = [
-    (RENEWAL, "Renewal"),
-    (CHECKING, "Checking"),
-    (PAID, "Paid"),
-]
-
-BAG = "BAG"
-CHARGE = "CHARGE"
-PREVIEW = "PREVIEW"
-INVITED = "INVITED"
-BAG_TYPE = [
-    (BAG, "Bag"),
-    (CHARGE, "Charge"),
-    (PREVIEW, "Preview"),
-    (INVITED, "Invited"),
-]
-
-NO_SET = "NO_SET"
-QUARTER = "QUARTER"
-HALF = "HALF"
-YEAR = "YEAR"
-CHOSEN_PERIOD = [
-    (NO_SET, "No set"),
-    (MONTH, "Month"),
-    (QUARTER, "Quarter"),
-    (HALF, "Half"),
-    (YEAR, "Year"),
-]
-
-
 class Bag(AbstractAmountByTime):
     """Represents a credit that can be used by a user to use a service."""
 
-    status = models.CharField(max_length=8, choices=BAG_STATUS, default=CHECKING, help_text="Bag status", db_index=True)
-    type = models.CharField(max_length=7, choices=BAG_TYPE, default=BAG, help_text="Bag type")
+    class Status(models.TextChoices):
+        RENEWAL = ("RENEWAL", "Renewal")
+        CHECKING = ("CHECKING", "Checking")
+        PAID = ("PAID", "Paid")
+        # UNMANAGED = ("UNMANAGED", "Unmanaged")
+
+    class Type(models.TextChoices):
+        BAG = ("BAG", "Bag")
+        CHARGE = ("CHARGE", "Charge")
+        PREVIEW = ("PREVIEW", "Preview")
+        INVITED = ("INVITED", "Invited")
+
+    class ChosenPeriod(models.TextChoices):
+        NO_SET = ("NO_SET", "No set")
+        MONTH = ("MONTH", "Month")
+        QUARTER = ("QUARTER", "Quarter")
+        HALF = ("HALF", "Half")
+        YEAR = ("YEAR", "Year")
+
+    status = models.CharField(
+        max_length=8, choices=Status, default=Status.CHECKING, help_text="Bag status", db_index=True
+    )
+    type = models.CharField(max_length=7, choices=Type, default=Type.BAG, help_text="Bag type")
     chosen_period = models.CharField(
         max_length=7,
-        choices=CHOSEN_PERIOD,
-        default=NO_SET,
+        choices=ChosenPeriod,
+        default=ChosenPeriod.NO_SET,
         help_text="Chosen period used to calculate the amount and build the subscription",
     )
     how_many_installments = models.IntegerField(
@@ -955,22 +944,75 @@ class Bag(AbstractAmountByTime):
         return f"{self.type} {self.status} {self.chosen_period}"
 
 
-FULFILLED = "FULFILLED"
-REJECTED = "REJECTED"
-PENDING = "PENDING"
-REFUNDED = "REFUNDED"
-DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD"
-INVOICE_STATUS = [
-    (FULFILLED, "Fulfilled"),
-    (REJECTED, "Rejected"),
-    (PENDING, "Pending"),
-    (REFUNDED, "Refunded"),
-    (DISPUTED_AS_FRAUD, "Disputed as fraud"),
-]
+class PaymentMethod(models.Model):
+    """
+    Different payment methods of each academy have.
+    """
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
+    title = models.CharField(max_length=120, null=False, blank=False)
+    is_credit_card = models.BooleanField(default=False, null=False, blank=False)
+    description = models.CharField(max_length=480, help_text="Description of the payment method")
+    third_party_link = models.URLField(
+        blank=True, null=True, default=None, help_text="Link of a third party payment method"
+    )
+    lang = models.CharField(
+        max_length=5,
+        validators=[validate_language_code],
+        help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
+    )
+
+
+class ProofOfPayment(models.Model):
+    """Represents a payment made by a user."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        DONE = "DONE", "Done"
+
+    provided_payment_details = models.TextField(
+        default="", blank=True, help_text="These details are provided by the user as proof of payment"
+    )
+    confirmation_image_url = models.URLField(
+        null=True, blank=True, default=None, help_text="URL of the confirmation image for the payment"
+    )
+    reference = models.CharField(
+        max_length=32, null=True, default=None, blank=True, help_text="Reference for the payment"
+    )
+    status = models.CharField(
+        max_length=8, choices=Status, default=Status.PENDING, help_text="Bag status", db_index=True
+    )
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User who provided these details")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if self.status == self.Status.PENDING and self.confirmation_image_url:
+            raise forms.ValidationError("Confirmation image URL mustn't be provided when status is PENDING")
+
+        if self.status == self.Status.DONE and (not self.confirmation_image_url and not self.reference):
+            raise forms.ValidationError("Either confirmation_image_url or reference must be provided")
+
+        if self.provided_payment_details is None:
+            self.provided_payment_details = ""
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class Invoice(models.Model):
     """Represents a payment made by a user."""
+
+    class Status(models.TextChoices):
+        FULFILLED = "FULFILLED", "Fulfilled"
+        REJECTED = "REJECTED", "Rejected"
+        PENDING = "PENDING", "Pending"
+        REFUNDED = "REFUNDED", "Refunded"
+        DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD", "Disputed as fraud"
 
     amount = models.FloatField(
         default=0, help_text="If amount is 0, transaction will not be sent to stripe or any other payment processor."
@@ -981,15 +1023,33 @@ class Invoice(models.Model):
         null=True, blank=True, default=None, help_text="Date when the invoice was refunded"
     )
     status = models.CharField(
-        max_length=17, choices=INVOICE_STATUS, default=PENDING, db_index=True, help_text="Invoice status"
+        max_length=17, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
     )
 
-    bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag")
+    bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag", related_name="invoices")
+    externally_managed = models.BooleanField(
+        default=False, help_text="If the billing is managed externally outside of the system"
+    )
 
-    # actually return 27 characters
+    proof = models.OneToOneField(
+        ProofOfPayment,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="Proof of payment",
+    )
+    payment_method = models.ForeignKey(
+        PaymentMethod,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="Payment method, null if it uses stripe",
+    )
+
+    # it has 27 characters right now
     stripe_id = models.CharField(max_length=32, null=True, default=None, blank=True, help_text="Stripe id")
 
-    # actually return 27 characters
+    # it has 27 characters right now
     refund_stripe_id = models.CharField(
         max_length=32, null=True, default=None, blank=True, help_text="Stripe id for refunding"
     )
@@ -999,6 +1059,20 @@ class Invoice(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if self.payment_method and self.externally_managed is False:
+            raise forms.ValidationError("Payment method cannot be setted if the billing isn't managed externally")
+
+        if self.payment_method and self.proof is None and self.status == self.Status.FULFILLED:
+            raise forms.ValidationError(
+                "Proof of payment must be provided when payment method is setted and status is FULFILLED"
+            )
+
+        if self.externally_managed and self.payment_method is None:
+            raise forms.ValidationError("Payment method must be setted if the billing is managed externally")
+
+        return super().clean()
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -1043,6 +1117,10 @@ class AbstractIOweYou(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
+
+    externally_managed = models.BooleanField(
+        default=False, help_text="If the billing is managed externally outside of the system"
+    )
 
     selected_cohort_set = models.ForeignKey(
         CohortSet,
@@ -1278,8 +1356,9 @@ class Consumable(AbstractServiceItem):
         user: User | str | int,
         lang: str = "en",
         service: Optional[Service | str | int] = None,
+        service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
-        extra: dict = None,
+        extra: Optional[dict] = None,
     ) -> QuerySet[Consumable]:
 
         if extra is None:
@@ -1324,6 +1403,9 @@ class Consumable(AbstractServiceItem):
         elif isinstance(service, Service):
             param["service_item__service"] = service
 
+        if service_type and isinstance(service_type, str):
+            param["service_item__service__type"] = service_type.upper()
+
         # Permission
         if permission and isinstance(permission, str) and not permission.isdigit():
             param["service_item__service__groups__permissions__codename"] = permission
@@ -1351,11 +1433,14 @@ class Consumable(AbstractServiceItem):
         user: User | str | int,
         lang: str = "en",
         service: Optional[Service | str | int] = None,
+        service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: dict = None,
     ) -> QuerySet[Consumable]:
 
-        return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra)
+        return cls.list(
+            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+        )
 
     @classmethod
     def get(
@@ -1364,6 +1449,7 @@ class Consumable(AbstractServiceItem):
         user: User | str | int,
         lang: str = "en",
         service: Optional[Service | str | int] = None,
+        service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: Optional[dict] = None,
     ) -> Consumable | None:
@@ -1371,7 +1457,9 @@ class Consumable(AbstractServiceItem):
         if extra is None:
             extra = {}
 
-        return cls.list(user=user, lang=lang, service=service, permission=permission, extra=extra).first()
+        return cls.list(
+            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+        ).first()
 
     @classmethod
     @sync_to_async
@@ -1381,10 +1469,13 @@ class Consumable(AbstractServiceItem):
         user: User | str | int,
         lang: str = "en",
         service: Optional[Service | str | int] = None,
+        service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: Optional[dict] = None,
     ) -> Consumable | None:
-        return cls.get(user=user, lang=lang, service=service, permission=permission, extra=extra)
+        return cls.get(
+            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+        )
 
     def clean(self) -> None:
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
@@ -1426,17 +1517,12 @@ class Consumable(AbstractServiceItem):
         return f"{self.user.email}: {self.service_item.service.slug} ({self.how_many})"
 
 
-PENDING = "PENDING"
-DONE = "DONE"
-CANCELLED = "CANCELLED"
-CONSUMPTION_SESSION_STATUS = [
-    (PENDING, "Pending"),
-    (DONE, "Done"),
-    (CANCELLED, "Cancelled"),
-]
-
-
 class ConsumptionSession(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        DONE = "DONE", "Done"
+        CANCELLED = "CANCELLED", "Cancelled"
+
     operation_code = models.SlugField(
         default="default", help_text="Code that identifies the operation, it could be repeated"
     )
@@ -1445,9 +1531,7 @@ class ConsumptionSession(models.Model):
     eta = models.DateTimeField(help_text="Estimated time of arrival")
     duration = models.DurationField(blank=False, default=timedelta, help_text="Duration of the session")
     how_many = models.FloatField(default=0, help_text="How many units of this service can be used")
-    status = models.CharField(
-        max_length=12, choices=CONSUMPTION_SESSION_STATUS, default=PENDING, help_text="Status of the session"
-    )
+    status = models.CharField(max_length=12, choices=Status, default=Status.PENDING, help_text="Status of the session")
     was_discounted = models.BooleanField(default=False, help_text="Was it discounted")
 
     request = models.JSONField(
@@ -1494,6 +1578,7 @@ class ConsumptionSession(models.Model):
         delta: timedelta,
         user: Optional[User] = None,
         operation_code: Optional[str] = None,
+        force_create: bool = False,
     ) -> "ConsumptionSession":
         assert request, "You must provide a request"
         assert consumable, "You must provide a consumable"
@@ -1504,7 +1589,12 @@ class ConsumptionSession(models.Model):
 
         utc_now = timezone.now()
 
-        resource = consumable.mentorship_service_set or consumable.event_type_set or consumable.cohort_set
+        resource = (
+            consumable.mentorship_service_set
+            or consumable.event_type_set
+            or consumable.cohort_set
+            or consumable.service_item.service
+        )
         id = resource.id if resource else 0
         slug = resource.slug if resource else ""
 
@@ -1528,20 +1618,22 @@ class ConsumptionSession(models.Model):
         # assert path, 'You must provide a path'
         assert delta, "You must provide a delta"
 
-        session = (
-            cls.objects.filter(
-                eta__gte=utc_now,
-                request=data,
-                path=path,
-                duration=delta,
-                related_id=id,
-                related_slug=slug,
-                operation_code=operation_code,
-                user=user,
+        session = None
+        if force_create is False:
+            session = (
+                cls.objects.filter(
+                    eta__gte=utc_now,
+                    request=data,
+                    path=path,
+                    duration=delta,
+                    related_id=id,
+                    related_slug=slug,
+                    operation_code=operation_code,
+                    user=user,
+                )
+                .exclude(eta__lte=utc_now)
+                .first()
             )
-            .exclude(eta__lte=utc_now)
-            .first()
-        )
 
         if session:
             return session
@@ -1764,22 +1856,3 @@ class FinancialReputation(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.email} -> {self.get_reputation()}"
-
-
-class PaymentMethod(models.Model):
-    """
-    Different payment methods of each academy have.
-    """
-
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
-    title = models.CharField(max_length=120, null=False, blank=False)
-    is_credit_card = models.BooleanField(default=False, null=False, blank=False)
-    description = models.CharField(max_length=255, help_text="Description of the payment method")
-    third_party_link = models.URLField(
-        blank=True, null=True, default=None, help_text="Link of a third party payment method"
-    )
-    lang = models.CharField(
-        max_length=5,
-        validators=[validate_language_code],
-        help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
-    )

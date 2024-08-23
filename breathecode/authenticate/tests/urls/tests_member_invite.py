@@ -297,6 +297,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     **self.bc.format.to_dict(user_invite),
                     "status": "ACCEPTED",
                     "user_id": 1,
+                    "process_status": "DONE",
                 }
                 for user_invite in model.user_invite
             ],

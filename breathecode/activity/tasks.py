@@ -24,6 +24,7 @@ from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import NDB
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.redis import Lock
+from capyc.core.managers import feature
 
 from .models import StudentActivity
 
@@ -199,6 +200,9 @@ def upload_activities(self, task_manager_id: int, **_):
 
             worker += 1
 
+    if feature.is_enabled("activity.logs") is False:
+        raise AbortTask("Activity is disabled")
+
     utc_now = timezone.now()
     limit = utc_now - timedelta(seconds=get_activity_sampling_rate())
 
@@ -277,6 +281,9 @@ def add_activity(
 ):
 
     logger.info(f"Executing add_activity related to {str(kind)}")
+
+    if feature.is_enabled("activity.logs") is False:
+        raise AbortTask("Activity is disabled")
 
     if timestamp is None:
         timestamp = timezone.now().isoformat()

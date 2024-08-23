@@ -730,6 +730,7 @@ def accept_invite(accepting_ids=None, user=None):
             invite.user = user
 
         invite.status = "ACCEPTED"
+        invite.process_status = "DONE"
         invite.save()
 
 

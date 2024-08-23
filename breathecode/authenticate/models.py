@@ -84,10 +84,10 @@ class Profile(models.Model):
         default=True, help_text="Set true if you want to show the tutorial on the user UI/UX", db_index=True
     )
 
-    twitter_username = models.CharField(max_length=50, blank=True, null=True)
-    github_username = models.CharField(max_length=50, blank=True, null=True)
-    portfolio_url = models.CharField(max_length=50, blank=True, null=True)
-    linkedin_url = models.CharField(max_length=50, blank=True, null=True)
+    twitter_username = models.CharField(max_length=64, blank=True, null=True)
+    github_username = models.CharField(max_length=64, blank=True, null=True)
+    portfolio_url = models.CharField(max_length=160, blank=True, null=True)
+    linkedin_url = models.CharField(max_length=160, blank=True, null=True)
 
     blog = models.CharField(max_length=150, blank=True, null=True)
 
