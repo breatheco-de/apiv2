@@ -8,6 +8,7 @@ from rest_framework import serializers
 
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.monitoring.actions import test_link
+from breathecode.services.activecampaign.client import acp_ids
 from breathecode.utils import serpy
 from breathecode.utils.integer_to_base import to_base
 from capyc.rest_framework.exceptions import ValidationException
@@ -311,7 +312,6 @@ class FormEntryBigSerializer(serpy.Serializer):
     utm_placement = serpy.Field()
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
-    custom_fields = serpy.Field()
     referral_key = serpy.Field()
     tags = serpy.Field()
     automations = serpy.Field()
@@ -341,6 +341,7 @@ class FormEntryBigSerializer(serpy.Serializer):
     academy = AcademySmallSerializer(required=False)
     lead_generation_app = LeadgenAppSmallSerializer(required=False)
     user = UserSmallSerializer(required=False)
+    custom_fields = serpy.MethodField(required=False)
 
     def get_tag_objects(self, obj):
         tag_ids = []
@@ -357,6 +358,30 @@ class FormEntryBigSerializer(serpy.Serializer):
 
         automations = Automation.objects.filter(slug__in=automation_ids, ac_academy__academy=obj.calculate_academy())
         return AutomationSmallSerializer(automations, many=True).data
+
+    def get_custom_fields(self, obj):
+
+        if not isinstance(obj.custom_fields, dict):
+            return obj.custom_fields
+
+        def convert_dict(input_dict, mapping_dict):
+            print(input_dict, mapping_dict)
+            # Create an inverse mapping dictionary from the deal_custom_fields
+            inverse_mapping = {v: k for k, v in mapping_dict.items()}
+
+            # Create a new dictionary with the converted keys
+            converted_dict = {}
+            for key, value in input_dict.items():
+                if key in inverse_mapping:
+                    new_key = inverse_mapping[key]
+                    converted_dict[new_key] = value
+                else:
+                    converted_dict[key] = value
+
+            return converted_dict
+
+        out = convert_dict(obj.custom_fields, acp_ids["deal"])
+        return out
 
 
 class GetAcademySmallSerializer(serpy.Serializer):
