@@ -2,7 +2,7 @@ import base64
 from collections.abc import Iterable, Mapping
 from copy import copy
 from datetime import datetime, timedelta
-from typing import Any, Optional, overload
+from typing import Any, Collection, Optional, overload
 
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
@@ -19,6 +19,10 @@ from django.db.models.fields.related_descriptors import (
 )
 from django.db.models.query_utils import DeferredAttribute
 from django.http import HttpRequest
+
+
+def pk_serializer(field: Any) -> Any:
+    return field.pk if field else None
 
 
 def binary_serializer(field: bytes) -> str:
@@ -167,6 +171,10 @@ def get_cache(key: Optional[str] = None) -> dict[str, ModelCached] | ModelCached
 
 class ModelFieldMixin:
     depth = 1
+    request = None
+    model: Optional[models.Model] = None
+    fields = {"default": tuple()}
+    # exclude = ()
 
     @classmethod
     def _get_related_fields(cls, key: str):
@@ -252,20 +260,21 @@ class ModelFieldMixin:
     @classmethod
     def _check_settings(cls):
         assert cls.depth > 0, "Depth must be greater than 0"
-        assert (len(cls.fields) > 0 and len(cls.exclude) == 0) or (
-            len(cls.fields) == 0 and len(cls.exclude) > 0
-        ), "Fields and exclude must be mutually exclusive"
-        assert all(isinstance(x, str) for x in cls.fields), "Fields must be an array of strings"
-        assert all(isinstance(x, str) for x in cls.exclude), "Exclude must be an array of strings"
+        assert all(isinstance(x, str) for x in cls.fields.keys()), "fields key must be a strings"
+        for field in cls.fields.values():
+            assert all(isinstance(x, str) for x in field), "fields value must be an array of strings"
 
         field_list = cls._get_field_names(cls.cache.field_list)
         id_list = cls._get_field_names(cls.cache.id_list)
+        cls._field_list = field_list
+        cls._id_list = id_list
 
-        for field in cls.fields:
-            if field in field_list or field in id_list:
-                continue
+        for fields in cls.fields.values():
+            for field in fields:
+                if field in field_list or field + "_id" in id_list:
+                    continue
 
-            assert 0, f"Field '{field}' not found in model '{cls.model.__name__}'"
+                assert 0, f"Field '{field}' not found in model '{cls.model.__name__}'"
 
         cls._serializers = {
             **cls._get_field_serializers(cls.cache.id_list),
@@ -279,27 +288,63 @@ class ModelFieldMixin:
 
 
 class Serializer(ModelFieldMixin):
-    model: Optional[models.Model] = None
-    fields = ()
-    exclude = ()
 
     def _serialize(self, instance: models.Model) -> dict:
         data = {}
-        self.fields
 
-        for field in self.fields:
+        for field in self._parsed_fields:
             data[field] = getattr(instance, field, None)
 
-            serializer = self._serializers.get(field, None)
-            if serializer:
-                data[field] = serializer(data[field])
+            if field in self._field_list:
+                serializer = self._serializers.get(field, None)
+                if serializer:
+                    data[field] = serializer(data[field])
+
+            elif field + "_id" in self._id_list:
+                if field in self._expands and hasattr(self, field):
+                    ser = getattr(self, field)
+                    many = False
+                    if isinstance(data[field], Collection):
+                        many = True
+
+                    data[field] = ser(data=data[field], many=many).data
+                else:
+                    data[field] = pk_serializer(data[field])
 
         return data
 
+    def _set_fields(self) -> list[str]:
+        sets = set(["default"])
+
+        if self.request is not None:
+            sets_param = self.request.GET.get("sets")
+            if sets_param:
+                for set_name in sets_param.split(","):
+                    if set_name:
+                        sets.add(set_name)
+
+        for key in sets:
+            if key in self.fields:
+                self._parsed_fields |= set(self.fields[key])
+
+    def _set_expands(self) -> list[str]:
+        if self.request is not None:
+            expand = self.request.GET.get("expand")
+            if expand:
+                for expand_name in expand.split(","):
+                    if expand_name and expand_name + "_id" in self._id_list:
+                        self._expands.add(expand_name)
+
     @property
     def data(self) -> dict | list:
+        if len(self._parsed_fields) == 0:
+            self._set_fields()
+
+        if len(self._expands) == 0:
+            self._set_expands()
+
         if isinstance(self._data, QuerySet):
-            self._data.only(*self.fields)
+            self._data.only(*self._parsed_fields)
 
         if issubclass(type(self._data), models.Model) or isinstance(self._data, Mapping):
             return self._serialize(self._data)
@@ -324,8 +369,22 @@ class Serializer(ModelFieldMixin):
         context: Optional[Mapping] = None,
         required: bool = True,
         request: Optional[HttpRequest | AsyncRequest] = None,
+        sets: Optional[Collection[str]] = None,
+        expand: Optional[Collection[str]] = None,
         **kwargs,
     ):
+        if sets is not None:
+            self._parsed_fields = set(sets)
+        else:
+            self._parsed_fields = set()
+
+        if expand is not None:
+            self._expands = set(expand)
+        else:
+            self._expands = set()
+
+        self._expands = set()
+        self._expand_sets = set()
         self.instance = instance
         self.many = many
         self._data = data
