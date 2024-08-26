@@ -1,4 +1,5 @@
 import base64
+import re
 from collections.abc import Iterable, Mapping
 from copy import copy
 from datetime import datetime, timedelta
@@ -171,10 +172,41 @@ def get_cache(key: Optional[str] = None) -> dict[str, ModelCached] | ModelCached
 
 class ModelFieldMixin:
     depth = 1
-    request = None
+    request: Optional[HttpRequest | AsyncRequest] = None
     model: Optional[models.Model] = None
     fields = {"default": tuple()}
-    # exclude = ()
+
+    @classmethod
+    def _get_args(cls, key: str) -> dict[str, Any]:
+        if cls.request is None:
+            return {}
+
+        expands = cls.request.GET.get("expand", "")
+        if not expands:
+            return {}
+
+        result = re.findall(r"[\w]+\[.*?\]|[\w]+", expands)
+        res = {}
+        for item in result:
+            paths = item.split(".")
+            head = res
+            for path in paths[:-1]:
+                if path not in head:
+                    head[path] = {}
+
+                head = head[path]
+
+            item = item[-1]
+
+            if "[" in item and "]" in item:
+                fields = item.replace("]", "").split("[")
+
+                head[fields[0]] = {"_sets": fields[1].split(",")}
+
+            else:
+                head[item] = {"_sets": []}
+
+        return res
 
     @classmethod
     def _get_related_fields(cls, key: str):
@@ -307,7 +339,9 @@ class Serializer(ModelFieldMixin):
                     if isinstance(data[field], Collection):
                         many = True
 
-                    data[field] = ser(data=data[field], many=many).data
+                    ser.init(data=data[field], many=many)
+
+                    data[field] = ser.data
                 else:
                     data[field] = pk_serializer(data[field])
 
@@ -371,12 +405,30 @@ class Serializer(ModelFieldMixin):
         request: Optional[HttpRequest | AsyncRequest] = None,
         sets: Optional[Collection[str]] = None,
         expand: Optional[Collection[str]] = None,
+        link: Optional[str] = None,
         **kwargs,
     ):
         if sets is not None:
             self._parsed_fields = set(sets)
         else:
             self._parsed_fields = set()
+
+        self.init(instance, many, data, context, required, request, expand, link)
+
+        super().__init__(**kwargs)
+
+    def init(
+        self,
+        instance: Optional[QuerySet | models.Model] = None,
+        many: bool = False,
+        data: Optional[Iterable | Mapping | QuerySet | models.Model] = None,
+        context: Optional[Mapping] = None,
+        required: bool = True,
+        request: Optional[HttpRequest | AsyncRequest] = None,
+        expand: Optional[Collection[str]] = None,
+        link: Optional[str] = None,
+    ) -> None:
+        self.link = link
 
         if expand is not None:
             self._expands = set(expand)
@@ -391,5 +443,3 @@ class Serializer(ModelFieldMixin):
         self.context = context or {}
         self.required = required
         self.request = request
-
-        super().__init__(**kwargs)
