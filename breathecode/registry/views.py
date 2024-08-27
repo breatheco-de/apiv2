@@ -2,7 +2,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from slugify import slugify
+
 import requests
 from circuitbreaker import CircuitBreakerError
 from django.core.validators import URLValidator
@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from slugify import slugify
 
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
@@ -26,7 +27,6 @@ from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
-from .utils import is_url
 from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
@@ -56,11 +56,11 @@ from .serializers import (
     AcademyAssetSerializer,
     AcademyCommentSerializer,
     AssetAliasSerializer,
-    AssetAndTechnologySerializer,
     AssetBigAndTechnologyPublishedSerializer,
     AssetBigSerializer,
     AssetBigTechnologySerializer,
     AssetCategorySerializer,
+    AssetExpandableSerializer,
     AssetImageSmallSerializer,
     AssetKeywordBigSerializer,
     AssetKeywordSerializer,
@@ -86,6 +86,7 @@ from .serializers import (
     VariableSmallSerializer,
 )
 from .tasks import async_pull_from_github
+from .utils import is_url
 
 logger = logging.getLogger(__name__)
 
@@ -706,10 +707,12 @@ class AssetView(APIView, GenerateLookupsMixin):
         items = items.filter(query, **lookup, visibility="PUBLIC").distinct()
         items = handler.queryset(items)
 
+        expand = self.request.GET.get("expand")
+
         if "big" in self.request.GET:
             serializer = AssetMidSerializer(items, many=True)
-        elif "expand" in self.request.GET and self.request.GET.get("expand") == "technologies":
-            serializer = AssetAndTechnologySerializer(items, many=True)
+        elif expand is not None:
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
         else:
             serializer = AssetSerializer(items, many=True)
 
