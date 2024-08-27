@@ -27,6 +27,7 @@ from .views import (
     AcademyInviteView,
     AcademyTokenView,
     AppSync,
+    AppTokenView,
     AppUserAgreementView,
     AppUserView,
     ConfirmEmailView,
@@ -165,4 +166,5 @@ urlpatterns = [
     path("app/user/<int:user_id>", AppUserView.as_view(), name="app_user_id"),
     path("app/webhook", app_webhook, name="app_webhook"),
     path("me/app/<str:app_slug>/sync", AppSync.as_view(), name="me_app_slug_sync"),
+    path("app/token", AppTokenView.as_view(), name="app_token"),
 ]

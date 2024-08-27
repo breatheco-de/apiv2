@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Tuple, TypedDict, Unpack
 
 import rest_framework.authtoken.models
 from django import forms
@@ -530,6 +530,15 @@ class CredentialsGoogle(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
+class TokenGetOrCreateArgs(TypedDict):
+    hours_length: int
+    expires_at: datetime
+
+
+class TokenFilterArgs(TypedDict):
+    token_type: str
+
+
 class Token(rest_framework.authtoken.models.Token):
     """Bearer Token that support different types like `'login'`, `'temporal'` or `'permanent'`."""
 
@@ -563,7 +572,7 @@ class Token(rest_framework.authtoken.models.Token):
         Token.objects.filter(expires_at__lt=utc_now).delete()
 
     @classmethod
-    def get_or_create(cls, user, token_type: str, **kwargs: Any):
+    def get_or_create(cls, user, token_type: str, **kwargs: Unpack[TokenGetOrCreateArgs]) -> Tuple["Token", bool]:
         utc_now = timezone.now()
         kwargs["token_type"] = token_type
 
@@ -606,12 +615,16 @@ class Token(rest_framework.authtoken.models.Token):
         return token, created
 
     @classmethod
-    def get_valid(cls, token: str):
+    def get_valid(cls, token: str, **kwargs: Unpack[TokenFilterArgs]) -> "Token | None":
         utc_now = timezone.now()
         cls.delete_expired_tokens()
 
         # find among any non-expired token
-        return Token.objects.filter(key=token).filter(Q(expires_at__gt=utc_now) | Q(expires_at__isnull=True)).first()
+        return (
+            Token.objects.filter(key=token, **kwargs)
+            .filter(Q(expires_at__gt=utc_now) | Q(expires_at__isnull=True))
+            .first()
+        )
 
     @classmethod
     def validate_and_destroy(cls, hash: str) -> User:
