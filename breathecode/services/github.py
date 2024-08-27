@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Generator
+from typing import Generator, Optional
 
 import requests
 
@@ -85,7 +85,9 @@ class Github:
             except Exception:
                 pass
 
-            raise Exception(f"Unable to communicate with Github API for {action_name}, error: {error_message}")
+            raise Exception(
+                f"Unable to communicate with Github API for {method_name} {action_name}, error: {error_message}"
+            )
 
     def get_machines_types(self, repo_name):
         return self.get(f"/repos/{self.org}/{repo_name}/codespaces/machines")
@@ -163,10 +165,6 @@ class Github:
         page = 0
         while True:
             page += 1
-
-            if page == 2:
-                break
-
             res = self.get(
                 f"/orgs/{organization}/repos?page={page}&type={type}&per_page={per_page}&sort={sort}&direction={direction}"
             )
@@ -179,3 +177,37 @@ class Github:
     def delete_org_repo(self, owner: str, repo: str):
         res = self.delete(f"/repos/{owner}/{repo}")
         return res
+
+    def transfer_repo(self, repo: str, new_owner: str, new_name: Optional[str] = None):
+        if new_name is None:
+            new_name = repo
+        return self.post(
+            f"/repos/{self.org}/{repo}/transfer",
+            request_data={"new_owner": new_owner, "new_name": new_name},
+        )
+
+    def repo_exists(self, owner: str, repo: str):
+        try:
+            response = self.head(f"/repos/{owner}/{repo}")
+            return response.status_code == 200
+        except Exception:
+            return False
+
+    def get_repo_events(
+        self,
+        owner: str,
+        repo: str,
+        per_page: int = 30,
+    ) -> Generator[list[dict], None, None]:
+        if per_page > 100:
+            raise Exception("per_page cannot be greater than 100")
+
+        page = 0
+        while True:
+            page += 1
+            res = self.get(f"/orgs/{owner}/{repo}/events?page={page}&per_page={per_page}")
+
+            if len(res) == 0:
+                break
+
+            yield res

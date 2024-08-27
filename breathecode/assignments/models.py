@@ -242,6 +242,8 @@ class RepositoryDeletionOrder(models.Model):
         PENDING = "PENDING", "Pending"
         ERROR = "ERROR", "Error"
         DELETED = "DELETED", "Deleted"
+        TRANSFERRED = "TRANSFERRED", "Transferred"
+        TRANSFERRING = "TRANSFERRING", "Transferring"
         CANCELLED = "CANCELLED", "Cancelled"
 
     provider = models.CharField(max_length=15, choices=Provider, default=Provider.GITHUB)
@@ -257,9 +259,6 @@ class RepositoryDeletionOrder(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-
-    # def __str__(self):
-    #     return f'Learnpack event {self.event} {self.status} => Student: {self.student.id}'
 
 
 class RepositoryWhiteList(models.Model):

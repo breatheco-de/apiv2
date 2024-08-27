@@ -2,6 +2,7 @@
 Test /answer
 """
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -17,6 +18,41 @@ from capyc.rest_framework import pytest as capyc
 def setup(db):
     reset_app_cache()
     yield
+
+
+# https://api.github.com/repos/{org}/{repo}/events
+class Event:
+
+    @staticmethod
+    def push(login: str) -> dict[str, Any]:
+        return {
+            "type": "PushEvent",
+            "actor": {
+                "login": login,
+            },
+        }
+
+    @staticmethod
+    def member(login: str) -> dict[str, Any]:
+        return {
+            "type": "MemberEvent",
+            "payload": {
+                "member": {
+                    "login": login,
+                },
+            },
+        }
+
+    @staticmethod
+    def watch(login: str) -> dict[str, Any]:
+        return (
+            {
+                "type": "WatchEvent",
+                "actor": {
+                    "login": login,
+                },
+            },
+        )
 
 
 class ResponseMock:
@@ -137,7 +173,6 @@ def test_two_repos(database: capyc.Database, patch_get):
 
 
 def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, set_datetime, utc_now):
-    from django.utils import timezone
 
     delta = relativedelta(months=2, hours=1)
     model = database.create(
@@ -205,6 +240,20 @@ def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, s
                 "code": 204,
                 "headers": {},
             },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 200,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 200,
+                "headers": {},
+            },
         ]
     )
     command = Command()
@@ -231,8 +280,129 @@ def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, s
     assert database.list_of("assignments.RepositoryWhiteList") == []
 
 
-def test_two_repos__deleting_repositories__got_an_error(database: capyc.Database, patch_get, set_datetime, utc_now):
-    from django.utils import timezone
+def test_two_repos__repository_transferred(database: capyc.Database, patch_get, set_datetime, utc_now):
+
+    delta = relativedelta(months=2, hours=1)
+    model = database.create(
+        academy_auth_settings=1,
+        city=1,
+        country=1,
+        user=1,
+        credentials_github=1,
+        repository_deletion_order=[
+            {
+                "provider": "GITHUB",
+                "repository_name": "curso-nodejs-4geeks",
+                "repository_user": "breatheco-de",
+                "status": "TRANSFERRING",
+                "status_text": None,
+            },
+            {
+                "provider": "GITHUB",
+                "repository_name": "curso-nodejs-4geeks",
+                "repository_user": "4GeeksAcademy",
+                "status": "TRANSFERRING",
+                "status_text": None,
+            },
+        ],
+    )
+    set_datetime(utc_now + delta)
+
+    patch_get(
+        [
+            {
+                "method": "GET",
+                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/repos?page=1&type=forks&per_page=30&sort=created&direction=desc",
+                "expected": [
+                    {
+                        "private": False,
+                        "html_url": "https://github.com/breatheco-de/curso-nodejs-4geeks",
+                        "fork": True,
+                        "created_at": "2024-04-05T19:22:39Z",
+                        "is_template": False,
+                        "allow_forking": True,
+                    },
+                    {
+                        "private": False,
+                        "html_url": "https://github.com/4GeeksAcademy/curso-nodejs-4geeks",
+                        "fork": True,
+                        "created_at": "2024-04-05T19:22:39Z",
+                        "is_template": False,
+                        "allow_forking": True,
+                    },
+                ],
+                "code": 200,
+                "headers": {},
+            },
+            {
+                "method": "DELETE",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 204,
+                "headers": {},
+            },
+            {
+                "method": "DELETE",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 204,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 404,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 404,
+                "headers": {},
+            },
+            {
+                "method": "POST",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks/transfer",
+                "expected": None,
+                "code": 202,
+                "headers": {},
+            },
+            {
+                "method": "POST",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks/transfer",
+                "expected": None,
+                "code": 202,
+                "headers": {},
+            },
+        ]
+    )
+    command = Command()
+    command.handle()
+
+    assert database.list_of("assignments.RepositoryDeletionOrder") == [
+        {
+            "id": 1,
+            "provider": "GITHUB",
+            "repository_name": "curso-nodejs-4geeks",
+            "repository_user": "breatheco-de",
+            "status": "TRANSFERRED",
+            "status_text": None,
+        },
+        {
+            "id": 2,
+            "provider": "GITHUB",
+            "repository_name": "curso-nodejs-4geeks",
+            "repository_user": "4GeeksAcademy",
+            "status": "TRANSFERRED",
+            "status_text": None,
+        },
+    ]
+    assert database.list_of("assignments.RepositoryWhiteList") == []
+
+
+def test_two_repos__repository_does_not_exists(database: capyc.Database, patch_get, set_datetime, utc_now):
 
     delta = relativedelta(months=2, hours=1)
     model = database.create(
@@ -286,6 +456,48 @@ def test_two_repos__deleting_repositories__got_an_error(database: capyc.Database
                 "code": 200,
                 "headers": {},
             },
+            {
+                "method": "DELETE",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 204,
+                "headers": {},
+            },
+            {
+                "method": "DELETE",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 204,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 404,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 404,
+                "headers": {},
+            },
+            {
+                "method": "POST",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks/transfer",
+                "expected": None,
+                "code": 202,
+                "headers": {},
+            },
+            {
+                "method": "POST",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks/transfer",
+                "expected": None,
+                "code": 202,
+                "headers": {},
+            },
         ]
     )
     command = Command()
@@ -298,7 +510,7 @@ def test_two_repos__deleting_repositories__got_an_error(database: capyc.Database
             "repository_name": "curso-nodejs-4geeks",
             "repository_user": "breatheco-de",
             "status": "ERROR",
-            "status_text": "Unable to communicate with Github API for /repos/breatheco-de/curso-nodejs-4geeks, error: 404",
+            "status_text": "Repository does not exist: breatheco-de/curso-nodejs-4geeks",
         },
         {
             "id": 2,
@@ -306,7 +518,223 @@ def test_two_repos__deleting_repositories__got_an_error(database: capyc.Database
             "repository_name": "curso-nodejs-4geeks",
             "repository_user": "4GeeksAcademy",
             "status": "ERROR",
-            "status_text": "Unable to communicate with Github API for /repos/4GeeksAcademy/curso-nodejs-4geeks, error: 404",
+            "status_text": "Repository does not exist: 4GeeksAcademy/curso-nodejs-4geeks",
+        },
+    ]
+    assert database.list_of("assignments.RepositoryWhiteList") == []
+
+
+def test_two_repos__repository_does_not_exists____(database: capyc.Database, patch_get, set_datetime, utc_now):
+
+    delta = relativedelta(months=2, hours=1)
+    model = database.create(
+        academy_auth_settings=1,
+        city=1,
+        country=1,
+        user=1,
+        credentials_github=1,
+        repository_deletion_order=[
+            {
+                "provider": "GITHUB",
+                "repository_name": "curso-nodejs-4geeks",
+                "repository_user": "breatheco-de",
+                "status": "PENDING",
+                "status_text": None,
+            },
+            {
+                "provider": "GITHUB",
+                "repository_name": "curso-nodejs-4geeks",
+                "repository_user": "4GeeksAcademy",
+                "status": "PENDING",
+                "status_text": None,
+            },
+        ],
+    )
+    set_datetime(utc_now - delta)
+
+    patch_get(
+        [
+            {
+                "method": "GET",
+                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/repos?page=1&type=forks&per_page=30&sort=created&direction=desc",
+                "expected": [
+                    {
+                        "private": False,
+                        "html_url": "https://github.com/breatheco-de/curso-nodejs-4geeks",
+                        "fork": True,
+                        "created_at": "2024-04-05T19:22:39Z",
+                        "is_template": False,
+                        "allow_forking": True,
+                    },
+                    {
+                        "private": False,
+                        "html_url": "https://github.com/4GeeksAcademy/curso-nodejs-4geeks",
+                        "fork": True,
+                        "created_at": "2024-04-05T19:22:39Z",
+                        "is_template": False,
+                        "allow_forking": True,
+                    },
+                ],
+                "code": 200,
+                "headers": {},
+            },
+            {
+                "method": "DELETE",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 204,
+                "headers": {},
+            },
+            {
+                "method": "DELETE",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 204,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 200,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 200,
+                "headers": {},
+            },
+            {
+                "method": "POST",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks/transfer",
+                "expected": None,
+                "code": 202,
+                "headers": {},
+            },
+            {
+                "method": "POST",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks/transfer",
+                "expected": None,
+                "code": 202,
+                "headers": {},
+            },
+        ]
+    )
+    command = Command()
+    command.handle()
+
+    assert database.list_of("assignments.RepositoryDeletionOrder") == [
+        {
+            "id": 1,
+            "provider": "GITHUB",
+            "repository_name": "curso-nodejs-4geeks",
+            "repository_user": "breatheco-de",
+            "status": "ERROR",
+            "status_text": "Repository does not exist: breatheco-de/curso-nodejs-4geeks",
+        },
+        {
+            "id": 2,
+            "provider": "GITHUB",
+            "repository_name": "curso-nodejs-4geeks",
+            "repository_user": "4GeeksAcademy",
+            "status": "ERROR",
+            "status_text": "Repository does not exist: 4GeeksAcademy/curso-nodejs-4geeks",
+        },
+    ]
+    assert database.list_of("assignments.RepositoryWhiteList") == []
+
+
+def test_two_repos__deleting_repositories__got_an_error(database: capyc.Database, patch_get, set_datetime, utc_now):
+
+    delta = relativedelta(months=2, hours=1)
+    model = database.create(
+        academy_auth_settings=1,
+        city=1,
+        country=1,
+        user=1,
+        credentials_github=1,
+        repository_deletion_order=[
+            {
+                "provider": "GITHUB",
+                "repository_name": "curso-nodejs-4geeks",
+                "repository_user": "breatheco-de",
+                "status": "PENDING",
+                "status_text": None,
+            },
+            {
+                "provider": "GITHUB",
+                "repository_name": "curso-nodejs-4geeks",
+                "repository_user": "4GeeksAcademy",
+                "status": "PENDING",
+                "status_text": None,
+            },
+        ],
+    )
+    set_datetime(utc_now + delta)
+
+    patch_get(
+        [
+            {
+                "method": "GET",
+                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/repos?page=1&type=forks&per_page=30&sort=created&direction=desc",
+                "expected": [
+                    {
+                        "private": False,
+                        "html_url": "https://github.com/breatheco-de/curso-nodejs-4geeks",
+                        "fork": True,
+                        "created_at": "2024-04-05T19:22:39Z",
+                        "is_template": False,
+                        "allow_forking": True,
+                    },
+                    {
+                        "private": False,
+                        "html_url": "https://github.com/4GeeksAcademy/curso-nodejs-4geeks",
+                        "fork": True,
+                        "created_at": "2024-04-05T19:22:39Z",
+                        "is_template": False,
+                        "allow_forking": True,
+                    },
+                ],
+                "code": 200,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 404,
+                "headers": {},
+            },
+            {
+                "method": "HEAD",
+                "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
+                "expected": None,
+                "code": 404,
+                "headers": {},
+            },
+        ]
+    )
+    command = Command()
+    command.handle()
+
+    assert database.list_of("assignments.RepositoryDeletionOrder") == [
+        {
+            "id": 1,
+            "provider": "GITHUB",
+            "repository_name": "curso-nodejs-4geeks",
+            "repository_user": "breatheco-de",
+            "status": "ERROR",
+            "status_text": "Repository does not exist: breatheco-de/curso-nodejs-4geeks",
+        },
+        {
+            "id": 2,
+            "provider": "GITHUB",
+            "repository_name": "curso-nodejs-4geeks",
+            "repository_user": "4GeeksAcademy",
+            "status": "ERROR",
+            "status_text": "Repository does not exist: 4GeeksAcademy/curso-nodejs-4geeks",
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
@@ -789,6 +1217,20 @@ def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_assets(
                         "allow_forking": True,
                     },
                 ],
+                "code": 200,
+                "headers": {},
+            },
+            {
+                "method": "GET",
+                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/events?page=1&per_page=30",
+                "expected": [],
+                "code": 200,
+                "headers": {},
+            },
+            {
+                "method": "GET",
+                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/events?page=2&per_page=30",
+                "expected": [],
                 "code": 200,
                 "headers": {},
             },
