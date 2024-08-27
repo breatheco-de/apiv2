@@ -167,6 +167,7 @@ class Service(AbstractAsset):
         EVENT_JOIN = ("EVENT_JOIN", "Event join")
         JOIN_MENTORSHIP = ("JOIN_MENTORSHIP", "Join mentorship")
         READ_LESSON = ("READ_LESSON", "Read lesson")
+        AI_INTERACTION = ("AI_INTERACTION", "AI Interaction")
         NO_SET = ("NO_SET", "No set")
 
     groups = models.ManyToManyField(
@@ -1516,17 +1517,12 @@ class Consumable(AbstractServiceItem):
         return f"{self.user.email}: {self.service_item.service.slug} ({self.how_many})"
 
 
-PENDING = "PENDING"
-DONE = "DONE"
-CANCELLED = "CANCELLED"
-CONSUMPTION_SESSION_STATUS = [
-    (PENDING, "Pending"),
-    (DONE, "Done"),
-    (CANCELLED, "Cancelled"),
-]
-
-
 class ConsumptionSession(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        DONE = "DONE", "Done"
+        CANCELLED = "CANCELLED", "Cancelled"
+
     operation_code = models.SlugField(
         default="default", help_text="Code that identifies the operation, it could be repeated"
     )
@@ -1535,9 +1531,7 @@ class ConsumptionSession(models.Model):
     eta = models.DateTimeField(help_text="Estimated time of arrival")
     duration = models.DurationField(blank=False, default=timedelta, help_text="Duration of the session")
     how_many = models.FloatField(default=0, help_text="How many units of this service can be used")
-    status = models.CharField(
-        max_length=12, choices=CONSUMPTION_SESSION_STATUS, default=PENDING, help_text="Status of the session"
-    )
+    status = models.CharField(max_length=12, choices=Status, default=Status.PENDING, help_text="Status of the session")
     was_discounted = models.BooleanField(default=False, help_text="Was it discounted")
 
     request = models.JSONField(

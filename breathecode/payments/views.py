@@ -1157,6 +1157,9 @@ class CancelConsumptionView(APIView):
         consumable = session.consumable
         reimburse_service_units.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
 
+        session.status = session.Status.CANCELLED
+        session.save()
+
         return Response({"id": session.id, "status": "reversed"}, status=status.HTTP_200_OK)
 
 
@@ -2082,7 +2085,12 @@ class AcademyPlanSubscriptionView(APIView):
 
         request.data["plans"] = [plan_slug]
 
-        invoice, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+        try:
+            invoice, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+
+        except Exception as e:
+            proof.delete()
+            raise e
 
         s1 = GetInvoiceSerializer(invoice, many=False)
         s2 = GetCouponSerializer(coupons, many=True)
