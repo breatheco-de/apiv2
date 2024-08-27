@@ -198,10 +198,7 @@ def test_assets_expand_readme(bc: Breathecode, client):
             model.asset,
             data={
                 "updated_at": bc.datetime.to_iso_string(model.asset.updated_at),
-                "readme": {
-                    "decoded": asset_readme["decoded"],
-                    "html": asset_readme["html"],
-                },
+                "readme": {"decoded": asset_readme["decoded"], "html": asset_readme["html"]},
             },
         )
     ]
