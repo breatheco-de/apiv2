@@ -1,3 +1,4 @@
+import re
 from urllib.parse import urlparse
 
 from django.utils import timezone
@@ -444,10 +445,31 @@ class AssetExpandableSerializer(AssetMidSerializer):
                     elem["technologies"] = self.format_technologies(obj)
 
                 if "readme" in self.expand:
-                    readme = obj.get_readme(parse=True, remove_frontmatter=True)
+                    url = obj.readme_url
+                    if url is None and obj.asset_type == "LESSON":
+                        url = obj.url
+
+                    params = {}
+                    extension = None
+                    if url is not None:
+                        # Extract the extension of the file
+                        ext_extractor = re.compile(r"(?:\.([^.]+))?$")
+                        match = ext_extractor.search(url)
+                        extension = match.group(1)
+
+                    if extension is not None and extension != "ipynb":
+                        params["parse"] = True
+                        params["remove_frontmatter"] = True
+
+                    readme = obj.get_readme(**params)
+
+                    html = obj.html
+                    if html is None:
+                        html = readme["html"] if "html" in readme else None
+
                     elem["readme"] = {
                         "decoded": readme["decoded"] if "decoded" in readme else None,
-                        "html": readme["html"] if "html" in readme else None,
+                        "html": html,
                     }
 
         return data

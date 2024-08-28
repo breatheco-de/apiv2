@@ -176,14 +176,48 @@ def test_assets_expand_technologies(bc: Breathecode, client):
     assert bc.database.list_of("registry.Asset") == bc.format.to_dict(model.asset)
 
 
-def test_assets_expand_readme(bc: Breathecode, client):
+def test_assets_expand_readme_no_readme_url(bc: Breathecode, client):
 
     technology = {"slug": "learn-react", "title": "Learn React"}
+
     model = bc.database.create(
         asset_technology=(1, technology),
         asset=(
             1,
             {"technologies": 1, "status": "PUBLISHED", "readme": readme},
+        ),
+    )
+
+    url = reverse_lazy("registry:asset") + f"?expand=readme"
+    response = client.get(url)
+    json = response.json()
+
+    asset_readme = model.asset.get_readme()
+
+    expected = [
+        get_mid_serializer(
+            model.asset,
+            data={
+                "updated_at": bc.datetime.to_iso_string(model.asset.updated_at),
+                "readme": {"decoded": asset_readme["decoded"], "html": None},
+            },
+        )
+    ]
+
+    assert json == expected
+    assert bc.database.list_of("registry.Asset") == [bc.format.to_dict(model.asset)]
+
+
+def test_assets_expand_readme(bc: Breathecode, client):
+
+    technology = {"slug": "learn-react", "title": "Learn React"}
+    readme_url = "https://github.com/4GeeksAcademy/03-probability-binomial-with-python.md"
+
+    model = bc.database.create(
+        asset_technology=(1, technology),
+        asset=(
+            1,
+            {"technologies": 1, "status": "PUBLISHED", "readme": readme, "readme_url": readme_url},
         ),
     )
 
@@ -207,14 +241,50 @@ def test_assets_expand_readme(bc: Breathecode, client):
     assert bc.database.list_of("registry.Asset") == [bc.format.to_dict(model.asset)]
 
 
-def test_assets_expand_readme_and_technologies(bc: Breathecode, client):
+def test_assets_expand_readme_ipynb(bc: Breathecode, client):
 
     technology = {"slug": "learn-react", "title": "Learn React"}
+    readme_url_ipynb = "https://github.com/4GeeksAcademy/03-probability-binomial-with-python.ipynb"
+    html = "<h1>hello</h1>"
+
     model = bc.database.create(
         asset_technology=(1, technology),
         asset=(
             1,
-            {"technologies": 1, "status": "PUBLISHED", "readme": readme},
+            {"technologies": 1, "status": "PUBLISHED", "readme": readme, "readme_url": readme_url_ipynb, "html": html},
+        ),
+    )
+
+    url = reverse_lazy("registry:asset") + f"?expand=readme"
+    response = client.get(url)
+    json = response.json()
+
+    asset_readme = model.asset.get_readme()
+    print(asset_readme)
+
+    expected = [
+        get_mid_serializer(
+            model.asset,
+            data={
+                "updated_at": bc.datetime.to_iso_string(model.asset.updated_at),
+                "readme": {"decoded": asset_readme["decoded"], "html": model.asset.html},
+            },
+        )
+    ]
+
+    assert json == expected
+    assert bc.database.list_of("registry.Asset") == [bc.format.to_dict(model.asset)]
+
+
+def test_assets_expand_readme_and_technologies(bc: Breathecode, client):
+
+    technology = {"slug": "learn-react", "title": "Learn React"}
+    readme_url = "https://github.com/4GeeksAcademy/03-probability-binomial-with-python.md"
+    model = bc.database.create(
+        asset_technology=(1, technology),
+        asset=(
+            1,
+            {"technologies": 1, "status": "PUBLISHED", "readme": readme, "readme_url": readme_url},
         ),
     )
 
