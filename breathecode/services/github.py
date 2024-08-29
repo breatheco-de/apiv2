@@ -57,11 +57,6 @@ class Github:
             "Authorization": "Bearer " + self.token,
             "Content-type": "application/json",
         }
-        if method_name in ["GET", "DELETE"]:
-            params = {
-                # 'token': self.token,
-                **params,
-            }
 
         url = self.HOST + action_name
         resp = requests.request(method=method_name, url=url, headers=self.headers, params=params, json=json, timeout=2)
@@ -174,6 +169,9 @@ class Github:
 
             yield res
 
+            if len(res) < per_page:
+                break
+
     def delete_org_repo(self, owner: str, repo: str):
         res = self.delete(f"/repos/{owner}/{repo}")
         return res
@@ -211,3 +209,6 @@ class Github:
                 break
 
             yield res
+
+            if len(res) < per_page:
+                break

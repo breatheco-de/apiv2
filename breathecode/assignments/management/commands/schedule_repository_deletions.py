@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
@@ -58,15 +58,41 @@ class Command(BaseCommand):
             for index in indexes:
                 value = value[index]
             return True
-        except KeyError:
+        except Exception:
             return False
 
+    def how_many_added_members(self, events: list[dict[str, Any]]) -> int:
+        return len(
+            [
+                event
+                for event in events
+                if self.check_path(event, "type")
+                and self.check_path(event, "payload", "action")
+                and event["type"] == "MemberEvent"
+                and event["payload"]["action"] == "added"
+            ]
+        )
+
     def get_username(self, owner: str, repo: str) -> Optional[str]:
+        r = repo
         repo = repo.lower()
-        for events in self.github_client.get_repo_events(owner, repo):
+        index = -1
+        for events in self.github_client.get_repo_events(owner, r):
+            index += 1
             for event in events:
                 if self.check_path(event, "type") is False:
                     continue
+
+                if (
+                    index == 0
+                    and event["type"] == "MemberEvent"
+                    and len(events) < 30
+                    and self.check_path(event, "payload", "action")
+                    and self.how_many_added_members(events) == 1
+                    and self.check_path(event, "payload", "member", "login")
+                    and event["payload"]["action"] == "added"
+                ):
+                    return event["payload"]["member"]["login"]
 
                 if (
                     event["type"] == "watchEvent"
@@ -278,22 +304,20 @@ class Command(BaseCommand):
                 break
 
             for deletion_order in qs:
+                ids.append(deletion_order.id)
                 try:
                     if self.github_client.repo_exists(
                         owner=deletion_order.repository_user, repo=deletion_order.repository_name
                     ):
                         new_owner = self.get_username(deletion_order.repository_user, deletion_order.repository_name)
-                        if new_owner:
+                        if not new_owner:
                             continue
 
-                        res = self.github_client.transfer_repo(repo=deletion_order.repository_name, new_owner=new_owner)
-                        if res["status"] == 202:
-                            deletion_order.status = RepositoryDeletionOrder.Status.TRANSFERRING
-                            deletion_order.save()
+                        self.github_client.transfer_repo(repo=deletion_order.repository_name, new_owner=new_owner)
+                        deletion_order.status = RepositoryDeletionOrder.Status.TRANSFERRING
+                        deletion_order.save()
 
                 except Exception as e:
                     deletion_order.status = RepositoryDeletionOrder.Status.ERROR
                     deletion_order.status_text = str(e)
                     deletion_order.save()
-
-                ids.append(deletion_order.id)
