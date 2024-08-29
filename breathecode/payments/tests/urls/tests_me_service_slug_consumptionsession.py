@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from rest_framework import status
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.rest_framework.pytest import fixtures as rfx
+from capyc.pytest.rest_framework import fixtures as rfx
 
 
 @pytest.fixture(autouse=True)

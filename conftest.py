@@ -10,19 +10,19 @@ from rest_framework.test import APIClient
 
 from breathecode.notify.utils.hook_manager import HookManagerClass
 from breathecode.utils.exceptions import TestError
-from capyc.core.pytest.fixtures import Random
-from capyc.django.pytest.fixtures.signals import Signals
+from capyc.pytest.core.fixtures import Random
+from capyc.pytest.django.fixtures.signals import Signals
 
 # set ENV as test before run django
 os.environ["ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 pytest_plugins = (
-    "capyc.core.pytest",
-    "capyc.newrelic.pytest",
-    "capyc.django.pytest",
-    "capyc.rest_framework.pytest",
-    "capyc.circuitbreaker.pytest",
+    "capyc.pytest.core",
+    "capyc.pytest.newrelic",
+    "capyc.pytest.django",
+    "capyc.pytest.rest_framework",
+    "capyc.pytest.circuitbreaker",
 )
 
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
