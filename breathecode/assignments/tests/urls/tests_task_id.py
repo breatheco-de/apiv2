@@ -375,13 +375,13 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch("breathecode.assignments.tasks.teacher_task_notification", MagicMock())
     @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
-    def test_task_id__put__with_one_task__with_revision_status__teacher_auth(self):
+    def test_task_id__put__with_one_task__with_revision_status__teacher_auth__good_statuses(self):
         from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
-        statuses = ["PENDING", "APPROVED", "REJECTED", "IGNORED"]
-        for index in range(0, 4):
+        statuses = ["PENDING", "APPROVED", "REJECTED"]
+        for index in range(0, 3):
             current_status = statuses[index]
-            next_status = statuses[index - 1 if index > 0 else 3]
+            next_status = statuses[index - 1 if index > 0 else 2]
             task = {"revision_status": current_status, "user_id": (index * 2) + 1, "task_status": "DONE"}
             cohort_users = [
                 {
@@ -436,6 +436,74 @@ class MediaTestSuite(AssignmentsTestCase):
             # teardown
             self.bc.database.delete("assignments.Task")
             student_task_notification.delay.call_args_list = []
+            activity_tasks.add_activity.delay.call_args_list = []
+
+    @patch("breathecode.assignments.tasks.student_task_notification", MagicMock())
+    @patch("breathecode.assignments.tasks.teacher_task_notification", MagicMock())
+    @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
+    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    def test_task_id__put__with_one_task__with_revision_status__teacher_auth__bad_statuses(self):
+        from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
+
+        another_statuses = ["PENDING", "APPROVED", "REJECTED"]
+        statuses = ["IGNORED"]
+        statuses = ["PENDING", "APPROVED", "REJECTED"]
+        for index in range(0, 3):
+            current_status = statuses[index]
+            next_status = "IGNORED"
+            task = {"revision_status": current_status, "user_id": (index * 2) + 1, "task_status": "DONE"}
+            cohort_users = [
+                {
+                    "role": "STUDENT",
+                    "user_id": (index * 2) + 1,
+                },
+                {
+                    "role": "TEACHER",
+                    "user_id": (index * 2) + 2,
+                },
+            ]
+            model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
+            model2 = self.bc.database.create(cohort=1)
+            self.bc.request.authenticate(model.user[1])
+
+            url = reverse_lazy("assignments:task_id", kwargs={"task_id": index + 1})
+            data = {
+                "title": "They killed kenny",
+                "revision_status": next_status,
+            }
+            start = self.bc.datetime.now()
+            response = self.client.put(url, data, format="json")
+            end = self.bc.datetime.now()
+
+            json = response.json()
+            updated_at = self.bc.datetime.from_iso_string(json["updated_at"])
+            self.bc.check.datetime_in_range(start, end, updated_at)
+
+            del json["updated_at"]
+
+            expected = put_serializer(self, model.task, data=data)
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            self.assertEqual(self.bc.database.list_of("assignments.Task"), [task_row(self, model.task, data=data)])
+            self.assertEqual(student_task_notification.delay.call_args_list, [])
+            self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+            self.bc.check.calls(
+                activity_tasks.add_activity.delay.call_args_list,
+                [
+                    call(
+                        (index * 2) + 2,
+                        "assignment_review_status_updated",
+                        related_type="assignments.Task",
+                        related_id=index + 1,
+                    ),
+                ],
+            )
+
+            # teardown
+            self.bc.database.delete("assignments.Task")
             activity_tasks.add_activity.delay.call_args_list = []
 
     @patch("breathecode.assignments.tasks.student_task_notification", MagicMock())

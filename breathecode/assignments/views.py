@@ -1,7 +1,7 @@
 import hashlib
 import logging
 import os
-from slugify import slugify
+
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
 from circuitbreaker import CircuitBreakerError
@@ -15,6 +15,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from slugify import slugify
 
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
@@ -713,7 +714,7 @@ class TaskMeView(APIView):
             if serializer.is_valid():
                 if not only_validate:
                     serializer.save()
-                    if _req.user.id != item.user.id:
+                    if _req.user.id != item.user.id and item.revision_status != "IGNORED":
                         tasks.student_task_notification.delay(item.id)
                 return status.HTTP_200_OK, serializer.data
             return status.HTTP_400_BAD_REQUEST, serializer.errors
