@@ -6,13 +6,13 @@ import tempfile
 from typing import Callable
 from unittest.mock import MagicMock, PropertyMock, call
 
+import capyc.pytest as capy
 import pytest
 from django.core.files.uploadedfile import InMemoryUploadedFile, SimpleUploadedFile
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
 from breathecode.services.google_cloud import File, Storage
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.fixture

@@ -2,11 +2,11 @@
 Test cases for /academy/:id/member/:id
 """
 
-import os
 import random
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
+import capyc.pytest as capy
 import pytest
 import timeago
 from django.core.handlers.wsgi import WSGIRequest
@@ -21,7 +21,6 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.payments import tasks
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.tests.mocks.requests import apply_requests_request_mock
-from capyc.rest_framework.pytest import fixtures as fx
 
 from ..mixins import MentorshipTestCase
 
@@ -3496,7 +3495,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
     MagicMock(side_effect=get_empty_mentorship_session_queryset),
 )
 def test__post__auth__no_saas__finantial_status_no_late(
-    bc: Breathecode, client: fx.Client, academy, cohort, cohort_user
+    bc: Breathecode, client: capy.Client, academy, cohort, cohort_user
 ):
 
     mentor_profile_cases = [
@@ -3643,7 +3642,7 @@ def test__post__auth__no_saas__finantial_status_no_late(
     "breathecode.mentorship.actions.get_pending_sessions_or_create",
     MagicMock(side_effect=get_empty_mentorship_session_queryset),
 )
-def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx.Client, academy, cohort):
+def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: capy.Client, academy, cohort):
 
     mentor_profile_cases = [
         {

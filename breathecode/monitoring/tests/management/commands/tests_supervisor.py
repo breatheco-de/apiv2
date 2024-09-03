@@ -1,11 +1,11 @@
 from datetime import timedelta
 from unittest.mock import MagicMock, call
 
+import capyc.pytest.core.fixtures as cfx
+import capyc.pytest.django.fixtures as dfx
 import pytest
 from asgiref.sync import sync_to_async
 
-import capyc.pytest.core.fixtures as cfx
-import capyc.pytest.django.fixtures as dfx
 from breathecode.monitoring.models import Supervisor as SupervisorModel
 from breathecode.monitoring.models import SupervisorIssue
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode

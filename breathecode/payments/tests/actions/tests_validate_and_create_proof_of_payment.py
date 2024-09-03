@@ -4,15 +4,15 @@ Test /answer
 
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
+from capyc.rest_framework.exceptions import ValidationException
 from django.core.handlers.wsgi import WSGIRequest
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from breathecode.payments.actions import validate_and_create_proof_of_payment
 from breathecode.payments.tasks import set_proof_of_payment_confirmation_url
-from capyc.rest_framework import pytest as capy
-from capyc.rest_framework.exceptions import ValidationException
 
 UTC_NOW = timezone.now()
 

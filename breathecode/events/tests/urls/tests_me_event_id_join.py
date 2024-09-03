@@ -3,6 +3,7 @@ import random
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
+import capyc.pytest as capy
 import pytest
 from django.template import loader
 from django.urls.base import reverse_lazy
@@ -11,7 +12,6 @@ from django.utils import timezone
 from breathecode.events.caches import EventCache
 from breathecode.payments import tasks
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.rest_framework.pytest import fixtures as fx
 
 from ..mixins.new_events_tests_case import EventTestCase
 
@@ -1557,7 +1557,7 @@ class AcademyEventTestSuite(EventTestCase):
 @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
 @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
 def test__post__auth__no_saas__finantial_status_no_late(
-    bc: Breathecode, client: fx.Client, academy, cohort, cohort_user
+    bc: Breathecode, client: capy.Client, academy, cohort, cohort_user
 ):
     service = {"consumer": "EVENT_JOIN"}
     online_meeting_url = bc.fake.url()
@@ -1643,7 +1643,7 @@ def test__post__auth__no_saas__finantial_status_no_late(
 @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
 @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
 @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
-def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: fx.Client, academy, cohort):
+def test__post__auth__no_saas__finantial_status_late(bc: Breathecode, client: capy.Client, academy, cohort):
     service = {"consumer": "EVENT_JOIN"}
     online_meeting_url = bc.fake.url()
     delta = timedelta(seconds=random.randint(1, 1000))

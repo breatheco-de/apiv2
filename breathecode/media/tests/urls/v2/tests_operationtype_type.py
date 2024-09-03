@@ -2,12 +2,11 @@
 Test /answer
 """
 
+import capyc.pytest as capy
 import pytest
 from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
-
-from capyc.rest_framework import pytest as capy
 
 UTC_NOW = timezone.now()
 

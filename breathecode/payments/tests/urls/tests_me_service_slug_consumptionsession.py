@@ -1,12 +1,12 @@
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
+import capyc.pytest as capy
 import pytest
 from django.urls import reverse_lazy
 from rest_framework import status
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.pytest.rest_framework import fixtures as rfx
 
 
 @pytest.fixture(autouse=True)
@@ -52,7 +52,7 @@ def random_duration():
     return timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
 
-def test_no_auth(bc: Breathecode, client: rfx.Client):
+def test_no_auth(bc: Breathecode, client: capy.Client):
     url = reverse_lazy("payments:me_service_slug_consumptionsession", kwargs={"service_slug": "my-service"})
 
     response = client.put(url)
@@ -65,7 +65,7 @@ def test_no_auth(bc: Breathecode, client: rfx.Client):
     assert bc.database.list_of("payments.ConsumptionSession") == []
 
 
-def test_no_consumables(bc: Breathecode, client: rfx.Client):
+def test_no_consumables(bc: Breathecode, client: capy.Client):
     url = reverse_lazy("payments:me_service_slug_consumptionsession", kwargs={"service_slug": "my-service"})
 
     model = bc.database.create(user=1)
@@ -81,7 +81,7 @@ def test_no_consumables(bc: Breathecode, client: rfx.Client):
     assert bc.database.list_of("payments.ConsumptionSession") == []
 
 
-def test_created(bc: Breathecode, client: rfx.Client, utc_now):
+def test_created(bc: Breathecode, client: capy.Client, utc_now):
     duration = random_duration()
     model = bc.database.create(user=1, consumable=1, service={"session_duration": duration, "type": "VOID"})
     url = reverse_lazy("payments:me_service_slug_consumptionsession", kwargs={"service_slug": model.service.slug})
@@ -109,7 +109,7 @@ def test_created(bc: Breathecode, client: rfx.Client, utc_now):
     ]
 
 
-def test_cached(bc: Breathecode, client: rfx.Client, utc_now, fake):
+def test_cached(bc: Breathecode, client: capy.Client, utc_now, fake):
     slug = fake.slug()
     duration = random_duration()
     model = bc.database.create(

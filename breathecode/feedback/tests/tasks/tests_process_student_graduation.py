@@ -5,11 +5,11 @@ Test /academy/survey
 import logging
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 from django.utils import timezone
 
 from breathecode.feedback.tasks import process_student_graduation
-from capyc.rest_framework import pytest as capy
 
 now = timezone.now()
 

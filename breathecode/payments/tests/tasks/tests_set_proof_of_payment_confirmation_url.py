@@ -2,11 +2,11 @@ from logging import Logger
 from typing import Generator
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.media import settings
 from breathecode.payments import tasks
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.fixture(autouse=True)
