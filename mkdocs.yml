@@ -25,6 +25,7 @@ theme:
 # this define the order of menu
 nav:
     - "index.md"
+    - "4geeks-libraries.md"
     - Getting started:
           # which version of python install
           - Set up:
