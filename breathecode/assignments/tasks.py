@@ -190,3 +190,63 @@ def set_cohort_user_assignments(task_id: int):
         logger.error(str(e))
 
     logger.info("History log saved")
+
+
+@shared_task(bind=False, priority=TaskPriority.ACADEMY.value)
+def sync_cohort_user_tasks(cohort_user_id: int):
+    logger.info(f"Executing sync_cohort_user_tasks for cohort user {cohort_user_id}")
+    cohort_user = CohortUser.objects.filter(id=cohort_user_id).first()
+
+    if not cohort_user:
+        logger.error("Cohort user not found")
+        return
+
+    cohort = cohort_user.cohort
+    syllabus_json = cohort.syllabus_version.json
+
+    all_cohort_tasks = []
+
+    def parse_task(type, assignment):
+        return {
+            "task_type": type,
+            "cohort": cohort.id,
+            "user": cohort_user.user.id,
+            "associated_slug": assignment["slug"],
+            "title": assignment["title"],
+        }
+
+    for day in syllabus_json["days"]:
+
+        readings = day["lessons"] if "lessons" in day else []
+        replits = day["replits"] if "replits" in day else []
+        assignments = day["assignments"] if "assignments" in day else []
+        answers = day["quizzes"] if "quizzes" in day else []
+
+        for r in readings:
+            all_cohort_tasks.append(parse_task("LESSON", r))
+
+        for r in replits:
+            all_cohort_tasks.append(parse_task("EXERCISE", r))
+
+        for r in assignments:
+            all_cohort_tasks.append(parse_task("PROJECT", r))
+
+        for r in answers:
+            all_cohort_tasks.append(parse_task("QUIZ", r))
+
+    for task in all_cohort_tasks:
+        user_task = Task.objects.filter(
+            user=cohort_user.user, cohort=cohort, associated_slug=task["associated_slug"], task_type=task["task_type"]
+        ).first()
+
+        if user_task is None:
+            user_task = Task(
+                user=cohort_user.user,
+                cohort=cohort,
+                associated_slug=task["associated_slug"],
+                title=task["title"],
+                task_type=task["task_type"],
+            )
+            user_task.save()
+
+    logger.info(f"Cohort User {cohort_user_id} synced successfully")
