@@ -338,14 +338,15 @@ class AcademyAuthSettings(models.Model):
         null=True,
         help_text="Github auth token for this user will be used for any admin call to the google cloud api, for example: inviting users to the academy",
     )
-    google_cloud_owner = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        blank=True,
-        default=None,
-        null=True,
-        help_text="Google auth token for this user will be used for any admin call to the google cloud api, for example: creating classroom video calls",
-    )
+    # TODO: uncomment this
+    # google_cloud_owner = models.ForeignKey(
+    #     User,
+    #     on_delete=models.SET_NULL,
+    #     blank=True,
+    #     default=None,
+    #     null=True,
+    #     help_text="Google auth token for this user will be used for any admin call to the google cloud api, for example: creating classroom video calls",
+    # )
     github_default_team_ids = models.CharField(
         max_length=40,
         blank=True,
