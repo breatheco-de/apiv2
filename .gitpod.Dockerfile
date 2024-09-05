@@ -31,6 +31,9 @@ RUN /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/data start && \
     /usr/lib/postgresql/16/bin/psql -c "CREATE DATABASE gitpod OWNER gitpod;" && \
     /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/data stop
 
+USER root
+RUn rm /usr/lib/postgresql/12 -rf
+
 # remove PIP_USER environment
 USER gitpod
 
