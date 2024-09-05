@@ -73,7 +73,8 @@ nav:
                 - "advanced/celery/routing.md"
                 - "advanced/celery/settings.md"
     - Testing:
-          - "testing/runing-tests.md"
+          - "testing/running-tests.md"
+          - "testing/parametrize.md"
           - Mixins:
                 - "bc": "testing/mixins/bc.md"
                 - "bc.fake": "testing/mixins/bc-fake.md"
@@ -87,6 +88,8 @@ nav:
           - Mocks:
                 - "testing/mocks/using-mocks.md"
                 - "testing/mocks/mock-requests.md"
+    - Workflows:
+            - "workflows/file-uploading.md"
     - Infrastructure:
           - "infrastructure/journal.md"
           - "infrastructure/web.md"

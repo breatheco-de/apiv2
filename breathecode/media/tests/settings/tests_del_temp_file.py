@@ -4,11 +4,11 @@ Test /answer
 
 from unittest.mock import MagicMock, PropertyMock, call
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.media.settings import del_temp_file
 from breathecode.services.google_cloud import File, Storage
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.fixture(autouse=True)

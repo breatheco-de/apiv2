@@ -56,6 +56,7 @@ google-apps-meet = "*"
 google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
 black = "*"
+capy-core = {extras = ["pytest"], version = "*"}
 
 [packages]
 django = "*"
@@ -128,19 +129,21 @@ brotli = "*"
 circuitbreaker = "*"
 kombu = "*"
 zstandard = "*"
-psycopg = {extras = ["pool", "binary"], version = "*"}
+psycopg = {extras = ["pool", "binary"] }
 cryptography = "*"
 adrf = "*"
 uvicorn = "*"
 django-minify-html = "*"
-django-storages = {extras = ["google"], version = "*"}
-aiohttp = {extras = ["speedups"], version = "*"}
+django-storages = {extras = ["google"] }
+aiohttp = {extras = ["speedups"] }
 aiodns = "*"
 eventlet = "*"
-linked-services = {extras = ["django", "aiohttp", "requests"], version = "*"}
-celery-task-manager = {extras = ["django"], version = "*"}
-django-sql-explorer = {extras = ["xls"], version = "*"}
+linked-services = {extras = ["django", "aiohttp", "requests"] }
+celery-task-manager = {extras = ["django"] }
+django-sql-explorer = {extras = ["xls"] }
 contextlib2 = "*"
 google-apps-meet = "*"
 google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
+capy-core = {extras = ["django"], version = "*"}
+google-api-python-client = "*"

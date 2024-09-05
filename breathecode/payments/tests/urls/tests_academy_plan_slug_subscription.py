@@ -2,12 +2,12 @@ import random
 from datetime import timedelta
 from unittest.mock import MagicMock
 
+import capyc.pytest as capy
 import pytest
 from django.urls import reverse_lazy
 from rest_framework import status
 from rest_framework.request import Request
 
-import capyc.rest_framework.pytest as capy
 from breathecode.payments import actions
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
