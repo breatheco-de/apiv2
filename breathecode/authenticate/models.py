@@ -336,7 +336,8 @@ class AcademyAuthSettings(models.Model):
         blank=True,
         default=None,
         null=True,
-        help_text="Github auth token for this user will be used for any admin call to the google cloud api, for example: inviting users to the academy",
+        # TODO: uncomment this
+        # help_text="Github auth token for this user will be used for any admin call to the google cloud api, for example: inviting users to the academy",
     )
     # TODO: uncomment this
     # google_cloud_owner = models.ForeignKey(
