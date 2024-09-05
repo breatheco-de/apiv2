@@ -6,12 +6,12 @@ from datetime import datetime, timedelta
 from typing import Callable
 from unittest.mock import MagicMock
 
+import capyc.pytest as capy
 import pytest
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.fixture(autouse=True)

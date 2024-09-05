@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 from logging import Logger
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 from asgiref.sync import sync_to_async
 
-import capyc.django.pytest.fixtures as dfx
 from breathecode.monitoring.models import Supervisor as SupervisorModel
 from breathecode.monitoring.models import SupervisorIssue
 from breathecode.monitoring.tasks import run_supervisor
@@ -95,7 +95,7 @@ def db(data={}):
     }
 
 
-def tests_not_found(database: dfx.Database, supervisor: Supervisor):
+def tests_not_found(database: capy.Database, supervisor: Supervisor):
     database.create()
 
     run_supervisor.delay(1)
@@ -119,7 +119,7 @@ def tests_not_found(database: dfx.Database, supervisor: Supervisor):
         ),
     ],
 )
-def tests_supervisor_handler_not_found(database: dfx.Database, supervisor: Supervisor, task_module, task_name, error):
+def tests_supervisor_handler_not_found(database: capy.Database, supervisor: Supervisor, task_module, task_name, error):
     database.create(
         supervisor={
             "task_module": task_module,
@@ -153,7 +153,7 @@ def tests_supervisor_handler_not_found(database: dfx.Database, supervisor: Super
     ]
 
 
-def tests_supervision_with_not_issues(database: dfx.Database, supervisor: Supervisor, utc_now: datetime):
+def tests_supervision_with_not_issues(database: capy.Database, supervisor: Supervisor, utc_now: datetime):
     database.create(
         supervisor={
             "task_module": "breathecode.monitoring.tests.tasks.tests_run_supervisor",
@@ -186,7 +186,7 @@ def tests_supervision_with_not_issues(database: dfx.Database, supervisor: Superv
     assert Logger.error.call_args_list == []
 
 
-def tests_supervision_with_issues(database: dfx.Database, supervisor: Supervisor, utc_now: datetime):
+def tests_supervision_with_issues(database: capy.Database, supervisor: Supervisor, utc_now: datetime):
     database.create(
         supervisor={
             "task_module": "breathecode.monitoring.tests.tasks.tests_run_supervisor",
