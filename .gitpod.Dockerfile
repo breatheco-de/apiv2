@@ -2,9 +2,12 @@ FROM gitpod/workspace-postgres:latest
 
 SHELL ["/bin/bash", "-c"]
 
+# Add LLVM repository and key
+RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - \
+    && echo "deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+
 RUN sudo apt-get update \
-    && sudo apt-get update \
-    && sudo apt-get install -y redis-server \
+    && sudo apt-get install -y redis-server postgresql \
     && sudo apt-get clean \
     && sudo rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
@@ -17,8 +20,8 @@ RUN sudo apt-get update \
 # RUN curl https://pyenv.run | bash
 
 
-# RUN pyenv update && pyenv install 3.12.2 && pyenv global 3.12.2
-RUN pyenv install 3.12.2 && pyenv global 3.12.2
+# RUN pyenv update && pyenv install 3.12.5 && pyenv global 3.12.5
+RUN pyenv install 3.12.5 && pyenv global 3.12.5
 RUN pip install pipenv yapf
 
 # remove PIP_USER environment
