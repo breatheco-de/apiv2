@@ -146,3 +146,4 @@ google-apps-meet = "*"
 google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
 capy-core = {extras = ["django"], version = "*"}
+google-api-python-client = "*"
