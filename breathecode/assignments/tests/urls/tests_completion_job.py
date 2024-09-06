@@ -64,6 +64,13 @@ def patch_post(monkeypatch):
     yield handler
 
 
+@pytest.fixture
+def get_jwt(bc: Breathecode, monkeypatch):
+    token = bc.random.string(lower=True, upper=True, symbol=True, number=True, size=20)
+    monkeypatch.setattr("linked_services.django.actions.get_jwt", MagicMock(return_value=token))
+    yield token
+
+
 # When: no auth
 # Then: response 401
 def test_no_auth(bc: Breathecode, client: APIClient):
@@ -112,7 +119,7 @@ def test_asset_not_found(bc: Breathecode, client: APIClient):
 
 # When: auth and asset
 # Then: response 200
-def test_with_asset_and_task(bc: Breathecode, client: APIClient, patch_post):
+def test_with_asset_and_task(bc: Breathecode, client: APIClient, patch_post, get_jwt):
     url = reverse_lazy("assignments:completion_job", kwargs={"task_id": 1})
     model = bc.database.create(
         profile_academy=1,
@@ -143,6 +150,28 @@ def test_with_asset_and_task(bc: Breathecode, client: APIClient, patch_post):
 
     patch_post(expected, 201, headers)
     response = client.post(url, format="json")
+
+    body = {
+        "inputs": {
+            "asset_type": model.task.task_type,
+            "title": model.task.title,
+            "syllabus_name": "syllabus",
+            "asset_mardown_body": None,
+        },
+        "include_organization_brief": False,
+        "include_purpose_objective": True,
+        "execute_async": False,
+        "just_format": True,
+    }
+
+    assert aiohttp.ClientSession.post.call_args_list == [
+        call(
+            f"{model.app.app_url}/v1/prompting/completion/linked/5/",
+            json=body,
+            data=None,
+            headers={"Authorization": f"Link App=breathecode,Token={get_jwt}"},
+        )
+    ]
 
     assert response.getvalue().decode("utf-8") == json.dumps(expected)
     assert response.status_code == status.HTTP_201_CREATED
