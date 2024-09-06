@@ -10,19 +10,17 @@ ports:
 tasks:
   - command: redis-server
   - init: |
-      # pyenv global 3.12.3 &&
       python -m scripts.install &&
       gp sync-done deps
-    command: pyenv global 3.12.3 && pipenv run celery
+    command: pipenv run celery
   - init: gp sync-await deps
     command: >
-      # pyenv global 3.12.3 &&
       (psql -U gitpod -c 'CREATE DATABASE breathecode;' || true) &&
       (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
-      pipenv run migrate &&
-      pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
-      pipenv run python manage.py create_academy_roles &&
-      pipenv run start;
+      CACHE=0 pipenv run migrate &&
+      CACHE=0 pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
+      CACHE=0 pipenv run python manage.py create_academy_roles &&
+      CACHE=1 pipenv run start;
   - init: gp sync-await deps
 
 vscode:
