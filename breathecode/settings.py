@@ -85,6 +85,7 @@ INSTALLED_APPS = [
 ]
 
 GRAPHENE = {"SCHEMA": "breathecode.schema.schema"}
+IS_TEST_ENV = os.getenv("ENV") == "test"
 
 if os.getenv("ALLOW_UNSAFE_CYPRESS_APP") or ENVIRONMENT == "test":
     INSTALLED_APPS.append("breathecode.cypress")
@@ -170,7 +171,7 @@ if os.getenv("GOOGLE_APPLICATION_CREDENTIALS") and (GS_BUCKET_NAME := os.getenv(
     }
     # STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
-else:
+elif IS_TEST_ENV is False:
     INSTALLED_APPS += [
         "whitenoise.runserver_nostatic",
     ]
@@ -233,7 +234,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Disable Django's logging setup
 LOGGING_CONFIG = None
 
-IS_TEST_ENV = os.getenv("ENV") == "test"
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 # this prevent the duplications of logs because heroku redirect the output to Coralogix

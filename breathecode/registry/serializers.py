@@ -1,5 +1,7 @@
-from django.utils import timezone
+import re
 from urllib.parse import urlparse
+
+from django.utils import timezone
 from rest_framework import serializers, status
 from slugify import slugify
 
@@ -416,15 +418,61 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
         return ParentAssetTechnologySerializer(techs, many=True).data
 
 
-class AssetAndTechnologySerializer(AssetMidSerializer):
+class AssetExpandableSerializer(AssetMidSerializer):
 
-    technologies = serpy.MethodField()
-
-    def get_technologies(self, obj):
+    def format_technologies(self, obj):
         techs = AssetTechnology.objects.filter(
             id__in=obj.technologies.filter(visibility__in=["PUBLIC", "UNLISTED"], is_deprecated=False)
         )
         return ParentAssetTechnologySerializer(techs, many=True).data
+
+    def __init__(self, *args, expand="", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.expand = expand
+
+    def to_value(self, instance):
+        """
+        Override the to_value method to conditionally add fields based on custom arguments.
+        """
+        data = super().to_value(instance)
+
+        # Conditionally add fields based on the custom arguments
+        if self.expand is not None:
+            for elem in data:
+                filter = [e for e in instance if e.slug == elem["slug"]]
+                obj = filter[0]
+                if "technologies" in self.expand:
+                    elem["technologies"] = self.format_technologies(obj)
+
+                if "readme" in self.expand:
+                    url = obj.readme_url
+                    if url is None and obj.asset_type == "LESSON":
+                        url = obj.url
+
+                    params = {}
+                    extension = None
+                    if url is not None:
+                        # Extract the extension of the file
+                        ext_extractor = re.compile(r"(?:\.([^.]+))?$")
+                        match = ext_extractor.search(url)
+                        extension = match.group(1)
+
+                    if extension is not None and extension != "ipynb":
+                        params["parse"] = True
+                        params["remove_frontmatter"] = True
+
+                    readme = obj.get_readme(**params)
+
+                    html = obj.html
+                    if html is None:
+                        html = readme["html"] if "html" in readme else None
+
+                    elem["readme"] = {
+                        "decoded": readme["decoded"] if "decoded" in readme else None,
+                        "html": html,
+                    }
+
+        return data
 
 
 class AssetTechnologySerializer(ParentAssetTechnologySerializer):

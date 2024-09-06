@@ -3,6 +3,7 @@ import random
 from datetime import timedelta
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 from adrf.decorators import APIView, api_view
 from asgiref.sync import sync_to_async
@@ -20,7 +21,6 @@ from breathecode.payments import models
 from breathecode.payments import signals as payments_signals
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.utils.decorators import ServiceContext
-from capyc.rest_framework import pytest as capy
 
 SERVICE = random.choice([value for value, _ in models.Service.Consumer.choices])
 UTC_NOW = timezone.now()

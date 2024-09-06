@@ -2,13 +2,13 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
+import capyc.pytest as capy
 import pytest
 from django.db.models.query import QuerySet
 from django.urls import reverse_lazy
 from rest_framework import status
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.rest_framework.pytest import fixtures as rfx
 
 
 def queryset_with_pks(query: Any, pks: list[int]) -> None:
@@ -119,7 +119,7 @@ def put_serializer(bag, plans=[], coupons=[], data={}):
 
 
 @pytest.mark.parametrize("plan_pk", [None, ""])
-def test_no_auth(bc: Breathecode, client: rfx.Client, plan_pk):
+def test_no_auth(bc: Breathecode, client: capy.Client, plan_pk):
     url = reverse_lazy("payments:bag_id_coupon", kwargs={"bag_id": 1})
     if plan_pk is not None:
         url += f"?plan={plan_pk}"
@@ -137,7 +137,7 @@ def test_no_auth(bc: Breathecode, client: rfx.Client, plan_pk):
 
 
 @pytest.mark.parametrize("plan_pk", [None, ""])
-def test_missing_plan(bc: Breathecode, client: rfx.Client, plan_pk):
+def test_missing_plan(bc: Breathecode, client: capy.Client, plan_pk):
     model = bc.database.create(user=1)
     client.force_authenticate(user=model.user)
 
@@ -158,7 +158,7 @@ def test_missing_plan(bc: Breathecode, client: rfx.Client, plan_pk):
 
 
 @pytest.mark.parametrize("plan_pk", ["my-plan", 1])
-def test_plan_not_found(bc: Breathecode, client: rfx.Client, plan_pk):
+def test_plan_not_found(bc: Breathecode, client: capy.Client, plan_pk):
     model = bc.database.create(user=1)
     client.force_authenticate(user=model.user)
 
@@ -179,7 +179,7 @@ def test_plan_not_found(bc: Breathecode, client: rfx.Client, plan_pk):
 
 
 @pytest.mark.parametrize("plan_pk", ["my-plan", 1])
-def test_no_bag(bc: Breathecode, client: rfx.Client, plan_pk):
+def test_no_bag(bc: Breathecode, client: capy.Client, plan_pk):
     plan = {
         "is_renewable": False,
     }
@@ -216,7 +216,7 @@ def test_no_bag(bc: Breathecode, client: rfx.Client, plan_pk):
         ("PREVIEW", [{"slug": slug, "auto": False, "discount_value": 1} for slug in ["coupon3", "coupon4"]]),
     ],
 )
-def test_plan_found__coupons_not_found(bc: Breathecode, client: rfx.Client, bag_type, plan_pk, coupons):
+def test_plan_found__coupons_not_found(bc: Breathecode, client: capy.Client, bag_type, plan_pk, coupons):
     plan = {
         "is_renewable": False,
     }
@@ -260,7 +260,7 @@ def test_plan_found__coupons_not_found(bc: Breathecode, client: rfx.Client, bag_
         ),
     ],
 )
-def test_plan_found__coupons_found(bc: Breathecode, client: rfx.Client, plan_pk, max, coupons, bag_type):
+def test_plan_found__coupons_found(bc: Breathecode, client: capy.Client, plan_pk, max, coupons, bag_type):
     plan = {
         "is_renewable": False,
     }

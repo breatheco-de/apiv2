@@ -6,6 +6,7 @@ import random
 from datetime import datetime
 from unittest.mock import MagicMock, call, patch
 
+import capyc.pytest as capy
 import pytest
 from django.urls.base import reverse_lazy
 from django.utils import timezone
@@ -15,7 +16,6 @@ import breathecode.activity.tasks as activity_tasks
 from breathecode.assignments import tasks
 from breathecode.assignments.caches import TaskCache
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from capyc.rest_framework import pytest as capy
 
 from ..mixins import AssignmentsTestCase
 

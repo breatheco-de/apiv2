@@ -1,17 +1,15 @@
 from datetime import datetime, timedelta
-from logging import Logger
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
+import capyc.pytest.core.fixtures as cfx
+import capyc.pytest.django.fixtures as dfx
 import pytest
 from asgiref.sync import sync_to_async
 
-import capyc.core.pytest.fixtures as cfx
-import capyc.django.pytest.fixtures as dfx
 from breathecode.monitoring.models import Supervisor as SupervisorModel
 from breathecode.monitoring.models import SupervisorIssue
 from breathecode.payments.supervisors import supervise_all_consumption_sessions
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from breathecode.utils.decorators import supervisor as supervisor_decorator
 
 
 class Supervisor:

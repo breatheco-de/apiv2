@@ -1,9 +1,9 @@
+import capyc.pytest as capy
 import pytest
 from django.urls import reverse_lazy
 from rest_framework import status
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.rest_framework.pytest import fixtures as rfx
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +25,7 @@ def get_serializer(bc: Breathecode, coupon):
 
 
 @pytest.mark.parametrize("plan_pk", [None, ""])
-def test_missing_plan(bc: Breathecode, client: rfx.Client, plan_pk):
+def test_missing_plan(bc: Breathecode, client: capy.Client, plan_pk):
     url = reverse_lazy("payments:coupon")
     if plan_pk is not None:
         url += f"?plan={plan_pk}"
@@ -42,7 +42,7 @@ def test_missing_plan(bc: Breathecode, client: rfx.Client, plan_pk):
 
 
 @pytest.mark.parametrize("plan_pk", ["my-plan", 1])
-def test_plan_not_found(bc: Breathecode, client: rfx.Client, plan_pk):
+def test_plan_not_found(bc: Breathecode, client: capy.Client, plan_pk):
     url = reverse_lazy("payments:coupon")
     if plan_pk is not None:
         url += f"?plan={plan_pk}"
@@ -66,7 +66,7 @@ def test_plan_not_found(bc: Breathecode, client: rfx.Client, plan_pk):
         ([{"slug": slug, "auto": False, "discount_value": 1} for slug in ["coupon3", "coupon4"]]),
     ],
 )
-def test_plan_found__coupons_not_found(bc: Breathecode, client: rfx.Client, plan_pk, coupons):
+def test_plan_found__coupons_not_found(bc: Breathecode, client: capy.Client, plan_pk, coupons):
     plan = {
         "is_renewable": False,
     }
@@ -105,7 +105,7 @@ def test_plan_found__coupons_not_found(bc: Breathecode, client: rfx.Client, plan
         ),
     ],
 )
-def test_plan_found__coupons_found(bc: Breathecode, client: rfx.Client, plan_pk, max, coupons):
+def test_plan_found__coupons_found(bc: Breathecode, client: capy.Client, plan_pk, max, coupons):
     plan = {
         "is_renewable": False,
     }

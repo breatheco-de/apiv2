@@ -2,18 +2,18 @@
 Test /answer
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
+from capyc.rest_framework.exceptions import ValidationException
 from django.core.handlers.wsgi import WSGIRequest
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from breathecode.payments.actions import validate_and_create_subscriptions
 from breathecode.payments.tasks import build_plan_financing
-from capyc.rest_framework import pytest as capy
-from capyc.rest_framework.exceptions import ValidationException
 
 UTC_NOW = timezone.now()
 
@@ -231,6 +231,47 @@ def test_no_payment_method(database: capy.Database, format: capy.Format, is_requ
         data = get_request(data, user=model.user)
 
     with pytest.raises(ValidationException, match="payment-method-not-provided"):
+        validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+
+    assert database.list_of("payments.Bag") == []
+    assert database.list_of("payments.Invoice") == []
+    assert database.list_of("payments.ProofOfPayment") == [
+        serialize_proof_of_payment(
+            data={
+                "id": 1,
+                "created_by_id": 1,
+                "status": "PENDING",
+            }
+        ),
+    ]
+
+    assert build_plan_financing.delay.call_args_list == []
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_plan_already_exists(database: capy.Database, format: capy.Format, is_request: bool, utc_now: datetime) -> None:
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1},
+        academy=1,
+        city=1,
+        country=1,
+        payment_method=1,
+        plan_financing={
+            "valid_until": utc_now + timedelta(days=30),
+            "plan_expires_at": utc_now + timedelta(days=30),
+            "monthly_price": 100,
+        },
+    )
+    data = {"plans": [model.plan.slug], "user": model.user.id, "payment_method": 1}
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    with pytest.raises(ValidationException, match="user-already-has-valid-subscription"):
         validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
 
     assert database.list_of("payments.Bag") == []

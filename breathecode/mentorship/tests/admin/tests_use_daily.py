@@ -2,10 +2,10 @@
 Test mentorships
 """
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.mentorship.admin import use_daily
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.mark.fixture(autouse=True)

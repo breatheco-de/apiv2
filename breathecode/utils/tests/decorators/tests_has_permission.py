@@ -1,5 +1,6 @@
 import json
 
+import capyc.pytest as capy
 import pytest
 from adrf.decorators import APIView, api_view
 from asgiref.sync import sync_to_async
@@ -13,7 +14,6 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 import breathecode.utils.decorators as decorators
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.rest_framework import pytest as capy
 
 PERMISSION = "can_kill_kenny"
 UTC_NOW = timezone.now()

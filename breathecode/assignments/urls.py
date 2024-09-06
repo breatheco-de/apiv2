@@ -19,6 +19,7 @@ from .views import (
     AssignmentTelemetryView,
     FinalProjectCohortView,
     CompletionJob,
+    SyncTasksView,
 )
 
 app_name = "assignments"
@@ -66,6 +67,7 @@ urlpatterns = [
         FinalProjectCohortView.as_view(),
         name="final_project_cohort_update",
     ),
+    path("academy/cohort/<int:cohort_id>/synctasks", SyncTasksView.as_view(), name="sync_cohort_tasks"),
     path("academy/user/<int:user_id>/task", TaskMeView.as_view(), name="academy_user_id_task"),
     path("task/<int:task_id>/deliver/<str:token>", deliver_assignment_view, name="task_id_deliver_token"),
     path("task/<int:task_id>/deliver", TaskMeDeliverView.as_view(), name="task_id_deliver"),
