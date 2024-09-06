@@ -988,14 +988,20 @@ class CompletionJob(APIView):
         syllabus_name = await self.get_task_syllabus(task)
 
         data = {
-            "asset_type": task.task_type,
-            "title": task.title,
-            "syllabus_name": syllabus_name,
-            "asset_mardown_body": Asset.decode(asset.readme),
+            "inputs": {
+                "asset_type": task.task_type,
+                "title": task.title,
+                "syllabus_name": syllabus_name,
+                "asset_mardown_body": Asset.decode(asset.readme),
+            },
+            "include_organization_brief": False,
+            "include_purpose_objective": True,
+            "execute_async": False,
+            "just_format": True,
         }
 
         async with Service("rigobot", request.user.id, proxy=True) as s:
-            return await s.post("/v1/prompting/completion/13", data=data)
+            return await s.post("/v1/prompting/completion/linked/5/", json=data)
 
 
 class MeCodeRevisionView(APIView):
