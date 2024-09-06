@@ -32,7 +32,28 @@ RUN /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/data start && \
     /usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/data stop
 
 USER root
-RUn rm /usr/lib/postgresql/12 -rf
+
+# remove postgresql 12
+RUN rm /usr/lib/postgresql/12 -rf
+
+# backup postgresql 16 settings
+# RUN mkdir /tmp/databk
+# RUN cp /workspace/.pgsql/data/postgresql.conf /tmp/databk/postgresql.conf
+# RUN cp /workspace/.pgsql/data/pg_hba.conf /tmp/databk/pg_hba.conf
+
+# create new data folder
+RUN rm /workspace/.pgsql/data -rf
+USER gitpod
+RUN /usr/lib/postgresql/16/bin/initdb -D /workspace/.pgsql/data
+
+USER root
+
+# restore postgresql 16 settings
+# RUN cp /tmp/databk/postgresql.conf /workspace/.pgsql/data/postgresql.conf
+# RUN cp /tmp/databk/databk/pg_hba.conf /workspace/.pgsql/data/pg_hba.conf
+
+# remove postgresql 16 backup folder
+# RUn rm /workspace/.pgsql/datapk -rf
 
 # remove PIP_USER environment
 USER gitpod
