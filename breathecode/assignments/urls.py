@@ -18,7 +18,7 @@ from .views import (
     sync_cohort_tasks_view,
     AssignmentTelemetryView,
     FinalProjectCohortView,
-    CompletionJob,
+    CompletionJobView,
     SyncTasksView,
 )
 
@@ -74,5 +74,5 @@ urlpatterns = [
     path("task/<int:task_id>/attachment", TaskMeAttachmentView.as_view(), name="task_id_attachment"),
     path("task/<int:task_id>", TaskMeView.as_view(), name="task_id"),
     path("sync/cohort/<int:cohort_id>/task", sync_cohort_tasks_view, name="sync_cohort_id_task"),
-    path("completion_job/<int:task_id>", CompletionJob.as_view(), name="completion_job"),
+    path("completion_job/<int:task_id>", CompletionJobView.as_view(), name="completion_job"),
 ]

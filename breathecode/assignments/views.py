@@ -1005,7 +1005,7 @@ class SubtaskMeView(APIView):
         return Response(item.subtasks)
 
 
-class CompletionJob(APIView):
+class CompletionJobView(APIView):
     @sync_to_async
     def get_task_syllabus(self, task):
 
