@@ -1,6 +1,6 @@
 # https://github.com/gitpod-io/workspace-images/blob/main/chunks/tool-postgresql/Dockerfile
 # FROM gitpod/workspace-base:latest
-from gitpod/workspace-python:latest
+from gitpod/workspace-python-3.12
 
 # Dazzle does not rebuild a layer until one of its lines are changed. Increase this counter to rebuild this layer.
 ENV TRIGGER_REBUILD=4
