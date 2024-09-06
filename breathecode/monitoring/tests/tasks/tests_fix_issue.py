@@ -3,6 +3,7 @@ from datetime import timedelta
 from logging import Logger
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 from asgiref.sync import sync_to_async
 
@@ -13,7 +14,6 @@ from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.utils.decorators import issue as issue_decorator
 from breathecode.utils.decorators import paths
 from breathecode.utils.decorators import supervisor as supervisor_decorator
-from capyc.rest_framework import pytest as capy
 
 PATHS = paths.copy()
 

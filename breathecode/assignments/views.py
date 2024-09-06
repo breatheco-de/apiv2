@@ -436,6 +436,41 @@ class FinalProjectCohortView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SyncTasksView(APIView, GenerateLookupsMixin):
+
+    @capable_of("crud_assignment")
+    def get(self, request, cohort_id, academy_id):
+
+        lang = get_user_language(request)
+
+        cohort = Cohort.objects.filter(id=cohort_id).first()
+
+        if cohort is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cohort {cohort_id} not found",
+                    es=f"Cohorte {cohort_id} no encontrada",
+                    slug="cohort-not-found",
+                ),
+                code=404,
+            )
+
+        students = CohortUser.objects.filter(cohort=cohort, role="STUDENT")
+
+        for student in students:
+            tasks.sync_cohort_user_tasks.delay(student.id)
+
+        message = translation(
+            lang,
+            en="Tasks syncronization initiated successfully. This should take a few minutes",
+            es="La sincronización de las actividades inició exitosamente. Esto debería demorar unos minutos",
+            slug="tasks-syncing",
+        )
+
+        return Response({"message": message}, status=status.HTTP_200_OK)
+
+
 class CohortTaskView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(cache=TaskCache, sort="-created_at", paginate=True)
 

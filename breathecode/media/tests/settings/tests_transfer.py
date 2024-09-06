@@ -5,12 +5,12 @@ Test /answer
 from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, call
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.media import settings
 from breathecode.media.settings import MEDIA_SETTINGS, transfer
 from breathecode.services.google_cloud import File, Storage
-from capyc.rest_framework import pytest as capy
 
 
 def mock_download(x: BytesIO) -> None:

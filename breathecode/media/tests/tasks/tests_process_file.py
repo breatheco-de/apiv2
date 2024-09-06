@@ -5,11 +5,11 @@ Test /answer
 from logging import Logger
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.media.settings import MEDIA_SETTINGS
 from breathecode.media.tasks import process_file
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.fixture(autouse=True)

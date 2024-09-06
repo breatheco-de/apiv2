@@ -5,13 +5,13 @@ Test /answer
 from typing import Any
 from unittest.mock import MagicMock
 
+import capyc.pytest as capyc
 import pytest
 from dateutil.relativedelta import relativedelta
 from linked_services.django.actions import reset_app_cache
 
 from breathecode.assignments.management.commands.schedule_repository_deletions import Command
 from breathecode.registry.models import Asset
-from capyc.rest_framework import pytest as capyc
 
 
 @pytest.fixture(autouse=True)

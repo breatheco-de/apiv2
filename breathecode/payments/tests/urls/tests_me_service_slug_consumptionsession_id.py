@@ -1,12 +1,12 @@
 import random
 from datetime import datetime, timedelta, timezone
 
+import capyc.pytest as capy
 import pytest
 from django.urls import reverse_lazy
 from rest_framework import status
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.rest_framework.pytest import fixtures as rfx
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +53,7 @@ def db_item(service, data={}):
     }
 
 
-def test_no_auth(bc: Breathecode, client: rfx.Client):
+def test_no_auth(bc: Breathecode, client: capy.Client):
     url = reverse_lazy(
         "payments:me_service_slug_consumptionsession_id",
         kwargs={"service_slug": "my-service", "consumptionsession_id": 1},
@@ -70,7 +70,7 @@ def test_no_auth(bc: Breathecode, client: rfx.Client):
 
 
 @pytest.mark.parametrize("with_session", [False, True])
-def test_no_sessions(bc: Breathecode, client: rfx.Client, with_session, fake, utc_now):
+def test_no_sessions(bc: Breathecode, client: capy.Client, with_session, fake, utc_now):
     slug = fake.slug()
     duration = random_duration()
     url = reverse_lazy(
@@ -128,7 +128,7 @@ def test_no_sessions(bc: Breathecode, client: rfx.Client, with_session, fake, ut
         assert bc.database.list_of("payments.ConsumptionSession") == []
 
 
-def test_cancelled(bc: Breathecode, client: rfx.Client, utc_now, fake):
+def test_cancelled(bc: Breathecode, client: capy.Client, utc_now, fake):
     slug = fake.slug()
     duration = random_duration()
     model = bc.database.create(

@@ -10,7 +10,7 @@ import pytest
 from django.utils import timezone
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from capyc.django.pytest.fixtures import QuerySet
+from capyc.pytest.django.fixtures import QuerySet
 
 from ...tasks import refund_mentoring_session
 

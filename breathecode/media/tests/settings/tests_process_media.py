@@ -4,11 +4,11 @@ Test /answer
 
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.media import settings
 from breathecode.media.settings import MEDIA_SETTINGS, process_media
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.fixture(autouse=True)

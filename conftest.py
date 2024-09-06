@@ -1,26 +1,28 @@
 import os
-from typing import Generator
+from typing import Generator, Optional
 from unittest.mock import MagicMock, patch
 
+import jwt
 import pytest
 from django.core.cache import cache
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from breathecode.notify.utils.hook_manager import HookManagerClass
 from breathecode.utils.exceptions import TestError
-from capyc.core.pytest.fixtures import Random
-from capyc.django.pytest.fixtures.signals import Signals
+from capyc.pytest.core.fixtures import Random
+from capyc.pytest.django.fixtures.signals import Signals
 
 # set ENV as test before run django
 os.environ["ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 pytest_plugins = (
-    "capyc.core.pytest",
-    "capyc.newrelic.pytest",
-    "capyc.django.pytest",
-    "capyc.rest_framework.pytest",
-    "capyc.circuitbreaker.pytest",
+    "capyc.pytest.core",
+    "capyc.pytest.newrelic",
+    "capyc.pytest.django",
+    "capyc.pytest.rest_framework",
+    "capyc.pytest.circuitbreaker",
 )
 
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
@@ -242,5 +244,70 @@ def partial_equality():
             original = _fill_partial_equality(first, second)
 
         assert original == second
+
+    yield wrapper
+
+
+@pytest.fixture
+def sign_jwt_link():
+
+    def wrapper(
+        client: APIClient,
+        app,
+        user_id: Optional[int] = None,
+        reverse: bool = False,
+    ):
+        """
+        Set Json Web Token in the request.
+
+        Usage:
+
+        ```py
+        # setup the database
+        model = self.bc.database.create(app=1, user=1)
+
+        # that setup the request to use the credential of user passed
+        self.bc.request.authenticate(model.app, model.user.id)
+        ```
+
+        Keywords arguments:
+
+        - user: a instance of user model `breathecode.authenticate.models.User`
+        """
+        from datetime import datetime, timedelta
+
+        from django.utils import timezone
+
+        now = timezone.now()
+
+        # https://datatracker.ietf.org/doc/html/rfc7519#section-4
+        payload = {
+            "sub": user_id,
+            "iss": os.getenv("API_URL", "http://localhost:8000"),
+            "app": app.slug,
+            "aud": "breathecode",
+            "exp": datetime.timestamp(now + timedelta(minutes=2)),
+            "iat": datetime.timestamp(now) - 1,
+            "typ": "JWT",
+        }
+
+        if reverse:
+            payload["aud"] = app.slug
+            payload["app"] = "breathecode"
+
+        if app.algorithm == "HMAC_SHA256":
+
+            token = jwt.encode(payload, bytes.fromhex(app.private_key), algorithm="HS256")
+
+        elif app.algorithm == "HMAC_SHA512":
+            token = jwt.encode(payload, bytes.fromhex(app.private_key), algorithm="HS512")
+
+        elif app.algorithm == "ED25519":
+            token = jwt.encode(payload, bytes.fromhex(app.private_key), algorithm="EdDSA")
+
+        else:
+            raise Exception("Algorithm not implemented")
+
+        client.credentials(HTTP_AUTHORIZATION=f"Link App={app.slug},Token={token}")
 
     yield wrapper
