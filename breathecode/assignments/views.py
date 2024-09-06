@@ -1014,11 +1014,11 @@ class CompletionJob(APIView):
     async def post(self, request, task_id):
         task = await Task.objects.filter(id=task_id).afirst()
         if task is None:
-            raise ValidationException("Task not found")
+            raise ValidationException("Task not found", code=404, slug="task-not-found")
 
         asset = await Asset.objects.filter(slug=task.associated_slug).afirst()
         if asset is None:
-            raise ValidationException("Asset not found")
+            raise ValidationException("Asset not found", code=404, slug="asset-not-found")
 
         syllabus_name = await self.get_task_syllabus(task)
 
