@@ -7,7 +7,7 @@ from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from breathecode.assignments.models import RepositoryDeletionOrder, RepositoryWhiteList
+from breathecode.assignments.models import RepositoryDeletionOrder, RepositoryWhiteList, Task
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.models import RepositorySubscription
 from breathecode.registry.models import Asset
@@ -16,7 +16,7 @@ from breathecode.services.github import Github
 
 class Command(BaseCommand):
     help = "Clean data from marketing module"
-    github_url_pattern = re.compile(r"https:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
+    github_url_pattern = re.compile(r"https?:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
 
     def handle(self, *args, **options):
         self.fill_whitelist()
@@ -124,6 +124,7 @@ class Command(BaseCommand):
     def purge_deletion_orders(self):
 
         page = 0
+        to_delete = []
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
                 status=RepositoryDeletionOrder.Status.PENDING,
@@ -138,9 +139,11 @@ class Command(BaseCommand):
                     repository_user__iexact=deletion_order.repository_user,
                     repository_name__iexact=deletion_order.repository_name,
                 ).exists():
-                    deletion_order.delete()
+                    to_delete.append(deletion_order.id)
 
             page += 1
+
+        RepositoryDeletionOrder.objects.filter(id__in=to_delete).delete()
 
     def delete_github_repositories(self):
 
@@ -255,9 +258,24 @@ class Command(BaseCommand):
         ).exists():
             return
 
-        RepositoryDeletionOrder.objects.get_or_create(
-            provider=provider, repository_user=user, repository_name=repo_name
+        status = RepositoryDeletionOrder.Status.PENDING
+        if (
+            Task.objects.filter(github_url__icontains=f"github.com/{user}/{repo_name}")
+            .exclude(revision_status=Task.RevisionStatus.PENDING)
+            .exists()
+        ):
+            status = RepositoryDeletionOrder.Status.NO_STARTED
+
+        order, _ = RepositoryDeletionOrder.objects.get_or_create(
+            provider=provider,
+            repository_user=user,
+            repository_name=repo_name,
+            defaults={"status": status},
         )
+
+        if order.status != status:
+            order.status = status
+            order.save()
 
     def collect_transferred_orders(self):
 

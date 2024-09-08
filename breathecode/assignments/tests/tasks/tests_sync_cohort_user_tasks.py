@@ -2,11 +2,18 @@
 Test sync_cohort_user_tasks
 """
 
+import pytest
 from unittest.mock import MagicMock, call, patch
 
 
 from ...tasks import sync_cohort_user_tasks
 from ..mixins import AssignmentsTestCase
+from breathecode.assignments.signals import assignment_created
+
+
+@pytest.fixture(autouse=True)
+def setup(db, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(assignment_created, "delay", MagicMock())
 
 
 def serialize_task(data={}):
@@ -48,6 +55,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of("assignments.Task"), [])
         self.assertEqual(Logger.info.call_args_list, [call("Executing sync_cohort_user_tasks for cohort user 1")])
         self.assertEqual(Logger.error.call_args_list, [call("Cohort user not found")])
+        assert assignment_created.delay.call_args_list == []
 
     @patch("logging.Logger.info", MagicMock())
     def test__sync_cohort_user(self):
@@ -111,6 +119,10 @@ class MediaTestSuite(AssignmentsTestCase):
                 call("Cohort User 1 synced successfully"),
             ],
         )
+        assert assignment_created.delay.call_args_list == [
+            call(instance=task, sender=task.__class__)
+            for task in self.bc.database.list_of("assignments.Task", dict=False)
+        ]
 
     @patch("logging.Logger.info", MagicMock())
     def test__sync_cohort_user_with_previous_tasks(self):
@@ -178,3 +190,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 call("Cohort User 1 synced successfully"),
             ],
         )
+        assert assignment_created.delay.call_args_list == [
+            call(instance=task, sender=task.__class__)
+            for task in self.bc.database.list_of("assignments.Task", dict=False)
+        ]
