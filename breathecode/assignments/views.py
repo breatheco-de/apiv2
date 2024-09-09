@@ -23,6 +23,7 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.assignments.permissions.consumers import code_revision_service
 from breathecode.authenticate.actions import aget_user_language, get_user_language
 from breathecode.authenticate.models import ProfileAcademy, Token
+from breathecode.registry.models import Asset
 from breathecode.services.learnpack import LearnPack
 from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman, response_207
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -1003,6 +1004,40 @@ class SubtaskMeView(APIView):
         item.save()
 
         return Response(item.subtasks)
+
+
+class CompletionJobView(APIView):
+    @sync_to_async
+    def get_task_syllabus(self, task):
+
+        return task.cohort.syllabus_version.syllabus.name
+
+    async def post(self, request, task_id):
+        task = await Task.objects.filter(id=task_id).afirst()
+        if task is None:
+            raise ValidationException("Task not found", code=404, slug="task-not-found")
+
+        asset = await Asset.objects.filter(slug=task.associated_slug).afirst()
+        if asset is None:
+            raise ValidationException("Asset not found", code=404, slug="asset-not-found")
+
+        syllabus_name = await self.get_task_syllabus(task)
+
+        data = {
+            "inputs": {
+                "asset_type": task.task_type,
+                "title": task.title,
+                "syllabus_name": syllabus_name,
+                "asset_mardown_body": Asset.decode(asset.readme),
+            },
+            "include_organization_brief": False,
+            "include_purpose_objective": True,
+            "execute_async": False,
+            "just_format": True,
+        }
+
+        async with Service("rigobot", request.user.id, proxy=True) as s:
+            return await s.post("/v1/prompting/completion/linked/5/", json=data)
 
 
 class MeCodeRevisionView(APIView):
