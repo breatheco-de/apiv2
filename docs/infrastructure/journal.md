@@ -61,3 +61,9 @@ Side effects:
 Reasons for the change:
 
 - Web worker was reaching 841 MB ram.
+
+## -9/09/2024
+
+- `[all]` `GOOGLE_SECRET` setted.
+- `[dev]` `GOOGLE_CLIENT_ID` setted.
+- `[all]` `GOOGLE_REDIRECT_URL` setted.

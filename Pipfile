@@ -147,3 +147,5 @@ google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
 capy-core = {extras = ["django"], version = "*"}
 google-api-python-client = "*"
+python-dotenv = "*"
+uvicorn-worker = "*"
