@@ -2060,11 +2060,19 @@ async def save_google_token(request):
         raise APIException("Google OAuth: " + error_description)
 
     print("request.query_params", request.query_params)
+    logger.info("request.query_params")
+    logger.info(request.query_params)
     print("request.GET", request.GET)
+    logger.info("request.GET")
+    logger.info(request.GET)
     print('request.query_params.get("url", None)', request.query_params.get("url", None))
+    logger.info('request.query_params.get("url", None)')
+    logger.info(request.query_params.get("url", None))
 
     state = parse_qs(request.query_params.get("state", None))
     print("state", state)
+    logger.info("state")
+    logger.info(state)
 
     if state.get("url") == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
