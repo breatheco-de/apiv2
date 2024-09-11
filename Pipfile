@@ -57,8 +57,6 @@ google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
 black = "*"
 capy-core = {extras = ["pytest"], version = "*"}
-aioresponses = "*"
-requests-mock = "*"
 
 [packages]
 django = "*"
