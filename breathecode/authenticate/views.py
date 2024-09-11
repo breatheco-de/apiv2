@@ -6,6 +6,7 @@ import re
 import urllib.parse
 from datetime import timedelta
 from urllib.parse import parse_qs, urlencode
+import aiohttp
 
 import requests
 from adrf.decorators import api_view
@@ -2004,7 +2005,6 @@ def login_html_view(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_google_token(request, token=None):
-
     if token == None:
         raise ValidationException("No session token has been specified", slug="no-session-token")
 
@@ -2040,12 +2040,6 @@ def get_google_token(request, token=None):
         return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
     else:
         return HttpResponseRedirect(redirect_to=redirect)
-
-
-# Create your views here.
-
-
-import aiohttp
 
 
 @api_view(["GET"])

@@ -133,8 +133,8 @@ urlpatterns = [
     path("password/<str:token>", pick_password, name="password_token"),
     path("github/", get_github_token, name="github"),
     path("github/me", GithubMeView.as_view(), name="github_me"),
-    path("github/<str:token>", get_github_token, name="github_token"),
     path("github/callback/", save_github_token, name="github_callback"),
+    path("github/<str:token>", get_github_token, name="github_token"),
     path("slack/", get_slack_token, name="slack"),
     path("slack/callback/", save_slack_token, name="slack_callback"),
     path("facebook/", get_facebook_token, name="facebook"),
@@ -144,8 +144,8 @@ urlpatterns = [
     path("user/me/invite/<slug:new_status>", MeInviteView.as_view(), name="user_me_invite_status"),
     path("academy/settings", AcademyAuthSettingsView.as_view(), name="academy_me_settings"),
     # google authentication oath2.0
+    path("google/callback", save_google_token, name="google_callback"),
     path("google/<str:token>", get_google_token, name="google_token"),
-    path("google/callback/", save_google_token, name="google_callback"),
     path("gitpod/sync", sync_gitpod_users_view, name="sync_gitpod_users"),
     # sync with gitHUB
     path("academy/github/user", GithubUserView.as_view(), name="github_user"),
