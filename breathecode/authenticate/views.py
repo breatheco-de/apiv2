@@ -2012,7 +2012,10 @@ def get_google_token(request, token=None):
     print("request.GET", request.GET)
     print('request.query_params.get("url", None)', request.query_params.get("url", None))
 
-    url = request.query_params.get("url", None)
+    state = parse_qs(request.query_params.get("state", None))
+    print("state", state)
+
+    url = state.get("url", None)
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
