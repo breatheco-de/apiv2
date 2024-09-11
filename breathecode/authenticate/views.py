@@ -2008,14 +2008,7 @@ def get_google_token(request, token=None):
     if token == None:
         raise ValidationException("No session token has been specified", slug="no-session-token")
 
-    print("request.query_params", request.query_params)
-    print("request.GET", request.GET)
-    print('request.query_params.get("url", None)', request.query_params.get("url", None))
-
-    state = parse_qs(request.query_params.get("state", None))
-    print("state", state)
-
-    url = state.get("url", None)
+    url = request.query_params.get("url", None)
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
@@ -2066,7 +2059,12 @@ async def save_google_token(request):
     if error:
         raise APIException("Google OAuth: " + error_description)
 
+    print("request.query_params", request.query_params)
+    print("request.GET", request.GET)
+    print('request.query_params.get("url", None)', request.query_params.get("url", None))
+
     state = parse_qs(request.query_params.get("state", None))
+    print("state", state)
 
     if state.get("url") == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
