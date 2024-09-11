@@ -41,7 +41,6 @@ def test_no_url(bc: Breathecode, client: APIClient):
     "token",
     [
         0,
-        {"token_type": "one_time"},
         {"token_type": "permanent"},
         {"token_type": "login"},
     ],
@@ -55,6 +54,7 @@ def test_invalid_token(database: capy.Database, client: capy.Client, token: Any)
     url = reverse_lazy("authenticate:google_token", kwargs={"token": key}) + "?url=https://4geeks.com"
     response = client.get(url, format="json")
 
+    print(response.content)
     json = response.json()
     expected = {"detail": "invalid-token", "status_code": 403}
 

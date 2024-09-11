@@ -2018,8 +2018,8 @@ def get_google_token(request, token=None):
         pass
 
         # you can only connect to google with temporal short lasting tokens
-    token = Token.get_valid(token, token_type="temporal")
-    if token is None:
+    token = Token.get_valid(token)
+    if token is None or token.token_type not in ["temporal", "one_time"]:
         raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
 
     params = {
@@ -2045,10 +2045,12 @@ def get_google_token(request, token=None):
 # Create your views here.
 
 
+import aiohttp
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def save_google_token(request):
-
+async def save_google_token(request):
     logger.debug("Google callback just landed")
     logger.debug(request.query_params)
 
@@ -2069,8 +2071,8 @@ def save_google_token(request):
     if code == None:
         raise ValidationException("No google code specified", slug="no-code")
 
-    token = Token.get_valid(state["token"][0])
-    if not token:
+    token = await Token.aget_valid(state["token"][0])
+    if not token or token.token_type not in ["temporal", "one_time"]:
         logger.debug(f'Token {state["token"][0]} not found or is expired')
         raise ValidationException(
             "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
@@ -2084,36 +2086,38 @@ def save_google_token(request):
         "code": code,
     }
     headers = {"Accept": "application/json"}
-    resp = requests.post("https://oauth2.googleapis.com/token", json=payload, headers=headers)
-    if resp.status_code == 200:
-        logger.debug("Google responded with 200")
 
-        body = resp.json()
-        if "access_token" not in body:
-            raise APIException(body["error_description"])
+    async with aiohttp.ClientSession() as session:
+        async with session.post("https://oauth2.googleapis.com/token", json=payload, headers=headers) as resp:
+            if resp.status == 200:
+                logger.debug("Google responded with 200")
 
-        logger.debug(body)
+                body = await resp.json()
+                if "access_token" not in body:
+                    raise APIException(body["error_description"])
 
-        user = token.user
-        refresh = ""
-        if "refresh_token" in body:
-            refresh = body["refresh_token"]
+                logger.debug(body)
 
-        CredentialsGoogle.objects.filter(user__id=user.id).delete()
+                user = token.user
+                refresh = ""
+                if "refresh_token" in body:
+                    refresh = body["refresh_token"]
 
-        google_credentials = CredentialsGoogle(
-            user=user,
-            token=body["access_token"],
-            refresh_token=refresh,
-            expires_at=timezone.now() + timedelta(seconds=body["expires_in"]),
-        )
-        google_credentials.save()
+                await CredentialsGoogle.objects.filter(user__id=user.id).adelete()
 
-        return HttpResponseRedirect(redirect_to=state["url"][0] + "?token=" + token.key)
+                google_credentials = CredentialsGoogle(
+                    user=user,
+                    token=body["access_token"],
+                    refresh_token=refresh,
+                    expires_at=timezone.now() + timedelta(seconds=body["expires_in"]),
+                )
+                await google_credentials.asave()
 
-    else:
-        logger.error(resp.json())
-        raise APIException("Error from google credentials")
+                return HttpResponseRedirect(redirect_to=state["url"][0] + "?token=" + token.key)
+
+            else:
+                logger.error(await resp.json())
+                raise APIException("Error from google credentials")
 
 
 class GithubUserView(APIView, GenerateLookupsMixin):

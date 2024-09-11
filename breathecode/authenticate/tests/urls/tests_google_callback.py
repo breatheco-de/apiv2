@@ -131,7 +131,7 @@ def test_token_not_found(database: capy.Database, client: capy.Client):
 
 
 def test_token(
-    database: capy.Database, client: capy.Client, format: capy.Format, utc_now: datetime, requests: staging.Requests
+    database: capy.Database, client: capy.Client, format: capy.Format, utc_now: datetime, http: staging.HTTP
 ):
     model = database.create(token={"token_type": "temporal"})
     url = (
@@ -139,10 +139,20 @@ def test_token(
         + f"?state=token%3D{model.token.key}%26url%3Dhttps://4geeks.com&code=12345&scope=https://www.googleapis.com/auth/calendar.events"
     )
 
-    requests.post(
+    payload = {
+        "client_id": "123456.apps.googleusercontent.com",
+        "client_secret": "123456",
+        "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
+        "grant_type": "authorization_code",
+        "code": "12345",
+    }
+
+    http.post(
         "https://oauth2.googleapis.com/token",
-        json={"access_token": "test_access_token", "expires_in": 3600, "refresh_token": "test_refresh_token"},
-        status_code=200,
+        json=payload,
+        headers={"Accept": "application/json"},
+    ).response(
+        {"access_token": "test_access_token", "expires_in": 3600, "refresh_token": "test_refresh_token"}, status=200
     )
 
     response = client.get(url, format="json")
@@ -150,19 +160,7 @@ def test_token(
     assert response.status_code == status.HTTP_302_FOUND
     assert response.url == f"https://4geeks.com?token={quote(model.token.key)}"
 
-    assert requests.call_count == 1
-    last_request = requests.last_request
-
-    assert last_request.method == "POST"
-    assert last_request.url == "https://oauth2.googleapis.com/token"
-    assert last_request.qs == {}
-    assert last_request.json() == {
-        "client_id": "123456.apps.googleusercontent.com",
-        "client_secret": "123456",
-        "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
-        "grant_type": "authorization_code",
-        "code": "12345",
-    }
+    http.call_count == 1
 
     assert database.list_of("authenticate.Token") == [format.to_obj_repr(model.token)]
     assert database.list_of("authenticate.CredentialsGoogle") == [
