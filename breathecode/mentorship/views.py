@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import time
+import traceback
 
 import timeago
 from django.contrib import messages
@@ -518,6 +519,7 @@ class ForwardMeetUrl:
         try:
             sessions = self.get_pending_sessions_or_create(mentor, service, mentee)
         except Exception as e:
+            traceback.print_exc()
             return render_message(self.request, str(e), status=400, academy=mentor.academy)
 
         if not is_token_of_mentee and sessions.count() > 0 and str(sessions.first().id) != self.query_params["session"]:
