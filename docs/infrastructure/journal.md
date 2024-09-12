@@ -67,3 +67,11 @@ Reasons for the change:
 - `[all]` `GOOGLE_SECRET` setted.
 - `[dev]` `GOOGLE_CLIENT_ID` setted.
 - `[all]` `GOOGLE_REDIRECT_URL` setted.
+
+## 11/09/2024
+
+- `[all]` `GOOGLE_CLIENT_SECRET` setted.
+
+Why:
+
+- To enable the oauth flow for the Google Meet API.

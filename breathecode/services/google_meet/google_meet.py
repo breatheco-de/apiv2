@@ -84,14 +84,15 @@ class ListParticipantsRequest(TypedDict):
 
 # Scopes for Google Calendar API (used for creating Google Meet links)
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
-CREDENTIAL_FILE_NAME = "google_cloud_oauth_token.pickle"
+TOKEN_FILE_NAME = "google_cloud_oauth_token.pickle"
+GOOGLE_CLIENT_SECRET = "client_secret.json"
 
 
 def get_credentials():
     creds = None
     # Check if google_meet_oauth_token.pickle exists (to reuse the token)
-    if os.path.exists(CREDENTIAL_FILE_NAME):
-        with open(CREDENTIAL_FILE_NAME, "rb") as token:
+    if os.path.exists(TOKEN_FILE_NAME):
+        with open(TOKEN_FILE_NAME, "rb") as token:
             creds = pickle.load(token)
 
     # If there are no valid credentials available, prompt the user to log in
@@ -99,11 +100,15 @@ def get_credentials():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
+            if not os.path.exists(GOOGLE_CLIENT_SECRET):
+                with open(GOOGLE_CLIENT_SECRET, "w") as f:
+                    f.write(os.getenv("GOOGLE_CLIENT_SECRET", ""))
+
+            flow = InstalledAppFlow.from_client_secrets_file(GOOGLE_CLIENT_SECRET, SCOPES)
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
-        with open(CREDENTIAL_FILE_NAME, "wb") as token:
+        with open(TOKEN_FILE_NAME, "wb") as token:
             pickle.dump(creds, token)
 
     return creds
