@@ -348,6 +348,7 @@ class AcademyAuthSettings(models.Model):
         null=True,
         help_text="Google auth token for this user will be used for any admin call to the google cloud api, "
         "for example: creating classroom video calls",
+        related_name="google_cloud_academy_auth_settings",
     )
     github_default_team_ids = models.CharField(
         max_length=40,
