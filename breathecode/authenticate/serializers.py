@@ -470,6 +470,7 @@ class AuthSettingsBigSerializer(serpy.Serializer):
     academy = AcademyTinySerializer()
     github_username = serpy.Field()
     github_owner = UserSmallSerializer(required=False)
+    google_cloud_owner = UserSmallSerializer(required=False)
     github_default_team_ids = serpy.Field()
     github_is_sync = serpy.Field()
     github_error_log = serpy.Field()

@@ -76,6 +76,9 @@ class MentorshipModelsMixin(ModelsMixin):
             if "mentorship_service" in models:
                 kargs["service"] = just_one(models["mentorship_service"])
 
+            if "academy" in models:
+                kargs["academy"] = just_one(models["academy"])
+
             models["mentorship_session"] = create_models(mentorship_session, "mentorship.MentorshipSession", **kargs)
 
         return models

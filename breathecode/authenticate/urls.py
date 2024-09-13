@@ -142,7 +142,7 @@ urlpatterns = [
     path("user/me", UserMeView.as_view(), name="user_me"),
     path("user/me/invite", MeInviteView.as_view(), name="user_me_invite"),
     path("user/me/invite/<slug:new_status>", MeInviteView.as_view(), name="user_me_invite_status"),
-    path("academy/settings", AcademyAuthSettingsView.as_view(), name="academy_me_settings"),
+    path("academy/settings", AcademyAuthSettingsView.as_view(), name="academy_settings"),
     # google authentication oath2.0
     path("google/callback", save_google_token, name="google_callback"),
     path("google/<str:token>", get_google_token, name="google_token"),

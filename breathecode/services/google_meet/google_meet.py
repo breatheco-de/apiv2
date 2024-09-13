@@ -1,14 +1,12 @@
 import os.path
-import pickle
 from typing import Optional, TypedDict, Unpack
 
 import google.apps.meet_v2.services.conference_records_service.pagers as pagers
 from asgiref.sync import async_to_sync
 from google.apps import meet_v2
 from google.apps.meet_v2.types import Space
-from google.auth.transport.requests import Request
 from google.protobuf.field_mask_pb2 import FieldMask
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2.credentials import Credentials
 
 __all__ = ["GoogleMeet"]
 
@@ -88,56 +86,72 @@ TOKEN_FILE_NAME = "google_cloud_oauth_token.pickle"
 GOOGLE_CLIENT_SECRET = "client_secret.json"
 
 
-def get_credentials():
-    creds = None
-    # Check if google_meet_oauth_token.pickle exists (to reuse the token)
-    if os.path.exists(TOKEN_FILE_NAME):
-        with open(TOKEN_FILE_NAME, "rb") as token:
-            creds = pickle.load(token)
+# def get_credentials():
+#     # creds = None
+#     # # Check if google_meet_oauth_token.pickle exists (to reuse the token)
+#     # if os.path.exists(TOKEN_FILE_NAME):
+#     #     with open(TOKEN_FILE_NAME, "rb") as token:
+#     #         creds = pickle.load(token)
 
-    # If there are no valid credentials available, prompt the user to log in
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not os.path.exists(GOOGLE_CLIENT_SECRET):
-                with open(GOOGLE_CLIENT_SECRET, "w") as f:
-                    f.write(os.getenv("GOOGLE_CLIENT_SECRET", ""))
+#     # # If there are no valid credentials available, prompt the user to log in
+#     # if not creds or not creds.valid:
+#     #     if creds and creds.expired and creds.refresh_token:
+#     #         creds.refresh(Request())
+#     #     else:
+#     #         if not os.path.exists(GOOGLE_CLIENT_SECRET):
+#     #             with open(GOOGLE_CLIENT_SECRET, "w") as f:
+#     #                 f.write(os.getenv("GOOGLE_CLIENT_SECRET", ""))
 
-            flow = InstalledAppFlow.from_client_secrets_file(GOOGLE_CLIENT_SECRET, SCOPES)
-            creds = flow.run_local_server(port=0)
+#     #         flow = InstalledAppFlow.from_client_secrets_file(GOOGLE_CLIENT_SECRET, SCOPES)
+#     #         creds = flow.run_local_server(port=0)
+#     #         flow.fetch_token()
+#     #         # flow.
 
-        # Save the credentials for the next run
-        with open(TOKEN_FILE_NAME, "wb") as token:
-            pickle.dump(creds, token)
+#     #     # Save the credentials for the next run
+#     #     with open(TOKEN_FILE_NAME, "wb") as token:
+#     #         pickle.dump(creds, token)
 
-    return creds
+#     return Credentials(
+#         token=...,
+#         refresh_token=...,
+#         token_uri="https://oauth2.googleapis.com/token",
+#         client_id=os.getenv("GOOGLE_CLIENT_ID"),
+#         client_secret=...,
+#     )
+
+#     return creds
 
 
 class GoogleMeet:
     _spaces_service_client: Optional[meet_v2.SpacesServiceAsyncClient]
     _conference_records_service_client: Optional[meet_v2.ConferenceRecordsServiceAsyncClient]
 
-    def __init__(self):
-        from breathecode.setup import resolve_gcloud_credentials
+    def __init__(self, token: str, refresh_token: Optional[str] = None):
+        # from breathecode.setup import resolve_gcloud_credentials
 
-        resolve_gcloud_credentials()
+        # resolve_gcloud_credentials()
+        self._credentials = Credentials(
+            token=token,
+            refresh_token=refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=os.getenv("GOOGLE_CLIENT_ID", ""),
+            client_secret=os.getenv("GOOGLE_SECRET", ""),
+            # granted_scopes=SCOPES,
+        )
 
         self._spaces_service_client = None
         self._conference_records_service_client = None
 
     async def spaces_service_client(self):
         if self._spaces_service_client is None:
-            credentials = get_credentials()
-            self._spaces_service_client = meet_v2.SpacesServiceAsyncClient(credentials=credentials)
+            self._spaces_service_client = meet_v2.SpacesServiceAsyncClient(credentials=self._credentials)
 
         return self._spaces_service_client
 
     async def conference_records_service_client(self):
         if self._conference_records_service_client is None:
-            credentials = get_credentials()
             self._conference_records_service_client = meet_v2.ConferenceRecordsServiceAsyncClient(
-                credentials=credentials
+                credentials=self._credentials
             )
 
         return self._conference_records_service_client
