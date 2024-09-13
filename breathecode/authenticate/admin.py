@@ -475,7 +475,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
     list_display = ("academy", "github_is_sync", "github_errors", "github_username", "github_owner", "authenticate")
     search_fields = ["academy__slug", "academy__name", "github__username", "academy__id"]
     actions = (clean_errors, activate_github_sync, deactivate_github_sync, sync_github_members)
-    raw_id_fields = ["github_owner"]
+    raw_id_fields = ["github_owner", "google_cloud_owner"]
 
     def get_queryset(self, request):
 
