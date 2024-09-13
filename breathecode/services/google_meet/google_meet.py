@@ -112,9 +112,11 @@ class GoogleMeet:
                 client_id=os.getenv("GOOGLE_CLIENT_ID"),
                 client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
             )
+            creds.refresh(Request())
         elif os.path.exists(TOKEN_FILE_NAME):
             with open(TOKEN_FILE_NAME, "rb") as token:
                 creds = pickle.load(token)
+                creds.refresh(Request())
 
         # If there are no valid credentials available, raise an exception
         if not creds or not creds.valid:
