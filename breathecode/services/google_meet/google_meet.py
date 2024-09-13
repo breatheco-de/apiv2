@@ -8,6 +8,10 @@ from google.apps.meet_v2.types import Space
 from google.protobuf.field_mask_pb2 import FieldMask
 from google.oauth2.credentials import Credentials
 
+
+import pickle
+from google.auth.transport.requests import Request
+
 __all__ = ["GoogleMeet"]
 
 
@@ -86,61 +90,40 @@ TOKEN_FILE_NAME = "google_cloud_oauth_token.pickle"
 GOOGLE_CLIENT_SECRET = "client_secret.json"
 
 
-# def get_credentials():
-#     # creds = None
-#     # # Check if google_meet_oauth_token.pickle exists (to reuse the token)
-#     # if os.path.exists(TOKEN_FILE_NAME):
-#     #     with open(TOKEN_FILE_NAME, "rb") as token:
-#     #         creds = pickle.load(token)
-
-#     # # If there are no valid credentials available, prompt the user to log in
-#     # if not creds or not creds.valid:
-#     #     if creds and creds.expired and creds.refresh_token:
-#     #         creds.refresh(Request())
-#     #     else:
-#     #         if not os.path.exists(GOOGLE_CLIENT_SECRET):
-#     #             with open(GOOGLE_CLIENT_SECRET, "w") as f:
-#     #                 f.write(os.getenv("GOOGLE_CLIENT_SECRET", ""))
-
-#     #         flow = InstalledAppFlow.from_client_secrets_file(GOOGLE_CLIENT_SECRET, SCOPES)
-#     #         creds = flow.run_local_server(port=0)
-#     #         flow.fetch_token()
-#     #         # flow.
-
-#     #     # Save the credentials for the next run
-#     #     with open(TOKEN_FILE_NAME, "wb") as token:
-#     #         pickle.dump(creds, token)
-
-#     return Credentials(
-#         token=...,
-#         refresh_token=...,
-#         token_uri="https://oauth2.googleapis.com/token",
-#         client_id=os.getenv("GOOGLE_CLIENT_ID"),
-#         client_secret=...,
-#     )
-
-#     return creds
-
-
 class GoogleMeet:
     _spaces_service_client: Optional[meet_v2.SpacesServiceAsyncClient]
     _conference_records_service_client: Optional[meet_v2.ConferenceRecordsServiceAsyncClient]
 
     def __init__(self, token: str, refresh_token: Optional[str] = None):
-        # from breathecode.setup import resolve_gcloud_credentials
-
-        # resolve_gcloud_credentials()
-        self._credentials = Credentials(
-            token=token,
-            refresh_token=refresh_token,
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=os.getenv("GOOGLE_CLIENT_ID", ""),
-            client_secret=os.getenv("GOOGLE_SECRET", ""),
-            # granted_scopes=SCOPES,
-        )
-
+        self._credentials = self._get_credentials(token, refresh_token)
         self._spaces_service_client = None
         self._conference_records_service_client = None
+
+    def _get_credentials(
+        self, token: Optional[str] = None, refresh_token: Optional[str] = None
+    ) -> Optional[Credentials]:
+        creds = None
+
+        if token:
+            creds = Credentials(
+                token=token,
+                refresh_token=refresh_token,
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=os.getenv("GOOGLE_CLIENT_ID"),
+                client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+            )
+        elif os.path.exists(TOKEN_FILE_NAME):
+            with open(TOKEN_FILE_NAME, "rb") as token:
+                creds = pickle.load(token)
+
+        # If there are no valid credentials available, raise an exception
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                raise Exception("Invalid or expired credentials. Please provide a valid token.")
+
+        return creds
 
     async def spaces_service_client(self):
         if self._spaces_service_client is None:
