@@ -2030,12 +2030,11 @@ def get_google_token(request, token=None):
         "scope": " ".join(
             [
                 "https://www.googleapis.com/auth/meetings.space.created",
-                "https://www.googleapis.com/auth/meetings.space.readonly",
+                # "https://www.googleapis.com/auth/meetings.space.readonly",
                 "https://www.googleapis.com/auth/drive.meet.readonly",
-                "https://www.googleapis.com/auth/calendar.events",
+                # "https://www.googleapis.com/auth/calendar.events",
             ]
         ),
-        # "scope": "calendar.events,meetings.space.readonly,meetings.space.created,drive.readonly",
         "state": f"token={token.key}&url={url}",
     }
 
