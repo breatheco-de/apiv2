@@ -85,7 +85,12 @@ class ListParticipantsRequest(TypedDict):
 
 
 # Scopes for Google Calendar API (used for creating Google Meet links)
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+# https://www.googleapis.com/auth/meetings.space.created
+# https://www.googleapis.com/auth/meetings.space.readonly
+# SCOPES = [
+#     "google.apps.meet.v2.SpacesService.CreateSpace",
+#     "google.apps.meet.v2.SpacesService.GetSpace",
+# ]
 TOKEN_FILE_NAME = "google_cloud_oauth_token.pickle"
 GOOGLE_CLIENT_SECRET = "client_secret.json"
 
