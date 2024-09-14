@@ -2027,7 +2027,15 @@ def get_google_token(request, token=None):
         "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GOOGLE_REDIRECT_URL", ""),
         "access_type": "offline",  # we need offline access to receive refresh token and avoid total expiration
-        "scope": "calendar.events,meetings.space.readonly,meetings.space.created,drive.readonly",
+        "scope": " ".join(
+            [
+                "https://www.googleapis.com/auth/meetings.space.created",
+                "https://www.googleapis.com/auth/meetings.space.readonly",
+                "https://www.googleapis.com/auth/drive.meet.readonly",
+                "https://www.googleapis.com/auth/calendar.events",
+            ]
+        ),
+        # "scope": "calendar.events,meetings.space.readonly,meetings.space.created,drive.readonly",
         "state": f"token={token.key}&url={url}",
     }
 
