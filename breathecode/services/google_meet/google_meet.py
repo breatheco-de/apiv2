@@ -110,7 +110,7 @@ class GoogleMeet:
                 refresh_token=refresh_token,
                 token_uri="https://oauth2.googleapis.com/token",
                 client_id=os.getenv("GOOGLE_CLIENT_ID"),
-                client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+                client_secret=os.getenv("GOOGLE_SECRET"),
             )
             creds.refresh(Request())
         elif os.path.exists(TOKEN_FILE_NAME):
