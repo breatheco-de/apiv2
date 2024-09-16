@@ -80,7 +80,14 @@ def test_redirect(database: capy.Database, client: capy.Client, token: Any):
         "client_id": "123456.apps.googleusercontent.com",
         "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
         "access_type": "offline",
-        "scope": "https://www.googleapis.com/auth/calendar.events",
+        "scope": " ".join(
+            [
+                "https://www.googleapis.com/auth/meetings.space.created",
+                # "https://www.googleapis.com/auth/meetings.space.readonly",
+                "https://www.googleapis.com/auth/drive.meet.readonly",
+                # "https://www.googleapis.com/auth/calendar.events",
+            ]
+        ),
         "state": f"token={model.token.key}&url={callback_url}",
     }
 

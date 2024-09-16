@@ -2104,15 +2104,20 @@ async def save_google_token(request):
                 if "refresh_token" in body:
                     refresh = body["refresh_token"]
 
-                await CredentialsGoogle.objects.filter(user__id=user.id).adelete()
-
-                google_credentials = CredentialsGoogle(
+                google_credentials, created = await CredentialsGoogle.objects.aget_or_create(
                     user=user,
-                    token=body["access_token"],
-                    refresh_token=refresh,
                     expires_at=timezone.now() + timedelta(seconds=body["expires_in"]),
+                    defaults={
+                        "token": body["access_token"],
+                        "refresh_token": refresh,
+                    },
                 )
-                await google_credentials.asave()
+                if created is False:
+                    google_credentials.token = body["access_token"]
+                    if refresh:
+                        google_credentials.refresh_token = refresh
+
+                    await google_credentials.asave()
 
                 return HttpResponseRedirect(redirect_to=state["url"][0] + "?token=" + token.key)
 

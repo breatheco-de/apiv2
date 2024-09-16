@@ -434,6 +434,9 @@ class ForwardMeetUrl:
             if "heading" not in obj:
                 obj["heading"] = session.mentor.academy.name
 
+        if session.online_meeting_url and "meet.google.com" in session.online_meeting_url:
+            return HttpResponseRedirect(session.online_meeting_url)
+
         return render(
             self.request,
             "message.html",

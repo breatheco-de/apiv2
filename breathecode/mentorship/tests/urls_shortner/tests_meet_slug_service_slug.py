@@ -1364,6 +1364,100 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete("payments.Service")
 
     """
+    🔽🔽🔽 Google Meet
+    """
+
+    @patch("breathecode.mentorship.actions.mentor_is_ready", MagicMock())
+    @patch(
+        "os.getenv",
+        MagicMock(
+            side_effect=apply_get_env(
+                {
+                    "DAILY_API_URL": URL,
+                    "DAILY_API_KEY": API_KEY,
+                }
+            )
+        ),
+    )
+    @patch(
+        "requests.request",
+        apply_requests_request_mock(
+            [
+                (
+                    201,
+                    f"{URL}/v1/rooms",
+                    {
+                        "name": ROOM_NAME,
+                        "url": ROOM_URL,
+                    },
+                )
+            ]
+        ),
+    )
+    def test_google_meet_redirect(self):
+        cases = [
+            {
+                "status": x,
+                "online_meeting_url": self.bc.fake.url(),
+                "booking_url": self.bc.fake.url(),
+            }
+            for x in ["ACTIVE", "UNLISTED"]
+        ]
+        service = {"consumer": "JOIN_MENTORSHIP"}
+
+        id = 0
+        for mentor_profile in cases:
+            id += 1
+
+            user = {"first_name": "", "last_name": ""}
+            base = self.bc.database.create(user=user, token=1, service=service)
+
+            mentorship_session = {"mentee_id": None, "online_meeting_url": "https://meet.google.com/abc123"}
+            academy = {"available_as_saas": False}
+            model = self.bc.database.create(
+                mentor_profile=mentor_profile,
+                mentorship_session=mentorship_session,
+                user=user,
+                mentorship_service={"language": "en", "video_provider": "GOOGLE_MEET"},
+                academy=academy,
+            )
+
+            model.mentorship_session.mentee = None
+            model.mentorship_session.save()
+
+            querystring = self.bc.format.to_querystring(
+                {
+                    "token": base.token.key,
+                }
+            )
+            url = (
+                reverse_lazy(
+                    "mentorship_shortner:meet_slug_service_slug",
+                    kwargs={"mentor_slug": model.mentor_profile.slug, "service_slug": model.mentorship_service.slug},
+                )
+                + f"?{querystring}"
+            )
+            response = self.client.get(url)
+
+            self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+            self.assertEqual(response.url, model.mentorship_session.online_meeting_url)
+
+            self.assertEqual(
+                self.bc.database.list_of("mentorship.MentorProfile"),
+                [
+                    self.bc.format.to_dict(model.mentor_profile),
+                ],
+            )
+            self.assertEqual(self.bc.database.list_of("payments.Consumable"), [])
+            self.assertEqual(self.bc.database.list_of("payments.ConsumptionSession"), [])
+
+            # teardown
+            self.bc.database.delete("mentorship.MentorProfile")
+            self.bc.database.delete("auth.Permission")
+            self.bc.database.delete("auth.User")
+            self.bc.database.delete("payments.Service")
+
+    """
     🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
     passing session and mentee but mentee does not exist, user without name
     """
