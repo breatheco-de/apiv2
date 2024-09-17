@@ -1,9 +1,13 @@
 from collections import OrderedDict
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import serializers
 from django.db import models
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort
@@ -215,3 +219,75 @@ class HookError(models.Model):
     hooks = models.ManyToManyField(Hook, related_name="errors", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class Notification(models.Model):
+    """This model works like a promise of delivery a notification to a user or academy."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        DONE = "DONE", "Done"
+        SENT = "SENT", "Sent"
+        SEEN = "SEEN", "Seen"
+
+    class Type(models.TextChoices):
+        INFO = "INFO", "Info"
+        WARNING = "WARNING", "Warning"
+        ERROR = "ERROR", "Error"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._status = self.status
+
+    operation_code = models.CharField(max_length=20)
+    message = models.TextField(blank=True, null=True, default=None)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, blank=True, default=None)
+    meta = models.JSONField(blank=True, null=True, default=None)
+
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    type = models.CharField(max_length=10, choices=Type.choices, default=Type.INFO)
+    done_at = models.DateTimeField(blank=True, null=True, default=None)
+    sent_at = models.DateTimeField(blank=True, null=True, default=None)
+    seen_at = models.DateTimeField(blank=True, null=True, default=None)
+
+    def __str__(self):
+        return self.operation_code
+
+    def clean(self):
+        if any([self.user, self.academy]) is False:
+            raise forms.ValidationError("Either user or academy must be provided")
+
+        if self.status == self.Status.DONE:
+            self.sent_at = timezone.now()
+
+        if self.status == self.Status.PENDING:
+            self.sent_at = None
+
+        super().clean()
+
+    @async_to_sync
+    async def send_notification(self):
+        channel_layer = get_channel_layer()
+
+        user_id = self.user.id if self.user else None
+        academy_id = self.academy.id if self.academy else None
+
+        await channel_layer.send(
+            f"notification_{user_id}_{academy_id}",
+            {
+                "type": "notification.refresh",
+                "user": user_id,
+                "academy": academy_id,
+            },
+        )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        if self.status != self._status and self.status == self.Status.DONE:
+            self.send_notification()
+
+        self._status = self.status

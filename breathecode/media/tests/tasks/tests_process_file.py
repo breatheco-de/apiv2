@@ -48,7 +48,7 @@ def test_no_process_fn(database: capy.Database, extra: dict):
 
 
 @pytest.mark.parametrize("extra", [{}, {"academy": 1, "city": 1, "country": 1}])
-@pytest.mark.parametrize("op_type", ["media"])
+@pytest.mark.parametrize("op_type", ["media", "profile-picture"])
 def test_process_file(database: capy.Database, extra: dict, op_type: str, monkeypatch: pytest.MonkeyPatch):
     m = MagicMock()
     monkeypatch.setitem(MEDIA_SETTINGS[op_type], "process", m)
