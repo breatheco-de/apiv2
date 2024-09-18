@@ -1,5 +1,6 @@
 # from django.db.models.signals import post_save
 import logging
+import re
 from typing import Any, Type
 
 from django.dispatch import receiver
@@ -15,6 +16,7 @@ from .signals import cohort_log_saved, cohort_user_created
 
 # add your receives here
 logger = logging.getLogger(__name__)
+GITHUB_URL_PATTERN = re.compile(r"https?:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
 
 
 @receiver(cohort_log_saved, sender=Cohort)
@@ -41,6 +43,32 @@ async def new_cohort_user(sender: Type[Cohort], instance: Cohort, **kwargs: Any)
             },
         },
     )
+
+
+@receiver(revision_status_updated, sender=Task, weak=False)
+def schedule_repository_deletion(sender: Type[Task], instance: Task, **kwargs: Any):
+    logger.info("Scheduling repository deletion for task: " + str(instance.id))
+
+    if instance.revision_status != Task.RevisionStatus.PENDING and instance.github_url:
+        match = GITHUB_URL_PATTERN.match(instance.github_url)
+        if match:
+            user = match.group("user")
+            repo = match.group("repo")
+            from breathecode.assignments.models import RepositoryDeletionOrder
+
+            order, created = RepositoryDeletionOrder.objects.get_or_create(
+                provider=RepositoryDeletionOrder.Provider.GITHUB,
+                repository_user=user,
+                repository_name=repo,
+                defaults={"status": RepositoryDeletionOrder.Status.PENDING},
+            )
+
+            if not created and order.status in [
+                RepositoryDeletionOrder.Status.NO_STARTED,
+                RepositoryDeletionOrder.Status.ERROR,
+            ]:
+                order.status = RepositoryDeletionOrder.Status.PENDING
+                order.save()
 
 
 @receiver(revision_status_updated, sender=Task, weak=False)

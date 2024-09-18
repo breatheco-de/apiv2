@@ -11,7 +11,7 @@ from django.utils import timezone
 from google.apps.meet_v2.types import Space, SpaceConfig
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.authenticate.models import User
+from breathecode.authenticate.models import AcademyAuthSettings, User
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
 from breathecode.services.google_meet.google_meet import GoogleMeet
@@ -438,9 +438,22 @@ def create_room_on_google_meet(session: MentorshipSession, mentee: User) -> None
     if not session.service:
         raise Exception("Mentorship session doesn't have a service associated with it")
 
+    settings = AcademyAuthSettings.objects.filter(
+        academy=session.service.academy, google_cloud_owner__isnull=False
+    ).first()
+
+    if not settings:
+        raise Exception("Academy doesn't have auth settings for google cloud")
+
+    if hasattr(settings.google_cloud_owner, "credentialsgoogle") is False:
+        raise Exception("Academy doesn't have a google cloud owner")
+
     # mentor = session.mentor
 
-    meet = GoogleMeet()
+    meet = GoogleMeet(
+        token=settings.google_cloud_owner.credentialsgoogle.token,
+        refresh_token=settings.google_cloud_owner.credentialsgoogle.refresh_token,
+    )
     if session.id is None:
         session.save()
 

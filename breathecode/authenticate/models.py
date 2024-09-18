@@ -22,6 +22,7 @@ from breathecode.authenticate.exceptions import (
     TryToGetOrCreateAOneTimeToken,
 )
 from breathecode.utils.validators import validate_language_code
+from asgiref.sync import sync_to_async
 
 from .signals import academy_invite_accepted
 
@@ -336,18 +337,19 @@ class AcademyAuthSettings(models.Model):
         blank=True,
         default=None,
         null=True,
-        # TODO: uncomment this
-        # help_text="Github auth token for this user will be used for any admin call to the google cloud api, for example: inviting users to the academy",
+        help_text="Github auth token for this user will be used for any admin call to the google cloud api, "
+        "for example: inviting users to the academy",
     )
-    # TODO: uncomment this
-    # google_cloud_owner = models.ForeignKey(
-    #     User,
-    #     on_delete=models.SET_NULL,
-    #     blank=True,
-    #     default=None,
-    #     null=True,
-    #     help_text="Google auth token for this user will be used for any admin call to the google cloud api, for example: creating classroom video calls",
-    # )
+    google_cloud_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        default=None,
+        null=True,
+        help_text="Google auth token for this user will be used for any admin call to the google cloud api, "
+        "for example: creating classroom video calls",
+        related_name="google_cloud_academy_auth_settings",
+    )
     github_default_team_ids = models.CharField(
         max_length=40,
         blank=True,
@@ -632,16 +634,21 @@ class Token(rest_framework.authtoken.models.Token):
         return token, created
 
     @classmethod
-    def get_valid(cls, token: str, **kwargs: Unpack[TokenFilterArgs]) -> "Token | None":
+    def get_valid(cls, token: str, async_mode: bool = False, **kwargs: Unpack[TokenFilterArgs]) -> "Token | None":
         utc_now = timezone.now()
         cls.delete_expired_tokens()
 
+        qs = Token.objects.filter(Q(expires_at__gt=utc_now) | Q(expires_at__isnull=True), key=token, **kwargs)
+        if async_mode:
+            qs = qs.prefetch_related("user")
+
         # find among any non-expired token
-        return (
-            Token.objects.filter(key=token, **kwargs)
-            .filter(Q(expires_at__gt=utc_now) | Q(expires_at__isnull=True))
-            .first()
-        )
+        return qs.first()
+
+    @classmethod
+    @sync_to_async
+    def aget_valid(cls, token: str, **kwargs: Unpack[TokenFilterArgs]) -> "Token | None":
+        return cls.get_valid(token, async_mode=True, **kwargs)
 
     @classmethod
     def validate_and_destroy(cls, hash: str) -> User:

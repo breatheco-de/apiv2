@@ -6,6 +6,7 @@ from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 from django.utils import timezone
+import pytest
 
 from breathecode.authenticate.models import Token
 from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
@@ -115,13 +116,78 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
     @patch("breathecode.mentorship.signals.mentorship_session_status.send", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=ENDS_AT))
     @patch("breathecode.mentorship.actions.close_older_sessions", MagicMock())
+    def test_no_auth_settings__google_meet(self):
+        """
+        When the mentor gets into the room before the mentee
+        if should create a room with status 'pending'
+        """
+
+        models = self.bc.database.create(
+            mentor_profile=1,
+            user=1,
+            mentorship_service={"video_provider": "GOOGLE_MEET"},
+        )
+
+        mentor = models.mentor_profile
+        mentor_token, created = Token.get_or_create(mentor.user, token_type="permanent")
+
+        with pytest.raises(Exception, match="Academy doesn't have auth settings for google cloud"):
+            get_pending_sessions_or_create(mentor_token, mentor, models.mentorship_service, mentee=None)
+
+        self.assertEqual(self.bc.database.list_of("mentorship.MentorshipSession"), [])
+        self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+
+    @patch.multiple(
+        "breathecode.services.google_meet.google_meet.GoogleMeet",
+        __init__=MagicMock(return_value=None),
+        create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri="https://meet.google.com/fake")),
+    )
+    @patch("breathecode.mentorship.signals.mentorship_session_status.send", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=ENDS_AT))
+    @patch("breathecode.mentorship.actions.close_older_sessions", MagicMock())
+    def test_no_google_cloud_owner__google_meet(self):
+        """
+        When the mentor gets into the room before the mentee
+        if should create a room with status 'pending'
+        """
+
+        models = self.bc.database.create(
+            mentor_profile=1,
+            user=1,
+            mentorship_service={"video_provider": "GOOGLE_MEET"},
+            academy_auth_settings=1,
+        )
+
+        mentor = models.mentor_profile
+        mentor_token, created = Token.get_or_create(mentor.user, token_type="permanent")
+
+        with pytest.raises(Exception, match="Academy doesn't have a google cloud owner"):
+            get_pending_sessions_or_create(mentor_token, mentor, models.mentorship_service, mentee=None)
+
+        self.assertEqual(self.bc.database.list_of("mentorship.MentorshipSession"), [])
+        self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+
+    @patch.multiple(
+        "breathecode.services.google_meet.google_meet.GoogleMeet",
+        __init__=MagicMock(return_value=None),
+        create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri="https://meet.google.com/fake")),
+    )
+    @patch("breathecode.mentorship.signals.mentorship_session_status.send", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=ENDS_AT))
+    @patch("breathecode.mentorship.actions.close_older_sessions", MagicMock())
     def test_create_session_mentor_first_no_previous_nothing__google_meet(self):
         """
         When the mentor gets into the room before the mentee
         if should create a room with status 'pending'
         """
 
-        models = self.bc.database.create(mentor_profile=1, user=1, mentorship_service={"video_provider": "GOOGLE_MEET"})
+        models = self.bc.database.create(
+            mentor_profile=1,
+            user=1,
+            mentorship_service={"video_provider": "GOOGLE_MEET"},
+            credentials_google=1,
+            academy_auth_settings=1,
+        )
 
         mentor = models.mentor_profile
         mentor_token, created = Token.get_or_create(mentor.user, token_type="permanent")
@@ -344,7 +410,13 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         it should return a brand new sessions with started at already started
         """
 
-        models = self.bc.database.create(mentor_profile=1, user=2, mentorship_service={"video_provider": "GOOGLE_MEET"})
+        models = self.bc.database.create(
+            mentor_profile=1,
+            user=2,
+            mentorship_service={"video_provider": "GOOGLE_MEET"},
+            credentials_google=1,
+            academy_auth_settings=1,
+        )
         mentor = models.mentor_profile
         mentee = models.user[1]
 
@@ -526,6 +598,8 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
             user=1,
             mentorship_session=mentorship_session,
             mentorship_service={"video_provider": "GOOGLE_MEET"},
+            credentials_google=1,
+            academy_auth_settings=1,
         )
         new_mentee = self.bc.database.create(user=1).user
 

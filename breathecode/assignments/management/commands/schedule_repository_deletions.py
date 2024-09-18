@@ -1,13 +1,13 @@
 import re
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from breathecode.assignments.models import RepositoryDeletionOrder, RepositoryWhiteList
+from breathecode.assignments.models import RepositoryDeletionOrder, RepositoryWhiteList, Task
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.models import RepositorySubscription
 from breathecode.registry.models import Asset
@@ -16,7 +16,7 @@ from breathecode.services.github import Github
 
 class Command(BaseCommand):
     help = "Clean data from marketing module"
-    github_url_pattern = re.compile(r"https:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
+    github_url_pattern = re.compile(r"https?:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
 
     def handle(self, *args, **options):
         self.fill_whitelist()
@@ -48,11 +48,83 @@ class Command(BaseCommand):
                 last_check = last.created_at
 
             self.schedule_github_deletions(settings.github_username, last_check)
+            self.collect_transferred_orders()
+            self.transfer_ownership()
             self.delete_github_repositories()
+
+    def check_path(self, obj: dict, *indexes: str) -> bool:
+        try:
+            value = obj
+            for index in indexes:
+                value = value[index]
+            return True
+        except Exception:
+            return False
+
+    def how_many_added_members(self, events: list[dict[str, Any]]) -> int:
+        return len(
+            [
+                event
+                for event in events
+                if self.check_path(event, "type")
+                and self.check_path(event, "payload", "action")
+                and event["type"] == "MemberEvent"
+                and event["payload"]["action"] == "added"
+            ]
+        )
+
+    def get_username(self, owner: str, repo: str) -> Optional[str]:
+        r = repo
+        repo = repo.lower()
+        index = -1
+        for events in self.github_client.get_repo_events(owner, r):
+            index += 1
+            for event in events:
+                if self.check_path(event, "type") is False:
+                    continue
+
+                if (
+                    index == 0
+                    and event["type"] == "MemberEvent"
+                    and len(events) < 30
+                    and self.check_path(event, "payload", "action")
+                    and self.how_many_added_members(events) == 1
+                    and self.check_path(event, "payload", "member", "login")
+                    and event["payload"]["action"] == "added"
+                ):
+                    return event["payload"]["member"]["login"]
+
+                if (
+                    event["type"] == "watchEvent"
+                    and self.check_path(event, "actor", "login")
+                    and event["actor"]["login"].replace("-", "").lower() in repo
+                ):
+                    return event["actor"]["login"]
+
+                if (
+                    event["type"] == "MemberEvent"
+                    and self.check_path(event, "payload", "member", "login")
+                    and event["payload"]["member"]["login"].replace("-", "").lower() in repo
+                ):
+                    return event["payload"]["member"]["login"]
+
+                if (
+                    event["type"] == "IssuesEvent"
+                    and self.check_path(event, "payload", "assignee", "login")
+                    and event["payload"]["assignee"]["login"].replace("-", "").lower() in repo
+                ):
+                    return event["payload"]["assignee"]["login"]
+
+                if (
+                    self.check_path(event, "actor", "login")
+                    and event["actor"]["login"].replace("-", "").lower() in repo
+                ):
+                    return event["actor"]["login"]
 
     def purge_deletion_orders(self):
 
         page = 0
+        to_delete = []
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
                 status=RepositoryDeletionOrder.Status.PENDING,
@@ -67,16 +139,18 @@ class Command(BaseCommand):
                     repository_user__iexact=deletion_order.repository_user,
                     repository_name__iexact=deletion_order.repository_name,
                 ).exists():
-                    deletion_order.delete()
+                    to_delete.append(deletion_order.id)
 
             page += 1
+
+        RepositoryDeletionOrder.objects.filter(id__in=to_delete).delete()
 
     def delete_github_repositories(self):
 
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
-                status=RepositoryDeletionOrder.Status.PENDING,
+                status__in=[RepositoryDeletionOrder.Status.PENDING, RepositoryDeletionOrder.Status.TRANSFERRING],
                 created_at__lte=timezone.now() - relativedelta(months=2),
             )[:100]
 
@@ -85,11 +159,23 @@ class Command(BaseCommand):
 
             for deletion_order in qs:
                 try:
-                    self.github_client.delete_org_repo(
+                    if self.github_client.repo_exists(
                         owner=deletion_order.repository_user, repo=deletion_order.repository_name
-                    )
-                    deletion_order.status = RepositoryDeletionOrder.Status.DELETED
-                    deletion_order.save()
+                    ):
+                        self.github_client.delete_org_repo(
+                            owner=deletion_order.repository_user, repo=deletion_order.repository_name
+                        )
+                        deletion_order.status = RepositoryDeletionOrder.Status.DELETED
+                        deletion_order.save()
+
+                    elif deletion_order.status == RepositoryDeletionOrder.Status.TRANSFERRING:
+                        deletion_order.status = RepositoryDeletionOrder.Status.TRANSFERRED
+                        deletion_order.save()
+
+                    else:
+                        raise Exception(
+                            f"Repository does not exist: {deletion_order.repository_user}/{deletion_order.repository_name}"
+                        )
 
                 except Exception as e:
                     deletion_order.status = RepositoryDeletionOrder.Status.ERROR
@@ -172,6 +258,84 @@ class Command(BaseCommand):
         ).exists():
             return
 
-        RepositoryDeletionOrder.objects.get_or_create(
-            provider=provider, repository_user=user, repository_name=repo_name
+        status = RepositoryDeletionOrder.Status.PENDING
+        if (
+            Task.objects.filter(github_url__icontains=f"github.com/{user}/{repo_name}")
+            .exclude(revision_status=Task.RevisionStatus.PENDING)
+            .exists()
+        ):
+            status = RepositoryDeletionOrder.Status.NO_STARTED
+
+        order, _ = RepositoryDeletionOrder.objects.get_or_create(
+            provider=provider,
+            repository_user=user,
+            repository_name=repo_name,
+            defaults={"status": status},
         )
+
+        if order.status != status:
+            order.status = status
+            order.save()
+
+    def collect_transferred_orders(self):
+
+        ids = []
+
+        while True:
+            qs = RepositoryDeletionOrder.objects.filter(
+                provider=RepositoryDeletionOrder.Provider.GITHUB,
+                status=RepositoryDeletionOrder.Status.TRANSFERRING,
+                created_at__gt=timezone.now(),
+            ).exclude(id__in=ids)[:100]
+
+            if qs.count() == 0:
+                break
+
+            for deletion_order in qs:
+                try:
+                    ids.append(deletion_order.id)
+                    if (
+                        self.github_client.repo_exists(
+                            owner=deletion_order.repository_user, repo=deletion_order.repository_name
+                        )
+                        is False
+                    ):
+                        deletion_order.status = RepositoryDeletionOrder.Status.TRANSFERRED
+                        deletion_order.save()
+
+                except Exception as e:
+                    deletion_order.status = RepositoryDeletionOrder.Status.ERROR
+                    deletion_order.status_text = str(e)
+                    deletion_order.save()
+
+    def transfer_ownership(self):
+        ids = []
+
+        while True:
+            qs = RepositoryDeletionOrder.objects.filter(
+                provider=RepositoryDeletionOrder.Provider.GITHUB,
+                status=RepositoryDeletionOrder.Status.PENDING,
+                created_at__gt=timezone.now(),
+            ).exclude(id__in=ids)[:100]
+
+            if qs.count() == 0:
+                break
+
+            for deletion_order in qs:
+                ids.append(deletion_order.id)
+                try:
+                    if self.github_client.repo_exists(
+                        owner=deletion_order.repository_user, repo=deletion_order.repository_name
+                    ):
+                        new_owner = self.get_username(deletion_order.repository_user, deletion_order.repository_name)
+                        if not new_owner:
+                            continue
+
+                        self.github_client.transfer_repo(repo=deletion_order.repository_name, new_owner=new_owner)
+                        deletion_order.status = RepositoryDeletionOrder.Status.TRANSFERRING
+                        deletion_order.save()
+
+                except Exception as e:
+                    deletion_order.status = RepositoryDeletionOrder.Status.ERROR
+                    deletion_order.status_text = str(e)
+                    deletion_order.save()
