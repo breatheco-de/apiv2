@@ -1,6 +1,6 @@
 import os
 from io import BytesIO
-from typing import Any, Awaitable, Callable, Optional, Type, TypedDict
+from typing import Any, Awaitable, Callable, Literal, Optional, Type, TypedDict
 
 from adrf.requests import AsyncRequest
 from capyc.rest_framework.exceptions import ValidationException
@@ -8,8 +8,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUpload
 from PIL import Image
 
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.media.actions import Emit
 from breathecode.media.models import Chunk, File
+from breathecode.notify.models import Notification
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.i18n import translation
 
@@ -26,7 +26,7 @@ class MediaSettings(TypedDict):
     is_mime_supported: Callable[[InMemoryUploadedFile | TemporaryUploadedFile, Optional[int]], Awaitable[bool]]
     get_schema = Optional[Callable[[AsyncRequest, Optional[int]], Awaitable[Schema]]]
     # this callback is sync because it'll be called within celery what doesn't support async operations properly
-    process = Optional[Callable[[File, dict[str, Any], Optional[int]], None]]
+    process = Optional[Callable[[File, dict[str, Any], Optional[int]], tuple[Literal["INFO", "WARNING", "ERROR"], str]]]
 
 
 MEDIA_MIME_ALLOWED = [
@@ -55,6 +55,17 @@ PROFILE_MIME_ALLOWED = [
     "image/png",
     "image/jpeg",
 ]
+
+EXT_MAP = {
+    # 'mime': 'format',
+    "image/gif": "gif",
+    "image/x-icon": "ico",
+    "image/jpeg": "jpeg",
+    # 'image/svg+xml': 'svg', not have sense resize a svg
+    # 'image/tiff': 'tiff', don't work
+    "image/webp": "webp",
+    "image/png": "png",
+}
 
 
 async def allow_any(request: AsyncRequest, academy_id: Optional[int] = None) -> bool:
@@ -167,7 +178,7 @@ def save_file(f: BytesIO, bucket: str, name: str, mime: str) -> str:
     return file.url()
 
 
-def process_media(file: File) -> None:
+def process_media(file: File) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
     from .models import Category, Media
 
     academy_id = file.academy.id if file.academy else None
@@ -175,7 +186,7 @@ def process_media(file: File) -> None:
 
     if Media.objects.filter(hash=file.hash, academy__id=academy_id).exists():
         del_temp_file(file)
-        return Emit.info("Media already exists")
+        return Notification.info("Media already exists")
 
     if url := Media.objects.filter(hash=file.hash).values_list("url", flat=True).first():
         del_temp_file(file)
@@ -195,10 +206,10 @@ def process_media(file: File) -> None:
 
     categories = Category.objects.filter(slug__in=meta["categories"])
     media.categories.set(categories)
-    return Emit.info("Media processed")
+    return Notification.info("Media processed")
 
 
-def process_profile(file: File) -> None:
+def process_profile(file: File) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
     from breathecode.authenticate.models import Profile
 
     f = get_file(file)
@@ -206,11 +217,11 @@ def process_profile(file: File) -> None:
     width, height = image.size
 
     user = file.user
-    settings = get_user_settings(user)
+    settings = get_user_settings(user.id)
     lang = settings.lang
 
     if width != height:
-        return Emit.error(
+        return Notification.error(
             translation(lang, en="Profile picture must be square", es="La foto de perfil debe ser cuadrada")
         )
 
@@ -218,7 +229,8 @@ def process_profile(file: File) -> None:
     image.resize((size, size))
 
     resized_image = BytesIO()
-    image.save(resized_image)
+    ext = EXT_MAP[file.mime]
+    image.save(resized_image, format=ext)
     f.close()
     name = f"{file.file_name}-{size}x{size}"
 
@@ -227,17 +239,17 @@ def process_profile(file: File) -> None:
 
     profile = Profile.objects.filter(user=user).first()
     if profile and profile.avatar_url == url:
-        return Emit.info(
+        return Notification.info(
             translation(lang, en="You uploaded the same profile picture", es="Subiste la misma foto de perfil")
         )
 
-    else:
+    elif profile is None:
         profile = Profile(user=user)
 
     profile.avatar_url = url
     profile.save()
 
-    return Emit.info(translation(lang, en="Profile picture was updated", es="Foto de perfil fue actualizada"))
+    return Notification.info(translation(lang, en="Profile picture was updated", es="Foto de perfil fue actualizada"))
 
 
 MB = 1024 * 1024
