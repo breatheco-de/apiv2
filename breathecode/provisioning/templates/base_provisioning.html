@@ -1,0 +1,224 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0;">
+	<meta name="format-detection" content="telephone=no" />
+	<link rel="stylesheet" href="//use.fontawesome.com/releases/v5.15.4/css/all.css">
+	<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/fontawesome.min.css" integrity="sha384-jLKHWM3JRmfMU0A5x5AkjWkw/EYfGUAGagvnfryNV3F9VqM98XiIH7VBGVoxVSc7" crossorigin="anonymous"> -->
+
+	<style>
+		/* Reset styles */
+		html {
+			height: 100%;
+		}
+		body {
+			margin: 0;
+			padding: 0;
+			min-width: 100%;
+			background: rgb(255,255,255);
+			background-repeat: no-repeat !important;
+			background-attachment: fixed;
+			background: linear-gradient(0deg, rgba(255,255,255,1) 50%, rgba(238,249,254,1) 50%);
+			width: 100% !important;
+			height: 100% !important;
+			font-family: sans-serif;
+		}
+
+		body,
+		table,
+		td,
+		div,
+		p,
+		a {
+			-webkit-font-smoothing: antialiased;
+			text-size-adjust: 100%;
+			-ms-text-size-adjust: 100%;
+			-webkit-text-size-adjust: 100%;
+			line-height: 100%;
+		}
+
+		table,
+		td {
+			mso-table-lspace: 0pt;
+			mso-table-rspace: 0pt;
+			border-collapse: collapse !important;
+			border-spacing: 0;
+		}
+
+		img {
+			border: 0;
+			line-height: 100%;
+			outline: none;
+			text-decoration: none;
+			-ms-interpolation-mode: bicubic;
+		}
+
+		h1 {
+			line-height: 100%;
+		}
+
+		#outlook a {
+			padding: 0;
+		}
+
+		.ReadMsgBody {
+			width: 100%;
+		}
+
+		.ExternalClass {
+			width: 100%;
+		}
+
+		.ExternalClass,
+		.ExternalClass p,
+		.ExternalClass span,
+		.ExternalClass font,
+		.ExternalClass td,
+		.ExternalClass div {
+			line-height: 100%;
+		}
+
+		/* Rounded corners for advanced mail clients only */
+		@media all and (min-width: 560px) {
+			.container {
+				border-radius: 8px;
+				-webkit-border-radius: 8px;
+				-moz-border-radius: 8px;
+				-khtml-border-radius: 8px;
+			}
+		}
+
+		/* Set color for auto links (addresses, dates, etc.) */
+		a,
+		a:hover {
+			color: #127DB3;
+		}
+
+		.footer a,
+		.footer a:hover {
+			color: #999999;
+		}
+
+		.es-pb-10 {
+			padding-bottom: 10px;
+		}
+
+		.es-p10t {
+			padding-top: 10px;
+		}
+
+		.es-p5r {
+			padding-right: 5px;
+		}
+
+		.es-p5l {
+			padding-left: 5px;
+		}
+
+		.pointer {
+			cursor: pointer;
+		}
+	</style>
+
+	<!-- MESSAGE SUBJECT -->
+	<title>{{ subject }}</title>
+
+	{% block head %}
+	{% endblock %}
+
+</head>
+
+<!-- BODY -->
+<!-- Set message background color (twice) and text color (twice) -->
+
+<body topmargin="0" rightmargin="0" bottommargin="0" leftmargin="0" marginwidth="0" marginheight="0" width="100%" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; width: 100%; height: 100%; -webkit-font-smoothing: antialiased; text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; line-height: 100%; color: #000000;" text="#000000">
+
+	<!-- SECTION / BACKGROUND -->
+	<!-- Set message background color one again -->
+	<table width="100%" align="center" border="0" cellpadding="0" cellspacing="0"
+		style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; width: 100%;" class="background">
+		<tr>
+			<td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0;"
+				<!-- WRAPPER -->
+				<!-- Set wrapper width (twice) -->
+				<table border="0" cellpadding="0" cellspacing="0" align="center" width="560" style="border-collapse: collapse; border-spacing: 0; padding: 0; width: inherit; max-width: 560px;" class="wrapper">
+					<tr>
+						<td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%; padding-top: 20px; padding-bottom: 20px;">
+							<!-- PREHEADER -->
+							<!-- Set text color to background color -->
+							<div style="display: none; visibility: hidden; overflow: hidden; opacity: 0; font-size: 1px; line-height: 1px; height: 0; max-height: 0; max-width: 0; color: #F0F0F0;" class="preheader">
+								Available on&nbsp;GitHub and&nbsp;CodePen. Highly compatible. Designer friendly. More
+								than 50%&nbsp;of&nbsp;total email opens occurred on&nbsp;a&nbsp;mobile device&nbsp;—
+								a&nbsp;mobile-friendly design is&nbsp;a&nbsp;must for&nbsp;email campaigns.
+							</div>
+
+
+
+						</td>
+					</tr>
+
+					<!-- End of WRAPPER -->
+				</table>
+				{% block content %}
+				{% endblock %}
+
+		<!-- PARAGRAPH -->
+		<!-- Set text color and font family ("sans-serif" or "Georgia, serif"). Duplicate all text styles in links, including line-height -->
+		<tr>
+			<td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%; font-size: 17px; font-weight: 400; line-height: 160%;
+			padding-top: 5px;
+			padding-bottom: 5px;
+			color: #000000;
+			font-family: sans-serif;" class="paragraph">&nbsp;
+			</td>
+		</tr>
+
+		<!-- End of WRAPPER -->
+	</table>
+
+	<!-- WRAPPER -->
+	<!-- Set wrapper width (twice) -->
+	<table border="0" cellpadding="0" cellspacing="0" align="center" width="560" style="border-collapse: collapse; border-spacing: 0; padding: 0; width: inherit;
+	max-width: 560px;" class="wrapper">
+
+		<!-- FOOTER -->
+		<!-- Set text color and font family ("sans-serif" or "Georgia, serif"). Duplicate all text styles in links, including line-height -->
+		<tr>
+			<td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%; font-size: 13px; font-weight: 400; line-height: 150%;
+			padding-top: 20px;
+			padding-bottom: 20px;
+			color: #999999;
+			font-family: sans-serif;" class="footer">
+				<p>Have a&nbsp;question? <a href="mailto:{{ COMPANY_INFO_EMAIL|default:'info@4geeks.com' }}" target="_blank"
+				style="color: #127DB3; font-family: sans-serif; font-size: 13px; font-weight: 400; line-height: 160%;">
+					{{ COMPANY_INFO_EMAIL|default:'info@4geeks.com' }}</a></p>
+				All rights reserved {{ COMPANY_LEGAL_NAME|default:'4Geeks LLC' }} <script>document.write(/\d{4}/.exec(Date())[0])</script>
+
+			</td>
+		</tr>
+
+		<!-- End of WRAPPER -->
+	</table>
+
+	<!-- End of SECTION / BACKGROUND -->
+	</td>
+	</tr>
+	</table>
+
+	{% if TRACKER_URL %}
+	<img width="1" height="1" border="0" vspace="0" hspace="0"
+		style="margin: 0; padding: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; border: none; display: block;"
+		src="{{ TRACKER_URL }}" />
+	{% endif %}
+
+	<script src="https://unpkg.com/popper.js@1"></script>
+	<script src="https://unpkg.com/tippy.js@4"></script>
+	<script>
+		window.onload = function () {
+			tippy('.tooltip', { allowHTML: true })
+		}
+	</script>
+</body>
+
+</html>
