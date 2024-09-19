@@ -606,8 +606,10 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             plan_financing.next_payment_at += delta
             plan_financing.save()
 
-            bag.was_delivered = True
-            bag.save()
+            # if this charge but the client paid all its installments, there hasn't been a new bag created
+            if bag:
+                bag.was_delivered = True
+                bag.save()
 
             renew_plan_financing_consumables.delay(plan_financing.id)
 
