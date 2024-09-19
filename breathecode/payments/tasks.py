@@ -377,8 +377,9 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     subscription.valid_until += delta
 
             subscription.invoices.add(invoice)
-
+            subscription.status = "ACTIVE"
             subscription.save()
+
             value = invoice.currency.format_price(invoice.amount)
 
             subject = translation(
@@ -572,6 +573,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     remaining_installments -= 1
                     plan_financing.valid_until = utc_now + relativedelta(months=remaining_installments)
 
+                elif remaining_installments > 0:
+                    remaining_installments -= 1
+
                 plan_financing.invoices.add(invoice)
 
                 value = invoice.currency.format_price(invoice.amount)
@@ -604,6 +608,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 delta += relativedelta(months=1)
 
             plan_financing.next_payment_at += delta
+            plan_financing.status = "ACTIVE" if remaining_installments > 0 else "FULLY_PAID"
             plan_financing.save()
 
             # if this charge but the client paid all its installments, there hasn't been a new bag created
