@@ -286,11 +286,13 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             academy=subscription.academy,
         )
 
-        bag.delete()
+        if bag:
+            bag.delete()
 
         subscription.status = "PAYMENT_ISSUE"
         subscription.save()
 
+    bag = None
     client = None
     if IS_DJANGO_REDIS:
         client = get_redis_connection("default")
@@ -462,11 +464,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             academy=plan_financing.academy,
         )
 
-        bag.delete()
+        if bag:
+            bag.delete()
 
         plan_financing.status = "PAYMENT_ISSUE"
         plan_financing.save()
 
+    bag = None
     client = None
     if IS_DJANGO_REDIS:
         client = get_redis_connection("default")
