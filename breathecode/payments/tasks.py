@@ -378,6 +378,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             subscription.invoices.add(invoice)
             subscription.status = "ACTIVE"
+            subscription.status_message = None
             subscription.save()
 
             value = invoice.currency.format_price(invoice.amount)
@@ -609,6 +610,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             plan_financing.next_payment_at += delta
             plan_financing.status = "ACTIVE" if remaining_installments > 0 else "FULLY_PAID"
+            plan_financing.status_message = None
             plan_financing.save()
 
             # if this charge but the client paid all its installments, there hasn't been a new bag created
