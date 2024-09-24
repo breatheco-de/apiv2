@@ -7,6 +7,7 @@ import os
 import requests
 from adrf.views import APIView
 from adrf.viewsets import ViewSet
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.db.models import Q
 from django.http import StreamingHttpResponse
@@ -35,7 +36,6 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
 MIME_ALLOWED = [
@@ -47,6 +47,8 @@ MIME_ALLOWED = [
     "video/mp4",
     "audio/mpeg",
     "application/pdf",
+    "application/json",
+    "text/plain",
     "image/jpg",
     "application/octet-stream",
     "application/x-pka",
