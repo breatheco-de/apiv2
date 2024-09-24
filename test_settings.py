@@ -23,3 +23,5 @@ CACHES = {
 
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv("CACHE_MIDDLEWARE_MINUTES", 120))
 SECURE_SSL_REDIRECT = False
+
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

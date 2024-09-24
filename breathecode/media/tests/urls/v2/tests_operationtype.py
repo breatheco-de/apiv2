@@ -19,6 +19,7 @@ def test_list_op_types(client: capy.Client):
     expected = [
         "media",
         "proof-of-payment",
+        "profile-picture",
     ]
 
     assert json == expected
