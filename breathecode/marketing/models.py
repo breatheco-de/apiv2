@@ -404,7 +404,7 @@ class FormEntry(models.Model):
 
     # is it saved into active campaign?
     storage_status = models.CharField(
-        max_length=15,
+        max_length=20,
         choices=STORAGE_STATUS,
         default=PENDING,
         help_text="MANUALLY_PERSISTED means it was copy pasted into active campaign",
