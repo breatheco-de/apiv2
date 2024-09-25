@@ -34,7 +34,9 @@ def deal_add(self, webhook, payload: dict, acp_ids):
     if entry is None and "deal[contact_email]" in payload:
         entry = (
             FormEntry.objects.filter(
-                email=payload["deal[contact_email]"], ac_deal_id__isnull=True, storage_status="PERSISTED"
+                email=payload["deal[contact_email]"],
+                ac_deal_id__isnull=True,
+                storage_status__in=["PERSISTED", "MANUALLY_PERSISTED"],
             )
             .order_by("-created_at")
             .first()

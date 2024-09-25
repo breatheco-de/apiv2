@@ -311,6 +311,13 @@ class Asset(models.Model):
         help_text="Brief for the copywriters, mainly used to describe what this lessons needs to be about",
     )
 
+    learnpack_deploy_url = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Only applies to LearnPack tutorials that have been published in the LearnPack cloud",
+    )
+
     readme_url = models.URLField(
         null=True,
         blank=True,

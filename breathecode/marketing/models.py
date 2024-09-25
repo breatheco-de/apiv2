@@ -283,6 +283,7 @@ PERSISTED = "PERSISTED"
 DUPLICATED = "DUPLICATED"
 REJECTED = "REJECTED"
 ERROR = "ERROR"
+MANUAL = "MANUALLY_PERSISTED"
 STORAGE_STATUS = (
     (PENDING, "Pending"),
     (PERSISTED, "Persisted"),
@@ -402,7 +403,12 @@ class FormEntry(models.Model):
     sex = models.CharField(max_length=15, null=True, default=None, blank=True, help_text="M=male,F=female,O=other")
 
     # is it saved into active campaign?
-    storage_status = models.CharField(max_length=15, choices=STORAGE_STATUS, default=PENDING)
+    storage_status = models.CharField(
+        max_length=20,
+        choices=STORAGE_STATUS,
+        default=PENDING,
+        help_text="MANUALLY_PERSISTED means it was copy pasted into active campaign",
+    )
     storage_status_text = models.CharField(
         default="",
         blank=True,
