@@ -404,6 +404,7 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
+    agent = serpy.Field()
 
     def get_translations(self, obj):
         result = {}
