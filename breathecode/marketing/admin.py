@@ -255,6 +255,7 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
                 "buenosaires-argentina",
                 "caracas-venezuela",
                 "online",
+                "4geeks-com",
             ],
             name="location",
         )
