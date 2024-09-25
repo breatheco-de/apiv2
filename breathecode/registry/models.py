@@ -346,6 +346,13 @@ class Asset(models.Model):
         default=False,
         help_text="If true, it means it can be opened on cloud provisioning vendors like Gitpod or Codespaces",
     )
+    agent = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="If value is vscode, then we recommend to open this exercise/project in vscode and instructions will be different. If it is standalone, then you can open it directly from the terminal",
+    )
     duration = models.IntegerField(null=True, blank=True, default=None, help_text="In hours")
 
     difficulty = models.CharField(max_length=20, choices=DIFFICULTY, default=None, null=True, blank=True)
