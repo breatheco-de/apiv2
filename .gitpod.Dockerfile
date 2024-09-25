@@ -11,7 +11,7 @@ RUN sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release 
     wget --quiet -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && \
     echo "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list && \
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && \
-    sudo install-packages postgresql-16 postgresql-contrib-16 redis-server netcat
+    sudo install-packages postgresql-16 postgresql-contrib-16 redis-server netcat passwd
 
 # Setup PostgreSQL server for user gitpod
 ENV PATH="/usr/lib/postgresql/16/bin:$PATH"
