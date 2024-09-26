@@ -344,6 +344,7 @@ class AssetMidSerializer(AssetSerializer):
     with_solutions = serpy.Field()
     with_video = serpy.Field()
     updated_at = serpy.Field()
+    agent = serpy.Field()
 
 
 class AssetBigSerializer(AssetMidSerializer):
@@ -404,7 +405,6 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
-    agent = serpy.Field()
 
     def get_translations(self, obj):
         result = {}
