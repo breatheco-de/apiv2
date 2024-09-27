@@ -104,7 +104,7 @@ class CustomForm(forms.ModelForm):
 class ACAcademyAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomForm
     search_fields = ["academy__name", "academy__slug"]
-    list_display = ("id", "academy", "ac_url", "sync_status", "last_interaction_at", "sync_message")
+    list_display = ("id", "academy", "crm_vendor", "ac_url", "sync_status", "last_interaction_at", "sync_message")
     list_filter = ["academy__slug", "sync_status"]
     actions = [test_ac, sync_ac_tags, sync_ac_automations]
 
