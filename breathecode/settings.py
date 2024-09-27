@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     "breathecode.commons",
     "breathecode.payments",
     "breathecode.provisioning",
+    "breathecode.websocket",
     "explorer",
     "graphene_django",
     "task_manager",
@@ -525,6 +526,14 @@ HOOK_EVENTS = {
 # Websocket
 ASGI_APPLICATION = "breathecode.asgi.application"
 REDIS_URL_PATTERN = r"^redis://(.+):(\d+)$"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 heroku_redis_ssl_host = {
     "address": REDIS_URL,  # The 'rediss' schema denotes a SSL connection.

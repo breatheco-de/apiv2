@@ -1,13 +1,17 @@
 import os
 from io import BytesIO
-from typing import Any, Awaitable, Callable, Optional, Type, TypedDict
+from typing import Any, Awaitable, Callable, Literal, Optional, Type, TypedDict
 
 from adrf.requests import AsyncRequest
-from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
-
-from breathecode.media.models import Chunk, File
-from breathecode.services.google_cloud.storage import Storage
 from capyc.rest_framework.exceptions import ValidationException
+from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
+from PIL import Image
+
+from breathecode.authenticate.actions import get_user_settings
+from breathecode.media.models import Chunk, File
+from breathecode.notify.models import Notification
+from breathecode.services.google_cloud.storage import Storage
+from breathecode.utils.i18n import translation
 
 type TypeValidator = Callable[[str, Any], None]
 type TypeValidatorWrapper = Callable[[Type[Any]], TypeValidator]
@@ -22,7 +26,7 @@ class MediaSettings(TypedDict):
     is_mime_supported: Callable[[InMemoryUploadedFile | TemporaryUploadedFile, Optional[int]], Awaitable[bool]]
     get_schema = Optional[Callable[[AsyncRequest, Optional[int]], Awaitable[Schema]]]
     # this callback is sync because it'll be called within celery what doesn't support async operations properly
-    process = Optional[Callable[[File, dict[str, Any], Optional[int]], None]]
+    process = Optional[Callable[[File, dict[str, Any], Optional[int]], tuple[Literal["INFO", "WARNING", "ERROR"], str]]]
 
 
 MEDIA_MIME_ALLOWED = [
@@ -52,9 +56,28 @@ PROFILE_MIME_ALLOWED = [
     "image/jpeg",
 ]
 
+EXT_MAP = {
+    # 'mime': 'format',
+    "image/gif": "gif",
+    "image/x-icon": "ico",
+    "image/jpeg": "jpeg",
+    # 'image/svg+xml': 'svg', not have sense resize a svg
+    # 'image/tiff': 'tiff', don't work
+    "image/webp": "webp",
+    "image/png": "png",
+}
+
 
 async def allow_any(request: AsyncRequest, academy_id: Optional[int] = None) -> bool:
     return True
+
+
+async def dont_allow_users(request: AsyncRequest, academy_id: Optional[int] = None) -> bool:
+    return academy_id is not None
+
+
+async def dont_allow_academies(request: AsyncRequest, academy_id: Optional[int] = None) -> bool:
+    return academy_id is None
 
 
 async def no_quota_limit(request: AsyncRequest, academy_id: Optional[int] = None) -> bool:
@@ -134,7 +157,28 @@ def del_temp_file(file: File | Chunk):
     uploaded_file.delete()
 
 
-def process_media(file: File) -> None:
+def get_file(file: File) -> BytesIO:
+    storage = Storage()
+    uploaded_file = storage.file(file.bucket, file.file_name)
+    if uploaded_file.exists() is False:
+        raise Exception("File does not exists")
+
+    f = BytesIO()
+    uploaded_file.download(f)
+    return f
+
+
+def save_file(f: BytesIO, bucket: str, name: str, mime: str) -> str:
+    storage = Storage()
+    file = storage.file(bucket, name)
+    if file.exists() is True:
+        return file.url()
+
+    file.upload(f, content_type=mime)
+    return file.url()
+
+
+def process_media(file: File) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
     from .models import Category, Media
 
     academy_id = file.academy.id if file.academy else None
@@ -142,7 +186,7 @@ def process_media(file: File) -> None:
 
     if Media.objects.filter(hash=file.hash, academy__id=academy_id).exists():
         del_temp_file(file)
-        return
+        return Notification.info("Media already exists")
 
     if url := Media.objects.filter(hash=file.hash).values_list("url", flat=True).first():
         del_temp_file(file)
@@ -162,17 +206,50 @@ def process_media(file: File) -> None:
 
     categories = Category.objects.filter(slug__in=meta["categories"])
     media.categories.set(categories)
+    return Notification.info("Media processed")
 
 
-# disabled
-# def process_profile(file: File, meta: dict[str, Any]) -> None:
-#     url = transfer(file, os.getenv("MEDIA_GALLERY_BUCKET"))
-#     storage = Storage()
-#     cloud_file = storage.file(get_profile_bucket(), hash)
-#     cloud_file_thumbnail = storage.file(get_profile_bucket(), f"{hash}-100x100")
+def process_profile(file: File) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
+    from breathecode.authenticate.models import Profile
 
-#     if thumb_exists := cloud_file_thumbnail.exists():
-#         cloud_file_thumbnail_url = cloud_file_thumbnail.url()
+    f = get_file(file)
+    image = Image.open(f)
+    width, height = image.size
+
+    user = file.user
+    settings = get_user_settings(user.id)
+    lang = settings.lang
+
+    if width != height:
+        return Notification.error(
+            translation(lang, en="Profile picture must be square", es="La foto de perfil debe ser cuadrada")
+        )
+
+    size = 120
+    image.resize((size, size))
+
+    resized_image = BytesIO()
+    ext = EXT_MAP[file.mime]
+    image.save(resized_image, format=ext)
+    f.close()
+    name = f"{file.file_name}-{size}x{size}"
+
+    url = save_file(resized_image, os.getenv("PROFILE_BUCKET"), name, file.mime)
+    resized_image.close()
+
+    profile = Profile.objects.filter(user=user).first()
+    if profile and profile.avatar_url == url:
+        return Notification.info(
+            translation(lang, en="You uploaded the same profile picture", es="Subiste la misma foto de perfil")
+        )
+
+    elif profile is None:
+        profile = Profile(user=user)
+
+    profile.avatar_url = url
+    profile.save()
+
+    return Notification.info(translation(lang, en="Profile picture was updated", es="Foto de perfil fue actualizada"))
 
 
 MB = 1024 * 1024
@@ -184,7 +261,7 @@ MEDIA_SETTINGS: dict[str, MediaSettings] = {
         "chunk_size": CHUNK_SIZE,
         "max_chunks": None,
         "is_quota_exceeded": no_quota_limit,
-        "is_authorized": allow_any,
+        "is_authorized": dont_allow_users,
         "is_mime_supported": media_is_mime_supported,
         "get_schema": media_schema,
         "process": process_media,
@@ -193,19 +270,18 @@ MEDIA_SETTINGS: dict[str, MediaSettings] = {
         "chunk_size": CHUNK_SIZE,
         "max_chunks": None,
         "is_quota_exceeded": no_quota_limit,
-        "is_authorized": allow_any,
+        "is_authorized": dont_allow_users,
         "is_mime_supported": proof_of_payment_is_mime_supported,
         "get_schema": None,
         "process": None,
     },
-    # disabled
-    # "profile-pictures": {
-    #     "chunk_size": CHUNK_SIZE,
-    #     "max_chunks": 25,  # because currently it accepts 4K photos
-    #     "is_quota_exceeded": no_quota_limit,  # change it in a future
-    #     "is_authorized": allow_any,
-    #     "is_mime_supported": profile_is_mime_supported,
-    #     "schema": no_schema,
-    #     "process": process_profile,
-    # },
+    "profile-picture": {
+        "chunk_size": CHUNK_SIZE,
+        "max_chunks": 25,  # because currently it accepts 4K photos
+        "is_quota_exceeded": no_quota_limit,  # change it in a future
+        "is_authorized": dont_allow_academies,
+        "is_mime_supported": profile_is_mime_supported,
+        "get_schema": None,
+        "process": process_profile,
+    },
 }

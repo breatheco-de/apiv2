@@ -5,6 +5,7 @@ from datetime import date, datetime
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import pandas as pd
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from dateutil.relativedelta import relativedelta
 from django.http import HttpResponse
@@ -35,7 +36,6 @@ from breathecode.utils.decorators import has_permission
 from breathecode.utils.i18n import translation
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import get_provisioning_vendor
 from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption
@@ -99,27 +99,49 @@ def redirect_new_container(request, token):
 
 def redirect_new_container_public(request):
 
+    from breathecode.registry.models import Asset
+
     # user = token.user
 
+    lang = request.GET.get("lang", None)
     repo = request.GET.get("repo", None)
     if repo is None:
         return render_message(request, "Please specify a repository in the URL")
 
     urls = {"gitpod": "https://gitpod.io/#", "codespaces": "https://github.com/codespaces/new/?repo="}
-    get_urls = {"codespaces": lambda x: x.replace("https://github.com/", "")}
+    url_modifiers = {"codespaces": lambda x: x.replace("https://github.com/", "")}
     vendors = request.GET.get("vendor", "codespaces,gitpod").split(",")
     buttons = []
-    for v in vendors:
-        if v not in urls:
-            return render_message(request, f"Invalid provisioning vendor: {v}")
 
+    asset = Asset.objects.filter(readme_url__icontains=repo)
+    if lang is not None:
+        asset = asset.filter(lang=lang)
+    asset = asset.first()
+    if asset and asset.learnpack_deploy_url:
         buttons.append(
             {
-                "label": f"Open in {v.capitalize()}",
-                "url": (get_urls[v](urls[v]) if v in get_urls else urls[v] + repo),
-                "icon": f"/static/img/{v}.svg",
+                "label": "Start tutorial",
+                "url": asset.learnpack_deploy_url,
+                "icon": "/static/img/learnpack.svg",
             }
         )
+
+    else:
+        for v in vendors:
+            if v not in urls:
+                return render_message(request, f"Invalid provisioning vendor: {v}")
+
+            _url = urls[v] + repo
+            if v in url_modifiers:
+                _url = urls[v] + url_modifiers[v](repo)
+
+            buttons.append(
+                {
+                    "label": f"Open in {v.capitalize()}",
+                    "url": _url,
+                    "icon": f"/static/img/{v}.svg",
+                }
+            )
 
     data = {
         # 'title': item.academy.name,

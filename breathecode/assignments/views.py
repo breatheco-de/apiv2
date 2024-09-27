@@ -4,6 +4,7 @@ import os
 
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
 from django.db.models import Q
@@ -31,7 +32,6 @@ from breathecode.utils.decorators import consume, has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
@@ -62,6 +62,8 @@ MIME_ALLOW = [
     "application/pdf",
     "image/jpg",
     "application/octet-stream",
+    "application/json",
+    "text/plain",
 ]
 
 IMAGES_MIME_ALLOW = ["image/png", "image/svg+xml", "image/jpeg", "image/jpg"]

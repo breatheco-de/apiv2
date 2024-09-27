@@ -133,6 +133,38 @@ async def test_op_type_not_provided(aclient: capy.AsyncClient, database: capy.Da
 @pytest.mark.asyncio
 @pytest.mark.django_db(reset_sequences=True)
 @pytest.mark.parametrize("op_type", ["media", "proof-of-payment"])
+async def test_no_authorized(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
+    url = reverse_lazy("v2:media:me_chunk_upload")
+    model = await database.acreate(
+        user=1,
+        token={"token_type": "login", "key": fake.slug()},
+        permission={"codename": "upload_media"},
+    )
+
+    data = {"operation_type": op_type}
+
+    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart")
+
+    json = response.json()
+    expected = {
+        "detail": "unauthorized-media-upload",
+        "status_code": 403,
+    }
+
+    assert json == expected
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert await database.alist_of("media.Chunk") == []
+    assert await database.alist_of("media.File") == []
+
+    assert Storage.__init__.call_args_list == []
+    assert File.upload.call_args_list == []
+
+    assert process_file.delay.call_args_list == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+@pytest.mark.parametrize("op_type", ["profile-picture"])
 async def test_no_total_chunks(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
     url = reverse_lazy("v2:media:me_chunk_upload")
     model = await database.acreate(
@@ -164,7 +196,7 @@ async def test_no_total_chunks(aclient: capy.AsyncClient, database: capy.Databas
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(reset_sequences=True)
-@pytest.mark.parametrize("op_type", ["media", "proof-of-payment"])
+@pytest.mark.parametrize("op_type", ["profile-picture"])
 async def test_no_filename(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
     url = reverse_lazy("v2:media:me_chunk_upload")
     model = await database.acreate(
@@ -196,7 +228,7 @@ async def test_no_filename(aclient: capy.AsyncClient, database: capy.Database, f
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(reset_sequences=True)
-@pytest.mark.parametrize("op_type", ["media", "proof-of-payment"])
+@pytest.mark.parametrize("op_type", ["profile-picture"])
 async def test_no_mime(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
     url = reverse_lazy("v2:media:me_chunk_upload")
     model = await database.acreate(
@@ -229,7 +261,7 @@ async def test_no_mime(aclient: capy.AsyncClient, database: capy.Database, fake:
 class TestNoSchema:
     @pytest.mark.asyncio
     @pytest.mark.django_db(reset_sequences=True)
-    @pytest.mark.parametrize("op_type", ["proof-of-payment"])
+    @pytest.mark.parametrize("op_type", ["profile-picture"])
     async def test_no_chunks(self, aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
         url = reverse_lazy("v2:media:me_chunk_upload")
         model = await database.acreate(
@@ -262,7 +294,7 @@ class TestNoSchema:
 
     @pytest.mark.asyncio
     @pytest.mark.django_db(reset_sequences=True)
-    @pytest.mark.parametrize("op_type", ["proof-of-payment"])
+    @pytest.mark.parametrize("op_type", ["profile-picture"])
     async def test_upload_file__schedule_deletions(
         self, aclient: capy.AsyncClient, database: capy.Database, format: capy.Format, fake: capy.Fake, op_type: str
     ):
@@ -296,242 +328,7 @@ class TestNoSchema:
         expected = {
             "id": 1,
             "academy": None,
-            "mime": "text/plain",
-            "name": "a291e39ac495b2effd38d508417cd731",
-            "operation_type": op_type,
-            "user": 1,
-            "status": "CREATED",
-        }
-
-        assert json == expected
-        assert response.status_code == status.HTTP_201_CREATED
-        assert await database.alist_of("media.Chunk") == [format.to_obj_repr(chunk) for chunk in model.chunk]
-        assert await database.alist_of("media.File") == [
-            {
-                "academy_id": None,
-                "bucket": "upload-bucket",
-                "hash": "a291e39ac495b2effd38d508417cd731",
-                "id": 1,
-                "meta": None,
-                "mime": "text/plain",
-                "name": filename,
-                "operation_type": op_type,
-                "size": 24,
-                "status": "CREATED",
-                "user_id": 1,
-                "status_message": None,
-            },
-        ]
-
-        assert Storage.__init__.call_args_list == [call()]
-        assert len(File.download.call_args_list) == 3
-
-        for n in range(3):
-            args, kwargs = File.download.call_args_list[0]
-            assert len(args) == 1
-            assert isinstance(args[0], BytesIO)
-            assert kwargs == {}
-
-        assert len(File.upload.call_args_list) == 1
-
-        args, kwargs = File.upload.call_args_list[0]
-
-        assert len(args) == 1
-        assert isinstance(args[0], BytesIO)
-        file: BytesIO = args[0]
-        assert file.getvalue() == b"my_line\nmy_line\nmy_line\n"
-
-        assert kwargs == {"content_type": "text/plain"}
-
-        assert schedule_deletion.adelay.call_args_list == [
-            call(instance=chunk, sender=chunk.__class__) for chunk in model.chunk
-        ]
-
-        assert process_file.delay.call_args_list == []
-
-
-class TestMediaSchema:
-    @pytest.mark.asyncio
-    @pytest.mark.django_db(reset_sequences=True)
-    @pytest.mark.parametrize("op_type", ["media"])
-    async def test_no_meta_keys(
-        self, aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str
-    ):
-        url = reverse_lazy("v2:media:me_chunk_upload")
-        model = await database.acreate(
-            user=1,
-            token={"token_type": "login", "key": fake.slug()},
-            permission={"codename": "upload_media"},
-        )
-
-        data = {"operation_type": op_type, "total_chunks": 3, "filename": "a.txt", "mime": "text/plain"}
-
-        response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart"
-        )
-
-        json = response.json()
-        expected = {
-            "detail": "missing-required-meta-key",
-            "status_code": 400,
-        }
-
-        assert json == expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert await database.alist_of("media.Chunk") == []
-        assert await database.alist_of("media.File") == []
-
-        assert Storage.__init__.call_args_list == []
-        assert File.upload.call_args_list == []
-
-        assert process_file.delay.call_args_list == []
-
-    @pytest.mark.asyncio
-    @pytest.mark.django_db(reset_sequences=True)
-    @pytest.mark.parametrize("op_type", ["media"])
-    async def test_bad_meta_keys(
-        self, aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str
-    ):
-        url = reverse_lazy("v2:media:me_chunk_upload")
-        model = await database.acreate(
-            user=1,
-            token={"token_type": "login", "key": fake.slug()},
-            permission={"codename": "upload_media"},
-        )
-
-        data = {
-            "operation_type": op_type,
-            "total_chunks": 3,
-            "filename": "a.txt",
-            "mime": "text/plain",
-            "meta": json_utils.dumps(
-                {
-                    "x": "y",
-                    "slug": 1,
-                    "name": 1,
-                    "categories": 7,
-                    "academy": "a",
-                }
-            ),
-        }
-
-        response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart"
-        )
-
-        json = response.json()
-        expected = {
-            "detail": "invalid-meta-value-type",
-            "status_code": 400,
-        }
-
-        assert json == expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert await database.alist_of("media.Chunk") == []
-        assert await database.alist_of("media.File") == []
-
-        assert Storage.__init__.call_args_list == []
-        assert File.upload.call_args_list == []
-
-        assert process_file.delay.call_args_list == []
-
-    @pytest.mark.asyncio
-    @pytest.mark.django_db(reset_sequences=True)
-    @pytest.mark.parametrize("op_type", ["media"])
-    async def test_no_chunks(self, aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
-        url = reverse_lazy("v2:media:me_chunk_upload")
-        model = await database.acreate(
-            user=1,
-            token={"token_type": "login", "key": fake.slug()},
-            permission={"codename": "upload_media"},
-        )
-
-        data = {
-            "operation_type": op_type,
-            "total_chunks": 3,
-            "filename": "a.txt",
-            "mime": "text/plain",
-            "meta": json_utils.dumps(
-                {
-                    "x": "y",
-                    "slug": fake.slug(),
-                    "name": fake.name(),
-                    "categories": [fake.slug()],
-                    "academy": 1,
-                }
-            ),
-        }
-
-        response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart"
-        )
-
-        json = response.json()
-        expected = {
-            "detail": "some-chunks-not-found",
-            "status_code": 400,
-        }
-
-        assert json == expected
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert await database.alist_of("media.Chunk") == []
-        assert await database.alist_of("media.File") == []
-
-        assert Storage.__init__.call_args_list == []
-        assert File.upload.call_args_list == []
-
-        assert process_file.delay.call_args_list == []
-
-    @pytest.mark.asyncio
-    @pytest.mark.django_db(reset_sequences=True)
-    @pytest.mark.parametrize("op_type", ["media"])
-    async def test_upload_file__schedule_deletions(
-        self, aclient: capy.AsyncClient, database: capy.Database, format: capy.Format, fake: capy.Fake, op_type: str
-    ):
-        url = reverse_lazy("v2:media:me_chunk_upload")
-        filename = fake.slug() + ".txt"
-        mime = "text/plain"
-        chunks = [
-            {
-                "name": filename,
-                "mime": mime,
-                "operation_type": op_type,
-                "total_chunks": 3,
-                "chunk_index": index,
-            }
-            for index in range(3)
-        ]
-        model = await database.acreate(
-            user=1,
-            token={"token_type": "login", "key": fake.slug()},
-            permission={"codename": "upload_media"},
-            chunk=chunks,
-        )
-
-        data = {
-            "operation_type": op_type,
-            "total_chunks": 3,
-            "filename": filename,
-            "mime": "text/plain",
-            "meta": json_utils.dumps(
-                {
-                    "x": "y",
-                    "slug": fake.slug(),
-                    "name": fake.name(),
-                    "categories": [fake.slug()],
-                    "academy": 1,
-                }
-            ),
-        }
-
-        response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart"
-        )
-
-        json = response.json()
-        expected = {
-            "id": 1,
-            "academy": None,
+            "notification": 1,
             "mime": "text/plain",
             "name": "a291e39ac495b2effd38d508417cd731",
             "operation_type": op_type,
@@ -583,4 +380,4 @@ class TestMediaSchema:
             call(instance=chunk, sender=chunk.__class__) for chunk in model.chunk
         ]
 
-        assert process_file.delay.call_args_list == [call(1)]
+        assert process_file.delay.call_args_list == [call(1, 1)]

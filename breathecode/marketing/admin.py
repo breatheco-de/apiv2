@@ -1,6 +1,7 @@
 import logging
 import secrets
 
+from capyc.rest_framework.exceptions import ValidationException
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
@@ -10,7 +11,6 @@ from django.utils.html import format_html
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     bind_formentry_with_webhook,
@@ -255,11 +255,12 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
                 "buenosaires-argentina",
                 "caracas-venezuela",
                 "online",
+                "4geeks-com",
             ],
             name="location",
         )
         + change_field(["full-stack", "datascience-ml", "cybersecurity"], name="course")
-        + change_field(["REJECTED", "DUPLICATED", "ERROR"], name="storage_status")
+        + change_field(["REJECTED", "DUPLICATED", "ERROR", "MANUALLY_PERSISTED"], name="storage_status")
     )
 
     def _attribution_id(self, obj):

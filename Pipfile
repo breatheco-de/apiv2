@@ -137,7 +137,6 @@ zstandard = "*"
 psycopg = {extras = ["pool", "binary"] }
 cryptography = "*"
 adrf = "*"
-uvicorn = "*"
 django-minify-html = "*"
 django-storages = {extras = ["google"] }
 aiohttp = {extras = ["speedups"] }
@@ -156,3 +155,5 @@ python-dotenv = "*"
 uvicorn-worker = "*"
 pyright = "*"
 mypy = "*"
+python-magic = "*"
+uvicorn = {extras = ["standard"], version = "*"}
