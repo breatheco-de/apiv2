@@ -16,6 +16,7 @@ UTC_NOW = timezone.now()
     [
         ("media", {"chunk_size": 10485760, "max_chunks": None}),
         ("proof-of-payment", {"chunk_size": 10485760, "max_chunks": None}),
+        ("profile-picture", {"chunk_size": 10485760, "max_chunks": 25}),
     ],
 )
 def test_op_type_desc(client: capy.Client, op_type: str, expected: dict):

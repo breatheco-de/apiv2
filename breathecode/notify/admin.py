@@ -11,7 +11,17 @@ from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from breathecode.utils import AdminExportCsvMixin
 
 from .actions import send_slack, sync_slack_team_channel
-from .models import CohortProxy, Device, HookError, SlackChannel, SlackTeam, SlackUser, SlackUserTeam, UserProxy
+from .models import (
+    CohortProxy,
+    Device,
+    HookError,
+    Notification,
+    SlackChannel,
+    SlackTeam,
+    SlackUser,
+    SlackUserTeam,
+    UserProxy,
+)
 from .tasks import async_slack_team_users
 from .utils.hook_manager import HookManager
 
@@ -181,3 +191,11 @@ class HookErrorAdmin(admin.ModelAdmin):
     list_display = ["event", "message", "created_at", "updated_at"]
     search_fields = ["message", "event"]
     list_filter = ["event"]
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("operation_code", "status", "type", "user", "academy", "done_at", "sent_at", "seen_at")
+    search_fields = ("operation_code", "message", "user__username", "user__email", "academy__name")
+    list_filter = ("status", "type")
+    raw_id_fields = ("user", "academy")
