@@ -57,6 +57,11 @@ google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
 black = "*"
 capy-core = {extras = ["pytest"], version = "*"}
+pyright = "*"
+mypy = "*"
+google-api-python-client-stubs = "*"
+django-stubs = "*"
+djangorestframework-stubs = "*"
 
 [packages]
 django = "*"
@@ -145,7 +150,9 @@ contextlib2 = "*"
 google-apps-meet = "*"
 google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
-capy-core = {extras = ["django"], version = "*"}
+capy-core = {extras = ["django"] }
 google-api-python-client = "*"
 python-dotenv = "*"
 uvicorn-worker = "*"
+pyright = "*"
+mypy = "*"

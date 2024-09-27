@@ -6,12 +6,13 @@ import re
 import urllib.parse
 from datetime import timedelta
 from urllib.parse import parse_qs, urlencode
-import aiohttp
 
+import aiohttp
 import requests
 from adrf.decorators import api_view
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.conf import settings
 from django.contrib import messages
@@ -49,7 +50,6 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import private_view, render_message, set_query_parameter
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     accept_invite,
@@ -2030,9 +2030,7 @@ def get_google_token(request, token=None):
         "scope": " ".join(
             [
                 "https://www.googleapis.com/auth/meetings.space.created",
-                # "https://www.googleapis.com/auth/meetings.space.readonly",
                 "https://www.googleapis.com/auth/drive.meet.readonly",
-                # "https://www.googleapis.com/auth/calendar.events",
             ]
         ),
         "state": f"token={token.key}&url={url}",
@@ -2047,6 +2045,17 @@ def get_google_token(request, token=None):
         return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
     else:
         return HttpResponseRedirect(redirect_to=redirect)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def receive_google_webhook(request):
+    logger.info("Received Google webhook")
+    logger.info(request.data)
+    print("Received Google webhook")
+    print(request.data)
+
+    return Response({"message": "Webhook received"}, status=200)
 
 
 @api_view(["GET"])
@@ -2098,6 +2107,11 @@ async def save_google_token(request):
                     raise APIException(body["error_description"])
 
                 logger.debug(body)
+
+                logger.info("aaaaaaaaaaaaaaaaaaaaaaaaa")
+                logger.info(body)
+                print("aaaaaaaaaaaaaaaaaaaaaaaaa")
+                print(body)
 
                 user = token.user
                 refresh = ""

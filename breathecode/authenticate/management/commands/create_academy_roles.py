@@ -161,7 +161,10 @@ CAPABILITIES = [
         "slug": "crud_subscription",
         "description": "Create, update or delete subscriptions and plan financings of other users",
     },
-    {"slug": "upload_assignment_telemetry", "description": "Allow upload the user's telemetry in a LearnPack assignment"},
+    {
+        "slug": "upload_assignment_telemetry",
+        "description": "Allow upload the user's telemetry in a LearnPack assignment",
+    },
 ]
 
 ROLES = [
@@ -218,7 +221,7 @@ ROLES = [
             "read_activity",
             "read_technology",
             "read_academyservice",
-            "upload_assignment_telemetry"
+            "upload_assignment_telemetry",
         ],
     },
     {
@@ -302,7 +305,7 @@ ROLES = [
             "read_cohort_log",
             "read_service",
             "read_academyservice",
-            "upload_assignment_telemetry"
+            "upload_assignment_telemetry",
         ],
     },
 ]

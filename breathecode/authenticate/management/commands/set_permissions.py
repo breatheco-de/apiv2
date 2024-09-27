@@ -79,7 +79,11 @@ PERMISSIONS = [
 
 GROUPS = [
     {"name": "Admin", "permissions": [x["codename"] for x in PERMISSIONS], "inherit": []},
-    {"name": "Default", "permissions": ["get_my_profile", "create_my_profile", "update_my_profile", "upload_assignment_telemetry"], "inherit": []},
+    {
+        "name": "Default",
+        "permissions": ["get_my_profile", "create_my_profile", "update_my_profile", "upload_assignment_telemetry"],
+        "inherit": [],
+    },
     {
         "name": "Student",
         "permissions": [

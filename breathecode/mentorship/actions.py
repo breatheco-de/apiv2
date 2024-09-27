@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import pytz
 from asgiref.sync import sync_to_async
+from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q, QuerySet
 from django.shortcuts import render
@@ -16,7 +17,6 @@ from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
 from breathecode.services.google_meet.google_meet import GoogleMeet
 from breathecode.utils.datetime_integer import duration_to_str
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import MentorProfile, MentorshipBill, MentorshipService, MentorshipSession
 
@@ -466,9 +466,10 @@ def create_room_on_google_meet(session: MentorshipSession, mentee: User) -> None
     session.online_meeting_url = space.meeting_uri
     session.name = s.name
     session.mentee = mentee
+    session.meta = {}
     session.save()
 
 
 @sync_to_async
-def acreate_room_on_google_meet(session: MentorshipSession) -> None:
-    return create_room_on_google_meet(session)
+def acreate_room_on_google_meet(session: MentorshipSession, mentee: User) -> None:
+    return create_room_on_google_meet(session, mentee)
