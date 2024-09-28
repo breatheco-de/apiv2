@@ -6,6 +6,7 @@ from io import BytesIO
 from typing import Any, Optional, Tuple, overload
 
 from adrf.views import APIView
+from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -15,7 +16,6 @@ from breathecode.media.models import Chunk, File
 from breathecode.media.signals import schedule_deletion
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .settings import MEDIA_MIME_ALLOWED, MEDIA_SETTINGS, MediaSettings, Schema
 
@@ -316,6 +316,7 @@ class ChunkUploadMixin(UploadMixin):
 
     async def upload(self, academy_id: Optional[int] = None):
         from breathecode.media.tasks import process_file
+        from breathecode.notify.models import Notification
 
         await super().upload(academy_id)
         request = self.request
@@ -360,7 +361,6 @@ class ChunkUploadMixin(UploadMixin):
                 code=400,
             )
 
-        ####
         if isinstance(meta, dict) is False:
             raise ValidationException(
                 translation(
@@ -450,6 +450,8 @@ class ChunkUploadMixin(UploadMixin):
         new_file = storage.file(bucket, hash)
         new_file.upload(res, content_type=mime)
 
+        notification_id = None
+
         file = await File.objects.acreate(
             academy=academy,
             user=request.user,
@@ -464,11 +466,20 @@ class ChunkUploadMixin(UploadMixin):
             file.status = File.Status.TRANSFERRING
             await file.asave()
 
-            process_file.delay(file.id)
+            notification = await Notification.objects.acreate(
+                operation_code=f"up-{self.op_type}",
+                user=request.user,
+                academy=academy,
+                meta={"file_id": file.id},
+            )
+            notification_id = notification.id
+
+            process_file.delay(file.id, notification.id)
 
         return Response(
             {
                 "id": file.id,
+                "notification": notification_id,
                 "academy": academy.slug if academy else None,
                 "user": request.user.id,
                 "status": file.status,

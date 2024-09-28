@@ -1,9 +1,14 @@
 from collections import OrderedDict
+from typing import Literal, Optional
 
+from asgiref.sync import async_to_sync, sync_to_async
+from channels.layers import get_channel_layer
+from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import serializers
 from django.db import models
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort
@@ -215,3 +220,151 @@ class HookError(models.Model):
     hooks = models.ManyToManyField(Hook, related_name="errors", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class Notification(models.Model):
+    """
+    This model works like:
+    1. a promise of delivery a notification to a user or academy.
+    2. a stateless way to emit notifications to the frontend.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        DONE = "DONE", "Done"
+        SENT = "SENT", "Sent"
+        SEEN = "SEEN", "Seen"
+
+    class Type(models.TextChoices):
+        INFO = "INFO", "Info"
+        WARNING = "WARNING", "Warning"
+        ERROR = "ERROR", "Error"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._status = self.status
+
+    operation_code = models.CharField(max_length=20)
+    message = models.TextField(blank=True, null=True, default=None)
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, blank=True, default=None)
+    meta = models.JSONField(blank=True, null=True, default=None)
+
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    type = models.CharField(max_length=10, choices=Type.choices, default=Type.INFO)
+    done_at = models.DateTimeField(blank=True, null=True, default=None)
+    sent_at = models.DateTimeField(blank=True, null=True, default=None)
+    seen_at = models.DateTimeField(blank=True, null=True, default=None)
+
+    def __str__(self):
+        return self.operation_code
+
+    def clean(self):
+        if any([self.user, self.academy]) is False:
+            raise forms.ValidationError("Either user or academy must be provided")
+
+        if self.status == self.Status.DONE:
+            self.sent_at = timezone.now()
+
+        if self.status == self.Status.PENDING:
+            self.sent_at = None
+
+        super().clean()
+
+    @async_to_sync
+    async def _send_notification(self):
+        channel_layer = get_channel_layer()
+
+        user_id = self.user.id if self.user else None
+        academy_id = self.academy.id if self.academy else None
+
+        await channel_layer.send(
+            f"notification_{user_id}_{academy_id}",
+            {
+                "type": "notification.refresh",
+                "user": user_id,
+                "academy": academy_id,
+            },
+        )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+        if self.status != self._status and self.status == self.Status.DONE:
+            self._send_notification()
+
+        self._status = self.status
+
+    @classmethod
+    def send(cls, message: tuple[Literal["INFO", "WARNING", "ERROR"], str], notification: "Notification"):
+        if notification.status == Notification.Status.PENDING:
+            notification.message = message[1]
+            notification.status = Notification.Status.DONE
+            notification.type = message[0]
+            notification.save()
+
+    @classmethod
+    @sync_to_async
+    def asend(cls, message: tuple[Literal["INFO", "WARNING", "ERROR"], str], notification: "Notification"):
+        cls.send(message, notification)
+
+    @classmethod
+    async def aemit(
+        cls,
+        message: tuple[Literal["INFO", "WARNING", "ERROR"], str],
+        user: Optional[User] = None,
+        academy: Optional[Academy] = None,
+    ) -> None:
+        """Emit a notification that won't be saved"""
+
+        user_id = None
+        academy_id = None
+
+        if isinstance(user, User):
+            user_id = user.id
+
+        elif isinstance(user, int):
+            user_id = user
+
+        if isinstance(academy, Academy):
+            academy_id = academy.id
+
+        elif isinstance(academy, int):
+            academy_id = academy
+
+        channel_layer = get_channel_layer()
+
+        await channel_layer.send(
+            f"notification_{user_id}_{academy_id}",
+            {
+                "type": "notification.push",
+                "user": user_id,
+                "academy": academy_id,
+                "level": message[0],
+                "message": message[1],
+            },
+        )
+
+    @classmethod
+    @async_to_sync
+    async def emit(
+        cls,
+        message: tuple[Literal["INFO", "WARNING", "ERROR"], str],
+        user: Optional[User] = None,
+        academy: Optional[Academy] = None,
+    ) -> None:
+        await cls.aemit(message, user, academy)
+
+    @classmethod
+    def info(cls, message: str) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
+        return ("INFO", message)
+
+    @classmethod
+    def warning(cls, message: str) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
+        return ("WARNING", message)
+
+    @classmethod
+    def error(cls, message: str) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
+        return ("ERROR", message)

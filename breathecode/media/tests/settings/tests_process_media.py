@@ -9,6 +9,7 @@ import pytest
 
 from breathecode.media import settings
 from breathecode.media.settings import MEDIA_SETTINGS, process_media
+from breathecode.notify.models import Notification
 
 
 @pytest.fixture(autouse=True)
@@ -42,8 +43,9 @@ def test_no_media(database: capy.Database, url: str, fake: capy.Fake):
         country=1,
     )
 
-    process_media(model.file)
+    res = process_media(model.file)
 
+    assert res == Notification.info("Media processed")
     assert settings.transfer.call_args_list == [call(model.file, "galery-bucket")]
     assert settings.del_temp_file.call_args_list == []
     assert database.list_of("media.Media") == [
@@ -82,8 +84,9 @@ def test_media__same_academy(database: capy.Database, format: capy.Format, query
         category=categories,
     )
 
-    process_media(model.file)
+    res = process_media(model.file)
 
+    assert res == Notification.info("Media already exists")
     assert settings.transfer.call_args_list == []
     assert settings.del_temp_file.call_args_list == [call(model.file)]
     assert database.list_of("media.Media") == [format.to_obj_repr(model.media)]
@@ -116,8 +119,9 @@ def test_media__other_academy(database: capy.Database, format: capy.Format, quer
         category=categories,
     )
 
-    process_media(model.file)
+    res = process_media(model.file)
 
+    assert res == Notification.info("Media processed")
     assert settings.transfer.call_args_list == []
     assert settings.del_temp_file.call_args_list == [call(model.file)]
     assert database.list_of("media.Media") == [

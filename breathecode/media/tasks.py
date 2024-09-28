@@ -1,11 +1,14 @@
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from django.core.cache import cache
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
+from breathecode.authenticate.actions import get_user_settings
+from breathecode.notify.models import Notification
 from breathecode.utils.decorators import TaskPriority
+from breathecode.utils.i18n import translation
 
 from .models import File
 from .utils import media_settings
@@ -15,7 +18,7 @@ IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
 
 
 @task(bind=False, priority=TaskPriority.STUDENT.value)
-def process_file(file_id: int, **_: Any):
+def process_file(file_id: int, notification_id: Optional[int] = None, **_: Any):
     """Renew consumables belongs to a subscription."""
 
     logger.info(f"Starting process_file for id {file_id}")
@@ -43,13 +46,26 @@ def process_file(file_id: int, **_: Any):
         file.save()
         raise AbortTask(message)
 
+    notification = None
+    if notification_id:
+        notification = Notification.objects.filter(id=notification_id).first()
+
     try:
-        process(file)
+        msg = process(file)
         file.status = File.Status.TRANSFERRED
         file.save()
+        if notification:
+            notification.send(msg, notification)
 
     except Exception as e:
         message = f"Error processing file {file_id}: {str(e)}"
+
+        if notification:
+            settings = get_user_settings(file.user.id)
+            lang = settings.lang
+            msg = Notification.error(translation(lang, en="Error processing file", es="Error procesando el archivo"))
+            notification.send(msg, notification)
+
         file.status = File.Status.ERROR
         file.status_message = message
         file.save()
