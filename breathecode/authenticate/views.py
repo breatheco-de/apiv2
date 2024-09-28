@@ -2108,11 +2108,6 @@ async def save_google_token(request):
 
                 logger.debug(body)
 
-                logger.info("aaaaaaaaaaaaaaaaaaaaaaaaa")
-                logger.info(body)
-                print("aaaaaaaaaaaaaaaaaaaaaaaaa")
-                print(body)
-
                 user = token.user
                 refresh = ""
                 if "refresh_token" in body:
@@ -2120,8 +2115,8 @@ async def save_google_token(request):
 
                 google_credentials, created = await CredentialsGoogle.objects.aget_or_create(
                     user=user,
-                    expires_at=timezone.now() + timedelta(seconds=body["expires_in"]),
                     defaults={
+                        "expires_at": timezone.now() + timedelta(seconds=body["expires_in"]),
                         "token": body["access_token"],
                         "refresh_token": refresh,
                     },
