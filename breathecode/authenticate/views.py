@@ -2114,6 +2114,11 @@ async def save_google_token(request):
                 if "refresh_token" in body:
                     refresh = body["refresh_token"]
 
+                logger.info("body123123123123")
+                logger.info(body)
+                print("body123123123123")
+                print(body)
+
                 google_credentials, created = await CredentialsGoogle.objects.aget_or_create(
                     user=user,
                     defaults={
