@@ -2031,6 +2031,7 @@ def get_google_token(request, token=None):
             [
                 "https://www.googleapis.com/auth/meetings.space.created",
                 "https://www.googleapis.com/auth/drive.meet.readonly",
+                "https://www.googleapis.com/auth/userinfo.profile",
             ]
         ),
         "state": f"token={token.key}&url={url}",
