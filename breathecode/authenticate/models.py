@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Tuple, TypedDict, Unpack
 
 import rest_framework.authtoken.models
+from asgiref.sync import sync_to_async
 from django import forms
 from django.conf import settings
 from django.contrib.auth.models import Group, Permission, User
@@ -22,7 +23,6 @@ from breathecode.authenticate.exceptions import (
     TryToGetOrCreateAOneTimeToken,
 )
 from breathecode.utils.validators import validate_language_code
-from asgiref.sync import sync_to_async
 
 from .signals import academy_invite_accepted
 
@@ -542,6 +542,7 @@ class CredentialsGoogle(models.Model):
 
     token = models.CharField(max_length=255)
     refresh_token = models.CharField(max_length=255)
+    id_token = models.CharField(max_length=1152, default="")
     expires_at = models.DateTimeField()
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
