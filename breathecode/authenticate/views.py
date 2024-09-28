@@ -42,6 +42,7 @@ from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
+from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -2119,16 +2120,23 @@ async def save_google_token(request):
                 print("body123123123123")
                 print(body)
 
+                c = GoogleApps(body["id_token"], refresh)
+                user_info = await c.get_user_info()
+
                 google_credentials, created = await CredentialsGoogle.objects.aget_or_create(
                     user=user,
                     defaults={
                         "expires_at": timezone.now() + timedelta(seconds=body["expires_in"]),
                         "token": body["access_token"],
                         "refresh_token": refresh,
+                        "id_token": body["id_token"],
+                        "google_id": user_info["id"],
                     },
                 )
                 if created is False:
                     google_credentials.token = body["access_token"]
+                    google_credentials.id_token = body["id_token"]
+                    google_credentials.google_id = user_info["id"]
                     if refresh:
                         google_credentials.refresh_token = refresh
 
