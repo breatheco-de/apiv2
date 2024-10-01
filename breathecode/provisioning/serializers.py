@@ -15,6 +15,7 @@ class AcademySerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     name = serpy.Field()
+    slug = serpy.Field()
 
 
 class ContainerMeSmallSerializer(serpy.Serializer):
@@ -75,6 +76,12 @@ class GetProvisioningBillSerializer(serpy.Serializer):
     stripe_url = serpy.Field()
     created_at = serpy.Field()
     title = serpy.Field()
+
+
+class GetProvisioningProfile(serpy.Serializer):
+    id = serpy.Field()
+    vendor = GetProvisioningVendorSerializer(required=False)
+    academy = AcademySerializer(required=False)
 
 
 class GetProvisioningConsumptionKindSerializer(serpy.Serializer):
