@@ -2177,7 +2177,7 @@ async def save_google_token(request):
                     if refresh:
                         google_credentials.refresh_token = refresh
 
-                    if google_credentials.google_id != google_id:
+                    if google_id == "" or google_credentials.google_id != google_id:
                         refresh = google_credentials.refresh_token
                         user_info = get_user_info(body["id_token"], refresh)
                         google_id = user_info["id"]
