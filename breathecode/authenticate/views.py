@@ -2074,6 +2074,10 @@ async def save_google_token(request):
             settings.google_cloud_owner.id = user.id
             await settings.asave()
 
+    async def async_iter(iterable: list):
+        for item in iterable:
+            yield item
+
     logger.debug("Google callback just landed")
     logger.debug(request.query_params)
 
@@ -2101,7 +2105,7 @@ async def save_google_token(request):
             "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
         )
 
-    academies = None
+    academies = async_iter([])
     roles = ["admin", "staff", "country_manager", "academy_token"]
     academy_settings = state.get("academysettings", "none")
     if academy_settings != "none":
@@ -2181,10 +2185,8 @@ async def save_google_token(request):
 
                     await google_credentials.asave()
 
-                # cannot use async for in a sync iterator
-                if academies:
-                    async for academy in academies:
-                        await set_academy_auth_settings(academy, user)
+                async for academy in academies:
+                    await set_academy_auth_settings(academy, user)
 
                 return HttpResponseRedirect(redirect_to=state["url"][0] + "?token=" + token.key)
 
