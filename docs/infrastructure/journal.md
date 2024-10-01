@@ -75,3 +75,12 @@ Reasons for the change:
 Why:
 
 - To enable the oauth flow for the Google Meet API.
+
+## 30/09/2024
+
+- `[prod]` set `GOOGLE_WEBHOOK_TOPIC` to `webhook`.
+- `[dev]` set `GOOGLE_WEBHOOK_TOPIC` to `webhook-test`.
+
+Why:
+
+- Google doesn't support webhooks directly, it uses its Pub/Sub service.

@@ -2023,6 +2023,16 @@ def get_google_token(request, token=None):
     if token is None or token.token_type not in ["temporal", "one_time"]:
         raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
 
+    # set academy settings automatically
+    academy_settings = request.GET.get("academysettings", "none")
+    state = f"token={token.key}&url={url}"
+
+    if academy_settings in ["overwrite", "set"]:
+        state += f"&academysettings={academy_settings}"
+
+    else:
+        state += "&academysettings=none"
+
     params = {
         "response_type": "code",
         "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
@@ -2035,7 +2045,7 @@ def get_google_token(request, token=None):
                 "https://www.googleapis.com/auth/userinfo.profile",
             ]
         ),
-        "state": f"token={token.key}&url={url}",
+        "state": state,
     }
 
     logger.debug("Redirecting to google")
@@ -2049,20 +2059,21 @@ def get_google_token(request, token=None):
         return HttpResponseRedirect(redirect_to=redirect)
 
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def receive_google_webhook(request):
-    logger.info("Received Google webhook")
-    logger.info(request.data)
-    print("Received Google webhook")
-    print(request.data)
-
-    return Response({"message": "Webhook received"}, status=200)
-
-
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_google_token(request):
+    def get_user_info(id_token, refresh_token):
+        c = GoogleApps(id_token, refresh_token)
+        return c.get_user_info()
+
+    async def set_academy_auth_settings(academy: Academy, user: User):
+        settings, created = await AcademyAuthSettings.objects.aget_or_create(
+            academy=academy, defaults={"google_cloud_owner": user}
+        )
+        if not created:
+            settings.google_cloud_owner.id = user.id
+            await settings.asave()
+
     logger.debug("Google callback just landed")
     logger.debug(request.query_params)
 
@@ -2090,6 +2101,25 @@ async def save_google_token(request):
             "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
         )
 
+    academies = None
+    roles = ["admin", "staff", "country_manager", "academy_token"]
+    academy_settings = state.get("academysettings", "none")
+    if academy_settings != "none":
+        ids = ProfileAcademy.objects.filter(user=token.user, status="ACTIVE", role__slug__in=roles).values_list(
+            "academy_id", flat=True
+        )
+
+        if academy_settings == "overwrite":
+            ids = AcademyAuthSettings.objects.filter(academy__id__in=ids).values_list("academy_id", flat=True)
+        else:
+            no_owner = Q(google_cloud_owner__isnull=True)
+            same_user = Q(google_cloud_owner__id=token.user.id)
+            ids = AcademyAuthSettings.objects.filter(no_owner | same_user, academy__id__in=ids).values_list(
+                "academy_id", flat=True
+            )
+
+        academies = Academy.objects.filter(id__in=ids)
+
     payload = {
         "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
         "client_secret": os.getenv("GOOGLE_SECRET", ""),
@@ -2110,7 +2140,7 @@ async def save_google_token(request):
 
                 logger.debug(body)
 
-                user = token.user
+                user: User = token.user
                 refresh = ""
                 if "refresh_token" in body:
                     refresh = body["refresh_token"]
@@ -2120,8 +2150,11 @@ async def save_google_token(request):
                 print("body123123123123")
                 print(body)
 
-                c = GoogleApps(body["id_token"], refresh)
-                user_info = await c.get_user_info()
+                # set user id after because it shouldn't exists
+                google_id = ""
+                if refresh:
+                    user_info = get_user_info(body["id_token"], refresh)
+                    google_id = user_info["id"]
 
                 google_credentials, created = await CredentialsGoogle.objects.aget_or_create(
                     user=user,
@@ -2130,23 +2163,46 @@ async def save_google_token(request):
                         "token": body["access_token"],
                         "refresh_token": refresh,
                         "id_token": body["id_token"],
-                        "google_id": user_info["id"],
+                        "google_id": google_id,
                     },
                 )
                 if created is False:
                     google_credentials.token = body["access_token"]
                     google_credentials.id_token = body["id_token"]
                     google_credentials.google_id = user_info["id"]
+
                     if refresh:
                         google_credentials.refresh_token = refresh
 
+                    if google_credentials.google_id != google_id:
+                        refresh = google_credentials.refresh_token
+                        user_info = get_user_info(body["id_token"], refresh)
+                        google_id = user_info["id"]
+                        google_credentials.google_id = google_id
+
                     await google_credentials.asave()
+
+                # cannot use async for in a sync iterator
+                if academies:
+                    async for academy in academies:
+                        await set_academy_auth_settings(academy, user)
 
                 return HttpResponseRedirect(redirect_to=state["url"][0] + "?token=" + token.key)
 
             else:
                 logger.error(await resp.json())
                 raise APIException("Error from google credentials")
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def receive_google_webhook(request):
+    logger.info("Received Google webhook")
+    logger.info(request.data)
+    print("Received Google webhook")
+    print(request.data)
+
+    return Response({"message": "Webhook received"}, status=200)
 
 
 class GithubUserView(APIView, GenerateLookupsMixin):

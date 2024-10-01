@@ -15,6 +15,7 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.authenticate.models import AcademyAuthSettings, User
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
+from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_meet.google_meet import GoogleMeet
 from breathecode.utils.datetime_integer import duration_to_str
 
@@ -463,6 +464,23 @@ def create_room_on_google_meet(session: MentorshipSession, mentee: User) -> None
         config=SpaceConfig(access_type=SpaceConfig.AccessType.OPEN),
     )
     space = meet.create_space(space=s)
+    google = GoogleApps(
+        id_token=settings.google_cloud_owner.credentialsgoogle.id_token,
+        refresh_token=settings.google_cloud_owner.credentialsgoogle.refresh_token,
+    )
+
+    google.subscribe_meet_webhook(
+        meet_code=space.meeting_uri.split("/")[-1].split("?")[0],
+        event_types=[
+            "google.workspace.meet.conference.v2.started",
+            "google.workspace.meet.conference.v2.ended",
+            "google.workspace.meet.participant.v2.joined",
+            "google.workspace.meet.participant.v2.left",
+            "google.workspace.meet.recording.v2.fileGenerated",
+            "google.workspace.meet.transcript.v2.fileGenerated",
+        ],
+    )
+
     session.online_meeting_url = space.meeting_uri
     session.name = s.name
     session.mentee = mentee
