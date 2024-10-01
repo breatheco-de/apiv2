@@ -2,7 +2,6 @@
 
 WEB_WORKER_CONNECTION=${WEB_WORKER_CONNECTION:-200}
 # uvicorn_worker.UvicornWorker is incompatible with new relic
-uvicorn.workers.UvicornWorker
 WEB_WORKER_CLASS=${WEB_WORKER_CLASS:-uvicorn.workers.UvicornWorker}
 CELERY_POOL=${CELERY_POOL:-prefork}
 WEB_WORKERS=${WEB_WORKERS:-2}

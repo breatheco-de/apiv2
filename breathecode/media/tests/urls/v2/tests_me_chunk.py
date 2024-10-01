@@ -117,6 +117,33 @@ async def test_op_type_not_provided(aclient: capy.AsyncClient, database: capy.Da
 @pytest.mark.asyncio
 @pytest.mark.django_db(reset_sequences=True)
 @pytest.mark.parametrize("op_type", ["media", "proof-of-payment"])
+async def test_no_authorized(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
+    url = reverse_lazy("v2:media:me_chunk")
+    model = await database.acreate(
+        user=1, token={"token_type": "login", "key": fake.slug()}, permission={"codename": "upload_media"}
+    )
+
+    data = {"operation_type": op_type}
+
+    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart")
+
+    json = response.json()
+    expected = {
+        "detail": "unauthorized-media-upload",
+        "status_code": 403,
+    }
+
+    assert json == expected
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert await database.alist_of("media.Chunk") == []
+
+    assert Storage.__init__.call_args_list == []
+    assert File.upload.call_args_list == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
+@pytest.mark.parametrize("op_type", ["profile-picture"])
 async def test_no_total_chunks(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
     url = reverse_lazy("v2:media:me_chunk")
     model = await database.acreate(
@@ -143,7 +170,7 @@ async def test_no_total_chunks(aclient: capy.AsyncClient, database: capy.Databas
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(reset_sequences=True)
-@pytest.mark.parametrize("op_type", ["media", "proof-of-payment"])
+@pytest.mark.parametrize("op_type", ["profile-picture"])
 async def test_no_chunk(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
     url = reverse_lazy("v2:media:me_chunk")
     model = await database.acreate(
@@ -170,7 +197,7 @@ async def test_no_chunk(aclient: capy.AsyncClient, database: capy.Database, fake
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(reset_sequences=True)
-@pytest.mark.parametrize("op_type", ["media", "proof-of-payment"])
+@pytest.mark.parametrize("op_type", ["profile-picture"])
 async def test_unsupported_mime(
     aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str, file: Callable
 ):
@@ -204,8 +231,7 @@ async def test_unsupported_mime(
 @pytest.mark.parametrize(
     "op_type, op_props",
     [
-        ("media", {"size": 1024 * 1024}),
-        ("proof-of-payment", {"size": 1024 * 1024}),
+        ("profile-picture", {"size": 1024 * 1024}),
     ],
 )
 async def test_no_chunk_index(
@@ -246,8 +272,7 @@ async def test_no_chunk_index(
 @pytest.mark.parametrize(
     "op_type, op_props",
     [
-        ("media", {"size": 1024 * 1024}),
-        ("proof-of-payment", {"size": 1024 * 1024}),
+        ("profile-picture", {"size": 1024 * 1024}),
     ],
 )
 async def test_chunk_uploaded(

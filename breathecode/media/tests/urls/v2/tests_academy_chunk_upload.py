@@ -135,6 +135,44 @@ async def test_op_type_not_provided(aclient: capy.AsyncClient, database: capy.Da
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(reset_sequences=True)
+@pytest.mark.parametrize("op_type", ["profile-picture"])
+async def test_no_authorized(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
+    url = reverse_lazy("v2:media:academy_chunk_upload")
+    model = await database.acreate(
+        user=1,
+        token={"token_type": "login", "key": fake.slug()},
+        role=1,
+        profile_academy=1,
+        capability={"slug": "crud_file"},
+        city=1,
+        country=1,
+    )
+
+    data = {"operation_type": op_type}
+
+    response = await aclient.put(
+        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+    )
+
+    json = response.json()
+    expected = {
+        "detail": "unauthorized-media-upload",
+        "status_code": 403,
+    }
+
+    assert json == expected
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert await database.alist_of("media.Chunk") == []
+    assert await database.alist_of("media.File") == []
+
+    assert Storage.__init__.call_args_list == []
+    assert File.upload.call_args_list == []
+
+    assert process_file.delay.call_args_list == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(reset_sequences=True)
 @pytest.mark.parametrize("op_type", ["media", "proof-of-payment"])
 async def test_no_total_chunks(aclient: capy.AsyncClient, database: capy.Database, fake: capy.Fake, op_type: str):
     url = reverse_lazy("v2:media:academy_chunk_upload")
@@ -328,6 +366,7 @@ class TestNoSchema:
             "id": 1,
             "status": "CREATED",
             "academy": model.academy.slug,
+            "notification": None,
             "mime": "text/plain",
             "name": "a291e39ac495b2effd38d508417cd731",
             "operation_type": op_type,
@@ -584,6 +623,7 @@ class TestMediaSchema:
             "id": 1,
             "status": "TRANSFERRING",
             "academy": model.academy.slug,
+            "notification": 1,
             "mime": "text/plain",
             "name": "a291e39ac495b2effd38d508417cd731",
             "operation_type": op_type,
@@ -635,4 +675,4 @@ class TestMediaSchema:
             call(instance=chunk, sender=chunk.__class__) for chunk in model.chunk
         ]
 
-        assert process_file.delay.call_args_list == [call(1)]
+        assert process_file.delay.call_args_list == [call(1, 1)]

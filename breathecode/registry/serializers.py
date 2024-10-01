@@ -344,6 +344,7 @@ class AssetMidSerializer(AssetSerializer):
     with_solutions = serpy.Field()
     with_video = serpy.Field()
     updated_at = serpy.Field()
+    agent = serpy.Field()
 
 
 class AssetBigSerializer(AssetMidSerializer):

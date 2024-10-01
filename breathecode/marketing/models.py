@@ -38,6 +38,13 @@ SYNC_STATUS = (
     (COMPLETED, "Completed"),
 )
 
+ACTIVE_CAMPAIGN = "ACTIVE_CAMPAIGN"
+BREVO = "BREVO"
+CRM_VENDORS = (
+    (ACTIVE_CAMPAIGN, "Active Campaign"),
+    (BREVO, "Brevo"),
+)
+
 
 class ActiveCampaignAcademy(models.Model):
     ac_key = models.CharField(max_length=150)
@@ -47,6 +54,13 @@ class ActiveCampaignAcademy(models.Model):
     )
 
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+
+    crm_vendor = models.CharField(
+        max_length=20,
+        choices=CRM_VENDORS,
+        default=ACTIVE_CAMPAIGN,
+        help_text="Only one vendor allowed per academy, defaults to active campaign",
+    )
 
     duplicate_leads_delta_avoidance = models.DurationField(
         default=timedelta(minutes=30),
@@ -283,6 +297,7 @@ PERSISTED = "PERSISTED"
 DUPLICATED = "DUPLICATED"
 REJECTED = "REJECTED"
 ERROR = "ERROR"
+MANUAL = "MANUALLY_PERSISTED"
 STORAGE_STATUS = (
     (PENDING, "Pending"),
     (PERSISTED, "Persisted"),
@@ -402,7 +417,12 @@ class FormEntry(models.Model):
     sex = models.CharField(max_length=15, null=True, default=None, blank=True, help_text="M=male,F=female,O=other")
 
     # is it saved into active campaign?
-    storage_status = models.CharField(max_length=15, choices=STORAGE_STATUS, default=PENDING)
+    storage_status = models.CharField(
+        max_length=20,
+        choices=STORAGE_STATUS,
+        default=PENDING,
+        help_text="MANUALLY_PERSISTED means it was copy pasted into active campaign",
+    )
     storage_status_text = models.CharField(
         default="",
         blank=True,
