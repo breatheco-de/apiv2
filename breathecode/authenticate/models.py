@@ -551,12 +551,12 @@ class CredentialsGoogle(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
-class TokenGetOrCreateArgs(TypedDict):
+class TokenGetOrCreateArgs(TypedDict, total=False):
     hours_length: int
     expires_at: datetime
 
 
-class TokenFilterArgs(TypedDict):
+class TokenFilterArgs(TypedDict, total=False):
     token_type: str
 
 
