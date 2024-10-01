@@ -470,7 +470,7 @@ def create_room_on_google_meet(session: MentorshipSession, mentee: User) -> None
     )
 
     google.subscribe_meet_webhook(
-        meet_code=space.meeting_uri.split("/")[-1].split("?")[0],
+        name=space.name,
         event_types=[
             "google.workspace.meet.conference.v2.started",
             "google.workspace.meet.conference.v2.ended",

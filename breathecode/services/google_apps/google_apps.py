@@ -63,9 +63,9 @@ class GoogleApps:
         service = build("oauth2", "v2", credentials=self._credentials)
         return service.userinfo().get().execute()
 
-    def subscribe_meet_webhook(self, meet_code: str, event_types: list[MeetEventType]):
+    def subscribe_meet_webhook(self, name: str, event_types: list[MeetEventType]):
         body = {
-            "target_resource": f"//meet.googleapis.com/spaces/{meet_code}",
+            "target_resource": f"//meet.googleapis.com/{name}",
             "event_types": event_types,
             "notification_endpoint": {
                 "pubsub_topic": f"projects/{os.getenv('GOOGLE_PROJECT_ID')}/topics/{os.getenv('GOOGLE_WEBHOOK_TOPIC')}",
