@@ -2035,7 +2035,7 @@ def get_google_token(request, token=None):
 
     if academy_settings in ["overwrite", "set"]:
         state += f"&academysettings={academy_settings}"
-        scopes.append("https://www.googleapis.com/auth/workspace.events")
+        scopes.append("https://www.googleapis.com/auth/pubsub")
 
     else:
         state += "&academysettings=none"
