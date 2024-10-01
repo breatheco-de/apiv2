@@ -2027,8 +2027,15 @@ def get_google_token(request, token=None):
     academy_settings = request.GET.get("academysettings", "none")
     state = f"token={token.key}&url={url}"
 
+    scopes = [
+        "https://www.googleapis.com/auth/meetings.space.created",
+        "https://www.googleapis.com/auth/drive.meet.readonly",
+        "https://www.googleapis.com/auth/userinfo.profile",
+    ]
+
     if academy_settings in ["overwrite", "set"]:
         state += f"&academysettings={academy_settings}"
+        scopes.append("https://www.googleapis.com/auth/workspace.events")
 
     else:
         state += "&academysettings=none"
@@ -2038,13 +2045,7 @@ def get_google_token(request, token=None):
         "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GOOGLE_REDIRECT_URL", ""),
         "access_type": "offline",  # we need offline access to receive refresh token and avoid total expiration
-        "scope": " ".join(
-            [
-                "https://www.googleapis.com/auth/meetings.space.created",
-                "https://www.googleapis.com/auth/drive.meet.readonly",
-                "https://www.googleapis.com/auth/userinfo.profile",
-            ]
-        ),
+        "scope": " ".join(scopes),
         "state": state,
     }
 
@@ -2148,11 +2149,6 @@ async def save_google_token(request):
                 refresh = ""
                 if "refresh_token" in body:
                     refresh = body["refresh_token"]
-
-                logger.info("body123123123123")
-                logger.info(body)
-                print("body123123123123")
-                print(body)
 
                 # set user id after because it shouldn't exists
                 google_id = ""
