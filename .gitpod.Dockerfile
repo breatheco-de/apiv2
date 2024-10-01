@@ -32,8 +32,6 @@ COPY --chown=gitpod:gitpod postgresql-hook.bash $HOME/.bashrc.d/200-postgresql-l
 # RUN pyenv install 3.12.3 && pyenv global 3.12.3
 # RUN pip install pipenv
 
-RUN echo "root:1234" | chpasswd
-
 USER gitpod
 
 RUN if ! grep -q "export PIP_USER=no" "$HOME/.bashrc"; then printf '%s\n' "export PIP_USER=no" >> "$HOME/.bashrc"; fi
