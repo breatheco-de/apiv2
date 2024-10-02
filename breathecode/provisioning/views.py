@@ -29,6 +29,7 @@ from breathecode.provisioning.serializers import (
     ProvisioningBillHTMLSerializer,
     ProvisioningBillSerializer,
     ProvisioningUserConsumptionHTMLResumeSerializer,
+    GetProvisioningProfile,
 )
 from breathecode.utils import capable_of, cut_csv
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -38,7 +39,7 @@ from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
 from .actions import get_provisioning_vendor
-from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption
+from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption, ProvisioningProfile
 
 
 @private_view()
@@ -726,6 +727,21 @@ class AcademyBillView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProvisioningProfileView(APIView):
+
+    extensions = APIViewExtensions(paginate=True)
+
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+
+        items = ProvisioningProfile.objects.filter(academy__id=academy_id)
+
+        items = handler.queryset(items)
+        serializer = GetProvisioningProfile(items, many=True)
+
+        return handler.response(serializer.data)
 
 
 # class ContainerMeView(APIView):
