@@ -50,6 +50,7 @@ class ContainerMeBigSerializer(serpy.Serializer):
 class GetProvisioningVendorSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
+    workspaces_url = serpy.Field()
 
 
 class GetProvisioningBillSmallSerializer(serpy.Serializer):
