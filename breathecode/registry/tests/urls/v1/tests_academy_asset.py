@@ -19,6 +19,8 @@ UTC_NOW = timezone.now()
 def database_item(academy, category, data={}):
     return {
         "academy_id": academy.id,
+        "learnpack_deploy_url": None,
+        "agent": None,
         "assessment_id": None,
         "asset_type": "PROJECT",
         "author_id": None,
@@ -88,6 +90,7 @@ def post_serializer(academy, category, data={}):
             "slug": category.slug,
             "title": category.title,
         },
+        "agent": None,
         "delivery_formats": "url",
         "delivery_instructions": None,
         "delivery_regex_url": None,

@@ -791,9 +791,7 @@ class MediaTestSuite(MediaTestCase):
         model = self.generate_models(authenticate=True, profile_academy=True, capability="crud_media", role="potato")
         url = reverse_lazy("media:upload")
 
-        file = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
-        text = self.bc.fake.text()
-        file.write(text.encode("utf-8"))
+        file = open("breathecode/settings.py", "r")
         file.close()
 
         with open(file.name, "rb") as data:
@@ -807,7 +805,7 @@ class MediaTestSuite(MediaTestCase):
             self.assertHash(hash)
 
             expected = {
-                "detail": f'You can upload only files on the following formats: {",".join(MIME_ALLOWED)}, got text/plain',
+                "detail": f'You can upload only files on the following formats: {",".join(MIME_ALLOWED)}, got text/x-python',
                 "status_code": 400,
             }
 
