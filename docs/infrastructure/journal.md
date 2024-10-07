@@ -62,7 +62,7 @@ Reasons for the change:
 
 - Web worker was reaching 841 MB ram.
 
-## -9/09/2024
+## -09/09/2024
 
 - `[all]` `GOOGLE_SECRET` setted.
 - `[dev]` `GOOGLE_CLIENT_ID` setted.
@@ -84,3 +84,7 @@ Why:
 Why:
 
 - Google doesn't support webhooks directly, it uses its Pub/Sub service.
+
+## 06/10/2024
+
+- `[dev]` `HEROKU_POSTGRESQL_TEAL` was replaced by `HEROKU_POSTGRESQL_GOLD`.
