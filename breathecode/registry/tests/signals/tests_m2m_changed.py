@@ -2,42 +2,9 @@
 This file will test branches of the ai_context instead of the whole content
 """
 
-import random
-from unittest.mock import patch
-
 import capyc.pytest as capy
-import pytest
-from aiohttp_retry import Optional
 
-from breathecode.registry.models import Asset, AssetContext
-
-LANG_MAP = {
-    "en": "english",
-    "es": "spanish",
-    "it": "italian",
-}
-
-
-# Fixture to create an Asset instance
-@pytest.fixture
-def asset():
-    return Asset.objects.create(slug="test-asset", title="Test Asset", status="PUBLISHED", lang="en")
-
-
-# Fixture to mock the save method of AssetContext
-@pytest.fixture
-def mock_save(monkeypatch):
-    with patch("breathecode.registry.receivers.AssetContext.save") as mock_save:
-        monkeypatch.setattr(AssetContext, "save", mock_save)
-        yield mock_save
-
-
-# Fixture to mock the build_ai_context method of Asset
-@pytest.fixture
-def mock_build_ai_context(monkeypatch):
-    with patch("breathecode.registry.models.Asset.build_ai_context", return_value="test-ai-context") as mock_method:
-        monkeypatch.setattr(Asset, "build_ai_context", mock_method)
-        yield mock_method
+from breathecode.registry.models import Asset
 
 
 def test_default_branch(database: capy.Database, signals: capy.Signals):
