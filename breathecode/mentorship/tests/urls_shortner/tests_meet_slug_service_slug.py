@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, call, patch
 import capyc.pytest as capy
 import pytest
 import timeago
+from capyc.core.managers import feature
 from django.core.handlers.wsgi import WSGIRequest
 from django.template import loader
 from django.test.client import FakePayload
@@ -3241,7 +3242,8 @@ class AuthenticateTestSuite(MentorshipTestCase):
         ),
     )
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_with_mentor_profile__redirect_to_session__saas(self):
+    @patch("capyc.core.managers.feature.is_enabled", MagicMock(return_value=False))
+    def test_with_mentor_profile__redirect_to_session__saas__bypass_consumption_false(self):
         mentor_profile_cases = [
             {
                 "status": x,
@@ -3322,12 +3324,231 @@ class AuthenticateTestSuite(MentorshipTestCase):
             )
             self.assertEqual(self.bc.database.list_of("payments.Consumable"), [])
             self.assertEqual(self.bc.database.list_of("payments.ConsumptionSession"), [])
+            calls = [
+                call(
+                    args[0],
+                    {
+                        **args[1],
+                        "context": {
+                            **args[1]["context"],
+                            "request": type(args[1]["context"]["request"]),
+                            "consumer": callable(args[1]["context"]["consumer"]),
+                            "consumables": [x for x in args[1]["context"]["consumables"]],
+                        },
+                    },
+                    *args[2:],
+                    **kwargs,
+                )
+                for args, kwargs in feature.is_enabled.call_args_list
+            ]
+            context1 = feature.context(
+                context={
+                    "utc_now": UTC_NOW,
+                    "consumer": True,
+                    "service": "join_mentorship",
+                    "request": WSGIRequest,
+                    "consumables": [],
+                    "lifetime": None,
+                    "price": 0,
+                    "is_consumption_session": False,
+                    "flags": {"bypass_consumption": False},
+                },
+            )
+            context2 = feature.context(
+                context={
+                    "utc_now": UTC_NOW,
+                    "consumer": True,
+                    "service": "join_mentorship",
+                    "request": WSGIRequest,
+                    "consumables": [],
+                    "lifetime": None,
+                    "price": 0,
+                    "is_consumption_session": False,
+                    "flags": {"bypass_consumption": False},
+                },
+                user=base.user,
+            )
+            assert calls == [
+                call("payments.bypass_consumption", context1, False),
+                call("payments.bypass_consumption", context2, False),
+            ]
 
             # teardown
             self.bc.database.delete("mentorship.MentorProfile")
 
             self.bc.database.delete("auth.Permission")
             self.bc.database.delete("payments.Service")
+            feature.is_enabled.call_args_list = []
+
+    @patch("breathecode.mentorship.actions.mentor_is_ready", MagicMock())
+    @patch(
+        "os.getenv",
+        MagicMock(
+            side_effect=apply_get_env(
+                {
+                    "DAILY_API_URL": URL,
+                    "DAILY_API_KEY": API_KEY,
+                }
+            )
+        ),
+    )
+    @patch(
+        "requests.request",
+        apply_requests_request_mock(
+            [
+                (
+                    201,
+                    f"{URL}/v1/rooms",
+                    {
+                        "name": ROOM_NAME,
+                        "url": ROOM_URL,
+                    },
+                )
+            ]
+        ),
+    )
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("capyc.core.managers.feature.is_enabled", MagicMock(side_effect=[False, True, False, True]))
+    def test_with_mentor_profile__redirect_to_session__saas__bypass_consumption_true(self):
+        mentor_profile_cases = [
+            {
+                "status": x,
+                "online_meeting_url": self.bc.fake.url(),
+                "booking_url": self.bc.fake.url(),
+            }
+            for x in ["ACTIVE", "UNLISTED"]
+        ]
+
+        id = 0
+        for mentor_profile in mentor_profile_cases:
+            id += 1
+
+            user = {"first_name": "", "last_name": ""}
+            service = {"consumer": "JOIN_MENTORSHIP"}
+            base = self.bc.database.create(user=user, token=1, service=service)
+
+            ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
+
+            academy = {"available_as_saas": True}
+            mentorship_session = {
+                "mentee_id": base.user.id,
+                "ends_at": ends_at,
+                "allow_mentee_to_extend": True,
+            }
+            token = 1
+
+            model = self.bc.database.create(
+                mentor_profile=mentor_profile,
+                mentorship_session=mentorship_session,
+                user=user,
+                token=token,
+                mentorship_service={"language": "en", "video_provider": "DAILY"},
+                service=base.service,
+                academy=academy,
+            )
+
+            model.mentorship_session.mentee = None
+            model.mentorship_session.save()
+
+            token = model.token if "token" in model else base.token
+
+            querystring = self.bc.format.to_querystring(
+                {
+                    "token": token.key,
+                    "extend": "true",
+                    "mentee": base.user.id,
+                    "session": model.mentorship_session.id,
+                }
+            )
+            url = (
+                reverse_lazy(
+                    "mentorship_shortner:meet_slug_service_slug",
+                    kwargs={"mentor_slug": model.mentor_profile.slug, "service_slug": model.mentorship_service.slug},
+                )
+                + f"?{querystring}"
+            )
+            response = self.client.get(url)
+
+            content = self.bc.format.from_bytes(response.content)
+            expected = ""
+
+            # dump error in external files
+            if content != expected:
+                with open("content.html", "w") as f:
+                    f.write(content)
+
+                with open("expected.html", "w") as f:
+                    f.write(expected)
+
+            self.assertEqual(content, expected)
+            self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+            assert (
+                response.url
+                == f"/mentor/session/{model.mentorship_session.id}?token={token.key}&message=You%20have%20a%20session%20that%20expired%2030%20minutes%20ago.%20Only%20sessions%20with%20less%20than%2030min%20from%20expiration%20can%20be%20extended%20(if%20allowed%20by%20the%20academy)"
+            )
+            self.assertEqual(
+                self.bc.database.list_of("mentorship.MentorProfile"),
+                [
+                    self.bc.format.to_dict(model.mentor_profile),
+                ],
+            )
+            self.assertEqual(self.bc.database.list_of("payments.Consumable"), [])
+            self.assertEqual(self.bc.database.list_of("payments.ConsumptionSession"), [])
+            calls = [
+                call(
+                    args[0],
+                    {
+                        **args[1],
+                        "context": {
+                            **args[1]["context"],
+                            "request": type(args[1]["context"]["request"]),
+                            "consumer": callable(args[1]["context"]["consumer"]),
+                            "consumables": [x for x in args[1]["context"]["consumables"]],
+                        },
+                    },
+                    *args[2:],
+                    **kwargs,
+                )
+                for args, kwargs in feature.is_enabled.call_args_list
+            ]
+            context1 = feature.context(
+                context={
+                    "utc_now": UTC_NOW,
+                    "consumer": True,
+                    "service": "join_mentorship",
+                    "request": WSGIRequest,
+                    "consumables": [],
+                    "lifetime": None,
+                    "price": 0,
+                    "is_consumption_session": False,
+                    "flags": {"bypass_consumption": False},
+                },
+            )
+            context2 = feature.context(
+                context={
+                    "utc_now": UTC_NOW,
+                    "consumer": True,
+                    "service": "join_mentorship",
+                    "request": WSGIRequest,
+                    "consumables": [],
+                    "lifetime": None,
+                    "price": 0,
+                    "is_consumption_session": False,
+                    "flags": {"bypass_consumption": False},
+                },
+                user=base.user,
+            )
+            assert calls == [
+                call("payments.bypass_consumption", context1, False),
+                call("payments.bypass_consumption", context2, False),
+            ]
+
+            # teardown
+            self.bc.database.delete("mentorship.MentorProfile")
+
+            self.bc.database.delete("auth.Permission")
+            self.bc.database.delete("payments.Service")
+            feature.is_enabled.call_args_list = []
 
     @patch("breathecode.mentorship.actions.mentor_is_ready", MagicMock())
     @patch(
