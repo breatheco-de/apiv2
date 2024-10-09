@@ -37,7 +37,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
-from .actions import get_provisioning_vendor
+from .actions import get_provisioning_vendor, extract_repo_name
 from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption
 
 
@@ -117,10 +117,11 @@ def redirect_new_container_public(request):
     if lang is not None:
         asset = asset.filter(lang=lang)
     asset = asset.first()
+
     if asset and asset.learnpack_deploy_url:
         buttons.append(
             {
-                "label": "Start tutorial",
+                "label": "Start now in the cloud",
                 "url": asset.learnpack_deploy_url,
                 "icon": "/static/img/learnpack.svg",
             }
@@ -148,6 +149,19 @@ def redirect_new_container_public(request):
         "buttons": buttons,
         # 'COMPANY_INFO_EMAIL': item.academy.feedback_email,
     }
+
+    if asset and asset.url:
+        data["repo_url"] = asset.url + ".git"
+        data["repo_slug"] = extract_repo_name(asset.url)
+    else:
+        data["repo_url"] = "repo_url"
+        data["repo_slug"] = "repo_name"
+
+    if asset and asset.agent:
+        data["agent"] = asset.agent
+    else:
+        data["agent"] = "vscode"
+
     template = get_template_content("choose_vendor", data)
     return HttpResponse(template["html"])
 

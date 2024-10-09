@@ -80,7 +80,266 @@
     .buttons-container {
         display: flex;
         gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    #modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        display: none;
+        padding: 20px;
+    }
+
+    #modal-backdrop .modal-container {
+        background: white;
+        width: min(1000px, 95%);
+        display: flex;
+        align-items: center;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        gap: 20px;
+        transform: translate(-50%, -50%);
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    #modal-backdrop .content {
+        display: flex;
         flex-direction: column;
+        text-align: justify;
+        width: 50%;
+    }
+
+    #modal-backdrop .content .header {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+
+    #modal-backdrop .content .header p {
+        text-align: left;
+    }
+
+    #modal-backdrop .content h2 {
+        font-family: 'Lato', sans-serif;
+        font-weight: 400;
+        font-size: 24px;
+        line-height: 28.8px;
+    }
+
+    #modal-backdrop .content p {
+        font-family: 'Lato', sans-serif;
+        font-weight: 400;
+        font-size: 18px;
+        line-height: 21.6px;
+    }
+
+    #modal-backdrop .content .back-button {
+        width: 90px;
+        border: none;
+        color: #0097CF;
+        font-size: 14px;
+        cursor: pointer;
+        margin-top: 10px;
+        text-align: left;
+        display: none;
+    }
+
+    #modal-backdrop .content .os-options {
+        padding: 30px;
+    }
+
+    #modal-backdrop .content .os-options span {
+        font-size: 18px;
+    }
+
+    #modal-backdrop .content .os-options .os-list {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    #modal-backdrop .content .os-options .os-list .os-item {
+        padding: 30px;
+        cursor: pointer;
+    }
+
+    #modal-backdrop .content .os-options .os-list img {
+        width: 60px;
+        height: 50px;
+    }
+
+    /* #modal-backdrop .content .footer {
+        text-align: center;
+        justify-self: flex-end;
+        margin-top: auto;
+        padding-top: 10px;
+    } */
+
+    /* #modal-backdrop .content .footer a {
+        color: #0097CF;
+        text-decoration: none;
+        font-family: 'Lato', sans-serif;
+        font-size: 17px;
+    } */
+
+    #modal-backdrop .supporting-material {
+        flex-grow: 1;
+    }
+
+    #modal-backdrop .supporting-material p {
+        font-size: 18px;
+    }
+
+    #modal-backdrop .close-button {
+        border: none;
+        background: none;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        font-size: 30px;
+    }
+
+    .selected {
+        background: #EEF9FE;
+        border-radius: 8px;
+        border: 1px solid #0097CF;
+        padding: 30px;
+    }
+
+    #steps-container {
+        display: none;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+
+    #steps-container .step-details.open {
+        border: 1px solid #0097CF;
+    }
+
+    .step-details.open svg {
+        transform: rotate(90deg);
+    }
+
+    .step-details.open svg path {
+        fill: #0097CF;
+        stroke-width: 1px;
+    }
+
+    .step-details.open .step-summary {
+        color: #0097CF;
+    }
+
+    .step-details.open p {
+        text-align: justify;
+        padding-top: 10px;
+    }
+
+    .step-details.open>div>span {
+        display: block;
+        padding: 5px 0;
+    }
+
+    .step-details.open a {
+        text-decoration: none;
+        color: #0097CF;
+    }
+
+    #steps-container {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+
+    }
+
+    #steps-container .step-details {
+        border: 1px solid #DADADA;
+        border-radius: 5px;
+        padding: 10px;
+    }
+
+    #steps-container .step-details .step-summary {
+        list-style-type: none;
+        font-size: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .step-details .step-content {
+        height: 0;
+        overflow: hidden;
+    }
+
+    .step-details.open .step-content {
+        height: auto;
+        padding: 10px 0;
+        transition: all 0.1s ease-in-out;
+    }
+
+    .custom-checkbox {
+        margin-right: 8px;
+        width: 15px;
+        height: 15px;
+        border: 2px solid #DADADA;
+        border-radius: 1px;
+        display: inline-block;
+        position: relative;
+        cursor: pointer;
+    }
+
+    .custom-checkbox.checked {
+        border: 1px solid #25BF6C;
+    }
+
+    .custom-checkbox.checked::after {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 0px;
+        width: 3px;
+        height: 10px;
+        border: solid #25BF6C;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+
+    #steps-container details p {
+        font-size: 14px !important;
+    }
+
+    /* #video-container {
+        height: 500px;
+        width: 100%;
+    } */
+
+    pre {
+        padding: 10px;
+        background: #2d2d2d;
+        border-radius: 3px;
+        margin: 4px 0;
+    }
+
+    pre code {
+        color: white;
+    }
+
+    code {
+        background: #2d2d2d;
+        padding: 3px;
+        border-radius: 3px;
+        color: white;
     }
 
     @media (min-width: 520px) {
@@ -88,11 +347,24 @@
             flex-direction: row;
         }
     }
+
+    @media (max-width: 750px) {
+        #modal-backdrop .content {
+            width: 100%;
+        }
+
+        #modal-backdrop .content .os-options .os-list {
+            gap: 30px;
+        }
+
+        #modal-backdrop .supporting-material {
+            display: none;
+        }
+    }
 </style>
 </head>
 
 <body>
-
     <div class="col-12 col-sm-8 center-box">
         <img class="mt-3" src="{% static 'img/provisioning.png' %}" alt="provisioning bridge logo">
         <h1 class="text-center" style="font-size: 32px; font-weight: 600;">Start coding in just one click</h1>
@@ -104,7 +376,7 @@
             {% if buttons %}
             {% for button in buttons %}
             <button class="d-flex gap-1 align-items-center btn"
-                style="font-size: 18px; font-weight: 600; width: 240px; background-color: #0097CF; color: white; justify-content: center;">
+                style="font-size: 15px; font-weight: 600; width: 200px; background-color: #0097CF; color: white; justify-content: center;">
                 <img class="white-filter" src="{{ button.icon }}" style="margin-right: 5px;" />
                 <a class="page-link" href="{{ button.url }}">{{ button.label }}</a>
             </button>
@@ -112,6 +384,11 @@
             {% else %}
             <p>No buttons available.</p>
             {% endif %}
+            <button class="toggler d-flex gap-1 align-items-center btn" onclick="toggleModal(event, true)"
+                style="font-size: 15px; font-weight: 600; width: 200px; background-color: #0097CF; color: white; justify-content: center;">
+                <img class="toggler white-filter" src="/static/img/button-locally.svg" style="margin-right: 5px;" />
+                <a class="toggler page-link">Start locally</a>
+            </button>
         </div>
         <div class="row p-2 mt-4" style="font-size: 14px;">
             <div class="col-12" style="display: flex; flex-direction: column; gap: 8px;">
@@ -122,10 +399,249 @@
             </div>
         </div>
     </div>
+
     <div class="emptiness"></div>
+
+    <div id="modal-backdrop" class="toggler" onclick="toggleModal(event, false)">
+        <div class="modal-container">
+            <div class="content">
+                <div class="header">
+                    <h2>Open locally on your computer</h2>
+                    <p>This example can be downloaded and run locally on your computer by following these steps:</p>
+                </div>
+                <button class="back-button" onclick="goBack()">← Go back</button>
+                <div class="os-options">
+                    <strong>
+                        <span>Select your operating system</span>
+                    </strong>
+                    <div class="os-list">
+                        <div class="os-item" onclick="handleOsItemClick(event)">
+                            <img src="/static/img/os-ios.svg" alt="macOs" width="50">
+                        </div>
+                        <div class="os-item" onclick="handleOsItemClick(event)">
+                            <img src="/static/img/os-linux.svg" alt="linux" width="50">
+                        </div>
+                        <div class="os-item" onclick="handleOsItemClick(event)">
+                            <img src="/static/img/os-windows.svg" alt="windows" width="50">
+                        </div>
+                    </div>
+                </div>
+                <div id="steps-container"></div>
+                <!-- <footer class="footer">
+                    <a href="#">Need help? Schedule a mentoring session →</a>
+                </footer> -->
+            </div>
+            <div class="supporting-material">
+                <!-- <p>Supporting material for each step will be shown here.</p> -->
+                <div id="video-container"></div>
+                <button class="toggler close-button" onclick="toggleModal(false)">&times;</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
         crossorigin="anonymous"></script>
+    <script>
 
+        const svgContent = '<svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.79289 13.7071C3.40237 13.3166 3.40237 12.6834 3.79289 12.2929L9.08579 7L3.7929 1.70711C3.40237 1.31658 3.40237 0.683417 3.7929 0.292893C4.18342 -0.0976312 4.81659 -0.0976311 5.20711 0.292894L11.2071 6.2929C11.5976 6.68342 11.5976 7.31659 11.2071 7.70711L5.20711 13.7071C4.81658 14.0976 4.18342 14.0976 3.79289 13.7071Z" fill="#00041A"/></svg>'
+        const agent = "{{agent}}"
+        let selectedOs = null
+        const lastStep = {}
+
+        if (agent === "vscode") {
+            lastStep.title = 'Open the project with VSCode'
+            lastStep.content = 'Make sure you have the <a href="https://marketplace.visualstudio.com/items?itemName=learn-pack.learnpack-vscode">LearnPack extension</a> installed, open the folder in VSCode and type <code>learnpack start</code> on your vscode terminal.'
+        } else {
+            lastStep.title = 'Open the project without VSCode'
+            lastStep.content = 'Use your computer terminal to get inside your recently created folder and start learnpack: <pre><code>$ cd {{repo_slug}}<br>$ learnpack start</code></pre>'
+        }
+
+        const steps = [
+            {
+                title: "Install Node.js on your computer.",
+                content: "We recommend installing NVM to manage your node.js versions locally much easier, follow this link for a full guide about how to install on {os}.",
+                url: {
+                    macOs: "https://4geeks.com/how-to/install-node-nvm-mac-osx",
+                    linux: "https://4geeks.com/how-to/install-nvm-linux",
+                    windows: "https://4geeks.com/how-to/nvm-install-windows"
+                },
+                urlVideo: {
+                    macOs: "https://www.youtube.com/watch?v=BhLFxy6Jz8c",
+                    linux: "https://www.youtube.com/watch?v=z6Tta9ZbbGg",
+                    windows: "https://www.youtube.com/watch?v=tyb4WuO5Pdo"
+                }
+            },
+            {
+                title: "Install Learnpack on your computer.",
+                content: "You must install LearnPack to run these exercises interactively on your computer, you should run this command on the terminal: <pre><code>$ npm install @learnpack/learnpack -g</code></pre> Click the link below to read more about LearnPack",
+                url: {
+                    macOs: "https://4geeks.com/docs/learnpack/what-is-learnpack",
+                    linux: "https://4geeks.com/docs/learnpack/what-is-learnpack",
+                    windows: "https://4geeks.com/docs/learnpack/what-is-learnpack"
+                },
+                urlVideo: {
+                    macOs: "https://www.youtube.com/watch?v=noKAD-d_z3c",
+                    linux: "https://www.youtube.com/watch?v=noKAD-d_z3c",
+                    windows: "https://www.youtube.com/watch?v=noKAD-d_z3c"
+                }
+            },
+            {
+                title: "Clone project into your computer.",
+                content: "On {os}, you can clone the project into your computer by simply running this command in the terminal: <pre><code>$ git clone {{repo_url}}</code></pre> You can check this link if you need a more detailed explanation.",
+                url: {
+                    macOs: "https://4geeks.com/how-to/github-clone-repository",
+                    linux: "https://4geeks.com/how-to/github-clone-repository",
+                    windows: "https://4geeks.com/how-to/github-clone-repository",
+                },
+                urlVideo: {
+                    macOs: "https://www.youtube.com/watch?v=EhxPBMQFCaI",
+                    linux: "https://www.youtube.com/watch?v=EhxPBMQFCaI",
+                    windows: "https://www.youtube.com/watch?v=EhxPBMQFCaI"
+                }
+            },
+            {
+                ...lastStep
+            }
+        ]
+
+        function displayVideo(url) {
+            const videoId = url.split('v=')[1].split('&')[0];
+            const iframe = document.createElement('iframe');
+            iframe.width = '100%';
+            iframe.height = '500px';
+            iframe.src = `https://www.youtube.com/embed/${videoId}`;
+            iframe.frameBorder = '0';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+            iframe.allowFullscreen = true;
+
+            const videoContainer = document.querySelector('#video-container');
+            videoContainer.innerHTML = '';
+            videoContainer.appendChild(iframe);
+        }
+
+        function toggleModal(event, show = true) {
+            const modal = document.getElementById("modal-backdrop");
+            if (event.target.classList.contains('toggler')) {
+                modal.style.display = show ? "flex" : "none";
+            }
+        }
+
+        function handleOsItemClick(event) {
+            const osItems = document.querySelectorAll('.os-item');
+            osItems.forEach(item => item.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            const osType = event.currentTarget.querySelector('img').alt;
+            displaySteps(osType);
+
+            const osListContainer = document.querySelector('.os-options');
+            osListContainer.style.display = 'none';
+
+            const backButton = document.querySelector('.back-button');
+            backButton.style.display = 'block';
+        }
+
+        function displaySteps(osType) {
+            selectedOs = osType
+            const stepsContainer = document.getElementById('steps-container');
+            stepsContainer.innerHTML = '';
+
+            let displayableSteps = [...steps]
+
+            if (osType === 'windows') {
+                const newStepTitle = "Install Git on your computer.";
+                const stepExists = displayableSteps.some(step => step.title === newStepTitle);
+
+                if (!stepExists) {
+                    const newStep = {
+                        title: newStepTitle,
+                        content: "You must install GIT to clone a GitHub repository locally. You must follow the instructions given in the following link.",
+                        url: {
+                            windows: "https://git-scm.com/downloads/win"
+                        },
+                        urlVideo: {
+                            windows: "https://www.youtube.com/watch?v=iYkLrXobBbA"
+                        }
+                    };
+                    displayableSteps.splice(2, 0, newStep);
+                }
+            }
+
+            if (displayableSteps) {
+                displayableSteps.forEach((step, index) => {
+                    const stepDetails = document.createElement('div');
+                    stepDetails.classList.add('step-details');
+
+                    if ("urlVideo" in step) {
+                        stepDetails.setAttribute('urlVideo', step.urlVideo[osType]);
+                    }
+
+                    const stepSummary = document.createElement('div');
+                    stepSummary.classList.add('step-summary');
+
+                    const contentWithOs = step.content.replace(/{os}/g, osType);
+                    const checkbox = `<div class="custom-checkbox" onclick="toggleCheckbox(event)"></div>`;
+
+                    stepSummary.innerHTML = `<div>${checkbox}<span>${index + 1}. ${step.title}</span></div> <div>${svgContent}</div>`;
+                    stepDetails.appendChild(stepSummary);
+
+                    stepSummary.addEventListener("click", function (event) {
+                        closeStep(event);
+                    });
+
+                    const stepContent = document.createElement('div');
+
+                    stepContent.classList.add('step-content')
+                    stepContent.innerHTML = `<p>${contentWithOs}</p> <span>${step.url ? `<a href="${step.url[osType]}" target="__blank">Learn more</a>` : ""}</span>`;
+                    stepDetails.appendChild(stepContent);
+                    stepsContainer.appendChild(stepDetails);
+                });
+                stepsContainer.style.display = 'flex';
+            } else {
+                console.error('No se encontraron pasos para el sistema operativo');
+            }
+        }
+
+        function goBack() {
+            const osListContainer = document.querySelector('.os-options');
+            const stepsContainer = document.getElementById('steps-container');
+
+            osListContainer.style.display = 'block';
+            stepsContainer.style.display = 'none';
+
+            const backButton = document.querySelector('.back-button');
+            backButton.style.display = 'none';
+
+            const osItems = document.querySelectorAll('.os-item');
+            osItems.forEach(item => item.classList.remove('selected'));
+
+            const videoContainer = document.querySelector('#video-container');
+            videoContainer.innerHTML = '';
+        }
+
+        function closeStep(event) {
+            const clickedDetails = event.target.closest('div.step-details')
+            const checkbox = clickedDetails.querySelector('.custom-checkbox')
+            const allDetails = document.querySelectorAll('div.step-details')
+            allDetails.forEach(detail => {
+                if (clickedDetails === detail && !clickedDetails.classList.contains('open')) {
+                    detail.classList.add('open')
+                    checkbox.classList.toggle('checked')
+                    const urlVideo = clickedDetails.getAttribute('urlVideo')
+
+                    if (urlVideo) {
+                        displayVideo(urlVideo);
+                    } else {
+                        const videoContainer = document.querySelector('#video-container');
+                        videoContainer.innerHTML = '';
+                    }
+
+                } else {
+                    detail.classList.remove('open');
+                }
+            });
+        }
+    </script>
 </body>
 {% endblock %}
