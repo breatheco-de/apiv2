@@ -93,18 +93,19 @@
         height: 100vh;
         display: none;
         padding: 20px;
+        overflow: auto;
     }
 
     #modal-backdrop .modal-container {
         background: white;
         width: min(1000px, 95%);
         display: flex;
+        position: relative;
         align-items: center;
-        position: fixed;
-        top: 50%;
-        left: 50%;
+        height: fit-content;
+        margin-inline: auto;
+        margin-top: 5vh;
         gap: 20px;
-        transform: translate(-50%, -50%);
         border-radius: 8px;
         padding: 15px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -120,7 +121,7 @@
     #modal-backdrop .content .header {
         display: flex;
         flex-direction: column;
-        gap: 30px;
+        gap: 20px;
     }
 
     #modal-backdrop .content .header p {
@@ -153,7 +154,8 @@
     }
 
     #modal-backdrop .content .os-options {
-        padding: 30px;
+        padding: 18px;
+        width: 100%;
     }
 
     #modal-backdrop .content .os-options span {
@@ -166,31 +168,33 @@
         align-items: center;
         gap: 10px;
         margin-top: 10px;
+        flex-wrap: nowrap;
     }
 
-    #modal-backdrop .content .os-options .os-list .os-item {
-        padding: 30px;
+    .os-item {
+        padding: 20px;
         cursor: pointer;
+        border: 1px solid transparent;
+        flex: 1 1 auto;
+        max-width: 100px;
     }
 
     #modal-backdrop .content .os-options .os-list img {
-        width: 60px;
+        width: 100%;
         height: 50px;
     }
 
-    /* #modal-backdrop .content .footer {
+    #modal-backdrop .content .footer {
         text-align: center;
-        justify-self: flex-end;
-        margin-top: auto;
-        padding-top: 10px;
-    } */
+        padding-top: 14px;
+    }
 
-    /* #modal-backdrop .content .footer a {
+    #modal-backdrop .content .footer a {
         color: #0097CF;
         text-decoration: none;
         font-family: 'Lato', sans-serif;
         font-size: 17px;
-    } */
+    }
 
     #modal-backdrop .supporting-material {
         flex-grow: 1;
@@ -203,7 +207,7 @@
     #modal-backdrop .close-button {
         border: none;
         background: none;
-        position: fixed;
+        position: absolute;
         top: 10px;
         right: 10px;
         font-size: 30px;
@@ -213,7 +217,7 @@
         background: #EEF9FE;
         border-radius: 8px;
         border: 1px solid #0097CF;
-        padding: 30px;
+        padding: 20px;
     }
 
     #steps-container {
@@ -242,12 +246,11 @@
 
     .step-details.open p {
         text-align: justify;
-        padding-top: 10px;
     }
 
     .step-details.open>div>span {
         display: block;
-        padding: 5px 0;
+        padding-top: 8px;
     }
 
     .step-details.open a {
@@ -272,9 +275,14 @@
         list-style-type: none;
         font-size: 18px;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
         cursor: pointer;
+    }
+
+    #steps-container .step-details .step-summary .svgContent {
+        padding: 5px;
+        display: flex;
+        margin-left: auto;
+        align-items: center;
     }
 
     .step-details .step-content {
@@ -285,7 +293,7 @@
     .step-details.open .step-content {
         height: auto;
         padding: 10px 0;
-        transition: all 0.1s ease-in-out;
+        transition: all 0.2s ease-in-out;
     }
 
     .custom-checkbox {
@@ -319,10 +327,11 @@
         font-size: 14px !important;
     }
 
-    /* #video-container {
-        height: 500px;
-        width: 100%;
-    } */
+    #video-container {
+        margin-top: 20px;
+        border-radius: 10px;
+        overflow: hidden;
+    }
 
     pre {
         padding: 10px;
@@ -333,6 +342,8 @@
 
     pre code {
         color: white;
+        line-height: normal;
+        padding: 0;
     }
 
     code {
@@ -416,7 +427,7 @@
                     </strong>
                     <div class="os-list">
                         <div class="os-item" onclick="handleOsItemClick(event)">
-                            <img src="/static/img/os-ios.svg" alt="macOs" width="50">
+                            <img src="/static/img/os-ios.svg" alt="macos" width="50">
                         </div>
                         <div class="os-item" onclick="handleOsItemClick(event)">
                             <img src="/static/img/os-linux.svg" alt="linux" width="50">
@@ -427,9 +438,10 @@
                     </div>
                 </div>
                 <div id="steps-container"></div>
-                <!-- <footer class="footer">
-                    <a href="#">Need help? Schedule a mentoring session →</a>
-                </footer> -->
+                <footer class="footer">
+                    <a href="https://4geeks.com/mentorship/schedule" target="_blank">Need help? Schedule a mentoring
+                        session →</a>
+                </footer>
             </div>
             <div class="supporting-material">
                 <!-- <p>Supporting material for each step will be shown here.</p> -->
@@ -441,75 +453,33 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
-        crossorigin="anonymous"></script>
+        crossorigin="anonymous">
+    </script>
     <script>
+        let jsonSteps = {}
+
+        fetch("{% static 'assets/clone_modal.json' %}")
+            .then(response => response.json())
+            .then(data => {
+                const jsonData = data;
+
+                jsonSteps = jsonData
+            })
+            .catch(error => console.error('Error al cargar el JSON:', error));
+
 
         const svgContent = '<svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.79289 13.7071C3.40237 13.3166 3.40237 12.6834 3.79289 12.2929L9.08579 7L3.7929 1.70711C3.40237 1.31658 3.40237 0.683417 3.7929 0.292893C4.18342 -0.0976312 4.81659 -0.0976311 5.20711 0.292894L11.2071 6.2929C11.5976 6.68342 11.5976 7.31659 11.2071 7.70711L5.20711 13.7071C4.81658 14.0976 4.18342 14.0976 3.79289 13.7071Z" fill="#00041A"/></svg>'
         const agent = "{{agent}}"
-        let selectedOs = null
-        const lastStep = {}
 
-        if (agent === "vscode") {
-            lastStep.title = 'Open the project with VSCode'
-            lastStep.content = 'Make sure you have the <a href="https://marketplace.visualstudio.com/items?itemName=learn-pack.learnpack-vscode">LearnPack extension</a> installed, open the folder in VSCode and type <code>learnpack start</code> on your vscode terminal.'
-        } else {
-            lastStep.title = 'Open the project without VSCode'
-            lastStep.content = 'Use your computer terminal to get inside your recently created folder and start learnpack: <pre><code>$ cd {{repo_slug}}<br>$ learnpack start</code></pre>'
-        }
-
-        const steps = [
-            {
-                title: "Install Node.js on your computer.",
-                content: "We recommend installing NVM to manage your node.js versions locally much easier, follow this link for a full guide about how to install on {os}.",
-                url: {
-                    macOs: "https://4geeks.com/how-to/install-node-nvm-mac-osx",
-                    linux: "https://4geeks.com/how-to/install-nvm-linux",
-                    windows: "https://4geeks.com/how-to/nvm-install-windows"
-                },
-                urlVideo: {
-                    macOs: "https://www.youtube.com/watch?v=BhLFxy6Jz8c",
-                    linux: "https://www.youtube.com/watch?v=z6Tta9ZbbGg",
-                    windows: "https://www.youtube.com/watch?v=tyb4WuO5Pdo"
-                }
-            },
-            {
-                title: "Install Learnpack on your computer.",
-                content: "You must install LearnPack to run these exercises interactively on your computer, you should run this command on the terminal: <pre><code>$ npm install @learnpack/learnpack -g</code></pre> Click the link below to read more about LearnPack",
-                url: {
-                    macOs: "https://4geeks.com/docs/learnpack/what-is-learnpack",
-                    linux: "https://4geeks.com/docs/learnpack/what-is-learnpack",
-                    windows: "https://4geeks.com/docs/learnpack/what-is-learnpack"
-                },
-                urlVideo: {
-                    macOs: "https://www.youtube.com/watch?v=noKAD-d_z3c",
-                    linux: "https://www.youtube.com/watch?v=noKAD-d_z3c",
-                    windows: "https://www.youtube.com/watch?v=noKAD-d_z3c"
-                }
-            },
-            {
-                title: "Clone project into your computer.",
-                content: "On {os}, you can clone the project into your computer by simply running this command in the terminal: <pre><code>$ git clone {{repo_url}}</code></pre> You can check this link if you need a more detailed explanation.",
-                url: {
-                    macOs: "https://4geeks.com/how-to/github-clone-repository",
-                    linux: "https://4geeks.com/how-to/github-clone-repository",
-                    windows: "https://4geeks.com/how-to/github-clone-repository",
-                },
-                urlVideo: {
-                    macOs: "https://www.youtube.com/watch?v=EhxPBMQFCaI",
-                    linux: "https://www.youtube.com/watch?v=EhxPBMQFCaI",
-                    windows: "https://www.youtube.com/watch?v=EhxPBMQFCaI"
-                }
-            },
-            {
-                ...lastStep
-            }
-        ]
 
         function displayVideo(url) {
             const videoId = url.split('v=')[1].split('&')[0];
             const iframe = document.createElement('iframe');
+            const modalContainer = document.querySelector('.content')
+            const height = modalContainer.offsetHeight;
+
             iframe.width = '100%';
-            iframe.height = '500px';
+            iframe.height = height;
             iframe.src = `https://www.youtube.com/embed/${videoId}`;
             iframe.frameBorder = '0';
             iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
@@ -533,57 +503,43 @@
             event.currentTarget.classList.add('selected');
 
             const osType = event.currentTarget.querySelector('img').alt;
-            displaySteps(osType);
-
             const osListContainer = document.querySelector('.os-options');
-            osListContainer.style.display = 'none';
-
             const backButton = document.querySelector('.back-button');
-            backButton.style.display = 'block';
+
+            setTimeout(() => {
+                displaySteps(osType);
+                osListContainer.style.display = 'none';
+                backButton.style.display = 'block';
+            }, 200);
         }
 
         function displaySteps(osType) {
-            selectedOs = osType
+
+            console.log(jsonSteps);
+
+            const lastStep = agent === "os" ? {
+                ...jsonSteps["agent-os"]
+            } : { ...jsonSteps["agent-vs-code"] }
+
+            const osSteps = [...jsonSteps["os-list"].find(os => os.name === osType).steps, lastStep]
             const stepsContainer = document.getElementById('steps-container');
             stepsContainer.innerHTML = '';
 
-            let displayableSteps = [...steps]
-
-            if (osType === 'windows') {
-                const newStepTitle = "Install Git on your computer.";
-                const stepExists = displayableSteps.some(step => step.title === newStepTitle);
-
-                if (!stepExists) {
-                    const newStep = {
-                        title: newStepTitle,
-                        content: "You must install GIT to clone a GitHub repository locally. You must follow the instructions given in the following link.",
-                        url: {
-                            windows: "https://git-scm.com/downloads/win"
-                        },
-                        urlVideo: {
-                            windows: "https://www.youtube.com/watch?v=iYkLrXobBbA"
-                        }
-                    };
-                    displayableSteps.splice(2, 0, newStep);
-                }
-            }
-
-            if (displayableSteps) {
-                displayableSteps.forEach((step, index) => {
+            if (osSteps) {
+                osSteps.forEach((step, index) => {
                     const stepDetails = document.createElement('div');
                     stepDetails.classList.add('step-details');
 
-                    if ("urlVideo" in step) {
-                        stepDetails.setAttribute('urlVideo', step.urlVideo[osType]);
+                    if ("video" in step && step.video) {
+                        stepDetails.setAttribute('urlVideo', step.video);
                     }
 
                     const stepSummary = document.createElement('div');
                     stepSummary.classList.add('step-summary');
 
-                    const contentWithOs = step.content.replace(/{os}/g, osType);
                     const checkbox = `<div class="custom-checkbox" onclick="toggleCheckbox(event)"></div>`;
 
-                    stepSummary.innerHTML = `<div>${checkbox}<span>${index + 1}. ${step.title}</span></div> <div>${svgContent}</div>`;
+                    stepSummary.innerHTML = `<div>${checkbox}</div><div><span>${index + 1}. ${step.label}</span></div> <div class="svgContent">${svgContent}</div>`;
                     stepDetails.appendChild(stepSummary);
 
                     stepSummary.addEventListener("click", function (event) {
@@ -593,7 +549,7 @@
                     const stepContent = document.createElement('div');
 
                     stepContent.classList.add('step-content')
-                    stepContent.innerHTML = `<p>${contentWithOs}</p> <span>${step.url ? `<a href="${step.url[osType]}" target="__blank">Learn more</a>` : ""}</span>`;
+                    stepContent.innerHTML = `<p>${step.description.replace("[repoUrl]", "{{repo_url}}").replace("[repoName]", "{{repo_name}}")}</p> <span>${step.source ? `<a href="${step.source}" target="__blank">Learn more</a>` : ""}</span>`;
                     stepDetails.appendChild(stepContent);
                     stepsContainer.appendChild(stepDetails);
                 });
@@ -624,23 +580,30 @@
             const clickedDetails = event.target.closest('div.step-details')
             const checkbox = clickedDetails.querySelector('.custom-checkbox')
             const allDetails = document.querySelectorAll('div.step-details')
+            const videoContainer = document.querySelector('#video-container');
+            const isOpen = clickedDetails.classList.contains('open')
+
             allDetails.forEach(detail => {
-                if (clickedDetails === detail && !clickedDetails.classList.contains('open')) {
-                    detail.classList.add('open')
-                    checkbox.classList.toggle('checked')
-                    const urlVideo = clickedDetails.getAttribute('urlVideo')
-
-                    if (urlVideo) {
-                        displayVideo(urlVideo);
-                    } else {
-                        const videoContainer = document.querySelector('#video-container');
-                        videoContainer.innerHTML = '';
-                    }
-
-                } else {
-                    detail.classList.remove('open');
-                }
+                detail.classList.remove('open');
+                detail.querySelector('.custom-checkbox').classList.remove('checked');
             });
+
+            if (!isOpen) {
+                clickedDetails.classList.add('open');
+                checkbox.classList.toggle('checked');
+                const urlVideo = clickedDetails.getAttribute('urlVideo');
+
+                if (urlVideo) {
+                    displayVideo(urlVideo);
+                }
+                else {
+                    videoContainer.innerHTML = '';
+                }
+            } else {
+                clickedDetails.classList.remove('open');
+                checkbox.classList.remove('checked');
+                videoContainer.innerHTML = '';
+            }
         }
     </script>
 </body>

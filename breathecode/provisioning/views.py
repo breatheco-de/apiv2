@@ -147,20 +147,18 @@ def redirect_new_container_public(request):
     data = {
         # 'title': item.academy.name,
         "buttons": buttons,
+        "repo_url": "repo_url",
+        "repo_name": "repo_name",
+        "agent": "vscode",
         # 'COMPANY_INFO_EMAIL': item.academy.feedback_email,
     }
 
     if asset and asset.url:
         data["repo_url"] = asset.url + ".git"
-        data["repo_slug"] = extract_repo_name(asset.url)
-    else:
-        data["repo_url"] = "repo_url"
-        data["repo_slug"] = "repo_name"
+        data["repo_name"] = extract_repo_name(asset.url)
 
     if asset and asset.agent:
         data["agent"] = asset.agent
-    else:
-        data["agent"] = "vscode"
 
     template = get_template_content("choose_vendor", data)
     return HttpResponse(template["html"])
