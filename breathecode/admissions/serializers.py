@@ -999,7 +999,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
                             mandatory_slugs.append(assignment["slug"])
 
         has_tasks = (
-            Task.objects.filter(associated_slug__in=mandatory_slugs)
+            Task.objects.filter(associated_slug__in=mandatory_slugs, user_id=user.id, cohort__id=cohort.id)
             .exclude(revision_status__in=["APPROVED", "IGNORED"])
             .count()
         )

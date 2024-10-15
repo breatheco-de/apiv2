@@ -17,7 +17,7 @@ from slugify import slugify
 from breathecode.admissions.models import Academy, SyllabusVersion
 from breathecode.assessment.models import Assessment
 
-from .signals import asset_readme_modified, asset_slug_modified, asset_status_updated, asset_title_modified
+from .signals import asset_readme_modified, asset_saved, asset_slug_modified, asset_status_updated, asset_title_modified
 
 __all__ = ["AssetTechnology", "Asset", "AssetAlias"]
 logger = logging.getLogger(__name__)
@@ -35,6 +35,12 @@ SORT_PRIORITY = (
     (2, 2),
     (3, 3),
 )
+
+LANG_MAP = {
+    "en": "english",
+    "es": "spanish",
+    "it": "italian",
+}
 
 
 class SyllabusVersionProxy(SyllabusVersion):
@@ -511,6 +517,93 @@ class Asset(models.Model):
     def __str__(self):
         return f"{self.slug}"
 
+    def build_ai_context(self):
+        lang = self.lang or self.category.lang
+        lang_name = LANG_MAP.get(lang, lang)
+
+        context = f"This {self.asset_type} about {self.title} is written in {lang_name}. "
+
+        translations = ", ".join([x.title for x in self.all_translations.all()])
+        if translations:
+            context = context[:-2]
+            context += f", and it has the following translations: {translations}. "
+
+        if self.solution_url:
+            context = context[:-2]
+            context += f", and it has a solution code this link is: {self.solution_url}. "
+
+        if self.solution_video_url:
+            context = context[:-2]
+            context += f", and it has a video solution this link is {self.solution_video_url}. "
+
+        context += f"It's category related is (what type of skills the student will get) {self.category.title}. "
+
+        technologies = ", ".join([x.title for x in self.technologies.filter(Q(lang=lang) | Q(lang=None))])
+        if technologies:
+            context += f"This asset is about the following technologies: {technologies}. "
+
+        if self.external:
+            context += "This asset is external, which means it opens outside 4geeks. "
+
+        if self.interactive:
+            context += (
+                "This asset opens on LearnPack so it has a step-by-step of the exercises that you should follow. "
+            )
+
+        if self.gitpod:
+            context += (
+                f"This {self.asset_type} can be opened both locally or with click and code (This "
+                "way you don't have to install nothing and it will open automatically on gitpod or github codespaces). "
+            )
+
+        if self.interactive == True and self.with_video == True:
+            context += f"This {self.asset_type} has videos on each step. "
+
+        if self.interactive == True and self.with_solutions == True:
+            context += f"This {self.asset_type} has a code solution on each step. "
+
+        if self.duration:
+            context += f"This {self.asset_type} will last {self.duration}. "
+
+        if self.difficulty:
+            context += f"Its difficulty is considered as {self.difficulty}. "
+
+        if self.superseded_by and self.superseded_by.title != self.title:
+            context += f"This {self.asset_type} has a previous version which is: {self.superseded_by.title}. "
+
+        if self.asset_type == "PROJECT" and not self.delivery_instructions:
+            context += "This project should be delivered by sending a github repository URL. "
+
+        if self.asset_type == "PROJECT" and self.delivery_instructions and self.delivery_formats:
+            context += (
+                f"This project should be delivered by adding a file of one of these types: {self.delivery_formats}. "
+            )
+
+        if self.asset_type == "PROJECT" and self.delivery_regex_url:
+            context += (
+                f"This project should be delivered with a URL that follows this format: {self.delivery_regex_url}. "
+            )
+
+        assets_related = ", ".join([x.slug for x in self.assets_related.all()])
+        if assets_related:
+            context += (
+                f"In case you still need to learn more about the basics of this {self.asset_type}, "
+                "you can check these lessons, exercises, "
+                f"and related projects to get ready for this content: {assets_related}. "
+            )
+
+        if self.readme:
+            context += "The markdown file with "
+
+            if self.asset_type == "PROJECT":
+                context += "the instructions"
+            else:
+                context += "the content"
+
+            context += f" of this {self.asset_type} is the following: {self.readme}."
+
+        return context
+
     def save(self, *args, **kwargs):
 
         slug_modified = False
@@ -552,6 +645,8 @@ class Asset(models.Model):
             asset_title_modified.send_robust(instance=self, sender=Asset)
         if status_modified:
             asset_status_updated.send_robust(instance=self, sender=Asset)
+
+        asset_saved.delay(instance=self, sender=Asset)
 
     def get_preview_generation_url(self):
 
@@ -742,6 +837,11 @@ class Asset(models.Model):
 
         else:
             return alias
+
+
+class AssetContext(models.Model):
+    asset = models.OneToOneField(Asset, on_delete=models.CASCADE)
+    ai_context = models.TextField()
 
 
 class AssetAlias(models.Model):

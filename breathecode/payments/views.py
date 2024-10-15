@@ -1947,8 +1947,9 @@ class PayView(APIView):
                     try:
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
+                        original_price = option.monthly_price
                         coupons = bag.coupons.all()
-                        amount = get_discounted_price(option.monthly_price, coupons)
+                        amount = get_discounted_price(original_price, coupons)
 
                         bag.monthly_price = option.monthly_price
                     except Exception:
@@ -1965,12 +1966,17 @@ class PayView(APIView):
                 elif not available_for_free_trial and not available_free:
                     amount = get_amount_by_chosen_period(bag, chosen_period, lang)
                     coupons = bag.coupons.all()
+                    original_price = amount
                     amount = get_discounted_price(amount, coupons)
 
                 else:
+                    original_price = 0
                     amount = 0
 
-                if amount == 0 and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).count():
+                if (
+                    original_price == 0
+                    and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).count()
+                ):
                     raise ValidationException(
                         translation(
                             lang,
@@ -1984,7 +1990,7 @@ class PayView(APIView):
                 # actions.check_dependencies_in_bag(bag, lang)
 
                 if (
-                    amount == 0
+                    original_price == 0
                     and not available_free
                     and available_for_free_trial
                     and not bag.plans.filter(plan_offer_from__id__gte=1).exists()
@@ -2031,7 +2037,7 @@ class PayView(APIView):
 
                 transaction.savepoint_commit(sid)
 
-                if amount == 0:
+                if original_price == 0:
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
