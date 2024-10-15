@@ -7,6 +7,8 @@ from typing import Any, Callable, Optional, TypedDict, Unpack
 
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
+from capyc.core.managers import feature
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import QuerySet, Sum
@@ -18,13 +20,20 @@ from rest_framework.views import APIView
 
 from breathecode.authenticate.models import User
 from breathecode.payments.signals import consume_service
-from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 from ..exceptions import ProgrammingError
 
 __all__ = ["consume", "Consumer", "ServiceContext"]
 
 logger = logging.getLogger(__name__)
+
+
+class Flags(TypedDict):
+    bypass_consumption: bool
+
+
+class FlagsParams(Flags, total=False):
+    pass
 
 
 class ServiceContext(TypedDict):
@@ -36,6 +45,7 @@ class ServiceContext(TypedDict):
     lifetime: Optional[timedelta]
     price: float
     is_consumption_session: bool
+    flags: Flags
 
 
 type Consumer = Callable[[ServiceContext, tuple, dict], tuple[ServiceContext, tuple, dict, Optional[timedelta]]]
@@ -200,8 +210,15 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
             return request
 
         def build_context(
-            request: HttpRequest | AsyncRequest, utc_now: datetime, **opts: Unpack[ServiceContext]
+            request: HttpRequest | AsyncRequest,
+            utc_now: datetime,
+            flags: Optional[FlagsParams] = None,
+            **opts: Unpack[ServiceContext],
         ) -> ServiceContext:
+
+            if flags is None:
+                flags = {}
+
             return {
                 "utc_now": utc_now,
                 "consumer": consumer,
@@ -211,6 +228,10 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
                 "lifetime": None,
                 "price": 1,
                 "is_consumption_session": False,
+                "flags": {
+                    "bypass_consumption": False,
+                    **flags,
+                },
                 **opts,
             }
 
@@ -238,8 +259,15 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
                 items = Consumable.list(user=request.user, service=service)
                 context["consumables"] = items
 
+                flag_context = feature.context(context=context)
+                bypass_consumption = feature.is_enabled("payments.bypass_consumption", flag_context, False)
+                context["flags"]["bypass_consumption"] = bypass_consumption
+
                 if callable(consumer):
                     context, args, kwargs = consumer(context, args, kwargs)
+
+                if bypass_consumption:
+                    return function(*args, **kwargs)
 
                 # exclude consumables that is being used in a session.
                 if consumer and context["lifetime"]:
@@ -343,11 +371,18 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
                 items = await Consumable.alist(user=user, service=service)
                 context["consumables"] = items
 
+                flag_context = feature.context(context=context)
+                bypass_consumption = feature.is_enabled("payments.bypass_consumption", flag_context, False)
+                context["flags"]["bypass_consumption"] = bypass_consumption
+
                 if callable(consumer):
                     if asyncio.iscoroutinefunction(consumer) is False:
                         consumer = sync_to_async(consumer)
 
                     context, args, kwargs = await consumer(context, args, kwargs)
+
+                if bypass_consumption:
+                    return await function(*args, **kwargs)
 
                 # exclude consumables that is being used in a session.
                 if consumer and context["lifetime"]:

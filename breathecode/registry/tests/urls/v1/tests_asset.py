@@ -95,6 +95,7 @@ def get_serializer_technology(technology, data={}):
 def get_mid_serializer(asset, data={}):
     return {
         **get_serializer(asset),
+        "agent": None,
         "with_solutions": asset.with_solutions,
         "with_video": asset.with_solutions,
         "updated_at": asset.updated_at,
@@ -260,7 +261,6 @@ def test_assets_expand_readme_ipynb(bc: Breathecode, client):
     json = response.json()
 
     asset_readme = model.asset.get_readme()
-    print(asset_readme)
 
     expected = [
         get_mid_serializer(

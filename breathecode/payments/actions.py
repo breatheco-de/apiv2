@@ -1,9 +1,11 @@
 import os
 import re
+from datetime import datetime
 from functools import lru_cache
-from typing import Optional, Type
+from typing import Literal, Optional, Type, TypedDict
 
 from adrf.requests import AsyncRequest
+from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
@@ -22,15 +24,17 @@ from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.i18n import translation
 from breathecode.utils.validate_conversion_info import validate_conversion_info
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
     SERVICE_UNITS,
     Bag,
+    CohortSet,
     Consumable,
     Coupon,
     Currency,
+    EventTypeSet,
     Invoice,
+    MentorshipServiceSet,
     PaymentMethod,
     Plan,
     PlanFinancing,
@@ -735,15 +739,20 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
             }
         )
 
-    return result.values()
+    return list(result.values())
 
 
-def get_balance_by_resource(queryset: QuerySet, key: str):
+def get_balance_by_resource(
+    queryset: QuerySet[Consumable],
+    key: str,
+):
     result = []
 
     ids = {getattr(x, key).id for x in queryset}
     for id in ids:
         current = queryset.filter(**{f"{key}__id": id})
+        # current_virtual = [x for x in x if x[key] == id]
+
         instance = current.first()
         balance = {}
         items = []
@@ -753,6 +762,9 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
             balance[unit.lower()] = (
                 -1 if per_unit.filter(how_many=-1).exists() else per_unit.aggregate(Sum("how_many"))["how_many__sum"]
             )
+
+        # for unit in current_virtual:
+        #     ...
 
         for x in queryset:
             valid_until = x.valid_until
@@ -1108,3 +1120,145 @@ def validate_and_create_subscriptions(
     tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
     return invoice, coupons
+
+
+class UnitBalance(TypedDict):
+    unit: int
+
+
+class ConsumableItem(TypedDict):
+    id: int
+    how_many: int
+    unit_type: str
+    valid_until: Optional[datetime]
+
+
+class ResourceBalance(TypedDict):
+    id: int
+    slug: str
+    balance: UnitBalance
+    items: list[ConsumableItem]
+
+
+class ConsumableBalance(TypedDict):
+    mentorship_service_sets: ResourceBalance
+    cohort_sets: list[ResourceBalance]
+    event_type_sets: list[ResourceBalance]
+    voids: list[ResourceBalance]
+
+
+def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
+    from breathecode.payments.data import get_virtual_consumables
+
+    virtuals = get_virtual_consumables()
+
+    event_type_set_ids = [virtual["event_type_set"]["id"] for virtual in virtuals if virtual["event_type_set"]]
+    cohort_set_ids = [virtual["cohort_set"]["id"] for virtual in virtuals if virtual["cohort_set"]]
+    mentorship_service_set_ids = [
+        virtual["mentorship_service_set"]["id"] for virtual in virtuals if virtual["mentorship_service_set"]
+    ]
+
+    available_services = [
+        virtual["service_item"]["service"]["id"]
+        for virtual in virtuals
+        if virtual["service_item"]["service"]["type"] == Service.Type.VOID
+    ]
+
+    available_event_type_sets = EventTypeSet.objects.filter(
+        academy__profileacademy__user=user, id__in=event_type_set_ids
+    ).values_list("id", flat=True)
+
+    available_cohort_sets = CohortSet.objects.filter(cohorts__cohortuser__user=user, id__in=cohort_set_ids).values_list(
+        "id", flat=True
+    )
+
+    available_mentorship_service_sets = MentorshipServiceSet.objects.filter(
+        academy__profileacademy__user=user, id__in=mentorship_service_set_ids
+    ).values_list("id", flat=True)
+
+    balance_mapping: dict[str, dict[int, int]] = {
+        "cohort_sets": dict(
+            [(v["id"], i) for (i, v) in enumerate(balance["cohort_sets"]) if v["id"] in available_cohort_sets]
+        ),
+        "event_type_sets": dict(
+            [(v["id"], i) for (i, v) in enumerate(balance["event_type_sets"]) if v["id"] in available_event_type_sets]
+        ),
+        "mentorship_service_sets": dict(
+            [
+                (v["id"], i)
+                for (i, v) in enumerate(balance["mentorship_service_sets"])
+                if v["id"] in available_mentorship_service_sets
+            ]
+        ),
+        "voids": dict([(v["id"], i) for (i, v) in enumerate(balance["voids"]) if v["id"] in available_services]),
+    }
+
+    def append(
+        key: Literal["cohort_sets", "event_type_sets", "mentorship_service_sets", "voids"],
+        id: int,
+        slug: str,
+        how_many: int,
+        unit_type: str,
+        valid_until: Optional[datetime] = None,
+    ):
+
+        index = balance_mapping[key].get(id)
+
+        # index = balance[key].append(id)
+        unit_type = unit_type.lower()
+        if index is None:
+            balance[key].append({"id": id, "slug": slug, "balance": {unit_type: 0}, "items": []})
+            index = len(balance[key]) - 1
+            balance_mapping[key][id] = index
+
+        obj = balance[key][index]
+
+        if how_many == -1:
+            obj["balance"][unit_type] = how_many
+
+        elif obj["balance"][unit_type] != -1:
+            obj["balance"][unit_type] += how_many
+
+        obj["items"].append(
+            {
+                "id": None,
+                "how_many": how_many,
+                "unit_type": unit_type.upper(),
+                "valid_until": valid_until,
+            }
+        )
+
+    for virtual in virtuals:
+        if (
+            virtual["service_item"]["service"]["type"] == Service.Type.VOID
+            and virtual["service_item"]["service"]["id"] in available_services
+        ):
+            id = virtual["service_item"]["service"]["id"]
+            slug = virtual["service_item"]["service"]["slug"]
+            how_many = virtual["service_item"]["how_many"]
+            unit_type = virtual["service_item"]["unit_type"]
+            append("voids", id, slug, how_many, unit_type)
+
+        if virtual["event_type_set"] and virtual["event_type_set"]["id"] in available_event_type_sets:
+            id = virtual["event_type_set"]["id"]
+            slug = virtual["event_type_set"]["slug"]
+            how_many = virtual["service_item"]["how_many"]
+            unit_type = virtual["service_item"]["unit_type"]
+            append("event_type_sets", id, slug, how_many, unit_type)
+
+        if (
+            virtual["mentorship_service_set"]
+            and virtual["mentorship_service_set"]["id"] in available_mentorship_service_sets
+        ):
+            id = virtual["mentorship_service_set"]["id"]
+            slug = virtual["mentorship_service_set"]["slug"]
+            how_many = virtual["service_item"]["how_many"]
+            unit_type = virtual["service_item"]["unit_type"]
+            append("mentorship_service_sets", id, slug, how_many, unit_type)
+
+        if virtual["cohort_set"] and virtual["cohort_set"]["id"] in available_cohort_sets:
+            id = virtual["cohort_set"]["id"]
+            slug = virtual["cohort_set"]["slug"]
+            how_many = virtual["service_item"]["how_many"]
+            unit_type = virtual["service_item"]["unit_type"]
+            append("cohort_sets", id, slug, how_many, unit_type)

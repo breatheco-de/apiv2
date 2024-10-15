@@ -6,5 +6,6 @@ class PaymentsConfig(AppConfig):
     name = "breathecode.payments"
 
     def ready(self):
+        from . import flags  # noqa: F401
         from . import receivers  # noqa: F401
         from . import supervisors  # noqa: F401
