@@ -345,6 +345,11 @@ STATICFILES_DIRS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://*.gitpod.io",
     "https://*.gitpod.io",
+    "s.4geeksacademy.co",
+    "s.4geeks.co",
+    "s.4geeks.com",
+    "https://breathecode.herokuapp.com",
+    "https://breathecode-test.herokuapp.com",
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
