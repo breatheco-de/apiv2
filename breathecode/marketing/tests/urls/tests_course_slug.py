@@ -62,6 +62,7 @@ def get_serializer(course, academy, syllabus=[], course_translation=None, data={
         "status": course.status,
         "visibility": course.visibility,
         "cohort": course.cohort,
+        "cohorts_group": [],
         "color": course.color,
         "plan_slug": course.plan_slug,
         **data,
