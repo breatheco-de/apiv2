@@ -1,3 +1,5 @@
+import traceback
+
 from django.db.models import QuerySet
 from task_manager.core.exceptions import AbortTask
 
@@ -49,6 +51,7 @@ def participant_session(name: str, credentials: QuerySet[CredentialsGoogle]):
             raise e
 
         except Exception as e:
+            traceback.print_exc()
             errors += f"Error with credentials {credential.id}: {e}\n"
 
     raise AbortTask(errors)

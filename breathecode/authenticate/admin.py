@@ -503,6 +503,6 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(GoogleWebhook)
 class GoogleWebhookAdmin(admin.ModelAdmin):
-    list_display = ("message", "status", "status_text", "created_at", "updated_at")
-    search_fields = ["message", "status", "status_text"]
+    list_display = ("id", "status", "status_text", "created_at", "updated_at")
+    search_fields = ["status", "status_text"]
     actions = []
