@@ -352,6 +352,10 @@ CSRF_TRUSTED_ORIGINS = [
     "https://breathecode-test.herokuapp.com",
 ]
 
+# CSP_DEFAULT_SRC = ("'self'", "https://*.4geeks.com", "https://*.4geeksacademy.co")
+# CSP_FRAME_SRC = ("'self'", "https://*.4geeks.com", "https://*.4geeksacademy.co")
+# SECURE_REFERRER_POLICY = "no-referrer"
+
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_HEADERS = [
     "accept",
