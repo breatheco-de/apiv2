@@ -24,7 +24,7 @@ from breathecode.authenticate.exceptions import (
 )
 from breathecode.utils.validators import validate_language_code
 
-from .signals import academy_invite_accepted
+from .signals import academy_invite_accepted, google_webhook_saved
 
 __all__ = [
     "User",
@@ -704,3 +704,24 @@ class App(models.Model):
         raise DeprecationWarning("authenticate.App was deprecated, use linked_services.App instead")
 
     name = models.CharField(max_length=25, unique=True, help_text="Descriptive and unique name of the app")
+
+
+class GoogleWebhook(models.Model):
+    class Status(models.TextChoices):
+        PENDING = ("PENDING", "Pending")
+        DONE = ("DONE", "Done")
+        ERROR = ("ERROR", "Error")
+
+    message = models.SlugField(max_length=124, blank=True, help_text="base64 message provided by google")
+
+    status = models.CharField(max_length=9, choices=Status, default=Status.PENDING)
+    status_text = models.CharField(max_length=255, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        created = self.pk is None
+        super().save(*args, **kwargs)
+        if created:
+            google_webhook_saved.send_robust(sender=self.__class__, instance=self, created=created)
