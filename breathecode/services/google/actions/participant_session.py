@@ -17,10 +17,12 @@ def participant_session(name: str, credentials: QuerySet[CredentialsGoogle]):
             client = get_client(credential)
             participant_session = client.get_participant_session(name=name)
             names = name.split("/")
-            space_name = "/".join(names[0:2])
+            conference_record_name = "/".join(names[0:2])
             participant_name = "/".join(names[0:4])
 
-            space = client.get_space(name=space_name)
+            conference_record = client.get_conference_record(name=conference_record_name)
+            space = client.get_space(name=conference_record.space)
+
             session = MentorshipSession.objects.filter(online_meeting_url=space.meeting_uri).first()
             if session is None:
                 raise AbortTask(f"MentorshipSession with meeting url {space.meeting_uri} not found")
