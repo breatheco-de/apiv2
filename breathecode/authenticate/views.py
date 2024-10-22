@@ -1795,6 +1795,15 @@ def render_invite(request, token, member_id=None):
         if invite and invite.academy:
             academy = invite.academy
 
+        if request.META.get("CONTENT_TYPE") == "application/json":
+            raise ValidationException(
+                translation(
+                    en="Invitation not found or it was already accepted",
+                    es="No se encuentra la invitación o ya fue aceptada",
+                ),
+                slug="invite-not-found",
+            )
+        
         return render_message(
             request, "Invitation not found or it was already accepted" + callback_msg, academy=academy
         )
