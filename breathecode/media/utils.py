@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import traceback
 from copy import copy
 from io import BytesIO
 from typing import Any, Optional, Tuple, overload
@@ -245,6 +246,7 @@ class ChunkedUploadMixin(UploadMixin):
             f.upload(chunk, content_type=chunk.content_type)
 
         except Exception:
+            traceback.print_exc()
             await instance.adelete()
             raise ValidationException(
                 translation(
