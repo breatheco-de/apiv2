@@ -1,5 +1,4 @@
 import hashlib
-import json
 import os
 import traceback
 from copy import copy
@@ -42,7 +41,7 @@ def media_settings(operation_type: Optional[str] = None) -> MediaSettings | Tupl
 
 
 class UploadMixin(APIView):
-    async def upload(self, academy_id: Optional[int] = None):
+    async def upload(self, academy_id: Optional[int] = None, format: str = "multipart"):
         request = self.request
         lang = await aget_user_language(request)
         self.lang = lang
@@ -73,8 +72,14 @@ class UploadMixin(APIView):
         total_chunks = request.data.get("total_chunks")
         if (
             total_chunks is None
-            or isinstance(total_chunks, (int, float)) is False
-            or (total_chunks := total_chunks) <= 0
+            or (
+                format == "multipart"
+                and (total_chunks.isnumeric() is False or (total_chunks := float(total_chunks)) <= 0)
+            )
+            or (
+                format == "json"
+                and (isinstance(total_chunks, (int, float)) is False or (total_chunks := total_chunks) <= 0)
+            )
         ):
             raise ValidationException(
                 translation(
@@ -86,7 +91,9 @@ class UploadMixin(APIView):
                 code=400,
             )
 
-        if total_chunks.is_integer() is False:
+        if (format == "multipart" and total_chunks.is_integer() is False) or (
+            format == "json" and isinstance(total_chunks, int) is False
+        ):
             raise ValidationException(
                 translation(
                     lang,
@@ -324,7 +331,7 @@ class ChunkUploadMixin(UploadMixin):
         from breathecode.media.tasks import process_file
         from breathecode.notify.models import Notification
 
-        await super().upload(academy_id)
+        await super().upload(academy_id, format="json")
         request = self.request
 
         total_chunks = self.total_chunks
@@ -332,7 +339,7 @@ class ChunkUploadMixin(UploadMixin):
         mime = request.data.get("mime")
 
         try:
-            meta = json.loads(request.data.get("meta", "{}"))
+            meta = request.data.get("meta", {})
 
         except Exception:
             raise ValidationException(
