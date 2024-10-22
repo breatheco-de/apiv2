@@ -75,11 +75,26 @@ PERMISSIONS = [
         "description": "Upload assignment telementry from learnpack",
         "codename": "upload_assignment_telemetry",
     },
+    {
+        "name": "Upload media",
+        "description": "Upload media to the platform",
+        "codename": "upload_media",
+    },
 ]
 
 GROUPS = [
     {"name": "Admin", "permissions": [x["codename"] for x in PERMISSIONS], "inherit": []},
-    {"name": "Default", "permissions": ["get_my_profile", "create_my_profile", "update_my_profile", "upload_assignment_telemetry"], "inherit": []},
+    {
+        "name": "Default",
+        "permissions": [
+            "get_my_profile",
+            "create_my_profile",
+            "update_my_profile",
+            "upload_assignment_telemetry",
+            "upload_media",
+        ],
+        "inherit": [],
+    },
     {
         "name": "Student",
         "permissions": [

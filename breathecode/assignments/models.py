@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from breathecode.admissions.models import Cohort
 
@@ -259,6 +260,10 @@ class RepositoryDeletionOrder(models.Model):
         TRANSFERRING = "TRANSFERRING", "Transferring"
         CANCELLED = "CANCELLED", "Cancelled"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._status = self.status
+
     provider = models.CharField(max_length=15, choices=Provider, default=Provider.GITHUB)
     status = models.CharField(max_length=15, choices=Status, default=Status.PENDING)
     status_text = models.TextField(default=None, null=True, blank=True)
@@ -266,12 +271,25 @@ class RepositoryDeletionOrder(models.Model):
     repository_user = models.CharField(max_length=100)
     repository_name = models.CharField(max_length=100)
 
+    starts_transferring_at = models.DateTimeField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def clean(self):
+        if self.status == RepositoryDeletionOrder.Status.TRANSFERRING:
+            self.starts_transferring_at = timezone.now()
+
     def save(self, *args, **kwargs):
         self.full_clean()
+        is_created = not self.pk
+
         super().save(*args, **kwargs)
+        from .signals import status_updated
+
+        if (self.status != self._status or is_created) and self.status == RepositoryDeletionOrder.Status.TRANSFERRING:
+            status_updated.delay(sender=self.__class__, instance=self)
+
+        self._status = self.status
 
 
 class RepositoryWhiteList(models.Model):
