@@ -45,7 +45,6 @@ def test_1_invite(database: capy.Database, format: capy.Format):
     assert logging.Logger.error.call_args_list == [
         call("User not found for user invite 1", exc_info=True),
     ]
-    # assert 0
 
 
 @pytest.mark.parametrize(

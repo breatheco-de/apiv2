@@ -61,7 +61,6 @@ def mentorship_session_field(data={}):
         "mentee_left_at": None,
         "suggested_accounted_duration": None,
         "questions_and_answers": None,
-        "meta": None,
         **data,
     }
 

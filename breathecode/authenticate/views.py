@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import logging
 import os
 import re
@@ -12,6 +13,7 @@ import requests
 from adrf.decorators import api_view
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
+from capyc.core.managers import feature
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.conf import settings
@@ -82,6 +84,7 @@ from .models import (
     CredentialsSlack,
     GithubAcademyUser,
     GitpodUser,
+    GoogleWebhook,
     Profile,
     ProfileAcademy,
     Role,
@@ -2034,6 +2037,12 @@ def get_google_token(request, token=None):
     ]
 
     if academy_settings in ["overwrite", "set"]:
+        if feature.is_enabled("authenticate.set_google_credentials", default=True) is False:
+            raise ValidationException(
+                "Setting academy google credentials is not available",
+                slug="set-google-credentials-not-available",
+            )
+
         state += f"&academysettings={academy_settings}"
         scopes.append("https://www.googleapis.com/auth/pubsub")
 
@@ -2110,6 +2119,12 @@ async def save_google_token(request):
     roles = ["admin", "staff", "country_manager", "academy_token"]
     academy_settings = state.get("academysettings", "none")
     if academy_settings != "none":
+        if feature.is_enabled("authenticate.set-google-credentials", default=False) is False:
+            raise ValidationException(
+                "Setting academy google credentials is not available",
+                slug="set-google-credentials-not-available",
+            )
+
         ids = ProfileAcademy.objects.filter(user=token.user, status="ACTIVE", role__slug__in=roles).values_list(
             "academy_id", flat=True
         )
@@ -2196,10 +2211,26 @@ async def save_google_token(request):
 def receive_google_webhook(request):
     logger.info("Received Google webhook")
     logger.info(request.data)
-    print("Received Google webhook")
-    print(request.data)
 
-    return Response({"message": "Webhook received"}, status=200)
+    data = request.data
+    if "data" not in data or "signature" not in data:
+        raise ValidationException("Invalid webhook data", slug="invalid-webhook-data")
+
+    signature = data["signature"]
+    encoded_data = data["data"]
+
+    # Verify the signature
+    secret_key = os.getenv("GOOGLE_WEBHOOK_SECRET", "")  # Ensure this is set in your Django settings
+    expected_signature = hmac.new(
+        key=secret_key.encode("utf-8"), msg=encoded_data.encode("utf-8"), digestmod=hashlib.sha256
+    ).hexdigest()
+
+    if hmac.compare_digest(expected_signature, signature) is False:
+        raise ValidationException("Invalid signature", slug="invalid-signature")
+
+    GoogleWebhook.objects.create(message=encoded_data)
+
+    return Response({"message": "ok"}, status=status.HTTP_202_ACCEPTED)
 
 
 class GithubUserView(APIView, GenerateLookupsMixin):
