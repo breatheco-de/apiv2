@@ -317,7 +317,7 @@ def test_lead__with__data(bc: Breathecode, client: APIClient):
                 "latitude": Decimal(data["latitude"]),
                 "longitude": Decimal(data["longitude"]),
                 "storage_status": "ERROR",
-                "storage_status_text": f"No academy found with slug {data['location']}",
+                "storage_status_text": f"No CRM vendor information for academy with slug {data['location']}. Is Active Campaign or Brevo used?",
                 "attribution_id": "75b36c508866d18732305da14fe9a0",
             }
         )
@@ -377,7 +377,7 @@ def test_passing_slug_of_academy_or_academy_alias(
                 "latitude": Decimal(data["latitude"]),
                 "longitude": Decimal(data["longitude"]),
                 "storage_status": "ERROR",
-                "storage_status_text": "No academy found with slug midgard",
+                "storage_status_text": "No CRM vendor information for academy with slug midgard. Is Active Campaign or Brevo used?",
                 "attribution_id": "75b36c508866d18732305da14fe9a0",
             }
         )

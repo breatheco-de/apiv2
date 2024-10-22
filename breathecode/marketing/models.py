@@ -803,6 +803,12 @@ class Course(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     syllabus = models.ManyToManyField(Syllabus, blank=True)
     cohort = models.ForeignKey(Cohort, null=True, blank=True, default=None, on_delete=models.CASCADE)
+    cohorts_group = models.ManyToManyField(
+        Cohort,
+        blank=True,
+        help_text="The student will be added to this cohorts when he buys the course",
+        related_name="courses",
+    )
 
     plan_slug = models.SlugField(max_length=150, null=True, blank=True, default=None)
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
