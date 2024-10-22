@@ -35,6 +35,7 @@ from .models import (
     GithubAcademyUser,
     GithubAcademyUserLog,
     GitpodUser,
+    GoogleWebhook,
     Profile,
     ProfileAcademy,
     Role,
@@ -498,3 +499,10 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         return format_html(
             f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.github_callback}&scope={scopes}'>connect owner</a>"
         )
+
+
+@admin.register(GoogleWebhook)
+class GoogleWebhookAdmin(admin.ModelAdmin):
+    list_display = ("message", "status", "status_text", "created_at", "updated_at")
+    search_fields = ["message", "status", "status_text"]
+    actions = []
