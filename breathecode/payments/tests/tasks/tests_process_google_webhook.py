@@ -194,6 +194,7 @@ class TestConferenceRecord:
                 **format.to_obj_repr(model.google_webhook),
                 "status": "ERROR",
                 "status_text": "MentorshipSession with meeting url https://meet.google.com/fake not found",
+                "type": "conferenceRecord",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == []
@@ -238,6 +239,7 @@ class TestConferenceRecord:
             {
                 **format.to_obj_repr(model.google_webhook),
                 "status": "DONE",
+                "type": "conferenceRecord",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == [
@@ -296,6 +298,7 @@ class TestConferenceRecord:
             {
                 **format.to_obj_repr(model.google_webhook),
                 "status": "DONE",
+                "type": "conferenceRecord",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == [
@@ -346,6 +349,7 @@ class TestConferenceRecord:
             {
                 **format.to_obj_repr(model.google_webhook),
                 "status": "DONE",
+                "type": "conferenceRecord",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == [
@@ -388,6 +392,7 @@ class TestParticipantSession:
                 **format.to_obj_repr(model.google_webhook),
                 "status": "ERROR",
                 "status_text": "MentorshipSession with meeting url https://meet.google.com/fake not found",
+                "type": "participantSession",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == []
@@ -433,6 +438,7 @@ class TestParticipantSession:
             {
                 **format.to_obj_repr(model.google_webhook),
                 "status": "DONE",
+                "type": "participantSession",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == [
@@ -487,6 +493,7 @@ class TestParticipantSession:
             {
                 **format.to_obj_repr(model.google_webhook),
                 "status": "DONE",
+                "type": "participantSession",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == [
@@ -536,6 +543,7 @@ class TestParticipantSession:
             {
                 **format.to_obj_repr(model.google_webhook),
                 "status": "DONE",
+                "type": "participantSession",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == [
@@ -589,6 +597,7 @@ class TestParticipantSession:
             {
                 **format.to_obj_repr(model.google_webhook),
                 "status": "DONE",
+                "type": "participantSession",
             },
         ]
         assert database.list_of("mentorship.MentorshipSession") == [

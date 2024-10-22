@@ -52,6 +52,8 @@ class Google:
         handler: Action = getattr(actions, action)
         name = message[key]["name"]
 
+        hook.type = key
+
         try:
             handler(name, credentials)
             hook.status = GoogleWebhook.Status.DONE

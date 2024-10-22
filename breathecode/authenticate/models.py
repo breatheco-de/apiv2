@@ -713,6 +713,7 @@ class GoogleWebhook(models.Model):
         ERROR = ("ERROR", "Error")
 
     message = models.SlugField(max_length=512, blank=True, help_text="base64 message provided by google")
+    type = models.CharField(max_length=40, default="noSet")
 
     status = models.CharField(max_length=9, choices=Status, default=Status.PENDING)
     status_text = models.CharField(max_length=255, default="")

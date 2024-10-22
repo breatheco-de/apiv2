@@ -87,5 +87,6 @@ def test_authorized_event(database: capy.Database, client: capy.Client):
             "message": message,
             "status": "PENDING",
             "status_text": "",
+            "type": "noSet",
         },
     ]
