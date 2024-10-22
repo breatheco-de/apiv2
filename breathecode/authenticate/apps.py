@@ -6,3 +6,4 @@ class AcademyConfig(AppConfig):
 
     def ready(self):
         from . import receivers  # noqa: F401
+        from . import flags  # noqa: F401

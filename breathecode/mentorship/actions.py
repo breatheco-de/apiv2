@@ -484,7 +484,6 @@ def create_room_on_google_meet(session: MentorshipSession, mentee: User) -> None
     session.online_meeting_url = space.meeting_uri
     session.name = s.name
     session.mentee = mentee
-    session.meta = {}
     session.save()
 
 
