@@ -71,7 +71,11 @@ class UploadMixin(APIView):
             )
 
         total_chunks = request.data.get("total_chunks")
-        if total_chunks is None or total_chunks.isnumeric() is False or (total_chunks := float(total_chunks)) <= 0:
+        if (
+            total_chunks is None
+            or isinstance(total_chunks, (int, float)) is False
+            or (total_chunks := total_chunks) <= 0
+        ):
             raise ValidationException(
                 translation(
                     lang,

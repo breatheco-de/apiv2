@@ -2,15 +2,13 @@
 Test /answer
 """
 
-import json as json_utils
 import tempfile
 from io import BytesIO
-from typing import Callable
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, call
 
 import capyc.pytest as capy
 import pytest
-from django.core.files.uploadedfile import InMemoryUploadedFile, SimpleUploadedFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
@@ -143,7 +141,7 @@ async def test_no_authorized(aclient: capy.AsyncClient, database: capy.Database,
 
     data = {"operation_type": op_type}
 
-    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart")
+    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="json")
 
     json = response.json()
     expected = {
@@ -175,7 +173,7 @@ async def test_no_total_chunks(aclient: capy.AsyncClient, database: capy.Databas
 
     data = {"operation_type": op_type}
 
-    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart")
+    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="json")
 
     json = response.json()
     expected = {
@@ -207,7 +205,7 @@ async def test_no_filename(aclient: capy.AsyncClient, database: capy.Database, f
 
     data = {"operation_type": op_type, "total_chunks": 3}
 
-    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart")
+    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="json")
 
     json = response.json()
     expected = {
@@ -239,7 +237,7 @@ async def test_no_mime(aclient: capy.AsyncClient, database: capy.Database, fake:
 
     data = {"operation_type": op_type, "total_chunks": 3, "filename": "a.txt"}
 
-    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart")
+    response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="json")
 
     json = response.json()
     expected = {
@@ -272,9 +270,7 @@ class TestNoSchema:
 
         data = {"operation_type": op_type, "total_chunks": 3, "filename": "a.txt", "mime": "text/plain"}
 
-        response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart"
-        )
+        response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="json")
 
         json = response.json()
         expected = {
@@ -320,9 +316,7 @@ class TestNoSchema:
 
         data = {"operation_type": op_type, "total_chunks": 3, "filename": filename, "mime": "text/plain"}
 
-        response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}"}, format="multipart"
-        )
+        response = await aclient.put(url, data, headers={"Authorization": f"Token {model.token.key}"}, format="json")
 
         json = response.json()
         expected = {
