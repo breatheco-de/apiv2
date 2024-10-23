@@ -6,6 +6,7 @@ import json
 import re
 from typing import Callable, Literal, TypedDict
 
+from asgiref.sync import async_to_sync
 from django.db.models import QuerySet
 from task_manager.core.exceptions import AbortTask
 
@@ -33,7 +34,9 @@ type Action = Callable[[str, QuerySet[CredentialsGoogle]], None]
 
 
 class Google:
-    def run_webhook(self, hook: GoogleWebhook, credentials: QuerySet[CredentialsGoogle]):
+
+    @async_to_sync
+    async def run_webhook(self, hook: GoogleWebhook, credentials: QuerySet[CredentialsGoogle]):
         if hook.status == GoogleWebhook.Status.DONE:
             raise AbortTask(f"GoogleWebhook with id {hook.id} was processed")
 
@@ -54,10 +57,12 @@ class Google:
 
         hook.type = key
 
+        # loop = asyncio.get_event_loop()
+        # asyncio.set_event_loop(loop)
         try:
-            handler(name, credentials)
+            await handler(name, credentials)
             hook.status = GoogleWebhook.Status.DONE
-            hook.save()
+            await hook.asave()
             return
 
         except Exception as e:
@@ -67,5 +72,8 @@ class Google:
             hook.status_text = str(e)
 
             traceback.print_exc()
-            hook.save()
+            await hook.asave()
             raise e
+
+        # finally:
+        #     # loop.close()

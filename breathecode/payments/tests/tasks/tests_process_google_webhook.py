@@ -11,7 +11,7 @@ import random
 from datetime import timedelta
 from logging import Logger
 from typing import Callable
-from unittest.mock import MagicMock, call
+from unittest.mock import AsyncMock, MagicMock, call
 
 import capyc.pytest as capy
 import pytest
@@ -38,19 +38,13 @@ def setup(monkeypatch: pytest.MonkeyPatch, conference_record_patcher):
     monkeypatch.setattr("task_manager.django.tasks.execute_signal.delay", MagicMock())
 
     monkeypatch.setattr("breathecode.services.google_meet.GoogleMeet.__init__", MagicMock(return_value=None))
-    # monkeypatch.setattr(
-    #     "breathecode.services.google_meet.GoogleMeet.get_conference_record",
-    #     MagicMock(
-    #         return_value=Object(space="https://meet.google.com/fake", meeting_uri="https://meet.google.com/fake")
-    #     ),
-    # )
     monkeypatch.setattr(
-        "breathecode.services.google_meet.GoogleMeet.get_space",
-        MagicMock(return_value=Object(meeting_uri="https://meet.google.com/fake")),
+        "breathecode.services.google_meet.GoogleMeet.aget_space",
+        AsyncMock(return_value=Object(meeting_uri="https://meet.google.com/fake")),
     )
     monkeypatch.setattr(
-        "breathecode.services.google_meet.GoogleMeet.get_participant_session",
-        MagicMock(return_value=Object(start_time=UTC_NOW, end_time=UTC_NOW + timedelta(hours=1))),
+        "breathecode.services.google_meet.GoogleMeet.aget_participant_session",
+        AsyncMock(return_value=Object(start_time=UTC_NOW, end_time=UTC_NOW + timedelta(hours=1))),
     )
 
     conference_record_patcher(
@@ -75,8 +69,8 @@ def serialize_participant_object(data: dict):
 def participant_patcher(monkeypatch: pytest.MonkeyPatch):
     def patcher(data: dict):
         monkeypatch.setattr(
-            "breathecode.services.google_meet.GoogleMeet.get_participant",
-            MagicMock(return_value=serialize_participant_object(data)),
+            "breathecode.services.google_meet.GoogleMeet.aget_participant",
+            AsyncMock(return_value=serialize_participant_object(data)),
         )
 
     yield patcher
@@ -86,8 +80,8 @@ def participant_patcher(monkeypatch: pytest.MonkeyPatch):
 def conference_record_patcher(monkeypatch: pytest.MonkeyPatch):
     def patcher(data: dict):
         monkeypatch.setattr(
-            "breathecode.services.google_meet.GoogleMeet.get_conference_record",
-            MagicMock(
+            "breathecode.services.google_meet.GoogleMeet.aget_conference_record",
+            AsyncMock(
                 return_value=serialize_participant_object(
                     {
                         "space": "https://meet.google.com/fake",
@@ -114,6 +108,7 @@ def serialize(data: dict):
     }
 
 
+# @pytest.mark.django_db(reset_sequences=True)
 def test_not_found(bc: Breathecode):
 
     tasks.process_google_webhook(1)
@@ -129,6 +124,7 @@ def test_not_found(bc: Breathecode):
     ]
 
 
+# @pytest.mark.django_db(reset_sequences=True)
 def test_no_credentials(database: capy.Database, format: capy.Format):
     data = serialize({"credential_id": "123456"})
 
@@ -148,6 +144,7 @@ def test_no_credentials(database: capy.Database, format: capy.Format):
     ]
 
 
+# @pytest.mark.django_db(reset_sequences=True)
 def test_action_not_found(database: capy.Database, format: capy.Format):
     data = serialize({"credential_id": "123456"})
 
@@ -175,6 +172,7 @@ def test_action_not_found(database: capy.Database, format: capy.Format):
 
 
 class TestConferenceRecord:
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_no_session(self, database: capy.Database, format: capy.Format):
         data = serialize({"conferenceRecord": {"name": "123456"}})
 
@@ -206,6 +204,7 @@ class TestConferenceRecord:
             call("MentorshipSession with meeting url https://meet.google.com/fake not found", exc_info=True),
         ]
 
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_starting_session(
         self,
         database: capy.Database,
@@ -261,6 +260,7 @@ class TestConferenceRecord:
             (UTC_NOW, None),
         ],
     )
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_someone_dont_show_up(
         self,
         database: capy.Database,
@@ -314,6 +314,7 @@ class TestConferenceRecord:
         ]
         assert Logger.error.call_args_list == []
 
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_everyone_show_up(
         self,
         database: capy.Database,
@@ -367,6 +368,7 @@ class TestConferenceRecord:
 
 
 class TestParticipantSession:
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_no_session(self, database: capy.Database, format: capy.Format, participant_patcher: Callable):
         data = serialize({"participantSession": {"name": "asd/123456/asd/123456"}})
 
@@ -405,6 +407,7 @@ class TestParticipantSession:
         ]
 
     @pytest.mark.parametrize("signedin_user", [None, {"user": 123123}])
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_mentee(
         self,
         database: capy.Database,
@@ -456,6 +459,7 @@ class TestParticipantSession:
         assert Logger.error.call_args_list == []
 
     @pytest.mark.parametrize("signedin_user", [None, {"user": 123123}])
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_mentee__dont_override_started_at__override_mentee_left_at(
         self,
         database: capy.Database,
@@ -510,6 +514,7 @@ class TestParticipantSession:
         ]
         assert Logger.error.call_args_list == []
 
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_mentor(
         self,
         database: capy.Database,
@@ -560,6 +565,7 @@ class TestParticipantSession:
         ]
         assert Logger.error.call_args_list == []
 
+    # @pytest.mark.django_db(reset_sequences=True)
     def test_mentor__dont_override_joined_at__override_left_at(
         self,
         database: capy.Database,

@@ -5,18 +5,18 @@ from breathecode.authenticate.models import CredentialsGoogle
 from breathecode.services.google.utils import get_client
 
 
-def conference_record(name: str, credentials: QuerySet[CredentialsGoogle]):
+async def conference_record(name: str, credentials: QuerySet[CredentialsGoogle]):
     from breathecode.mentorship.models import MentorshipSession
 
     errors = ""
 
-    for credential in credentials:
+    async for credential in credentials:
         try:
             client = get_client(credential)
-            conference_record = client.get_conference_record(name=name)
+            conference_record = await client.aget_conference_record(name=name)
 
-            space = client.get_space(name=conference_record.space)
-            session = MentorshipSession.objects.filter(online_meeting_url=space.meeting_uri).first()
+            space = await client.aget_space(name=conference_record.space)
+            session = await MentorshipSession.objects.filter(online_meeting_url=space.meeting_uri).afirst()
             if session is None:
                 raise AbortTask(f"MentorshipSession with meeting url {space.meeting_uri} not found")
 
@@ -31,7 +31,7 @@ def conference_record(name: str, credentials: QuerySet[CredentialsGoogle]):
                 session.status = "COMPLETED"
                 session.ended_at = conference_record.end_time
 
-            session.save()
+            await session.asave()
 
             return
 
