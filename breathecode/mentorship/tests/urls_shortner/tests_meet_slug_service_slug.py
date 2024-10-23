@@ -3,6 +3,7 @@ Test cases for /academy/:id/member/:id
 """
 
 import random
+import urllib.parse
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
@@ -960,7 +961,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             for x in ["ACTIVE", "UNLISTED"]
         ]
 
-        service = {"consumer": "JOIN_MENTORSHIP"}
+        service = {"consumer": "JOIN_MENTORSHIP", "video_provider": "DAILY"}
         base = self.bc.database.create(user=1, token=1, service=service)
 
         id = 0
@@ -969,7 +970,9 @@ class AuthenticateTestSuite(MentorshipTestCase):
 
             mentorship_session = {"mentee_id": None}
             model = self.bc.database.create(
-                mentor_profile=mentor_profile, mentorship_session=mentorship_session, mentorship_service=1
+                mentor_profile=mentor_profile,
+                mentorship_session=mentorship_session,
+                mentorship_service={"video_provider": "DAILY"},
             )
 
             model.mentorship_session.mentee = None
@@ -1187,11 +1190,13 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
 
             for mentorship_session in session_cases:
-                service = {"consumer": "JOIN_MENTORSHIP"}
+                service = {"consumer": "JOIN_MENTORSHIP", "video_provider": "DAILY"}
                 base = self.bc.database.create(user=1, token=1, service=service)
 
                 model = self.bc.database.create(
-                    mentor_profile=mentor_profile, mentorship_session=mentorship_session, mentorship_service=1
+                    mentor_profile=mentor_profile,
+                    mentorship_session=mentorship_session,
+                    mentorship_service={"video_provider": "DAILY"},
                 )
 
                 model.mentorship_session.mentee = None
@@ -1300,12 +1305,14 @@ class AuthenticateTestSuite(MentorshipTestCase):
         for mentor_profile in cases:
             id += 1
 
-            service = {"consumer": "JOIN_MENTORSHIP"}
+            service = {"consumer": "JOIN_MENTORSHIP", "video_provider": "DAILY"}
             base = self.bc.database.create(user=1, token=1, service=service)
 
             mentorship_session = {"mentee_id": None}
             model = self.bc.database.create(
-                mentor_profile=mentor_profile, mentorship_session=mentorship_session, mentorship_service=1
+                mentor_profile=mentor_profile,
+                mentorship_session=mentorship_session,
+                mentorship_service={"video_provider": "DAILY"},
             )
 
             model.mentorship_session.mentee = None
@@ -1394,7 +1401,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
         ),
     )
-    def test_google_meet_redirect(self):
+    def test_ask_for_crendentials(self):
         cases = [
             {
                 "status": x,
@@ -1418,6 +1425,102 @@ class AuthenticateTestSuite(MentorshipTestCase):
                 mentor_profile=mentor_profile,
                 mentorship_session=mentorship_session,
                 user=user,
+                mentorship_service={"language": "en", "video_provider": "GOOGLE_MEET"},
+                academy=academy,
+            )
+
+            model.mentorship_session.mentee = None
+            model.mentorship_session.save()
+
+            querystring = self.bc.format.to_querystring(
+                {
+                    "token": base.token.key,
+                }
+            )
+            url = (
+                reverse_lazy(
+                    "mentorship_shortner:meet_slug_service_slug",
+                    kwargs={"mentor_slug": model.mentor_profile.slug, "service_slug": model.mentorship_service.slug},
+                )
+                + f"?{querystring}"
+            )
+            response = self.client.get(url)
+
+            self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+            encoded_path = urllib.parse.urlencode({"url": url})
+            Token = self.bc.database.get_model("authenticate.Token")
+            token = Token.objects.filter(user=base.user).last()
+            ask_for_url = reverse_lazy("auth:google_token", kwargs={"token": token.key}) + "?" + encoded_path
+            self.assertEqual(response.url, ask_for_url)
+
+            self.assertEqual(
+                self.bc.database.list_of("mentorship.MentorProfile"),
+                [
+                    self.bc.format.to_dict(model.mentor_profile),
+                ],
+            )
+            self.assertEqual(self.bc.database.list_of("payments.Consumable"), [])
+            self.assertEqual(self.bc.database.list_of("payments.ConsumptionSession"), [])
+
+            # teardown
+            self.bc.database.delete("mentorship.MentorProfile")
+            self.bc.database.delete("auth.Permission")
+            self.bc.database.delete("auth.User")
+            self.bc.database.delete("payments.Service")
+
+    @patch("breathecode.mentorship.actions.mentor_is_ready", MagicMock())
+    @patch(
+        "os.getenv",
+        MagicMock(
+            side_effect=apply_get_env(
+                {
+                    "DAILY_API_URL": URL,
+                    "DAILY_API_KEY": API_KEY,
+                }
+            )
+        ),
+    )
+    @patch(
+        "requests.request",
+        apply_requests_request_mock(
+            [
+                (
+                    201,
+                    f"{URL}/v1/rooms",
+                    {
+                        "name": ROOM_NAME,
+                        "url": ROOM_URL,
+                    },
+                )
+            ]
+        ),
+    )
+    def test_google_meet_redirect(self):
+        cases = [
+            {
+                "status": x,
+                "online_meeting_url": self.bc.fake.url(),
+                "booking_url": self.bc.fake.url(),
+            }
+            for x in ["ACTIVE", "UNLISTED"]
+        ]
+        service = {"consumer": "JOIN_MENTORSHIP"}
+
+        id = 0
+        for mentor_profile in cases:
+            id += 1
+
+            user = {"first_name": "", "last_name": ""}
+            base = self.bc.database.create(user=user, token=1, service=service, credentials_google=1)
+
+            mentorship_session = {"mentee_id": None, "online_meeting_url": "https://meet.google.com/abc123"}
+            academy = {"available_as_saas": False}
+            model = self.bc.database.create(
+                mentor_profile=mentor_profile,
+                mentorship_session=mentorship_session,
+                user=user,
+                credentials_google=1,
                 mentorship_service={"language": "en", "video_provider": "GOOGLE_MEET"},
                 academy=academy,
             )
@@ -2037,7 +2140,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             how_many = random.randint(1, 100)
             consumable = {"how_many": how_many}
             delta = timedelta(seconds=random.randint(1, 1000))
-            mentorship_service = {"max_duration": delta, "language": "en"}
+            mentorship_service = {"max_duration": delta, "language": "en", "video_provider": "DAILY"}
             model = self.bc.database.create(
                 mentor_profile=mentor_profile,
                 mentorship_session=mentorship_session,
@@ -2307,7 +2410,10 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ends_at = UTC_NOW - timedelta(seconds=10)
             mentorship_session = {"mentee_id": None, "ends_at": ends_at}
             model = self.bc.database.create(
-                mentor_profile=mentor_profile, mentorship_session=mentorship_session, user=user, mentorship_service=1
+                mentor_profile=mentor_profile,
+                mentorship_session=mentorship_session,
+                user=user,
+                mentorship_service={"video_provider": "DAILY"},
             )
 
             model.mentorship_session.mentee = None
@@ -2580,6 +2686,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         "allow_mentors_to_extend": True,
                         "allow_mentee_to_extend": False,
                         "language": "en",
+                        "video_provider": "DAILY",
                     },
                     1,
                 ),
@@ -2588,6 +2695,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         "allow_mentee_to_extend": False,
                         "allow_mentee_to_extend": True,
                         "language": "en",
+                        "video_provider": "DAILY",
                     },
                     None,
                 ),
@@ -2729,6 +2837,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         "allow_mentors_to_extend": False,
                         "allow_mentee_to_extend": False,
                         "language": "en",
+                        "video_provider": "DAILY",
                     },
                     None,
                 ),
@@ -2737,6 +2846,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
                         "allow_mentors_to_extend": False,
                         "allow_mentee_to_extend": False,
                         "language": "en",
+                        "video_provider": "DAILY",
                     },
                     1,
                 ),
@@ -3269,7 +3379,7 @@ class AuthenticateTestSuite(MentorshipTestCase):
             consumable = {"how_many": how_many}
 
             delta = timedelta(seconds=random.randint(1, 1000))
-            mentorship_service = {"max_duration": delta, "language": "en"}
+            mentorship_service = {"max_duration": delta, "language": "en", "video_provider": "DAILY"}
             base = self.bc.database.create(
                 user=user,
                 token=1,

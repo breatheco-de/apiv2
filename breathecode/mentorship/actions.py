@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import pytz
 from asgiref.sync import sync_to_async
+from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.db.models import Q, QuerySet
 from django.shortcuts import render
@@ -14,9 +15,9 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.authenticate.models import AcademyAuthSettings, User
 from breathecode.mentorship.exceptions import ExtendSessionException
 from breathecode.services.daily.client import DailyClient
+from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_meet.google_meet import GoogleMeet
 from breathecode.utils.datetime_integer import duration_to_str
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import MentorProfile, MentorshipBill, MentorshipService, MentorshipSession
 
@@ -463,12 +464,30 @@ def create_room_on_google_meet(session: MentorshipSession, mentee: User) -> None
         config=SpaceConfig(access_type=SpaceConfig.AccessType.OPEN),
     )
     space = meet.create_space(space=s)
+    google = GoogleApps(
+        id_token=settings.google_cloud_owner.credentialsgoogle.id_token,
+        refresh_token=settings.google_cloud_owner.credentialsgoogle.refresh_token,
+    )
+
+    google.subscribe_meet_webhook(
+        name=space.name,
+        event_types=[
+            "google.workspace.meet.conference.v2.started",
+            "google.workspace.meet.conference.v2.ended",
+            "google.workspace.meet.participant.v2.joined",
+            "google.workspace.meet.participant.v2.left",
+            "google.workspace.meet.recording.v2.fileGenerated",
+            "google.workspace.meet.transcript.v2.fileGenerated",
+        ],
+    )
+
     session.online_meeting_url = space.meeting_uri
     session.name = s.name
     session.mentee = mentee
+    session.meta = {}
     session.save()
 
 
 @sync_to_async
-def acreate_room_on_google_meet(session: MentorshipSession) -> None:
-    return create_room_on_google_meet(session)
+def acreate_room_on_google_meet(session: MentorshipSession, mentee: User) -> None:
+    return create_room_on_google_meet(session, mentee)

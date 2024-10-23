@@ -6,7 +6,6 @@ import datetime
 from unittest.mock import MagicMock, patch
 
 import pytz
-
 from capyc.rest_framework.exceptions import ValidationException
 
 from ...actions import generate_mentor_bills
@@ -62,6 +61,7 @@ def mentorship_session_field(data={}):
         "mentee_left_at": None,
         "suggested_accounted_duration": None,
         "questions_and_answers": None,
+        "meta": None,
         **data,
     }
 

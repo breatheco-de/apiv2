@@ -15,12 +15,15 @@ tasks:
     command: pipenv run celery
   - init: gp sync-await deps
     command: >
+      ./scripts/utils/wait-port.sh localhost 5432 &&
       (psql -U gitpod -c 'CREATE DATABASE breathecode;' || true) &&
       (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
-      CACHE=0 pipenv run migrate &&
-      CACHE=0 pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
-      CACHE=0 pipenv run python manage.py create_academy_roles &&
-      CACHE=1 pipenv run start;
+      export CACHE=0 &&
+      pipenv run migrate &&
+      pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
+      pipenv run python manage.py create_academy_roles &&
+      export CACHE=1 &&
+      pipenv run start;
   - init: gp sync-await deps
 
 vscode:

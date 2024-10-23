@@ -5,8 +5,8 @@ Test mentorhips
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
-from django.utils import timezone
 import pytest
+from django.utils import timezone
 
 from breathecode.authenticate.models import Token
 from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
@@ -51,6 +51,7 @@ def format_mentorship_session_attrs(attrs={}):
         "suggested_accounted_duration": None,
         "summary": None,
         "questions_and_answers": None,
+        "meta": None,
         **attrs,
     }
 
@@ -213,6 +214,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                         # "name": get_title(1, models.mentorship_service, models.mentor_profile),
                         "online_meeting_url": "https://meet.google.com/fake",
                         "ends_at": ENDS_AT + timedelta(seconds=3600),
+                        "meta": {},
                     }
                 ),
             ],
@@ -442,6 +444,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                         "name": "",
                         # "name": get_title(1, models.mentorship_service, models.mentor_profile),
                         "online_meeting_url": "https://meet.google.com/fake",
+                        "meta": {},
                     }
                 ),
             ],
@@ -645,6 +648,7 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                         # "name": get_title(3, models.mentorship_service, models.mentor_profile),
                         "online_meeting_url": "https://meet.google.com/fake",
                         "service_id": 2,
+                        "meta": {},
                     }
                 ),
             ],

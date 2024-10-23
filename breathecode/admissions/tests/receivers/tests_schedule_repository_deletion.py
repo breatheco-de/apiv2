@@ -1,9 +1,9 @@
 import random
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-import capyc.pytest as capy
 
 
 @pytest.mark.parametrize(
@@ -76,5 +76,6 @@ def test_schedule_repository_deletion(
             "repository_user": username,
             "status": "PENDING",
             "status_text": None,
+            "starts_transferring_at": None,
         },
     ]
