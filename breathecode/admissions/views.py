@@ -1,17 +1,20 @@
+import csv
 import logging
 
 import pytz
 from adrf.decorators import api_view
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
+from django.http import HttpResponse
 from django.utils import timezone
-from slugify import slugify
 from rest_framework import status
 from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from slugify import slugify
 
 from breathecode.admissions import tasks
 from breathecode.admissions.caches import CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache, UserCache
@@ -27,7 +30,6 @@ from breathecode.utils import (
 )
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
 from .models import (
@@ -1723,6 +1725,94 @@ class SyllabusVersionView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SyllabusVersionCSVView(APIView):
+
+    @capable_of("read_syllabus")
+    def get(self, request, syllabus_id, version, academy_id):
+        lang = get_user_language(request)
+        CLASSES_PER_WEEK = 3
+
+        syllabus_slug = None
+        if not syllabus_id.isnumeric():
+            syllabus_slug = syllabus_id
+            syllabus_id = None
+
+        syllabus_version = None
+        if version == "latest":
+            syllabus_version = (
+                SyllabusVersion.objects.filter(
+                    Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                    Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                )
+                .filter(status="PUBLISHED")
+                .order_by("-version")
+                .first()
+            )
+
+        if syllabus_version is None and version is not None and version != "latest":
+            syllabus_version = SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                version=version,
+            ).first()
+
+        if syllabus_version is None:
+            raise ValidationException(
+                f'Syllabus version "{version}" not found or is a draft', code=404, slug="syllabus-version-not-found"
+            )
+
+        if syllabus_version.json is None or "days" not in syllabus_version.json:
+            raise ValidationException(
+                "Syllabus version is empty or improperly formatted missing the 'days' key",
+                code=404,
+                slug="syllabus-version-empty",
+            )
+
+        # Calculate the week number based on the number of classes per week
+        week_number = (syllabus_version.json["days"][0]["id"] - 1) // CLASSES_PER_WEEK + 1
+
+        # Create the HTTP response with CSV header
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="syllabus_{syllabus_version}_export.csv"'
+
+        # Create a CSV writer object
+        writer = csv.writer(response)
+
+        # Write the header row based on language
+        if lang == "es":
+            writer.writerow(["Semana", "Días", "Temas a impartir", "Descripción", "Recursos", "Objetivos"])
+        else:
+            writer.writerow(["Week", "Day", "Topics", "Description", "Resources", "Objectives"])
+
+        # Write the data rows for each day
+        for day in syllabus_version.json["days"]:
+            week_number = (day["id"] - 1) // CLASSES_PER_WEEK + 1
+            if lang == "es":
+                writer.writerow(
+                    [
+                        f"Semana {week_number}",
+                        f"Día {day['id']}: {day['label']}",
+                        ", ".join([lesson["title"] for lesson in day["lessons"]]),
+                        day.get("description", ""),
+                        ", ".join([tech["title"] for tech in day["technologies"]]),
+                        day.get("teacher_instructions", ""),
+                    ]
+                )
+            else:
+                writer.writerow(
+                    [
+                        f"Week {week_number}",
+                        f"Day {day['id']}: {day['label']}",
+                        ", ".join([lesson["title"] for lesson in day["lessons"]]),
+                        day.get("description", ""),
+                        ", ".join([tech["title"] for tech in day["technologies"]]),
+                        day.get("teacher_instructions", ""),
+                    ]
+                )
+
+        return response
 
 
 class AllSyllabusVersionsView(APIView):
