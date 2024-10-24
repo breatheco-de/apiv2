@@ -6,6 +6,8 @@ from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 
+from breathecode.authenticate.models import GoogleWebhook
+from breathecode.authenticate.signals import google_webhook_saved
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments import tasks
@@ -97,3 +99,9 @@ def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, *
 @receiver(update_plan_m2m_service_items, sender=Plan.service_items.through)
 def plan_m2m_changed(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
     tasks.update_service_stock_schedulers.delay(instance.id)
+
+
+@receiver(google_webhook_saved, sender=GoogleWebhook)
+def process_google_webhook_on_created(sender: Type[GoogleWebhook], instance: GoogleWebhook, created: bool, **kwargs):
+    if created:
+        tasks.process_google_webhook.delay(instance.id)

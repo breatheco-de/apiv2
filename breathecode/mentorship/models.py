@@ -456,7 +456,6 @@ class MentorshipSession(models.Model):
     )
 
     questions_and_answers = models.JSONField(null=True, blank=True, default=None)
-    meta = models.JSONField(null=True, blank=True, default=None, help_text="Meta information related to meeting vendor")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

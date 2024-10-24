@@ -70,7 +70,7 @@ class GoogleApps:
             "notification_endpoint": {
                 "pubsub_topic": f"projects/{os.getenv('GOOGLE_PROJECT_ID')}/topics/{os.getenv('GOOGLE_WEBHOOK_TOPIC')}",
             },
-            "payload_options": {"include_resource": True},
+            "payload_options": {},
         }
         service = build("workspaceevents", "v1", credentials=self._credentials)
         return service.subscriptions().create(body=body).execute()

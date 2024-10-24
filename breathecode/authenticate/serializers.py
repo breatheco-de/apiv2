@@ -106,6 +106,7 @@ class CohortTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
 

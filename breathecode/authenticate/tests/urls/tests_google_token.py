@@ -3,8 +3,10 @@ Test /v1/auth/subscribe
 """
 
 from typing import Any
+from unittest.mock import MagicMock
 from urllib.parse import urlencode
 
+import capyc.pytest as capy
 import pytest
 from django.urls.base import reverse_lazy
 from django.utils import timezone
@@ -12,7 +14,6 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-import capyc.pytest as capy
 
 now = timezone.now()
 
@@ -22,6 +23,7 @@ def setup(monkeypatch: pytest.MonkeyPatch, db):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "123456.apps.googleusercontent.com")
     monkeypatch.setenv("GOOGLE_SECRET", "123456")
     monkeypatch.setenv("GOOGLE_REDIRECT_URL", "https://breathecode.herokuapp.com/v1/auth/google/callback")
+    monkeypatch.setenv("SET_GOOGLE_CREDENTIALS", "true")
 
     yield
 
@@ -83,12 +85,56 @@ def test_redirect(database: capy.Database, client: capy.Client, token: Any):
         "scope": " ".join(
             [
                 "https://www.googleapis.com/auth/meetings.space.created",
-                # "https://www.googleapis.com/auth/meetings.space.readonly",
                 "https://www.googleapis.com/auth/drive.meet.readonly",
-                # "https://www.googleapis.com/auth/calendar.events",
+                "https://www.googleapis.com/auth/userinfo.profile",
             ]
         ),
-        "state": f"token={model.token.key}&url={callback_url}",
+        "state": f"token={model.token.key}&url={callback_url}&academysettings=none",
+    }
+
+    assert response.url == f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        {"token_type": "temporal"},
+    ],
+)
+@pytest.mark.parametrize(
+    "academy_settings",
+    [
+        "overwrite",
+        "set",
+    ],
+)
+def test_redirect_with_academy_settings(
+    database: capy.Database, client: capy.Client, token: Any, academy_settings: str
+):
+    model = database.create(token=token)
+    callback_url = "https://4geeks.com/"
+
+    url = (
+        reverse_lazy("authenticate:google_token", kwargs={"token": model.token.key})
+        + f"?url={callback_url}&academysettings={academy_settings}"
+    )
+    response = client.get(url, format="json")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    params = {
+        "response_type": "code",
+        "client_id": "123456.apps.googleusercontent.com",
+        "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
+        "access_type": "offline",
+        "scope": " ".join(
+            [
+                "https://www.googleapis.com/auth/meetings.space.created",
+                "https://www.googleapis.com/auth/drive.meet.readonly",
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/pubsub",
+            ]
+        ),
+        "state": f"token={model.token.key}&url={callback_url}&academysettings={academy_settings}",
     }
 
     assert response.url == f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"

@@ -74,6 +74,8 @@ def database_item(academy, category, data={}):
         "is_auto_subscribed": True,
         "superseded_by_id": None,
         "enable_table_of_content": True,
+        "agent": None,
+        "learnpack_deploy_url": None,
         **data,
     }
 
@@ -128,6 +130,8 @@ def post_serializer(academy, category, data={}):
         "with_video": False,
         "superseded_by": None,
         "enable_table_of_content": True,
+        "agent": None,
+        "learnpack_deploy_url": None,
         "updated_at": UTC_NOW.isoformat().replace("+00:00", "Z"),
         **data,
     }
@@ -170,6 +174,7 @@ def put_serializer(academy, category, asset, data={}):
         "readme_url": None,
         "requirements": None,
         "seo_json_status": None,
+        "learnpack_deploy_url": None,
         "seo_keywords": [],
         "slug": asset.slug,
         "solution_video_url": None,

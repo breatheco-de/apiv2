@@ -76,6 +76,7 @@ def get_serializer(asset, data={}):
         "visibility": asset.visibility,
         "enable_table_of_content": asset.enable_table_of_content,
         "interactive": asset.interactive,
+        "learnpack_deploy_url": asset.learnpack_deploy_url,
         **data,
     }
 
@@ -95,7 +96,7 @@ def get_serializer_technology(technology, data={}):
 def get_mid_serializer(asset, data={}):
     return {
         **get_serializer(asset),
-        "agent": None,
+        "agent": asset.agent,
         "with_solutions": asset.with_solutions,
         "with_video": asset.with_solutions,
         "updated_at": asset.updated_at,

@@ -345,7 +345,16 @@ STATICFILES_DIRS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://*.gitpod.io",
     "https://*.gitpod.io",
+    "https://s.4geeksacademy.co",
+    "https://s.4geeks.co",
+    "https://s.4geeks.com",
+    "https://breathecode.herokuapp.com",
+    "https://breathecode-test.herokuapp.com",
 ]
+
+# CSP_DEFAULT_SRC = ("'self'", "https://*.4geeks.com", "https://*.4geeksacademy.co")
+# CSP_FRAME_SRC = ("'self'", "https://*.4geeks.com", "https://*.4geeksacademy.co")
+# SECURE_REFERRER_POLICY = "no-referrer"
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_HEADERS = [
