@@ -110,7 +110,7 @@ urlpatterns = [
     path("syllabus/<int:syllabus_id>/version", SyllabusVersionView.as_view(), name="syllabus_id_version"),
     path("syllabus/version", AllSyllabusVersionsView.as_view(), name="syllabus_version"),
     path(
-        "syllabus/<str:syllabus_id>/version/<int:version>.csv",
+        "syllabus/<str:syllabus_id>/version/<str:version>.csv",
         SyllabusVersionCSVView.as_view(),
         name="syllabus_id_version_csv",
     ),
