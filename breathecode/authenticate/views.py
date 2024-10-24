@@ -489,6 +489,41 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             raise ValidationException("Invite ids were not provided", code=400, slug="missing-ids")
 
 
+class MeProfileAcademyInvite(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
+    def put(self, request, profile_academy_id=None, new_status=None):
+        lang = get_user_language(request)
+        profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id, user=request.user).first()
+
+        if profile_academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Profile academy was not found",
+                    es="No se encontro el Profile Academy",
+                    slug="profile-academy-not-found",
+                ),
+                code=400,
+            )
+
+        if new_status.upper() not in ["ACTIVE", "INVITED"]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid invite status {new_status}",
+                    es=f"Estatus inválido {new_status}",
+                    slug="invalid-status",
+                ),
+                code=400,
+            )
+
+        profile_academy.status = new_status.upper()
+        profile_academy.save()
+
+        serializer = GetProfileAcademySmallSerializer(profile_academy, many=False)
+        return Response(serializer.data)
+
+
 class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
