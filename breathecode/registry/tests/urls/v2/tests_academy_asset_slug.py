@@ -48,6 +48,7 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
         "last_test_at": None,
         "last_cleaning_at": None,
         "last_seo_scan_at": None,
+        "learnpack_deploy_url": None,
         "optimization_rating": None,
         "owner": None,
         "preview": None,
