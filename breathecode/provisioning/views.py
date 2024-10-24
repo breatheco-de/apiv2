@@ -37,7 +37,7 @@ from breathecode.utils.i18n import translation
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
 
-from .actions import get_provisioning_vendor, extract_repo_name
+from .actions import get_provisioning_vendor
 from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption
 
 
@@ -155,7 +155,9 @@ def redirect_new_container_public(request):
 
     if asset and asset.url:
         data["repo_url"] = asset.url + ".git"
-        data["repo_name"] = extract_repo_name(asset.url)
+
+    if asset and asset.title:
+        data["repo_name"] = asset.title
 
     if asset and asset.agent:
         data["agent"] = asset.agent
