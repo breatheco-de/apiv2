@@ -72,6 +72,8 @@ def database_item(academy, category, data={}):
         "is_auto_subscribed": True,
         "superseded_by_id": None,
         "enable_table_of_content": True,
+        "agent": None,
+        "learnpack_deploy_url": None,
         **data,
     }
 
@@ -125,6 +127,7 @@ def post_serializer(academy, category, data={}):
         "with_video": False,
         "superseded_by": None,
         "enable_table_of_content": True,
+        "agent": None,
         "updated_at": UTC_NOW.isoformat().replace("+00:00", "Z"),
         **data,
     }

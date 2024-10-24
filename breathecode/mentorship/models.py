@@ -300,7 +300,7 @@ class MentorProfile(models.Model):
         if self.user is not None and self.user.first_name is not None and self.user.first_name != "":
             name = self.user.first_name + " " + self.user.last_name
 
-        return f"{name} ({self.id})"
+        return f"{name} ({self.id})"  # pyright: ignore
 
 
 RECALCULATE = "RECALCULATE"
@@ -436,9 +436,8 @@ class MentorshipSession(models.Model):
     started_at = models.DateTimeField(
         blank=True, null=True, default=None, help_text="Real start date (only if it started)"
     )
-    ended_at = models.DateTimeField(
-        blank=True, null=True, default=None, help_text="Real start date (only if it started)"
-    )
+
+    ended_at = models.DateTimeField(blank=True, null=True, default=None, help_text="Real end date (only if it started)")
 
     mentor_joined_at = models.DateTimeField(
         blank=True, null=True, default=None, help_text="Exact moment the mentor joined the meeting for the first time"
@@ -457,12 +456,13 @@ class MentorshipSession(models.Model):
     )
 
     questions_and_answers = models.JSONField(null=True, blank=True, default=None)
+    meta = models.JSONField(null=True, blank=True, default=None, help_text="Meta information related to meeting vendor")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"(Session {self.id} with {str(self.mentor)} and {str(self.mentee)})"
+        return f"(Session {self.id} with {str(self.mentor)} and {str(self.mentee)})"  # pyright: ignore
 
     def save(self, *args, **kwargs):
 

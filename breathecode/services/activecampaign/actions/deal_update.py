@@ -31,7 +31,9 @@ def deal_update(ac_cls, webhook, payload: dict, acp_ids):
         )
     if entry is None and "deal[contact_email]" in payload:
         entry = (
-            FormEntry.objects.filter(email=payload["deal[contact_email]"], storage_status__in=["PERSISTED", "MANUALLY_PERSISTED"])
+            FormEntry.objects.filter(
+                email=payload["deal[contact_email]"], storage_status__in=["PERSISTED", "MANUALLY_PERSISTED"]
+            )
             .order_by("-created_at")
             .first()
         )

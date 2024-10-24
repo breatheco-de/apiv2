@@ -62,7 +62,7 @@ Reasons for the change:
 
 - Web worker was reaching 841 MB ram.
 
-## -9/09/2024
+## -09/09/2024
 
 - `[all]` `GOOGLE_SECRET` setted.
 - `[dev]` `GOOGLE_CLIENT_ID` setted.
@@ -75,3 +75,16 @@ Reasons for the change:
 Why:
 
 - To enable the oauth flow for the Google Meet API.
+
+## 30/09/2024
+
+- `[prod]` set `GOOGLE_WEBHOOK_TOPIC` to `webhook`.
+- `[dev]` set `GOOGLE_WEBHOOK_TOPIC` to `webhook-test`.
+
+Why:
+
+- Google doesn't support webhooks directly, it uses its Pub/Sub service.
+
+## 06/10/2024
+
+- `[dev]` `HEROKU_POSTGRESQL_TEAL` was replaced by `HEROKU_POSTGRESQL_GOLD`.

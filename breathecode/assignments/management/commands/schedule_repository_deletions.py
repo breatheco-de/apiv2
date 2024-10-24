@@ -5,6 +5,7 @@ from typing import Any, Optional
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.utils import timezone
 
 from breathecode.assignments.models import RepositoryDeletionOrder, RepositoryWhiteList, Task
@@ -149,9 +150,15 @@ class Command(BaseCommand):
 
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
+                Q(
+                    status=RepositoryDeletionOrder.Status.TRANSFERRING,
+                    starts_transferring_at__lte=timezone.now() - relativedelta(months=2),
+                )
+                | Q(
+                    status=RepositoryDeletionOrder.Status.PENDING,
+                    created_at__lte=timezone.now() - relativedelta(months=2),
+                ),
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
-                status__in=[RepositoryDeletionOrder.Status.PENDING, RepositoryDeletionOrder.Status.TRANSFERRING],
-                created_at__lte=timezone.now() - relativedelta(months=2),
             )[:100]
 
             if qs.count() == 0:

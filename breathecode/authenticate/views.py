@@ -6,12 +6,13 @@ import re
 import urllib.parse
 from datetime import timedelta
 from urllib.parse import parse_qs, urlencode
-import aiohttp
 
+import aiohttp
 import requests
 from adrf.decorators import api_view
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.conf import settings
 from django.contrib import messages
@@ -41,6 +42,7 @@ from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
+from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -49,7 +51,6 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import private_view, render_message, set_query_parameter
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     accept_invite,
@@ -1795,6 +1796,15 @@ def render_invite(request, token, member_id=None):
         if invite and invite.academy:
             academy = invite.academy
 
+        if request.META.get("CONTENT_TYPE") == "application/json":
+            raise ValidationException(
+                translation(
+                    en="Invitation not found or it was already accepted",
+                    es="No se encuentra la invitación o ya fue aceptada",
+                ),
+                slug="invite-not-found",
+            )
+        
         return render_message(
             request, "Invitation not found or it was already accepted" + callback_msg, academy=academy
         )
@@ -2022,20 +2032,30 @@ def get_google_token(request, token=None):
     if token is None or token.token_type not in ["temporal", "one_time"]:
         raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
 
+    # set academy settings automatically
+    academy_settings = request.GET.get("academysettings", "none")
+    state = f"token={token.key}&url={url}"
+
+    scopes = [
+        "https://www.googleapis.com/auth/meetings.space.created",
+        "https://www.googleapis.com/auth/drive.meet.readonly",
+        "https://www.googleapis.com/auth/userinfo.profile",
+    ]
+
+    if academy_settings in ["overwrite", "set"]:
+        state += f"&academysettings={academy_settings}"
+        scopes.append("https://www.googleapis.com/auth/pubsub")
+
+    else:
+        state += "&academysettings=none"
+
     params = {
         "response_type": "code",
         "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GOOGLE_REDIRECT_URL", ""),
         "access_type": "offline",  # we need offline access to receive refresh token and avoid total expiration
-        "scope": " ".join(
-            [
-                "https://www.googleapis.com/auth/meetings.space.created",
-                # "https://www.googleapis.com/auth/meetings.space.readonly",
-                "https://www.googleapis.com/auth/drive.meet.readonly",
-                # "https://www.googleapis.com/auth/calendar.events",
-            ]
-        ),
-        "state": f"token={token.key}&url={url}",
+        "scope": " ".join(scopes),
+        "state": state,
     }
 
     logger.debug("Redirecting to google")
@@ -2052,6 +2072,22 @@ def get_google_token(request, token=None):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_google_token(request):
+    def get_user_info(id_token, refresh_token):
+        c = GoogleApps(id_token, refresh_token)
+        return c.get_user_info()
+
+    async def set_academy_auth_settings(academy: Academy, user: User):
+        settings, created = await AcademyAuthSettings.objects.aget_or_create(
+            academy=academy, defaults={"google_cloud_owner": user}
+        )
+        if not created:
+            settings.google_cloud_owner.id = user.id
+            await settings.asave()
+
+    async def async_iter(iterable: list):
+        for item in iterable:
+            yield item
+
     logger.debug("Google callback just landed")
     logger.debug(request.query_params)
 
@@ -2079,6 +2115,25 @@ async def save_google_token(request):
             "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
         )
 
+    academies = async_iter([])
+    roles = ["admin", "staff", "country_manager", "academy_token"]
+    academy_settings = state.get("academysettings", "none")
+    if academy_settings != "none":
+        ids = ProfileAcademy.objects.filter(user=token.user, status="ACTIVE", role__slug__in=roles).values_list(
+            "academy_id", flat=True
+        )
+
+        if academy_settings == "overwrite":
+            ids = AcademyAuthSettings.objects.filter(academy__id__in=ids).values_list("academy_id", flat=True)
+        else:
+            no_owner = Q(google_cloud_owner__isnull=True)
+            same_user = Q(google_cloud_owner__id=token.user.id)
+            ids = AcademyAuthSettings.objects.filter(no_owner | same_user, academy__id__in=ids).values_list(
+                "academy_id", flat=True
+            )
+
+        academies = Academy.objects.filter(id__in=ids)
+
     payload = {
         "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
         "client_secret": os.getenv("GOOGLE_SECRET", ""),
@@ -2099,31 +2154,61 @@ async def save_google_token(request):
 
                 logger.debug(body)
 
-                user = token.user
+                user: User = token.user
                 refresh = ""
                 if "refresh_token" in body:
                     refresh = body["refresh_token"]
 
+                # set user id after because it shouldn't exists
+                google_id = ""
+                if refresh:
+                    user_info = get_user_info(body["id_token"], refresh)
+                    google_id = user_info["id"]
+
                 google_credentials, created = await CredentialsGoogle.objects.aget_or_create(
                     user=user,
-                    expires_at=timezone.now() + timedelta(seconds=body["expires_in"]),
                     defaults={
+                        "expires_at": timezone.now() + timedelta(seconds=body["expires_in"]),
                         "token": body["access_token"],
                         "refresh_token": refresh,
+                        "id_token": body["id_token"],
+                        "google_id": google_id,
                     },
                 )
                 if created is False:
                     google_credentials.token = body["access_token"]
+                    google_credentials.id_token = body["id_token"]
+
                     if refresh:
                         google_credentials.refresh_token = refresh
 
+                    if google_id == "" or google_credentials.google_id != google_id:
+                        refresh = google_credentials.refresh_token
+                        user_info = get_user_info(body["id_token"], refresh)
+                        google_id = user_info["id"]
+                        google_credentials.google_id = google_id
+
                     await google_credentials.asave()
+
+                async for academy in academies:
+                    await set_academy_auth_settings(academy, user)
 
                 return HttpResponseRedirect(redirect_to=state["url"][0] + "?token=" + token.key)
 
             else:
                 logger.error(await resp.json())
                 raise APIException("Error from google credentials")
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def receive_google_webhook(request):
+    logger.info("Received Google webhook")
+    logger.info(request.data)
+    print("Received Google webhook")
+    print(request.data)
+
+    return Response({"message": "Webhook received"}, status=200)
 
 
 class GithubUserView(APIView, GenerateLookupsMixin):

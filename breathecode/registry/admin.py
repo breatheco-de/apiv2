@@ -24,6 +24,7 @@ from .models import (
     AssetAlias,
     AssetCategory,
     AssetComment,
+    AssetContext,
     AssetErrorLog,
     AssetImage,
     AssetKeyword,
@@ -894,3 +895,19 @@ class ContentVariablesAdmin(admin.ModelAdmin):
             "FETCH_TEXT": "Fetch from: " + obj.value,
         }
         return format_html(f"{_values[obj.var_type]}")
+
+
+@admin.register(AssetContext)
+class AssetContextAdmin(admin.ModelAdmin):
+    list_display = ["asset", "ai_context"]
+    search_fields = ("asset__slug", "asset__title")
+    list_filter = ["asset__category", "asset__lang"]
+
+    def ai_context(self, obj: AssetContext):
+        lenght = len(obj.ai_context)
+        ai_context = obj.ai_context
+
+        if lenght <= 20:
+            return ai_context
+
+        return ai_context[:20] + "..."
