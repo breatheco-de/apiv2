@@ -371,6 +371,28 @@ class WithKeywordFilter(admin.SimpleListFilter):
             return queryset.filter(seo_keywords__isnull=True)
 
 
+class LearnpackDeployed(admin.SimpleListFilter):
+
+    title = "LearnPack Deployed"
+
+    parameter_name = "is_learnpack_deployed"
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ("yes", "Deployed"),
+            ("no", "Not deployed"),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == "yes":
+            return queryset.filter(learnpack_deploy_url__isnull=False)
+
+        if self.value() == "no":
+            return queryset.filter(learnpack_deploy_url__isnull=True)
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -389,6 +411,7 @@ class AssetAdmin(admin.ModelAdmin):
         WithKeywordFilter,
         WithDescription,
         IsMarkdown,
+        LearnpackDeployed,
     ]
     raw_id_fields = ["author", "owner", "superseded_by"]
     actions = (
