@@ -494,13 +494,14 @@ class MeProfileAcademyInvite(APIView, HeaderLimitOffsetPagination, GenerateLooku
     def put(self, request, profile_academy_id=None, new_status=None):
         lang = get_user_language(request)
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id, user=request.user).first()
-        if new_status is None:
+
+        if profile_academy is None:
             raise ValidationException(
                 translation(
                     lang,
-                    en="Please specify new status for the profile academy",
-                    es="Por favor especifica el nuevo estatus para el profile academy",
-                    slug="missing-status",
+                    en="Profile academy was not found",
+                    es="No se encontro el Profile Academy",
+                    slug="profile-academy-not-found",
                 ),
                 code=400,
             )
@@ -516,10 +517,10 @@ class MeProfileAcademyInvite(APIView, HeaderLimitOffsetPagination, GenerateLooku
                 code=400,
             )
 
-        profile_academy.status = new_status
+        profile_academy.status = new_status.upper()
         profile_academy.save()
 
-        serializer = GetProfileAcademySerializer(profile_academy, many=False)
+        serializer = GetProfileAcademySmallSerializer(profile_academy, many=False)
         return Response(serializer.data)
 
 

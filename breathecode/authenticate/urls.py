@@ -119,7 +119,9 @@ urlpatterns = [
     path("academy/user/me/invite/<slug:new_status>", MeInviteView.as_view(), name="academy_user_me_invite_status"),
     # 🔼🔼🔼
     path(
-        "user/me/profile_academy/<slug:new_status>", MeProfileAcademyInvite.as_view(), name="me_profile_academy_invite"
+        "user/me/profile_academy/<int:profile_academy_id>/<slug:new_status>",
+        MeProfileAcademyInvite.as_view(),
+        name="me_profile_academy_invite",
     ),
     path("academy/invite/<int:invite_id>", AcademyInviteView.as_view(), name="academy_invite_id"),
     path("academy/user/invite", AcademyInviteView.as_view(), name="academy_user_invite"),
