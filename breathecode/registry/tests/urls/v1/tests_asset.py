@@ -76,6 +76,7 @@ def get_serializer(asset, data={}):
         "visibility": asset.visibility,
         "enable_table_of_content": asset.enable_table_of_content,
         "interactive": asset.interactive,
+        "learnpack_deploy_url": asset.learnpack_deploy_url,
         **data,
     }
 
