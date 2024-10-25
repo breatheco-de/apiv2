@@ -220,6 +220,7 @@ class AssetHookSerializer(serpy.Serializer):
     solution_video_url = serpy.Field()
     intro_video_url = serpy.Field()
     published_at = serpy.Field()
+    learnpack_deploy_url = serpy.Field()
 
     technologies = serpy.MethodField()
     seo_keywords = serpy.MethodField()

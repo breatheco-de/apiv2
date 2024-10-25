@@ -127,6 +127,7 @@ def post_serializer(plans=[], data={}):
         "conversion_info": None,
         "asset_slug": None,
         "event_slug": None,
+        "has_marketing_consent": False,
         **data,
     }
 
@@ -151,6 +152,7 @@ def put_serializer(user_invite, cohort=None, syllabus=None, user=None, plans=[],
         "asset_slug": None,
         "event_slug": None,
         "status": user_invite.status,
+        "has_marketing_consent": False,
         **data,
     }
 
