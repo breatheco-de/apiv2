@@ -12,7 +12,7 @@ from capyc.rest_framework.exceptions import PaymentException, ValidationExceptio
 from django.contrib.auth.models import AnonymousUser
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import QuerySet, Sum
-from django.http import HttpRequest, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework.response import Response
@@ -190,7 +190,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
 
     def decorator(function: callable) -> callable:
 
-        def validate_and_get_request(permission: str, args: Any) -> HttpRequest | AsyncRequest:
+        def validate_and_get_request(permission: str, args: Any) -> WSGIRequest | AsyncRequest:
             if isinstance(permission, str) == False:
                 raise ProgrammingError("Service must be a string")
 
@@ -210,7 +210,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
             return request
 
         def build_context(
-            request: HttpRequest | AsyncRequest,
+            request: WSGIRequest | AsyncRequest,
             utc_now: datetime,
             flags: Optional[FlagsParams] = None,
             **opts: Unpack[ServiceContext],
@@ -259,7 +259,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
                 items = Consumable.list(user=request.user, service=service)
                 context["consumables"] = items
 
-                flag_context = feature.context(context=context)
+                flag_context = feature.context(context=context, kwargs=kwargs)
                 bypass_consumption = feature.is_enabled("payments.bypass_consumption", flag_context, False)
                 context["flags"]["bypass_consumption"] = bypass_consumption
 
@@ -371,7 +371,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
                 items = await Consumable.alist(user=user, service=service)
                 context["consumables"] = items
 
-                flag_context = feature.context(context=context)
+                flag_context = feature.context(context=context, kwargs=kwargs)
                 bypass_consumption = feature.is_enabled("payments.bypass_consumption", flag_context, False)
                 context["flags"]["bypass_consumption"] = bypass_consumption
 

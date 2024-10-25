@@ -113,7 +113,7 @@ def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs
             )
         )
     ):
-        c = feature.context(context=context, user=mentee)
+        c = feature.context(context=context, args=args, kwargs=kwargs, user=mentee)
         if feature.is_enabled("payments.bypass_consumption", c, False) is False:
             raise ValidationException(
                 translation(

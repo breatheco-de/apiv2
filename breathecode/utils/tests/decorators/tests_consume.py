@@ -434,7 +434,7 @@ class TestNoConsumer:
             user=user, service=services, service_item={"service_id": 2}, consumable=consumable
         )
 
-        view, _, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
+        view, _, _, kwargs = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
         response, _ = await view()
         expected = {"detail": "with-consumer-not-enough-consumables", "status_code": 402}
@@ -462,7 +462,8 @@ class TestNoConsumer:
                 "price": 1,
                 "is_consumption_session": False,
                 "flags": {"bypass_consumption": False},
-            }
+            },
+            kwargs=kwargs,
         )
         assert await is_enabled_call_list() == [call("payments.bypass_consumption", context, False)]
 
@@ -481,7 +482,7 @@ class TestNoConsumer:
             user=user, service=services, service_item={"service_id": 2}, consumable=consumable
         )
 
-        view, expected, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
+        view, expected, _, kwargs = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
         response, _ = await view()
 
@@ -508,7 +509,8 @@ class TestNoConsumer:
                 "price": 1,
                 "is_consumption_session": False,
                 "flags": {"bypass_consumption": True},
-            }
+            },
+            kwargs=kwargs,
         )
         assert await is_enabled_call_list() == [call("payments.bypass_consumption", context, False)]
 
