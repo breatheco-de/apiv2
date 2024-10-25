@@ -1796,7 +1796,7 @@ class SyllabusVersionCSVView(APIView):
                         f"Día {day['id']}: {day['label']}",
                         ", ".join([lesson["title"] for lesson in day["lessons"]]),
                         day.get("description", ""),
-                        ", ".join([tech["title"] for tech in day["technologies"]]),
+                        ", ".join([tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]),
                         day.get("teacher_instructions", ""),
                     ]
                 )
@@ -1807,7 +1807,7 @@ class SyllabusVersionCSVView(APIView):
                         f"Day {day['id']}: {day['label']}",
                         ", ".join([lesson["title"] for lesson in day["lessons"]]),
                         day.get("description", ""),
-                        ", ".join([tech["title"] for tech in day["technologies"]]),
+                        ", ".join([tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]),
                         day.get("teacher_instructions", ""),
                     ]
                 )
