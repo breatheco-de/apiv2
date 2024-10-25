@@ -194,6 +194,10 @@ def get_technologies(request):
     if "is_deprecated" not in request.GET or request.GET.get("is_deprecated").lower() == "false":
         items = items.filter(is_deprecated=False)
 
+    like = request.GET.get("like", None)
+    if like is not None and like != "undefined" and like != "":
+        items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
+
     items = items.order_by("sort_priority")
 
     serializer = AssetTechnologySerializer(items, many=True)
