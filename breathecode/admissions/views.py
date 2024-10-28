@@ -1,5 +1,6 @@
 import csv
 import logging
+import math
 
 import pytz
 from adrf.decorators import api_view
@@ -1732,7 +1733,17 @@ class SyllabusVersionCSVView(APIView):
     @capable_of("read_syllabus")
     def get(self, request, syllabus_id, version, academy_id):
         lang = get_user_language(request)
-        CLASSES_PER_WEEK = 3
+        if "class_days_per_week" not in request.GET:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing class_days_per_week in query parameters",
+                    es="Falta class_days_per_week en los parámetros de consulta",
+                    slug="missing-class-days-per-week",
+                )
+            )
+
+        class_days_per_week = int(request.GET.get("class_days_per_week"))
 
         syllabus_slug = None
         if not syllabus_id.isnumeric():
@@ -1741,15 +1752,10 @@ class SyllabusVersionCSVView(APIView):
 
         syllabus_version = None
         if version == "latest":
-            syllabus_version = (
-                SyllabusVersion.objects.filter(
-                    Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
-                    Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
-                )
-                .filter(status="PUBLISHED")
-                .order_by("-version")
-                .first()
-            )
+            syllabus_version = SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+            ).latest("created_at")
 
         if syllabus_version is None and version is not None and version != "latest":
             syllabus_version = SyllabusVersion.objects.filter(
@@ -1758,24 +1764,9 @@ class SyllabusVersionCSVView(APIView):
                 version=version,
             ).first()
 
-        if syllabus_version is None:
-            raise ValidationException(
-                f'Syllabus version "{version}" not found or is a draft', code=404, slug="syllabus-version-not-found"
-            )
-
-        if syllabus_version.json is None or "days" not in syllabus_version.json:
-            raise ValidationException(
-                "Syllabus version is empty or improperly formatted missing the 'days' key",
-                code=404,
-                slug="syllabus-version-empty",
-            )
-
-        # Calculate the week number based on the number of classes per week
-        week_number = (syllabus_version.json["days"][0]["id"] - 1) // CLASSES_PER_WEEK + 1
-
-        # Create the HTTP response with CSV header
+        # Create an HTTP response object and set the content type to CSV
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="syllabus_{syllabus_version}_export.csv"'
+        response["Content-Disposition"] = 'attachment; filename="syllabus_{syllabus_slug}.csv"'
 
         # Create a CSV writer object
         writer = csv.writer(response)
@@ -1786,9 +1777,12 @@ class SyllabusVersionCSVView(APIView):
         else:
             writer.writerow(["Week", "Day", "Topics", "Description", "Resources", "Objectives"])
 
+        # Initialize cumulative day counter
+        cumulative_days = 1
+
         # Write the data rows for each day
-        for day in syllabus_version.json["days"]:
-            week_number = (day["id"] - 1) // CLASSES_PER_WEEK + 1
+        for day in sorted(syllabus_version.json["days"], key=lambda x: x["position"]):
+            week_number = math.ceil(cumulative_days / class_days_per_week)
             if lang == "es":
                 writer.writerow(
                     [
@@ -1811,7 +1805,7 @@ class SyllabusVersionCSVView(APIView):
                         day.get("teacher_instructions", ""),
                     ]
                 )
-
+            cumulative_days += day["duration_in_days"]
         return response
 
 

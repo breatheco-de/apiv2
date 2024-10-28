@@ -532,6 +532,7 @@ HOOK_EVENTS = {
     "session.mentorship_session_status": "mentorship.MentorshipSession.mentorship_session_status",
     "planfinancing.planfinancing_created": "payments.PlanFinancing.planfinancing_created",
     "subscription.subscription_created": "payments.Subscription.subscription_created",
+    "UserAssessment.userassessment_status_updated": "assessment.UserAssessment.userassessment_status_updated",
 }
 
 # Websocket
