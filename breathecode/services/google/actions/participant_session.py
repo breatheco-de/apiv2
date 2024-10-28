@@ -23,7 +23,14 @@ async def participant_session(name: str, credentials: QuerySet[CredentialsGoogle
             conference_record = await client.aget_conference_record(name=conference_record_name)
             space = await client.aget_space(name=conference_record.space)
 
-            session = await MentorshipSession.objects.filter(online_meeting_url=space.meeting_uri).afirst()
+            session = (
+                await MentorshipSession.objects.filter(online_meeting_url=space.meeting_uri)
+                .prefetch_related(
+                    "mentor",
+                    "mentor__user",
+                )
+                .afirst()
+            )
             if session is None:
                 raise AbortTask(f"MentorshipSession with meeting url {space.meeting_uri} not found")
 
