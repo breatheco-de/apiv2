@@ -541,11 +541,12 @@ HOOK_EVENTS = {
 # Websocket
 ASGI_APPLICATION = "breathecode.asgi.application"
 REDIS_URL_PATTERN = r"^redis://(.+):(\d+)$"
+REDIS_PARTS = REDIS_URL.split(":")
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [(":".join(REDIS_PARTS[:-1]), int(REDIS_PARTS[-1]))],
         },
     },
 }
