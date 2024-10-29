@@ -405,6 +405,7 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
 
     technologies = serpy.MethodField()
     translations = serpy.MethodField()
+    aliases = serpy.MethodField()
 
     def get_translations(self, obj):
         result = {}
@@ -417,6 +418,13 @@ class AssetBigAndTechnologyPublishedSerializer(AssetBigSerializer):
             id__in=obj.technologies.filter(visibility__in=["PUBLIC", "UNLISTED"], is_deprecated=False)
         )
         return ParentAssetTechnologySerializer(techs, many=True).data
+
+    def get_aliases(self, obj):
+        aliases = []
+        items = AssetAlias.objects.filter(asset=obj)
+        for item in items:
+            aliases.append(item.slug)
+        return aliases
 
 
 class AssetExpandableSerializer(AssetMidSerializer):

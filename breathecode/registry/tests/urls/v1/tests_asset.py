@@ -95,6 +95,7 @@ def get_serializer_technology(technology, data={}):
 def get_mid_serializer(asset, data={}):
     return {
         **get_serializer(asset),
+        "agent": asset.agent,
         "with_solutions": asset.with_solutions,
         "with_video": asset.with_solutions,
         "updated_at": asset.updated_at,

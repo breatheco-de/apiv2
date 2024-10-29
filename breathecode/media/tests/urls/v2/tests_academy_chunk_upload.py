@@ -151,7 +151,7 @@ async def test_no_authorized(aclient: capy.AsyncClient, database: capy.Database,
     data = {"operation_type": op_type}
 
     response = await aclient.put(
-        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
     )
 
     json = response.json()
@@ -189,7 +189,7 @@ async def test_no_total_chunks(aclient: capy.AsyncClient, database: capy.Databas
     data = {"operation_type": op_type}
 
     response = await aclient.put(
-        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
     )
 
     json = response.json()
@@ -227,7 +227,7 @@ async def test_no_filename(aclient: capy.AsyncClient, database: capy.Database, f
     data = {"operation_type": op_type, "total_chunks": 3}
 
     response = await aclient.put(
-        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
     )
 
     json = response.json()
@@ -265,7 +265,7 @@ async def test_no_mime(aclient: capy.AsyncClient, database: capy.Database, fake:
     data = {"operation_type": op_type, "total_chunks": 3, "filename": "a.txt"}
 
     response = await aclient.put(
-        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+        url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
     )
 
     json = response.json()
@@ -305,7 +305,7 @@ class TestNoSchema:
         data = {"operation_type": op_type, "total_chunks": 3, "filename": "a.txt", "mime": "text/plain"}
 
         response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
         )
 
         json = response.json()
@@ -358,7 +358,7 @@ class TestNoSchema:
         data = {"operation_type": op_type, "total_chunks": 3, "filename": filename, "mime": "text/plain"}
 
         response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
         )
 
         json = response.json()
@@ -443,7 +443,7 @@ class TestMediaSchema:
         data = {"operation_type": op_type, "total_chunks": 3, "filename": "a.txt", "mime": "text/plain"}
 
         response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
         )
 
         json = response.json()
@@ -485,19 +485,17 @@ class TestMediaSchema:
             "total_chunks": 3,
             "filename": "a.txt",
             "mime": "text/plain",
-            "meta": json_utils.dumps(
-                {
-                    "x": "y",
-                    "slug": 1,
-                    "name": 1,
-                    "categories": 7,
-                    "academy": "a",
-                }
-            ),
+            "meta": {
+                "x": "y",
+                "slug": 1,
+                "name": 1,
+                "categories": 7,
+                "academy": "a",
+            },
         }
 
         response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
         )
 
         json = response.json()
@@ -536,19 +534,17 @@ class TestMediaSchema:
             "total_chunks": 3,
             "filename": "a.txt",
             "mime": "text/plain",
-            "meta": json_utils.dumps(
-                {
-                    "x": "y",
-                    "slug": fake.slug(),
-                    "name": fake.name(),
-                    "categories": [fake.slug()],
-                    "academy": 1,
-                }
-            ),
+            "meta": {
+                "x": "y",
+                "slug": fake.slug(),
+                "name": fake.name(),
+                "categories": [fake.slug()],
+                "academy": 1,
+            },
         }
 
         response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
         )
 
         json = response.json()
@@ -603,19 +599,17 @@ class TestMediaSchema:
             "total_chunks": 3,
             "filename": filename,
             "mime": "text/plain",
-            "meta": json_utils.dumps(
-                {
-                    "x": "y",
-                    "slug": fake.slug(),
-                    "name": fake.name(),
-                    "categories": [fake.slug()],
-                    "academy": 1,
-                }
-            ),
+            "meta": {
+                "x": "y",
+                "slug": fake.slug(),
+                "name": fake.name(),
+                "categories": [fake.slug()],
+                "academy": 1,
+            },
         }
 
         response = await aclient.put(
-            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="multipart"
+            url, data, headers={"Authorization": f"Token {model.token.key}", "Academy": "1"}, format="json"
         )
 
         json = response.json()
