@@ -327,6 +327,83 @@ class ChunkUploadMixin(UploadMixin):
         for key in to_delete:
             del meta[key]
 
+    async def upload_file(self, file_name: str, mime: dict[str, Any], academy: Academy, file: Optional[File] = None):
+        request = self.request
+        total_chunks = self.total_chunks
+
+        chunks = (
+            Chunk.objects.filter(
+                academy=academy,
+                user=request.user,
+                name=file_name,
+                operation_type=self.op_type,
+                total_chunks=total_chunks,
+                mime=mime,
+            )
+            .prefetch_related("user", "academy")
+            .order_by("chunk_index")
+        )
+
+        if (n := await chunks.acount()) < total_chunks:
+            missing_chunks = total_chunks - n
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en=f"{missing_chunks}/{total_chunks} chunks are missing",
+                    es=f"{missing_chunks}/{total_chunks} chunks están faltando",
+                    slug="some-chunks-not-found",
+                ),
+                code=400,
+            )
+        res = BytesIO()
+
+        storage = Storage()
+
+        # separate it to a cloud function to avoid memory issues
+        async for chunk in chunks:
+            f = BytesIO()
+
+            uploaded_chunk = storage.file(chunk.bucket, chunk.file_name)
+            uploaded_chunk.download(f)
+
+            res.write(f.getvalue())
+
+            await schedule_deletion.adelay(instance=chunk, sender=chunk.__class__)
+
+        bucket = os.getenv("UPLOAD_BUCKET", "upload-bucket")
+        size = res.tell()
+        res.seek(0)
+
+        hash = hashlib.md5(res.getvalue()).hexdigest()
+        res.seek(0)
+
+        new_file = storage.file(bucket, hash)
+        new_file.upload(res, content_type=mime)
+
+        if file is None:
+            file = await File.objects.acreate(
+                academy=academy,
+                user=request.user,
+                name=file_name,
+                mime=mime,
+                operation_type=self.op_type,
+                size=size,
+                hash=hash,
+                bucket=bucket,
+            )
+        else:
+            file.academy = academy
+            file.user = request.user
+            file.name = file_name
+            file.mime = mime
+            file.operation_type = self.op_type
+            file.size = size
+            file.hash = hash
+            file.bucket = bucket
+            await file.asave()
+
+        return file
+
     async def upload(self, academy_id: Optional[int] = None):
         from breathecode.media.tasks import process_file
         from breathecode.notify.models import Notification
@@ -334,7 +411,6 @@ class ChunkUploadMixin(UploadMixin):
         await super().upload(academy_id, format="json")
         request = self.request
 
-        total_chunks = self.total_chunks
         file_name = request.data.get("filename")
         mime = request.data.get("mime")
 
@@ -403,7 +479,7 @@ class ChunkUploadMixin(UploadMixin):
             mime=mime,
             operation_type=self.op_type,
         ).afirst()
-        if file:
+        if file and file.status not in [File.Status.TRANSFERRING]:
             raise ValidationException(
                 translation(
                     self.lang,
@@ -414,67 +490,17 @@ class ChunkUploadMixin(UploadMixin):
                 code=400,
             )
 
-        chunks = (
-            Chunk.objects.filter(
-                academy=academy,
-                user=request.user,
-                name=file_name,
-                operation_type=self.op_type,
-                total_chunks=total_chunks,
-                mime=mime,
-            )
-            .prefetch_related("user", "academy")
-            .order_by("chunk_index")
-        )
+        if file is None or request.data.get("overwrite", False) is True:
+            file = await self.upload_file(file_name, mime, academy, file)
 
-        if (n := await chunks.acount()) < total_chunks:
-            missing_chunks = total_chunks - n
-            raise ValidationException(
-                translation(
-                    self.lang,
-                    en=f"{missing_chunks}/{total_chunks} chunks are missing",
-                    es=f"{missing_chunks}/{total_chunks} chunks están faltando",
-                    slug="some-chunks-not-found",
-                ),
-                code=400,
-            )
-        res = BytesIO()
-
-        storage = Storage()
-
-        # separate it to a cloud function to avoid memory issues
-        async for chunk in chunks:
-            f = BytesIO()
-
-            uploaded_chunk = storage.file(chunk.bucket, chunk.file_name)
-            uploaded_chunk.download(f)
-
-            res.write(f.getvalue())
-
-            await schedule_deletion.adelay(instance=chunk, sender=chunk.__class__)
-
-        bucket = os.getenv("UPLOAD_BUCKET", "upload-bucket")
-        size = res.tell()
-        res.seek(0)
-
-        hash = hashlib.md5(res.getvalue()).hexdigest()
-        res.seek(0)
-
-        new_file = storage.file(bucket, hash)
-        new_file.upload(res, content_type=mime)
+        elif file:
+            storage = Storage()
+            new_file = storage.file(file.bucket, file.hash)
+            if new_file.exists() is False:
+                file = await self.upload_file(file_name, mime, academy, file)
 
         notification_id = None
 
-        file = await File.objects.acreate(
-            academy=academy,
-            user=request.user,
-            name=file_name,
-            mime=mime,
-            operation_type=self.op_type,
-            size=size,
-            hash=hash,
-            bucket=bucket,
-        )
         if MEDIA_SETTINGS[self.op_type]["process"]:
             file.status = File.Status.TRANSFERRING
             await file.asave()
