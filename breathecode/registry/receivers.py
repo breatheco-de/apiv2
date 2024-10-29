@@ -112,7 +112,7 @@ def post_assignment_created(sender, instance: Task, **kwargs):
 def post_webhook_received(sender, instance, **kwargs):
     if instance.scope in ["push"]:
         logger.debug("Received github webhook signal for push")
-        async_synchonize_repository_content.delay(instance.id)
+        async_synchonize_repository_content.delay(instance.id, override_meta=True)
 
 
 @receiver(syllabus_version_json_updated, sender=SyllabusVersion)

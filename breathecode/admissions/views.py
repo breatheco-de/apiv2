@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 import math
 
@@ -8,6 +9,7 @@ from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
 from django.http import HttpResponse
+from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import permission_classes
@@ -31,6 +33,7 @@ from breathecode.utils import (
 )
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.i18n import translation
+from breathecode.utils.views import render_message
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
 from .models import (
@@ -79,6 +82,54 @@ from .serializers import (
 from .utils import CohortLog
 
 logger = logging.getLogger(__name__)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def render_syllabus_preview(request, syllabus_id, version):
+
+    syllabus_slug = None
+    if not syllabus_id.isnumeric():
+        syllabus_slug = syllabus_id
+        syllabus_id = None
+
+    syllabus_version = None
+    if version == "latest":
+        syllabus_version = (
+            SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+            )
+            .latest("created_at")
+            .first()
+        )
+    else:
+        syllabus_version = (
+            SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+            )
+            .filter(version=version)
+            .first()
+        )
+
+    if syllabus_version is None:
+        return render_message(request, f"Syllabus Version {syllabus_id} {version} not found")
+
+    payload = GetSyllabusVersionSerializer(syllabus_version).data
+    response = render(
+        request,
+        "syllabus.html",
+        {
+            **payload,
+            "code": json.dumps(payload["json"], indent=4),
+            "theme": request.GET.get("theme", "light"),
+            "plain": request.GET.get("plain", "false"),
+        },
+    )
+
+    # Set Content-Security-Policy header
+    response["Content-Security-Policy"] = "frame-ancestors 'self' https://4geeks.com"
+
+    return response
 
 
 @api_view(["GET"])

@@ -7,6 +7,7 @@ from django.contrib import admin, messages
 from django.db.models import Q
 from django.utils.html import format_html
 
+# from breathecode.admissions.admin import SyllabusVersionAdmin
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.admin import change_field
 
@@ -896,11 +897,18 @@ def add_translations_into_json(modeladmin, request, queryset):
 
 @admin.register(SyllabusVersionProxy)
 class SyllabusVersionAdmin(admin.ModelAdmin):
-    list_display = ["syllabus", "version", "status"]
+    list_display = ["syllabus", "version", "status", "url_path"]
     search_fields = ("syllabus__slug", "syllabus__name")
     # raw_id_fields = ['assets']
     list_filter = ["syllabus"]
     actions = [add_translations_into_json]
+
+    def url_path(self, obj):
+        return format_html(
+            f"""
+            <a rel='noopener noreferrer' target='_blank' href='/v1/admissions/syllabus/{obj.syllabus.id}/version/{obj.version}/preview'>preview</a>
+        """
+        )
 
 
 @admin.register(ContentVariable)

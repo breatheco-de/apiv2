@@ -32,6 +32,7 @@ from .views import (
     get_single_academy,
     get_timezones,
     handle_test_syllabus,
+    render_syllabus_preview,
 )
 
 app_name = "admissions"
@@ -113,6 +114,11 @@ urlpatterns = [
         "syllabus/<str:syllabus_id>/version/<str:version>.csv",
         SyllabusVersionCSVView.as_view(),
         name="syllabus_id_version_csv",
+    ),
+    path(
+        "syllabus/<str:syllabus_id>/version/<str:version>/preview",
+        render_syllabus_preview,
+        name="syllabus_id_version_preview",
     ),
     path(
         "syllabus/<int:syllabus_id>/version/<int:version>",
