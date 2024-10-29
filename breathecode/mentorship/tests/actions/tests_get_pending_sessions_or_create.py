@@ -9,6 +9,7 @@ import pytest
 from django.utils import timezone
 
 from breathecode.authenticate.models import Token
+from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
 
 from ... import actions
@@ -51,7 +52,6 @@ def format_mentorship_session_attrs(attrs={}):
         "suggested_accounted_duration": None,
         "summary": None,
         "questions_and_answers": None,
-        "meta": None,
         **attrs,
     }
 
@@ -60,6 +60,7 @@ class GoogleMeetMock:
 
     def __init__(self, meeting_uri="https://meet.google.com/fake"):
         self.meeting_uri = meeting_uri
+        self.name = "asdasd"
 
 
 def get_title(pk, service, mentor) -> str:
@@ -114,6 +115,11 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         __init__=MagicMock(return_value=None),
         create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri="https://meet.google.com/fake")),
     )
+    @patch.multiple(
+        "breathecode.services.google_apps.google_apps.GoogleApps",
+        __init__=MagicMock(return_value=None),
+        subscribe_meet_webhook=MagicMock(),
+    )
     @patch("breathecode.mentorship.signals.mentorship_session_status.send", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=ENDS_AT))
     @patch("breathecode.mentorship.actions.close_older_sessions", MagicMock())
@@ -137,11 +143,18 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
 
         self.assertEqual(self.bc.database.list_of("mentorship.MentorshipSession"), [])
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+        assert GoogleApps.__init__.call_args_list == []
+        assert GoogleApps.subscribe_meet_webhook.call_args_list == []
 
     @patch.multiple(
         "breathecode.services.google_meet.google_meet.GoogleMeet",
         __init__=MagicMock(return_value=None),
         create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri="https://meet.google.com/fake")),
+    )
+    @patch.multiple(
+        "breathecode.services.google_apps.google_apps.GoogleApps",
+        __init__=MagicMock(return_value=None),
+        subscribe_meet_webhook=MagicMock(),
     )
     @patch("breathecode.mentorship.signals.mentorship_session_status.send", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=ENDS_AT))
@@ -167,11 +180,18 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
 
         self.assertEqual(self.bc.database.list_of("mentorship.MentorshipSession"), [])
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+        assert GoogleApps.__init__.call_args_list == []
+        assert GoogleApps.subscribe_meet_webhook.call_args_list == []
 
     @patch.multiple(
         "breathecode.services.google_meet.google_meet.GoogleMeet",
         __init__=MagicMock(return_value=None),
         create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri="https://meet.google.com/fake")),
+    )
+    @patch.multiple(
+        "breathecode.services.google_apps.google_apps.GoogleApps",
+        __init__=MagicMock(return_value=None),
+        subscribe_meet_webhook=MagicMock(),
     )
     @patch("breathecode.mentorship.signals.mentorship_session_status.send", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=ENDS_AT))
@@ -214,13 +234,28 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                         # "name": get_title(1, models.mentorship_service, models.mentor_profile),
                         "online_meeting_url": "https://meet.google.com/fake",
                         "ends_at": ENDS_AT + timedelta(seconds=3600),
-                        "meta": {},
                     }
                 ),
             ],
         )
 
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+        assert GoogleApps.__init__.call_args_list == [
+            call(id_token=models.credentials_google.id_token, refresh_token=models.credentials_google.refresh_token)
+        ]
+        assert GoogleApps.subscribe_meet_webhook.call_args_list == [
+            call(
+                name="asdasd",
+                event_types=[
+                    "google.workspace.meet.conference.v2.started",
+                    "google.workspace.meet.conference.v2.ended",
+                    "google.workspace.meet.participant.v2.joined",
+                    "google.workspace.meet.participant.v2.left",
+                    "google.workspace.meet.recording.v2.fileGenerated",
+                    "google.workspace.meet.transcript.v2.fileGenerated",
+                ],
+            )
+        ]
 
     @patch(REQUESTS_PATH["request"], apply_requests_request_mock([(200, daily_url, daily_payload)]))
     @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
@@ -403,6 +438,11 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         __init__=MagicMock(return_value=None),
         create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri="https://meet.google.com/fake")),
     )
+    @patch.multiple(
+        "breathecode.services.google_apps.google_apps.GoogleApps",
+        __init__=MagicMock(return_value=None),
+        subscribe_meet_webhook=MagicMock(),
+    )
     @patch("breathecode.mentorship.signals.mentorship_session_status.send", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=ENDS_AT))
     @patch("breathecode.mentorship.actions.close_older_sessions", MagicMock())
@@ -444,13 +484,28 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                         "name": "",
                         # "name": get_title(1, models.mentorship_service, models.mentor_profile),
                         "online_meeting_url": "https://meet.google.com/fake",
-                        "meta": {},
                     }
                 ),
             ],
         )
 
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+        assert GoogleApps.__init__.call_args_list == [
+            call(id_token=models.credentials_google.id_token, refresh_token=models.credentials_google.refresh_token)
+        ]
+        assert GoogleApps.subscribe_meet_webhook.call_args_list == [
+            call(
+                name="asdasd",
+                event_types=[
+                    "google.workspace.meet.conference.v2.started",
+                    "google.workspace.meet.conference.v2.ended",
+                    "google.workspace.meet.participant.v2.joined",
+                    "google.workspace.meet.participant.v2.left",
+                    "google.workspace.meet.recording.v2.fileGenerated",
+                    "google.workspace.meet.transcript.v2.fileGenerated",
+                ],
+            )
+        ]
 
     @patch(REQUESTS_PATH["request"], apply_requests_request_mock([(200, daily_url, daily_payload)]))
     @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())
@@ -577,6 +632,11 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
         __init__=MagicMock(return_value=None),
         create_space=MagicMock(return_value=GoogleMeetMock(meeting_uri="https://meet.google.com/fake")),
     )
+    @patch.multiple(
+        "breathecode.services.google_apps.google_apps.GoogleApps",
+        __init__=MagicMock(return_value=None),
+        subscribe_meet_webhook=MagicMock(),
+    )
     @patch("breathecode.mentorship.signals.mentorship_session_status.send", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=ENDS_AT))
     @patch("breathecode.mentorship.actions.close_older_sessions", MagicMock())
@@ -648,13 +708,28 @@ class GetOrCreateSessionTestSuite(MentorshipTestCase):
                         # "name": get_title(3, models.mentorship_service, models.mentor_profile),
                         "online_meeting_url": "https://meet.google.com/fake",
                         "service_id": 2,
-                        "meta": {},
                     }
                 ),
             ],
         )
 
         self.assertEqual(actions.close_older_sessions.call_args_list, [call()])
+        assert GoogleApps.__init__.call_args_list == [
+            call(id_token=models.credentials_google.id_token, refresh_token=models.credentials_google.refresh_token)
+        ]
+        assert GoogleApps.subscribe_meet_webhook.call_args_list == [
+            call(
+                name="asdasd",
+                event_types=[
+                    "google.workspace.meet.conference.v2.started",
+                    "google.workspace.meet.conference.v2.ended",
+                    "google.workspace.meet.participant.v2.joined",
+                    "google.workspace.meet.participant.v2.left",
+                    "google.workspace.meet.recording.v2.fileGenerated",
+                    "google.workspace.meet.transcript.v2.fileGenerated",
+                ],
+            )
+        ]
 
     @patch(REQUESTS_PATH["request"], apply_requests_request_mock([(200, daily_url, daily_payload)]))
     @patch("breathecode.mentorship.signals.mentorship_session_status.send_robust", MagicMock())

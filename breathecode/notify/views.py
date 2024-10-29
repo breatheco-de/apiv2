@@ -1,7 +1,9 @@
 import logging
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.db.models import Q
 from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -9,11 +11,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.utils import APIViewExtensions, GenerateLookupsMixin
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import get_template_content
-from .models import Hook, SlackTeam
-from .serializers import HookSerializer, SlackTeamSerializer
+from .models import Hook, Notification, SlackTeam
+from .serializers import HookSerializer, NotificationSerializer, SlackTeamSerializer
 from .tasks import async_slack_action, async_slack_command
 
 logger = logging.getLogger(__name__)
@@ -215,4 +216,31 @@ class SlackTeamsView(APIView, GenerateLookupsMixin):
         items = handler.queryset(items)
         serializer = SlackTeamSerializer(items, many=True)
 
+        return handler.response(serializer.data)
+
+
+class NotificationsView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+        items = Notification.objects.filter(user__id=request.user.id)
+
+        if (academies := request.GET.get("academy")) is not None:
+            academies = academies.split(",")
+            items = items.filter(academy__slug__in=academies)
+
+        if (done_at := request.GET.get("done_at")) is not None:
+            items = items.filter(done_at__gte=done_at)
+
+        if request.GET.get("seen") == "true":
+            items = items.filter(seen_at__isnull=False)
+
+        items = handler.queryset(items)
+
+        ids = [x.id for x in items if x.seen_at is None]
+        if ids:
+            Notification.objects.filter(id__in=ids).update(seen_at=timezone.now())
+
+        serializer = NotificationSerializer(items, many=True)
         return handler.response(serializer.data)

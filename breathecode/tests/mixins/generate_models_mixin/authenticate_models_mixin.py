@@ -194,9 +194,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if "user" in models:
                 kargs["user"] = just_one(models["user"])
 
-            models["credentials_facebook"] = create_models(
-                credentials_google, "authenticate.CredentialsGoogle", **kargs
-            )
+            models["credentials_google"] = create_models(credentials_google, "authenticate.CredentialsGoogle", **kargs)
 
         if not "cohort_user" in models and is_valid(cohort_user):
             kargs = {}
