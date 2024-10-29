@@ -479,7 +479,7 @@ class ChunkUploadMixin(UploadMixin):
             mime=mime,
             operation_type=self.op_type,
         ).afirst()
-        if file and file.status not in [File.Status.TRANSFERRING]:
+        if file and file.status in [File.Status.TRANSFERRING]:
             raise ValidationException(
                 translation(
                     self.lang,
@@ -490,14 +490,7 @@ class ChunkUploadMixin(UploadMixin):
                 code=400,
             )
 
-        if file is None or request.data.get("overwrite", False) is True:
-            file = await self.upload_file(file_name, mime, academy, file)
-
-        elif file:
-            storage = Storage()
-            new_file = storage.file(file.bucket, file.hash)
-            if new_file.exists() is False:
-                file = await self.upload_file(file_name, mime, academy, file)
+        file = await self.upload_file(file_name, mime, academy)
 
         notification_id = None
 
