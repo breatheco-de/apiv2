@@ -92,7 +92,6 @@
         width: 100vw;
         height: 100vh;
         display: none;
-        padding: 20px;
         overflow: auto;
     }
 
@@ -144,6 +143,7 @@
 
     #modal-backdrop .content .back-button {
         width: 90px;
+        background: none;
         border: none;
         color: #0097CF;
         font-size: 14px;
@@ -153,8 +153,12 @@
         display: none;
     }
 
+    #modal-backdrop .content .back-button:hover {
+        text-decoration: underline;
+    }
+
     #modal-backdrop .content .os-options {
-        padding: 18px;
+        padding: 16px;
         width: 100%;
     }
 
@@ -164,7 +168,6 @@
 
     #modal-backdrop .content .os-options .os-list {
         display: flex;
-        justify-content: center;
         align-items: center;
         gap: 10px;
         margin-top: 10px;
@@ -172,16 +175,14 @@
     }
 
     .os-item {
-        padding: 20px;
         cursor: pointer;
         border: 1px solid transparent;
-        flex: 1 1 auto;
-        max-width: 100px;
-    }
-
-    #modal-backdrop .content .os-options .os-list img {
-        width: 100%;
-        height: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: min(140px, 100%);
+        height: 140px;
+        background: #F9F9F9;
     }
 
     #modal-backdrop .content .footer {
@@ -217,7 +218,6 @@
         background: #EEF9FE;
         border-radius: 8px;
         border: 1px solid #0097CF;
-        padding: 20px;
     }
 
     #steps-container {
@@ -225,7 +225,6 @@
         flex-direction: column;
         gap: 5px;
     }
-
 
     #steps-container .step-details.open {
         border: 1px solid #0097CF;
@@ -258,24 +257,32 @@
         color: #0097CF;
     }
 
+    .step-details.open a:hover {
+        text-decoration: underline;
+    }
+
     #steps-container {
         margin-top: 10px;
         display: flex;
         gap: 8px;
-
     }
 
     #steps-container .step-details {
         border: 1px solid #DADADA;
         border-radius: 5px;
-        padding: 10px;
+        padding: 12px;
     }
 
     #steps-container .step-details .step-summary {
         list-style-type: none;
         font-size: 18px;
+        font-family: "Space Grotesk", sans-serif;
         display: flex;
         cursor: pointer;
+    }
+
+    #steps-container .step-details .step-summary .stepTitle {
+        padding-right: 20px;
     }
 
     #steps-container .step-details .step-summary .svgContent {
@@ -296,19 +303,24 @@
         transition: all 0.2s ease-in-out;
     }
 
+    .step-details.open .step-content p {
+        font-size: 15px !important;
+    }
+
     .custom-checkbox {
         margin-right: 8px;
         width: 15px;
         height: 15px;
         border: 2px solid #DADADA;
-        border-radius: 1px;
+        border-radius: 1.6px;
         display: inline-block;
         position: relative;
         cursor: pointer;
     }
 
     .custom-checkbox.checked {
-        border: 1px solid #25BF6C;
+        border: 1px solid #3182ce;
+        background: #3182ce;
     }
 
     .custom-checkbox.checked::after {
@@ -318,7 +330,7 @@
         top: 0px;
         width: 3px;
         height: 10px;
-        border: solid #25BF6C;
+        border: solid white;
         border-width: 0 2px 2px 0;
         transform: rotate(45deg);
     }
@@ -365,7 +377,7 @@
         }
 
         #modal-backdrop .content .os-options .os-list {
-            gap: 30px;
+            gap: 20px;
         }
 
         #modal-backdrop .supporting-material {
@@ -427,13 +439,13 @@
                     </strong>
                     <div class="os-list">
                         <div class="os-item" onclick="handleOsItemClick(event)">
-                            <img src="/static/img/os-ios.svg" alt="macos" width="50">
+                            <img src="/static/img/os-ios.svg" alt="macos">
                         </div>
                         <div class="os-item" onclick="handleOsItemClick(event)">
-                            <img src="/static/img/os-linux.svg" alt="linux" width="50">
+                            <img src="/static/img/os-linux.svg" alt="linux">
                         </div>
                         <div class="os-item" onclick="handleOsItemClick(event)">
-                            <img src="/static/img/os-windows.svg" alt="windows" width="50">
+                            <img src="/static/img/os-windows.svg" alt="windows">
                         </div>
                     </div>
                 </div>
@@ -470,7 +482,6 @@
 
         const svgContent = '<svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.79289 13.7071C3.40237 13.3166 3.40237 12.6834 3.79289 12.2929L9.08579 7L3.7929 1.70711C3.40237 1.31658 3.40237 0.683417 3.7929 0.292893C4.18342 -0.0976312 4.81659 -0.0976311 5.20711 0.292894L11.2071 6.2929C11.5976 6.68342 11.5976 7.31659 11.2071 7.70711L5.20711 13.7071C4.81658 14.0976 4.18342 14.0976 3.79289 13.7071Z" fill="#00041A"/></svg>'
         const agent = "{{agent}}"
-
 
         function displayVideo(url) {
             const videoId = url.split('v=')[1].split('&')[0];
@@ -537,9 +548,9 @@
                     const stepSummary = document.createElement('div');
                     stepSummary.classList.add('step-summary');
 
-                    const checkbox = `<div class="custom-checkbox" onclick="toggleCheckbox(event)"></div>`;
+                    const checkbox = `<div class="custom-checkbox" onclick="toggleCheckbox()"></div>`;
 
-                    stepSummary.innerHTML = `<div>${checkbox}</div><div><span>${index + 1}. ${step.label}</span></div> <div class="svgContent">${svgContent}</div>`;
+                    stepSummary.innerHTML = `<div>${checkbox}</div><div class="stepTitle"><span>${index + 1}. ${step.label}</span></div> <div class="svgContent">${svgContent}</div>`;
                     stepDetails.appendChild(stepSummary);
 
                     stepSummary.addEventListener("click", function (event) {
@@ -555,8 +566,13 @@
                 });
                 stepsContainer.style.display = 'flex';
             } else {
-                console.error('No se encontraron pasos para el sistema operativo');
+                console.error('No steps found for the operating system');
             }
+        }
+
+        function toggleCheckbox() {
+            const checkbox = event.target;
+            checkbox.classList.toggle('checked');
         }
 
         function goBack() {
@@ -583,14 +599,14 @@
             const videoContainer = document.querySelector('#video-container');
             const isOpen = clickedDetails.classList.contains('open')
 
+            if(event.target === checkbox) return
+
             allDetails.forEach(detail => {
                 detail.classList.remove('open');
-                detail.querySelector('.custom-checkbox').classList.remove('checked');
             });
 
             if (!isOpen) {
                 clickedDetails.classList.add('open');
-                checkbox.classList.toggle('checked');
                 const urlVideo = clickedDetails.getAttribute('urlVideo');
 
                 if (urlVideo) {
