@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import Any, Optional
 
 from asgiref.sync import sync_to_async
+from capyc.rest_framework.exceptions import ValidationException
 from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.contrib.auth.models import Group, Permission, User
@@ -24,7 +25,6 @@ from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import signals
 from breathecode.utils.i18n import translation
 from breathecode.utils.validators.language import validate_language_code
-from capyc.rest_framework.exceptions import ValidationException
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/
 
@@ -327,19 +327,6 @@ class CohortSet(models.Model):
     cohorts = models.ManyToManyField(
         Cohort, blank=True, through="CohortSetCohort", through_fields=("cohort_set", "cohort")
     )
-
-    def clean(self) -> None:
-        if self.academy.available_as_saas == False:
-            raise forms.ValidationError(
-                translation(
-                    self._lang,
-                    en="Academy is not available as SaaS",
-                    es="La academia no está disponible como SaaS",
-                    slug="academy-not-available-as-saas",
-                )
-            )
-
-        return super().clean()
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()

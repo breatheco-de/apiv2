@@ -119,6 +119,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "breathecode.middlewares.static_redirect_middleware",
     "breathecode.middlewares.set_service_header_middleware",
+    "breathecode.middlewares.detect_pagination_issues_middleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     # Cache

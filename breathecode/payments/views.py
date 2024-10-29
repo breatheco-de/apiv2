@@ -601,6 +601,9 @@ class MeConsumableView(APIView):
             "voids": filter_void_consumable_balance(request, items),
         }
 
+        if request.GET.get("virtual") in ["true", "1", "y"]:
+            actions.set_virtual_balance(balance, request.user)
+
         return Response(balance)
 
 
