@@ -1,3 +1,4 @@
+import traceback
 from collections import OrderedDict
 from typing import Literal, Optional
 
@@ -265,7 +266,7 @@ class Notification(models.Model):
             raise forms.ValidationError("Either user or academy must be provided")
 
         if self.status == self.Status.DONE:
-            self.sent_at = timezone.now()
+            self.done_at = timezone.now()
 
         if self.status == self.Status.PENDING:
             self.sent_at = None
@@ -293,7 +294,10 @@ class Notification(models.Model):
         super().save(*args, **kwargs)
 
         if self.status != self._status and self.status == self.Status.DONE:
-            self._send_notification()
+            try:
+                self._send_notification()
+            except Exception:
+                traceback.print_exc()
 
         self._status = self.status
 

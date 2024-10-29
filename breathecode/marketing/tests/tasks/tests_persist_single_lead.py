@@ -2,21 +2,24 @@
 Test /answer/:id
 """
 
-import requests
-from breathecode.marketing.tasks import persist_single_lead
 import logging
-import string, os
-from unittest.mock import patch, MagicMock, call
-
+import os
+import string
 from random import choice, choices, randint
+from unittest.mock import MagicMock, call, patch
+
+import requests
+from faker import Faker
+
+from breathecode.marketing.tasks import persist_single_lead
 from breathecode.tests.mocks import (
     OLD_BREATHECODE_INSTANCES,
     apply_old_breathecode_requests_request_mock,
     apply_requests_get_mock,
 )
 from breathecode.tests.mocks.requests import apply_requests_post_mock
+
 from ..mixins import MarketingTestCase
-from faker import Faker
 
 MAILGUN_URL = f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages"
 
@@ -199,9 +202,13 @@ class AnswerIdTestSuite(MarketingTestCase):
                 call("Starting persist_single_lead"),
             ],
         )
-        self.assertEqual(
-            logging.Logger.error.call_args_list, [call("No academy found with slug they-killed-kenny", exc_info=True)]
-        )
+        assert logging.Logger.error.call_args_list == [
+            call(
+                "No CRM vendor information for academy with slug they-killed-kenny. "
+                "Is Active Campaign or Brevo used?",
+                exc_info=True,
+            )
+        ]
 
         self.assertEqual(requests.get.error.call_args_list, [])
         self.assertEqual(requests.post.error.call_args_list, [])
@@ -330,7 +337,9 @@ class AnswerIdTestSuite(MarketingTestCase):
             str(
                 [
                     call(
-                        "Some tag applied to the contact not found or have tag_type different than [STRONG, SOFT, DISCOVER, OTHER]: Check for the follow tags:  they-killed-kenny",
+                        "Some tag applied to the contact not found or have tag_type different than "
+                        f"[STRONG, SOFT, DISCOVER, OTHER] for this academy {model.academy.name}. "
+                        "Check for the follow tags:  they-killed-kenny",
                         exc_info=True,
                     ),
                 ]
@@ -380,7 +389,9 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(
             logging.Logger.error.call_args_list,
             [
-                call("No automation was specified and the the specified tag has no automation either", exc_info=True),
+                call(
+                    "No automation was specified and the specified tag (if any) has no automation either", exc_info=True
+                ),
             ],
         )
 
@@ -493,7 +504,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             [
                 call("Starting persist_single_lead"),
                 call("found automations"),
-                call([model.automation.acp_id]),
+                call([model.automation]),
                 call("found tags"),
                 call({model.tag.slug}),
             ],
@@ -544,7 +555,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             [
                 call("Starting persist_single_lead"),
                 call("found automations"),
-                call([model.automation.acp_id]),
+                call([model.automation]),
                 call("found tags"),
                 call({model.tag.slug}),
             ],
@@ -601,7 +612,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             [
                 call("Starting persist_single_lead"),
                 call("found automations"),
-                call([model.automation.acp_id]),
+                call([model.automation]),
                 call("found tags"),
                 call({model.tag.slug}),
             ],
@@ -659,7 +670,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             [
                 call("Starting persist_single_lead"),
                 call("found automations"),
-                call([model.automation.acp_id]),
+                call([model.automation]),
                 call("found tags"),
                 call({model.tag.slug}),
             ],
@@ -718,7 +729,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             [
                 call("Starting persist_single_lead"),
                 call("found automations"),
-                call([model.automation.acp_id]),
+                call([model.automation]),
                 call("found tags"),
                 call({model.tag.slug}),
             ],
@@ -778,7 +789,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             [
                 call("Starting persist_single_lead"),
                 call("found automations"),
-                call([model.automation.acp_id]),
+                call([model.automation]),
                 call("found tags"),
                 call({model.tag.slug}),
             ],
@@ -842,7 +853,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             [
                 call("Starting persist_single_lead"),
                 call("found automations"),
-                call([model.automation.acp_id]),
+                call([model.automation]),
                 call("found tags"),
                 call({model.tag.slug}),
             ],
@@ -925,7 +936,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     #     self.assertEqual(logging.Logger.info.call_args_list, [
     #         call('Starting persist_single_lead'),
     #         call('found automations'),
-    #         call([model.automation.acp_id]),
+    #         call([model.automation]),
     #         call('found tags'),
     #         call({model.tag.slug}),
     #         call('ready to send contact with following details: ' + str({
@@ -1058,7 +1069,6 @@ class AnswerIdTestSuite(MarketingTestCase):
                 fix_db_field(self.bc.format.to_dict(model.form_entry[0])),
                 {
                     **db,
-                    "ac_contact_id": "1",
                     "ac_expected_cohort": None,
                     "latitude": form.latitude,
                     "longitude": form.longitude,
@@ -1074,49 +1084,14 @@ class AnswerIdTestSuite(MarketingTestCase):
             [
                 call("Starting persist_single_lead"),
                 call("found automations"),
-                call([model.automation.acp_id]),
+                call([model.automation]),
                 call("found tags"),
                 call({model.tag.slug}),
-                call(
-                    "ready to send contact with following details: "
-                    + str(
-                        {
-                            "email": "pokemon@potato.io",
-                            "first_name": "Konan",
-                            "last_name": "Amegakure",
-                            "phone": "123123123",
-                            "field[18,0]": model.academy.slug,
-                            "field[2,0]": "asdasd",
-                        }
-                    )
-                ),
-                call("FormEntry is considered a duplicate, no automations or tags added"),
+                call("FormEntry is considered a duplicate, not sent to CRM and no automations or tags added"),
             ],
         )
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(requests.get.call_args_list, [])
         self.assertEqual(requests.post.call_args_list, [])
-        self.assertEqual(
-            requests.request.call_args_list,
-            [
-                call(
-                    "POST",
-                    "https://old.hardcoded.breathecode.url/admin/api.php",
-                    params=[
-                        ("api_action", "contact_sync"),
-                        ("api_key", model["active_campaign_academy"].ac_key),
-                        ("api_output", "json"),
-                    ],
-                    data={
-                        "email": "pokemon@potato.io",
-                        "first_name": "Konan",
-                        "last_name": "Amegakure",
-                        "phone": "123123123",
-                        "field[18,0]": model["academy"].slug,
-                        "field[2,0]": "asdasd",
-                    },
-                    timeout=3,
-                ),
-            ],
-        )
+        self.assertEqual(requests.request.call_args_list, [])

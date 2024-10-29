@@ -1,13 +1,15 @@
 from django.urls import path
+
 from .views import (
-    test_email,
+    HooksView,
+    NotificationsView,
+    SlackTeamsView,
+    get_sample_data,
+    preview_slack_template,
     preview_template,
     process_interaction,
     slack_command,
-    preview_slack_template,
-    HooksView,
-    get_sample_data,
-    SlackTeamsView,
+    test_email,
 )
 
 app_name = "notify"
@@ -22,4 +24,5 @@ urlpatterns = [
     path("hook/<int:hook_id>/sample", get_sample_data),
     path("slack/command", slack_command, name="slack_command"),
     path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
+    path("me/notification", NotificationsView.as_view(), name="me_notification"),
 ]

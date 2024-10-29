@@ -76,6 +76,7 @@ def get_serializer(asset, data={}):
         "visibility": asset.visibility,
         "enable_table_of_content": asset.enable_table_of_content,
         "interactive": asset.interactive,
+        "learnpack_deploy_url": asset.learnpack_deploy_url,
         **data,
     }
 
@@ -261,7 +262,6 @@ def test_assets_expand_readme_ipynb(bc: Breathecode, client):
     json = response.json()
 
     asset_readme = model.asset.get_readme()
-    print(asset_readme)
 
     expected = [
         get_mid_serializer(

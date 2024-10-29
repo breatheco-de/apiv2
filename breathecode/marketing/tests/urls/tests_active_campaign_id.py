@@ -4,7 +4,9 @@ Test /activecampaign/ac_id
 
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from breathecode.services import datetime_to_iso_format
+
 from ..mixins import MarketingTestCase
 
 
@@ -130,6 +132,7 @@ class ActiveCampaignIdTestSuite(MarketingTestCase):
 
         expected = {
             "id": 1,
+            "crm_vendor": "ACTIVE_CAMPAIGN",
             "event_attendancy_automation": None,
             "last_interaction_at": None,
             "sync_message": None,
