@@ -1165,15 +1165,22 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
     ]
 
     available_event_type_sets = EventTypeSet.objects.filter(
-        academy__profileacademy__user=user, id__in=event_type_set_ids
+        academy__available_as_saas=False,
+        academy__profileacademy__user=user,
+        id__in=event_type_set_ids,
     ).values_list("id", flat=True)
 
-    available_cohort_sets = CohortSet.objects.filter(cohorts__cohortuser__user=user, id__in=cohort_set_ids).values_list(
-        "id", flat=True
-    )
+    available_cohort_sets = CohortSet.objects.filter(
+        academy__available_as_saas=False,
+        cohorts__cohortuser__user=user,
+        # cohorts__cohortuser__cohort__academy__available_as_saas=False,
+        id__in=cohort_set_ids,
+    ).values_list("id", flat=True)
 
     available_mentorship_service_sets = MentorshipServiceSet.objects.filter(
-        academy__profileacademy__user=user, id__in=mentorship_service_set_ids
+        academy__available_as_saas=False,
+        academy__profileacademy__user=user,
+        id__in=mentorship_service_set_ids,
     ).values_list("id", flat=True)
 
     balance_mapping: dict[str, dict[int, int]] = {

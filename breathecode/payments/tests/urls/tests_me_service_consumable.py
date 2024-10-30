@@ -1389,7 +1389,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x["how_many"] for x in belong_to2]) + sum([rand2 * (1 + n) for n in range(3)])
         how_many_belong_to3 = sum([x["how_many"] for x in belong_to3]) + sum([rand3 * (1 + n) for n in range(3)])
 
-        academy = {"available_as_saas": True}
+        academy = {"available_as_saas": False}
 
         model = self.bc.database.create(
             user=1,
@@ -1479,6 +1479,89 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__append_to_same_balance___cohort_set__with_three_virtual_consumables__as_saas(self, monkeypatch):
+        from breathecode.payments.utils import reset_cache
+
+        reset_cache()
+
+        rand1 = random.randint(1, 9)
+        rand2 = random.randint(1, 9)
+        rand3 = random.randint(1, 9)
+
+        monkeypatch.setattr(
+            "breathecode.payments.data.get_virtual_consumables",
+            get_virtual_consumables_mock(
+                *[{"resource": "cohort_set", "id": 1, "service": 2 + n, "how_many": rand1 * (1 + n)} for n in range(3)],
+                *[{"resource": "cohort_set", "id": 2, "service": 5 + n, "how_many": rand2 * (1 + n)} for n in range(3)],
+                *[{"resource": "cohort_set", "id": 3, "service": 8 + n, "how_many": rand3 * (1 + n)} for n in range(3)],
+            ),
+        )
+        consumables = [{"how_many": random.randint(1, 30), "cohort_set_id": math.floor(n / 3) + 1} for n in range(9)]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        academy = {"available_as_saas": True}
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            cohort_set=3,
+            cohort_set_cohort=[{"cohort_set_id": 1 + n} for n in range(3)],
+            academy=academy,
+            service=(10, {"type": "COHORT_SET"}),
+            cohort={"available_as_saas": True},
+            cohort_user=1,
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            "mentorship_service_sets": [],
+            "cohort_sets": [
+                {
+                    "balance": {"unit": how_many_belong_to1},
+                    "id": model.cohort_set[0].id,
+                    "slug": model.cohort_set[0].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.cohort_set[1].id,
+                    "slug": model.cohort_set[1].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.cohort_set[2].id,
+                    "slug": model.cohort_set[2].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+            ],
+            "event_type_sets": [],
+            "voids": [],
+        }
+
+        assert json == expected
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("payments.Consumable"),
+            self.bc.format.to_dict(model.consumable),
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__append_to_same_balance___mentorship_service_set__with_three_virtual_consumables(self, monkeypatch):
         from breathecode.payments.utils import reset_cache
 
@@ -1516,7 +1599,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x["how_many"] for x in belong_to2]) + sum([rand2 * (1 + n) for n in range(3)])
         how_many_belong_to3 = sum([x["how_many"] for x in belong_to3]) + sum([rand3 * (1 + n) for n in range(3)])
 
-        academy = {"available_as_saas": True}
+        academy = {"available_as_saas": False}
 
         model = self.bc.database.create(
             user=1,
@@ -1604,6 +1687,100 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__append_to_same_balance___mentorship_service_set__with_three_virtual_consumables__as_saas(
+        self, monkeypatch
+    ):
+        from breathecode.payments.utils import reset_cache
+
+        reset_cache()
+
+        rand1 = random.randint(1, 9)
+        rand2 = random.randint(1, 9)
+        rand3 = random.randint(1, 9)
+
+        monkeypatch.setattr(
+            "breathecode.payments.data.get_virtual_consumables",
+            get_virtual_consumables_mock(
+                *[
+                    {"resource": "mentorship_service_set", "id": 1, "service": 2 + n, "how_many": rand1 * (1 + n)}
+                    for n in range(3)
+                ],
+                *[
+                    {"resource": "mentorship_service_set", "id": 2, "service": 5 + n, "how_many": rand2 * (1 + n)}
+                    for n in range(3)
+                ],
+                *[
+                    {"resource": "mentorship_service_set", "id": 3, "service": 8 + n, "how_many": rand3 * (1 + n)}
+                    for n in range(3)
+                ],
+            ),
+        )
+        consumables = [
+            {"how_many": random.randint(1, 30), "mentorship_service_set_id": math.floor(n / 3) + 1} for n in range(9)
+        ]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        academy = {"available_as_saas": True}
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            mentorship_service_set=3,
+            profile_academy=1,
+            academy=academy,
+            service=(10, {"type": "MENTORSHIP_SERVICE_SET"}),
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            "mentorship_service_sets": [
+                {
+                    "balance": {"unit": how_many_belong_to1},
+                    "id": model.mentorship_service_set[0].id,
+                    "slug": model.mentorship_service_set[0].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.mentorship_service_set[1].id,
+                    "slug": model.mentorship_service_set[1].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.mentorship_service_set[2].id,
+                    "slug": model.mentorship_service_set[2].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+            ],
+            "cohort_sets": [],
+            "event_type_sets": [],
+            "voids": [],
+        }
+
+        assert json == expected
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("payments.Consumable"),
+            self.bc.format.to_dict(model.consumable),
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__append_to_same_balance___event_type_set__with_three_virtual_consumables(self, monkeypatch):
         from breathecode.payments.utils import reset_cache
 
@@ -1641,7 +1818,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x["how_many"] for x in belong_to2]) + sum([rand2 * (1 + n) for n in range(3)])
         how_many_belong_to3 = sum([x["how_many"] for x in belong_to3]) + sum([rand3 * (1 + n) for n in range(3)])
 
-        academy = {"available_as_saas": True}
+        academy = {"available_as_saas": False}
 
         model = self.bc.database.create(
             user=1,
@@ -1716,6 +1893,98 @@ class TestSignal(LegacyAPITestCase):
                             for n in range(3)
                         ],
                     ],
+                },
+            ],
+            "voids": [],
+        }
+
+        assert json == expected
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("payments.Consumable"),
+            self.bc.format.to_dict(model.consumable),
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__append_to_same_balance___event_type_set__with_three_virtual_consumables__as_saas(self, monkeypatch):
+        from breathecode.payments.utils import reset_cache
+
+        reset_cache()
+
+        rand1 = random.randint(1, 9)
+        rand2 = random.randint(1, 9)
+        rand3 = random.randint(1, 9)
+
+        monkeypatch.setattr(
+            "breathecode.payments.data.get_virtual_consumables",
+            get_virtual_consumables_mock(
+                *[
+                    {"resource": "event_type_set", "id": 1, "service": 2 + n, "how_many": rand1 * (1 + n)}
+                    for n in range(3)
+                ],
+                *[
+                    {"resource": "event_type_set", "id": 2, "service": 5 + n, "how_many": rand2 * (1 + n)}
+                    for n in range(3)
+                ],
+                *[
+                    {"resource": "event_type_set", "id": 3, "service": 8 + n, "how_many": rand3 * (1 + n)}
+                    for n in range(3)
+                ],
+            ),
+        )
+        consumables = [
+            {"how_many": random.randint(1, 30), "event_type_set_id": math.floor(n / 3) + 1} for n in range(9)
+        ]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        academy = {"available_as_saas": True}
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            event_type_set=3,
+            profile_academy=1,
+            academy=academy,
+            service=(10, {"type": "EVENT_TYPE_SET"}),
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            "mentorship_service_sets": [],
+            "cohort_sets": [],
+            "event_type_sets": [
+                {
+                    "balance": {"unit": how_many_belong_to1},
+                    "id": model.event_type_set[0].id,
+                    "slug": model.event_type_set[0].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.event_type_set[1].id,
+                    "slug": model.event_type_set[1].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.event_type_set[2].id,
+                    "slug": model.event_type_set[2].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
                 },
             ],
             "voids": [],
@@ -1871,7 +2140,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
         how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
 
-        academy = {"available_as_saas": True}
+        academy = {"available_as_saas": False}
 
         model = self.bc.database.create(
             user=1,
@@ -1977,6 +2246,89 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__append_to_new_balance___cohort_set__with_three_virtual_consumables__as_saas(self, monkeypatch):
+        from breathecode.payments.utils import reset_cache
+
+        reset_cache()
+
+        rand1 = random.randint(1, 9)
+        rand2 = random.randint(1, 9)
+        rand3 = random.randint(1, 9)
+
+        monkeypatch.setattr(
+            "breathecode.payments.data.get_virtual_consumables",
+            get_virtual_consumables_mock(
+                *[{"resource": "cohort_set", "id": 4, "service": 2 + n, "how_many": rand1 * (1 + n)} for n in range(3)],
+                *[{"resource": "cohort_set", "id": 5, "service": 5 + n, "how_many": rand2 * (1 + n)} for n in range(3)],
+                *[{"resource": "cohort_set", "id": 6, "service": 8 + n, "how_many": rand3 * (1 + n)} for n in range(3)],
+            ),
+        )
+        consumables = [{"how_many": random.randint(1, 30), "cohort_set_id": math.floor(n / 3) + 1} for n in range(9)]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        academy = {"available_as_saas": True}
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            cohort_set=6,
+            cohort_set_cohort=[{"cohort_set_id": 4 + n} for n in range(3)],
+            academy=academy,
+            service=(10, {"type": "COHORT_SET"}),
+            cohort={"available_as_saas": True},
+            cohort_user=1,
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            "mentorship_service_sets": [],
+            "cohort_sets": [
+                {
+                    "balance": {"unit": how_many_belong_to1},
+                    "id": model.cohort_set[0].id,
+                    "slug": model.cohort_set[0].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.cohort_set[1].id,
+                    "slug": model.cohort_set[1].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.cohort_set[2].id,
+                    "slug": model.cohort_set[2].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+            ],
+            "event_type_sets": [],
+            "voids": [],
+        }
+
+        assert json == expected
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("payments.Consumable"),
+            self.bc.format.to_dict(model.consumable),
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__append_to_new_balance___event_type_set__with_three_virtual_consumables(self, monkeypatch):
         from breathecode.payments.utils import reset_cache
 
@@ -2014,7 +2366,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
         how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
 
-        academy = {"available_as_saas": True}
+        academy = {"available_as_saas": False}
 
         model = self.bc.database.create(
             user=1,
@@ -2118,6 +2470,98 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__append_to_new_balance___event_type_set__with_three_virtual_consumables__as_saas(self, monkeypatch):
+        from breathecode.payments.utils import reset_cache
+
+        reset_cache()
+
+        rand1 = random.randint(1, 9)
+        rand2 = random.randint(1, 9)
+        rand3 = random.randint(1, 9)
+
+        monkeypatch.setattr(
+            "breathecode.payments.data.get_virtual_consumables",
+            get_virtual_consumables_mock(
+                *[
+                    {"resource": "event_type_set", "id": 4, "service": 2 + n, "how_many": rand1 * (1 + n)}
+                    for n in range(3)
+                ],
+                *[
+                    {"resource": "event_type_set", "id": 5, "service": 5 + n, "how_many": rand2 * (1 + n)}
+                    for n in range(3)
+                ],
+                *[
+                    {"resource": "event_type_set", "id": 6, "service": 8 + n, "how_many": rand3 * (1 + n)}
+                    for n in range(3)
+                ],
+            ),
+        )
+        consumables = [
+            {"how_many": random.randint(1, 30), "event_type_set_id": math.floor(n / 3) + 1} for n in range(9)
+        ]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        academy = {"available_as_saas": True}
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            event_type_set=6,
+            academy=academy,
+            service=(10, {"type": "EVENT_TYPE_SET"}),
+            profile_academy=1,
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            "mentorship_service_sets": [],
+            "cohort_sets": [],
+            "event_type_sets": [
+                {
+                    "balance": {"unit": how_many_belong_to1},
+                    "id": model.event_type_set[0].id,
+                    "slug": model.event_type_set[0].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.event_type_set[1].id,
+                    "slug": model.event_type_set[1].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.event_type_set[2].id,
+                    "slug": model.event_type_set[2].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+            ],
+            "voids": [],
+        }
+
+        assert json == expected
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("payments.Consumable"),
+            self.bc.format.to_dict(model.consumable),
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__append_to_new_balance___mentorship_service_set__with_three_virtual_consumables(self, monkeypatch):
         from breathecode.payments.utils import reset_cache
 
@@ -2155,7 +2599,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
         how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
 
-        academy = {"available_as_saas": True}
+        academy = {"available_as_saas": False}
 
         model = self.bc.database.create(
             user=1,
@@ -2259,6 +2703,100 @@ class TestSignal(LegacyAPITestCase):
         )
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__append_to_new_balance___mentorship_service_set__with_three_virtual_consumables__as_saas(
+        self, monkeypatch
+    ):
+        from breathecode.payments.utils import reset_cache
+
+        reset_cache()
+
+        rand1 = random.randint(1, 9)
+        rand2 = random.randint(1, 9)
+        rand3 = random.randint(1, 9)
+
+        monkeypatch.setattr(
+            "breathecode.payments.data.get_virtual_consumables",
+            get_virtual_consumables_mock(
+                *[
+                    {"resource": "mentorship_service_set", "id": 4, "service": 2 + n, "how_many": rand1 * (1 + n)}
+                    for n in range(3)
+                ],
+                *[
+                    {"resource": "mentorship_service_set", "id": 5, "service": 5 + n, "how_many": rand2 * (1 + n)}
+                    for n in range(3)
+                ],
+                *[
+                    {"resource": "mentorship_service_set", "id": 6, "service": 8 + n, "how_many": rand3 * (1 + n)}
+                    for n in range(3)
+                ],
+            ),
+        )
+        consumables = [
+            {"how_many": random.randint(1, 30), "mentorship_service_set_id": math.floor(n / 3) + 1} for n in range(9)
+        ]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        academy = {"available_as_saas": True}
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            mentorship_service_set=6,
+            academy=academy,
+            service=(10, {"type": "MENTORSHIP_SERVICE_SET"}),
+            profile_academy=1,
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
+        response = self.client.get(url)
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        expected = {
+            "mentorship_service_sets": [
+                {
+                    "balance": {"unit": how_many_belong_to1},
+                    "id": model.mentorship_service_set[0].id,
+                    "slug": model.mentorship_service_set[0].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.mentorship_service_set[1].id,
+                    "slug": model.mentorship_service_set[1].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.mentorship_service_set[2].id,
+                    "slug": model.mentorship_service_set[2].slug,
+                    "items": [serialize_consumable(model.consumable[n]) for n in range(9)],
+                },
+            ],
+            "cohort_sets": [],
+            "event_type_sets": [],
+            "voids": [],
+        }
+
+        assert json == expected
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("payments.Consumable"),
+            self.bc.format.to_dict(model.consumable),
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__append_to_new_balance___service__with_three_virtual_consumables(self, monkeypatch):
         from breathecode.payments.utils import reset_cache
 
@@ -2287,7 +2825,7 @@ class TestSignal(LegacyAPITestCase):
         how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
         how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
 
-        academy = {"available_as_saas": True}
+        academy = {"available_as_saas": False}
 
         model = self.bc.database.create(
             user=1,
