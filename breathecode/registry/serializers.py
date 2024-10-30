@@ -514,6 +514,12 @@ class AssetCategorySerializer(serpy.Serializer):
     academy = AcademySmallSerializer()
 
 
+class AssetContextSerializer(serpy.Serializer):
+    id = serpy.Field()
+    asset = AssetTinySerializer()
+    ai_context = serpy.Field()
+
+
 class _Keyword(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
