@@ -1,7 +1,7 @@
 import math
 import random
 from typing import Callable, Literal, TypedDict
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from aiohttp_retry import Any
@@ -1404,8 +1404,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=True
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -1520,8 +1523,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=False
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -1612,8 +1618,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=True
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -1739,8 +1748,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=False
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -1831,8 +1843,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=True
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -1956,8 +1971,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=False
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -2036,7 +2054,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=True
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -2109,6 +2131,89 @@ class TestSignal(LegacyAPITestCase):
             self.bc.format.to_dict(model.consumable),
         )
 
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__append_to_same_balance___service__with_three_virtual_consumables__as_saas(self, monkeypatch):
+        from breathecode.payments.utils import reset_cache
+
+        reset_cache()
+
+        rand1 = random.randint(1, 9)
+        rand2 = random.randint(1, 9)
+        rand3 = random.randint(1, 9)
+
+        monkeypatch.setattr(
+            "breathecode.payments.data.get_virtual_consumables",
+            get_virtual_consumables_mock(
+                *[{"service": 1, "how_many": rand1 * (1 + n)} for n in range(3)],
+                *[{"service": 2, "how_many": rand2 * (1 + n)} for n in range(3)],
+                *[{"service": 3, "how_many": rand3 * (1 + n)} for n in range(3)],
+            ),
+        )
+
+        consumables = [{"how_many": random.randint(1, 30), "service_item_id": math.floor(n / 3) + 1} for n in range(9)]
+        service_items = [{"service_id": n + 1} for n in range(3)]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            service_item=service_items,
+            service=[{"type": "VOID"} for _ in range(3)],
+        )
+
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=False
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
+
+        json = response.json()
+        expected = {
+            "mentorship_service_sets": [],
+            "cohort_sets": [],
+            "event_type_sets": [],
+            "voids": [
+                {
+                    "balance": {"unit": how_many_belong_to1},
+                    "id": model.service[0].id,
+                    "slug": model.service[0].slug,
+                    "items": [serialize_consumable(consumable) for consumable in model.consumable[:3]],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.service[1].id,
+                    "slug": model.service[1].slug,
+                    "items": [serialize_consumable(consumable) for consumable in model.consumable[3:6]],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.service[2].id,
+                    "slug": model.service[2].slug,
+                    "items": [serialize_consumable(consumable) for consumable in model.consumable[6:]],
+                },
+            ],
+        }
+
+        assert json == expected
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("payments.Consumable"),
+            self.bc.format.to_dict(model.consumable),
+        )
+
     """
     🔽🔽🔽 Virtual Consumables, append to a new balance
     """
@@ -2155,8 +2260,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=True
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -2287,8 +2395,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=False
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -2379,8 +2490,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=True
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -2520,8 +2634,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=False
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -2612,8 +2729,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=True
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -2755,8 +2875,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=False
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         expected = {
@@ -2837,8 +2960,11 @@ class TestSignal(LegacyAPITestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
-        response = self.client.get(url)
-        self.client.force_authenticate(model.user)
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=True
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
 
         json = response.json()
         consumables = [serialize_consumable(model.consumable[n]) for n in range(9)]
@@ -2917,6 +3043,92 @@ class TestSignal(LegacyAPITestCase):
                         }
                         for n in range(3)
                     ],
+                },
+            ],
+        }
+
+        assert json == expected
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.bc.database.list_of("payments.Consumable"),
+            self.bc.format.to_dict(model.consumable),
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__append_to_new_balance___service__with_three_virtual_consumables__as_saas(self, monkeypatch):
+        from breathecode.payments.utils import reset_cache
+
+        reset_cache()
+
+        rand1 = random.randint(1, 9)
+        rand2 = random.randint(1, 9)
+        rand3 = random.randint(1, 9)
+
+        monkeypatch.setattr(
+            "breathecode.payments.data.get_virtual_consumables",
+            get_virtual_consumables_mock(
+                *[{"service": 4, "how_many": rand1 * (1 + n)} for n in range(3)],
+                *[{"service": 5, "how_many": rand2 * (1 + n)} for n in range(3)],
+                *[{"service": 6, "how_many": rand3 * (1 + n)} for n in range(3)],
+            ),
+        )
+
+        consumables = [{"how_many": random.randint(1, 30), "service_item_id": math.floor(n / 3) + 1} for n in range(9)]
+        service_items = [{"service_id": n + 1} for n in range(3)]
+        belong_to1 = consumables[:3]
+        belong_to2 = consumables[3:6]
+        belong_to3 = consumables[6:]
+
+        how_many_belong_to1 = sum([x["how_many"] for x in belong_to1])
+        how_many_belong_to2 = sum([x["how_many"] for x in belong_to2])
+        how_many_belong_to3 = sum([x["how_many"] for x in belong_to3])
+
+        academy = {"available_as_saas": False}
+
+        model = self.bc.database.create(
+            user=1,
+            consumable=consumables,
+            service_item=service_items,
+            academy=academy,
+            service=(6, {"type": "VOID"}),
+        )
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:me_service_consumable") + "?virtual=true"
+        with patch(
+            "breathecode.admissions.actions.is_no_saas_student_up_to_date_in_any_cohort", return_value=False
+        ) as mock:
+            response = self.client.get(url)
+            mock.call_args_list == [call(model.user, default=False)]
+
+        json = response.json()
+        consumables = [serialize_consumable(model.consumable[n]) for n in range(9)]
+        expected = {
+            "mentorship_service_sets": [],
+            "cohort_sets": [],
+            "event_type_sets": [],
+            "voids": [
+                {
+                    "balance": {"unit": how_many_belong_to1},
+                    "id": model.service[0].id,
+                    "slug": model.service[0].slug,
+                    "items": consumables[:3],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to2,
+                    },
+                    "id": model.service[1].id,
+                    "slug": model.service[1].slug,
+                    "items": consumables[3:6],
+                },
+                {
+                    "balance": {
+                        "unit": how_many_belong_to3,
+                    },
+                    "id": model.service[2].id,
+                    "slug": model.service[2].slug,
+                    "items": consumables[6:9],
                 },
             ],
         }
