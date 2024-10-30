@@ -47,6 +47,7 @@ from .models import (
     AssetImage,
     AssetKeyword,
     AssetTechnology,
+    AssetContext,
     ContentVariable,
     KeywordCluster,
     OriginalityScan,
@@ -84,6 +85,7 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
+    AssetContextSerializer,
 )
 from .tasks import async_pull_from_github
 from .utils import is_url
@@ -715,6 +717,32 @@ class AssetView(APIView, GenerateLookupsMixin):
             serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
         else:
             serializer = AssetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class AssetContextView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=AssetCache, paginate=True)
+
+    def get(self, request, asset_id=None):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        asset_context = AssetContext.objects.filter(asset__id=asset_id).first()
+        if asset_context is None:
+            raise ValidationException(
+                f"No context found for asset {asset_id}", status.HTTP_404_NOT_FOUND, slug="context-not-found"
+            )
+
+        serializer = AssetContextSerializer(asset_context, many=False)
 
         return handler.response(serializer.data)
 
