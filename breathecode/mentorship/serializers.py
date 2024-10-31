@@ -176,6 +176,16 @@ class GETSessionSmallSerializer(serpy.Serializer):
 
     bill = TinyBillSerializer(required=False)
 
+    rating = serpy.MethodField()
+
+    def get_rating(self, obj):
+
+        answer = obj.answer_set.first()
+        if answer is None:
+            return None
+        else:
+            return AnswerSmallSerializer(answer).data
+
 
 class GETServiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()

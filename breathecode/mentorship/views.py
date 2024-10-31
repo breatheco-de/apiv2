@@ -1227,6 +1227,12 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         if service is not None:
             lookup["service__slug__icontains"] = service
 
+        with_feedback = request.GET.get("with_feedback", "")
+        if with_feedback.lower() == "true":
+            items = items.filter(answer__score__isnull=False).distinct()
+        elif with_feedback.lower() == "false":
+            items = items.exclude(answer__score__isnull=False).distinct()
+
         items = items.filter(**lookup).distinct()
         items = handler.queryset(items)
         serializer = GETSessionSmallSerializer(items, many=True)

@@ -145,6 +145,32 @@ class GetUserAssessmentSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
+class HookUserAssessmentSerializer(serpy.Serializer):
+    id = serpy.Field()
+    token = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+
+    academy = AcademySmallSerializer(required=False)
+    assessment = AssessmentSmallSerializer()
+
+    owner = UserSerializer(required=False)
+    owner_email = serpy.Field()
+    owner_phone = serpy.Field()
+
+    status = serpy.Field()
+    status_text = serpy.Field()
+
+    conversion_info = serpy.Field()
+    total_score = serpy.Field()
+    comment = serpy.Field()
+
+    started_at = serpy.Field()
+    finished_at = serpy.Field()
+
+    created_at = serpy.Field()
+
+
 class PublicUserAssessmentSerializer(serpy.Serializer):
     id = serpy.Field()
     token = serpy.Field()

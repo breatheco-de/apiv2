@@ -21,6 +21,7 @@ from .views import (
     PublicCohortView,
     SyllabusAssetView,
     SyllabusScheduleView,
+    SyllabusVersionCSVView,
     SyllabusVersionView,
     SyllabusView,
     UserMeView,
@@ -31,6 +32,7 @@ from .views import (
     get_single_academy,
     get_timezones,
     handle_test_syllabus,
+    render_syllabus_preview,
 )
 
 app_name = "admissions"
@@ -108,6 +110,16 @@ urlpatterns = [
     path("syllabus/<int:syllabus_id>", SyllabusView.as_view(), name="syllabus_id"),
     path("syllabus/<int:syllabus_id>/version", SyllabusVersionView.as_view(), name="syllabus_id_version"),
     path("syllabus/version", AllSyllabusVersionsView.as_view(), name="syllabus_version"),
+    path(
+        "syllabus/<str:syllabus_id>/version/<str:version>.csv",
+        SyllabusVersionCSVView.as_view(),
+        name="syllabus_id_version_csv",
+    ),
+    path(
+        "syllabus/<str:syllabus_id>/version/<str:version>/preview",
+        render_syllabus_preview,
+        name="syllabus_id_version_preview",
+    ),
     path(
         "syllabus/<int:syllabus_id>/version/<int:version>",
         SyllabusVersionView.as_view(),
