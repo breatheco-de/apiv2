@@ -253,9 +253,8 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
         price
         and plan.is_renewable
         and subscriptions.filter(
-            Q(Q(status="CANCELLED") | Q(status="DEPRECATED"), valid_until=None, next_payment_at__gte=utc_now)
-            | Q(valid_until__gte=utc_now)
-        )
+            Q(valid_until=None, next_payment_at__gte=utc_now) | Q(valid_until__gte=utc_now)
+        ).exclude(status__in=["CANCELLED", "DEPRECATED"])
     ):
         raise ValidationException(
             translation(
