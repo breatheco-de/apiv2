@@ -29,7 +29,7 @@ ENV PGHOSTADDR="127.0.0.1"
 ENV PGDATABASE="postgres"
 COPY --chown=gitpod:gitpod postgresql-hook.bash $HOME/.bashrc.d/200-postgresql-launch
 
-# RUN pyenv install 3.12.3 && pyenv global 3.12.3
+# RUN pyenv install 3.12.7 && pyenv global 3.12.7
 # RUN pip install pipenv
 
 USER gitpod
