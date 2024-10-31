@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 
 import requests
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.core.validators import URLValidator
 from django.db.models import Count, Q
@@ -25,9 +27,7 @@ from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     AssetThumbnailGenerator,
@@ -43,11 +43,11 @@ from .models import (
     AssetAlias,
     AssetCategory,
     AssetComment,
+    AssetContext,
     AssetErrorLog,
     AssetImage,
     AssetKeyword,
     AssetTechnology,
-    AssetContext,
     ContentVariable,
     KeywordCluster,
     OriginalityScan,
@@ -61,6 +61,7 @@ from .serializers import (
     AssetBigSerializer,
     AssetBigTechnologySerializer,
     AssetCategorySerializer,
+    AssetContextSerializer,
     AssetExpandableSerializer,
     AssetImageSmallSerializer,
     AssetKeywordBigSerializer,
@@ -85,7 +86,6 @@ from .serializers import (
     SEOReportSerializer,
     TechnologyPUTSerializer,
     VariableSmallSerializer,
-    AssetContextSerializer,
 )
 from .tasks import async_pull_from_github
 from .utils import is_url

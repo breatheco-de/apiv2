@@ -2,16 +2,18 @@ import logging
 
 import pytz
 from adrf.decorators import api_view
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
 from django.utils import timezone
-from slugify import slugify
 from rest_framework import status
 from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from slugify import slugify
 
 from breathecode.admissions import tasks
 from breathecode.admissions.caches import CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache, UserCache
@@ -26,8 +28,6 @@ from breathecode.utils import (
     localize_query,
 )
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
 from .models import (

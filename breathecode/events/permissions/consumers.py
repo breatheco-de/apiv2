@@ -1,5 +1,7 @@
 import logging
 
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.db.models import Q
 from django.utils import timezone
 
@@ -9,8 +11,6 @@ from breathecode.authenticate.actions import get_user_language
 from breathecode.events.actions import get_my_event_types
 from breathecode.events.models import Event, LiveClass
 from breathecode.utils.decorators import ServiceContext
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = logging.getLogger(__name__)
 

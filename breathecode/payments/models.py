@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import Any, Optional
 
 from asgiref.sync import sync_to_async
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from currencies import Currency as CurrencyFormatter
 from django import forms
@@ -23,7 +24,6 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.events.models import EventType
 from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import signals
-from breathecode.utils.i18n import translation
 from breathecode.utils.validators.language import validate_language_code
 
 # https://devdocs.prestashop-project.org/1.7/webservice/resources/warehouses/

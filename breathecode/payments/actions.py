@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import Literal, Optional, Type, TypedDict
 
 from adrf.requests import AsyncRequest
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
@@ -22,7 +23,6 @@ from breathecode.authenticate.models import UserSetting
 from breathecode.media.models import File
 from breathecode.payments import tasks
 from breathecode.utils import getLogger
-from breathecode.utils.i18n import translation
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 
 from .models import (

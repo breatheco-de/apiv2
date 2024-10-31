@@ -8,6 +8,7 @@ import traceback
 import urllib.parse
 
 import timeago
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -36,7 +37,6 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import consume, has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 

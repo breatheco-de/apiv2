@@ -1,5 +1,6 @@
 import logging
 
+from capyc.core.i18n import translation
 from capyc.core.managers import feature
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
@@ -9,7 +10,6 @@ from breathecode.authenticate.models import User
 from breathecode.mentorship.models import MentorProfile, MentorshipService
 from breathecode.payments.models import Consumable, ConsumptionSession
 from breathecode.utils.decorators import ServiceContext
-from breathecode.utils.i18n import translation
 
 logger = logging.getLogger(__name__)
 

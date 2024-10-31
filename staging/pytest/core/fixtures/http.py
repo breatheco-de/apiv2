@@ -1,6 +1,6 @@
-from aiohttp_retry import Optional
+from typing import Generator, Optional, Self
+
 import pytest
-from typing import Generator, Self
 
 # not implemented yet
 supported_http_clients = []

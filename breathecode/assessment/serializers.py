@@ -1,3 +1,5 @@
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 from rest_framework import serializers
@@ -5,8 +7,6 @@ from rest_framework import serializers
 from breathecode.admissions.models import Academy
 from breathecode.utils import serpy
 from breathecode.utils.datetime_integer import duration_to_str, from_now
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import Answer, Assessment, Option, Question, UserAssessment
 

@@ -1,6 +1,8 @@
 import logging
 import os
 
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from celery import shared_task
 from django.contrib.auth.models import User
 from task_manager.core.exceptions import AbortTask, RetryTask
@@ -10,8 +12,6 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.marketing.actions import validate_email
 from breathecode.notify import actions as notify_actions
 from breathecode.utils.decorators import TaskPriority
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import add_to_organization, get_user_settings, remove_from_organization, set_gitpod_user_expiration
 

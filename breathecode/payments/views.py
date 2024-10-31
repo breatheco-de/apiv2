@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from capyc.core.i18n import translation
 from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.core.cache import cache
@@ -78,7 +79,6 @@ from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
 from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
-from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
 
 logger = getLogger(__name__)
