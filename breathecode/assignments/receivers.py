@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Type
 
+from capyc.core.i18n import translation
 from django.dispatch import receiver
 
 from breathecode.admissions.signals import syllabus_asset_slug_updated
@@ -8,7 +9,6 @@ from breathecode.assignments import tasks
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.notify.actions import send_email_message
-from breathecode.utils.i18n import translation
 
 from .models import RepositoryDeletionOrder, Task
 from .signals import assignment_status_updated, status_updated

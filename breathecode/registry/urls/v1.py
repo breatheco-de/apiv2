@@ -26,6 +26,7 @@ from ..views import (
     render_preview_html,
     render_readme,
     AssetSupersedesView,
+    AssetContextView,
 )
 
 app_name = "registry"
@@ -39,6 +40,7 @@ urlpatterns = [
     path("asset/<str:asset_slug>/github/config", get_config),
     path("asset/<str:asset_slug>.<str:extension>", render_readme),
     path("asset/<str:asset_slug>", AssetView.as_view()),
+    path("asset/<int:asset_id>/context", AssetContextView.as_view(), name="asset_context"),
     path("academy/contentvariable", AcademyContentVariableView.as_view()),
     path("academy/contentvariable/<str:variable_slug>", AcademyContentVariableView.as_view()),
     path("academy/asset", AcademyAssetView.as_view(), name="academy_asset"),

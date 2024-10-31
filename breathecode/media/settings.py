@@ -3,6 +3,7 @@ from io import BytesIO
 from typing import Any, Awaitable, Callable, Literal, Optional, Type, TypedDict
 
 from adrf.requests import AsyncRequest
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from PIL import Image
@@ -11,7 +12,6 @@ from breathecode.authenticate.actions import get_user_settings
 from breathecode.media.models import Chunk, File
 from breathecode.notify.models import Notification
 from breathecode.services.google_cloud.storage import Storage
-from breathecode.utils.i18n import translation
 
 type TypeValidator = Callable[[str, Any], None]
 type TypeValidatorWrapper = Callable[[Type[Any]], TypeValidator]

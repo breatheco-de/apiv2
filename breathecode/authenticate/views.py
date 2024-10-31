@@ -13,6 +13,7 @@ import requests
 from adrf.decorators import api_view
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
+from capyc.core.i18n import translation
 from capyc.core.managers import feature
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
@@ -50,7 +51,6 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 

@@ -5,6 +5,7 @@ import math
 
 import pytz
 from adrf.decorators import api_view
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
@@ -32,7 +33,6 @@ from breathecode.utils import (
     localize_query,
 )
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json

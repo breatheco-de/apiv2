@@ -16,6 +16,7 @@ from .models import (
     CSVUpload,
     Endpoint,
     MonitorScript,
+    NoPagination,
     RepositorySubscription,
     RepositoryWebhook,
     Supervisor,
@@ -315,3 +316,15 @@ class SupervisorIssueAdmin(admin.ModelAdmin):
     list_filter = ["supervisor"]
     search_fields = ["supervisor__task_module", "supervisor__task_name"]
     actions = []
+
+
+def delete_all(modeladmin, request, queryset):
+    NoPagination.objects.all().delete()
+
+
+@admin.register(NoPagination)
+class NoPaginationAdmin(admin.ModelAdmin):
+    list_display = ("path", "method")
+    list_filter = ["method"]
+    search_fields = ["path", "method"]
+    actions = [delete_all]

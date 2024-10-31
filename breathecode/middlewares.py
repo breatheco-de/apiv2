@@ -6,8 +6,8 @@ import zlib
 
 import brotli
 import zstandard
-from asgiref.sync import iscoroutinefunction
-from django.http import HttpResponseRedirect
+from asgiref.sync import iscoroutinefunction, sync_to_async
+from django.http import HttpRequest, HttpResponseRedirect
 from django.utils.decorators import sync_and_async_middleware
 from django.utils.deprecation import MiddlewareMixin
 
@@ -145,6 +145,52 @@ def set_service_header_middleware(get_response):
         def middleware(request):
             response = get_response(request)
             set_header(response)
+            return response
+
+    return middleware
+
+
+NO_PAGINATED = set()
+
+
+@sync_and_async_middleware
+def detect_pagination_issues_middleware(get_response):
+    from breathecode.monitoring.models import NoPagination
+
+    def instrument_no_pagination(request: HttpRequest) -> None:
+        if request.method not in ["GET"]:
+            return
+
+        path = request.path
+        method = request.method
+
+        if (path, method) in NO_PAGINATED:
+            return
+
+        is_paginated = request.GET.get("limit") and request.GET.get("offset")
+
+        if is_paginated is False and NoPagination.objects.filter(path=path, method=method).exists() is False:
+            NO_PAGINATED.add((path, method))
+            NoPagination.objects.create(path=path, method=method)
+
+    @sync_to_async
+    def ainstrument_no_pagination(request: HttpRequest) -> None:
+        instrument_no_pagination(request)
+
+    if iscoroutinefunction(get_response):
+
+        async def middleware(request: HttpRequest):
+            await ainstrument_no_pagination(request)
+
+            response = await get_response(request)
+            return response
+
+    else:
+
+        def middleware(request: HttpRequest):
+            instrument_no_pagination(request)
+
+            response = get_response(request)
             return response
 
     return middleware

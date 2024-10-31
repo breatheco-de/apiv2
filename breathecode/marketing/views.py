@@ -10,6 +10,7 @@ from urllib import parse
 
 import pandas as pd
 import pytz
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.contrib.auth.models import AnonymousUser
@@ -37,7 +38,6 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import validate_captcha, validate_captcha_challenge
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
 
 from .actions import convert_data_frame, sync_automations, sync_tags, validate_email
 from .models import (

@@ -6,7 +6,9 @@ from unittest.mock import MagicMock, call
 import capyc.pytest as capy
 import pytest
 from adrf.decorators import APIView, api_view
+from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
+from capyc.core.managers import feature
 from django.http.response import JsonResponse
 from django.utils import timezone
 from rest_framework import status
@@ -58,6 +60,27 @@ def consumer(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, 
 CONSUMER_MOCK = MagicMock(wraps=consumer)
 
 time_of_life = timedelta(days=random.randint(1, 100))
+
+
+@sync_to_async
+def is_enabled_call_list():
+    return [
+        call(
+            args[0],
+            {
+                **args[1],
+                "context": {
+                    **args[1]["context"],
+                    "request": type(args[1]["context"]["request"]),
+                    "consumer": callable(args[1]["context"]["consumer"]),
+                    "consumables": [x for x in args[1]["context"]["consumables"]],
+                },
+            },
+            *args[2:],
+            **kwargs,
+        )
+        for args, kwargs in feature.is_enabled.call_args_list
+    ]
 
 
 def consumer_with_time_of_life(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
@@ -398,18 +421,20 @@ class TestNoConsumer:
 
     @pytest.mark.asyncio
     @pytest.mark.django_db(reset_sequences=True)
-    async def test_with_user__with_group_related_to_permission__consumable__how_many_0(
-        self, bc: Breathecode, make_view_all_cases
+    async def test_with_user__with_group_related_to_permission__consumable__how_many_0__bypass_consumption_false(
+        self, bc: Breathecode, make_view_all_cases, monkeypatch, utc_now
     ):
+        monkeypatch.setattr(feature, "is_enabled", MagicMock(return_value=False))
         user = {"user_permissions": []}
-        services = [{}, {"consumer": SERVICE.upper()}]
+        consumer = SERVICE.upper()
+        services = [{}, {"consumer": consumer}]
 
         consumable = {"how_many": 0}
         model = await bc.database.acreate(
             user=user, service=services, service_item={"service_id": 2}, consumable=consumable
         )
 
-        view, _, _, _ = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
+        view, _, _, kwargs = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
 
         response, _ = await view()
         expected = {"detail": "with-consumer-not-enough-consumables", "status_code": 402}
@@ -425,6 +450,69 @@ class TestNoConsumer:
             assert payments_signals.consume_service.send_robust.call_args_list == []
 
         await check_consume_service()
+
+        context = feature.context(
+            context={
+                "utc_now": utc_now,
+                "consumer": False,
+                "service": consumer,
+                "request": AsyncRequest,
+                "consumables": [],
+                "lifetime": None,
+                "price": 1,
+                "is_consumption_session": False,
+                "flags": {"bypass_consumption": False},
+            },
+            kwargs=kwargs,
+        )
+        assert await is_enabled_call_list() == [call("payments.bypass_consumption", context, False)]
+
+    @pytest.mark.asyncio
+    @pytest.mark.django_db(reset_sequences=True)
+    async def test_with_user__with_group_related_to_permission__consumable__how_many_0__bypass_consumption_true(
+        self, bc: Breathecode, make_view_all_cases, monkeypatch, utc_now
+    ):
+        monkeypatch.setattr(feature, "is_enabled", MagicMock(return_value=True))
+        user = {"user_permissions": []}
+        consumer = SERVICE.upper()
+        services = [{}, {"consumer": consumer}]
+
+        consumable = {"how_many": 0}
+        model = await bc.database.acreate(
+            user=user, service=services, service_item={"service_id": 2}, consumable=consumable
+        )
+
+        view, expected, _, kwargs = await make_view_all_cases(user=model.user, decorator_params={}, url_params={})
+
+        response, _ = await view()
+
+        assert json.loads(response.content.decode("utf-8")) == expected
+        assert response.status_code == status.HTTP_200_OK
+        # self.assertEqual(CONSUMER_MOCK.call_args_list, [])
+        assert await bc.database.alist_of("payments.ConsumptionSession") == []
+        assert models.ConsumptionSession.build_session.call_args_list == []
+
+        @sync_to_async
+        def check_consume_service():
+            assert payments_signals.consume_service.send_robust.call_args_list == []
+
+        await check_consume_service()
+
+        context = feature.context(
+            context={
+                "utc_now": utc_now,
+                "consumer": False,
+                "service": consumer,
+                "request": AsyncRequest,
+                "consumables": [],
+                "lifetime": None,
+                "price": 1,
+                "is_consumption_session": False,
+                "flags": {"bypass_consumption": True},
+            },
+            kwargs=kwargs,
+        )
+        assert await is_enabled_call_list() == [call("payments.bypass_consumption", context, False)]
 
     @pytest.mark.asyncio
     @pytest.mark.django_db(reset_sequences=True)

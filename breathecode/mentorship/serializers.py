@@ -1,3 +1,4 @@
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import serializers
 
@@ -9,7 +10,6 @@ from breathecode.payments.models import Consumable
 from breathecode.services.calendly import Calendly
 from breathecode.utils import serpy
 from breathecode.utils.datetime_integer import duration_to_str
-from breathecode.utils.i18n import translation
 
 from .actions import generate_mentor_bill
 from .models import CalendlyOrganization, MentorProfile, MentorshipBill, MentorshipService, MentorshipSession

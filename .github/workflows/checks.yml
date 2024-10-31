@@ -8,7 +8,7 @@ on:
   pull_request: {}
 
 env:
-  PYTHON_VERSION: 3.12.3
+  PYTHON_VERSION: 3.12.7
   PYTHONUNBUFFERED: 1
   APP_URL: https://4geeks.com
 
@@ -19,7 +19,6 @@ env:
 # |> code-complexity                          |> tests -------|> dockerhub
 # |> naming-conventions                       |> linter
 # |> unexpected-behaviors                     |> pages
-
 
 jobs:
   cache:
@@ -141,7 +140,6 @@ jobs:
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
         run: pipenv run pip freeze -r requirements2.txt > requirements2.txt
-
 
       - name: Check Pipfile.lock is up-to-date
         run: diff requirements.txt requirements2.txt

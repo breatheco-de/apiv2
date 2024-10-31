@@ -4,6 +4,7 @@ import os
 
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
@@ -30,7 +31,6 @@ from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman, re
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import consume, has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
-from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 
 from .actions import deliver_task, sync_cohort_tasks

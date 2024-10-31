@@ -6,6 +6,7 @@ from io import BytesIO
 from typing import Any, Optional, Tuple, overload
 
 from adrf.views import APIView
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import status
 from rest_framework.response import Response
@@ -15,7 +16,6 @@ from breathecode.authenticate.actions import aget_user_language
 from breathecode.media.models import Chunk, File
 from breathecode.media.signals import schedule_deletion
 from breathecode.services.google_cloud.storage import Storage
-from breathecode.utils.i18n import translation
 
 from .settings import MEDIA_MIME_ALLOWED, MEDIA_SETTINGS, MediaSettings, Schema
 
