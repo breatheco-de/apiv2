@@ -446,6 +446,7 @@ class GetCourseSerializer(GetCourseSmallSerializer):
     cohort = serpy.MethodField()
     cohorts_group = serpy.MethodField()
     status = serpy.Field()
+    cohorts_order = serpy.Field()
     visibility = serpy.Field()
 
     def get_syllabus(self, obj):
