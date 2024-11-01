@@ -305,7 +305,7 @@ class UserAssessment(models.Model):
         if is_creating or self.status != old_status:
             signals.userassessment_status_updated.send_robust(instance=self, sender=self.__class__)
 
-    return _instance
+        return _instance
 
         
 
