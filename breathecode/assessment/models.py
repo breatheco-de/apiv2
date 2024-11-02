@@ -302,7 +302,7 @@ class UserAssessment(models.Model):
         _instance = super().save(*args, **kwargs)
         
         # Answer is being closed
-        if is_creating or self.status != self.old_status:
+        if is_creating or self.status != self._old_status:
             signals.userassessment_status_updated.send_robust(instance=self, sender=self.__class__)
 
         return _instance
