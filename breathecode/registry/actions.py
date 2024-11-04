@@ -1083,7 +1083,7 @@ def add_syllabus_translations(_json: dict):
 
     day_count = -1
     for day in _json.get("days", []):
-        technologies = []
+        unique_technologies = {}
         day_count += 1
         for asset_type in ["assignments", "lessons", "quizzes", "replits"]:
             index = -1
@@ -1108,7 +1108,9 @@ def add_syllabus_translations(_json: dict):
                         # add translations technologies as well
                         _assetTechs = a.technologies.all()
                         for t in _assetTechs:
-                            technologies.append({"slug": t.slug, "title": t.title})
+                            # Use the slug as a unique key to avoid duplicates
+                            if t.slug not in unique_technologies:
+                                unique_technologies[t.slug] = {"slug": t.slug, "title": t.title}
 
                     if _asset.lang not in _json["days"][day_count][asset_type][index]["translations"]:
                         _json["days"][day_count][asset_type][index]["translations"][_asset.lang] = {
@@ -1118,6 +1120,9 @@ def add_syllabus_translations(_json: dict):
 
                     _assetTechs = _asset.technologies.all()
                     for t in _assetTechs:
-                        technologies.append({"slug": t.slug, "title": t.title})
-                    _json["days"][day_count]["technologies"] = technologies
+                        # Use the slug as a unique key to avoid duplicates
+                        if t.slug not in unique_technologies:
+                            unique_technologies[t.slug] = {"slug": t.slug, "title": t.title}
+
+                    _json["days"][day_count]["technologies"] = list(unique_technologies.values())
     return _json
