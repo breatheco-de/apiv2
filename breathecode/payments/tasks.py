@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
+from capyc.core.i18n import translation
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
 from django.utils import timezone
@@ -13,13 +14,14 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, reimburse_service_units
+from breathecode.services.google.google import Google
 from breathecode.utils.decorators import TaskPriority
-from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
 
 from .models import (
@@ -1199,3 +1201,28 @@ def set_proof_of_payment_confirmation_url(file_id: int, proof_of_payment_id: int
     proof.confirmation_image_url = url
     proof.status = ProofOfPayment.Status.DONE
     proof.save()
+
+
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def process_google_webhook(hook_id: int, **_: Any):
+    from breathecode.authenticate.models import CredentialsGoogle, GoogleWebhook
+
+    logger.info(f"Starting process_google_webhook for id {hook_id}")
+
+    hook = GoogleWebhook.objects.filter(id=hook_id).first()
+    if not hook:
+        raise RetryTask(f"GoogleWebhook with id {hook_id} not found")
+
+    if hook.status == GoogleWebhook.Status.DONE:
+        raise AbortTask(f"GoogleWebhook with id {hook_id} was processed")
+
+    users_ids = AcademyAuthSettings.objects.filter(google_cloud_owner__isnull=False).values_list(
+        "google_cloud_owner_id", flat=True
+    )
+
+    credentials = CredentialsGoogle.objects.filter(user__id__in=users_ids).only("token", "refresh_token")
+    if credentials.exists() is False:
+        raise AbortTask("CredentialsGoogle not found")
+
+    google = Google()
+    google.run_webhook(hook, credentials)

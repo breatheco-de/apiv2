@@ -9,6 +9,8 @@ from random import randint
 
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import Q
@@ -17,8 +19,6 @@ from django.utils import timezone
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.services.github import Github
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
     AcademyAuthSettings,

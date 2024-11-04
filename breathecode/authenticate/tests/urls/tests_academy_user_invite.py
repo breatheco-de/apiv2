@@ -28,6 +28,7 @@ def generate_user_invite(self, model, user_invite, arguments={}):
             "logo_url": model.academy.logo_url,
         },
         "cohort": {
+            "id": model.cohort.id,
             "name": model.cohort.name,
             "slug": model.cohort.slug,
         },

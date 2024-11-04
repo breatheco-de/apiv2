@@ -119,6 +119,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "breathecode.middlewares.static_redirect_middleware",
     "breathecode.middlewares.set_service_header_middleware",
+    "breathecode.middlewares.detect_pagination_issues_middleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     # Cache
@@ -352,6 +353,10 @@ CSRF_TRUSTED_ORIGINS = [
     "https://breathecode-test.herokuapp.com",
 ]
 
+# CSP_DEFAULT_SRC = ("'self'", "https://*.4geeks.com", "https://*.4geeksacademy.co")
+# CSP_FRAME_SRC = ("'self'", "https://*.4geeks.com", "https://*.4geeksacademy.co")
+# SECURE_REFERRER_POLICY = "no-referrer"
+
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -532,16 +537,18 @@ HOOK_EVENTS = {
     "session.mentorship_session_status": "mentorship.MentorshipSession.mentorship_session_status",
     "planfinancing.planfinancing_created": "payments.PlanFinancing.planfinancing_created",
     "subscription.subscription_created": "payments.Subscription.subscription_created",
+    "UserAssessment.userassessment_status_updated": "assessment.UserAssessment.userassessment_status_updated",
 }
 
 # Websocket
 ASGI_APPLICATION = "breathecode.asgi.application"
 REDIS_URL_PATTERN = r"^redis://(.+):(\d+)$"
+REDIS_PARTS = REDIS_URL.split(":")
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [(":".join(REDIS_PARTS[:-1]), int(REDIS_PARTS[-1]))],
         },
     },
 }

@@ -8,6 +8,9 @@ from django.utils import timezone
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.serializers import CohortHookSerializer, CohortUserHookSerializer
 from breathecode.admissions.signals import cohort_stage_updated, student_edu_status_updated
+from breathecode.assessment.models import UserAssessment
+from breathecode.assessment.serializers import HookUserAssessmentSerializer
+from breathecode.assessment.signals import userassessment_status_updated
 from breathecode.authenticate.models import UserInvite
 from breathecode.authenticate.signals import invite_status_updated
 from breathecode.events.models import Event, EventCheckin
@@ -193,6 +196,20 @@ def new_subscription_created(sender, instance, **kwargs):
         instance,
         model_label,
         "subscription_created",
+        payload_override=serializer.data,
+        academy_override=instance.academy,
+    )
+
+
+@receiver(userassessment_status_updated, sender=UserAssessment)
+def user_assessment_status_updated(sender, instance, **kwargs):
+    logger.debug("User assessment updated")
+    model_label = get_model_label(instance)
+    serializer = HookUserAssessmentSerializer(instance)
+    HookManager.process_model_event(
+        instance,
+        model_label,
+        "userassessment_status_updated",
         payload_override=serializer.data,
         academy_override=instance.academy,
     )

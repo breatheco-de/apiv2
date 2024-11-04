@@ -2,17 +2,17 @@
 Test /v1/auth/subscribe
 """
 
-from datetime import datetime, timedelta
 import random
-from unittest.mock import call
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, call
+from urllib.parse import quote
 
+import capyc.pytest as capy
 import pytest
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-import capyc.pytest as capy
 import staging.pytest as staging
-from urllib.parse import quote
 
 
 @pytest.fixture(autouse=True)
@@ -20,6 +20,11 @@ def setup(monkeypatch: pytest.MonkeyPatch, db):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "123456.apps.googleusercontent.com")
     monkeypatch.setenv("GOOGLE_SECRET", "123456")
     monkeypatch.setenv("GOOGLE_REDIRECT_URL", "https://breathecode.herokuapp.com/v1/auth/google/callback")
+    monkeypatch.setattr("breathecode.services.google_apps.GoogleApps.__init__", MagicMock(return_value=None))
+    monkeypatch.setattr("breathecode.services.google_apps.GoogleApps.subscribe_meet_webhook", MagicMock())
+    monkeypatch.setattr(
+        "breathecode.services.google_apps.GoogleApps.get_user_info", MagicMock(return_value={"id": 123})
+    )
 
     yield
 
@@ -152,7 +157,13 @@ def test_token(
         json=payload,
         headers={"Accept": "application/json"},
     ).response(
-        {"access_token": "test_access_token", "expires_in": 3600, "refresh_token": "test_refresh_token"}, status=200
+        {
+            "access_token": "test_access_token",
+            "expires_in": 3600,
+            "refresh_token": "test_refresh_token",
+            "id_token": "test_id_token",
+        },
+        status=200,
     )
 
     response = client.get(url, format="json")
@@ -167,6 +178,8 @@ def test_token(
         {
             "expires_at": utc_now + timedelta(seconds=3600),
             "id": 1,
+            "google_id": "123",
+            "id_token": "test_id_token",
             "refresh_token": "test_refresh_token",
             "token": "test_access_token",
             "user_id": 1,

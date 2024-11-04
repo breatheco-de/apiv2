@@ -1,11 +1,12 @@
 import hashlib
-import json
 import os
+import traceback
 from copy import copy
 from io import BytesIO
 from typing import Any, Optional, Tuple, overload
 
 from adrf.views import APIView
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import status
 from rest_framework.response import Response
@@ -15,7 +16,6 @@ from breathecode.authenticate.actions import aget_user_language
 from breathecode.media.models import Chunk, File
 from breathecode.media.signals import schedule_deletion
 from breathecode.services.google_cloud.storage import Storage
-from breathecode.utils.i18n import translation
 
 from .settings import MEDIA_MIME_ALLOWED, MEDIA_SETTINGS, MediaSettings, Schema
 
@@ -41,7 +41,7 @@ def media_settings(operation_type: Optional[str] = None) -> MediaSettings | Tupl
 
 
 class UploadMixin(APIView):
-    async def upload(self, academy_id: Optional[int] = None):
+    async def upload(self, academy_id: Optional[int] = None, format: str = "multipart"):
         request = self.request
         lang = await aget_user_language(request)
         self.lang = lang
@@ -70,7 +70,17 @@ class UploadMixin(APIView):
             )
 
         total_chunks = request.data.get("total_chunks")
-        if total_chunks is None or total_chunks.isnumeric() is False or (total_chunks := float(total_chunks)) <= 0:
+        if (
+            total_chunks is None
+            or (
+                format == "multipart"
+                and (total_chunks.isnumeric() is False or (total_chunks := float(total_chunks)) <= 0)
+            )
+            or (
+                format == "json"
+                and (isinstance(total_chunks, (int, float)) is False or (total_chunks := total_chunks) <= 0)
+            )
+        ):
             raise ValidationException(
                 translation(
                     lang,
@@ -81,7 +91,9 @@ class UploadMixin(APIView):
                 code=400,
             )
 
-        if total_chunks.is_integer() is False:
+        if (format == "multipart" and total_chunks.is_integer() is False) or (
+            format == "json" and isinstance(total_chunks, int) is False
+        ):
             raise ValidationException(
                 translation(
                     lang,
@@ -245,6 +257,7 @@ class ChunkedUploadMixin(UploadMixin):
             f.upload(chunk, content_type=chunk.content_type)
 
         except Exception:
+            traceback.print_exc()
             await instance.adelete()
             raise ValidationException(
                 translation(
@@ -314,19 +327,95 @@ class ChunkUploadMixin(UploadMixin):
         for key in to_delete:
             del meta[key]
 
+    async def upload_file(self, file_name: str, mime: dict[str, Any], academy: Academy, file: Optional[File] = None):
+        request = self.request
+        total_chunks = self.total_chunks
+
+        chunks = (
+            Chunk.objects.filter(
+                academy=academy,
+                user=request.user,
+                name=file_name,
+                operation_type=self.op_type,
+                total_chunks=total_chunks,
+                mime=mime,
+            )
+            .prefetch_related("user", "academy")
+            .order_by("chunk_index")
+        )
+
+        if (n := await chunks.acount()) < total_chunks:
+            missing_chunks = total_chunks - n
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en=f"{missing_chunks}/{total_chunks} chunks are missing",
+                    es=f"{missing_chunks}/{total_chunks} chunks están faltando",
+                    slug="some-chunks-not-found",
+                ),
+                code=400,
+            )
+        res = BytesIO()
+
+        storage = Storage()
+
+        # separate it to a cloud function to avoid memory issues
+        async for chunk in chunks:
+            f = BytesIO()
+
+            uploaded_chunk = storage.file(chunk.bucket, chunk.file_name)
+            uploaded_chunk.download(f)
+
+            res.write(f.getvalue())
+
+            await schedule_deletion.adelay(instance=chunk, sender=chunk.__class__)
+
+        bucket = os.getenv("UPLOAD_BUCKET", "upload-bucket")
+        size = res.tell()
+        res.seek(0)
+
+        hash = hashlib.md5(res.getvalue()).hexdigest()
+        res.seek(0)
+
+        new_file = storage.file(bucket, hash)
+        new_file.upload(res, content_type=mime)
+
+        if file is None:
+            file = await File.objects.acreate(
+                academy=academy,
+                user=request.user,
+                name=file_name,
+                mime=mime,
+                operation_type=self.op_type,
+                size=size,
+                hash=hash,
+                bucket=bucket,
+            )
+        else:
+            file.academy = academy
+            file.user = request.user
+            file.name = file_name
+            file.mime = mime
+            file.operation_type = self.op_type
+            file.size = size
+            file.hash = hash
+            file.bucket = bucket
+            await file.asave()
+
+        return file
+
     async def upload(self, academy_id: Optional[int] = None):
         from breathecode.media.tasks import process_file
         from breathecode.notify.models import Notification
 
-        await super().upload(academy_id)
+        await super().upload(academy_id, format="json")
         request = self.request
 
-        total_chunks = self.total_chunks
         file_name = request.data.get("filename")
         mime = request.data.get("mime")
 
         try:
-            meta = json.loads(request.data.get("meta", "{}"))
+            meta = request.data.get("meta", {})
 
         except Exception:
             raise ValidationException(
@@ -390,7 +479,7 @@ class ChunkUploadMixin(UploadMixin):
             mime=mime,
             operation_type=self.op_type,
         ).afirst()
-        if file:
+        if file and file.status in [File.Status.TRANSFERRING]:
             raise ValidationException(
                 translation(
                     self.lang,
@@ -401,67 +490,10 @@ class ChunkUploadMixin(UploadMixin):
                 code=400,
             )
 
-        chunks = (
-            Chunk.objects.filter(
-                academy=academy,
-                user=request.user,
-                name=file_name,
-                operation_type=self.op_type,
-                total_chunks=total_chunks,
-                mime=mime,
-            )
-            .prefetch_related("user", "academy")
-            .order_by("chunk_index")
-        )
-
-        if (n := await chunks.acount()) < total_chunks:
-            missing_chunks = total_chunks - n
-            raise ValidationException(
-                translation(
-                    self.lang,
-                    en=f"{missing_chunks}/{total_chunks} chunks are missing",
-                    es=f"{missing_chunks}/{total_chunks} chunks están faltando",
-                    slug="some-chunks-not-found",
-                ),
-                code=400,
-            )
-        res = BytesIO()
-
-        storage = Storage()
-
-        # separate it to a cloud function to avoid memory issues
-        async for chunk in chunks:
-            f = BytesIO()
-
-            uploaded_chunk = storage.file(chunk.bucket, chunk.file_name)
-            uploaded_chunk.download(f)
-
-            res.write(f.getvalue())
-
-            await schedule_deletion.adelay(instance=chunk, sender=chunk.__class__)
-
-        bucket = os.getenv("UPLOAD_BUCKET", "upload-bucket")
-        size = res.tell()
-        res.seek(0)
-
-        hash = hashlib.md5(res.getvalue()).hexdigest()
-        res.seek(0)
-
-        new_file = storage.file(bucket, hash)
-        new_file.upload(res, content_type=mime)
+        file = await self.upload_file(file_name, mime, academy)
 
         notification_id = None
 
-        file = await File.objects.acreate(
-            academy=academy,
-            user=request.user,
-            name=file_name,
-            mime=mime,
-            operation_type=self.op_type,
-            size=size,
-            hash=hash,
-            bucket=bucket,
-        )
         if MEDIA_SETTINGS[self.op_type]["process"]:
             file.status = File.Status.TRANSFERRING
             await file.asave()

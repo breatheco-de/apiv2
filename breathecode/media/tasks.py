@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Optional
 
+from capyc.core.i18n import translation
 from django.core.cache import cache
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
@@ -8,7 +9,6 @@ from task_manager.django.decorators import task
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.notify.models import Notification
 from breathecode.utils.decorators import TaskPriority
-from breathecode.utils.i18n import translation
 
 from .models import File
 from .utils import media_settings

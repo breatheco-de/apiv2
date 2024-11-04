@@ -1,6 +1,7 @@
 import logging
 from collections import OrderedDict
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.db.models import Q
 
@@ -9,7 +10,6 @@ from breathecode.assignments.models import Task
 from breathecode.assignments.serializers import TaskGETSmallSerializer
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 from breathecode.utils import localize_query, serializers, serpy
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import haversine, test_syllabus
 from .models import (

@@ -8,6 +8,7 @@ import traceback
 import urllib.parse
 
 import timeago
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -36,7 +37,6 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import consume, has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 
@@ -439,15 +439,7 @@ class ForwardMeetUrl:
             if "heading" not in obj:
                 obj["heading"] = session.mentor.academy.name
 
-        if session.online_meeting_url and "meet.google.com" in session.online_meeting_url:
-            if self.is_mentee and session.started_at is None:
-                session.started_at = self.now
-                session.save()
-
-            elif session.mentor_joined_at is None:
-                session.mentor_joined_at = self.now
-                session.save()
-
+        if session.service.video_provider == "GOOGLE_MEET" and session.online_meeting_url:
             return HttpResponseRedirect(session.online_meeting_url)
 
         return render(
@@ -656,10 +648,13 @@ class ForwardMeetUrl:
         # save progress so far, we are about to render the session below
         session.save()
 
-        if session.mentee is None:
+        is_google_meet = session.service.video_provider == "GOOGLE_MEET"
+        if is_google_meet is False and session.mentee is None:
             return render_session(self.request, session, token=self.token)
 
-        if self.query_params["redirect"] is not None or self.token.user.id == session.mentor.user.id:
+        if is_google_meet is False and (
+            self.query_params["redirect"] is not None or self.token.user.id == session.mentor.user.id
+        ):
             return render_session(self.request, session, token=self.token)
 
         return self.render_start_session(session)
@@ -1231,6 +1226,12 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         service = request.GET.get("service", None)
         if service is not None:
             lookup["service__slug__icontains"] = service
+
+        with_feedback = request.GET.get("with_feedback", "")
+        if with_feedback.lower() == "true":
+            items = items.filter(answer__score__isnull=False).distinct()
+        elif with_feedback.lower() == "false":
+            items = items.exclude(answer__score__isnull=False).distinct()
 
         items = items.filter(**lookup).distinct()
         items = handler.queryset(items)

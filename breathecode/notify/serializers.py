@@ -1,10 +1,10 @@
+from capyc.rest_framework.exceptions import ValidationException
 from django.conf import settings
 from rest_framework import serializers
 
 from breathecode.admissions.models import Academy
-from breathecode.utils import serpy
-from capyc.rest_framework.exceptions import ValidationException
 from breathecode.authenticate.serializers import GetSmallAcademySerializer
+from breathecode.utils import serpy
 
 from .models import Hook
 
@@ -53,3 +53,15 @@ class SlackTeamSerializer(serpy.Serializer):
     created_at = serpy.Field()
     sync_status = serpy.Field()
     sync_message = serpy.Field()
+
+
+class NotificationSerializer(serpy.Serializer):
+    id = serpy.Field()
+    message = serpy.Field()
+    status = serpy.Field()
+    type = serpy.Field()
+    academy = GetSmallAcademySerializer(required=False)
+    meta = serpy.Field()
+    sent_at = serpy.Field()
+    done_at = serpy.Field()
+    seen_at = serpy.Field()

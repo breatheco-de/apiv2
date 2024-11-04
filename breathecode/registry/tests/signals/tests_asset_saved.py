@@ -3,10 +3,10 @@ This file will test branches of the ai_context instead of the whole content
 """
 
 import random
+from typing import Optional
 
 import capyc.pytest as capy
 import pytest
-from aiohttp_retry import Optional
 
 from breathecode.registry.models import Asset
 
