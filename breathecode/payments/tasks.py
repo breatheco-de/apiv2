@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
+from capyc.core.i18n import translation
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
 from django.utils import timezone
@@ -21,7 +22,6 @@ from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, reimburse_service_units
 from breathecode.services.google.google import Google
 from breathecode.utils.decorators import TaskPriority
-from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
 
 from .models import (

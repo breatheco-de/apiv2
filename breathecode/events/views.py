@@ -4,6 +4,8 @@ import re
 from datetime import datetime, timedelta
 
 import pytz
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from django.http.response import HttpResponse
@@ -36,10 +38,8 @@ from breathecode.utils import (
 )
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import consume
-from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import fix_datetime_weekday, get_my_event_types, update_timeslots_out_of_range
 from .models import (

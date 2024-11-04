@@ -2,6 +2,8 @@ import logging
 from datetime import timedelta
 from typing import Any
 
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.db.models.query_utils import Q
 from django.utils import timezone
 from rest_framework import serializers
@@ -15,8 +17,6 @@ from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.utils import serpy
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization
 

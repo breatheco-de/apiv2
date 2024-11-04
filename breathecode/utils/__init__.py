@@ -11,7 +11,6 @@ from .generate_lookups_mixin import *  # noqa: F401
 from .header_limit_offset_pagination import *  # noqa: F401
 
 # from .validators import *
-from .i18n import *  # noqa: F401
 from .io import *  # noqa: F401
 from .localize_query import *  # noqa: F401
 from .multi_status_response import *  # noqa: F401

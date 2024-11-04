@@ -1,3 +1,4 @@
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
@@ -6,7 +7,6 @@ from rest_framework import serializers
 from breathecode.admissions.models import Academy
 from breathecode.utils import serpy
 from breathecode.utils.datetime_integer import duration_to_str, from_now
-from breathecode.utils.i18n import translation
 
 from .models import Answer, Assessment, Option, Question, UserAssessment
 
@@ -162,13 +162,22 @@ class HookUserAssessmentSerializer(serpy.Serializer):
     status_text = serpy.Field()
 
     conversion_info = serpy.Field()
-    total_score = serpy.Field()
     comment = serpy.Field()
 
     started_at = serpy.Field()
     finished_at = serpy.Field()
 
     created_at = serpy.Field()
+
+    summary = serpy.MethodField()
+    def get_summary(self, obj):
+        total_score, last_one = obj.get_score()
+
+        last_answer = None
+        if last_one is not None:
+            last_answer = AnswerSmallSerializer(last_one).data
+
+        return {"last_answer": last_answer, "live_score": total_score}
 
 
 class PublicUserAssessmentSerializer(serpy.Serializer):

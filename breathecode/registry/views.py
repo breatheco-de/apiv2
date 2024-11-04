@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 
 import requests
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.core.validators import URLValidator
 from django.db.models import Count, Q
@@ -25,9 +27,7 @@ from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     AssetThumbnailGenerator,
@@ -43,6 +43,7 @@ from .models import (
     AssetAlias,
     AssetCategory,
     AssetComment,
+    AssetContext,
     AssetErrorLog,
     AssetImage,
     AssetKeyword,
@@ -60,6 +61,7 @@ from .serializers import (
     AssetBigSerializer,
     AssetBigTechnologySerializer,
     AssetCategorySerializer,
+    AssetContextSerializer,
     AssetExpandableSerializer,
     AssetImageSmallSerializer,
     AssetKeywordBigSerializer,
@@ -719,6 +721,32 @@ class AssetView(APIView, GenerateLookupsMixin):
             serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
         else:
             serializer = AssetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class AssetContextView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=AssetCache, paginate=True)
+
+    def get(self, request, asset_id=None):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        asset_context = AssetContext.objects.filter(asset__id=asset_id).first()
+        if asset_context is None:
+            raise ValidationException(
+                f"No context found for asset {asset_id}", status.HTTP_404_NOT_FOUND, slug="context-not-found"
+            )
+
+        serializer = AssetContextSerializer(asset_context, many=False)
 
         return handler.response(serializer.data)
 

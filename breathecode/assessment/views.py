@@ -1,4 +1,7 @@
 from datetime import datetime
+
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
@@ -12,8 +15,6 @@ from breathecode.authenticate.actions import get_user_language
 from breathecode.marketing.serializers import FormEntryBigSerializer, PostFormEntrySerializer
 from breathecode.marketing.tasks import persist_single_lead
 from breathecode.utils import APIViewExtensions, GenerateLookupsMixin, capable_of
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import Answer, Assessment, AssessmentLayout, AssessmentThreshold, Option, Question, UserAssessment
 from .serializers import (

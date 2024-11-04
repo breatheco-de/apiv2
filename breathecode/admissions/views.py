@@ -5,6 +5,7 @@ import math
 
 import pytz
 from adrf.decorators import api_view
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
@@ -32,7 +33,6 @@ from breathecode.utils import (
     localize_query,
 )
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
@@ -1834,6 +1834,9 @@ class SyllabusVersionCSVView(APIView):
         # Write the data rows for each day
         for day in sorted(syllabus_version.json["days"], key=lambda x: x["position"]):
             week_number = math.ceil(cumulative_days / class_days_per_week)
+            if "technologies" not in day:
+                day["technologies"] = []
+                
             if lang == "es":
                 writer.writerow(
                     [
@@ -1856,7 +1859,7 @@ class SyllabusVersionCSVView(APIView):
                         day.get("teacher_instructions", ""),
                     ]
                 )
-            cumulative_days += day["duration_in_days"]
+            cumulative_days += day["duration_in_days"] if "duration_in_days" in day else 1
         return response
 
 

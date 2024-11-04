@@ -74,7 +74,7 @@ def change_status_answered(modeladmin, request, queryset):
 
 @admin.register(UserAssessment)
 class UserAssessmentAdmin(admin.ModelAdmin):
-    search_fields = ["title", "question__assessment__title"]
+    search_fields = ["title", "assessment__title"]
     readonly_fields = ("token",)
     list_display = ["id", "title", "current_status", "lang", "owner", "total_score", "assessment", "academy"]
     list_filter = ["lang", "status", "academy"]

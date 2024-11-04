@@ -7,6 +7,7 @@ import os
 import requests
 from adrf.views import APIView
 from adrf.viewsets import ViewSet
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.db.models import Q
@@ -35,7 +36,6 @@ from breathecode.utils import GenerateLookupsMixin, capable_of, num_to_roman
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
-from breathecode.utils.i18n import translation
 
 logger = logging.getLogger(__name__)
 MIME_ALLOWED = [

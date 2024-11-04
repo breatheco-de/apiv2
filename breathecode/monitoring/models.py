@@ -346,3 +346,8 @@ class SupervisorIssue(models.Model):
         self.full_clean()
 
         return super().save(*args, **kwargs)
+
+
+class NoPagination(models.Model):
+    path = models.CharField(max_length=255)
+    method = models.CharField(max_length=9)
