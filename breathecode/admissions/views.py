@@ -1856,7 +1856,7 @@ class SyllabusVersionCSVView(APIView):
                         day.get("teacher_instructions", ""),
                     ]
                 )
-            cumulative_days += day["duration_in_days"]
+            cumulative_days += day["duration_in_days"] if "duration_in_days" in day else 1
         return response
 
 
