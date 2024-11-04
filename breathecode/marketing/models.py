@@ -8,7 +8,6 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 from breathecode.admissions.models import Academy, Cohort, Syllabus
-from breathecode.payments.models import Plan
 from breathecode.authenticate.models import UserInvite
 from breathecode.utils.validators.language import validate_language_code
 
@@ -861,19 +860,6 @@ class Course(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
-
-        if self.pk is not None:
-            cohorts_group = self.cohorts_group.all()
-            if len(cohorts_group) > 0:
-                plan = Plan.objects.filter(slug=self.plan_slug).first()
-                if plan is None:
-                    raise Exception("A Course must have a Plan to have a Cohort group")
-
-                cohort_set_cohorts = plan.cohort_set.cohorts.all()
-                for cohort in cohorts_group:
-                    if cohort not in cohort_set_cohorts:
-                        raise Exception(f"The cohort {cohort.slug} does not belong to the plan cohort set")
-
         super().save(*args, **kwargs)
 
 
