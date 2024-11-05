@@ -1,18 +1,19 @@
-import logging
 import json
+import logging
+
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import (
-    CohortAdmin as AdmissionsCohortAdmin,
-    CohortUserAdmin as AdmissionsCohortUserAdmin,
-)
-from breathecode.feedback.tasks import recalculate_survey_scores
-from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Review, ReviewPlatform
-from .actions import send_survey_group, create_user_graduation_reviews
-from . import actions
 from django.utils.html import format_html
+
+from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
+from breathecode.admissions.admin import CohortUserAdmin as AdmissionsCohortUserAdmin
+from breathecode.feedback.tasks import recalculate_survey_scores
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
+
+from . import actions
+from .actions import create_user_graduation_reviews, send_survey_group
+from .models import Answer, CohortProxy, CohortUserProxy, Review, ReviewPlatform, Survey, UserProxy
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +182,7 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ["user__first_name", "user__last_name", "user__email", "cohort__slug"]
     list_filter = [AnswerTypeFilter, "status", "score", "academy__slug", "cohort__slug"]
     actions = ["export_as_csv", add_academy_to_answer]
-    raw_id_fields = ["user", "cohort", "mentor", "event", "mentorship_session"]
+    raw_id_fields = ["user", "cohort", "mentor", "event", "mentorship_session", "survey"]
 
     def answer_url(self, obj):
         url = "https://nps.4geeks.com/" + str(obj.id)

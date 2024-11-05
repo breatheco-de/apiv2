@@ -308,7 +308,12 @@ class Asset(models.Model):
 
     url = models.URLField(null=True, blank=True, default=None)
     solution_url = models.URLField(null=True, blank=True, default=None)
-    preview = models.URLField(null=True, blank=True, default=None)
+    preview = models.URLField(
+        null=True, blank=True, default=None, help_text="This preview will be used when shared in social media"
+    )
+    preview_in_tutorial = models.URLField(
+        null=True, blank=True, default=None, help_text="Used in 4geeks.com before the tutorial is about to start"
+    )
     description = models.TextField(null=True, blank=True, default=None)
     requirements = models.TextField(
         null=True,

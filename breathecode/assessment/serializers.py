@@ -162,13 +162,22 @@ class HookUserAssessmentSerializer(serpy.Serializer):
     status_text = serpy.Field()
 
     conversion_info = serpy.Field()
-    total_score = serpy.Field()
     comment = serpy.Field()
 
     started_at = serpy.Field()
     finished_at = serpy.Field()
 
     created_at = serpy.Field()
+
+    summary = serpy.MethodField()
+    def get_summary(self, obj):
+        total_score, last_one = obj.get_score()
+
+        last_answer = None
+        if last_one is not None:
+            last_answer = AnswerSmallSerializer(last_one).data
+
+        return {"last_answer": last_answer, "live_score": total_score}
 
 
 class PublicUserAssessmentSerializer(serpy.Serializer):
