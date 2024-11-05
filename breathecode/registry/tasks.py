@@ -461,7 +461,7 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
 
 
 @shared_task(bind=True, base=WebhookTask, priority=TaskPriority.CONTENT.value)
-def async_synchonize_repository_content(self, webhook):
+def async_synchonize_repository_content(self, webhook, override_meta=True):
 
     logger.debug("async_synchonize_repository_content")
     payload = webhook.get_payload()
@@ -514,7 +514,7 @@ def async_synchonize_repository_content(self, webhook):
                         # probably the asset was updated in github using the breathecode api
                         continue
                     logger.debug(f"Pulling asset from github for asset: {a.slug}")
-                    async_pull_from_github.delay(a.slug)
+                    async_pull_from_github.delay(a.slug, override_meta)
 
     return webhook
 
