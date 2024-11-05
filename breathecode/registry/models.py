@@ -553,7 +553,7 @@ class Asset(models.Model):
         if self.gitpod:
             context += (
                 f"This {self.asset_type} can be opened both locally or with click and code (This "
-                "way you don't have to install nothing and it will open automatically on gitpod or github codespaces). "
+                "way you don't have to install anything and it will open automatically on gitpod or github codespaces). "
             )
 
         if self.interactive == True and self.with_video == True:
@@ -563,7 +563,7 @@ class Asset(models.Model):
             context += f"This {self.asset_type} has a code solution on each step. "
 
         if self.duration:
-            context += f"This {self.asset_type} will last {self.duration}. "
+            context += f"This {self.asset_type} will last {self.duration} hours. "
 
         if self.difficulty:
             context += f"Its difficulty is considered as {self.difficulty}. "
@@ -588,11 +588,11 @@ class Asset(models.Model):
         if assets_related:
             context += (
                 f"In case you still need to learn more about the basics of this {self.asset_type}, "
-                "you can check these lessons, exercises, "
+                "you can check these lessons, and exercises, "
                 f"and related projects to get ready for this content: {assets_related}. "
             )
 
-        if self.readme:
+        if self.html:
             context += "The markdown file with "
 
             if self.asset_type == "PROJECT":
@@ -600,7 +600,7 @@ class Asset(models.Model):
             else:
                 context += "the content"
 
-            context += f" of this {self.asset_type} is the following: {self.readme}."
+            context += f" of this {self.asset_type} is the following: {self.html}."
 
         return context
 
