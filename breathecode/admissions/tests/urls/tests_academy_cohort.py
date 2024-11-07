@@ -901,6 +901,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": False,
+                        "cohorts_order": None,
                     }
                 ),
             ],
@@ -1002,6 +1003,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": False,
+                        "cohorts_order": None,
                     }
                 ),
             ],
@@ -1103,6 +1105,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": True,
+                        "cohorts_order": None,
                     }
                 ),
             ],
@@ -1204,6 +1207,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": False,
+                        "cohorts_order": None,
                     }
                 ),
             ],
@@ -1304,6 +1308,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": model.academy.available_as_saas,
+                        "cohorts_order": None,
                     }
                 ),
             ],
