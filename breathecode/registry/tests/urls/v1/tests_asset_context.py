@@ -27,11 +27,11 @@ def get_serializer(asset_context, data={}):
     }
 
 
-def test_with_no_context(bc: Breathecode, client):
+def test_with_no_assets(bc: Breathecode, client):
 
     url = reverse_lazy("registry:asset_context", kwargs={"asset_id": 1})
     response = client.get(url)
     json = response.json()
 
-    assert json == {"detail": "context-not-found", "status_code": 404}
+    assert json == {"detail": "asset-not-found", "status_code": 404}
     assert response.status_code == 404

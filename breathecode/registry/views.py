@@ -738,9 +738,14 @@ class AssetContextView(APIView, GenerateLookupsMixin):
 
         asset_context = AssetContext.objects.filter(asset__id=asset_id).first()
         if asset_context is None:
-            raise ValidationException(
-                f"No context found for asset {asset_id}", status.HTTP_404_NOT_FOUND, slug="context-not-found"
-            )
+            asset = Asset.objects.filter(id=asset_id).first()
+            if asset is None:
+                raise ValidationException(
+                    f"Asset {asset_id} not found", status.HTTP_404_NOT_FOUND, slug="asset-not-found"
+                )
+            asset_context = AssetContext(asset=asset)
+            asset_context.ai_context = asset.build_ai_context()
+            asset_context.save()
 
         serializer = AssetContextSerializer(asset_context, many=False)
 
