@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers, status
 from slugify import slugify
@@ -8,7 +9,6 @@ from slugify import slugify
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils import serpy
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
     Asset,
@@ -492,10 +492,13 @@ class AssetTechnologySerializer(ParentAssetTechnologySerializer):
 
 
 class AssetBigTechnologySerializer(AssetTechnologySerializer):
-
     assets = serpy.MethodField()
     alias = serpy.MethodField()
     sort_priority = serpy.Field()
+    marketing_information = serpy.MethodField()
+
+    def get_marketing_information(self, obj):
+        return obj.MarketingInformation
 
     def get_assets(self, obj):
         assets = Asset.objects.filter(technologies__id=obj.id)
