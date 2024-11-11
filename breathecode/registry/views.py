@@ -165,7 +165,7 @@ def render_preview_html(request, asset_slug):
 # Create your views here.
 
 
-class PublicTechnologyView(APIView):
+class TechnologyView(APIView):
     """
     View to retrieve a list of technologies or a specific technology by slug.
     """

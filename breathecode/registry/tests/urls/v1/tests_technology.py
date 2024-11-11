@@ -29,7 +29,7 @@ def get_detailed_serializer(asset_technology, assets=[], asset_technologies=[]):
         "icon_url": asset_technology.icon_url,
         "lang": None,
         "is_deprecated": asset_technology.is_deprecated,
-        "marketing_information": asset_technology.MarketingInformation,
+        "marketing_information": asset_technology.marketing_information,
         "parent": None,
         "slug": asset_technology.slug,
         "title": asset_technology.title,

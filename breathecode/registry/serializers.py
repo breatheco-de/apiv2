@@ -495,10 +495,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
     assets = serpy.MethodField()
     alias = serpy.MethodField()
     sort_priority = serpy.Field()
-    marketing_information = serpy.MethodField()
-
-    def get_marketing_information(self, obj):
-        return obj.MarketingInformation
+    marketing_information = serpy.Field()
 
     def get_assets(self, obj):
         assets = Asset.objects.filter(technologies__id=obj.id)
