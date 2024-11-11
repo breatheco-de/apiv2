@@ -6,7 +6,6 @@ import datetime
 from unittest.mock import MagicMock, patch
 
 import pytz
-
 from capyc.rest_framework.exceptions import ValidationException
 
 from ...actions import generate_mentor_bills

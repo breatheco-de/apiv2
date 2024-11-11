@@ -308,7 +308,7 @@ def test_syllabus(syl, validate_assets=False, ignore=None):
 
 
 def is_no_saas_student_up_to_date_in_any_cohort(
-    user: User, cohort: Optional[Cohort] = None, academy: Optional[Cohort] = None
+    user: User, cohort: Optional[Cohort] = None, academy: Optional[Cohort] = None, default: bool = True
 ) -> str:
     no_available_as_saas = Q(cohort__available_as_saas=False) | Q(
         cohort__available_as_saas=None, cohort__academy__available_as_saas=False
@@ -337,4 +337,4 @@ def is_no_saas_student_up_to_date_in_any_cohort(
         return False
 
     # if no cohorts were found, we assume that the user is up to date
-    return True
+    return default

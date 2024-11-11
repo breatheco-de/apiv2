@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from breathecode.admissions.models import Cohort
 
@@ -39,20 +40,7 @@ class AssignmentTelemetry(models.Model):
 
 PENDING = "PENDING"
 DONE = "DONE"
-TASK_STATUS = (
-    (PENDING, "Pending"),
-    (DONE, "Done"),
-)
 
-APPROVED = "APPROVED"
-REJECTED = "REJECTED"
-IGNORED = "IGNORED"
-REVISION_STATUS = (
-    (PENDING, "Pending"),
-    (APPROVED, "Approved"),
-    (REJECTED, "Rejected"),
-    (IGNORED, "Ignored"),
-)
 
 PROJECT = "PROJECT"
 QUIZ = "QUIZ"
@@ -66,8 +54,29 @@ TASK_TYPE = (
 )
 
 
+class TaskStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending"
+    DONE = "DONE", "Done"
+
+
+class RevisionStatus(models.TextChoices):
+    PENDING = "PENDING", "Pending"
+    APPROVED = "APPROVED", "Approved"
+    REJECTED = "REJECTED", "Rejected"
+    IGNORED = "IGNORED", "Ignored"
+
+
 # Create your models here.
 class Task(models.Model):
+    TaskStatus = TaskStatus
+    RevisionStatus = RevisionStatus
+
+    class TaskType(models.TextChoices):
+        PROJECT = "PROJECT", "project"
+        QUIZ = "QUIZ", "quiz"
+        LESSON = "LESSON", "lesson"
+        EXERCISE = "EXERCISE", "Exercise"
+
     _current_task_status = None
     _current_revision_status = None
 
@@ -87,9 +96,11 @@ class Task(models.Model):
 
     rigobot_repository_id = models.IntegerField(null=True, blank=True, default=None, db_index=True)
 
-    task_status = models.CharField(max_length=15, choices=TASK_STATUS, default=PENDING, db_index=True)
-    revision_status = models.CharField(max_length=15, choices=REVISION_STATUS, default=PENDING, db_index=True)
-    task_type = models.CharField(max_length=15, choices=TASK_TYPE, db_index=True)
+    task_status = models.CharField(max_length=15, choices=TaskStatus, default=TaskStatus.PENDING, db_index=True)
+    revision_status = models.CharField(
+        max_length=15, choices=RevisionStatus, default=RevisionStatus.PENDING, db_index=True
+    )
+    task_type = models.CharField(max_length=15, choices=TaskType, db_index=True)
     github_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     live_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=450, blank=True)
@@ -125,16 +136,15 @@ class Task(models.Model):
         creating = not self.pk
 
         super().save(*args, **kwargs)
-
         if not creating and self.task_status != self._current_task_status:
-            signals.assignment_status_updated.send_robust(instance=self, sender=self.__class__)
+            signals.assignment_status_updated.delay(instance=self, sender=self.__class__)
 
         if not creating and self.revision_status != self._current_revision_status:
-            signals.revision_status_updated.send_robust(instance=self, sender=self.__class__)
+            signals.revision_status_updated.delay(instance=self, sender=self.__class__)
 
         # only validate this on creation
         if creating:
-            signals.assignment_created.send_robust(instance=self, sender=self.__class__)
+            signals.assignment_created.delay(instance=self, sender=self.__class__)
 
         self._current_task_status = self.task_status
         self._current_revision_status = self.revision_status
@@ -163,6 +173,8 @@ VISIBILITY_STATUS = (
 
 
 class FinalProject(models.Model):
+    TaskStatus = TaskStatus
+
     repo_owner = models.ForeignKey(
         User, on_delete=models.SET_NULL, blank=True, null=True, related_name="projects_owned"
     )
@@ -173,12 +185,15 @@ class FinalProject(models.Model):
     members = models.ManyToManyField(User, related_name="final_projects")
 
     project_status = models.CharField(
-        max_length=15, choices=TASK_STATUS, default=PENDING, help_text="Done projects will be reviewed for publication"
+        max_length=15,
+        choices=TaskStatus,
+        default=TaskStatus.PENDING,
+        help_text="Done projects will be reviewed for publication",
     )
     revision_status = models.CharField(
         max_length=15,
-        choices=REVISION_STATUS,
-        default=PENDING,
+        choices=RevisionStatus,
+        default=RevisionStatus.PENDING,
         help_text="Only approved projects will display on the feature projects list",
     )
     revision_message = models.TextField(null=True, blank=True, default=None)
@@ -203,8 +218,6 @@ class FinalProject(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
-# PENDING = 'PENDING'
-# DONE = 'DONE'
 ERROR = "ERROR"
 LEARNPACK_WEBHOOK_STATUS = (
     (PENDING, "Pending"),
@@ -242,7 +255,14 @@ class RepositoryDeletionOrder(models.Model):
         PENDING = "PENDING", "Pending"
         ERROR = "ERROR", "Error"
         DELETED = "DELETED", "Deleted"
+        TRANSFERRED = "TRANSFERRED", "Transferred"
+        NO_STARTED = "NO_STARTED", "No started"
+        TRANSFERRING = "TRANSFERRING", "Transferring"
         CANCELLED = "CANCELLED", "Cancelled"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._status = self.status
 
     provider = models.CharField(max_length=15, choices=Provider, default=Provider.GITHUB)
     status = models.CharField(max_length=15, choices=Status, default=Status.PENDING)
@@ -251,15 +271,25 @@ class RepositoryDeletionOrder(models.Model):
     repository_user = models.CharField(max_length=100)
     repository_name = models.CharField(max_length=100)
 
+    starts_transferring_at = models.DateTimeField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def clean(self):
+        if self.status == RepositoryDeletionOrder.Status.TRANSFERRING:
+            self.starts_transferring_at = timezone.now()
+
     def save(self, *args, **kwargs):
         self.full_clean()
-        super().save(*args, **kwargs)
+        is_created = not self.pk
 
-    # def __str__(self):
-    #     return f'Learnpack event {self.event} {self.status} => Student: {self.student.id}'
+        super().save(*args, **kwargs)
+        from .signals import status_updated
+
+        if (self.status != self._status or is_created) and self.status == RepositoryDeletionOrder.Status.TRANSFERRING:
+            status_updated.delay(sender=self.__class__, instance=self)
+
+        self._status = self.status
 
 
 class RepositoryWhiteList(models.Model):

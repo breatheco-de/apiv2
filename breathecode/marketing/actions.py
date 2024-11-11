@@ -6,6 +6,8 @@ from typing import Optional
 
 import numpy as np
 import requests
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import APIException
@@ -14,9 +16,8 @@ from task_manager.core.exceptions import RetryTask
 from breathecode.authenticate.models import CredentialsFacebook
 from breathecode.notify.actions import send_email_message
 from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, ActiveCampaignClient, acp_ids, map_ids
+from breathecode.services.brevo import Brevo
 from breathecode.utils import getLogger
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import AcademyAlias, ActiveCampaignAcademy, Automation, FormEntry, Tag
 
@@ -152,12 +153,16 @@ def validate_email(email, lang):
     return email_status
 
 
-def set_optional(contact, key, data, custom_key=None):
+def set_optional(contact, key, data, custom_key=None, crm_vendor="ACTIVE_CAMPAIGN"):
     if custom_key is None:
         custom_key = key
 
-    if custom_key in data:
-        contact["field[" + acp_ids[key] + ",0]"] = data[custom_key]
+    if crm_vendor == "ACTIVE_CAMPAIGN":
+        if custom_key in data:
+            contact["field[" + acp_ids[key] + ",0]"] = data[custom_key]
+    else:
+        if custom_key in data:
+            contact[key] = data[custom_key]
 
     return contact
 
@@ -177,7 +182,7 @@ def get_lead_tags(ac_academy, form_entry):
 
     tags = list(chain(strong_tags, soft_tags, dicovery_tags, other_tags))
     if len(tags) != len(_tags):
-        message = "Some tag applied to the contact not found or have tag_type different than [STRONG, SOFT, DISCOVER, OTHER]: "
+        message = f"Some tag applied to the contact not found or have tag_type different than [STRONG, SOFT, DISCOVER, OTHER] for this academy {ac_academy.academy.name}. "
         message += f'Check for the follow tags:  {",".join(_tags)}'
         raise Exception(message)
 
@@ -198,7 +203,7 @@ def get_lead_automations(ac_academy, form_entry):
         raise Exception(f"The specified automation {_name} was not found for this AC Academy")
 
     logger.debug(f"found {str(count)} automations")
-    return automations.values_list("acp_id", flat=True)
+    return automations
 
 
 def add_to_active_campaign(contact, academy_id: int, automation_id: int):
@@ -250,7 +255,7 @@ def add_to_active_campaign(contact, academy_id: int, automation_id: int):
         logger.error(f"error triggering automation with id {str(acp_id)}", response)
         raise APIException("Could not add contact to Automation")
 
-    logger.info(f"Triggered automation with id {str(acp_id)}", response)
+    logger.debug(f"Triggered automation with id {str(acp_id)}", response)
 
 
 def register_new_lead(form_entry=None):
@@ -275,7 +280,9 @@ def register_new_lead(form_entry=None):
         ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry["location"]).first()
 
     if ac_academy is None:
-        raise RetryTask(f"No academy found with slug {form_entry['location']}")
+        raise RetryTask(
+            f"No CRM vendor information for academy with slug {form_entry['location']}. Is Active Campaign or Brevo used?"
+        )
 
     automations = get_lead_automations(ac_academy, form_entry)
 
@@ -285,13 +292,26 @@ def register_new_lead(form_entry=None):
     else:
         logger.info("automations not found")
 
-    tags = get_lead_tags(ac_academy, form_entry)
-    logger.info("found tags")
-    logger.info(set(t.slug for t in tags))
+    # Tags are only for ACTIVE CAMPAIGN
+    tags = []
+    if ac_academy.crm_vendor == "BREVO":
+        # brevo uses slugs instead of ID for automations
+        automations = automations.values_list("slug", flat=True)
+        if "tags" in form_entry and len(form_entry["tags"]) > 0:
+            raise Exception("Brevo CRM does not support tags, please remove them from the contact payload")
+    else:
+        if hasattr(automations, "values_list"):
+            automations = automations.values_list("acp_id", flat=True)
+
+        tags = get_lead_tags(ac_academy, form_entry)
+        logger.info("found tags")
+        logger.info(set(t.slug for t in tags))
 
     if (automations is None or len(automations) == 0) and len(tags) > 0:
         if tags[0].automation is None:
-            raise ValidationException("No automation was specified and the the specified tag has no automation either")
+            raise ValidationException(
+                "No automation was specified and the specified tag (if any) has no automation either"
+            )
 
         automations = [tags[0].automation.acp_id]
 
@@ -326,30 +346,33 @@ def register_new_lead(form_entry=None):
         "phone": form_entry["phone"],
     }
 
-    contact = set_optional(contact, "utm_url", form_entry)
-    contact = set_optional(contact, "utm_location", form_entry, "location")
-    contact = set_optional(contact, "course", form_entry)
-    contact = set_optional(contact, "utm_language", form_entry, "language")
-    contact = set_optional(contact, "utm_country", form_entry, "country")
-    contact = set_optional(contact, "utm_campaign", form_entry)
-    contact = set_optional(contact, "utm_source", form_entry)
-    contact = set_optional(contact, "utm_content", form_entry)
-    contact = set_optional(contact, "utm_medium", form_entry)
-    contact = set_optional(contact, "utm_plan", form_entry)
-    contact = set_optional(contact, "utm_placement", form_entry)
-    contact = set_optional(contact, "utm_term", form_entry)
-    contact = set_optional(contact, "gender", form_entry, "sex")
-    contact = set_optional(contact, "client_comments", form_entry)
-    contact = set_optional(contact, "gclid", form_entry)
-    contact = set_optional(contact, "current_download", form_entry)
-    contact = set_optional(contact, "referral_key", form_entry)
+    contact = set_optional(contact, "utm_url", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_location", form_entry, "location", crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "course", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_language", form_entry, "language", crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_country", form_entry, "country", crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_campaign", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_source", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_content", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_medium", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_plan", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_placement", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "utm_term", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "gender", form_entry, "sex", crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "client_comments", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "gclid", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "current_download", form_entry, crm_vendor=ac_academy.crm_vendor)
+    contact = set_optional(contact, "referral_key", form_entry, crm_vendor=ac_academy.crm_vendor)
+
+    # only for brevo
+    if ac_academy.crm_vendor == "BREVO":
+        contact = set_optional(contact, "utm_landing", form_entry, crm_vendor=ac_academy.crm_vendor)
 
     entry = FormEntry.objects.filter(id=form_entry["id"]).first()
-
     if not entry:
         raise ValidationException("FormEntry not found (id: " + str(form_entry["id"]) + ")")
 
-    if "contact-us" == tags[0].slug:
+    if len(tags) > 0 and "contact-us" == tags[0].slug:
 
         obj = {}
         if ac_academy.academy:
@@ -370,53 +393,26 @@ def register_new_lead(form_entry=None):
         )
 
     is_duplicate = entry.is_duplicate(form_entry)
-    # ENV Variable to fake lead storage
+    if is_duplicate:
+        entry.storage_status = "DUPLICATED"
+        entry.save()
+        logger.info("FormEntry is considered a duplicate, not sent to CRM and no automations or tags added")
+        return entry
 
+    # ENV Variable to fake lead storage
     if get_save_leads() == "FALSE":
-        entry.storage_status_text = "Saved but not send to AC because SAVE_LEADS is FALSE"
+        entry.storage_status_text = "Saved but not send to CRM because SAVE_LEADS is FALSE"
         entry.storage_status = "PERSISTED" if not is_duplicate else "DUPLICATED"
         entry.save()
         return entry
 
-    logger.info("ready to send contact with following details: " + str(contact))
-    old_client = ACOldClient(ac_academy.ac_url, ac_academy.ac_key)
-    response = old_client.contacts.create_contact(contact)
-    contact_id = response["subscriber_id"]
+    if ac_academy.crm_vendor == "ACTIVE_CAMPAIGN":
+        entry = send_to_active_campaign(entry, ac_academy, contact, automations, tags)
+    elif ac_academy.crm_vendor == "BREVO":
+        entry = send_to_brevo(entry, ac_academy, contact, automations)
 
-    # save contact_id from active campaign
-    entry.ac_contact_id = contact_id
-    entry.save()
-
-    if "subscriber_id" not in response:
-        logger.error("error adding contact", response)
-        entry.storage_status = "ERROR"
-        entry.storage_status_text = "Could not save contact in CRM: Subscriber_id not found"
-        entry.save()
-
-    if is_duplicate:
-        entry.storage_status = "DUPLICATED"
-        entry.save()
-        logger.info("FormEntry is considered a duplicate, no automations or tags added")
+    if entry.storage_status in ["ERROR"]:
         return entry
-
-    client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
-    if automations and not is_duplicate:
-        for automation_id in automations:
-            data = {"contactAutomation": {"contact": contact_id, "automation": automation_id}}
-            response = client.contacts.add_a_contact_to_an_automation(data)
-
-            if "contacts" not in response:
-                logger.error(f"error triggering automation with id {str(automation_id)}", response)
-                raise APIException("Could not add contact to Automation")
-            logger.info(f"Triggered automation with id {str(automation_id)} " + str(response))
-
-        logger.info("automations was executed successfully")
-
-    if tags and not is_duplicate:
-        for t in tags:
-            data = {"contactTag": {"contact": contact_id, "tag": t.acp_id}}
-            response = client.contacts.add_a_tag_to_contact(data)
-        logger.info("contact was tagged successfully")
 
     entry.storage_status = "PERSISTED"
     entry.save()
@@ -424,6 +420,64 @@ def register_new_lead(form_entry=None):
     form_entry["storage_status"] = "PERSISTED"
 
     return entry
+
+
+def send_to_active_campaign(form_entry, ac_academy, contact, automations, tags):
+
+    old_client = ACOldClient(ac_academy.ac_url, ac_academy.ac_key)
+    response = old_client.contacts.create_contact(contact)
+    contact_id = response["subscriber_id"]
+
+    # save contact_id from active campaign
+    form_entry.ac_contact_id = contact_id
+    form_entry.save()
+
+    if "subscriber_id" not in response:
+        logger.error("error adding contact", response)
+        form_entry.storage_status = "ERROR"
+        form_entry.storage_status_text = "Could not save contact in CRM: Subscriber_id not found"
+        form_entry.save()
+        return form_entry
+
+    client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
+    if automations:
+        for automation_id in automations:
+            data = {"contactAutomation": {"contact": contact_id, "automation": automation_id}}
+            response = client.contacts.add_a_contact_to_an_automation(data)
+
+            if "contacts" not in response:
+                logger.error(f"error triggering automation with id {str(automation_id)}", response)
+                raise APIException("Could not add contact to Automation")
+            logger.debug(f"Triggered automation with id {str(automation_id)} " + str(response))
+
+        logger.info("automations was executed successfully")
+
+    if tags:
+        for t in tags:
+            data = {"contactTag": {"contact": contact_id, "tag": t.acp_id}}
+            response = client.contacts.add_a_tag_to_contact(data)
+        logger.info("contact was tagged successfully")
+
+    return form_entry
+
+
+def send_to_brevo(form_entry, ac_academy, contact, automations):
+
+    if automations.count() > 1:
+        raise Exception("Only one automation at a time is allowed for Brevo")
+
+    _a = automations.first()
+
+    brevo_client = Brevo(ac_academy.ac_key)
+    response = brevo_client.create_contact(contact, _a)
+
+    # Brevo does not answer with the contact ID when the create_contact
+    # is being made thru triggering a brevo event
+    if response and "id" in response:
+        form_entry.ac_contact_id = response["id"]
+        form_entry.save()
+
+    return form_entry
 
 
 def test_ac_connection(ac_academy):
@@ -487,6 +541,9 @@ def update_deal_custom_fields(formentry_id: int):
 
 def sync_tags(ac_academy):
 
+    if ac_academy.crm_vendor == "BREVO":
+        raise Exception("Sync method has not been implemented for Brevo Tags")
+
     client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
     response = client.tags.list_all_tags(limit=100)
 
@@ -517,6 +574,9 @@ def sync_tags(ac_academy):
 
 
 def sync_automations(ac_academy):
+
+    if ac_academy.crm_vendor == "BREVO":
+        raise Exception("Sync method has not been implemented for Brevo Automations")
 
     client = ActiveCampaignClient(ac_academy.ac_url, ac_academy.ac_key)
     response = client.automations.list_all_automations(limit=100)

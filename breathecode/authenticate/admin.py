@@ -35,6 +35,7 @@ from .models import (
     GithubAcademyUser,
     GithubAcademyUserLog,
     GitpodUser,
+    GoogleWebhook,
     Profile,
     ProfileAcademy,
     Role,
@@ -475,7 +476,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
     list_display = ("academy", "github_is_sync", "github_errors", "github_username", "github_owner", "authenticate")
     search_fields = ["academy__slug", "academy__name", "github__username", "academy__id"]
     actions = (clean_errors, activate_github_sync, deactivate_github_sync, sync_github_members)
-    raw_id_fields = ["github_owner"]
+    raw_id_fields = ["github_owner", "google_cloud_owner"]
 
     def get_queryset(self, request):
 
@@ -498,3 +499,11 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         return format_html(
             f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.github_callback}&scope={scopes}'>connect owner</a>"
         )
+
+
+@admin.register(GoogleWebhook)
+class GoogleWebhookAdmin(admin.ModelAdmin):
+    list_display = ("id", "type", "status", "status_text", "created_at", "updated_at")
+    search_fields = ["status", "status_text"]
+    list_filter = ("type", "status")
+    actions = []

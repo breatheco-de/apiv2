@@ -137,7 +137,8 @@ class HookManagerClass(object):
         #         filters['user'] = instance
         #     else:
         #         raise Exception('{} has no `user` property. REST Hooks needs this.'.format(repr(instance)))
-
+        logger.debug(f"Triggering hook {event_name} with the following params")
+        logger.debug(filters)
         hook_model_cls = self.get_hook_model()
         hooks = hook_model_cls.objects.filter(**filters)
         for hook in hooks:
@@ -187,6 +188,8 @@ class HookManagerClass(object):
 
                     if len(allowed_action_parts) == 2:
                         user_override = False
+            else:
+                logger.debug(f"Event {event_name} not found on settings.py")
         else:
             event_actions_config = self.get_event_actions_config()
             event_name, ignore_user_override = event_actions_config.get(model, {}).get(action, (None, False))

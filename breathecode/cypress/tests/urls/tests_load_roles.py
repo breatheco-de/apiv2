@@ -495,7 +495,7 @@ class AcademyEventTestSuite(CypressTestCase):
 
         for capability in CAPABILITIES:
             self.assertRegex(capability["slug"], r"^[a-z_]+$")
-            self.assertRegex(capability["description"], r'^[a-zA-Z,. _()"]+$')
+            self.assertRegex(capability["description"], r'^[a-zA-Z,. _()"\']+$')
             self.assertEqual(len(capability), 2)
 
     def test_load_roles__check_the_roles(self):

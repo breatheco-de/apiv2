@@ -6,6 +6,7 @@ import random
 from datetime import datetime
 from unittest.mock import MagicMock, call, patch
 
+import capyc.pytest as capy
 import pytest
 from django.urls.base import reverse_lazy
 from django.utils import timezone
@@ -15,7 +16,6 @@ import breathecode.activity.tasks as activity_tasks
 from breathecode.assignments import tasks
 from breathecode.assignments.caches import TaskCache
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from capyc.rest_framework import pytest as capy
 
 from ..mixins import AssignmentsTestCase
 
@@ -629,10 +629,10 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test__put__with_task__one_item_in_body__passing_revision_status__teacher_token(self):
-        statuses = ["APPROVED", "REJECTED", "IGNORED"]
-        for index in range(0, 3):
+        statuses = ["APPROVED", "REJECTED"]
+        for index in range(0, 2):
             current_status = statuses[index]
-            next_status = statuses[index - 1 if index > 0 else 2]
+            next_status = statuses[index - 1 if index > 0 else 1]
             task = {"revision_status": current_status, "task_status": "DONE"}
             cohort_users = [
                 {

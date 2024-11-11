@@ -7,6 +7,7 @@ from django.contrib import admin, messages
 from django.db.models import Q
 from django.utils.html import format_html
 
+# from breathecode.admissions.admin import SyllabusVersionAdmin
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.admin import change_field
 
@@ -24,6 +25,7 @@ from .models import (
     AssetAlias,
     AssetCategory,
     AssetComment,
+    AssetContext,
     AssetErrorLog,
     AssetImage,
     AssetKeyword,
@@ -370,6 +372,28 @@ class WithKeywordFilter(admin.SimpleListFilter):
             return queryset.filter(seo_keywords__isnull=True)
 
 
+class LearnpackDeployed(admin.SimpleListFilter):
+
+    title = "LearnPack Deployed"
+
+    parameter_name = "is_learnpack_deployed"
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ("yes", "Deployed"),
+            ("no", "Not deployed"),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == "yes":
+            return queryset.filter(learnpack_deploy_url__isnull=False)
+
+        if self.value() == "no":
+            return queryset.filter(learnpack_deploy_url__isnull=True)
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -388,6 +412,7 @@ class AssetAdmin(admin.ModelAdmin):
         WithKeywordFilter,
         WithDescription,
         IsMarkdown,
+        LearnpackDeployed,
     ]
     raw_id_fields = ["author", "owner", "superseded_by"]
     actions = (
@@ -872,11 +897,18 @@ def add_translations_into_json(modeladmin, request, queryset):
 
 @admin.register(SyllabusVersionProxy)
 class SyllabusVersionAdmin(admin.ModelAdmin):
-    list_display = ["syllabus", "version", "status"]
+    list_display = ["syllabus", "version", "status", "url_path"]
     search_fields = ("syllabus__slug", "syllabus__name")
     # raw_id_fields = ['assets']
     list_filter = ["syllabus"]
     actions = [add_translations_into_json]
+
+    def url_path(self, obj):
+        return format_html(
+            f"""
+            <a rel='noopener noreferrer' target='_blank' href='/v1/admissions/syllabus/{obj.syllabus.id}/version/{obj.version}/preview'>preview</a>
+        """
+        )
 
 
 @admin.register(ContentVariable)
@@ -894,3 +926,19 @@ class ContentVariablesAdmin(admin.ModelAdmin):
             "FETCH_TEXT": "Fetch from: " + obj.value,
         }
         return format_html(f"{_values[obj.var_type]}")
+
+
+@admin.register(AssetContext)
+class AssetContextAdmin(admin.ModelAdmin):
+    list_display = ["asset", "ai_context"]
+    search_fields = ("asset__slug", "asset__title")
+    list_filter = ["asset__category", "asset__lang"]
+
+    def ai_context(self, obj: AssetContext):
+        lenght = len(obj.ai_context)
+        ai_context = obj.ai_context
+
+        if lenght <= 20:
+            return ai_context
+
+        return ai_context[:20] + "..."

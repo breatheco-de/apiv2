@@ -2,8 +2,10 @@ import logging
 import os
 import re
 from pathlib import Path
-from slugify import slugify
+
 import requests
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.core.validators import URLValidator
 from django.db.models import Count, Q
@@ -15,6 +17,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from slugify import slugify
 
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
@@ -24,10 +27,7 @@ from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.i18n import translation
 from breathecode.utils.views import render_message
-from .utils import is_url
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import (
     AssetThumbnailGenerator,
@@ -43,6 +43,7 @@ from .models import (
     AssetAlias,
     AssetCategory,
     AssetComment,
+    AssetContext,
     AssetErrorLog,
     AssetImage,
     AssetKeyword,
@@ -56,11 +57,12 @@ from .serializers import (
     AcademyAssetSerializer,
     AcademyCommentSerializer,
     AssetAliasSerializer,
-    AssetAndTechnologySerializer,
     AssetBigAndTechnologyPublishedSerializer,
     AssetBigSerializer,
     AssetBigTechnologySerializer,
     AssetCategorySerializer,
+    AssetContextSerializer,
+    AssetExpandableSerializer,
     AssetImageSmallSerializer,
     AssetKeywordBigSerializer,
     AssetKeywordSerializer,
@@ -86,6 +88,7 @@ from .serializers import (
     VariableSmallSerializer,
 )
 from .tasks import async_pull_from_github
+from .utils import is_url
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +195,10 @@ def get_technologies(request):
 
     if "is_deprecated" not in request.GET or request.GET.get("is_deprecated").lower() == "false":
         items = items.filter(is_deprecated=False)
+
+    like = request.GET.get("like", None)
+    if like is not None and like != "undefined" and like != "":
+        items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
     items = items.order_by("sort_priority")
 
@@ -696,15 +703,50 @@ class AssetView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get("exclude_category")
             items = items.exclude(category__slug__in=[p for p in param.split(",") if p])
 
+        if "authors_username" in self.request.GET:
+            au = self.request.GET.get("authors_username", "").split(",")
+            query = Q()
+            for username in au:
+                query |= Q(authors_username__icontains=username)
+            items = items.exclude(~query)
+
         items = items.filter(query, **lookup, visibility="PUBLIC").distinct()
         items = handler.queryset(items)
 
+        expand = self.request.GET.get("expand")
+
         if "big" in self.request.GET:
             serializer = AssetMidSerializer(items, many=True)
-        elif "expand" in self.request.GET and self.request.GET.get("expand") == "technologies":
-            serializer = AssetAndTechnologySerializer(items, many=True)
+        elif expand is not None:
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
         else:
             serializer = AssetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class AssetContextView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=AssetCache, paginate=True)
+
+    def get(self, request, asset_id=None):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        asset_context = AssetContext.objects.filter(asset__id=asset_id).first()
+        if asset_context is None:
+            raise ValidationException(
+                f"No context found for asset {asset_id}", status.HTTP_404_NOT_FOUND, slug="context-not-found"
+            )
+
+        serializer = AssetContextSerializer(asset_context, many=False)
 
         return handler.response(serializer.data)
 

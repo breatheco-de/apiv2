@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     AcademyProvisioningUserConsumptionView,
     AcademyBillView,
+    ProvisioningProfileView,
     UploadView,
     redirect_new_container,
     redirect_new_container_public,
@@ -19,6 +20,11 @@ urlpatterns = [
     path("academy/userconsumption", AcademyProvisioningUserConsumptionView.as_view(), name="academy_userconsumption"),
     path("academy/bill", AcademyBillView.as_view(), name="academy_bill_id"),
     path("academy/bill/<int:bill_id>", AcademyBillView.as_view(), name="academy_bill_id"),
+    path(
+        "academy/<int:academy_id>/provisioningprofile",
+        ProvisioningProfileView.as_view(),
+        name="academy_id_provisioning_profile",
+    ),
     path("bill/html", render_html_all_bills, name="bill_html"),
     path("bill/<int:id>/html", render_html_bill, name="bill_id_html"),
     # path('academy/me/container', ContainerMeView.as_view()),

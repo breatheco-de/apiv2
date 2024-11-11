@@ -1,3 +1,5 @@
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import serializers
 
 import breathecode.activity.tasks as tasks_activity
@@ -8,8 +10,6 @@ from breathecode.payments.models import Consumable
 from breathecode.services.calendly import Calendly
 from breathecode.utils import serpy
 from breathecode.utils.datetime_integer import duration_to_str
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import generate_mentor_bill
 from .models import CalendlyOrganization, MentorProfile, MentorshipBill, MentorshipService, MentorshipSession
@@ -175,6 +175,16 @@ class GETSessionSmallSerializer(serpy.Serializer):
     summary = serpy.Field()
 
     bill = TinyBillSerializer(required=False)
+
+    rating = serpy.MethodField()
+
+    def get_rating(self, obj):
+
+        answer = obj.answer_set.first()
+        if answer is None:
+            return None
+        else:
+            return AnswerSmallSerializer(answer).data
 
 
 class GETServiceSmallSerializer(serpy.Serializer):

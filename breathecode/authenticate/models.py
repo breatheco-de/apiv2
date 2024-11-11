@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import Any
+from typing import Tuple, TypedDict, Unpack
 
 import rest_framework.authtoken.models
+from asgiref.sync import sync_to_async
 from django import forms
 from django.conf import settings
 from django.contrib.auth.models import Group, Permission, User
@@ -23,7 +24,7 @@ from breathecode.authenticate.exceptions import (
 )
 from breathecode.utils.validators import validate_language_code
 
-from .signals import academy_invite_accepted
+from .signals import academy_invite_accepted, google_webhook_saved
 
 __all__ = [
     "User",
@@ -84,10 +85,10 @@ class Profile(models.Model):
         default=True, help_text="Set true if you want to show the tutorial on the user UI/UX", db_index=True
     )
 
-    twitter_username = models.CharField(max_length=50, blank=True, null=True)
-    github_username = models.CharField(max_length=50, blank=True, null=True)
-    portfolio_url = models.CharField(max_length=50, blank=True, null=True)
-    linkedin_url = models.CharField(max_length=50, blank=True, null=True)
+    twitter_username = models.CharField(max_length=64, blank=True, null=True)
+    github_username = models.CharField(max_length=64, blank=True, null=True)
+    portfolio_url = models.CharField(max_length=160, blank=True, null=True)
+    linkedin_url = models.CharField(max_length=160, blank=True, null=True)
 
     blog = models.CharField(max_length=150, blank=True, null=True)
 
@@ -330,7 +331,25 @@ class CredentialsGithub(models.Model):
 class AcademyAuthSettings(models.Model):
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
     github_username = models.SlugField(max_length=40, blank=True)
-    github_owner = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, default=None, null=True)
+    github_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        default=None,
+        null=True,
+        help_text="Github auth token for this user will be used for any admin call to the google cloud api, "
+        "for example: inviting users to the academy",
+    )
+    google_cloud_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        default=None,
+        null=True,
+        help_text="Google auth token for this user will be used for any admin call to the google cloud api, "
+        "for example: creating classroom video calls",
+        related_name="google_cloud_academy_auth_settings",
+    )
     github_default_team_ids = models.CharField(
         max_length=40,
         blank=True,
@@ -523,11 +542,22 @@ class CredentialsGoogle(models.Model):
 
     token = models.CharField(max_length=255)
     refresh_token = models.CharField(max_length=255)
+    id_token = models.CharField(max_length=1152, default="")
+    google_id = models.CharField(max_length=24, default="")
     expires_at = models.DateTimeField()
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class TokenGetOrCreateArgs(TypedDict, total=False):
+    hours_length: int
+    expires_at: datetime
+
+
+class TokenFilterArgs(TypedDict, total=False):
+    token_type: str
 
 
 class Token(rest_framework.authtoken.models.Token):
@@ -563,7 +593,7 @@ class Token(rest_framework.authtoken.models.Token):
         Token.objects.filter(expires_at__lt=utc_now).delete()
 
     @classmethod
-    def get_or_create(cls, user, token_type: str, **kwargs: Any):
+    def get_or_create(cls, user, token_type: str, **kwargs: Unpack[TokenGetOrCreateArgs]) -> Tuple["Token", bool]:
         utc_now = timezone.now()
         kwargs["token_type"] = token_type
 
@@ -606,12 +636,21 @@ class Token(rest_framework.authtoken.models.Token):
         return token, created
 
     @classmethod
-    def get_valid(cls, token: str):
+    def get_valid(cls, token: str, async_mode: bool = False, **kwargs: Unpack[TokenFilterArgs]) -> "Token | None":
         utc_now = timezone.now()
         cls.delete_expired_tokens()
 
+        qs = Token.objects.filter(Q(expires_at__gt=utc_now) | Q(expires_at__isnull=True), key=token, **kwargs)
+        if async_mode:
+            qs = qs.prefetch_related("user")
+
         # find among any non-expired token
-        return Token.objects.filter(key=token).filter(Q(expires_at__gt=utc_now) | Q(expires_at__isnull=True)).first()
+        return qs.first()
+
+    @classmethod
+    @sync_to_async
+    def aget_valid(cls, token: str, **kwargs: Unpack[TokenFilterArgs]) -> "Token | None":
+        return cls.get_valid(token, async_mode=True, **kwargs)
 
     @classmethod
     def validate_and_destroy(cls, hash: str) -> User:
@@ -665,3 +704,25 @@ class App(models.Model):
         raise DeprecationWarning("authenticate.App was deprecated, use linked_services.App instead")
 
     name = models.CharField(max_length=25, unique=True, help_text="Descriptive and unique name of the app")
+
+
+class GoogleWebhook(models.Model):
+    class Status(models.TextChoices):
+        PENDING = ("PENDING", "Pending")
+        DONE = ("DONE", "Done")
+        ERROR = ("ERROR", "Error")
+
+    message = models.SlugField(max_length=512, blank=True, help_text="base64 message provided by google")
+    type = models.CharField(max_length=40, default="noSet")
+
+    status = models.CharField(max_length=9, choices=Status, default=Status.PENDING)
+    status_text = models.CharField(max_length=255, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        created = self.pk is None
+        super().save(*args, **kwargs)
+        if created:
+            google_webhook_saved.send_robust(sender=self.__class__, instance=self, created=created)

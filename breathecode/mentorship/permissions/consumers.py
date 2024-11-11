@@ -1,13 +1,15 @@
 import logging
 
+from capyc.core.i18n import translation
+from capyc.core.managers import feature
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
+
 from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import User
 from breathecode.mentorship.models import MentorProfile, MentorshipService
 from breathecode.payments.models import Consumable, ConsumptionSession
 from breathecode.utils.decorators import ServiceContext
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -111,16 +113,17 @@ def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs
             )
         )
     ):
-
-        raise ValidationException(
-            translation(
-                lang,
-                en=f'Mentee do not have enough credits to access this service: {context["service"]}',
-                es="El mentee no tiene suficientes créditos para acceder a este servicio: " f'{context["service"]}',
-            ),
-            slug="mentee-not-enough-consumables",
-            code=402,
-        )
+        c = feature.context(context=context, kwargs=kwargs, user=mentee)
+        if feature.is_enabled("payments.bypass_consumption", c, False) is False:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f'Mentee do not have enough credits to access this service: {context["service"]}',
+                    es="El mentee no tiene suficientes créditos para acceder a este servicio: " f'{context["service"]}',
+                ),
+                slug="mentee-not-enough-consumables",
+                code=402,
+            )
 
     if consumable:
         session = ConsumptionSession.build_session(request, consumable, mentorship_service.max_duration, mentee)

@@ -1,7 +1,8 @@
 import logging
 import os
+from typing import Type
 
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
 from breathecode.admissions.models import SyllabusVersion
@@ -11,8 +12,9 @@ from breathecode.assignments.models import Task
 from breathecode.assignments.signals import assignment_created
 from breathecode.monitoring.models import RepositoryWebhook
 from breathecode.monitoring.signals import github_webhook
+from breathecode.registry.signals import asset_saved
 
-from .models import Asset, AssetAlias, AssetImage
+from .models import Asset, AssetAlias, AssetContext, AssetImage
 from .signals import asset_readme_modified, asset_slug_modified, asset_title_modified
 from .tasks import (
     async_add_syllabus_translations,
@@ -110,7 +112,7 @@ def post_assignment_created(sender, instance: Task, **kwargs):
 def post_webhook_received(sender, instance, **kwargs):
     if instance.scope in ["push"]:
         logger.debug("Received github webhook signal for push")
-        async_synchonize_repository_content.delay(instance.id)
+        async_synchonize_repository_content.delay(instance.id, override_meta=True)
 
 
 @receiver(syllabus_version_json_updated, sender=SyllabusVersion)
@@ -150,3 +152,40 @@ def model_b_deleted(sender, instance, **kwargs):
             async_generate_quiz_config(instance.question.assessment.id)
     except Exception:
         pass
+
+
+def update_asset_context(instance: Asset):
+    x = AssetContext.objects.filter(asset=instance).first()
+    if x is None:
+        x = AssetContext(asset=instance)
+
+    x.ai_context = instance.build_ai_context()
+    x.save()
+
+
+@receiver(asset_saved, sender=Asset)
+def update_asset_context_on_field_change(sender: Type[Asset], instance: Asset, **kwargs):
+    update_asset_context(instance)
+
+
+@receiver(m2m_changed, sender=Asset.all_translations.through)
+def update_asset_context_on_translations_changed(
+    sender: Type[Asset.all_translations.through], instance: Asset, **kwargs
+):
+    update_asset_context(instance)
+
+
+@receiver(m2m_changed, sender=Asset.technologies.through)
+def update_asset_context_on_technologies_changed(
+    sender: Type[Asset.technologies.through], instance: Asset, action: str, **kwargs
+):
+    if action == "post_add":
+        update_asset_context(instance)
+
+
+@receiver(m2m_changed, sender=Asset.assets_related.through)
+def update_asset_context_on_assets_related_changed(
+    sender: Type[Asset.assets_related.through], instance: Asset, action: str, **kwargs
+):
+    if action == "post_add":
+        update_asset_context(instance)

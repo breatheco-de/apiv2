@@ -41,7 +41,6 @@ SECRET_KEY = "5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a"
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT == "development" or ENVIRONMENT == "test"
 
-ALLOWED_HOSTS = []
 
 # Application definition
 INSTALLED_APPS = [
@@ -78,6 +77,7 @@ INSTALLED_APPS = [
     "breathecode.commons",
     "breathecode.payments",
     "breathecode.provisioning",
+    "breathecode.websocket",
     "explorer",
     "graphene_django",
     "task_manager",
@@ -85,6 +85,7 @@ INSTALLED_APPS = [
 ]
 
 GRAPHENE = {"SCHEMA": "breathecode.schema.schema"}
+IS_TEST_ENV = os.getenv("ENV") == "test"
 
 if os.getenv("ALLOW_UNSAFE_CYPRESS_APP") or ENVIRONMENT == "test":
     INSTALLED_APPS.append("breathecode.cypress")
@@ -117,6 +118,8 @@ if os.getenv("ENABLE_DEFAULT_PAGINATION", "y") in ["t", "true", "True", "TRUE", 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "breathecode.middlewares.static_redirect_middleware",
+    "breathecode.middlewares.set_service_header_middleware",
+    "breathecode.middlewares.detect_pagination_issues_middleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     # Cache
@@ -170,7 +173,7 @@ if os.getenv("GOOGLE_APPLICATION_CREDENTIALS") and (GS_BUCKET_NAME := os.getenv(
     }
     # STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
-else:
+elif IS_TEST_ENV is False:
     INSTALLED_APPS += [
         "whitenoise.runserver_nostatic",
     ]
@@ -233,7 +236,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Disable Django's logging setup
 LOGGING_CONFIG = None
 
-IS_TEST_ENV = os.getenv("ENV") == "test"
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 # this prevent the duplications of logs because heroku redirect the output to Coralogix
@@ -317,10 +319,17 @@ USE_I18N = True
 USE_TZ = True
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Allow all host headers
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    "breathecode.herokuapp.com",
+    "breathecode-test.herokuapp.com",
+    "localhost",
+    "127.0.0.1",
+    "*.gitpod.io",
+    "*.github.dev",
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
@@ -337,7 +346,16 @@ STATICFILES_DIRS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://*.gitpod.io",
     "https://*.gitpod.io",
+    "https://s.4geeksacademy.co",
+    "https://s.4geeks.co",
+    "https://s.4geeks.com",
+    "https://breathecode.herokuapp.com",
+    "https://breathecode-test.herokuapp.com",
 ]
+
+# CSP_DEFAULT_SRC = ("'self'", "https://*.4geeks.com", "https://*.4geeksacademy.co")
+# CSP_FRAME_SRC = ("'self'", "https://*.4geeks.com", "https://*.4geeksacademy.co")
+# SECURE_REFERRER_POLICY = "no-referrer"
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_HEADERS = [
@@ -519,11 +537,21 @@ HOOK_EVENTS = {
     "session.mentorship_session_status": "mentorship.MentorshipSession.mentorship_session_status",
     "planfinancing.planfinancing_created": "payments.PlanFinancing.planfinancing_created",
     "subscription.subscription_created": "payments.Subscription.subscription_created",
+    "UserAssessment.userassessment_status_updated": "assessment.UserAssessment.userassessment_status_updated",
 }
 
 # Websocket
 ASGI_APPLICATION = "breathecode.asgi.application"
 REDIS_URL_PATTERN = r"^redis://(.+):(\d+)$"
+REDIS_PARTS = REDIS_URL.split(":")
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+        "CONFIG": {
+            "hosts": [(":".join(REDIS_PARTS[:-1]), int(REDIS_PARTS[-1]))],
+        },
+    },
+}
 
 heroku_redis_ssl_host = {
     "address": REDIS_URL,  # The 'rediss' schema denotes a SSL connection.
@@ -531,6 +559,12 @@ heroku_redis_ssl_host = {
 
 if IS_REDIS_WITH_SSL_ON_HEROKU:
     heroku_redis_ssl_host["address"] += "?ssl_cert_reqs=none"
+
+
+MB = 1024 * 1024
+
+# keeps compatibility with the actual media endpoint
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 200 * MB
 
 # keep last part of the file
 django_heroku.settings(locals(), databases=False)

@@ -2,11 +2,11 @@ import logging
 import random
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.notify import actions
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.fixture(autouse=True)
@@ -45,7 +45,6 @@ def test_1_invite(database: capy.Database, format: capy.Format):
     assert logging.Logger.error.call_args_list == [
         call("User not found for user invite 1", exc_info=True),
     ]
-    # assert 0
 
 
 @pytest.mark.parametrize(

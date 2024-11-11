@@ -34,6 +34,7 @@ def plan_financing_item(data={}):
         "selected_cohort_set_id": None,
         "selected_event_type_set_id": None,
         "selected_mentorship_service_set_id": None,
+        "externally_managed": False,
         **data,
     }
 

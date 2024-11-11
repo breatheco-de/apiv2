@@ -1,32 +1,44 @@
 import os
 import re
+from datetime import datetime
 from functools import lru_cache
-from typing import Optional, Type
+from typing import Literal, Optional, Type, TypedDict
 
+from adrf.requests import AsyncRequest
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
 from django.db.models import QuerySet, Sum
 from django.db.models.query_utils import Q
+from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
 from rest_framework.request import Request
 
-from breathecode.admissions.models import Cohort, CohortUser, Syllabus
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
+from breathecode.media.models import File
+from breathecode.payments import tasks
 from breathecode.utils import getLogger
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
+from breathecode.utils.validate_conversion_info import validate_conversion_info
 
 from .models import (
     SERVICE_UNITS,
     Bag,
+    CohortSet,
     Consumable,
     Coupon,
     Currency,
+    EventTypeSet,
+    Invoice,
+    MentorshipServiceSet,
+    PaymentMethod,
     Plan,
     PlanFinancing,
+    ProofOfPayment,
     Service,
     ServiceItem,
     Subscription,
@@ -241,9 +253,8 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
         price
         and plan.is_renewable
         and subscriptions.filter(
-            Q(Q(status="CANCELLED") | Q(status="DEPRECATED"), valid_until=None, next_payment_at__gte=utc_now)
-            | Q(valid_until__gte=utc_now)
-        )
+            Q(valid_until=None, next_payment_at__gte=utc_now) | Q(valid_until__gte=utc_now)
+        ).exclude(status__in=["CANCELLED", "DEPRECATED"])
     ):
         raise ValidationException(
             translation(
@@ -727,15 +738,20 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
             }
         )
 
-    return result.values()
+    return list(result.values())
 
 
-def get_balance_by_resource(queryset: QuerySet, key: str):
+def get_balance_by_resource(
+    queryset: QuerySet[Consumable],
+    key: str,
+):
     result = []
 
     ids = {getattr(x, key).id for x in queryset}
     for id in ids:
         current = queryset.filter(**{f"{key}__id": id})
+        # current_virtual = [x for x in x if x[key] == id]
+
         instance = current.first()
         balance = {}
         items = []
@@ -745,6 +761,9 @@ def get_balance_by_resource(queryset: QuerySet, key: str):
             balance[unit.lower()] = (
                 -1 if per_unit.filter(how_many=-1).exists() else per_unit.aggregate(Sum("how_many"))["how_many__sum"]
             )
+
+        # for unit in current_virtual:
+        #     ...
 
         for x in queryset:
             valid_until = x.valid_until
@@ -859,3 +878,390 @@ def get_discounted_price(price: float, coupons: list[Coupon]) -> float:
         price = 0
 
     return price
+
+
+def validate_and_create_proof_of_payment(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
+    staff_user: User,
+    academy_id: int,
+    lang: Optional[str] = None,
+):
+    from .tasks import set_proof_of_payment_confirmation_url
+
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
+        data = request.data
+
+    else:
+        data = request
+
+    if lang is None:
+        settings = get_user_settings(staff_user.id)
+        lang = settings.lang
+
+    provided_payment_details = data.get("provided_payment_details")
+    reference = data.get("reference")
+    file_id = data.get("file")
+
+    if not file_id and not reference:
+        raise ValidationException(
+            translation(
+                lang,
+                en="At least one of 'file' or'reference' must be provided",
+                es="Debe proporcionar al menos un 'file' o'reference'",
+                slug="at-least-one-of-file-or-reference-must-be-provided",
+            ),
+            code=400,
+        )
+
+    x = ProofOfPayment()
+    x.provided_payment_details = provided_payment_details
+    x.reference = reference
+    x.created_by = staff_user
+
+    if file_id and (
+        file := File.objects.filter(
+            Q(user__id=staff_user.id) | Q(academy__id=academy_id), id=file_id, status=File.Status.CREATED
+        ).first()
+    ):
+        file.status = File.Status.TRANSFERRING
+        file.save()
+
+        x.status = ProofOfPayment.Status.PENDING
+        x.save()
+
+        set_proof_of_payment_confirmation_url.delay(file.id, x.id)
+
+    elif file_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid file id",
+                es="ID de archivo inválido",
+                slug="invalid-file-id",
+            ),
+            code=400,
+        )
+
+    else:
+        x.status = ProofOfPayment.Status.DONE
+        x.save()
+
+    return x
+
+
+def validate_and_create_subscriptions(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
+    staff_user: User,
+    proof_of_payment: ProofOfPayment,
+    academy_id: int,
+    lang: Optional[str] = None,
+):
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
+        data = request.data
+
+    else:
+        data = request
+
+    if lang is None:
+        settings = get_user_settings(staff_user.id)
+        lang = settings.lang
+
+    how_many_installments = 1
+
+    plans = data.get("plans", [])
+    plans = Plan.objects.filter(slug__in=plans)
+    if plans.count() != 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Exactly one plan must be provided",
+                es="Debe proporcionar exactamente un plan",
+                slug="exactly-one-plan-must-be-provided",
+            ),
+            code=400,
+        )
+
+    if "coupons" in data and not isinstance(data["coupons"], list):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Coupons must be a list of strings",
+                es="Cupones debe ser una lista de cadenas",
+                slug="invalid-coupons",
+            ),
+            code=400,
+        )
+
+    if "coupons" in data and len(data["coupons"]) > (max := max_coupons_allowed()):
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Too many coupons (max {max})",
+                es=f"Demasiados cupones (max {max})",
+                slug="too-many-coupons",
+            ),
+            code=400,
+        )
+
+    plan = plans[0]
+    coupons = get_available_coupons(plan, data.get("coupons", []))
+
+    if (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Financing option not found for {how_many_installments} installments",
+                es=f"Opción de financiamiento no encontrada para {how_many_installments} cuotas",
+                slug="financing-option-not-found",
+            ),
+            code=404,
+        )
+
+    conversion_info = data["conversion_info"] if "conversion_info" in data else None
+    validate_conversion_info(conversion_info, lang)
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if academy is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy not found",
+                es="Academia no encontrada",
+                slug="academy-not-found",
+            ),
+            code=404,
+        )
+
+    user_pk = data.get("user", None)
+    if user_pk is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="user must be provided",
+                es="user debe ser proporcionado",
+                slug="user-must-be-provided",
+            ),
+            code=400,
+        )
+
+    payment_method = data.get("payment_method")
+    if not payment_method or (payment_method := PaymentMethod.objects.filter(id=payment_method).first()) is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method not provided",
+                es="Método de pago no proporcionado",
+                slug="payment-method-not-provided",
+            ),
+            code=400,
+        )
+
+    args = []
+    kwargs = {}
+    if isinstance(user_pk, int):
+        kwargs["id"] = user_pk
+    else:
+        args.append(Q(email=user_pk) | Q(username=user_pk))
+
+    if (user := User.objects.filter(*args, **kwargs).first()) is None:
+        ValidationException(
+            translation(
+                lang,
+                en=f"User not found: {user_pk}",
+                es=f"Usuario no encontrado: {user_pk}",
+                slug="user-not-found",
+            ),
+            code=404,
+        )
+
+    if PlanFinancing.objects.filter(plans=plan, user=user, valid_until__gt=timezone.now()).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"User already has a valid subscription for this plan: {user_pk}",
+                es=f"Usuario ya tiene una suscripción válida para este plan: {user_pk}",
+                slug="user-already-has-valid-subscription",
+            ),
+            code=409,
+        )
+
+    bag = Bag()
+    bag.type = Bag.Type.BAG
+    bag.user = user
+    bag.currency = academy.main_currency
+    bag.status = Bag.Status.PAID
+    bag.academy = academy
+    bag.is_recurrent = True
+
+    bag.how_many_installments = how_many_installments
+    amount = get_discounted_price(option.monthly_price, coupons)
+    bag.monthly_price = option.monthly_price
+
+    bag.save()
+    bag.plans.set(plans)
+
+    utc_now = timezone.now()
+
+    invoice = Invoice(
+        amount=amount,
+        paid_at=utc_now,
+        user=user,
+        bag=bag,
+        academy=bag.academy,
+        status="FULFILLED",
+        currency=bag.academy.main_currency,
+        externally_managed=True,
+        proof=proof_of_payment,
+        payment_method=payment_method,
+    )
+    invoice.save()
+
+    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+
+    return invoice, coupons
+
+
+class UnitBalance(TypedDict):
+    unit: int
+
+
+class ConsumableItem(TypedDict):
+    id: int
+    how_many: int
+    unit_type: str
+    valid_until: Optional[datetime]
+
+
+class ResourceBalance(TypedDict):
+    id: int
+    slug: str
+    balance: UnitBalance
+    items: list[ConsumableItem]
+
+
+class ConsumableBalance(TypedDict):
+    mentorship_service_sets: ResourceBalance
+    cohort_sets: list[ResourceBalance]
+    event_type_sets: list[ResourceBalance]
+    voids: list[ResourceBalance]
+
+
+def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
+    from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
+    from breathecode.payments.data import get_virtual_consumables
+
+    if is_no_saas_student_up_to_date_in_any_cohort(user, default=False) is False:
+        return
+
+    virtuals = get_virtual_consumables()
+
+    event_type_set_ids = [virtual["event_type_set"]["id"] for virtual in virtuals if virtual["event_type_set"]]
+    cohort_set_ids = [virtual["cohort_set"]["id"] for virtual in virtuals if virtual["cohort_set"]]
+    mentorship_service_set_ids = [
+        virtual["mentorship_service_set"]["id"] for virtual in virtuals if virtual["mentorship_service_set"]
+    ]
+
+    available_services = [
+        virtual["service_item"]["service"]["id"]
+        for virtual in virtuals
+        if virtual["service_item"]["service"]["type"] == Service.Type.VOID
+    ]
+
+    available_event_type_sets = EventTypeSet.objects.filter(
+        academy__profileacademy__user=user, id__in=event_type_set_ids
+    ).values_list("id", flat=True)
+
+    available_cohort_sets = CohortSet.objects.filter(cohorts__cohortuser__user=user, id__in=cohort_set_ids).values_list(
+        "id", flat=True
+    )
+
+    available_mentorship_service_sets = MentorshipServiceSet.objects.filter(
+        academy__profileacademy__user=user, id__in=mentorship_service_set_ids
+    ).values_list("id", flat=True)
+
+    balance_mapping: dict[str, dict[int, int]] = {
+        "cohort_sets": dict(
+            [(v["id"], i) for (i, v) in enumerate(balance["cohort_sets"]) if v["id"] in available_cohort_sets]
+        ),
+        "event_type_sets": dict(
+            [(v["id"], i) for (i, v) in enumerate(balance["event_type_sets"]) if v["id"] in available_event_type_sets]
+        ),
+        "mentorship_service_sets": dict(
+            [
+                (v["id"], i)
+                for (i, v) in enumerate(balance["mentorship_service_sets"])
+                if v["id"] in available_mentorship_service_sets
+            ]
+        ),
+        "voids": dict([(v["id"], i) for (i, v) in enumerate(balance["voids"]) if v["id"] in available_services]),
+    }
+
+    def append(
+        key: Literal["cohort_sets", "event_type_sets", "mentorship_service_sets", "voids"],
+        id: int,
+        slug: str,
+        how_many: int,
+        unit_type: str,
+        valid_until: Optional[datetime] = None,
+    ):
+
+        index = balance_mapping[key].get(id)
+
+        # index = balance[key].append(id)
+        unit_type = unit_type.lower()
+        if index is None:
+            balance[key].append({"id": id, "slug": slug, "balance": {unit_type: 0}, "items": []})
+            index = len(balance[key]) - 1
+            balance_mapping[key][id] = index
+
+        obj = balance[key][index]
+
+        if how_many == -1:
+            obj["balance"][unit_type] = how_many
+
+        elif obj["balance"][unit_type] != -1:
+            obj["balance"][unit_type] += how_many
+
+        obj["items"].append(
+            {
+                "id": None,
+                "how_many": how_many,
+                "unit_type": unit_type.upper(),
+                "valid_until": valid_until,
+            }
+        )
+
+    for virtual in virtuals:
+        if (
+            virtual["service_item"]["service"]["type"] == Service.Type.VOID
+            and virtual["service_item"]["service"]["id"] in available_services
+        ):
+            id = virtual["service_item"]["service"]["id"]
+            slug = virtual["service_item"]["service"]["slug"]
+            how_many = virtual["service_item"]["how_many"]
+            unit_type = virtual["service_item"]["unit_type"]
+            append("voids", id, slug, how_many, unit_type)
+
+        if virtual["event_type_set"] and virtual["event_type_set"]["id"] in available_event_type_sets:
+            id = virtual["event_type_set"]["id"]
+            slug = virtual["event_type_set"]["slug"]
+            how_many = virtual["service_item"]["how_many"]
+            unit_type = virtual["service_item"]["unit_type"]
+            append("event_type_sets", id, slug, how_many, unit_type)
+
+        if (
+            virtual["mentorship_service_set"]
+            and virtual["mentorship_service_set"]["id"] in available_mentorship_service_sets
+        ):
+            id = virtual["mentorship_service_set"]["id"]
+            slug = virtual["mentorship_service_set"]["slug"]
+            how_many = virtual["service_item"]["how_many"]
+            unit_type = virtual["service_item"]["unit_type"]
+            append("mentorship_service_sets", id, slug, how_many, unit_type)
+
+        if virtual["cohort_set"] and virtual["cohort_set"]["id"] in available_cohort_sets:
+            id = virtual["cohort_set"]["id"]
+            slug = virtual["cohort_set"]["slug"]
+            how_many = virtual["service_item"]["how_many"]
+            unit_type = virtual["service_item"]["unit_type"]
+            append("cohort_sets", id, slug, how_many, unit_type)

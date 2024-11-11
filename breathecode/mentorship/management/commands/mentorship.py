@@ -1,24 +1,11 @@
-import os
+# import os
+# import urllib.parse
+# from datetime import timedelta
 
-from django.core.cache import cache
 from django.core.management.base import BaseCommand
 
 from breathecode.mentorship import tasks
 from breathecode.mentorship.models import MentorProfile
-
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
-
-
-def db_backup_bucket():
-    return os.getenv("DB_BACKUP_BUCKET")
-
-
-def get_activity_sampling_rate():
-    env = os.getenv("ACTIVITY_SAMPLING_RATE")
-    if env:
-        return int(env)
-
-    return 60
 
 
 class Command(BaseCommand):

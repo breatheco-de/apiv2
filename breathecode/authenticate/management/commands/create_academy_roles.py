@@ -1,5 +1,7 @@
 from typing import TypedDict
+
 from django.core.management.base import BaseCommand
+
 from ...models import Capability, Role
 
 CAPABILITIES = [
@@ -154,6 +156,15 @@ CAPABILITIES = [
     {"slug": "delete_calendly_organization", "description": "Delete calendly integration"},
     {"slug": "crud_assessment", "description": "Manage student quizzes and assessments"},
     {"slug": "read_user_assessment", "description": "Read user assessment submissions"},
+    {"slug": "read_subscription", "description": "Read subscriptions and plan financings of other users"},
+    {
+        "slug": "crud_subscription",
+        "description": "Create, update or delete subscriptions and plan financings of other users",
+    },
+    {
+        "slug": "upload_assignment_telemetry",
+        "description": "Allow upload the user's telemetry in a LearnPack assignment",
+    },
 ]
 
 ROLES = [
@@ -194,6 +205,7 @@ ROLES = [
             "crud_event",
             "crud_mentorship_session",
             "read_calendly_organization",
+            "crud_subscription",
         ],
     },
     {
@@ -209,6 +221,7 @@ ROLES = [
             "read_activity",
             "read_technology",
             "read_academyservice",
+            "upload_assignment_telemetry",
         ],
     },
     {
@@ -292,6 +305,7 @@ ROLES = [
             "read_cohort_log",
             "read_service",
             "read_academyservice",
+            "upload_assignment_telemetry",
         ],
     },
 ]
@@ -584,6 +598,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "generate_temporal_token",
                 "read_organization",
                 "crud_provisioning_bill",
+                "crud_subscription",
             ],
         }
     )

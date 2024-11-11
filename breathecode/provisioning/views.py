@@ -5,6 +5,8 @@ from datetime import date, datetime
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import pandas as pd
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from dateutil.relativedelta import relativedelta
 from django.http import HttpResponse
@@ -24,6 +26,7 @@ from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
     GetProvisioningBillSerializer,
     GetProvisioningBillSmallSerializer,
+    GetProvisioningProfile,
     GetProvisioningUserConsumptionSerializer,
     ProvisioningBillHTMLSerializer,
     ProvisioningBillSerializer,
@@ -32,13 +35,11 @@ from breathecode.provisioning.serializers import (
 from breathecode.utils import capable_of, cut_csv
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
-from breathecode.utils.i18n import translation
 from breathecode.utils.io.file import count_csv_rows
 from breathecode.utils.views import private_view, render_message
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import get_provisioning_vendor
-from .models import BILL_STATUS, ProvisioningBill, ProvisioningUserConsumption
+from .models import BILL_STATUS, ProvisioningBill, ProvisioningProfile, ProvisioningUserConsumption
 
 
 @private_view()
@@ -99,27 +100,49 @@ def redirect_new_container(request, token):
 
 def redirect_new_container_public(request):
 
+    from breathecode.registry.models import Asset
+
     # user = token.user
 
+    lang = request.GET.get("lang", None)
     repo = request.GET.get("repo", None)
     if repo is None:
         return render_message(request, "Please specify a repository in the URL")
 
     urls = {"gitpod": "https://gitpod.io/#", "codespaces": "https://github.com/codespaces/new/?repo="}
-    get_urls = {"codespaces": lambda x: x.replace("https://github.com/", "")}
+    url_modifiers = {"codespaces": lambda x: x.replace("https://github.com/", "")}
     vendors = request.GET.get("vendor", "codespaces,gitpod").split(",")
     buttons = []
-    for v in vendors:
-        if v not in urls:
-            return render_message(request, f"Invalid provisioning vendor: {v}")
 
+    asset = Asset.objects.filter(readme_url__icontains=repo)
+    if lang is not None:
+        asset = asset.filter(lang=lang)
+    asset = asset.first()
+    if asset and asset.learnpack_deploy_url:
         buttons.append(
             {
-                "label": f"Open in {v.capitalize()}",
-                "url": (get_urls[v](urls[v]) if v in get_urls else urls[v] + repo),
-                "icon": f"/static/img/{v}.svg",
+                "label": "Start tutorial",
+                "url": asset.learnpack_deploy_url,
+                "icon": "/static/img/learnpack.svg",
             }
         )
+
+    else:
+        for v in vendors:
+            if v not in urls:
+                return render_message(request, f"Invalid provisioning vendor: {v}")
+
+            _url = urls[v] + repo
+            if v in url_modifiers:
+                _url = urls[v] + url_modifiers[v](repo)
+
+            buttons.append(
+                {
+                    "label": f"Open in {v.capitalize()}",
+                    "url": _url,
+                    "icon": f"/static/img/{v}.svg",
+                }
+            )
 
     data = {
         # 'title': item.academy.name,
@@ -704,6 +727,21 @@ class AcademyBillView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProvisioningProfileView(APIView):
+
+    extensions = APIViewExtensions(paginate=True)
+
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+
+        items = ProvisioningProfile.objects.filter(academy__id=academy_id)
+
+        items = handler.queryset(items)
+        serializer = GetProvisioningProfile(items, many=True)
+
+        return handler.response(serializer.data)
 
 
 # class ContainerMeView(APIView):

@@ -4,13 +4,19 @@ import logging
 import os
 import re
 import time
+import traceback
+import urllib.parse
 
 import timeago
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.db.models import Q
+from django.core.handlers.wsgi import WSGIRequest
+from django.db.models import Q, QuerySet
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
+from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
@@ -20,7 +26,7 @@ from rest_framework.views import APIView
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.authenticate.actions import get_user_language
-from breathecode.authenticate.models import ProfileAcademy, Token
+from breathecode.authenticate.models import CredentialsGoogle, ProfileAcademy, Token
 from breathecode.mentorship import actions
 from breathecode.mentorship.caches import MentorProfileCache
 from breathecode.mentorship.exceptions import ExtendSessionException
@@ -31,10 +37,8 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import consume, has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message, set_query_parameter
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import close_mentoring_session, generate_mentor_bills, render_session
 from .forms import CloseMentoringSessionForm
@@ -322,7 +326,9 @@ def pick_mentorship_service(request, token, mentor_slug):
 
 class ForwardMeetUrl:
 
-    def __init__(self, request, mentor_profile, mentorship_service, token):
+    def __init__(
+        self, request: WSGIRequest, mentor_profile: MentorProfile, mentorship_service: MentorshipService, token: Token
+    ):
         self.request = request
         self.token = token
         self.baseUrl = request.get_full_path()
@@ -343,7 +349,7 @@ class ForwardMeetUrl:
 
         return result
 
-    def render_pick_session(self, mentor, sessions):
+    def render_pick_session(self, mentor: MentorProfile, sessions: QuerySet[MentorshipSession]):
         obj = {}
         if self.mentor.academy:
             obj["COMPANY_INFO_EMAIL"] = self.mentor.academy.feedback_email
@@ -367,7 +373,7 @@ class ForwardMeetUrl:
             },
         )
 
-    def render_pick_mentee(self, mentor, session):
+    def render_pick_mentee(self, mentor: MentorProfile, session: MentorshipSession):
 
         obj = {}
         if mentor.academy:
@@ -391,7 +397,7 @@ class ForwardMeetUrl:
             },
         )
 
-    def render_end_session(self, message, btn_url, status=200):
+    def render_end_session(self, message: str, btn_url: str, status: int = 200):
         return render_message(
             self.request,
             message,
@@ -402,7 +408,7 @@ class ForwardMeetUrl:
             academy=self.mentor.academy,
         )
 
-    def get_user_name(self, user, default):
+    def get_user_name(self, user: User, default: str):
         name = ""
 
         if user.first_name:
@@ -417,7 +423,7 @@ class ForwardMeetUrl:
 
         return name
 
-    def render_start_session(self, session):
+    def render_start_session(self, session: MentorshipSession):
         student_name = self.get_user_name(session.mentee, "student")
         mentor_name = self.get_user_name(session.mentor.user, "a mentor")
         link = set_query_parameter("?" + self.request.GET.urlencode(), "redirect", "true")
@@ -433,6 +439,9 @@ class ForwardMeetUrl:
             if "heading" not in obj:
                 obj["heading"] = session.mentor.academy.name
 
+        if session.service.video_provider == "GOOGLE_MEET" and session.online_meeting_url:
+            return HttpResponseRedirect(session.online_meeting_url)
+
         return render(
             self.request,
             "message.html",
@@ -446,7 +455,7 @@ class ForwardMeetUrl:
             },
         )
 
-    def get_pending_sessions_or_create(self, mentor, service, mentee):
+    def get_pending_sessions_or_create(self, mentor: MentorProfile, service: MentorshipService, mentee: User):
         # if specific sessions is being loaded
         if self.query_params["session"] is not None:
             sessions = MentorshipSession.objects.filter(id=self.query_params["session"])
@@ -466,7 +475,19 @@ class ForwardMeetUrl:
 
         return sessions
 
-    def get_session(self, sessions, mentee):
+    def ask_for_credentials(self, session: MentorshipSession):
+        # make oauth consent for the user if no outh credentials were found
+        if session.service.video_provider == "GOOGLE_MEET":
+            credentials = CredentialsGoogle.objects.filter(user=self.token.user).first()
+
+            if credentials is None:
+                current_path = self.request.get_full_path()
+                token, _ = Token.get_or_create(user=self.request.user, token_type="temporal")
+                encoded_path = urllib.parse.urlencode({"url": current_path})
+                url = reverse_lazy("auth:google_token", kwargs={"token": token.key}) + "?" + encoded_path
+                return HttpResponseRedirect(url)
+
+    def get_session(self, sessions: QuerySet[MentorshipSession], mentee: User):
         if self.query_params["session"] is not None:
             session = sessions.filter(id=self.query_params["session"]).first()
         else:
@@ -512,12 +533,14 @@ class ForwardMeetUrl:
             )
 
         is_token_of_mentee = mentor.user.id != self.token.user.id
+        self.is_mentee = is_token_of_mentee
 
         # if the mentor is not the user, then we assume is the mentee
         mentee = self.token.user if is_token_of_mentee else None
         try:
             sessions = self.get_pending_sessions_or_create(mentor, service, mentee)
         except Exception as e:
+            traceback.print_exc()
             return render_message(self.request, str(e), status=400, academy=mentor.academy)
 
         if not is_token_of_mentee and sessions.count() > 0 and str(sessions.first().id) != self.query_params["session"]:
@@ -548,6 +571,9 @@ class ForwardMeetUrl:
                     f'<a href="{self.baseUrl}&mentee=undefined">click here to start the session anyway.</a>',
                     academy=mentor.academy,
                 )
+
+        if response := self.ask_for_credentials(session):
+            return response
 
         # passing a invalid mentee query param
         if session.mentee is None and not is_mentee_params_undefined:
@@ -622,10 +648,13 @@ class ForwardMeetUrl:
         # save progress so far, we are about to render the session below
         session.save()
 
-        if session.mentee is None:
+        is_google_meet = session.service.video_provider == "GOOGLE_MEET"
+        if is_google_meet is False and session.mentee is None:
             return render_session(self.request, session, token=self.token)
 
-        if self.query_params["redirect"] is not None or self.token.user.id == session.mentor.user.id:
+        if is_google_meet is False and (
+            self.query_params["redirect"] is not None or self.token.user.id == session.mentor.user.id
+        ):
             return render_session(self.request, session, token=self.token)
 
         return self.render_start_session(session)
@@ -633,7 +662,9 @@ class ForwardMeetUrl:
 
 @private_view()
 @consume("join_mentorship", consumer=mentorship_service_by_url_param, format="html")
-def forward_meet_url(request, mentor_profile, mentorship_service, token):
+def forward_meet_url(
+    request: WSGIRequest, mentor_profile: MentorProfile, mentorship_service: MentorshipService, token: Token
+):
     handler = ForwardMeetUrl(request, mentor_profile, mentorship_service, token)
     return handler()
 
@@ -1195,6 +1226,12 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         service = request.GET.get("service", None)
         if service is not None:
             lookup["service__slug__icontains"] = service
+
+        with_feedback = request.GET.get("with_feedback", "")
+        if with_feedback.lower() == "true":
+            items = items.filter(answer__score__isnull=False).distinct()
+        elif with_feedback.lower() == "false":
+            items = items.exclude(answer__score__isnull=False).distinct()
 
         items = items.filter(**lookup).distinct()
         items = handler.queryset(items)

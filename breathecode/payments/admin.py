@@ -2,6 +2,7 @@ from django import forms
 from django.contrib import admin
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.html import format_html
 
 from breathecode.payments import signals, tasks
 from breathecode.payments.models import (
@@ -22,6 +23,7 @@ from breathecode.payments.models import (
     MentorshipServiceSet,
     MentorshipServiceSetTranslation,
     PaymentContact,
+    PaymentMethod,
     Plan,
     PlanFinancing,
     PlanOffer,
@@ -29,6 +31,7 @@ from breathecode.payments.models import (
     PlanServiceItem,
     PlanServiceItemHandler,
     PlanTranslation,
+    ProofOfPayment,
     Seller,
     Service,
     ServiceItem,
@@ -37,7 +40,6 @@ from breathecode.payments.models import (
     ServiceTranslation,
     Subscription,
     SubscriptionServiceItem,
-    PaymentMethod,
 )
 
 # Register your models here.
@@ -415,3 +417,16 @@ class PaymentMethodAdmin(admin.ModelAdmin):
     list_filter = ["academy__name", "lang"]
     raw_id_fields = ["academy"]
     search_fields = ["title", "academy__name"]
+
+
+@admin.register(ProofOfPayment)
+class ProofOfPaymentAdmin(admin.ModelAdmin):
+    list_display = ("reference", "status", "created_by", "open_image")
+    search_fields = ["reference"]
+    list_filter = ["status"]
+
+    def open_image(self, obj: ProofOfPayment) -> str:
+        if not obj.confirmation_image_url:
+            return "No image uploaded"
+
+        return format_html(f"<a target='blank' href='{obj.confirmation_image_url}'>link</a>")

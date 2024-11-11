@@ -1,5 +1,8 @@
 from datetime import timedelta
 
+from capyc.core.i18n import translation
+from capyc.core.shorteners import C
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import CharField, Q, Value
@@ -76,10 +79,7 @@ from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
 from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
-from breathecode.utils.i18n import translation
 from breathecode.utils.redis import Lock
-from breathecode.utils.shorteners import C
-from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 logger = getLogger(__name__)
 
@@ -601,6 +601,9 @@ class MeConsumableView(APIView):
             "voids": filter_void_consumable_balance(request, items),
         }
 
+        if request.GET.get("virtual") in ["true", "1", "y"]:
+            actions.set_virtual_balance(balance, request.user)
+
         return Response(balance)
 
 
@@ -1050,6 +1053,11 @@ class AcademyInvoiceView(APIView):
 
         return handler.response(serializer.data)
 
+    # @capable_of("crud_invoice")
+    # def post(self, request, academy_id=None):
+    #     add_invoice_externally_managed(request, request.user, academy_id)
+    #     return Response({"status": "ok"})
+
 
 class CardView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
@@ -1151,6 +1159,9 @@ class CancelConsumptionView(APIView):
         how_many = session.how_many
         consumable = session.consumable
         reimburse_service_units.send_robust(instance=consumable, sender=consumable.__class__, how_many=how_many)
+
+        session.status = session.Status.CANCELLED
+        session.save()
 
         return Response({"id": session.id, "status": "reversed"}, status=status.HTTP_200_OK)
 
@@ -1936,8 +1947,9 @@ class PayView(APIView):
                     try:
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
+                        original_price = option.monthly_price
                         coupons = bag.coupons.all()
-                        amount = get_discounted_price(option.monthly_price, coupons)
+                        amount = get_discounted_price(original_price, coupons)
 
                         bag.monthly_price = option.monthly_price
                     except Exception:
@@ -1954,12 +1966,17 @@ class PayView(APIView):
                 elif not available_for_free_trial and not available_free:
                     amount = get_amount_by_chosen_period(bag, chosen_period, lang)
                     coupons = bag.coupons.all()
+                    original_price = amount
                     amount = get_discounted_price(amount, coupons)
 
                 else:
+                    original_price = 0
                     amount = 0
 
-                if amount == 0 and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).count():
+                if (
+                    original_price == 0
+                    and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).count()
+                ):
                     raise ValidationException(
                         translation(
                             lang,
@@ -1973,7 +1990,7 @@ class PayView(APIView):
                 # actions.check_dependencies_in_bag(bag, lang)
 
                 if (
-                    amount == 0
+                    original_price == 0
                     and not available_free
                     and available_for_free_trial
                     and not bag.plans.filter(plan_offer_from__id__gte=1).exists()
@@ -2020,7 +2037,7 @@ class PayView(APIView):
 
                 transaction.savepoint_commit(sid)
 
-                if amount == 0:
+                if original_price == 0:
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
@@ -2064,6 +2081,33 @@ class PayView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+class AcademyPlanSubscriptionView(APIView):
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_subscription")
+    def post(self, request, plan_slug: str, academy_id: int):
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+
+        request.data["plans"] = [plan_slug]
+
+        try:
+            invoice, coupons = actions.validate_and_create_subscriptions(request, request.user, proof, academy_id, lang)
+
+        except Exception as e:
+            proof.delete()
+            raise e
+
+        s1 = GetInvoiceSerializer(invoice, many=False)
+        s2 = GetCouponSerializer(coupons, many=True)
+
+        data = s1.data
+        data["coupons"] = s2.data
+
+        return Response(data)
 
 
 class PaymentMethodView(APIView):

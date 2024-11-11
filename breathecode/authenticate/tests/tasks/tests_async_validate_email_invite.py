@@ -2,10 +2,10 @@ import logging
 import random
 from unittest.mock import MagicMock, call
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.authenticate.tasks import async_validate_email_invite
-from capyc.rest_framework import pytest as capy
 
 
 @pytest.fixture(autouse=True)

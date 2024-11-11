@@ -4,6 +4,8 @@ import os
 import random
 import urllib.parse
 
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import Permission, User
 from django.db import IntegrityError
 from django.db.models import Q
@@ -18,8 +20,6 @@ from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
 from breathecode.utils import serpy, validate_conversion_info
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
     AcademyAuthSettings,
@@ -106,6 +106,7 @@ class CohortTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
 
@@ -470,6 +471,7 @@ class AuthSettingsBigSerializer(serpy.Serializer):
     academy = AcademyTinySerializer()
     github_username = serpy.Field()
     github_owner = UserSmallSerializer(required=False)
+    google_cloud_owner = UserSmallSerializer(required=False)
     github_default_team_ids = serpy.Field()
     github_is_sync = serpy.Field()
     github_error_log = serpy.Field()
@@ -1289,6 +1291,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             "conversion_info",
             "asset_slug",
             "event_slug",
+            "has_marketing_consent",
         )
 
     def validate(self, data: dict[str, str]):

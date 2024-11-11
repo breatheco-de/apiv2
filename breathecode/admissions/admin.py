@@ -1,39 +1,39 @@
-import os
-import pytz
-import json
-import re
-import requests
 import base64
-from django.contrib import admin
+import json
+import os
+import re
+from random import choice
+
+import pytz
+import requests
 from django import forms
+from django.contrib import admin, messages
+from django.contrib.auth.admin import UserAdmin
+from django.db.models import Q, QuerySet
 from django.utils import timezone
 from django.utils.html import format_html
-from django.contrib.auth.admin import UserAdmin
-from django.contrib import messages
-from breathecode.utils.datetime_integer import from_now
-from breathecode.utils import getLogger
-from django.db.models import QuerySet
-from breathecode.activity.tasks import get_attendancy_log
 
+from breathecode.activity.tasks import get_attendancy_log
+from breathecode.assignments.actions import sync_student_tasks
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
+from breathecode.utils import getLogger
+from breathecode.utils.datetime_integer import from_now
+
+from .actions import ImportCohortTimeSlots, test_syllabus
 from .models import (
     Academy,
-    SyllabusSchedule,
+    City,
     Cohort,
+    CohortTimeSlot,
     CohortUser,
     Country,
-    City,
+    Syllabus,
+    SyllabusSchedule,
+    SyllabusScheduleTimeSlot,
     SyllabusVersion,
     UserAdmissions,
-    Syllabus,
-    CohortTimeSlot,
-    SyllabusScheduleTimeSlot,
 )
-from .actions import ImportCohortTimeSlots, test_syllabus
 from .tasks import async_test_syllabus
-from breathecode.assignments.actions import sync_student_tasks
-from random import choice
-from django.db.models import Q
 
 logger = getLogger(__name__)
 
@@ -382,7 +382,7 @@ def async_test_syllabus_integrity(modeladmin, request, queryset):
 
 @admin.register(SyllabusVersion)
 class SyllabusVersionAdmin(admin.ModelAdmin):
-    list_display = ("version", "syllabus", "integrity", "owner")
+    list_display = ("version", "syllabus", "integrity", "owner", "url_path")
     search_fields = ["syllabus__name", "syllabus__slug"]
     list_filter = ["syllabus__private", "syllabus__academy_owner"]
     actions = [
@@ -411,6 +411,13 @@ class SyllabusVersionAdmin(admin.ModelAdmin):
             <p class='d-block badge {colors[obj.integrity_status]}'>{obj.integrity_status}</p>
             <small>{when}</small>
 </table>"""
+        )
+
+    def url_path(self, obj):
+        return format_html(
+            f"""
+            <a rel='noopener noreferrer' target='_blank' href='/v1/admissions/syllabus/{obj.syllabus.id}/version/{obj.version}/preview'>preview</a>
+        """
         )
 
 

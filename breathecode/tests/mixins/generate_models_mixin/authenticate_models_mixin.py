@@ -34,6 +34,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
         user_setting=False,
         github_academy_user_log=False,
         pending_github_user=False,
+        credentials_google=False,
         profile_kwargs={},
         device_id_kwargs={},
         capability_kwargs={},
@@ -144,6 +145,9 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if "user" in models:
                 kargs["github_owner"] = just_one(models["user"])
 
+            if "user" in models:
+                kargs["google_cloud_owner"] = just_one(models["user"])
+
             if "academy" in models:
                 kargs["academy"] = just_one(models["academy"])
 
@@ -183,6 +187,14 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             models["credentials_facebook"] = create_models(
                 credentials_facebook, "authenticate.CredentialsFacebook", **{**kargs, **credentials_facebook_kwargs}
             )
+
+        if not "credentials_google" in models and is_valid(credentials_google):
+            kargs = {}
+
+            if "user" in models:
+                kargs["user"] = just_one(models["user"])
+
+            models["credentials_google"] = create_models(credentials_google, "authenticate.CredentialsGoogle", **kargs)
 
         if not "cohort_user" in models and is_valid(cohort_user):
             kargs = {}

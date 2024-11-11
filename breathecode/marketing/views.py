@@ -7,9 +7,11 @@ import os
 import re
 from datetime import timedelta
 from urllib import parse
-from slugify import slugify
+
 import pandas as pd
 import pytz
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import CharField, Count, F, Func, Q, Value
@@ -23,6 +25,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_csv.renderers import CSVRenderer
+from slugify import slugify
 
 import breathecode.marketing.tasks as tasks
 from breathecode.admissions.models import Academy
@@ -35,8 +38,6 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import validate_captcha, validate_captcha_challenge
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import convert_data_frame, sync_automations, sync_tags, validate_email
 from .models import (

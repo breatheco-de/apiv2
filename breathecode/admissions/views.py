@@ -1,17 +1,24 @@
+import csv
+import json
 import logging
+import math
 
 import pytz
 from adrf.decorators import api_view
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import FloatField, Max, Q, Value
+from django.http import HttpResponse
+from django.shortcuts import render
 from django.utils import timezone
-from slugify import slugify
 from rest_framework import status
 from rest_framework.decorators import permission_classes
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from slugify import slugify
 
 from breathecode.admissions import tasks
 from breathecode.admissions.caches import CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache, UserCache
@@ -26,8 +33,7 @@ from breathecode.utils import (
     localize_query,
 )
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
+from breathecode.utils.views import render_message
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
 from .models import (
@@ -76,6 +82,54 @@ from .serializers import (
 from .utils import CohortLog
 
 logger = logging.getLogger(__name__)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def render_syllabus_preview(request, syllabus_id, version):
+
+    syllabus_slug = None
+    if not syllabus_id.isnumeric():
+        syllabus_slug = syllabus_id
+        syllabus_id = None
+
+    syllabus_version = None
+    if version == "latest":
+        syllabus_version = (
+            SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+            )
+            .latest("created_at")
+            .first()
+        )
+    else:
+        syllabus_version = (
+            SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+            )
+            .filter(version=version)
+            .first()
+        )
+
+    if syllabus_version is None:
+        return render_message(request, f"Syllabus Version {syllabus_id} {version} not found")
+
+    payload = GetSyllabusVersionSerializer(syllabus_version).data
+    response = render(
+        request,
+        "syllabus.html",
+        {
+            **payload,
+            "code": json.dumps(payload["json"], indent=4),
+            "theme": request.GET.get("theme", "light"),
+            "plain": request.GET.get("plain", "false"),
+        },
+    )
+
+    # Set Content-Security-Policy header
+    response["Content-Security-Policy"] = "frame-ancestors 'self' https://4geeks.com"
+
+    return response
 
 
 @api_view(["GET"])
@@ -1723,6 +1777,90 @@ class SyllabusVersionView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SyllabusVersionCSVView(APIView):
+
+    @capable_of("read_syllabus")
+    def get(self, request, syllabus_id, version, academy_id):
+        lang = get_user_language(request)
+        if "class_days_per_week" not in request.GET:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing class_days_per_week in query parameters",
+                    es="Falta class_days_per_week en los parámetros de consulta",
+                    slug="missing-class-days-per-week",
+                )
+            )
+
+        class_days_per_week = int(request.GET.get("class_days_per_week"))
+
+        syllabus_slug = None
+        if not syllabus_id.isnumeric():
+            syllabus_slug = syllabus_id
+            syllabus_id = None
+
+        syllabus_version = None
+        if version == "latest":
+            syllabus_version = SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+            ).latest("created_at")
+
+        if syllabus_version is None and version is not None and version != "latest":
+            syllabus_version = SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                version=version,
+            ).first()
+
+        # Create an HTTP response object and set the content type to CSV
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="syllabus_{syllabus_slug}.csv"'
+
+        # Create a CSV writer object
+        writer = csv.writer(response)
+
+        # Write the header row based on language
+        if lang == "es":
+            writer.writerow(["Semana", "Días", "Temas a impartir", "Descripción", "Recursos", "Objetivos"])
+        else:
+            writer.writerow(["Week", "Day", "Topics", "Description", "Resources", "Objectives"])
+
+        # Initialize cumulative day counter
+        cumulative_days = 1
+
+        # Write the data rows for each day
+        for day in sorted(syllabus_version.json["days"], key=lambda x: x["position"]):
+            week_number = math.ceil(cumulative_days / class_days_per_week)
+            if "technologies" not in day:
+                day["technologies"] = []
+                
+            if lang == "es":
+                writer.writerow(
+                    [
+                        f"Semana {week_number}",
+                        f"Día {day['id']}: {day['label']}",
+                        ", ".join([lesson["title"] for lesson in day["lessons"]]),
+                        day.get("description", ""),
+                        ", ".join([tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]),
+                        day.get("teacher_instructions", ""),
+                    ]
+                )
+            else:
+                writer.writerow(
+                    [
+                        f"Week {week_number}",
+                        f"Day {day['id']}: {day['label']}",
+                        ", ".join([lesson["title"] for lesson in day["lessons"]]),
+                        day.get("description", ""),
+                        ", ".join([tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]),
+                        day.get("teacher_instructions", ""),
+                    ]
+                )
+            cumulative_days += day["duration_in_days"] if "duration_in_days" in day else 1
+        return response
 
 
 class AllSyllabusVersionsView(APIView):

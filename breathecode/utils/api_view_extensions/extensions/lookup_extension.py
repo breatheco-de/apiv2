@@ -1,12 +1,12 @@
 from functools import cache
 from typing import Any, Callable, Optional
 
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.db.models import Q
 from django.utils import dateparse
 
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
-from breathecode.utils.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 
 __all__ = ["LookupExtension"]
 

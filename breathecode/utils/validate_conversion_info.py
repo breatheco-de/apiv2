@@ -1,4 +1,4 @@
-from breathecode.utils.i18n import translation
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 
 __all__ = ["validate_conversion_info"]
