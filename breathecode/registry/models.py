@@ -844,9 +844,34 @@ class Asset(models.Model):
             return alias
 
 
+PENDING = "PENDING"
+PROCESSING = "PROCESSING"
+DONE = "DONE"
+ERROR = "ERROR"
+ASSETCONTEXT_STATUS = (
+    (PENDING, "Pending"),
+    (PROCESSING, "Processing"),
+    (DONE, "Done"),
+    (ERROR, "Error"),
+)
+
+
 class AssetContext(models.Model):
     asset = models.OneToOneField(Asset, on_delete=models.CASCADE)
     ai_context = models.TextField()
+    status = models.CharField(
+        max_length=20,
+        choices=ASSETCONTEXT_STATUS,
+        default=PENDING,
+        help_text="If pending, it means it hasn't been generated yet, processing means that is being generated at this moment, done means it has been generated",
+        db_index=True,
+    )
+    status_text = models.TextField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Status details, it may be set automatically if enough error information",
+    )
 
 
 class AssetAlias(models.Model):
