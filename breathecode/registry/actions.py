@@ -902,7 +902,7 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
     return asset
 
 
-def pull_project_dependencies(github, asset):
+def pull_repo_dependencies(github, asset):
     """
     Pulls the main programming languages and their versions from a GitHub repository.
 

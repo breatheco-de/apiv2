@@ -33,7 +33,7 @@ from .actions import (
     clean_asset_readme,
     generate_screenshot,
     pull_from_github,
-    pull_project_dependencies,
+    pull_repo_dependencies,
     screenshots_bucket,
     test_asset,
     upload_image_to_bucket,
@@ -86,7 +86,11 @@ def async_pull_project_dependencies(asset_slug):
                 raise Exception(
                     f"Asset {asset_slug} template {asset.template_url} not found in the database as another asset"
                 )
-            target_asset.is_template = True
+            if target_asset.asset_type != "STARTER":
+                target_asset.log_error(
+                    "not-a-template",
+                    f"Asset {asset_slug} references {target_asset.slug} as a template but its type != 'STARTER'",
+                )
             target_asset.save()
         logger.debug(f"Retrieving asset dependencies for {asset_slug}")
 
@@ -101,7 +105,7 @@ def async_pull_project_dependencies(asset_slug):
 
         g = Github(credentials.token)
 
-        dependency_string = pull_project_dependencies(g, target_asset)
+        dependency_string = pull_repo_dependencies(g, target_asset)
         logger.debug(dependency_string)
         target_asset.dependencies = dependency_string
         if target_asset.id != asset.id:

@@ -227,6 +227,7 @@ class AssetKeyword(models.Model):
 
 
 PROJECT = "PROJECT"
+STARTER = "STARTER"
 EXERCISE = "EXERCISE"
 LESSON = "LESSON"
 QUIZ = "QUIZ"
@@ -234,6 +235,7 @@ VIDEO = "VIDEO"
 ARTICLE = "ARTICLE"
 TYPE = (
     (PROJECT, "Project"),
+    (STARTER, "Starter Template"),
     (EXERCISE, "Exercise"),
     (QUIZ, "Quiz"),
     (LESSON, "Lesson"),
@@ -329,11 +331,6 @@ class Asset(models.Model):
         help_text="Only applies to LearnPack tutorials that have been published in the LearnPack cloud",
     )
 
-    is_template = models.BooleanField(
-        default=False,
-        help_text="Automatically set by the system, if true, it means that this asset is set as template by another asset",
-        db_index=True,
-    )
     template_url = models.URLField(
         null=True,
         blank=True,
