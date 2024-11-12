@@ -2,7 +2,7 @@ import os
 
 from capyc.core.managers import feature
 
-flags = feature._flags
+flags = feature.flags
 
 
 @feature.availability("authenticate.set_google_credentials")

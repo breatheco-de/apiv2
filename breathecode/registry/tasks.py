@@ -76,8 +76,10 @@ def async_pull_project_dependencies(asset_slug):
 
     asset = Asset.objects.filter(slug=asset_slug).first()
     try:
-        if asset.asset_type != "PROJECT":
-            raise Exception(f"Asset {asset_slug} is not a project, only projects can have dependencies")
+        if asset.asset_type not in ["PROJECT", "STARTER"]:
+            raise Exception(
+                f"Asset {asset_slug} is not a project or starter, only projects or starters can have dependencies"
+            )
 
         target_asset = asset
         if asset.template_url is not None and asset.template_url != "":
