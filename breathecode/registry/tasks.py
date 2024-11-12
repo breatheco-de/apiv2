@@ -108,10 +108,11 @@ def async_pull_project_dependencies(asset_slug):
         g = Github(credentials.token)
 
         dependency_string = pull_repo_dependencies(g, target_asset)
-        logger.debug(dependency_string)
         target_asset.dependencies = dependency_string
+        target_asset.save()
         if target_asset.id != asset.id:
             asset.dependencies = dependency_string
+            asset.save()
         return True
     except Exception:
         logger.exception(f"Error retrieving dependencies for asset {asset.slug}")

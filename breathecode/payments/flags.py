@@ -11,7 +11,7 @@ from breathecode.payments.models import CohortSet, MentorshipServiceSet
 from breathecode.registry.models import Asset
 from breathecode.utils.decorators.consume import ServiceContext
 
-flags = feature._flags
+flags = feature.flags
 
 
 @feature.availability("payments.bypass_consumption")
