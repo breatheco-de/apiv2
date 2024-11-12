@@ -779,6 +779,8 @@ def process_asset_config(asset, config):
             asset.log_error("template-url", "Only asset types projects can have templates")
         else:
             asset.template_url = config["template_url"]
+    else:
+        asset.template_url = None
 
     if "difficulty" in config:
         asset.difficulty = config["difficulty"].upper()
