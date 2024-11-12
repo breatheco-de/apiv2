@@ -227,6 +227,7 @@ class AssetKeyword(models.Model):
 
 
 PROJECT = "PROJECT"
+STARTER = "STARTER"
 EXERCISE = "EXERCISE"
 LESSON = "LESSON"
 QUIZ = "QUIZ"
@@ -234,6 +235,7 @@ VIDEO = "VIDEO"
 ARTICLE = "ARTICLE"
 TYPE = (
     (PROJECT, "Project"),
+    (STARTER, "Starter Template"),
     (EXERCISE, "Exercise"),
     (QUIZ, "Quiz"),
     (LESSON, "Lesson"),
@@ -327,6 +329,20 @@ class Asset(models.Model):
         blank=True,
         default=None,
         help_text="Only applies to LearnPack tutorials that have been published in the LearnPack cloud",
+    )
+
+    template_url = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="This template will be used to open the asset (only applied for projects)",
+    )
+    dependencies = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Automatically calculated based on the package.json, pipfile or alternatives. String like: python=3.10,node=16.0",
     )
 
     readme_url = models.URLField(
@@ -842,6 +858,20 @@ class Asset(models.Model):
 
         else:
             return alias
+
+    @staticmethod
+    def get_by_github_url(github_url):
+        parsed_url = urlparse(github_url)
+        if parsed_url.netloc != "github.com":
+            raise ValueError("Invalid GitHub URL")
+
+        path_parts = parsed_url.path.strip("/").split("/")
+        if len(path_parts) < 2:
+            raise ValueError("Invalid GitHub URL")
+
+        org_name, repo_name = path_parts[:2]
+        asset = Asset.objects.filter(readme_url__icontains=f"github.com/{org_name}/{repo_name}").first()
+        return asset
 
 
 PENDING = "PENDING"

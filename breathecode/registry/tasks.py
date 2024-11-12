@@ -11,11 +11,13 @@ from celery import shared_task
 from circuitbreaker import CircuitBreakerError
 from django.db.models.query_utils import Q
 from django.utils import timezone
+from github import Github
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.assessment.models import Assessment
+from breathecode.authenticate.models import CredentialsGithub
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
 from breathecode.monitoring.decorators import WebhookTask
@@ -31,6 +33,7 @@ from .actions import (
     clean_asset_readme,
     generate_screenshot,
     pull_from_github,
+    pull_repo_dependencies,
     screenshots_bucket,
     test_asset,
     upload_image_to_bucket,
@@ -61,8 +64,59 @@ def is_remote_image(_str):
 @shared_task(priority=TaskPriority.ACADEMY.value)
 def async_pull_from_github(asset_slug, user_id=None, override_meta=False):
     logger.debug(f"Synching asset {asset_slug} with data found on github")
-    sync_status = pull_from_github(asset_slug, override_meta=override_meta)
-    return sync_status != "ERROR"
+    asset_or_status = pull_from_github(asset_slug, override_meta=override_meta)
+    if asset_or_status != "ERROR":
+        async_pull_project_dependencies.delay(asset_slug)
+
+    return asset_or_status != "ERROR"
+
+
+@shared_task(priority=TaskPriority.ACADEMY.value)
+def async_pull_project_dependencies(asset_slug):
+
+    asset = Asset.objects.filter(slug=asset_slug).first()
+    try:
+        if asset.asset_type not in ["PROJECT", "STARTER"]:
+            raise Exception(
+                f"Asset {asset_slug} is not a project or starter, only projects or starters can have dependencies"
+            )
+
+        target_asset = asset
+        if asset.template_url is not None and asset.template_url != "":
+            target_asset = Asset.get_by_github_url(asset.template_url)
+            if target_asset is None:
+                raise Exception(
+                    f"Asset {asset_slug} template {asset.template_url} not found in the database as another asset"
+                )
+            if target_asset.asset_type != "STARTER":
+                target_asset.log_error(
+                    "not-a-template",
+                    f"Asset {asset_slug} references {target_asset.slug} as a template but its type != 'STARTER'",
+                )
+            target_asset.save()
+        logger.debug(f"Retrieving asset dependencies for {asset_slug}")
+
+        if target_asset.owner is None:
+            raise Exception(f"Asset {asset_slug} needs to have an owner in order to retrieve its github dependencies")
+
+        credentials = CredentialsGithub.objects.filter(user__id=target_asset.owner.id).first()
+        if credentials is None:
+            raise Exception(
+                f"Github credentials for user {target_asset.owner.first_name} {target_asset.owner.last_name} (id: {target_asset.owner.id}) not found when retrieving asset {asset_slug} dependencies"
+            )
+
+        g = Github(credentials.token)
+
+        dependency_string = pull_repo_dependencies(g, target_asset)
+        target_asset.dependencies = dependency_string
+        target_asset.save()
+        if target_asset.id != asset.id:
+            asset.dependencies = dependency_string
+            asset.save()
+        return True
+    except Exception:
+        logger.exception(f"Error retrieving dependencies for asset {asset.slug}")
+        return False
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)
@@ -461,7 +515,7 @@ def async_resize_asset_thumbnail(media_id: int, width: Optional[int] = 0, height
 
 
 @shared_task(bind=True, base=WebhookTask, priority=TaskPriority.CONTENT.value)
-def async_synchonize_repository_content(self, webhook):
+def async_synchonize_repository_content(self, webhook, override_meta=True):
 
     logger.debug("async_synchonize_repository_content")
     payload = webhook.get_payload()
@@ -514,7 +568,7 @@ def async_synchonize_repository_content(self, webhook):
                         # probably the asset was updated in github using the breathecode api
                         continue
                     logger.debug(f"Pulling asset from github for asset: {a.slug}")
-                    async_pull_from_github.delay(a.slug)
+                    async_pull_from_github.delay(a.slug, override_meta)
 
     return webhook
 
