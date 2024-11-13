@@ -749,7 +749,7 @@ class AssetContextView(APIView, GenerateLookupsMixin):
                 )
             asset_context = AssetContext(
                 asset=asset,
-                status="PENDING",
+                status="PROCESSING",
                 status_text="The asset context is being generated in the background and will be ready in a moment.",
             )
             asset_context.save()
