@@ -15,7 +15,7 @@ class Command(BaseCommand):
         assets = Asset.objects.filter(assetcontext__isnull=True)
         for asset in assets:
             try:
-                AssetContext.objects.update_or_create(asset=asset, defaults={"status": "PENDING"})
+                AssetContext.objects.update_or_create(asset=asset, defaults={"status": "PROCESSING"})
                 async_build_asset_context.delay(asset.id)
 
             except Exception as e:
