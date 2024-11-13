@@ -879,10 +879,10 @@ PROCESSING = "PROCESSING"
 DONE = "DONE"
 ERROR = "ERROR"
 ASSETCONTEXT_STATUS = (
-    (PENDING, "Pending"),
-    (PROCESSING, "Processing"),
-    (DONE, "Done"),
-    (ERROR, "Error"),
+    (PENDING, "PENDING"),
+    (PROCESSING, "PROCESSING"),
+    (DONE, "DONE"),
+    (ERROR, "ERROR"),
 )
 
 

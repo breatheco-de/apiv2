@@ -38,7 +38,7 @@ from .actions import (
     test_asset,
     upload_image_to_bucket,
 )
-from .models import Asset, AssetImage
+from .models import Asset, AssetImage, AssetContext
 
 logger = logging.getLogger(__name__)
 
@@ -603,7 +603,8 @@ def async_generate_quiz_config(assessment_id):
 
 
 @shared_task(priority=TaskPriority.CONTENT.value)
-def async_build_asset_context(asset):
+def async_build_asset_context(asset_id):
+    asset = Asset.objects.get(id=asset_id)
     LANG_MAP = {
         "en": "english",
         "es": "spanish",
@@ -690,4 +691,4 @@ def async_build_asset_context(asset):
 
         context += f" of this {asset.asset_type} is the following: {asset.html}."
 
-    return context
+    AssetContext.objects.update_or_create(asset=asset, defaults={"ai_context": context, "status": "DONE"})
