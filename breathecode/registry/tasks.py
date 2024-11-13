@@ -602,7 +602,7 @@ def async_generate_quiz_config(assessment_id):
     return True
 
 
-@shared_task(priority=TaskPriority.BACKGROUND.value)
+@shared_task(priority=TaskPriority.CONTENT.value)
 def async_build_asset_context(asset):
     LANG_MAP = {
         "en": "english",
