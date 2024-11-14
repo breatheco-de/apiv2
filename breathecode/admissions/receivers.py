@@ -2,6 +2,7 @@
 import logging
 import re
 from typing import Any, Type
+from asgiref.sync import sync_to_async
 
 from django.dispatch import receiver
 
@@ -26,9 +27,21 @@ def process_cohort_history_log(sender: Type[Cohort], instance: Cohort, **kwargs:
     activity_tasks.get_attendancy_log.delay(instance.id)
 
 
-@receiver(cohort_user_created, sender=Cohort)
-async def new_cohort_user(sender: Type[Cohort], instance: Cohort, **kwargs: Any):
-    logger.info("Processing Cohort history log for cohort: " + str(instance.id))
+@sync_to_async
+def join_to_micro_cohorts(cohort_user):
+
+    micro_cohorts = cohort_user.cohort.micro_cohorts.all()
+
+    user = cohort_user.user
+    for cohort in micro_cohorts:
+        cohort_user = CohortUser(user=user, cohort=cohort, role="STUDENT", finantial_status="FULLY_PAID")
+        cohort_user.save()
+
+
+@receiver(cohort_user_created, sender=CohortUser)
+async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwargs: Any):
+    logger.info("Signal for created cohort user: " + str(instance.id))
+    await join_to_micro_cohorts(instance)
 
     await authenticate_actions.send_webhook(
         "rigobot",
