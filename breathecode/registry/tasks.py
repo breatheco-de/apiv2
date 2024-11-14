@@ -38,7 +38,7 @@ from .actions import (
     test_asset,
     upload_image_to_bucket,
 )
-from .models import Asset, AssetImage
+from .models import Asset, AssetImage, AssetContext
 
 logger = logging.getLogger(__name__)
 
@@ -600,3 +600,95 @@ def async_generate_quiz_config(assessment_id):
         a.save()
 
     return True
+
+
+@shared_task(priority=TaskPriority.CONTENT.value)
+def async_build_asset_context(asset_id):
+    asset = Asset.objects.get(id=asset_id)
+    LANG_MAP = {
+        "en": "english",
+        "es": "spanish",
+        "it": "italian",
+    }
+
+    lang = asset.lang or asset.category.lang
+    lang_name = LANG_MAP.get(lang, lang)
+
+    context = f"This {asset.asset_type} about {asset.title} is written in {lang_name}. "
+
+    translations = ", ".join([x.title for x in asset.all_translations.all()])
+    if translations:
+        context = context[:-2]
+        context += f", and it has the following translations: {translations}. "
+
+    if asset.solution_url:
+        context = context[:-2]
+        context += f", and it has a solution code this link is: {asset.solution_url}. "
+
+    if asset.solution_video_url:
+        context = context[:-2]
+        context += f", and it has a video solution this link is {asset.solution_video_url}. "
+
+    context += f"It's category related is (what type of skills the student will get) {asset.category.title}. "
+
+    technologies = ", ".join([x.title for x in asset.technologies.filter(Q(lang=lang) | Q(lang=None))])
+    if technologies:
+        context += f"This asset is about the following technologies: {technologies}. "
+
+    if asset.external:
+        context += "This asset is external, which means it opens outside 4geeks. "
+
+    if asset.interactive:
+        context += "This asset opens on LearnPack so it has a step-by-step of the exercises that you should follow. "
+
+    if asset.gitpod:
+        context += (
+            f"This {asset.asset_type} can be opened both locally or with click and code (This "
+            "way you don't have to install anything and it will open automatically on gitpod or github codespaces). "
+        )
+
+    if asset.interactive == True and asset.with_video == True:
+        context += f"This {asset.asset_type} has videos on each step. "
+
+    if asset.interactive == True and asset.with_solutions == True:
+        context += f"This {asset.asset_type} has a code solution on each step. "
+
+    if asset.duration:
+        context += f"This {asset.asset_type} will last {asset.duration} hours. "
+
+    if asset.difficulty:
+        context += f"Its difficulty is considered as {asset.difficulty}. "
+
+    if asset.superseded_by and asset.superseded_by.title != asset.title:
+        context += f"This {asset.asset_type} has a previous version which is: {asset.superseded_by.title}. "
+
+    if asset.asset_type == "PROJECT" and not asset.delivery_instructions:
+        context += "This project should be delivered by sending a github repository URL. "
+
+    if asset.asset_type == "PROJECT" and asset.delivery_instructions and asset.delivery_formats:
+        context += (
+            f"This project should be delivered by adding a file of one of these types: {asset.delivery_formats}. "
+        )
+
+    if asset.asset_type == "PROJECT" and asset.delivery_regex_url:
+        context += f"This project should be delivered with a URL that follows this format: {asset.delivery_regex_url}. "
+
+    assets_related = ", ".join([x.slug for x in asset.assets_related.all()])
+    if assets_related:
+        context += (
+            f"In case you still need to learn more about the basics of this {asset.asset_type}, "
+            "you can check these lessons, and exercises, "
+            f"and related projects to get ready for this content: {assets_related}. "
+        )
+
+    if asset.html:
+        context += "The markdown file with "
+
+        if asset.asset_type == "PROJECT":
+            context += "the instructions"
+        else:
+            context += "the content"
+
+        context += f" of this {asset.asset_type} is the following: {asset.html}."
+
+    AssetContext.objects.update_or_create(asset=asset, defaults={"ai_context": context, "status": "DONE"})

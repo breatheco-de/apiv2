@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers, status
 from slugify import slugify
@@ -8,7 +9,6 @@ from slugify import slugify
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils import serpy
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import (
     Asset,
@@ -518,6 +518,8 @@ class AssetContextSerializer(serpy.Serializer):
     id = serpy.Field()
     asset = AssetTinySerializer()
     ai_context = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
 
 
 class _Keyword(serpy.Serializer):

@@ -14,7 +14,7 @@ from rest_framework.exceptions import ValidationError
 from task_manager.django.actions import schedule_task
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, Cohort
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
@@ -951,6 +951,13 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 }
             )
             profile_academy.save()
+
+            for c in cohort:
+                CohortUser.objects.create(
+                    cohort=c,
+                    role="STUDENT",
+                    user=user,
+                )
 
             notify_actions.send_email_message(
                 "academy_invite",

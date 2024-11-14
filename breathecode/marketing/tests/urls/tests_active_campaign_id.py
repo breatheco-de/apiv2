@@ -138,6 +138,7 @@ class ActiveCampaignIdTestSuite(MarketingTestCase):
             "sync_message": None,
             "sync_status": "INCOMPLETED",
             "duplicate_leads_delta_avoidance": "00:30:00",
+            "crm_vendor": "ACTIVE_CAMPAIGN",
             **data,
         }
 
