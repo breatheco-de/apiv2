@@ -773,6 +773,15 @@ def process_asset_config(asset, config):
 
     if "duration" in config:
         asset.duration = config["duration"]
+
+    if "template_url" in config:
+        if asset.asset_type != "PROJECT":
+            asset.log_error("template-url", "Only asset types projects can have templates")
+        else:
+            asset.template_url = config["template_url"]
+    else:
+        asset.template_url = None
+
     if "difficulty" in config:
         asset.difficulty = config["difficulty"].upper()
     if "videoSolutions" in config:
@@ -893,6 +902,96 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
 
     asset = process_asset_config(asset, config)
     return asset
+
+
+def pull_repo_dependencies(github, asset):
+    """
+    Pulls the main programming languages and their versions from a GitHub repository.
+
+    Parameters:
+    - github: Authenticated GitHub client instance (e.g., from PyGithub).
+    - asset: Asset object with `get_repo_meta()` to retrieve repo metadata.
+    - override_meta: Optional metadata to override repository details.
+
+    Returns:
+    - languages: Dictionary of main programming languages and their versions.
+    """
+    org_name, repo_name, branch_name = asset.get_repo_meta()
+
+    # Access the repository
+    repo = github.get_repo(f"{org_name}/{repo_name}")
+
+    # Retrieve programming languages from GitHub
+    languages = repo.get_languages()
+    if not languages:
+        return "No languages detected by Github"
+
+    # Parse version from dependency files
+    dependency_files = ["requirements.txt", "pyproject.toml", "Pipfile", "package.json"]
+    language_versions = {}
+
+    for file_name in dependency_files:
+        try:
+            content_file = repo.get_contents(file_name, ref=branch_name)
+            content = content_file.decoded_content.decode("utf-8")
+            detected_version = detect_language_version(file_name, content)
+            if detected_version:
+                language_versions.update(detected_version)
+        except Exception:
+            continue
+
+    # Combine languages and versions
+    combined = {lang: language_versions.get(lang, "unknown") for lang in languages}
+    dependencies_str = ",".join(f"{lang.lower()}={version}" for lang, version in combined.items())
+    return dependencies_str
+
+
+def detect_language_version(file_name, content):
+    import tomli
+
+    """
+    Detects the programming language version from a dependency file.
+
+    Returns:
+    - Dictionary of language and version detected.
+    """
+    if file_name == "requirements.txt":
+        # Check for Python version in requirements.txt (e.g., python_version marker)
+        if "python_version" in content:
+            return {"Python": extract_python_version(content)}
+
+    if file_name == "pyproject.toml":
+        data = tomli.loads(content)
+        version = data.get("tool", {}).get("poetry", {}).get("dependencies", {}).get("python", None)
+        if version:
+            return {"Python": version}
+
+    if file_name == "package.json":
+        import json
+
+        data = json.loads(content)
+        engines = data.get("engines", {})
+        if "node" in engines:
+            return {"Node.js": engines["node"]}
+
+    if file_name == "Pipfile":
+
+        data = tomli.loads(content)
+        version = data.get("requires", {}).get("python_version", None)
+        if version:
+            return {"Python": version}
+
+    return {}
+
+
+def extract_python_version(content):
+    """
+    Extracts Python version from requirements.txt content.
+    """
+    for line in content.splitlines():
+        if "python_version" in line:
+            return line.split("python_version")[-1].strip(" ()=")
+    return "unknown"
 
 
 def pull_quiz_asset(github, asset: Asset):
@@ -1083,7 +1182,7 @@ def add_syllabus_translations(_json: dict):
 
     day_count = -1
     for day in _json.get("days", []):
-        technologies = []
+        unique_technologies = {}
         day_count += 1
         for asset_type in ["assignments", "lessons", "quizzes", "replits"]:
             index = -1
@@ -1108,7 +1207,9 @@ def add_syllabus_translations(_json: dict):
                         # add translations technologies as well
                         _assetTechs = a.technologies.all()
                         for t in _assetTechs:
-                            technologies.append({"slug": t.slug, "title": t.title})
+                            # Use the slug as a unique key to avoid duplicates
+                            if t.slug not in unique_technologies:
+                                unique_technologies[t.slug] = {"slug": t.slug, "title": t.title}
 
                     if _asset.lang not in _json["days"][day_count][asset_type][index]["translations"]:
                         _json["days"][day_count][asset_type][index]["translations"][_asset.lang] = {
@@ -1118,6 +1219,9 @@ def add_syllabus_translations(_json: dict):
 
                     _assetTechs = _asset.technologies.all()
                     for t in _assetTechs:
-                        technologies.append({"slug": t.slug, "title": t.title})
-                    _json["days"][day_count]["technologies"] = technologies
+                        # Use the slug as a unique key to avoid duplicates
+                        if t.slug not in unique_technologies:
+                            unique_technologies[t.slug] = {"slug": t.slug, "title": t.title}
+
+                    _json["days"][day_count]["technologies"] = list(unique_technologies.values())
     return _json

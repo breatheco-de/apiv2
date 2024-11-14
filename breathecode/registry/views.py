@@ -87,7 +87,7 @@ from .serializers import (
     TechnologyPUTSerializer,
     VariableSmallSerializer,
 )
-from .tasks import async_pull_from_github
+from .tasks import async_build_asset_context, async_pull_from_github
 from .utils import is_url
 
 logger = logging.getLogger(__name__)
@@ -742,9 +742,18 @@ class AssetContextView(APIView, GenerateLookupsMixin):
 
         asset_context = AssetContext.objects.filter(asset__id=asset_id).first()
         if asset_context is None:
-            raise ValidationException(
-                f"No context found for asset {asset_id}", status.HTTP_404_NOT_FOUND, slug="context-not-found"
+            asset = Asset.objects.filter(id=asset_id).first()
+            if asset is None:
+                raise ValidationException(
+                    f"Asset {asset_id} not found", status.HTTP_404_NOT_FOUND, slug="asset-not-found"
+                )
+            asset_context = AssetContext(
+                asset=asset,
+                status="PROCESSING",
+                status_text="The asset context is being generated in the background and will be ready in a moment.",
             )
+            asset_context.save()
+            async_build_asset_context.delay(asset_id)
 
         serializer = AssetContextSerializer(asset_context, many=False)
 

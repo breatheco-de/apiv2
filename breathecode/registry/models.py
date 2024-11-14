@@ -227,6 +227,7 @@ class AssetKeyword(models.Model):
 
 
 PROJECT = "PROJECT"
+STARTER = "STARTER"
 EXERCISE = "EXERCISE"
 LESSON = "LESSON"
 QUIZ = "QUIZ"
@@ -234,6 +235,7 @@ VIDEO = "VIDEO"
 ARTICLE = "ARTICLE"
 TYPE = (
     (PROJECT, "Project"),
+    (STARTER, "Starter Template"),
     (EXERCISE, "Exercise"),
     (QUIZ, "Quiz"),
     (LESSON, "Lesson"),
@@ -308,7 +310,12 @@ class Asset(models.Model):
 
     url = models.URLField(null=True, blank=True, default=None)
     solution_url = models.URLField(null=True, blank=True, default=None)
-    preview = models.URLField(null=True, blank=True, default=None)
+    preview = models.URLField(
+        null=True, blank=True, default=None, help_text="This preview will be used when shared in social media"
+    )
+    preview_in_tutorial = models.URLField(
+        null=True, blank=True, default=None, help_text="Used in 4geeks.com before the tutorial is about to start"
+    )
     description = models.TextField(null=True, blank=True, default=None)
     requirements = models.TextField(
         null=True,
@@ -322,6 +329,20 @@ class Asset(models.Model):
         blank=True,
         default=None,
         help_text="Only applies to LearnPack tutorials that have been published in the LearnPack cloud",
+    )
+
+    template_url = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="This template will be used to open the asset (only applied for projects)",
+    )
+    dependencies = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Automatically calculated based on the package.json, pipfile or alternatives. String like: python=3.10,node=16.0",
     )
 
     readme_url = models.URLField(
@@ -553,7 +574,7 @@ class Asset(models.Model):
         if self.gitpod:
             context += (
                 f"This {self.asset_type} can be opened both locally or with click and code (This "
-                "way you don't have to install nothing and it will open automatically on gitpod or github codespaces). "
+                "way you don't have to install anything and it will open automatically on gitpod or github codespaces). "
             )
 
         if self.interactive == True and self.with_video == True:
@@ -563,7 +584,7 @@ class Asset(models.Model):
             context += f"This {self.asset_type} has a code solution on each step. "
 
         if self.duration:
-            context += f"This {self.asset_type} will last {self.duration}. "
+            context += f"This {self.asset_type} will last {self.duration} hours. "
 
         if self.difficulty:
             context += f"Its difficulty is considered as {self.difficulty}. "
@@ -588,11 +609,11 @@ class Asset(models.Model):
         if assets_related:
             context += (
                 f"In case you still need to learn more about the basics of this {self.asset_type}, "
-                "you can check these lessons, exercises, "
+                "you can check these lessons, and exercises, "
                 f"and related projects to get ready for this content: {assets_related}. "
             )
 
-        if self.readme:
+        if self.html:
             context += "The markdown file with "
 
             if self.asset_type == "PROJECT":
@@ -600,7 +621,7 @@ class Asset(models.Model):
             else:
                 context += "the content"
 
-            context += f" of this {self.asset_type} is the following: {self.readme}."
+            context += f" of this {self.asset_type} is the following: {self.html}."
 
         return context
 
@@ -838,10 +859,49 @@ class Asset(models.Model):
         else:
             return alias
 
+    @staticmethod
+    def get_by_github_url(github_url):
+        parsed_url = urlparse(github_url)
+        if parsed_url.netloc != "github.com":
+            raise ValueError("Invalid GitHub URL")
+
+        path_parts = parsed_url.path.strip("/").split("/")
+        if len(path_parts) < 2:
+            raise ValueError("Invalid GitHub URL")
+
+        org_name, repo_name = path_parts[:2]
+        asset = Asset.objects.filter(readme_url__icontains=f"github.com/{org_name}/{repo_name}").first()
+        return asset
+
+
+PENDING = "PENDING"
+PROCESSING = "PROCESSING"
+DONE = "DONE"
+ERROR = "ERROR"
+ASSETCONTEXT_STATUS = (
+    (PENDING, "PENDING"),
+    (PROCESSING, "PROCESSING"),
+    (DONE, "DONE"),
+    (ERROR, "ERROR"),
+)
+
 
 class AssetContext(models.Model):
     asset = models.OneToOneField(Asset, on_delete=models.CASCADE)
     ai_context = models.TextField()
+    status = models.CharField(
+        max_length=20,
+        choices=ASSETCONTEXT_STATUS,
+        default=PENDING,
+        help_text="If pending, it means it hasn't been generated yet, processing means that is being generated at this moment, done means it has been generated",
+        db_index=True,
+    )
+    status_text = models.TextField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Status details, it may be set automatically if enough error information",
+    )
 
 
 class AssetAlias(models.Model):
