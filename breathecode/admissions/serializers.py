@@ -446,6 +446,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     cohorts_order = serpy.Field()
     intro_video = serpy.Field()
     current_day = serpy.Field()
+    color = serpy.Field()
     current_module = serpy.Field()
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
