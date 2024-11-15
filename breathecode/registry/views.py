@@ -171,7 +171,7 @@ class TechnologyView(APIView):
     """
 
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(cache=TechnologyCache)
+    extensions = APIViewExtensions(cache=TechnologyCache, paginate=True, sort="sort_priority")
 
     def get(self, request, tech_slug=None):
         lang = request.GET.get("lang", "en")
@@ -218,7 +218,6 @@ class TechnologyView(APIView):
         if like and like not in ["undefined", ""]:
             items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
 
-        items = items.order_by("sort_priority")
         items = handler.queryset(items)
 
         serializer = AssetTechnologySerializer(items, many=True)
