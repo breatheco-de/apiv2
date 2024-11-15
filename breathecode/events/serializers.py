@@ -245,6 +245,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
+    is_public = serpy.Field()
 
 
 class EventPublicBigSerializer(EventSmallSerializer):
