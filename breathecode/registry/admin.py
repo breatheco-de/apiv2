@@ -89,7 +89,7 @@ def pull_content_from_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         try:
-            async_pull_from_github.delay(a.slug, request.user.id)
+            async_pull_from_github.delay(a.slug, request.user.id, override_meta=True)
             # async_pull_from_github(a.slug, request.user.id)  # uncomment for testing purposes
         except Exception as e:
             messages.error(request, a.slug + ": " + str(e))
@@ -486,7 +486,6 @@ class AssetAdmin(admin.ModelAdmin):
             "OPTIMIZED": "bg-error",
             "PENDING_TRANSLATION": "bg-error",
             "PENDING": "bg-warning",
-            "WARNING": "bg-warning",
             "NOT_STARTED": "bg-error",
             "NEEDS_RESYNC": "bg-error",
             "UNLISTED": "bg-warning",

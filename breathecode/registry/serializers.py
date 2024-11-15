@@ -518,6 +518,8 @@ class AssetContextSerializer(serpy.Serializer):
     id = serpy.Field()
     asset = AssetTinySerializer()
     ai_context = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
 
 
 class _Keyword(serpy.Serializer):

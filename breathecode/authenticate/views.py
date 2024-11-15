@@ -1237,7 +1237,8 @@ def save_github_token(request):
             else:
                 logger.error("Failed user registration on rigobot")
 
-            return HttpResponseRedirect(redirect_to=url + "?token=" + token.key)
+            redirect_url = set_query_parameter(url, "token", token.key)
+            return HttpResponseRedirect(redirect_to=redirect_url)
 
         else:
             raise APIException("Error from github")
@@ -1842,7 +1843,7 @@ def render_invite(request, token, member_id=None):
                 ),
                 slug="invite-not-found",
             )
-        
+
         return render_message(
             request, "Invitation not found or it was already accepted" + callback_msg, academy=academy
         )
