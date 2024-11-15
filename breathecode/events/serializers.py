@@ -189,6 +189,7 @@ class EventSmallSerializer(EventTinySerializer):
     host_user = UserBigSerializer(required=False)
     author = UserSerializer(required=False)
     asset = serpy.MethodField()
+    is_public = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
