@@ -13,7 +13,7 @@ from breathecode.certificate.actions import how_many_pending_tasks
 
 from ..activity import tasks as activity_tasks
 from .models import Cohort, CohortUser
-from .signals import cohort_log_saved, cohort_user_created
+from .signals import cohort_log_saved, cohort_user_created, student_edu_status_updated
 
 # add your receives here
 logger = logging.getLogger(__name__)
@@ -82,6 +82,25 @@ def schedule_repository_deletion(sender: Type[Task], instance: Task, **kwargs: A
             ]:
                 order.status = RepositoryDeletionOrder.Status.PENDING
                 order.save()
+
+
+@receiver(student_edu_status_updated, sender=CohortUser)
+def post_save_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwargs: Any):
+    logger.info("Validating if the student is graduating from a saas cohort")
+    cohort = instance.cohort
+    if cohort.available_as_saas and instance.educational_status == "GRADUATED":
+        main_cohorts = cohort.main_cohorts.all()
+        for main in main_cohorts:
+            main_cohort_user = CohortUser.objects.filter(cohort=main, user=instance.user).first()
+            if main_cohort_user.educational_status != "GRADUATED":
+                main_cohort = main_cohort_user.cohort
+                micro_cohorts = main_cohort.micro_cohorts.all()
+                cohort_users = CohortUser.objects.filter(user=instance.user, cohort__in=micro_cohorts).exclude(
+                    educational_status__in=["GRADUATED"]
+                )
+                if len(cohort_users) == 0:
+                    main_cohort_user.educational_status = "GRADUATED"
+                    main_cohort_user.save()
 
 
 @receiver(revision_status_updated, sender=Task, weak=False)

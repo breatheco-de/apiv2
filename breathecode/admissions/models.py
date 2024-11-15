@@ -366,7 +366,7 @@ class Cohort(models.Model):
         "Cohort",
         blank=True,
         help_text="This cohorts will represent small courses inside a main course",
-        related_name="cohorts",
+        related_name="main_cohorts",
     )
 
     cohorts_order = models.CharField(
