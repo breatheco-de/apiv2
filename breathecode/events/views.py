@@ -131,6 +131,15 @@ def get_events(request):
     elif online_event == "false":
         lookup["online_event"] = False
 
+    is_public = request.GET.get("is_public", None)
+    print(f"Valor de is_public: {is_public}")
+
+    if is_public == "true":
+        lookup["is_public"] = True
+    elif is_public == "false":
+        lookup["is_public"] = False
+    print(f"Filtro is_public aplicado: {lookup['is_public']}")
+
     lookup["ending_at__gte"] = timezone.now()
     if "past" in request.GET:
         if request.GET.get("past") == "true":
