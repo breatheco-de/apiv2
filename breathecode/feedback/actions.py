@@ -261,3 +261,37 @@ def calculate_survey_scores(survey_id: int) -> dict:
         "cohort": cohort,
         "mentors": sorted(mentors, key=lambda x: x["name"]),
     }
+
+
+def filter_answer_by_question(answers, question_type):
+    question_type = question_type.upper()
+    if question_type == "MENTORSHIP_SESSION":
+        return answers.filter(mentorship_session__isnull=False)
+    elif question_type == "EVENT":
+        return answers.filter(event__isnull=False, mentorship_session__isnull=True)
+    elif question_type == "MENTOR":
+        return answers.filter(mentor__isnull=False, event__isnull=True, mentorship_session__isnull=True)
+    elif question_type == "COHORT":
+        return answers.filter(
+            cohort__isnull=False, mentor__isnull=True, event__isnull=True, mentorship_session__isnull=True
+        )
+    elif question_type == "ACADEMY":
+        return answers.filter(
+            academy__isnull=False,
+            cohort__isnull=True,
+            mentor__isnull=True,
+            event__isnull=True,
+            mentorship_session__isnull=True,
+        )
+    elif question_type == "CONTENT_AND_PLATFORM":
+        return (
+            answers.filter(question_by_slug__isnull=False)
+            .exclude(question_by_slug="")
+            .filter(
+                cohort__isnull=True,
+                mentor__isnull=True,
+                event__isnull=True,
+                mentorship_session__isnull=True,
+            )
+        )
+    return answers

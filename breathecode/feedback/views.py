@@ -17,6 +17,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from capyc.rest_framework.exceptions import ValidationException
 
+from .actions import filter_answer_by_question
 from .caches import AnswerCache
 from .models import Answer, Review, ReviewPlatform, Survey
 from .serializers import (
@@ -122,6 +123,10 @@ class GetAnswerView(APIView):
         surveys = request.GET.get("survey", None)
         if surveys is not None and surveys != "":
             items = items.filter(survey__id__in=surveys.split(","))
+
+        question_filter = request.GET.get("question", None)
+        if question_filter is not None and question_filter != "":
+            items = filter_answer_by_question(items, question_filter)
 
         items = items.filter(**lookup)
 
