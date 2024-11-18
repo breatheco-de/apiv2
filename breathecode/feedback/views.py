@@ -375,6 +375,10 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         items = Review.objects.filter(cohort__academy__id=academy.id)
         lookup = {}
 
+        never_ending_cohorts = request.GET.get("never_ending_cohorts", None)
+        if never_ending_cohorts is not None:
+            items = items.filter(cohort__never_ends=(never_ending_cohorts.lower() == "true"))
+
         start = request.GET.get("start", None)
         if start is not None:
             start_date = datetime.strptime(start, "%Y-%m-%d").date()
