@@ -131,6 +131,10 @@ def get_events(request):
     elif online_event == "false":
         lookup["online_event"] = False
 
+    if "technology" in request.GET:
+        value = request.GET.get("technology")
+        lookup["event_type__technologies__icontains"] = value
+
     lookup["ending_at__gte"] = timezone.now()
     if "past" in request.GET:
         if request.GET.get("past") == "true":
