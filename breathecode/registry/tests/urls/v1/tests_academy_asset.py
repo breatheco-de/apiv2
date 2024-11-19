@@ -76,6 +76,9 @@ def database_item(academy, category, data={}):
         "enable_table_of_content": True,
         "agent": None,
         "learnpack_deploy_url": None,
+        "template_url": None,
+        "dependencies": None,
+        "preview_in_tutorial": None,
         **data,
     }
 
@@ -133,6 +136,8 @@ def post_serializer(academy, category, data={}):
         "agent": None,
         "learnpack_deploy_url": None,
         "updated_at": UTC_NOW.isoformat().replace("+00:00", "Z"),
+        "template_url": None,
+        "dependencies": None,
         **data,
     }
 

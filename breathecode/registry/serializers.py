@@ -368,6 +368,8 @@ class AssetBigSerializer(AssetMidSerializer):
     delivery_instructions = serpy.Field()
     delivery_formats = serpy.Field()
     delivery_regex_url = serpy.Field()
+    template_url = serpy.Field()
+    dependencies = serpy.Field()
 
     academy = AcademySmallSerializer(required=False)
 
