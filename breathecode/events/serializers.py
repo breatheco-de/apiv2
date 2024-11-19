@@ -297,6 +297,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     author = UserSerializer(required=False)
     free_for_all = serpy.Field()
     asset = serpy.MethodField()
+    is_public = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:

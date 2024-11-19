@@ -132,7 +132,6 @@ def get_events(request):
         lookup["online_event"] = False
 
     is_public = request.GET.get("is_public", None)
-
     if is_public == "true":
         lookup["is_public"] = True
     elif is_public == "false":
