@@ -90,7 +90,13 @@ def schedule_repository_deletion(sender: Type[Task], instance: Task, **kwargs: A
 def post_save_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwargs: Any):
     logger.info("Validating if the student is graduating from a saas cohort")
     cohort = instance.cohort
+
+    if instance.cohort is None:
+        return
+
     if cohort.available_as_saas and instance.educational_status == "GRADUATED":
+        # main_cohorts is the backwards relationship for the many to many
+        # it contains every cohort that another cohort is linked to as a micro cohort
         main_cohorts = cohort.main_cohorts.all()
         for main in main_cohorts:
             main_cohort_user = CohortUser.objects.filter(cohort=main, user=instance.user).first()
