@@ -142,6 +142,7 @@ def get_serializer(
         "updated_at": self.bc.datetime.to_iso_string(event.updated_at),
         "url": event.url,
         "venue": event.venue,
+        "is_public": event.is_public,
         **data,
     }
 
