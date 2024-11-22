@@ -77,6 +77,10 @@ class AssetTechnology(models.Model):
         help_text="Priority to sort technology (1, 2, or 3): One is more important and goes first than three.",
     )
 
+    marketing_information = models.JSONField(
+        null=True, blank=True, default=None, help_text="JSON structure for marketing information"
+    )
+
     def __str__(self):
         return self.title
 

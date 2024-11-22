@@ -23,6 +23,23 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[]):
     }
 
 
+def get_detailed_serializer(asset_technology, assets=[], asset_technologies=[]):
+    return {
+        "description": asset_technology.description,
+        "icon_url": asset_technology.icon_url,
+        "lang": None,
+        "is_deprecated": asset_technology.is_deprecated,
+        "marketing_information": asset_technology.marketing_information,
+        "parent": None,
+        "slug": asset_technology.slug,
+        "title": asset_technology.title,
+        "visibility": asset_technology.visibility,
+        "alias": [],
+        "assets": [],
+        "sort_priority": asset_technology.sort_priority,
+    }
+
+
 class RegistryTestSuite(RegistryTestCase):
     """
     🔽🔽🔽 Auth
@@ -120,6 +137,41 @@ class RegistryTestSuite(RegistryTestCase):
             self.bc.database.list_of("registry.AssetTechnology"),
             self.bc.format.to_dict(model.asset_technology),
         )
+
+        # teardown
+        self.bc.database.delete("registry.AssetTechnology")
+
+    def test_asset_technology_with_marketing_information(self):
+        marketing_info = {
+            "title": {"us": "Practice python", "es": "Practica python"},
+            "description": {"us": "Description in English", "es": "Descripción en español"},
+            "video": {"us": "https://video-url-us", "es": "https://video-url-es"},
+        }
+
+        asset_technology = {
+            "slug": self.bc.fake.slug(),
+            "title": self.bc.fake.word(),
+            "marketing_information": marketing_info,
+        }
+
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            role=1,
+            asset_technology=asset_technology,
+            capability="read_technology",
+        )
+
+        self.headers(academy=model.academy.id)
+
+        url = reverse_lazy("registry:get_technology_detail", kwargs={"tech_slug": model.asset_technology.slug})
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = get_detailed_serializer(model.asset_technology)
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # teardown
         self.bc.database.delete("registry.AssetTechnology")

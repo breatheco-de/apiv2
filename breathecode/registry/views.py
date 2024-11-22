@@ -162,51 +162,68 @@ def render_preview_html(request, asset_slug):
     return response
 
 
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def get_technologies(request):
-    lang = get_user_language(request)
-
-    items = AssetTechnology.objects.filter(parent__isnull=True)
-
-    if "sort_priority" in request.GET:
-        param = request.GET.get("sort_priority")
-
-        try:
-
-            param = int(param)
-
-            items = items.filter(sort_priority__exact=param)
-        except Exception:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="The parameter must be an integer, nothing else",
-                    es="El parametró debera ser un entero y nada mas ",
-                    slug="integer-not-found",
-                )
-            )
-
-    if "lang" in request.GET:
-        param = request.GET.get("lang")
-        if param == "en":
-            param = "us"
-        items = items.filter(Q(lang__iexact=param) | Q(lang="") | Q(lang__isnull=True))
-
-    if "is_deprecated" not in request.GET or request.GET.get("is_deprecated").lower() == "false":
-        items = items.filter(is_deprecated=False)
-
-    like = request.GET.get("like", None)
-    if like is not None and like != "undefined" and like != "":
-        items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
-
-    items = items.order_by("sort_priority")
-
-    serializer = AssetTechnologySerializer(items, many=True)
-    return Response(serializer.data)
-
-
 # Create your views here.
+
+
+class TechnologyView(APIView):
+    """
+    View to retrieve a list of technologies or a specific technology by slug.
+    """
+
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=TechnologyCache, paginate=True, sort="sort_priority")
+
+    def get(self, request, tech_slug=None):
+        lang = request.GET.get("lang", "en")
+        if lang == "en":
+            lang = "us"
+
+        handler = self.extensions(request)
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        if tech_slug:
+            try:
+                technology = AssetTechnology.objects.get(slug=tech_slug)
+            except AssetTechnology.DoesNotExist:
+                raise ValidationException(f"Technology with slug '{tech_slug}' not found", code=404)
+            serializer = AssetBigTechnologySerializer(technology)
+            return Response(serializer.data)
+
+        items = AssetTechnology.objects.filter(parent__isnull=True)
+
+        if "sort_priority" in request.GET:
+            try:
+                param = int(request.GET.get("sort_priority"))
+                items = items.filter(sort_priority__exact=param)
+            except ValueError:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="The parameter must be an integer, nothing else",
+                        es="El parametró debera ser un entero y nada mas ",
+                        slug="integer-not-found",
+                    )
+                )
+
+        if "lang" in request.GET:
+            param = request.GET.get("lang")
+            items = items.filter(Q(lang__iexact=param) | Q(lang="") | Q(lang__isnull=True))
+
+        if "is_deprecated" not in request.GET or request.GET.get("is_deprecated").lower() == "false":
+            items = items.filter(is_deprecated=False)
+
+        like = request.GET.get("like", None)
+        if like and like not in ["undefined", ""]:
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        items = handler.queryset(items)
+
+        serializer = AssetTechnologySerializer(items, many=True)
+        return handler.response(serializer.data)
+
+
 class AcademyTechnologyView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
