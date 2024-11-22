@@ -135,3 +135,64 @@ def test_filter_by_technologies(client: capy.Client, database: capy.Database, fa
     assert response.status_code == 200
     assert len(json) == 1
     assert expected == json
+
+
+def test_filter_by_technologies_obtain_two(client: capy.Client, database: capy.Database, fake: capy.Fake):
+    url = reverse_lazy("events:all")
+
+    model = database.create(
+        city=1,
+        country=1,
+        academy={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "logo_url": "https://example.com/logo.jpg",
+            "street_address": "Address",
+        },
+        event_type=[
+            {
+                "slug": fake.slug(),
+                "name": fake.name(),
+                "description": "description1",
+                "technologies": "python, flask",
+            },
+            {
+                "slug": fake.slug(),
+                "name": fake.name(),
+                "description": "description2",
+                "technologies": "flask, pandas",
+            },
+            {
+                "slug": fake.slug(),
+                "name": fake.name(),
+                "description": "description3",
+                "technologies": "javascript, java",
+            },
+        ],
+        event=[
+            {
+                "title": f"My Event {n + 1}",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": datetime.now(),
+                "ending_at": datetime.now() + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": n + 1,
+            }
+            for n in range(3)
+        ],
+    )
+
+    response = client.get(f"{url}?technologies=python,java")
+    json = response.json()
+
+    technologies_to_filter = {"python", "java"}
+    expected = [
+        serialize_event(event)
+        for event in model.event
+        if any(tech in event.event_type.technologies.split(", ") for tech in technologies_to_filter)
+    ]
+
+    assert response.status_code == 200
+    assert len(json) == 2
+    assert expected == json
