@@ -87,7 +87,7 @@ def serialize_event(event):
     }
 
 
-def test_filter_by_status(client: capy.Client, database: capy.Database, fake: capy.Fake):
+def test_filter_by_technologies(client: capy.Client, database: capy.Database, fake: capy.Fake):
     url = reverse_lazy("events:all")
 
     model = database.create(
