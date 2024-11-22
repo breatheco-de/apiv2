@@ -34,6 +34,7 @@ def get_serializer(event_type, academy=None, city=None, data={}):
         "slug": event_type.slug,
         "lang": event_type.lang,
         "description": event_type.description,
+        "technologies": event_type.technologies,
         **data,
     }
 
@@ -288,6 +289,7 @@ class AcademyEventTestSuite(EventTestCase):
             "description": "Potato",
             "icon_url": "https://www.google.com",
             "lang": "en",
+            "technologies": "",
         }
 
         url = reverse_lazy("events:academy_eventype")

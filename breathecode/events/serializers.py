@@ -80,6 +80,7 @@ class EventTypeSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    technologies = serpy.Field()
 
 
 class EventTypeSerializer(EventTypeSmallSerializer):
