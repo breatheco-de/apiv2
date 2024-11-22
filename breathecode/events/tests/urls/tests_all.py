@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import capyc.pytest as capy
 from django.urls.base import reverse_lazy
@@ -8,8 +8,16 @@ def serialize_event(event):
     return {
         "id": event.id,
         "title": event.title,
-        "starting_at": event.starting_at.isoformat() if isinstance(event.starting_at, datetime) else event.starting_at,
-        "ending_at": event.ending_at.isoformat() if isinstance(event.ending_at, datetime) else event.ending_at,
+        "starting_at": (
+            event.starting_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+            if isinstance(event.starting_at, datetime)
+            else None
+        ),
+        "ending_at": (
+            event.ending_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+            if isinstance(event.ending_at, datetime)
+            else None
+        ),
         "event_type": {
             "id": event.event_type.id,
             "slug": event.event_type.slug,
@@ -17,18 +25,22 @@ def serialize_event(event):
             "technologies": event.event_type.technologies,
         },
         "slug": event.slug,
-        "excerpt": event.excerpt or None,
-        "lang": event.lang or None,
-        "url": event.url or None,
+        "excerpt": event.excerpt,
+        "lang": event.lang,
+        "url": event.url,
         "banner": event.banner,
-        "description": event.description or None,
+        "description": event.description,
         "capacity": event.capacity,
         "status": event.status,
-        "host": event.host or None,
-        "ended_at": event.ended_at.isoformat() if event.ended_at else None,
+        "host": event.host,
+        "ended_at": (
+            event.ended_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z" if event.ended_at else None
+        ),
         "online_event": event.online_event,
         "venue": (
-            {
+            None
+            if not event.venue
+            else {
                 "id": event.venue.id,
                 "title": event.venue.title,
                 "street_address": event.venue.street_address,
@@ -37,23 +49,21 @@ def serialize_event(event):
                 "state": event.venue.state,
                 "updated_at": event.venue.updated_at.isoformat(),
             }
-            if event.venue
-            else None
         ),
         "academy": (
-            {
+            None
+            if not event.academy
+            else {
                 "id": event.academy.id,
                 "slug": event.academy.slug,
                 "name": event.academy.name,
                 "city": {"name": event.academy.city.name} if event.academy.city else None,
             }
-            if event.academy
-            else None
         ),
         "sync_with_eventbrite": event.sync_with_eventbrite,
-        "eventbrite_sync_status": event.eventbrite_sync_status or None,
-        "eventbrite_sync_description": event.eventbrite_sync_description or None,
-        "tags": event.tags or None,
+        "eventbrite_sync_status": event.eventbrite_sync_status,
+        "eventbrite_sync_description": event.eventbrite_sync_description,
+        "tags": event.tags,
         "asset_slug": event.asset_slug,
         "host_user": (
             None
@@ -73,6 +83,7 @@ def serialize_event(event):
                 "last_name": event.author.last_name,
             }
         ),
+        "asset": None,
     }
 
 
@@ -123,4 +134,4 @@ def test_filter_by_status(client: capy.Client, database: capy.Database, fake: ca
 
     assert response.status_code == 200
     assert len(json) == 1
-    assert json[0]["event_type"]["technologies"] == "python, flask"
+    assert expected == json
