@@ -134,6 +134,10 @@ class EventType(models.Model):
         default=True, help_text="Other academies are allowed to create events of this type"
     )
 
+    technologies = models.CharField(
+        max_length=200, null=True, default=None, blank=True, help_text="Add comma-separated list of technologies"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

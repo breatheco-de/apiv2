@@ -39,6 +39,7 @@ def get_serializer(asset_technology, assets=[], asset_technologies=[], data={}):
         "title": asset_technology.title,
         "visibility": asset_technology.visibility,
         "sort_priority": asset_technology.sort_priority,
+        "marketing_information": asset_technology.marketing_information,
         **data,
     }
 

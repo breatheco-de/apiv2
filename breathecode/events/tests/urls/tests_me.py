@@ -114,6 +114,7 @@ def get_serializer(
             "allow_shared_creation": event_type.allow_shared_creation,
             "description": event_type.description,
             "visibility_settings": visibility_settings_serializer(event_type.visibility_settings),
+            "technologies": event_type.technologies,
         },
         "eventbrite_id": event.eventbrite_id,
         "eventbrite_organizer_id": event.eventbrite_organizer_id,

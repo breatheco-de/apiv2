@@ -1,11 +1,13 @@
 from unittest.mock import MagicMock, call, patch
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.services import datetime_to_iso_format
+from django.urls.base import reverse_lazy
 from django.utils import timezone
+
+from breathecode.events.caches import EventCache
+from breathecode.services import datetime_to_iso_format
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 
 def get_serializer(event_type, academy=None, city=None, data={}):
@@ -32,6 +34,7 @@ def get_serializer(event_type, academy=None, city=None, data={}):
         "slug": event_type.slug,
         "lang": event_type.lang,
         "description": event_type.description,
+        "technologies": event_type.technologies,
         **data,
     }
 
@@ -73,6 +76,7 @@ class AcademyEventTestSuite(EventTestCase):
             "created_at": timezone.now(),
             "updated_at": timezone.now(),
             "icon_url": "https://www.google.com",
+            "technologies": None,
         }
         model = self.generate_models(
             authenticate=True, event=True, event_type=True, event_type_kwargs=event_type_kwargs
