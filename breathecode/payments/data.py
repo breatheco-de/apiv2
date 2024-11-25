@@ -10,8 +10,6 @@ def get_virtual_consumables() -> list[ConsumableType]:
     return [
         consumable(
             service_item=service_item(service=48, unit_type="unit", how_many=-1),
-        ),
-        consumable(
             service_item=service_item(service=93, unit_type="unit", how_many=-1),
         ),
     ]
