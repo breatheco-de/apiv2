@@ -131,6 +131,12 @@ def get_events(request):
     elif online_event == "false":
         lookup["online_event"] = False
 
+    is_public = request.GET.get("is_public", None)
+    if is_public == "true":
+        lookup["is_public"] = True
+    elif is_public == "false":
+        lookup["is_public"] = False
+
     if "technologies" in request.GET:
         values = request.GET.get("technologies").split(",")
         tech_query = Q()

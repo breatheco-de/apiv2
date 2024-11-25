@@ -37,6 +37,7 @@ def serialize_event(event):
             event.ended_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z" if event.ended_at else None
         ),
         "online_event": event.online_event,
+        "is_public": event.is_public,
         "venue": (
             None
             if not event.venue
@@ -195,4 +196,224 @@ def test_filter_by_technologies_obtain_two(client: capy.Client, database: capy.D
 
     assert response.status_code == 200
     assert len(json) == 2
+    assert expected == json
+
+
+def test_all_academy_events_get_with_event_is_public_true_in_filter_is_public_true(
+    client: capy.Client, database: capy.Database, fake: capy.Fake
+):
+    url = reverse_lazy("events:all")
+
+    event_types = [
+        {
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description1",
+            "technologies": "python, flask",
+        },
+        {
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description2",
+            "technologies": "javascript, react",
+        },
+    ]
+
+    model = database.create(
+        city=1,
+        country=1,
+        academy={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "logo_url": "https://example.com/logo.jpg",
+            "street_address": "Address",
+        },
+        event_type=event_types,
+        event=[
+            {
+                "title": f"My Event {n + 1}",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": datetime.now(),
+                "ending_at": datetime.now() + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": n + 1,
+                "is_public": True,
+            }
+            for n in range(len(event_types))
+        ],
+    )
+
+    response = client.get(f"{url}?is_public=true")
+    json = response.json()
+
+    expected = [serialize_event(event) for event in model.event if event.is_public]
+
+    assert response.status_code == 200
+    assert len(json) == len(expected)
+    assert expected == json
+
+
+def test_all_academy_events_get_with_event_is_public_false_in_filter_is_public_true(
+    client: capy.Client, database: capy.Database, fake: capy.Fake
+):
+    url = reverse_lazy("events:all")
+
+    event_types = [
+        {
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description1",
+            "technologies": "python, flask",
+        },
+        {
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description2",
+            "technologies": "javascript, react",
+        },
+    ]
+
+    model = database.create(
+        city=1,
+        country=1,
+        academy={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "logo_url": "https://example.com/logo.jpg",
+            "street_address": "Address",
+        },
+        event_type=event_types,
+        event=[
+            {
+                "title": f"My Event {n + 1}",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": datetime.now(),
+                "ending_at": datetime.now() + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": n + 1,
+                "is_public": False,
+            }
+            for n in range(len(event_types))
+        ],
+    )
+
+    response = client.get(f"{url}?is_public=true")
+    json = response.json()
+
+    expected = [serialize_event(event) for event in model.event if event.is_public]
+
+    assert response.status_code == 200
+    assert len(json) == len(expected)
+    assert expected == json
+
+
+def test_all_academy_events_get_with_event_is_public_false_in_filter_is_public_false(
+    client: capy.Client, database: capy.Database, fake: capy.Fake
+):
+    url = reverse_lazy("events:all")
+
+    event_types = [
+        {
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description1",
+            "technologies": "python, flask",
+        },
+        {
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description2",
+            "technologies": "javascript, react",
+        },
+    ]
+
+    model = database.create(
+        city=1,
+        country=1,
+        academy={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "logo_url": "https://example.com/logo.jpg",
+            "street_address": "Address",
+        },
+        event_type=event_types,
+        event=[
+            {
+                "title": f"My Event {n + 1}",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": datetime.now(),
+                "ending_at": datetime.now() + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": n + 1,
+                "is_public": False,
+            }
+            for n in range(len(event_types))
+        ],
+    )
+
+    response = client.get(f"{url}?is_public=false")
+    json = response.json()
+
+    expected = [serialize_event(event) for event in model.event if event.is_public == False]
+
+    assert response.status_code == 200
+    assert len(json) == len(expected)
+    assert expected == json
+
+
+def test_all_academy_events_get_with_event_is_public_true_in_filter_is_public_false(
+    client: capy.Client, database: capy.Database, fake: capy.Fake
+):
+    url = reverse_lazy("events:all")
+
+    event_types = [
+        {
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description1",
+            "technologies": "python, flask",
+        },
+        {
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "description": "description2",
+            "technologies": "javascript, react",
+        },
+    ]
+
+    model = database.create(
+        city=1,
+        country=1,
+        academy={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "logo_url": "https://example.com/logo.jpg",
+            "street_address": "Address",
+        },
+        event_type=event_types,
+        event=[
+            {
+                "title": f"My Event {n + 1}",
+                "capacity": 100,
+                "banner": "https://example.com/banner.jpg",
+                "starting_at": datetime.now(),
+                "ending_at": datetime.now() + timedelta(hours=2),
+                "status": "ACTIVE",
+                "event_type_id": n + 1,
+                "is_public": True,
+            }
+            for n in range(len(event_types))
+        ],
+    )
+
+    response = client.get(f"{url}?is_public=false")
+    json = response.json()
+
+    expected = [serialize_event(event) for event in model.event if event.is_public == False]
+
+    assert response.status_code == 200
+    assert len(json) == len(expected)
     assert expected == json

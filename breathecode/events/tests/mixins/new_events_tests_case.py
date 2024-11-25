@@ -3,16 +3,18 @@ Collections of mixins used to login in authorize microservice
 """
 
 import os
+
 from django.urls import reverse_lazy
 from rest_framework.test import APITestCase
+
 from breathecode.tests.mixins import (
-    GenerateModelsMixin,
+    BreathecodeMixin,
     CacheMixin,
+    DatetimeMixin,
+    GenerateModelsMixin,
     GenerateQueriesMixin,
     HeadersMixin,
-    DatetimeMixin,
     ICallMixin,
-    BreathecodeMixin,
 )
 
 
@@ -78,6 +80,7 @@ class EventTestCase(
                 "sync_with_eventbrite": model["event"].sync_with_eventbrite,
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
+                "is_public": model["event"].is_public,
             }
             for model in models
         ]

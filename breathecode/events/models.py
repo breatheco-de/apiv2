@@ -276,6 +276,13 @@ class Event(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    is_public = models.BooleanField(
+        default=True,
+        blank=False,
+        null=False,
+        help_text="If true, then it will be shown in cards and the workshop's landing page. Otherwise it will be hidden.",
+    )
+
     def __str__(self):
         return self.title or "No title"
 

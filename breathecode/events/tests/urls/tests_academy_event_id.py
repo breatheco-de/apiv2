@@ -70,6 +70,7 @@ def get_serializer(event, academy, asset=None, data={}):
         "eventbrite_sync_status": event.eventbrite_sync_status,
         "eventbrite_sync_description": event.eventbrite_sync_description,
         "asset": asset_serializer(asset) if asset else None,
+        "is_public": event.is_public,
         **data,
     }
 
@@ -139,6 +140,203 @@ class AcademyEventIdTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
+
+    """
+    🔽🔽🔽 Put, is_public true
+    """
+
+    @patch("breathecode.marketing.signals.downloadable_saved.send_robust", MagicMock())
+    @patch("uuid.uuid4", PropertyMock(MagicMock=uuid))
+    @patch("os.urandom", MagicMock(return_value=seed))
+    def test_academy_event_id__put__is_public_true(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        event_kwargs = {"is_public": True}
+        model = self.generate_models(
+            authenticate=True,
+            organization=True,
+            profile_academy=True,
+            academy=True,
+            active_campaign_academy=True,
+            tag=(2, {"tag_type": "DISCOVERY"}),
+            capability="crud_event",
+            role="potato2",
+            event_type=1,
+            event=True,
+            event_kwargs=event_kwargs,
+        )
+
+        url = reverse_lazy("events:academy_event_id", kwargs={"event_id": 1})
+        current_date = self.datetime_now()
+        data = {
+            "id": 1,
+            "url": "https://www.google.com/",
+            "banner": "https://www.google.com/banner",
+            "tags": ",".join([x.slug for x in model.tag]),
+            "capacity": 11,
+            "starting_at": self.datetime_to_iso(current_date),
+            "ending_at": self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        del json["updated_at"]
+        del json["created_at"]
+
+        expected = {
+            "academy": 1,
+            "author": 1,
+            "description": None,
+            "event_type": 1,
+            "eventbrite_id": None,
+            "eventbrite_organizer_id": None,
+            "eventbrite_status": None,
+            "eventbrite_url": None,
+            "excerpt": None,
+            "host": model["event"].host,
+            "id": 2,
+            "lang": "en",
+            "slug": None,
+            "online_event": False,
+            "free_for_all": False,
+            "organization": 1,
+            "published_at": None,
+            "asset_slug": None,
+            "status": "DRAFT",
+            "eventbrite_sync_description": None,
+            "eventbrite_sync_status": "PENDING",
+            "title": None,
+            "venue": None,
+            "sync_with_eventbrite": False,
+            "ended_at": None,
+            "eventbrite_sync_status": "PENDING",
+            "currency": "USD",
+            "live_stream_url": None,
+            "host_user": 1,
+            "free_for_bootcamps": True,
+            "free_for_all": False,
+            "uuid": str(uuid),
+            "is_public": True,
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.bc.database.list_of("events.Event"),
+            [
+                {
+                    **self.model_to_dict(model, "event"),
+                    **data,
+                    "organization_id": 1,
+                    "starting_at": current_date,
+                    "ending_at": current_date,
+                    "free_for_bootcamps": True,
+                    "event_type_id": 1,
+                    "lang": "en",
+                }
+            ],
+        )
+
+    """
+    🔽🔽🔽 Put, is_public false
+    """
+
+    @patch("breathecode.marketing.signals.downloadable_saved.send_robust", MagicMock())
+    @patch("uuid.uuid4", PropertyMock(MagicMock=uuid))
+    @patch("os.urandom", MagicMock(return_value=seed))
+    def test_academy_event_id__put__is_public_false(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        event_kwargs = {"is_public": False}
+        model = self.generate_models(
+            authenticate=True,
+            organization=True,
+            profile_academy=True,
+            academy=True,
+            active_campaign_academy=True,
+            tag=(2, {"tag_type": "DISCOVERY"}),
+            capability="crud_event",
+            role="potato2",
+            event_type=1,
+            event=True,
+            event_kwargs=event_kwargs,
+        )
+
+        url = reverse_lazy("events:academy_event_id", kwargs={"event_id": 1})
+        current_date = self.datetime_now()
+        data = {
+            "id": 1,
+            "url": "https://www.google.com/",
+            "banner": "https://www.google.com/banner",
+            "tags": ",".join([x.slug for x in model.tag]),
+            "capacity": 11,
+            "starting_at": self.datetime_to_iso(current_date),
+            "ending_at": self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        del json["updated_at"]
+        del json["created_at"]
+
+        expected = {
+            "academy": 1,
+            "author": 1,
+            "description": None,
+            "event_type": 1,
+            "eventbrite_id": None,
+            "eventbrite_organizer_id": None,
+            "eventbrite_status": None,
+            "eventbrite_url": None,
+            "excerpt": None,
+            "host": model["event"].host,
+            "id": 2,
+            "lang": "en",
+            "slug": None,
+            "online_event": False,
+            "free_for_all": False,
+            "organization": 1,
+            "published_at": None,
+            "asset_slug": None,
+            "status": "DRAFT",
+            "eventbrite_sync_description": None,
+            "eventbrite_sync_status": "PENDING",
+            "title": None,
+            "venue": None,
+            "sync_with_eventbrite": False,
+            "ended_at": None,
+            "eventbrite_sync_status": "PENDING",
+            "currency": "USD",
+            "live_stream_url": None,
+            "host_user": 1,
+            "free_for_bootcamps": True,
+            "free_for_all": False,
+            "uuid": str(uuid),
+            "is_public": False,
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)  # Verificamos que la respuesta sea correcta
+        self.assertEqual(
+            self.bc.database.list_of("events.Event"),
+            [
+                {
+                    **self.model_to_dict(model, "event"),
+                    **data,
+                    "organization_id": 1,
+                    "starting_at": current_date,
+                    "ending_at": current_date,
+                    "free_for_bootcamps": True,
+                    "event_type_id": 1,
+                    "lang": "en",
+                    "is_public": False,
+                }
+            ],
+        )
 
     """
     🔽🔽🔽 Put - bad tags
@@ -467,6 +665,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             "free_for_bootcamps": True,
             "free_for_all": False,
             "uuid": str(uuid),
+            "is_public": True,
             **data,
         }
 
@@ -700,6 +899,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             "free_for_bootcamps": True,
             "free_for_all": False,
             "uuid": str(uuid),
+            "is_public": True,
             **data,
         }
 
@@ -800,6 +1000,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             "free_for_bootcamps": True,
             "free_for_all": False,
             "uuid": str(uuid),
+            "is_public": True,
             **data,
         }
 
