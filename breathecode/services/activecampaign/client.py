@@ -62,7 +62,7 @@ def map_ids(contact_customfield_id):
         "60": "5",  # utm_url
         "18": "16",
         "33": "7",
-        "2": "65",  # phone
+        # "2": "65",  # phone
         "26": "4",
         "27": "34",
         "35": "70",  # utm_content
