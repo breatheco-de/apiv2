@@ -218,6 +218,10 @@ class TechnologyView(APIView):
         if like and like not in ["undefined", ""]:
             items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
 
+        if "visibility" in request.GET:
+            visibility_param = request.GET.get("visibility")
+            items = items.filter(visibility__iexact=visibility_param)
+
         items = handler.queryset(items)
 
         serializer = AssetTechnologySerializer(items, many=True)
