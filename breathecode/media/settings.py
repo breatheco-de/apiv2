@@ -41,6 +41,8 @@ MEDIA_MIME_ALLOWED = [
     "image/jpg",
     "application/octet-stream",
     "application/x-pka",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]
 
 PROOF_OF_PAYMENT_MIME_ALLOWED = [
