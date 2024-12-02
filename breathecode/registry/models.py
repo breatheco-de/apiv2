@@ -865,6 +865,20 @@ class Asset(models.Model):
 
     @staticmethod
     def get_by_github_url(github_url):
+        """
+        Retrieve an Asset object based on a GitHub URL.
+        This method parses the provided GitHub URL to extract the organization name,
+        repository name, and optionally the branch name. It then searches for an Asset
+        object whose `readme_url` contains the relevant GitHub URL components.
+        Args:
+            github_url (str): The GitHub URL to parse and search for.
+        Returns:
+            Asset: The first Asset object that matches the parsed GitHub URL components,
+                or None if no matching Asset is found.
+        Raises:
+            ValueError: If the provided URL is not a valid GitHub URL or does not contain
+                        the necessary components.
+        """
         parsed_url = urlparse(github_url)
         if parsed_url.netloc != "github.com":
             raise ValueError("Invalid GitHub URL")
@@ -874,7 +888,21 @@ class Asset(models.Model):
             raise ValueError("Invalid GitHub URL")
 
         org_name, repo_name = path_parts[:2]
-        asset = Asset.objects.filter(readme_url__icontains=f"github.com/{org_name}/{repo_name}").first()
+        branch_name = None
+
+        # if branch is specified in the URL, we will use it to find the asset
+        # For example: https://github.com/4GeeksAcademy/react-hello/blob/1.0/README.md
+        if "blob" in path_parts:
+            blob_index = path_parts.index("blob")
+            if len(path_parts) > blob_index + 1:
+                branch_name = path_parts[blob_index + 1]
+
+        if branch_name:
+            asset = Asset.objects.filter(
+                readme_url__icontains=f"github.com/{org_name}/{repo_name}/blob/{branch_name}"
+            ).first()
+        else:
+            asset = Asset.objects.filter(readme_url__icontains=f"github.com/{org_name}/{repo_name}").first()
         return asset
 
 
