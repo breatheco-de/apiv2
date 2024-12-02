@@ -896,10 +896,11 @@ class Asset(models.Model):
 
         # if branch is specified in the URL, we will use it to find the asset
         # For example: https://github.com/4GeeksAcademy/react-hello/blob/1.0/README.md
-        if "blob" in path_parts:
-            blob_index = path_parts.index("blob")
-            if len(path_parts) > blob_index + 1:
-                branch_name = path_parts[blob_index + 1]
+        branch_pattern = "blob" if "blob" in path_parts else "tree" if "tree" in path_parts else None
+        if branch_pattern is not None:
+            branch_index = path_parts.index(branch_pattern)
+            if len(path_parts) > branch_index + 1:
+                branch_name = path_parts[branch_index + 1]
 
         if branch_name:
 
@@ -923,9 +924,9 @@ class Asset(models.Model):
                 return 0
 
             pattern = r"^v\d+\.\d+$"
-            if not bool(re.match(branch_name, string)):
+            if not bool(re.match(pattern, branch_name)):
                 raise ValueError("Version name must follow the format vX.X, for example: v1.0")
-                
+
             original_version = branch_name.replace("v", "")
             original_major_version = int(original_version.split(".")[0])
 
