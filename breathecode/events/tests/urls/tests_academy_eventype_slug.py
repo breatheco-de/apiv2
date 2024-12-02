@@ -1,11 +1,13 @@
 from unittest.mock import MagicMock, call, patch
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
 
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.services import datetime_to_iso_format
+from django.urls.base import reverse_lazy
 from django.utils import timezone
+
+from breathecode.events.caches import EventCache
+from breathecode.services import datetime_to_iso_format
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
+from ..mixins.new_events_tests_case import EventTestCase
 
 
 def get_serializer(event_type, academy=None, city=None, data={}):
@@ -35,6 +37,7 @@ def get_serializer(event_type, academy=None, city=None, data={}):
         "allow_shared_creation": event_type.allow_shared_creation,
         "description": event_type.description,
         "visibility_settings": event_type.visibility_settings,
+        "technologies": event_type.technologies,
         **data,
     }
 
@@ -51,6 +54,7 @@ def put_serializer(event_type, data={}):
         "allow_shared_creation": event_type.allow_shared_creation,
         "free_for_bootcamps": event_type.free_for_bootcamps,
         "description": event_type.description,
+        "technologies": event_type.technologies,
         **data,
     }
 

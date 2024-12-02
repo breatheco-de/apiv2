@@ -13,7 +13,7 @@ __all__ = ["UserProxy", "CohortProxy", "Task", "UserAttachment"]
 class UserAttachment(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
-    mime = models.CharField(max_length=60)
+    mime = models.CharField(max_length=120)
     url = models.URLField(max_length=255)
     hash = models.CharField(max_length=64)
 

@@ -53,6 +53,7 @@ def post_serializer(data={}):
         "currency": "USD",
         "live_stream_url": None,
         "host_user": None,
+        "is_public": True,
         **data,
     }
 
@@ -95,6 +96,7 @@ def event_table(data={}):
         "live_stream_url": None,
         "sync_with_eventbrite": False,
         "currency": "",
+        "is_public": True,
         **data,
     }
 
@@ -192,6 +194,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "sync_with_eventbrite": model["event"].sync_with_eventbrite,
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
+                "is_public": model["event"].is_public,
             }
         ]
 
@@ -265,6 +268,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "sync_with_eventbrite": model["event"].sync_with_eventbrite,
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
+                "is_public": model["event"].is_public,
             }
         ]
 
@@ -338,6 +342,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "sync_with_eventbrite": model["event"].sync_with_eventbrite,
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
+                "is_public": model["event"].is_public,
             }
         ]
 
@@ -392,6 +397,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "sync_with_eventbrite": model["event"].sync_with_eventbrite,
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
+                "is_public": model["event"].is_public,
             }
         ]
 
@@ -627,6 +633,172 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.bc.database.list_of("events.Event"), [])
+
+    """
+    🔽🔽🔽 Post is_public
+    """
+
+    def test_all_academy_events__post_with_event_is_public_true(self):
+        self.headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="read_event",
+            role="potato",
+            syllabus=True,
+            venue=True,
+            event=True,
+            is_public=True,
+        )
+        url = reverse_lazy("events:academy_event")
+
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = [
+            {
+                "banner": model["event"].banner,
+                "ending_at": datetime_to_iso_format(model["event"].ending_at),
+                "event_type": model["event"].event_type,
+                "excerpt": model["event"].excerpt,
+                "tags": model["event"].tags,
+                "slug": model["event"].slug,
+                "id": model["event"].id,
+                "lang": model["event"].lang,
+                "online_event": model["event"].online_event,
+                "starting_at": datetime_to_iso_format(model["event"].starting_at),
+                "ended_at": model["event"].ended_at,
+                "status": model["event"].status,
+                "title": model["event"].title,
+                "url": model["event"].url,
+                "host": model["event"].host,
+                "asset_slug": model["event"].asset_slug,
+                "capacity": model["event"].capacity,
+                "venue": {
+                    "city": model["event"].venue.city,
+                    "id": model["event"].id,
+                    "state": model["event"].venue.state,
+                    "street_address": model["event"].venue.street_address,
+                    "title": model["event"].venue.title,
+                    "zip_code": model["event"].venue.zip_code,
+                    "updated_at": self.bc.datetime.to_iso_string(model.venue.updated_at),
+                },
+                "sync_with_eventbrite": model["event"].sync_with_eventbrite,
+                "eventbrite_sync_description": model["event"].eventbrite_sync_description,
+                "eventbrite_sync_status": model["event"].eventbrite_sync_status,
+                "is_public": model["event"].is_public,
+            }
+        ]
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+
+    def test_all_academy_events__post_with_event_is_public_false(self):
+        self.headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="read_event",
+            role="potato",
+            syllabus=True,
+            venue=True,
+            event=True,
+            is_public=False,
+        )
+        url = reverse_lazy("events:academy_event")
+
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = [
+            {
+                "banner": model["event"].banner,
+                "ending_at": datetime_to_iso_format(model["event"].ending_at),
+                "event_type": model["event"].event_type,
+                "excerpt": model["event"].excerpt,
+                "tags": model["event"].tags,
+                "slug": model["event"].slug,
+                "id": model["event"].id,
+                "lang": model["event"].lang,
+                "online_event": model["event"].online_event,
+                "starting_at": datetime_to_iso_format(model["event"].starting_at),
+                "ended_at": model["event"].ended_at,
+                "status": model["event"].status,
+                "title": model["event"].title,
+                "url": model["event"].url,
+                "host": model["event"].host,
+                "asset_slug": model["event"].asset_slug,
+                "capacity": model["event"].capacity,
+                "venue": {
+                    "city": model["event"].venue.city,
+                    "id": model["event"].id,
+                    "state": model["event"].venue.state,
+                    "street_address": model["event"].venue.street_address,
+                    "title": model["event"].venue.title,
+                    "zip_code": model["event"].venue.zip_code,
+                    "updated_at": self.bc.datetime.to_iso_string(model.venue.updated_at),
+                },
+                "sync_with_eventbrite": model["event"].sync_with_eventbrite,
+                "eventbrite_sync_description": model["event"].eventbrite_sync_description,
+                "eventbrite_sync_status": model["event"].eventbrite_sync_status,
+                "is_public": model["event"].is_public,
+            }
+        ]
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+
+    def test_all_academy_events__post_with_event_is_public_empty(self):
+        self.headers(academy=1)
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="read_event",
+            role="potato",
+            syllabus=True,
+            venue=True,
+            event=True,
+        )
+        url = reverse_lazy("events:academy_event")
+
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = [
+            {
+                "banner": model["event"].banner,
+                "ending_at": datetime_to_iso_format(model["event"].ending_at),
+                "event_type": model["event"].event_type,
+                "excerpt": model["event"].excerpt,
+                "tags": model["event"].tags,
+                "slug": model["event"].slug,
+                "id": model["event"].id,
+                "lang": model["event"].lang,
+                "online_event": model["event"].online_event,
+                "starting_at": datetime_to_iso_format(model["event"].starting_at),
+                "ended_at": model["event"].ended_at,
+                "status": model["event"].status,
+                "title": model["event"].title,
+                "url": model["event"].url,
+                "host": model["event"].host,
+                "asset_slug": model["event"].asset_slug,
+                "capacity": model["event"].capacity,
+                "venue": {
+                    "city": model["event"].venue.city,
+                    "id": model["event"].id,
+                    "state": model["event"].venue.state,
+                    "street_address": model["event"].venue.street_address,
+                    "title": model["event"].venue.title,
+                    "zip_code": model["event"].venue.zip_code,
+                    "updated_at": self.bc.datetime.to_iso_string(model.venue.updated_at),
+                },
+                "sync_with_eventbrite": model["event"].sync_with_eventbrite,
+                "eventbrite_sync_description": model["event"].eventbrite_sync_description,
+                "eventbrite_sync_status": model["event"].eventbrite_sync_status,
+                "is_public": model["event"].is_public,
+            }
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
 
     """
     🔽🔽🔽 Post bad slug

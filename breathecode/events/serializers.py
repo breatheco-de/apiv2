@@ -80,6 +80,7 @@ class EventTypeSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    technologies = serpy.Field()
 
 
 class EventTypeSerializer(EventTypeSmallSerializer):
@@ -189,6 +190,7 @@ class EventSmallSerializer(EventTinySerializer):
     host_user = UserBigSerializer(required=False)
     author = UserSerializer(required=False)
     asset = serpy.MethodField()
+    is_public = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -244,6 +246,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
+    is_public = serpy.Field()
 
 
 class EventPublicBigSerializer(EventSmallSerializer):
@@ -295,6 +298,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     author = UserSerializer(required=False)
     free_for_all = serpy.Field()
     asset = serpy.MethodField()
+    is_public = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:

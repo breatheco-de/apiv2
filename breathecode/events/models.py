@@ -134,6 +134,10 @@ class EventType(models.Model):
         default=True, help_text="Other academies are allowed to create events of this type"
     )
 
+    technologies = models.CharField(
+        max_length=200, null=True, default=None, blank=True, help_text="Add comma-separated list of technologies"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -271,6 +275,13 @@ class Event(models.Model):
     published_at = models.DateTimeField(null=True, default=None, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    is_public = models.BooleanField(
+        default=True,
+        blank=False,
+        null=False,
+        help_text="If true, then it will be shown in cards and the workshop's landing page. Otherwise it will be hidden.",
+    )
 
     def __str__(self):
         return self.title or "No title"

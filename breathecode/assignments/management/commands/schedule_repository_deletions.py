@@ -200,6 +200,7 @@ class Command(BaseCommand):
                 asset.readme_url,
                 asset.intro_video_url,
                 asset.solution_video_url,
+                asset.template_url,
             ]
             for url in [x for x in options if x]:
                 match = self.github_url_pattern.search(url)
