@@ -43,7 +43,8 @@ acp_ids = {
         "utm_campaign": "7",
         "utm_source": "8",
         "utm_medium": "9",
-        "utm_location": "16",
+        "utm_content": "70",
+        "Deal_Phone": "65",
         "utm_term": "22",
         "utm_placement": "23",
         "referral_key": "34",
@@ -58,12 +59,13 @@ def map_ids(contact_customfield_id):
         "65": "22",
         "59": "8",
         "36": "9",
-        "60": "5",
+        "60": "5",  # utm_url
         "18": "16",
         "33": "7",
-        "2": "6",
+        # "2": "65",  # phone
         "26": "4",
         "27": "34",
+        "35": "70",  # utm_content
     }
 
     if contact_customfield_id in contact_to_deal:

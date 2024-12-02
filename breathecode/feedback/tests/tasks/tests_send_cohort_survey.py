@@ -163,23 +163,20 @@ class SendCohortSurvey(FeedbackTestCase):
             tasks.generate_user_cohort_survey_answers.call_args_list, [call(model.user, model.survey, status="SENT")]
         )
         token = self.bc.database.get("authenticate.Token", 1, dict=False)
-        self.assertEqual(
-            actions.send_email_message.call_args_list,
-            [
-                call(
-                    "nps_survey",
-                    model.user.email,
-                    {
-                        "SUBJECT": "We need your feedback",
-                        "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
-                        "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
-                        "BUTTON": "Answer the question",
-                        "LINK": f"https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}",
-                    },
-                    academy=model.academy,
-                )
-            ],
-        )
+        assert actions.send_email_message.call_args_list == [
+            call(
+                "nps_survey",
+                model.user.email,
+                {
+                    "SUBJECT": "How was the mentoring session at 4Geeks?",
+                    "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
+                    "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
+                    "BUTTON": "Answer the question",
+                    "LINK": f"https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}",
+                },
+                academy=model.academy,
+            )
+        ]
 
     @patch("os.getenv", MagicMock(side_effect=apply_get_env({"API_URL": "https://hello.com"})))
     @patch("breathecode.feedback.tasks.generate_user_cohort_survey_answers", MagicMock())
@@ -211,23 +208,20 @@ class SendCohortSurvey(FeedbackTestCase):
                 [call(model.user, model.survey, status="SENT")],
             )
             token = self.bc.database.get("authenticate.Token", model.survey.id, dict=False)
-            self.assertEqual(
-                actions.send_email_message.call_args_list,
-                [
-                    call(
-                        "nps_survey",
-                        model.user.email,
-                        {
-                            "SUBJECT": "We need your feedback",
-                            "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
-                            "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
-                            "BUTTON": "Answer the question",
-                            "LINK": f"https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}",
-                        },
-                        academy=model.academy,
-                    )
-                ],
-            )
+            assert actions.send_email_message.call_args_list == [
+                call(
+                    "nps_survey",
+                    model.user.email,
+                    {
+                        "SUBJECT": "How was the mentoring session at 4Geeks?",
+                        "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
+                        "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
+                        "BUTTON": "Answer the question",
+                        "LINK": f"https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}",
+                    },
+                    academy=model.academy,
+                )
+            ]
 
             logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []
@@ -270,43 +264,35 @@ class SendCohortSurvey(FeedbackTestCase):
 
             token = self.bc.database.get("authenticate.Token", model.survey.id, dict=False)
 
-            self.assertEqual(
-                str(actions.send_slack.call_args_list),
-                str(
-                    [
-                        call(
-                            "nps_survey",
-                            model.slack_user,
-                            model.slack_team,
-                            data={
-                                "SUBJECT": "We need your feedback",
-                                "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
-                                "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
-                                "BUTTON": "Answer the question",
-                                "LINK": f"https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}",
-                            },
-                            academy=model.academy,
-                        )
-                    ]
-                ),
-            )
-            self.assertEqual(
-                actions.send_email_message.call_args_list,
-                [
-                    call(
-                        "nps_survey",
-                        model.user.email,
-                        {
-                            "SUBJECT": "We need your feedback",
-                            "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
-                            "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
-                            "BUTTON": "Answer the question",
-                            "LINK": f"https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}",
-                        },
-                        academy=model.academy,
-                    )
-                ],
-            )
+            assert actions.send_slack.call_args_list == [
+                call(
+                    "nps_survey",
+                    model.slack_user,
+                    model.slack_team,
+                    data={
+                        "SUBJECT": "How was the mentoring session at 4Geeks?",
+                        "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
+                        "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
+                        "BUTTON": "Answer the question",
+                        "LINK": f"https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}",
+                    },
+                    academy=model.academy,
+                )
+            ]
+            assert actions.send_email_message.call_args_list == [
+                call(
+                    "nps_survey",
+                    model.user.email,
+                    {
+                        "SUBJECT": "How was the mentoring session at 4Geeks?",
+                        "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
+                        "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
+                        "BUTTON": "Answer the question",
+                        "LINK": f"https://nps.4geeks.com/survey/{model.survey.id}?token={token.key}",
+                    },
+                    academy=model.academy,
+                )
+            ]
 
             logging.Logger.info.call_args_list = []
             logging.Logger.error.call_args_list = []

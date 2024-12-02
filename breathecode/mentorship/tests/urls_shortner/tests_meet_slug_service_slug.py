@@ -1781,91 +1781,6 @@ class AuthenticateTestSuite(MentorshipTestCase):
             self.bc.database.delete("auth.Permission")
             self.bc.database.delete("auth.User")
 
-    # TODO: disabled until have a new feature flags manager
-    # """
-    # 🔽🔽🔽 GET without MentorProfile, good statuses with mentor urls, MentorshipSession without mentee
-    # passing session and mentee but mentee does not exist, user without name
-    # """
-
-    # @patch('breathecode.mentorship.actions.mentor_is_ready', MagicMock())
-    # @patch('os.getenv',
-    #        MagicMock(side_effect=apply_get_env({
-    #            'DAILY_API_URL': URL,
-    #            'DAILY_API_KEY': API_KEY,
-    #        })))
-    # @patch('requests.request',
-    #        apply_requests_request_mock([(201, f'{URL}/v1/rooms', {
-    #            'name': ROOM_NAME,
-    #            'url': ROOM_URL,
-    #        })]))
-    # @patch('breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships',
-    #        MagicMock(return_value=False))
-    # def test_with_mentor_profile__academy_available_as_saas__flag_eq_false__mentee(self):
-    #     cases = [{
-    #         'status': x,
-    #         'online_meeting_url': self.bc.fake.url(),
-    #         'booking_url': self.bc.fake.url(),
-    #     } for x in ['ACTIVE', 'UNLISTED']]
-    #     service= {'slug': 'join_mentorship'}
-
-    #     id = 0
-    #     for mentor_profile in cases:
-    #         id += 1
-
-    #         user = {'first_name': '', 'last_name': ''}
-    #         base = self.bc.database.create(user=user, token=1,  service=service)
-
-    #         mentorship_session = {'mentee_id': None}
-    #         academy = {'available_as_saas': True}
-    #         model = self.bc.database.create(mentor_profile=mentor_profile,
-    #                                         mentorship_session=mentorship_session,
-    #                                         user=user,
-    #                                         mentorship_service={'language': 'en', 'video_provider': 'DAILY'},
-    #                                         academy=academy)
-
-    #         model.mentorship_session.mentee = None
-    #         model.mentorship_session.save()
-
-    #         querystring = self.bc.format.to_querystring({
-    #             'token': base.token.key,
-    #         })
-    #         url = reverse_lazy('mentorship_shortner:meet_slug_service_slug',
-    #                            kwargs={
-    #                                'mentor_slug': model.mentor_profile.slug,
-    #                                'service_slug': model.mentorship_service.slug
-    #                            }) + f'?{querystring}'
-    #         response = self.client.get(url)
-
-    #         content = self.bc.format.from_bytes(response.content)
-    #         expected = render(
-    #             f'Hello student, you are about to start a {model.mentorship_service.name} with a mentor.',
-    #             model.mentor_profile,
-    #             base.token,
-    #             fix_logo=True,
-    #             start_session=True)
-
-    #         # dump error in external files
-    #         if content != expected:
-    #             with open('content.html', 'w') as f:
-    #                 f.write(content)
-
-    #             with open('expected.html', 'w') as f:
-    #                 f.write(expected)
-
-    #         self.assertEqual(content, expected)
-    #         self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #         self.assertEqual(self.bc.database.list_of('mentorship.MentorProfile'), [
-    #             self.bc.format.to_dict(model.mentor_profile),
-    #         ])
-    #         self.assertEqual(self.bc.database.list_of('payments.Consumable'), [])
-    #         self.assertEqual(self.bc.database.list_of('payments.ConsumptionSession'), [])
-
-    #         # teardown
-    #         self.bc.database.delete('mentorship.MentorProfile')
-    #         self.bc.database.delete('auth.Permission')
-    #         self.bc.database.delete('auth.User')
-    #         self.bc.database.delete('payments.Service')
-
     @patch("breathecode.mentorship.actions.mentor_is_ready", MagicMock())
     @patch(
         "os.getenv",
@@ -1893,7 +1808,6 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
         ),
     )
-    @patch("breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships", MagicMock(return_value=True))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__mentee_with_no_consumables(self):
         cases = [
             {
@@ -2000,7 +1914,6 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
         ),
     )
-    @patch("breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships", MagicMock(return_value=True))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__mentee_with_no_consumables_with_subcription(
         self,
     ):
@@ -2116,7 +2029,6 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
         ),
     )
-    @patch("breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships", MagicMock(return_value=True))
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     @patch("breathecode.payments.tasks.end_the_consumption_session.apply_async", MagicMock(return_value=None))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__mentee_with_consumables(self):
@@ -2276,7 +2188,6 @@ class AuthenticateTestSuite(MentorshipTestCase):
             ]
         ),
     )
-    @patch("breathecode.mentorship.permissions.flags.Release.enable_consume_mentorships", MagicMock(return_value=True))
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_with_mentor_profile__academy_available_as_saas__flag_eq_true__bypass_mentor_consume(self):
         cases = [
@@ -3353,6 +3264,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     "is_consumption_session": False,
                     "flags": {"bypass_consumption": False},
                 },
+                kwargs={
+                    "token": model.token,
+                    "mentor_profile": model.mentor_profile,
+                    "mentorship_service": model.mentorship_service,
+                },
             )
             context2 = feature.context(
                 context={
@@ -3365,6 +3281,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     "price": 0,
                     "is_consumption_session": False,
                     "flags": {"bypass_consumption": False},
+                },
+                kwargs={
+                    "token": model.token,
+                    "mentor_profile": model.mentor_profile,
+                    "mentorship_service": model.mentorship_service,
                 },
                 user=base.user,
             )
@@ -3523,6 +3444,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     "is_consumption_session": False,
                     "flags": {"bypass_consumption": False},
                 },
+                kwargs={
+                    "token": model.token,
+                    "mentor_profile": model.mentor_profile,
+                    "mentorship_service": model.mentorship_service,
+                },
             )
             context2 = feature.context(
                 context={
@@ -3535,6 +3461,11 @@ class AuthenticateTestSuite(MentorshipTestCase):
                     "price": 0,
                     "is_consumption_session": False,
                     "flags": {"bypass_consumption": False},
+                },
+                kwargs={
+                    "token": model.token,
+                    "mentor_profile": model.mentor_profile,
+                    "mentorship_service": model.mentorship_service,
                 },
                 user=base.user,
             )

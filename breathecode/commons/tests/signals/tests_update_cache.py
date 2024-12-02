@@ -195,6 +195,7 @@ def test_model_cache__many_to_one(cache_cls, value):
             CohortCache,
             set(
                 [
+                    marketing_models.Course,
                     payments_models.CohortSet,
                     payments_models.PlanFinancing,
                     payments_models.Subscription,
