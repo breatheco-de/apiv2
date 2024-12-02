@@ -300,14 +300,12 @@ class UserAssessment(models.Model):
             self.token = binascii.hexlify(os.urandom(20)).decode()
 
         _instance = super().save(*args, **kwargs)
-        
+
         # Answer is being closed
         if is_creating or self.status != self._old_status:
             signals.userassessment_status_updated.send_robust(instance=self, sender=self.__class__)
 
         return _instance
-
-        
 
     def get_score(self):
 
