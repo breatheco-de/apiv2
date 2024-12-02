@@ -922,7 +922,11 @@ class Asset(models.Model):
 
                 return 0
 
-            original_version = branch_name
+            pattern = r"^v\d+\.\d+$"
+            if not bool(re.match(branch_name, string)):
+                raise ValueError("Version name must follow the format vX.X, for example: v1.0")
+                
+            original_version = branch_name.replace("v", "")
             original_major_version = int(original_version.split(".")[0])
 
             assets = Asset.objects.filter(readme_url__icontains=f"github.com/{org_name}/{repo_name}/blob/")
