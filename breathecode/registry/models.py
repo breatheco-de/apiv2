@@ -60,6 +60,14 @@ class AssetTechnology(models.Model):
         default=False, help_text="If True, the technology will be programmatically deleted."
     )
     featured_asset = models.ForeignKey("Asset", on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    featured_course = models.ForeignKey(
+        "marketing.Course",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="The featured course for this technology",
+    )
     visibility = models.CharField(
         max_length=20,
         choices=VISIBILITY,
