@@ -8,6 +8,7 @@ from slugify import slugify
 
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.marketing.serializers import GetCourseSmallSerializer
 from breathecode.utils import serpy
 
 from .models import (
@@ -497,7 +498,14 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
     assets = serpy.MethodField()
     alias = serpy.MethodField()
     sort_priority = serpy.Field()
+    featured_course = serpy.MethodField()
     marketing_information = serpy.Field()
+
+    def get_featured_course(self, obj):
+        if obj.featured_course:
+            obj.featured_course.lang = obj.lang or "en"
+            return GetCourseSmallSerializer(obj.featured_course).data
+        return None
 
     def get_assets(self, obj):
         assets = Asset.objects.filter(technologies__id=obj.id)
