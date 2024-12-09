@@ -17,7 +17,7 @@ from breathecode.services.github import Github
 
 class Command(BaseCommand):
     help = "Clean data from marketing module"
-    github_url_pattern = re.compile(r"https?:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
+    github_url_pattern = re.compile(r"https?://github\.com/(?P<user>[^/\s]+)/(?P<repo>[^/\s]+)/?")
 
     def handle(self, *args, **options):
         self.fill_whitelist()
