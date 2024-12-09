@@ -83,7 +83,13 @@ def async_pull_project_dependencies(asset_slug):
 
         target_asset = asset
         if asset.template_url is not None and asset.template_url != "":
-            target_asset = Asset.get_by_github_url(asset.template_url)
+
+            # To avoid legacy issues we have to mark assets.template_url as "self" when no template is needed
+            if asset.template_url == "self":
+                target_asset = asset
+            else:                
+                target_asset = Asset.get_by_github_url(asset.template_url)
+                
             if target_asset is None:
                 raise Exception(
                     f"Asset {asset_slug} template {asset.template_url} not found in the database as another asset"
@@ -614,47 +620,45 @@ def async_build_asset_context(asset_id):
     lang = asset.lang or asset.category.lang
     lang_name = LANG_MAP.get(lang, lang)
 
-    context = f"This {asset.asset_type} about {asset.title} is written in {lang_name}. "
+    context = f"This {asset.asset_type} called '{asset.title}' is written in {lang_name}. "
 
     translations = ", ".join([x.title for x in asset.all_translations.all()])
     if translations:
         context = context[:-2]
-        context += f", and it has the following translations: {translations}. "
+        context += f"It has the following translation languages: {translations}. "
 
     if asset.solution_url:
         context = context[:-2]
-        context += f", and it has a solution code this link is: {asset.solution_url}. "
+        context += f"It has a solution published on this link: {asset.solution_url}. "
 
     if asset.solution_video_url:
         context = context[:-2]
-        context += f", and it has a video solution this link is {asset.solution_video_url}. "
-
-    context += f"It's category related is (what type of skills the student will get) {asset.category.title}. "
+        context += f"It also has a video solution, published on this link is {asset.solution_video_url}. "
 
     technologies = ", ".join([x.title for x in asset.technologies.filter(Q(lang=lang) | Q(lang=None))])
     if technologies:
-        context += f"This asset is about the following technologies: {technologies}. "
+        context += f"This {asset.asset_type} is about the following technologies: {technologies}. "
 
     if asset.external:
-        context += "This asset is external, which means it opens outside 4geeks. "
+        context += f"This {asset.asset_type} opens outside of 4Geeks.com. "
 
     if asset.interactive:
-        context += "This asset opens on LearnPack so it has a step-by-step of the exercises that you should follow. "
+        context += f"This {asset.asset_type} uses LearnPack with an interactive step-by-step tutorial the student must follow. "
 
     if asset.gitpod:
         context += (
-            f"This {asset.asset_type} can be opened both locally or with click and code (This "
-            "way you don't have to install anything and it will open automatically on gitpod or github codespaces). "
+            f"This {asset.asset_type} can be opened both locally on your computer or in the cloud using our 'click and learn' technology (This "
+            "way you don't have to install anything, and it will open automatically in the cloud). "
         )
 
     if asset.interactive == True and asset.with_video == True:
-        context += f"This {asset.asset_type} has videos on each step. "
+        context += f"This {asset.asset_type} has video solutions and/or explanations on each step. "
 
     if asset.interactive == True and asset.with_solutions == True:
-        context += f"This {asset.asset_type} has a code solution on each step. "
+        context += f"This {asset.asset_type} has a model solution for each coding challenge on each step. "
 
-    if asset.duration:
-        context += f"This {asset.asset_type} will last {asset.duration} hours. "
+    if asset.duration and asset.duration > 0:
+        context += f"This {asset.asset_type} will takes {asset.duration} hours to complete (in average). "
 
     if asset.difficulty:
         context += f"Its difficulty is considered as {asset.difficulty}. "
@@ -667,7 +671,7 @@ def async_build_asset_context(asset_id):
 
     if asset.asset_type == "PROJECT" and asset.delivery_instructions and asset.delivery_formats:
         context += (
-            f"This project should be delivered by adding a file of one of these types: {asset.delivery_formats}. "
+            f"This project should be delivered by adding at least one file of one of these types: {asset.delivery_formats}. "
         )
 
     if asset.asset_type == "PROJECT" and asset.delivery_regex_url:
