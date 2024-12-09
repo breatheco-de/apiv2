@@ -268,8 +268,8 @@ class RepositoryDeletionOrder(models.Model):
     status = models.CharField(max_length=15, choices=Status, default=Status.PENDING)
     status_text = models.TextField(default=None, null=True, blank=True)
 
-    repository_user = models.CharField(max_length=100)
-    repository_name = models.CharField(max_length=100)
+    repository_user = models.CharField(max_length=256)
+    repository_name = models.CharField(max_length=256)
 
     starts_transferring_at = models.DateTimeField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -296,8 +296,8 @@ class RepositoryWhiteList(models.Model):
     Provider = Provider
 
     provider = models.CharField(max_length=15, choices=Provider, default=Provider.GITHUB)
-    repository_user = models.CharField(max_length=100)
-    repository_name = models.CharField(max_length=100)
+    repository_user = models.CharField(max_length=256)
+    repository_name = models.CharField(max_length=256)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
