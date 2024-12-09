@@ -335,11 +335,12 @@ class Asset(models.Model):
         help_text="Only applies to LearnPack tutorials that have been published in the LearnPack cloud",
     )
 
-    template_url = models.URLField(
+    template_url = models.CharField(
         null=True,
         blank=True,
         default=None,
-        help_text="This template will be used to open the asset (only applied for projects)",
+        max_length=500,
+        help_text="This template will be used to open the asset (only applied for projects). If project has no template it should state 'self' as template url",
     )
     dependencies = models.CharField(
         max_length=50,
