@@ -83,7 +83,13 @@ def async_pull_project_dependencies(asset_slug):
 
         target_asset = asset
         if asset.template_url is not None and asset.template_url != "":
-            target_asset = Asset.get_by_github_url(asset.template_url)
+
+            # To avoid legacy issues we have to mark assets.template_url as "self" when no template is needed
+            if asset.template_url == "self":
+                target_asset = asset
+            else:                
+                target_asset = Asset.get_by_github_url(asset.template_url)
+                
             if target_asset is None:
                 raise Exception(
                     f"Asset {asset_slug} template {asset.template_url} not found in the database as another asset"
