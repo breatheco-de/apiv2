@@ -452,6 +452,7 @@ class CohortUserHookSerializer(serpy.Serializer):
     id = serpy.Field()
     user = UserSerializer()
     cohort = GetSmallCohortSerializer()
+    academy = GetSmallAcademySerializer()
     role = serpy.Field()
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
