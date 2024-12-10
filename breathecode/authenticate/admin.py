@@ -178,7 +178,7 @@ class UserAdmin(UserAdmin):
 
     def google_login(self, obj):
         return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/google?user={obj.id}'>connect google</a>"
+            "<a rel='noopener noreferrer' target='_blank' href='/v1/auth/academy/google'>connect google</a>"
         )
 
 
