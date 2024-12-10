@@ -6,7 +6,7 @@ import os
 import re
 import urllib.parse
 from datetime import timedelta
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import aiohttp
 import requests
@@ -2249,6 +2249,28 @@ async def save_google_token(request):
             else:
                 logger.error(await resp.json())
                 raise APIException("Error from google credentials")
+
+
+@private_view()
+def render_google_connect(request, token):
+    callback_url = request.GET.get("url", None)
+
+    if not callback_url:
+        # Fallback to HTTP_REFERER if 'url' is not in the query string
+        referrer = request.META.get("HTTP_REFERER", "")
+        # Optionally, parse query parameters from the referrer if needed
+        if referrer:
+            parsed_referrer = urlparse(referrer)
+            query_params = parse_qs(parsed_referrer.query)
+            callback_url = str(base64.urlsafe_b64encode(query_params.get("url", [None])[0].encode("utf-8")), "utf-8")
+
+    if callback_url is None:
+        raise ValidationException("Callback URL specified", slug="no-callback")
+
+    token, created = Token.get_or_create(user=request.user, token_type="one_time")
+
+    url = f"/v1/auth/google/{token}?url={callback_url}"
+    return HttpResponseRedirect(redirect_to=url)
 
 
 @api_view(["POST"])
