@@ -1698,10 +1698,20 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
         lang = request.GET.get("lang", None)
-        if lang is not None and lang != "undefined" and lang != "":
-            lookup["lang__iexact"] = lang
+        query = []
+        if lang:
+            if "," not in lang:
+                lookup["lang__iexact"] = lang
+                print(f"Filtered by languages: {lang}")
+            else:
+                queryLang = Q()
+                for language in lang.split(","):
+                    if language == "":
+                        continue
+                    queryLang = queryLang | Q(lang__iexact=language)
+                query.append(queryLang)
 
-        items = items.filter(**lookup)
+        items = items.filter(*query, **lookup)
         items = handler.queryset(items)
 
         serializer = KeywordClusterMidSerializer(items, many=True)
