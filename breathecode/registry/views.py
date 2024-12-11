@@ -1697,6 +1697,10 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
+        lang = request.GET.get("lang", None)
+        if lang is not None and lang != "undefined" and lang != "":
+            lookup["lang__iexact"] = lang
+
         items = items.filter(**lookup)
         items = handler.queryset(items)
 
