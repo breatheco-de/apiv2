@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 default=None,
                 help_text="Heading that will be used in the landing page",
-                max_length=160,
+                max_length=400,
                 null=True,
             ),
         ),
