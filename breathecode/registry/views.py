@@ -1702,7 +1702,6 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
         if lang:
             if "," not in lang:
                 lookup["lang__iexact"] = lang
-                print(f"Filtered by languages: {lang}")
             else:
                 queryLang = Q()
                 for language in lang.split(","):
