@@ -2,6 +2,7 @@ import logging
 import re
 from datetime import timedelta
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.db.models.query_utils import Q
 from django.utils import timezone
 from rest_framework import serializers
@@ -11,7 +12,6 @@ from breathecode.monitoring.actions import test_link
 from breathecode.services.activecampaign.client import acp_ids
 from breathecode.utils import serpy
 from breathecode.utils.integer_to_base import to_base
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import AcademyAlias, ActiveCampaignAcademy, Automation, CourseTranslation, FormEntry, ShortLink, Tag
 
@@ -408,6 +408,7 @@ class GetCourseTranslationSerializer(serpy.Serializer):
     landing_variables = serpy.Field()
     landing_url = serpy.Field()
     video_url = serpy.Field()
+    heading = serpy.Field()
 
 
 class GetCourseSmallSerializer(serpy.Serializer):
