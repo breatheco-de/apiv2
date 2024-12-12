@@ -867,8 +867,8 @@ class CourseTranslation(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     lang = models.CharField(max_length=5, validators=[validate_language_code])
     title = models.CharField(max_length=60)
-    heading = models.CharField(
-        max_length=160, help_text="Heading that will be used in the landing page", default=None, null=True, blank=True
+    heading = models.TextField(
+        max_length=400, help_text="Heading that will be used in the landing page", default=None, null=True, blank=True
     )
     description = models.TextField(max_length=400)
     short_description = models.CharField(max_length=120, null=True, default=None, blank=True)
