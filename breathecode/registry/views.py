@@ -56,6 +56,7 @@ from .models import (
 from .serializers import (
     AcademyAssetSerializer,
     AcademyCommentSerializer,
+    AcademyErrorSerializer,
     AssetAliasSerializer,
     AssetBigAndTechnologyPublishedSerializer,
     AssetBigSerializer,
@@ -81,6 +82,7 @@ from .serializers import (
     PostKeywordClusterSerializer,
     PostKeywordSerializer,
     PutAssetCommentSerializer,
+    PutAssetErrorSerializer,
     PUTCategorySerializer,
     PUTKeywordSerializer,
     SEOReportSerializer,
@@ -1409,6 +1411,103 @@ class AcademyAssetCommentView(APIView, GenerateLookupsMixin):
             raise ValidationException("This comment does not exist", 404)
 
         comment.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    @capable_of("read_asset_error")
+    def get(self, request, academy_id=None):
+
+        handler = self.extensions(request)
+        # cache = handler.cache.get()
+        # if cache is not None:
+        #     return cache
+
+        items = AssetErrorLog.objects.filter(Q(asset__academy__id=academy_id) | Q(asset__isnull=True))
+        lookup = {}
+
+        if "asset" in self.request.GET:
+            param = self.request.GET.get("asset")
+            lookup["asset__slug__in"] = [p.lower() for p in param.split(",")]
+
+        if "slug" in self.request.GET:
+            param = self.request.GET.get("slug")
+            lookup["slug__in"] = [p.lower() for p in param.split(",")]
+
+        if "status" in self.request.GET:
+            param = self.request.GET.get("status")
+            lookup["status__in"] = [p.upper() for p in param.split(",")]
+
+        if "asset_type" in self.request.GET:
+            param = self.request.GET.get("asset_type")
+            lookup["asset_type__in"] = [p.upper() for p in param.split(",")]
+
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+
+        serializer = AcademyErrorSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of("crud_asset_error")
+    def put(self, request, academy_id=None):
+
+        data_list = request.data
+        if not isinstance(request.data, list):
+            data_list = [request.data]
+
+        all_errors = []
+        for data in data_list:
+            error_id = data.get("id")
+            if not error_id:
+                raise ValidationException("Missing error id")
+
+            error = AssetErrorLog.objects.filter(
+                Q(id=error_id) & (Q(asset__academy__id=academy_id) | Q(asset__isnull=True))
+            ).first()
+            if error is None:
+                raise ValidationException(f"This error with id {error_id} does not exist for this academy", 404)
+
+            serializer = PutAssetErrorSerializer(error, data=data, context={"request": request, "academy": academy_id})
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            all_errors.append(serializer)
+
+        for serializer in all_errors:
+            serializer.save()
+
+        return Response([serializer.data for serializer in all_errors], status=status.HTTP_200_OK)
+
+    @capable_of("crud_asset_error")
+    def delete(self, request, error_id=None, academy_id=None):
+
+        lookups = self.generate_lookups(request, many_fields=["id"])
+        if not lookups and not error_id:
+            raise ValidationException("provide arguments in the url", code=400, slug="without-lookups-and-error-id")
+
+        if lookups and error_id:
+            raise ValidationException(
+                "error_id in url " "in bulk mode request, use querystring style instead",
+                code=400,
+                slug="lookups-and-error-id-together",
+            )
+
+        if error_id:
+            error = AssetErrorLog.objects.filter(id=error_id, asset__academy__id=academy_id).first()
+            if error is None:
+                raise ValidationException("This error does not exist", 404)
+
+            error.delete()
+
+        if lookups:
+            items = AssetErrorLog.objects.filter(**lookups)
+            items.delete()
+
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
