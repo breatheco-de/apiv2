@@ -335,11 +335,12 @@ class Asset(models.Model):
         help_text="Only applies to LearnPack tutorials that have been published in the LearnPack cloud",
     )
 
-    template_url = models.URLField(
+    template_url = models.CharField(
         null=True,
         blank=True,
         default=None,
-        help_text="This template will be used to open the asset (only applied for projects)",
+        max_length=500,
+        help_text="This template will be used to open the asset (only applied for projects). If project has no template it should state 'self' as template url",
     )
     dependencies = models.CharField(
         max_length=50,
@@ -896,10 +897,11 @@ class Asset(models.Model):
 
         # if branch is specified in the URL, we will use it to find the asset
         # For example: https://github.com/4GeeksAcademy/react-hello/blob/1.0/README.md
-        if "blob" in path_parts:
-            blob_index = path_parts.index("blob")
-            if len(path_parts) > blob_index + 1:
-                branch_name = path_parts[blob_index + 1]
+        branch_pattern = "blob" if "blob" in path_parts else "tree" if "tree" in path_parts else None
+        if branch_pattern is not None:
+            branch_index = path_parts.index(branch_pattern)
+            if len(path_parts) > branch_index + 1:
+                branch_name = path_parts[branch_index + 1]
 
         if branch_name:
 
