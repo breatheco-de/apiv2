@@ -158,11 +158,11 @@ class Command(BaseCommand):
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
                 Q(
-                    status=RepositoryDeletionOrder.Status.TRANSFERRING,
+                    status__in=[RepositoryDeletionOrder.Status.TRANSFERRING, RepositoryDeletionOrder.Status.ERROR],
                     starts_transferring_at__lte=timezone.now() - relativedelta(months=2),
                 )
                 | Q(
-                    status=RepositoryDeletionOrder.Status.PENDING,
+                    status__in=[RepositoryDeletionOrder.Status.PENDING, RepositoryDeletionOrder.Status.ERROR],
                     created_at__lte=timezone.now() - relativedelta(months=2),
                 ),
                 repository_user__in=self.allowed_users,
@@ -332,7 +332,7 @@ class Command(BaseCommand):
             qs = RepositoryDeletionOrder.objects.filter(
                 repository_user__in=self.allowed_users,
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
-                status=RepositoryDeletionOrder.Status.PENDING,
+                status__in=[RepositoryDeletionOrder.Status.PENDING, RepositoryDeletionOrder.Status.ERROR],
                 created_at__gt=timezone.now(),
             ).exclude(id__in=ids)[:100]
 

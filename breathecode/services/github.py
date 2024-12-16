@@ -203,7 +203,7 @@ class Github:
         page = 0
         while True:
             page += 1
-            res = self.get(f"/orgs/{owner}/{repo}/events?page={page}&per_page={per_page}")
+            res = self.get(f"/repos/{owner}/{repo}/events?page={page}&per_page={per_page}")
 
             if len(res) == 0:
                 break
