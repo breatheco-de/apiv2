@@ -130,8 +130,8 @@ class Command(BaseCommand):
         page = 0
         to_delete = []
         while True:
-            qs = RepositoryDeletionOrder.objects.filter(
-                status=RepositoryDeletionOrder.Status.PENDING,
+            qs = RepositoryDeletionOrder.objects.exclude(
+                status__in=[RepositoryDeletionOrder.Status.TRANSFERRED, RepositoryDeletionOrder.Status.DELETED]
             )[page * 100 : (page + 1) * 100]
 
             if len(qs) == 0:
