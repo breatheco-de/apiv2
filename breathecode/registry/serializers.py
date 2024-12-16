@@ -16,6 +16,7 @@ from .models import (
     AssetAlias,
     AssetCategory,
     AssetComment,
+    AssetErrorLog,
     AssetKeyword,
     AssetTechnology,
     ContentVariable,
@@ -193,6 +194,18 @@ class AcademyCommentSerializer(serpy.Serializer):
     delivered = serpy.Field()
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
+    created_at = serpy.Field()
+
+
+class AcademyErrorSerializer(serpy.Serializer):
+    id = serpy.Field()
+    asset_type = serpy.Field()
+    slug = serpy.Field()
+    status = serpy.Field()
+    path = serpy.Field()
+    status_text = serpy.Field()
+    asset = SmallAsset(required=False)
+    user = UserSerializer(required=False)
     created_at = serpy.Field()
 
 
@@ -830,6 +843,54 @@ class PutAssetCommentSerializer(serializers.ModelSerializer):
                 raise ValidationException("You cannot update the resolved property if you are the Asset Comment owner")
 
         return validated_data
+
+
+class AssetErrorListSerializer(serializers.ListSerializer):
+
+    def update(self, instances, validated_data):
+
+        instance_hash = {index: instance for index, instance in enumerate(instances)}
+
+        result = [self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)]
+
+        return result
+
+
+class PutAssetErrorSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AssetErrorLog
+        exclude = ("asset_type", "slug", "path", "user", "created_at")
+        list_serializer_class = AssetErrorListSerializer
+
+    def validate(self, data):
+
+        validated_data = super().validate(data)
+
+        updating_status = (
+            True if "status" in validated_data and validated_data["status"] != self.instance.status else False
+        )
+        updating_asset = True if "asset" in validated_data and validated_data["asset"] != self.instance.asset else False
+
+        if updating_asset:
+            if updating_status:
+                raise ValidationException(
+                    "You cannot update the status and the asset of the error at the same time",
+                    slug="update-status-along",
+                )
+
+        return validated_data
+
+    def update(self, instance, validated_data):
+
+        if "status" in validated_data and validated_data["status"] != instance.status:
+            AssetErrorLog.objects.filter(
+                slug=instance.slug, asset_type=instance.asset_type, path=instance.path, asset=instance.asset
+            ).update(status=validated_data["status"])
+            return instance
+
+        else:
+            return super().update(instance, validated_data)
 
 
 class AssetListSerializer(serializers.ListSerializer):

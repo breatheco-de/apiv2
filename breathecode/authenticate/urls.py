@@ -37,8 +37,8 @@ from .views import (
     LoginView,
     LogoutView,
     MeInviteView,
-    MeProfileAcademyInvite,
     MemberView,
+    MeProfileAcademyInvite,
     PasswordResetView,
     ProfileInviteMeView,
     ProfileMePictureView,
@@ -63,6 +63,7 @@ from .views import (
     pick_password,
     receive_google_webhook,
     render_academy_invite,
+    render_google_connect,
     render_invite,
     render_user_invite,
     reset_password_view,
@@ -154,6 +155,7 @@ urlpatterns = [
     # google authentication oath2.0
     path("google/callback", save_google_token, name="google_callback"),
     path("google/<str:token>", get_google_token, name="google_token"),
+    path("academy/google", render_google_connect, name="academy_google_token"),
     path("gitpod/sync", sync_gitpod_users_view, name="sync_gitpod_users"),
     # sync with gitHUB
     path("academy/github/user", GithubUserView.as_view(), name="github_user"),

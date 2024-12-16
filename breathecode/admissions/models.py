@@ -468,12 +468,14 @@ POSTPONED = "POSTPONED"
 SUSPENDED = "SUSPENDED"
 GRADUATED = "GRADUATED"
 DROPPED = "DROPPED"
+NOT_COMPLETING = "NOT_COMPLETING"
 EDU_STATUS = (
     (ACTIVE, "Active"),
     (POSTPONED, "Postponed"),
     (GRADUATED, "Graduated"),
     (SUSPENDED, "Suspended"),
     (DROPPED, "Dropped"),
+    (NOT_COMPLETING, "Not Completing"),
 )
 
 

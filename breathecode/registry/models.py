@@ -343,11 +343,12 @@ class Asset(models.Model):
         help_text="Only applies to LearnPack tutorials that have been published in the LearnPack cloud",
     )
 
-    template_url = models.URLField(
+    template_url = models.CharField(
         null=True,
         blank=True,
         default=None,
-        help_text="This template will be used to open the asset (only applied for projects)",
+        max_length=500,
+        help_text="This template will be used to open the asset (only applied for projects). If project has no template it should state 'self' as template url",
     )
     dependencies = models.CharField(
         max_length=50,
@@ -873,6 +874,24 @@ class Asset(models.Model):
 
     @staticmethod
     def get_by_github_url(github_url):
+        """
+        Retrieve an Asset object based on a GitHub URL.
+        This method parses the provided GitHub URL to extract the organization name,
+        repository name, and optionally the branch name. It then searches for an Asset
+        object whose `readme_url` contains the relevant GitHub URL components.
+
+        If a branch name is specified, it will return the Asset with the highest version
+        number in the branch.
+
+        Args:
+            github_url (str): The GitHub URL to parse and search for.
+        Returns:
+            Asset: The first Asset object that matches the parsed GitHub URL components,
+                or None if no matching Asset is found.
+        Raises:
+            ValueError: If the provided URL is not a valid GitHub URL or does not contain
+                        the necessary components.
+        """
         parsed_url = urlparse(github_url)
         if parsed_url.netloc != "github.com":
             raise ValueError("Invalid GitHub URL")
@@ -882,7 +901,64 @@ class Asset(models.Model):
             raise ValueError("Invalid GitHub URL")
 
         org_name, repo_name = path_parts[:2]
-        asset = Asset.objects.filter(readme_url__icontains=f"github.com/{org_name}/{repo_name}").first()
+        branch_name = None
+
+        # if branch is specified in the URL, we will use it to find the asset
+        # For example: https://github.com/4GeeksAcademy/react-hello/blob/1.0/README.md
+        branch_pattern = "blob" if "blob" in path_parts else "tree" if "tree" in path_parts else None
+        if branch_pattern is not None:
+            branch_index = path_parts.index(branch_pattern)
+            if len(path_parts) > branch_index + 1:
+                branch_name = path_parts[branch_index + 1]
+
+        if branch_name:
+
+            def compare_versions(version1, version2):
+                v1_parts = list(map(int, version1.split(".")))
+                v2_parts = list(map(int, version2.split(".")))
+
+                # Compare each part of the version
+                for v1, v2 in zip(v1_parts, v2_parts):
+                    if v1 > v2:
+                        return 1
+                    elif v1 < v2:
+                        return -1
+
+                # If all parts are equal, compare lengths
+                if len(v1_parts) > len(v2_parts):
+                    return 1
+                elif len(v1_parts) < len(v2_parts):
+                    return -1
+
+                return 0
+
+            pattern = r"^v\d+\.\d+$"
+            if not bool(re.match(pattern, branch_name)):
+                raise ValueError("Version name must follow the format vX.X, for example: v1.0")
+
+            original_version = branch_name.replace("v", "")
+            original_major_version = int(original_version.split(".")[0])
+
+            assets = Asset.objects.filter(readme_url__icontains=f"github.com/{org_name}/{repo_name}/blob/")
+
+            # Extract and compare versions to find the highest one
+            highest_version = None
+            highest_asset = None
+            version_pattern = re.compile(r"/blob/(\d+(\.\d+)*)/README.md")
+
+            for asset in assets:
+                match = version_pattern.search(asset.readme_url or "")
+                if match:
+                    version = match.group(1)
+                    major_version = int(version.split(".")[0])
+                    if major_version == original_major_version:
+                        if highest_version is None or compare_versions(version, highest_version) > 0:
+                            highest_version = version
+                            highest_asset = asset
+
+            return highest_asset
+        else:
+            asset = Asset.objects.filter(readme_url__icontains=f"github.com/{org_name}/{repo_name}").first()
         return asset
 
 
