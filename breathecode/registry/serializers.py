@@ -307,6 +307,7 @@ class AcademyAssetSerializer(AssetSerializer):
     published_at = serpy.Field()
     readme_updated_at = serpy.Field()
     authors_username = serpy.Field()
+    sort_priority = serpy.Field()
 
     requirements = serpy.Field()
 
