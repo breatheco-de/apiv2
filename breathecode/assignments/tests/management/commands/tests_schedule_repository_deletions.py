@@ -3,20 +3,22 @@ Test /answer
 """
 
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import capyc.pytest as capyc
 import pytest
 from dateutil.relativedelta import relativedelta
 from linked_services.django.actions import reset_app_cache
 
+from breathecode.assignments import tasks
 from breathecode.assignments.management.commands.schedule_repository_deletions import Command
 from breathecode.registry.models import Asset
 
 
 @pytest.fixture(autouse=True)
-def setup(db):
+def setup(db, monkeypatch: pytest.MonkeyPatch):
     reset_app_cache()
+    monkeypatch.setattr("breathecode.assignments.tasks.send_repository_deletion_notification.delay", MagicMock())
     yield
 
 
@@ -95,6 +97,7 @@ def test_no_settings(database: capyc.Database):
 
     assert database.list_of("assignments.RepositoryDeletionOrder") == []
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_no_repos(database: capyc.Database, patch_get):
@@ -115,6 +118,7 @@ def test_no_repos(database: capyc.Database, patch_get):
 
     assert database.list_of("assignments.RepositoryDeletionOrder") == []
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_two_repos(database: capyc.Database, patch_get):
@@ -159,6 +163,7 @@ def test_two_repos(database: capyc.Database, patch_get):
             "status": "PENDING",
             "status_text": None,
             "starts_transferring_at": None,
+            "notified_at": None,
         },
         {
             "id": 2,
@@ -168,9 +173,11 @@ def test_two_repos(database: capyc.Database, patch_get):
             "status": "PENDING",
             "status_text": None,
             "starts_transferring_at": None,
+            "notified_at": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, set_datetime, utc_now):
@@ -269,6 +276,7 @@ def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, s
             "status": "DELETED",
             "status_text": None,
             "starts_transferring_at": None,
+            "notified_at": None,
         },
         {
             "id": 2,
@@ -278,9 +286,11 @@ def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, s
             "status": "DELETED",
             "status_text": None,
             "starts_transferring_at": None,
+            "notified_at": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_two_repos__repository_transferred(database: capyc.Database, patch_get, set_datetime, utc_now):
@@ -351,6 +361,7 @@ def test_two_repos__repository_transferred(database: capyc.Database, patch_get, 
             "status": "TRANSFERRED",
             "status_text": None,
             "starts_transferring_at": utc_now,
+            "notified_at": None,
         },
         {
             "id": 2,
@@ -360,9 +371,11 @@ def test_two_repos__repository_transferred(database: capyc.Database, patch_get, 
             "status": "TRANSFERRED",
             "status_text": None,
             "starts_transferring_at": utc_now,
+            "notified_at": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_two_repos__repository_does_not_exists(database: capyc.Database, patch_get, set_datetime, utc_now):
@@ -433,6 +446,7 @@ def test_two_repos__repository_does_not_exists(database: capyc.Database, patch_g
             "status": "ERROR",
             "status_text": "Repository does not exist: breatheco-de/curso-nodejs-4geeks",
             "starts_transferring_at": None,
+            "notified_at": None,
         },
         {
             "id": 2,
@@ -442,15 +456,17 @@ def test_two_repos__repository_does_not_exists(database: capyc.Database, patch_g
             "status": "ERROR",
             "status_text": "Repository does not exist: 4GeeksAcademy/curso-nodejs-4geeks",
             "starts_transferring_at": None,
+            "notified_at": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_one_repo__pending__user_not_found(database: capyc.Database, patch_get, set_datetime, utc_now, fake):
 
     delta = relativedelta(months=2, hours=1)
-    github_username = fake.slug()
+    github_username = "4GeeksAcademy"
     model = database.create(
         academy_auth_settings={"github_username": github_username},
         city=1,
@@ -508,23 +524,27 @@ def test_one_repo__pending__user_not_found(database: capyc.Database, patch_get, 
             "status": "PENDING",
             "status_text": None,
             "starts_transferring_at": None,
+            "notified_at": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
     "event",
     [
-        Event.push("my-user"),
-        Event.member("my-user"),
-        Event.watch("my-user"),
+        Event.push("breatheco-de"),
+        Event.member("breatheco-de"),
+        Event.watch("breatheco-de"),
     ],
 )
-def test_one_repo__pending__user_found(database: capyc.Database, patch_get, set_datetime, utc_now, event):
+def test_one_repo__pending__user_found(
+    database: capyc.Database, format: capyc.Format, patch_get, set_datetime, utc_now, event
+):
 
     delta = relativedelta(months=2, hours=1)
-    github_username = "my-user"
+    github_username = "breatheco-de"
     parsed_name = github_username.replace("-", "")
     model = database.create(
         academy_auth_settings={"github_username": github_username},
@@ -590,24 +610,23 @@ def test_one_repo__pending__user_found(database: capyc.Database, patch_get, set_
 
     assert database.list_of("assignments.RepositoryDeletionOrder") == [
         {
-            "id": 1,
-            "provider": "GITHUB",
-            "repository_name": f"curso-nodejs-4geeks-{parsed_name}",
-            "repository_user": github_username,
+            **format.to_obj_repr(model.repository_deletion_order),
             "status": "TRANSFERRING",
-            "status_text": None,
             "starts_transferring_at": utc_now - delta,
-        },
+            "notified_at": None,
+        }
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == [
+        call(1, "breatheco-de"),
+    ]
 
 
 def test_one_repo__pending__user_found__inferred(database: capyc.Database, patch_get, set_datetime, utc_now):
-    event = Event.member("my-user")
+    event = Event.member("4GeeksAcademy")
 
     delta = relativedelta(months=2, hours=1)
-    github_username = "my-user"
-    parsed_name = github_username.replace("-", "")
+    github_username = "4GeeksAcademy"
     model = database.create(
         academy_auth_settings={"github_username": github_username},
         city=1,
@@ -679,17 +698,18 @@ def test_one_repo__pending__user_found__inferred(database: capyc.Database, patch
             "status": "TRANSFERRING",
             "status_text": None,
             "starts_transferring_at": utc_now - delta,
+            "notified_at": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == [
+        call(1, "4GeeksAcademy"),
+    ]
 
 
 def test_one_repo__transferring__repo_found(database: capyc.Database, patch_get, set_datetime, utc_now):
-    event = Event.member("my-user")
-
     delta = relativedelta(months=2, hours=1)
-    github_username = "my-user"
-    parsed_name = github_username.replace("-", "")
+    github_username = "breatheco-de"
     model = database.create(
         academy_auth_settings={"github_username": github_username},
         city=1,
@@ -747,16 +767,16 @@ def test_one_repo__transferring__repo_found(database: capyc.Database, patch_get,
             "status": "TRANSFERRING",
             "status_text": None,
             "starts_transferring_at": utc_now,
+            "notified_at": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_one_repo__transferring__repo_not_found(database: capyc.Database, patch_get, set_datetime, utc_now):
-    event = Event.member("my-user")
-
     delta = relativedelta(months=2, hours=1)
-    github_username = "my-user"
+    github_username = "breatheco-de"
     model = database.create(
         academy_auth_settings={"github_username": github_username},
         city=1,
@@ -814,9 +834,11 @@ def test_one_repo__transferring__repo_not_found(database: capyc.Database, patch_
             "status": "TRANSFERRED",
             "status_text": None,
             "starts_transferring_at": utc_now,
+            "notified_at": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 # def test_two_repos__deleting_repositories__got_an_error(database: capyc.Database, patch_get, set_datetime, utc_now):
@@ -979,6 +1001,7 @@ def test_two_repos_in_the_whitelist(database: capyc.Database, patch_get):
             "repository_user": "4GeeksAcademy",
         },
     ]
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_whitelist(database: capyc.Database, patch_get):
@@ -1063,6 +1086,7 @@ def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_whitelist(da
             "repository_user": "4GeeksAcademy",
         },
     ]
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_two_repos_used_in_subscriptions(database: capyc.Database, patch_get):
@@ -1127,6 +1151,7 @@ def test_two_repos_used_in_subscriptions(database: capyc.Database, patch_get):
             "repository_user": "4GeeksAcademy",
         },
     ]
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_subscriptions(database: capyc.Database, patch_get):
@@ -1207,6 +1232,7 @@ def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_subscription
             "repository_user": "4GeeksAcademy",
         },
     ]
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
@@ -1298,6 +1324,7 @@ def test_two_repos_used_in_assets(database: capyc.Database, patch_get, attr, is_
             "repository_user": "4GeeksAcademy",
         },
     ]
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
@@ -1413,3 +1440,4 @@ def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_assets(
             "repository_user": "4GeeksAcademy",
         },
     ]
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == []

@@ -170,6 +170,7 @@ class HookUserAssessmentSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
     summary = serpy.MethodField()
+
     def get_summary(self, obj):
         total_score, last_one = obj.get_score()
 

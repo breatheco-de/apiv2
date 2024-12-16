@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
 
+from breathecode.assignments import tasks
 from breathecode.assignments.models import RepositoryDeletionOrder, RepositoryWhiteList, Task
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.models import RepositorySubscription
@@ -18,8 +19,10 @@ from breathecode.services.github import Github
 class Command(BaseCommand):
     help = "Clean data from marketing module"
     github_url_pattern = re.compile(r"https?://github\.com/(?P<user>[^/\s]+)/(?P<repo>[^/\s]+)/?")
+    allowed_users = ["breatheco-de", "4GeeksAcademy", "4geeksacademy"]
 
     def handle(self, *args, **options):
+
         self.fill_whitelist()
         self.purge_deletion_orders()
         self.github()
@@ -135,6 +138,11 @@ class Command(BaseCommand):
                 break
 
             for deletion_order in qs:
+                if deletion_order.repository_user not in self.allowed_users:
+                    to_delete.append(deletion_order.id)
+                    print("here")
+                    continue
+
                 if RepositoryWhiteList.objects.filter(
                     provider=deletion_order.provider,
                     repository_user__iexact=deletion_order.repository_user,
@@ -158,6 +166,7 @@ class Command(BaseCommand):
                     status=RepositoryDeletionOrder.Status.PENDING,
                     created_at__lte=timezone.now() - relativedelta(months=2),
                 ),
+                repository_user__in=self.allowed_users,
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
             )[:100]
 
@@ -291,6 +300,7 @@ class Command(BaseCommand):
 
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
+                repository_user__in=self.allowed_users,
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
                 status=RepositoryDeletionOrder.Status.TRANSFERRING,
                 created_at__gt=timezone.now(),
@@ -321,27 +331,42 @@ class Command(BaseCommand):
 
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
+                repository_user__in=self.allowed_users,
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
                 status=RepositoryDeletionOrder.Status.PENDING,
                 created_at__gt=timezone.now(),
             ).exclude(id__in=ids)[:100]
 
+            print(-1111)
             if qs.count() == 0:
                 break
 
+            print(2222)
+
             for deletion_order in qs:
                 ids.append(deletion_order.id)
+
                 try:
+                    print(1111)
                     if self.github_client.repo_exists(
                         owner=deletion_order.repository_user, repo=deletion_order.repository_name
                     ):
+                        print(3333)
                         new_owner = self.get_username(deletion_order.repository_user, deletion_order.repository_name)
                         if not new_owner:
                             continue
 
+                        print(4444)
+
                         self.github_client.transfer_repo(repo=deletion_order.repository_name, new_owner=new_owner)
                         deletion_order.status = RepositoryDeletionOrder.Status.TRANSFERRING
                         deletion_order.save()
+
+                        print(5555)
+
+                        tasks.send_repository_deletion_notification.delay(deletion_order.id, new_owner)
+
+                        print(6666, tasks.send_repository_deletion_notification.delay)
 
                 except Exception as e:
                     deletion_order.status = RepositoryDeletionOrder.Status.ERROR

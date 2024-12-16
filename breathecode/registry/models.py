@@ -923,9 +923,9 @@ class Asset(models.Model):
                 return 0
 
             pattern = r"^v\d+\.\d+$"
-            if not bool(re.match(branch_name, string)):
+            if not bool(re.match(pattern, branch_name)):
                 raise ValueError("Version name must follow the format vX.X, for example: v1.0")
-                
+
             original_version = branch_name.replace("v", "")
             original_major_version = int(original_version.split(".")[0])
 
