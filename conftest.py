@@ -4,14 +4,14 @@ from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
+from capyc.pytest.core.fixtures import Random
+from capyc.pytest.django.fixtures.signals import Signals
 from django.core.cache import cache
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from breathecode.notify.utils.hook_manager import HookManagerClass
 from breathecode.utils.exceptions import TestError
-from capyc.pytest.core.fixtures import Random
-from capyc.pytest.django.fixtures.signals import Signals
 
 # set ENV as test before run django
 os.environ["ENV"] = "test"
