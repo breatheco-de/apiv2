@@ -1,218 +1,318 @@
-import random
-from datetime import datetime
-from unittest.mock import MagicMock, call, patch
+from datetime import datetime, timedelta, timezone
 
 import capyc.pytest as capy
-import pytest
 from django.urls.base import reverse_lazy
 from django.utils import timezone
-from rest_framework import status
 
-from breathecode.admissions.models import Academy
-from breathecode.registry.models import KeywordCluster
-from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
-
-from ...mixins import RegistryTestCase
-
-# import breathecode.activity.tasks as activity_tasks
-# from breathecode.assignments import tasks
-# from breathecode.assignments.caches import TaskCache
+from breathecode.admissions.models import City, Country
+from breathecode.registry.models import Academy, KeywordCluster
 
 
-UTC_NOW = timezone.now()
-
-
-def get_serializer(self, task, user):
+def serialize_keyword_cluster(keyword_cluster):
     return {
-        "associated_slug": task.associated_slug,
-        "created_at": self.bc.datetime.to_iso_string(task.created_at),
-        "updated_at": self.bc.datetime.to_iso_string(task.updated_at),
-        "github_url": task.github_url,
-        "id": task.id,
-        "live_url": task.live_url,
-        "revision_status": task.revision_status,
-        "task_status": task.task_status,
-        "task_type": task.task_type,
-        "title": task.title,
-        "assignment_telemetry": task.telemetry.telemetry if task.telemetry else None,
-        "description": task.description,
-        "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
-        "delivered_at": self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
-        "user": {"first_name": user.first_name, "id": user.id, "last_name": user.last_name},
-        "cohort": {"id": task.cohort.id, "name": task.cohort.name, "slug": task.cohort.slug},
+        "id": keyword_cluster.id,
+        "slug": keyword_cluster.slug,
+        "title": keyword_cluster.title,
+        "academy": (
+            None
+            if not keyword_cluster.academy
+            else {
+                "id": keyword_cluster.academy.id,
+                "slug": keyword_cluster.academy.slug,
+                "name": keyword_cluster.academy.name,
+                "city": ({"name": keyword_cluster.academy.city.name} if keyword_cluster.academy.city else None),
+                "country": (
+                    {"name": keyword_cluster.academy.country.name} if keyword_cluster.academy.country else None
+                ),
+            }
+        ),
+        "lang": keyword_cluster.lang,
+        "visibility": keyword_cluster.visibility,
+        "landing_page_url": keyword_cluster.landing_page_url,
+        "is_deprecated": keyword_cluster.is_deprecated,
+        "is_important": keyword_cluster.is_important,
+        "is_urgent": keyword_cluster.is_urgent,
+        "internal_description": keyword_cluster.internal_description,
+        "optimization_rating": keyword_cluster.optimization_rating,
+        "created_at": keyword_cluster.created_at.isoformat(),
+        "updated_at": keyword_cluster.updated_at.isoformat(),
     }
 
 
-# def database_item(academy, category, data={}):
-#     return {
-#         "academy_id": academy.id,
-#         "learnpack_deploy_url": None,
-#         "agent": None,
-#         "assessment_id": None,
-#         "asset_type": "PROJECT",
-#         "author_id": None,
-#         "authors_username": None,
-#         "category_id": category.id,
-#         "cleaning_status": "PENDING",
-#         "cleaning_status_details": None,
-#         "config": None,
-#         "delivery_formats": "url",
-#         "delivery_instructions": None,
-#         "readme_updated_at": None,
-#         "delivery_regex_url": None,
-#         "description": None,
-#         "difficulty": None,
-#         "duration": None,
-#         "external": False,
-#         "gitpod": False,
-#         "graded": False,
-#         "html": None,
-#         "id": 1,
-#         "interactive": False,
-#         "intro_video_url": None,
-#         "is_seo_tracked": True,
-#         "lang": None,
-#         "last_cleaning_at": None,
-#         "last_seo_scan_at": None,
-#         "last_synch_at": None,
-#         "last_test_at": None,
-#         "optimization_rating": None,
-#         "owner_id": None,
-#         "github_commit_hash": None,
-#         "preview": None,
-#         "published_at": None,
-#         "readme": None,
-#         "readme_raw": None,
-#         "readme_url": None,
-#         "requirements": None,
-#         "seo_json_status": None,
-#         "slug": "",
-#         "solution_url": None,
-#         "solution_video_url": None,
-#         "status": "NOT_STARTED",
-#         "status_text": None,
-#         "sync_status": None,
-#         "test_status": None,
-#         "title": "",
-#         "url": None,
-#         "visibility": "PUBLIC",
-#         "with_solutions": False,
-#         "with_video": False,
-#         "is_auto_subscribed": True,
-#         "superseded_by_id": None,
-#         "enable_table_of_content": True,
-#         "agent": None,
-#         "learnpack_deploy_url": None,
-#         "template_url": None,
-#         "dependencies": None,
-#         "preview_in_tutorial": None,
-#         **data,
-#     }
+def test_get_keyword_cluster(client: capy.Client, database: capy.Database, fake: capy.Fake):
+    # url = reverse_lazy("academy_keywordcluster")
+    url = "academy/keywordcluster"
 
+    # country = database.create(code=1, name=fake.country())
 
-# @pytest.fixture(autouse=True)
-# def setup(monkeypatch: pytest.MonkeyPatch, db):
-#     monkeypatch.setenv("GOOGLE_CLIENT_ID", "123456.apps.googleusercontent.com")
-#     monkeypatch.setenv("GOOGLE_SECRET", "123456")
-#     monkeypatch.setenv("GOOGLE_REDIRECT_URL", "https://breathecode.herokuapp.com/v1/auth/google/callback")
-#     monkeypatch.setattr("breathecode.services.google_apps.GoogleApps.__init__", MagicMock(return_value=None))
-#     monkeypatch.setattr("breathecode.services.google_apps.GoogleApps.subscribe_meet_webhook", MagicMock())
-#     monkeypatch.setattr(
-#         "breathecode.services.google_apps.GoogleApps.get_user_info", MagicMock(return_value={"id": 123})
-#     )
-
-
-# Fixtures
-# @pytest.fixture(autouse=True)
-# def setup(db, monkeypatch):
-#     monkeypatch.setattr("breathecode.registry.signals.keywordcluster_slug_modified.send_robust", MagicMock())
-#     yield
-
-
-@pytest.fixture
-def academy(database: capy.Database):
-    return database.create(academy=Academy)
-
-
-@pytest.fixture
-def keywordcluster(database: capy.Database, academy):
-    return database.create(
-        KeywordCluster, academy=academy, slug="test-cluster", title="Test Cluster", visibility="PUBLIC", lang="en"
+    model = database.create(
+        city=1,
+        country=1,
+        academy={
+            "slug": fake.slug(),
+            "name": fake.name(),
+            "logo_url": "https://example.com/logo.jpg",
+            "street_address": "Address",
+        },
+        keyword_cluster=[
+            {
+                "slug": "web",
+                "title": "web",
+                "lang": "us",
+                "visibility": "PUBLIC",
+                "landing_page_url": None,
+                "is_deprecated": False,
+                "is_important": True,
+                "is_urgent": True,
+                "internal_description": None,
+                "optimization_rating": None,
+            }
+        ],
     )
 
+    print("keyword_cluster", model.keyword_cluster)
 
-# @pytest.fixture
-# def client():
-#     return capy.Client()
+    expected = [serialize_keyword_cluster(model.keyword_cluster)]
 
+    response = client.get(f"{url}?visibility=PUBLIC")
+    json_response = response.json()
 
-# def test_no_token(database: capy.Database, client: capy.Client):
-#     url = reverse_lazy("authenticate:google_callback")
-
-#     response = client.get(url, format="json")
-
-#     json = response.json()
-#     expected = {"detail": "no-callback-url", "status_code": 400}
-
-#     assert json == expected
-#     assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-#     assert database.list_of("authenticate.Token") == []
-#     assert database.list_of("authenticate.CredentialsGoogle") == []
+    assert response.status_code == 200
+    assert json_response == expected
 
 
-# def test_no_url(database: capy.Database, client: capy.Client):
-#     url = reverse_lazy("authenticate:google_callback") + "?state=url%3Dhttps://4geeks.com"
+# def test_get_keyword_cluster(client: capy.Client, database: capy.Database, fake: capy.Fake):
+#     url = reverse_lazy("academy_keywordcluster")
 
-#     response = client.get(url, format="json")
+#     country = database.create({"model": Country, "fields": {"code": fake.country_code(), "name": fake.country()}})
 
-#     json = response.json()
-#     expected = {"detail": "no-user-token", "status_code": 400}
+#     city, created = City.objects.get_or_create(name=fake.city())
 
-#     assert json == expected
-#     assert response.status_code == status.HTTP_400_BAD_REQUEST
+#     academy = database.create(
+#         {
+#             "model": Academy,
+#             "fields": {
+#                 "slug": fake.slug(),
+#                 "name": fake.name(),
+#                 "logo_url": "https://example.com/logo.jpg",
+#                 "street_address": "Address",
+#                 "city": city,
+#                 "country": country,
+#             },
+#         }
+#     )
 
-#     assert database.list_of("authenticate.Token") == []
-#     assert database.list_of("authenticate.CredentialsGoogle") == []
+#     keyword_cluster = database.create(
+#         {
+#             "model": KeywordCluster,
+#             "fields": [
+#                 {
+#                     "slug": "web",
+#                     "title": "web",
+#                     "lang": "us",
+#                     "academy": academy,
+#                     "visibility": "PUBLIC",
+#                     "landing_page_url": None,
+#                     "is_deprecated": False,
+#                     "is_important": True,
+#                     "is_urgent": True,
+#                     "internal_description": None,
+#                     "optimization_rating": None,
+#                 }
+#             ],
+#         }
+#     )
+
+#     response = client.get(f"{url}?visibility=PUBLIC")
+#     json_response = response.json()
+
+#     expected = [serialize_keyword_cluster(keyword_cluster[0])]
+
+#     assert response.status_code == 200
+#     assert json_response == expected
 
 
-class RegistryTestSuite(RegistryTestCase):
-    """
-    🔽🔽🔽 Auth
-    """
+# def test_get_keyword_cluster(client: capy.Client, database: capy.Database, fake: capy.Fake):
+#     url = reverse_lazy("academy_keywordcluster")
 
-    def test_without_auth(self):
-        url = reverse_lazy("registry:keywordcluster")
-        response = self.client.get(url)
+#     academy = database.create(
+#         city=1,
+#         country=1,
+#         academy={
+#             "slug": fake.slug(),
+#             "name": fake.name(),
+#             "logo_url": "https://example.com/logo.jpg",
+#             "street_address": "Address",
+#         },
+#     )
 
-        json = response.json()
-        expected = {"detail": "Authentication credentials were not provided.", "status_code": 401}
+#     keyword_cluster = database.create(
+#         keyword_cluster=[
+#             {
+#                 "slug": "web",
+#                 "title": "web",
+#                 "lang": "us",
+#                 "visibility": "PUBLIC",
+#                 "landing_page_url": None,
+#                 "is_deprecated": False,
+#                 "is_important": True,
+#                 "is_urgent": True,
+#                 "internal_description": None,
+#                 "optimization_rating": None,
+#             }
+#         ],
+#     )
+#     response = client.get(f"{url}?visibility=PUBLIC")
+#     json_response = response.json()
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.bc.database.list_of("registry.keywordcluster"), [])
+#     expected = [serialize_keyword_cluster(keyword_cluster[0])]
 
-    # def test_get_keywordcluster(client: capy.Client, database: capy.Database, keywordcluster: KeywordCluster):
+#     assert response.status_code == 200
+#     assert json_response == expected
 
-    #     url = reverse_lazy("academy:keywordcluster")
 
-    #     response = client.get(url, format="json")
+# def test_get_keyword_cluster(client: capy.Client, database: capy.Database, fake: capy.Fake):
+#     # Create mock data
+#     url = reverse_lazy("academy_keywordcluster")
+#     # Ensure that city and country objects exist before creating the academy
+#     # city = database.create({"name": fake.city()})
+#     # country = database.create({"name": fake.country()})
 
-    #     assert response.status_code == status.HTTP_200_OK
-    #     assert len(response.data) > 0
-    #     assert response.data[0]["slug"] == keywordcluster.slug
-    #     assert response.data[0]["title"] == keywordcluster.title
-    #     assert response.data[0]["lang"] == keywordcluster.lang
-    #     assert database.list_of("academy.KeywordCluster") == [capy.Format.to_obj_repr(keywordcluster)]
+#     model = database.create(
+#         city=1,
+#         country=1,
+#         academy={
+#             "slug": fake.slug(),
+#             "name": fake.name(),
+#             "logo_url": "https://example.com/logo.jpg",
+#             "street_address": "Address",
+#         },
+#         keyword_cluster=[
+#             {
+#                 "slug": "web",
+#                 "title": "web",
+#                 # "academy": academy.id,
+#                 "lang": "us",
+#                 "visibility": "PUBLIC",
+#                 "landing_page_url": None,
+#                 "is_deprecated": False,
+#                 "is_important": True,
+#                 "is_urgent": True,
+#                 "internal_description": None,
+#                 "optimization_rating": None,
+#             }
+#         ],
+#     )
 
-    # def test_get_single_keywordcluster(client: capy.Client, database: capy.Database, keywordcluster: KeywordCluster):
-    #     url = reverse_lazy("academy:keywordcluster") + f"/{keywordcluster.slug}/"
+#     # Perform GET request with query parameters
+#     # url = reverse_lazy("keywordcluster-list", kwargs={"academy_id": academy.id})
 
-    #     response = client.get(url, format="json")
+#     # Filtering by visibility as an example
+#     response = client.get(f"{url}?visibility=PUBLIC")
+#     json_response = response.json()
 
-    #     assert response.status_code == status.HTTP_200_OK
-    #     assert response.data["slug"] == keywordcluster.slug
-    #     assert response.data["title"] == keywordcluster.title
-    #     assert response.data["lang"] == keywordcluster.lang
-    #     assert database.list_of("academy.KeywordCluster") == [capy.Format.to_obj_repr(keywordcluster)]
+#     # Serialize the expected result
+#     expected = [serialize_keyword_cluster(keyword_cluster[0])]
+
+#     # Test that the status code is 200 and the response matches expected output
+#     assert response.status_code == 200
+#     assert json_response == expected
+
+
+# def test_get_keyword_cluster_filter_by_lang(client: capy.Client, database: capy.Database, fake: capy.Fake):
+#     # Create mock data for multiple keyword clusters
+#     academy = database.create(
+#         academy={
+#             "slug": fake.slug(),
+#             "name": fake.name(),
+#             "logo_url": "https://example.com/logo.jpg",
+#             "street_address": "Address",
+#             "city": fake.city(),
+#             "country": fake.country(),
+#         }
+#     )
+
+#     keyword_clusters = database.create(
+#         keywordcluster=[
+#             {
+#                 "slug": "web",
+#                 "title": "web",
+#                 "academy": academy.academy.id,
+#                 "lang": "us",
+#                 "visibility": "PUBLIC",
+#                 "landing_page_url": None,
+#                 "is_deprecated": False,
+#                 "is_important": True,
+#                 "is_urgent": True,
+#                 "internal_description": None,
+#                 "optimization_rating": None,
+#             },
+#             {
+#                 "slug": "marketing",
+#                 "title": "marketing",
+#                 "academy": academy.academy.id,
+#                 "lang": "es",
+#                 "visibility": "PUBLIC",
+#                 "landing_page_url": None,
+#                 "is_deprecated": False,
+#                 "is_important": True,
+#                 "is_urgent": True,
+#                 "internal_description": None,
+#                 "optimization_rating": None,
+#             },
+#         ]
+#     )
+
+#     # Perform GET request with query parameter 'lang'
+#     url = reverse_lazy("keywordcluster-list", kwargs={"academy_id": academy.academy.id})
+#     response = client.get(f"{url}?lang=us")
+#     json_response = response.json()
+
+#     # Serialize the expected result (only the 'us' lang cluster)
+#     expected = [serialize_keyword_cluster(keyword_clusters[0])]
+
+#     # Test that the status code is 200 and the response matches expected output
+#     assert response.status_code == 200
+#     assert json_response == expected
+
+
+# def test_get_keyword_cluster_with_search(client: capy.Client, database: capy.Database, fake: capy.Fake):
+#     # Create mock data for a keyword cluster with searchable fields
+#     academy = database.create(
+#         academy={
+#             "slug": fake.slug(),
+#             "name": fake.name(),
+#             "logo_url": "https://example.com/logo.jpg",
+#             "street_address": "Address",
+#         }
+#     )
+
+#     keyword_cluster = database.create(
+#         keywordcluster=[
+#             {
+#                 "slug": "web",
+#                 "title": "web development",
+#                 "academy": academy.academy.id,
+#                 "lang": "us",
+#                 "visibility": "PUBLIC",
+#                 "landing_page_url": None,
+#                 "is_deprecated": False,
+#                 "is_important": True,
+#                 "is_urgent": True,
+#                 "internal_description": None,
+#                 "optimization_rating": None,
+#             }
+#         ]
+#     )
+
+#     # Perform GET request with search query 'web'
+#     url = reverse_lazy("keywordcluster-list", kwargs={"academy_id": academy.academy.id})
+#     response = client.get(f"{url}?like=web")
+#     json_response = response.json()
+
+#     # Serialize the expected result
+#     expected = [serialize_keyword_cluster(keyword_cluster[0])]
+
+#     # Test that the status code is 200 and the response matches expected output
+#     assert response.status_code == 200
+#     assert json_response == expected
