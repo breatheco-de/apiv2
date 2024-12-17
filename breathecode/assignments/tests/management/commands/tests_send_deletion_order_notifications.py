@@ -126,8 +126,9 @@ def test_one_repo__pending__user_found(
                 "provider": "GITHUB",
                 "repository_name": f"curso-nodejs-4geeks-{parsed_name}",
                 "repository_user": github_username,
-                "status": "PENDING",
+                "status": "TRANSFERRING",
                 "status_text": None,
+                "notified_at": None,
             },
         ],
     )
@@ -137,7 +138,7 @@ def test_one_repo__pending__user_found(
         [
             {
                 "method": "GET",
-                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks-{parsed_name}/events?page=1&per_page=30",
+                "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks-{parsed_name}/events?page=1&per_page=30",
                 "expected": [event],
                 "code": 200,
                 "headers": {},
@@ -174,8 +175,9 @@ def test_one_repo__pending__user_found__inferred(
                 "provider": "GITHUB",
                 "repository_name": "curso-nodejs-4geeks",
                 "repository_user": github_username,
-                "status": "PENDING",
+                "status": "TRANSFERRING",
                 "status_text": None,
+                "notified_at": None,
             },
         ],
     )
@@ -185,7 +187,7 @@ def test_one_repo__pending__user_found__inferred(
         [
             {
                 "method": "GET",
-                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/events?page=1&per_page=30",
+                "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/events?page=1&per_page=30",
                 "expected": [event],
                 "code": 200,
                 "headers": {},

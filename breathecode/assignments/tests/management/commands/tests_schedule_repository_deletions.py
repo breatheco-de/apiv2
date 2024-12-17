@@ -505,7 +505,7 @@ def test_one_repo__pending__user_not_found(database: capyc.Database, patch_get, 
             },
             {
                 "method": "GET",
-                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/events?page=1&per_page=30",
+                "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/events?page=1&per_page=30",
                 "expected": [],
                 "code": 200,
                 "headers": {},
@@ -598,7 +598,7 @@ def test_one_repo__pending__user_found(
             },
             {
                 "method": "GET",
-                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks-{parsed_name}/events?page=1&per_page=30",
+                "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks-{parsed_name}/events?page=1&per_page=30",
                 "expected": [event],
                 "code": 200,
                 "headers": {},
@@ -679,7 +679,7 @@ def test_one_repo__pending__user_found__inferred(database: capyc.Database, patch
             },
             {
                 "method": "GET",
-                "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/events?page=1&per_page=30",
+                "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/events?page=1&per_page=30",
                 "expected": [event],
                 "code": 200,
                 "headers": {},

@@ -18,6 +18,7 @@ class Command(BaseCommand):
 
     def github(self):
         ids = []
+        allowed_users = ["breatheco-de", "4GeeksAcademy", "4geeksacademy"]
         processed = set()
         for settings in AcademyAuthSettings.objects.filter(
             github_owner__isnull=False, github_owner__credentialsgithub__isnull=False
@@ -31,13 +32,13 @@ class Command(BaseCommand):
                 continue
 
             processed.add(key)
-            allowed_users = ["breatheco-de", "4GeeksAcademy", "4geeksacademy"]
 
             while True:
                 items = RepositoryDeletionOrder.objects.filter(
                     provider=RepositoryDeletionOrder.Provider.GITHUB,
                     notified_at=None,
                     status=RepositoryDeletionOrder.Status.TRANSFERRING,
+                    repository_user__in=allowed_users,
                 ).exclude(id__in=ids)[:100]
 
                 if len(items) == 0:
@@ -45,8 +46,6 @@ class Command(BaseCommand):
 
                 for deletion_order in items:
                     ids.append(deletion_order.id)
-                    if deletion_order.repository_user not in allowed_users:
-                        continue
 
                     if deletion_order.repository_name.endswith(".git"):
                         deletion_order.repository_name = deletion_order.repository_name[:-4]
