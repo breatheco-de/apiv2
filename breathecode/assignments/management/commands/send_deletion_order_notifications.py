@@ -17,6 +17,7 @@ class Command(BaseCommand):
         self.github()
 
     def github(self):
+        ids = []
         processed = set()
         for settings in AcademyAuthSettings.objects.filter(
             github_owner__isnull=False, github_owner__credentialsgithub__isnull=False
@@ -32,20 +33,28 @@ class Command(BaseCommand):
             processed.add(key)
             allowed_users = ["breatheco-de", "4GeeksAcademy", "4geeksacademy"]
 
-            items = RepositoryDeletionOrder.objects.filter(provider=RepositoryDeletionOrder.Provider.GITHUB)
-            for deletion_order in items:
-                if deletion_order.repository_user not in allowed_users:
-                    continue
+            while True:
+                items = RepositoryDeletionOrder.objects.filter(
+                    provider=RepositoryDeletionOrder.Provider.GITHUB, notified_at=None
+                ).exclude(id__in=ids)[:100]
 
-                if deletion_order.repository_name.endswith(".git"):
-                    deletion_order.repository_name = deletion_order.repository_name[:-4]
-                    deletion_order.save()
+                if len(items) == 0:
+                    break
 
-                new_owner = self.get_username(deletion_order.repository_user, deletion_order.repository_name)
-                if new_owner is None:
-                    continue
+                for deletion_order in items:
+                    ids.append(deletion_order.id)
+                    if deletion_order.repository_user not in allowed_users:
+                        continue
 
-                tasks.send_repository_deletion_notification.delay(deletion_order.id, new_owner)
+                    if deletion_order.repository_name.endswith(".git"):
+                        deletion_order.repository_name = deletion_order.repository_name[:-4]
+                        deletion_order.save()
+
+                    new_owner = self.get_username(deletion_order.repository_user, deletion_order.repository_name)
+                    if new_owner is None:
+                        continue
+
+                    tasks.send_repository_deletion_notification.delay(deletion_order.id, new_owner)
 
     def check_path(self, obj: dict, *indexes: str) -> bool:
         try:
