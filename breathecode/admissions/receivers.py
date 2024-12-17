@@ -17,6 +17,7 @@ from .signals import cohort_log_saved, cohort_user_created
 # add your receives here
 logger = logging.getLogger(__name__)
 GITHUB_URL_PATTERN = re.compile(r"https?:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
+BREATHECODE_USERS = ["breatheco-de", "4GeeksAcademy", "4geeksacademy"]
 
 
 @receiver(cohort_log_saved, sender=Cohort)
@@ -47,6 +48,8 @@ async def new_cohort_user(sender: Type[Cohort], instance: Cohort, **kwargs: Any)
 
 @receiver(revision_status_updated, sender=Task, weak=False)
 def schedule_repository_deletion(sender: Type[Task], instance: Task, **kwargs: Any):
+    from breathecode.assignments.models import RepositoryDeletionOrder
+
     logger.info("Scheduling repository deletion for task: " + str(instance.id))
 
     if instance.revision_status != Task.RevisionStatus.PENDING and instance.github_url:
@@ -54,7 +57,9 @@ def schedule_repository_deletion(sender: Type[Task], instance: Task, **kwargs: A
         if match:
             user = match.group("user")
             repo = match.group("repo")
-            from breathecode.assignments.models import RepositoryDeletionOrder
+
+            if user not in BREATHECODE_USERS:
+                return
 
             order, created = RepositoryDeletionOrder.objects.get_or_create(
                 provider=RepositoryDeletionOrder.Provider.GITHUB,

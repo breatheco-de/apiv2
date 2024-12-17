@@ -282,11 +282,12 @@ class RepositoryDeletionOrder(models.Model):
             self.starts_transferring_at = timezone.now()
 
     def save(self, *args, **kwargs):
+        from .signals import status_updated
+
         self.full_clean()
         is_created = not self.pk
 
         super().save(*args, **kwargs)
-        from .signals import status_updated
 
         if (self.status != self._status or is_created) and self.status == RepositoryDeletionOrder.Status.TRANSFERRING:
             status_updated.delay(sender=self.__class__, instance=self)

@@ -1453,7 +1453,7 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(path__icontains=like))
-            
+
         items = handler.queryset(items)
 
         serializer = AcademyErrorSerializer(items, many=True)

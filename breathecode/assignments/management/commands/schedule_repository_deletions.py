@@ -55,6 +55,7 @@ class Command(BaseCommand):
             self.collect_transferred_orders()
             self.transfer_ownership()
             self.delete_github_repositories()
+            self.delete_invalid_orders()
 
     def check_path(self, obj: dict, *indexes: str) -> bool:
         try:
@@ -155,6 +156,11 @@ class Command(BaseCommand):
             page += 1
 
         RepositoryDeletionOrder.objects.filter(id__in=to_delete).delete()
+
+    def delete_invalid_orders(self):
+        RepositoryDeletionOrder.objects.exclude(
+            repository_user__in=self.allowed_users,
+        ).delete()
 
     def delete_github_repositories(self):
         ids = []
