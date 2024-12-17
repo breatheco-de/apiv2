@@ -37,6 +37,10 @@ class Command(BaseCommand):
                 if deletion_order.repository_user not in allowed_users:
                     continue
 
+                if deletion_order.repository_name.endswith(".git"):
+                    deletion_order.repository_name = deletion_order.repository_name[:-4]
+                    deletion_order.save()
+
                 new_owner = self.get_username(deletion_order.repository_user, deletion_order.repository_name)
                 if new_owner is None:
                     continue

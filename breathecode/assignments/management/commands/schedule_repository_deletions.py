@@ -185,6 +185,10 @@ class Command(BaseCommand):
             for deletion_order in qs:
                 ids.append(deletion_order.id)
 
+                if deletion_order.repository_name.endswith(".git"):
+                    deletion_order.repository_name = deletion_order.repository_name[:-4]
+                    deletion_order.save()
+
                 try:
                     if self.github_client.repo_exists(
                         owner=deletion_order.repository_user, repo=deletion_order.repository_name
@@ -289,6 +293,9 @@ class Command(BaseCommand):
         ).exists():
             return
 
+        if repo_name.endswith(".git"):
+            repo_name = repo_name[:-4]
+
         status = RepositoryDeletionOrder.Status.PENDING
         if (
             Task.objects.filter(github_url__icontains=f"github.com/{user}/{repo_name}")
@@ -355,6 +362,10 @@ class Command(BaseCommand):
 
             for deletion_order in qs:
                 ids.append(deletion_order.id)
+
+                if deletion_order.repository_name.endswith(".git"):
+                    deletion_order.repository_name = deletion_order.repository_name[:-4]
+                    deletion_order.save()
 
                 try:
                     if self.github_client.repo_exists(
