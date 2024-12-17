@@ -275,6 +275,9 @@ class Command(BaseCommand):
                         self.schedule_github_deletion("GITHUB", user, repo_name)
 
     def schedule_github_deletion(self, provider: str, user: str, repo_name: str):
+        if user not in self.allowed_users:
+            return
+
         if RepositoryWhiteList.objects.filter(
             provider=provider, repository_user=user, repository_name=repo_name
         ).exists():
