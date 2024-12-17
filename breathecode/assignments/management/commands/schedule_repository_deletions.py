@@ -126,18 +126,21 @@ class Command(BaseCommand):
                     return event["actor"]["login"]
 
     def purge_deletion_orders(self):
+        ids = []
 
         page = 0
         to_delete = []
         while True:
             qs = RepositoryDeletionOrder.objects.exclude(
-                status__in=[RepositoryDeletionOrder.Status.TRANSFERRED, RepositoryDeletionOrder.Status.DELETED]
+                status__in=[RepositoryDeletionOrder.Status.TRANSFERRED, RepositoryDeletionOrder.Status.DELETED],
+                id__in=ids,
             )[page * 100 : (page + 1) * 100]
 
             if len(qs) == 0:
                 break
 
             for deletion_order in qs:
+                ids.append(deletion_order.id)
                 if deletion_order.repository_user not in self.allowed_users:
                     to_delete.append(deletion_order.id)
                     continue
@@ -154,6 +157,7 @@ class Command(BaseCommand):
         RepositoryDeletionOrder.objects.filter(id__in=to_delete).delete()
 
     def delete_github_repositories(self):
+        ids = []
 
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
@@ -167,12 +171,14 @@ class Command(BaseCommand):
                 ),
                 repository_user__in=self.allowed_users,
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
-            )[:100]
+            ).exclude(id__in=ids)[:100]
 
             if qs.count() == 0:
                 break
 
             for deletion_order in qs:
+                ids.append(deletion_order.id)
+
                 try:
                     if self.github_client.repo_exists(
                         owner=deletion_order.repository_user, repo=deletion_order.repository_name
@@ -294,7 +300,6 @@ class Command(BaseCommand):
             order.save()
 
     def collect_transferred_orders(self):
-
         ids = []
 
         while True:
