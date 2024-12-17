@@ -35,7 +35,9 @@ class Command(BaseCommand):
 
             while True:
                 items = RepositoryDeletionOrder.objects.filter(
-                    provider=RepositoryDeletionOrder.Provider.GITHUB, notified_at=None
+                    provider=RepositoryDeletionOrder.Provider.GITHUB,
+                    notified_at=None,
+                    status=RepositoryDeletionOrder.Status.TRANSFERRING,
                 ).exclude(id__in=ids)[:100]
 
                 if len(items) == 0:
