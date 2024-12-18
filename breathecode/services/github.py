@@ -59,7 +59,7 @@ class Github:
         }
 
         url = self.HOST + action_name
-        resp = requests.request(method=method_name, url=url, headers=self.headers, params=params, json=json, timeout=2)
+        resp = requests.request(method=method_name, url=url, headers=self.headers, params=params, json=json, timeout=20)
 
         if resp.status_code >= 200 and resp.status_code < 300:
             if method_name in ["DELETE", "HEAD"]:

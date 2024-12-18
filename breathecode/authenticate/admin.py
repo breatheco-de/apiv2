@@ -162,7 +162,7 @@ def clear_user_password(modeladmin, request, queryset):
 
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
-    list_display = ("username", "email", "first_name", "last_name", "is_staff", "github_login")
+    list_display = ("username", "email", "first_name", "last_name", "is_staff", "github_login", "google_login")
     actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password]
 
     def get_queryset(self, request):
@@ -174,6 +174,11 @@ class UserAdmin(UserAdmin):
     def github_login(self, obj):
         return format_html(
             f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/github/?user={obj.id}&url={self.github_callback}'>connect github</a>"
+        )
+
+    def google_login(self, obj):
+        return format_html(
+            "<a rel='noopener noreferrer' target='_blank' href='/v1/auth/academy/google'>connect google</a>"
         )
 
 
@@ -473,12 +478,21 @@ def clean_errors(modeladmin, request, queryset):
 
 @admin.register(AcademyAuthSettings)
 class AcademyAuthSettingsAdmin(admin.ModelAdmin):
-    list_display = ("academy", "github_is_sync", "github_errors", "github_username", "github_owner", "authenticate")
+    list_display = (
+        "academy",
+        "github_is_sync",
+        "github_errors",
+        "github_username",
+        "github_owner",
+        "authenticate_github",
+        "authenticate_google",
+    )
     search_fields = ["academy__slug", "academy__name", "github__username", "academy__id"]
     actions = (clean_errors, activate_github_sync, deactivate_github_sync, sync_github_members)
     raw_id_fields = ["github_owner", "google_cloud_owner"]
 
     def get_queryset(self, request):
+        self.admin_request = request
 
         self.github_callback = "https://4geeks.com"
         self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode("utf-8")), "utf-8")
@@ -490,15 +504,26 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         else:
             return format_html("<span class='badge bg-success'>No errors</span>")
 
-    def authenticate(self, obj):
+    def authenticate_github(self, obj):
         settings = AcademyAuthSettings.objects.get(id=obj.id)
         if settings.github_owner is None:
             return format_html("no owner")
 
         scopes = str(base64.urlsafe_b64encode(b"user repo admin:org"), "utf-8")
         return format_html(
-            f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.github_callback}&scope={scopes}'>connect owner</a>"
+            f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.github_callback}&scope={scopes}'>connect github</a>"
         )
+
+    def authenticate_google(self, obj):
+        settings = AcademyAuthSettings.objects.get(id=obj.id)
+        if settings.google_cloud_owner is None:
+            return format_html("no google cloud owner")
+
+        request = getattr(self, "admin_request", None)
+        current_url = f"{request.scheme}://{request.get_host()}{request.get_full_path()}"
+        current_url = str(base64.urlsafe_b64encode(current_url.encode("utf-8")), "utf-8")
+
+        return format_html(f"<a href='/v1/auth/academy/google?url={current_url}'>connect google</a>")
 
 
 @admin.register(GoogleWebhook)

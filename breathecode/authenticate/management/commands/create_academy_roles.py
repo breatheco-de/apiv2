@@ -95,6 +95,8 @@ CAPABILITIES = [
     {"slug": "read_mentorship_bill", "description": "Read all mentroship bills from one academy"},
     {"slug": "read_asset", "description": "Read all academy registry assets"},
     {"slug": "crud_asset", "description": "Update, create and delete registry assets"},
+    {"slug": "read_asset_error", "description": "Update, create and delete asset errors"},
+    {"slug": "crud_asset_error", "description": "Update, create and delete asset errors"},
     {"slug": "read_content_variables", "description": "Read all academy content variables used in the asset markdowns"},
     {
         "slug": "crud_content_variables",
@@ -361,6 +363,8 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "read_my_academy",
                 "read_asset",
                 "crud_asset",
+                "read_asset_error",
+                "crud_asset_error",
                 "read_category",
                 "crud_category",
                 "read_content_variables",

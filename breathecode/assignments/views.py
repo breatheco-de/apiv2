@@ -64,6 +64,8 @@ MIME_ALLOW = [
     "application/octet-stream",
     "application/json",
     "text/plain",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]
 
 IMAGES_MIME_ALLOW = ["image/png", "image/svg+xml", "image/jpeg", "image/jpg"]
