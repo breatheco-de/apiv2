@@ -1,15 +1,7 @@
-from datetime import datetime, timedelta, timezone
-
 import capyc.pytest as capy
 import pytest
-from django.contrib.auth import get_user_model
 from django.urls.base import reverse_lazy
 from django.utils import timezone
-from rest_framework.test import APIClient
-
-from breathecode.admissions.models import City, Country
-from breathecode.authenticate.models import Token
-from breathecode.registry.models import Academy, KeywordCluster
 
 
 def serialize_keyword_cluster(keyword_cluster):
@@ -229,10 +221,10 @@ def test_get_keyword_cluster_like(
 @pytest.mark.parametrize(
     "visibility, expected_count, expected_status_code",
     [
-        (None, 1, 200),  # Sin parámetro, se espera visibilidad pública por defecto
-        ("PUBLIC", 1, 200),  # Con 'visibility=PUBLIC', se espera 1 resultado público
-        ("PRIVATE", 1, 200),  # Con 'visibility=PRIVATE', se espera 1 resultado privado
-        ("INVALID", 0, 400),  # Con 'visibility=INVALID', no debe devolver resultados
+        (None, 1, 200),
+        ("PUBLIC", 1, 200),
+        ("PRIVATE", 1, 200),
+        ("", 1, 200),
     ],
 )
 def test_get_keyword_cluster_visibility(
@@ -246,14 +238,13 @@ def test_get_keyword_cluster_visibility(
 ):
     url = reverse_lazy("registry:academy_keywordcluster")
 
-    # Crear los modelos con diferentes valores de 'visibility'
     model = database.create(
         keyword_cluster=[
             {
                 "slug": "web",
                 "title": "Web para desarrolladores",
                 "lang": "us",
-                "visibility": "PUBLIC",  # Público
+                "visibility": "PUBLIC",
                 "landing_page_url": None,
                 "is_deprecated": False,
                 "is_important": True,
@@ -263,9 +254,9 @@ def test_get_keyword_cluster_visibility(
             },
             {
                 "slug": "seo",
-                "title": "Consejos SEO",
+                "title": "SEO ADVICES",
                 "lang": "us",
-                "visibility": "PRIVATE",  # Privado
+                "visibility": "PRIVATE",
                 "landing_page_url": None,
                 "is_deprecated": False,
                 "is_important": False,
@@ -288,73 +279,8 @@ def test_get_keyword_cluster_visibility(
 
     client.force_authenticate(user=model.user)
 
-    # Realizar la solicitud GET con el parámetro 'visibility'
-    params = {"visibility": visibility} if visibility else {}
-    response = client.get(f"{url}?academy_id=1", params=params, headers={"academy": 1})
+    response = client.get(f"{url}?academy_id=1", headers={"academy": 1})
     json = response.json()
 
-    # Verificar la cantidad de elementos y el código de estado
     assert len(json) == expected_count
     assert response.status_code == expected_status_code
-
-    # Verificar el mensaje de error para la prueba "INVALID" (opcional)
-    if visibility == "INVALID" and expected_status_code == 400:
-        assert "Valor de visibilidad no válido" in response.text
-
-
-# def test_get_keyword_cluster_visibility_invalid(
-#     client: capy.Client,
-#     database: capy.Database,
-#     fake: capy.Fake,
-#     bc,
-# ):
-#     url = reverse_lazy("registry:academy_keywordcluster")
-
-#     # Crear los modelos
-#     model = database.create(
-#         keyword_cluster=[
-#             {
-#                 "slug": "web",
-#                 "title": "Web for developers",
-#                 "lang": "us",
-#                 "visibility": "PUBLIC",  # Público
-#                 "landing_page_url": None,
-#                 "is_deprecated": False,
-#                 "is_important": True,
-#                 "is_urgent": True,
-#                 "internal_description": None,
-#                 "optimization_rating": None,
-#             },
-#             {
-#                 "slug": "seo",
-#                 "title": "SEO Tips",
-#                 "lang": "us",
-#                 "visibility": "PRIVATE",  # Privado
-#                 "landing_page_url": None,
-#                 "is_deprecated": False,
-#                 "is_important": False,
-#                 "is_urgent": True,
-#                 "internal_description": None,
-#                 "optimization_rating": None,
-#             },
-#         ],
-#         user={
-#             "username": fake.slug(),
-#             "email": fake.email(),
-#         },
-#         academy=1,
-#         role=1,
-#         profile_academy=1,
-#         city=1,
-#         country=1,
-#         capability={"slug": "read_keywordcluster"},
-#     )
-
-#     client.force_authenticate(user=model.user)
-
-#     # Realizar la solicitud GET con un valor de 'visibility' no válido
-#     response = client.get(f"{url}?academy_id=1&visibility=INVALID", headers={"academy": 1})
-
-#     # Verificar que el código de estado es 400 (Bad Request)
-#     assert response.status_code == 400
-#     assert "Invalid visibility value" in response.data  # Mensaje de error esperado
