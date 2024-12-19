@@ -1,12 +1,12 @@
 strings = {
     "es": {
         "event": {
-            "title": "¿Que tan probable es que recomiendes eventos como estos a tus familiares y amigos?",
+            "title": "¿Qué tan probable es que recomiendes eventos como este a tus familiares y amigos?",
             "highest": "muy probable",
             "lowest": "poco probable",
         },
         "mentor": {
-            "title": "¿Como ha sido tu experiencia con tu mentor {}?",
+            "title": "¿Cómo ha sido tu experiencia con el mentor {} a lo largo del programa?",
             "highest": "muy buena",
             "lowest": "mala",
         },
@@ -36,7 +36,7 @@ strings = {
     },
     "en": {
         "event": {
-            "title": "How likely are you to recommend upcomint events to your friends and family?",
+            "title": "How likely are you to recommend upcoming events to your friends and family?",
             "highest": "very likely",
             "lowest": "not likely",
         },
@@ -56,7 +56,7 @@ strings = {
             "lowest": "not likely",
         },
         "session": {
-            "title": "How was your experience in your mentoring with {}?",
+            "title": "How was your experience in your mentoring session with {}?",
             "highest": "very useful",
             "lowest": "not useful",
         },
