@@ -2,9 +2,10 @@ import logging
 import os
 
 import requests
+from capyc.rest_framework.exceptions import ValidationException
+from task_manager.core.exceptions import AbortTask
 
 from breathecode.admissions.models import CohortUser
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import Task
 
@@ -134,19 +135,11 @@ def sync_cohort_tasks(cohort):
     return synchronized
 
 
-def task_is_valid_for_notifications(task: Task) -> bool:
-    if not task:
-        logger.error("Task not found")
-        return False
-
+def validate_task_for_notifications(task: Task) -> bool:
     if not task.cohort:
-        logger.error("Can't determine the student cohort")
-        return False
+        raise AbortTask("Can't determine the student cohort")
 
     language = task.cohort.language.lower()
 
     if language not in NOTIFICATION_STRINGS:
-        logger.error(f"The language {language} is not implemented in teacher_task_notification")
-        return False
-
-    return True
+        raise AbortTask(f"The language {language} is not implemented in teacher_task_notification")

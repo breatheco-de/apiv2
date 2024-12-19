@@ -1,31 +1,40 @@
 import logging
 import os
 import re
+from typing import Any
 
-from celery import shared_task
+from capyc.core.i18n import translation
+from django.contrib.auth.models import User
+from django.utils import timezone
 from linked_services.django.service import Service
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
 
 import breathecode.notify.actions as actions
-from breathecode.services.learnpack import LearnPack
 from breathecode.admissions.models import CohortUser
+from breathecode.assignments.actions import NOTIFICATION_STRINGS, validate_task_for_notifications
 from breathecode.assignments.models import LearnPackWebhook
-from breathecode.assignments.actions import NOTIFICATION_STRINGS, task_is_valid_for_notifications
+from breathecode.authenticate.actions import get_user_settings
+from breathecode.notify import actions as notify_actions
+from breathecode.services.learnpack import LearnPack
 from breathecode.utils import TaskPriority
 
-from .models import Task
+from .models import RepositoryDeletionOrder, Task
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
-def student_task_notification(self, task_id):
+@task(bind=True, priority=TaskPriority.NOTIFICATION.value)
+def student_task_notification(self, task_id, **_: Any):
     """Notify if the task was change."""
     logger.info("Starting student_task_notification")
 
     task = Task.objects.filter(id=task_id).first()
-    if not task_is_valid_for_notifications(task):
-        return
+    if task is None:
+        raise RetryTask("Task not found")
+
+    validate_task_for_notifications(task)
 
     language = task.cohort.language.lower()
     revision_status = task.revision_status
@@ -47,35 +56,29 @@ def student_task_notification(self, task_id):
     )
 
 
-@shared_task(bind=True, priority=TaskPriority.ACTIVITY.value)
-def async_learnpack_webhook(self, webhook_id):
-    logger.debug("Starting async_learnpack_webhook")
-    status = "ok"
+@task(bind=True, priority=TaskPriority.ACTIVITY.value)
+def async_learnpack_webhook(self, webhook_id, **_: Any):
+    logger.info(f"Starting async_learnpack_webhook for webhook {webhook_id}")
 
     webhook = LearnPackWebhook.objects.filter(id=webhook_id).first()
-    if webhook:
-        try:
-            client = LearnPack()
-            client.execute_action(webhook_id)
-        except Exception as e:
-            logger.debug("LearnPack Telemetry exception")
-            logger.debug(str(e))
-            status = "error"
-
-    else:
+    if webhook is None:
         message = f"Webhook {webhook_id} not found"
+
+        raise RetryTask(message)
+
+    try:
+        client = LearnPack()
+        client.execute_action(webhook_id)
+
+    except Exception as e:
         webhook.status = "ERROR"
-        webhook.status_text = message
+        webhook.status_text = str(e)
         webhook.save()
-
-        logger.debug(message)
-        status = "error"
-
-    logger.debug(f"LearnPack telemetry status: {status}")
+        raise e
 
 
-@shared_task(bind=True, priority=TaskPriority.NOTIFICATION.value)
-def teacher_task_notification(self, task_id):
+@task(bind=True, priority=TaskPriority.NOTIFICATION.value)
+def teacher_task_notification(self, task_id, **_: Any):
     """Notify if the task was change."""
 
     logger.info("Starting teacher_task_notification")
@@ -88,8 +91,10 @@ def teacher_task_notification(self, task_id):
     url = re.sub("/$", "", url)
 
     task = Task.objects.filter(id=task_id).first()
-    if not task_is_valid_for_notifications(task):
-        return
+    if task is None:
+        raise RetryTask("Task not found")
+
+    validate_task_for_notifications(task)
 
     language = task.cohort.language.lower()
     subject = NOTIFICATION_STRINGS[language]["teacher"]["subject"].format(
@@ -118,8 +123,8 @@ def teacher_task_notification(self, task_id):
     )
 
 
-@shared_task(bind=False, priority=TaskPriority.ACADEMY.value)
-def set_cohort_user_assignments(task_id: int):
+@task(bind=False, priority=TaskPriority.ACADEMY.value)
+def set_cohort_user_assignments(task_id: int, **_: Any):
     logger.info("Executing set_cohort_user_assignments")
 
     def serialize_task(task):
@@ -131,14 +136,12 @@ def set_cohort_user_assignments(task_id: int):
     task = Task.objects.filter(id=task_id).first()
 
     if not task:
-        logger.error("Task not found")
-        return
+        raise AbortTask("Task not found")
 
     cohort_user = CohortUser.objects.filter(cohort=task.cohort, user=task.user, role="STUDENT").first()
 
     if not cohort_user:
-        logger.error("CohortUser not found")
-        return
+        raise AbortTask("CohortUser not found")
 
     user_history_log = cohort_user.history_log or {}
     user_history_log["delivered_assignments"] = user_history_log.get("delivered_assignments", [])
@@ -158,6 +161,7 @@ def set_cohort_user_assignments(task_id: int):
 
     cohort_user.history_log = user_history_log
     cohort_user.save()
+    logger.info("History log saved")
 
     s = None
     try:
@@ -187,13 +191,11 @@ def set_cohort_user_assignments(task_id: int):
                     task.rigobot_repository_id = data["id"]
 
     except Exception as e:
-        logger.error(str(e))
-
-    logger.info("History log saved")
+        raise AbortTask(str(e))
 
 
-@shared_task(bind=False, priority=TaskPriority.ACADEMY.value)
-def sync_cohort_user_tasks(cohort_user_id: int):
+@task(bind=False, priority=TaskPriority.ACADEMY.value)
+def sync_cohort_user_tasks(cohort_user_id: int, **_: Any):
     logger.info(f"Executing sync_cohort_user_tasks for cohort user {cohort_user_id}")
     cohort_user = CohortUser.objects.filter(id=cohort_user_id).first()
 
@@ -234,19 +236,87 @@ def sync_cohort_user_tasks(cohort_user_id: int):
         for r in answers:
             all_cohort_tasks.append(parse_task("QUIZ", r))
 
-    for task in all_cohort_tasks:
+    for cohort_task in all_cohort_tasks:
         user_task = Task.objects.filter(
-            user=cohort_user.user, cohort=cohort, associated_slug=task["associated_slug"], task_type=task["task_type"]
+            user=cohort_user.user,
+            cohort=cohort,
+            associated_slug=cohort_task["associated_slug"],
+            task_type=cohort_task["task_type"],
         ).first()
 
         if user_task is None:
             user_task = Task(
                 user=cohort_user.user,
                 cohort=cohort,
-                associated_slug=task["associated_slug"],
-                title=task["title"],
-                task_type=task["task_type"],
+                associated_slug=cohort_task["associated_slug"],
+                title=cohort_task["title"],
+                task_type=cohort_task["task_type"],
             )
             user_task.save()
 
     logger.info(f"Cohort User {cohort_user_id} synced successfully")
+
+
+@task(bind=False, priority=TaskPriority.ACADEMY.value)
+def send_repository_deletion_notification(deletion_order_id: int, new_owner: str, **_: Any):
+    logger.info(f"Executing send_repository_deletion_notification for cohort user {deletion_order_id}")
+    deletion_order = RepositoryDeletionOrder.objects.filter(
+        id=deletion_order_id, status=RepositoryDeletionOrder.Status.TRANSFERRING, notified_at=None
+    ).first()
+
+    if deletion_order is None:
+        raise RetryTask("Repository deletion order not found")
+
+    if not new_owner:
+        raise AbortTask("New owner not found")
+
+    user = None
+    link = None
+
+    if deletion_order.provider == RepositoryDeletionOrder.Provider.GITHUB:
+        user = User.objects.filter(credentialsgithub__username=new_owner).first()
+        link = f"https://github.com/{deletion_order.repository_user}/{deletion_order.repository_name}"
+    else:
+        raise AbortTask(f"Provider {deletion_order.provider} not supported")
+
+    if user is None:
+        raise AbortTask(f"User not found for {RepositoryDeletionOrder.Provider.GITHUB} username {new_owner}")
+
+    settings = get_user_settings(user.id)
+    lang = settings.lang
+
+    print(f"lang: {lang}")
+
+    subject = translation(
+        lang,
+        en=f"We are transfering the repository {deletion_order.repository_name} to you",
+        es=f"Te estamos transfiriendo el repositorio {deletion_order.repository_name}",
+    )
+
+    message = translation(
+        lang,
+        en=f"We are transfering the repository {deletion_order.repository_name} to you, you have two "
+        "months to accept the transfer before we delete it",
+        es=f"Te estamos transfiriendo el repositorio {deletion_order.repository_name}, tienes dos meses "
+        "para aceptar la transferencia antes de que la eliminemos",
+    )
+
+    button = translation(
+        lang,
+        en="Go to the repository",
+        es="Ir al repositorio",
+    )
+
+    notify_actions.send_email_message(
+        "message",
+        user.email,
+        {
+            "SUBJECT": subject,
+            "MESSAGE": message,
+            "BUTTON": button,
+            "LINK": link,
+        },
+    )
+
+    deletion_order.notified_at = timezone.now()
+    deletion_order.save()

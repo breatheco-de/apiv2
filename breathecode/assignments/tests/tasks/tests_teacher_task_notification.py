@@ -52,15 +52,21 @@ class MediaTestSuite(AssignmentsTestCase):
 
         from breathecode.notify.actions import send_email_message
 
-        # os.environ['TEACHER_URL'] = 'https://hardcoded.url'
-
         teacher_task_notification.delay(1)
 
         self.assertEqual(self.bc.database.list_of("assignments.Task"), [])
         self.assertEqual(send_email_message.call_args_list, [])
-        self.assertEqual(os.getenv.call_args_list, [call("TEACHER_URL")])
-        self.assertEqual(Logger.info.call_args_list, [call("Starting teacher_task_notification")])
-        self.assertEqual(Logger.error.call_args_list, [call("Task not found")])
+        self.assertEqual(os.getenv.call_args_list, [call("TEACHER_URL"), call("TEACHER_URL")])
+        self.assertEqual(
+            Logger.info.call_args_list,
+            [call("Starting teacher_task_notification"), call("Starting teacher_task_notification")],
+        )
+        self.assertEqual(
+            Logger.error.call_args_list,
+            [
+                call("Task not found", exc_info=True),
+            ],
+        )
         self.assertEqual(signals.assignment_created.delay.call_args_list, [])
 
     """
@@ -113,7 +119,9 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(
             signals.assignment_created.delay.call_args_list,
-            [call(instance=model.task, sender=model.task.__class__)],
+            [
+                call(instance=model.task, sender=model.task.__class__),
+            ],
         )
 
     """
@@ -169,7 +177,9 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(
             signals.assignment_created.delay.call_args_list,
-            [call(instance=model.task, sender=model.task.__class__)],
+            [
+                call(instance=model.task, sender=model.task.__class__),
+            ],
         )
 
     """
@@ -224,5 +234,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(Logger.error.call_args_list, [])
         self.assertEqual(
             signals.assignment_created.delay.call_args_list,
-            [call(instance=model.task, sender=model.task.__class__)],
+            [
+                call(instance=model.task, sender=model.task.__class__),
+            ],
         )

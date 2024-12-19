@@ -87,9 +87,9 @@ def async_pull_project_dependencies(asset_slug):
             # To avoid legacy issues we have to mark assets.template_url as "self" when no template is needed
             if asset.template_url == "self":
                 target_asset = asset
-            else:                
+            else:
                 target_asset = Asset.get_by_github_url(asset.template_url)
-                
+
             if target_asset is None:
                 raise Exception(
                     f"Asset {asset_slug} template {asset.template_url} not found in the database as another asset"
@@ -670,9 +670,7 @@ def async_build_asset_context(asset_id):
         context += "This project should be delivered by sending a github repository URL. "
 
     if asset.asset_type == "PROJECT" and asset.delivery_instructions and asset.delivery_formats:
-        context += (
-            f"This project should be delivered by adding at least one file of one of these types: {asset.delivery_formats}. "
-        )
+        context += f"This project should be delivered by adding at least one file of one of these types: {asset.delivery_formats}. "
 
     if asset.asset_type == "PROJECT" and asset.delivery_regex_url:
         context += f"This project should be delivered with a URL that follows this format: {asset.delivery_regex_url}. "
