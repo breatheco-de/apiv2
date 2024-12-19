@@ -6,12 +6,12 @@ strings = {
             "lowest": "poco probable",
         },
         "mentor": {
-            "title": "¿Cómo ha sido tu experiencia con el mentor {} a lo largo del programa?",
+            "title": "¿Cómo ha sido tu experiencia con el mentor {} hasta este momento?",
             "highest": "muy buena",
             "lowest": "mala",
         },
         "cohort": {
-            "title": "¿Cómo ha sido tu experiencia estudiando {}?",
+            "title": "¿Cómo ha sido tu experiencia estudiando {} hasta este momento?",
             "highest": "muy buena",
             "lowest": "mala",
         },
@@ -26,12 +26,12 @@ strings = {
             "lowest": "poco útil",
         },
         "platform": {
-            "title": "¿Cómo ha sido tu experiencia con la plataforma y el contenido?",
+            "title": "¿Cómo ha sido tu experiencia con la plataforma y el contenido hasta este momento?",
             "highest": "muy buena",
             "lowest": "mala",
         },
         "button_label": "Responder",
-        "survey_subject": "¿Cómo ha sido tu experiencia en 4Geeks hasta ahora?",
+        "survey_subject": "¿Cómo ha sido tu experiencia en 4Geeks hasta este momento?",
         "survey_message": "Por favor toma 5 minutos para enviarnos un feedback sobre tu experiencia en la academia hasta ahora",
     },
     "en": {
@@ -61,7 +61,7 @@ strings = {
             "lowest": "not useful",
         },
         "platform": {
-            "title": "How has been your experience with the platform and content?",
+            "title": "How has been your experience with the platform and content so far?",
             "highest": "very good",
             "lowest": "not good",
         },
