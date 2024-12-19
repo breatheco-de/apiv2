@@ -31,7 +31,7 @@ strings = {
             "lowest": "mala",
         },
         "button_label": "Responder",
-        "survey_subject": "¿Cómo te fue en tu mentoría de 4Geeks?",
+        "survey_subject": "¿Cómo fue tu experiencia en 4Geeks?",
         "survey_message": "Por favor toma 5 minutos para enviarnos un feedback sobre tu experiencia en la academia hasta ahora",
     },
     "en": {
@@ -66,7 +66,7 @@ strings = {
             "lowest": "not good",
         },
         "button_label": "Answer the question",
-        "survey_subject": "How was the mentoring session at 4Geeks?",
+        "survey_subject": "How was your experience at 4Geeks?",
         "survey_message": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
     },
 }
