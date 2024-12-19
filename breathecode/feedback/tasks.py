@@ -189,7 +189,7 @@ def send_cohort_survey(user_id, survey_id, **_):
 
     token, created = Token.get_or_create(user, token_type="temporal", hours_length=48)
     data = {
-        "SUBJECT": strings[survey.lang]["title"],
+        "SUBJECT": strings[survey.lang]["survey_subject"],
         "MESSAGE": strings[survey.lang]["survey_message"],
         "TRACKER_URL": f"{api_url()}/v1/feedback/survey/{survey_id}/tracker.png",
         "BUTTON": strings[survey.lang]["button_label"],
