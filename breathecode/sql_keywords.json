@@ -44,6 +44,7 @@
         "CASE",
         "WHEN",
         "THEN",
+        "END",
         "IFNULL",
         "ISNULL",
         "COALESCE",
@@ -170,7 +171,8 @@
         "CONVERT",
         "IF",
         "LAST_INSERT_ID",
-        "NULLIF"
+        "NULLIF",
+        "WITH"
     ],
     "blacklist": [
         "FILTER",
