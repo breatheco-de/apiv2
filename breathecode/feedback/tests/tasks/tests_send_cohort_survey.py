@@ -168,7 +168,7 @@ class SendCohortSurvey(FeedbackTestCase):
                 "nps_survey",
                 model.user.email,
                 {
-                    "SUBJECT": "How was the mentoring session at 4Geeks?",
+                    "SUBJECT": "How has been your experience at 4Geeks so far?",
                     "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
                     "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
                     "BUTTON": "Answer the question",
@@ -213,7 +213,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "nps_survey",
                     model.user.email,
                     {
-                        "SUBJECT": "How was the mentoring session at 4Geeks?",
+                        "SUBJECT": "How has been your experience at 4Geeks so far?",
                         "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
                         "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
                         "BUTTON": "Answer the question",
@@ -270,7 +270,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     model.slack_user,
                     model.slack_team,
                     data={
-                        "SUBJECT": "How was the mentoring session at 4Geeks?",
+                        "SUBJECT": "How has been your experience at 4Geeks so far?",
                         "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
                         "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
                         "BUTTON": "Answer the question",
@@ -284,7 +284,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "nps_survey",
                     model.user.email,
                     {
-                        "SUBJECT": "How was the mentoring session at 4Geeks?",
+                        "SUBJECT": "How has been your experience at 4Geeks so far?",
                         "MESSAGE": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
                         "TRACKER_URL": f"https://hello.com/v1/feedback/survey/{model.survey.id}/tracker.png",
                         "BUTTON": "Answer the question",

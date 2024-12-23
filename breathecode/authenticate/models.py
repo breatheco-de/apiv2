@@ -636,6 +636,11 @@ class Token(rest_framework.authtoken.models.Token):
         return token, created
 
     @classmethod
+    @sync_to_async
+    def aget_or_create(cls, user, token_type: str, **kwargs: Unpack[TokenGetOrCreateArgs]) -> Tuple["Token", bool]:
+        return cls.get_or_create(user=user, token_type=token_type, **kwargs)
+
+    @classmethod
     def get_valid(cls, token: str, async_mode: bool = False, **kwargs: Unpack[TokenFilterArgs]) -> "Token | None":
         utc_now = timezone.now()
         cls.delete_expired_tokens()

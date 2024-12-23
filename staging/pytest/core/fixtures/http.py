@@ -138,32 +138,32 @@ class HTTP:
         handlers = {
             "get": (
                 self._get,
-                lambda url, **kwargs: match(is_request=False, method="GET", url=url, kwargs=kwargs),
-                lambda url, **kwargs: amatch(is_request=False, method="GET", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: match(is_request=False, method="GET", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: amatch(is_request=False, method="GET", url=url, kwargs=kwargs),
             ),
             "post": (
                 self._post,
-                lambda url, **kwargs: match(is_request=False, method="POST", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: match(is_request=False, method="POST", url=url, kwargs=kwargs),
                 lambda self, url, **kwargs: amatch(is_request=False, method="POST", url=url, kwargs=kwargs),
             ),
             "put": (
                 self._put,
-                lambda url, **kwargs: match(is_request=False, method="PUT", url=url, kwargs=kwargs),
-                lambda url, **kwargs: amatch(is_request=False, method="PUT", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: match(is_request=False, method="PUT", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: amatch(is_request=False, method="PUT", url=url, kwargs=kwargs),
             ),
             "delete": (
                 self._delete,
-                lambda url, **kwargs: match(is_request=False, method="DELETE", url=url, kwargs=kwargs),
-                lambda url, **kwargs: amatch(is_request=False, method="DELETE", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: match(is_request=False, method="DELETE", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: amatch(is_request=False, method="DELETE", url=url, kwargs=kwargs),
             ),
             "head": (
                 self._head,
-                lambda url, **kwargs: match(is_request=False, method="HEAD", url=url, kwargs=kwargs),
-                lambda url, **kwargs: amatch(is_request=False, method="HEAD", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: match(is_request=False, method="HEAD", url=url, kwargs=kwargs),
+                lambda self, url, **kwargs: amatch(is_request=False, method="HEAD", url=url, kwargs=kwargs),
             ),
             "request": (
                 self._request,
-                lambda method, url, **kwargs: match(is_request=True, method=method, url=url, kwargs=kwargs),
+                lambda self, method, url, **kwargs: match(is_request=True, method=method, url=url, kwargs=kwargs),
                 lambda self, method, url, **kwargs: amatch(is_request=True, method=method, url=url, kwargs=kwargs),
             ),
         }
