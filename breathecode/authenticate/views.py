@@ -1093,7 +1093,6 @@ async def save_github_token(request):
         async with session.post(
             "https://github.com/login/oauth/access_token", data=payload, headers=headers, timeout=30
         ) as resp:
-            print(session.post)
             body = await resp.json()
             logger.debug(f"https://github.com/login/oauth/access_token => {body}")
             if resp.status != 200:
@@ -1113,8 +1112,6 @@ async def save_github_token(request):
                 raise APIException(
                     f"Github code {resp.status}: {error_message(github_user, 'error getting github user')}"
                 )
-
-    print(github_user)
 
     if github_user["email"] is None:
         github_token = body["access_token"]
@@ -1228,7 +1225,6 @@ async def save_github_token(request):
         profile.avatar_url = github_user["avatar_url"]
         await profile.asave()
 
-    print(111)
     student_role = await Role.objects.aget(slug="student")
     cus = CohortUser.objects.filter(user=user, role="STUDENT").prefetch_related("cohort", "user", "cohort__academy")
     async for cu in cus:
