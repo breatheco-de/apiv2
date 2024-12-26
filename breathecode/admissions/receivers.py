@@ -18,6 +18,7 @@ from .signals import cohort_log_saved, cohort_user_created, student_edu_status_u
 # add your receives here
 logger = logging.getLogger(__name__)
 GITHUB_URL_PATTERN = re.compile(r"https?:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/\s]+)\/?")
+BREATHECODE_USERS = ["breatheco-de", "4GeeksAcademy", "4geeksacademy"]
 
 
 @receiver(cohort_log_saved, sender=Cohort)
@@ -34,10 +35,12 @@ def join_to_micro_cohorts(cohort_user):
 
     user = cohort_user.user
     for cohort in micro_cohorts:
-        cohort_user = CohortUser.objects.filter(user=user, cohort=cohort, role="STUDENT").first()
-        if cohort_user is None:
-            cohort_user = CohortUser(user=user, cohort=cohort, role="STUDENT", finantial_status="FULLY_PAID")
-            cohort_user.save()
+        micro_cohort_user = CohortUser.objects.filter(user=user, cohort=cohort, role=cohort_user.role).first()
+        if micro_cohort_user is None:
+            micro_cohort_user = CohortUser(
+                user=user, cohort=cohort, role=cohort_user.role, finantial_status="FULLY_PAID"
+            )
+            micro_cohort_user.save()
 
 
 @receiver(cohort_user_created, sender=CohortUser)
@@ -62,6 +65,8 @@ async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
 
 @receiver(revision_status_updated, sender=Task, weak=False)
 def schedule_repository_deletion(sender: Type[Task], instance: Task, **kwargs: Any):
+    from breathecode.assignments.models import RepositoryDeletionOrder
+
     logger.info("Scheduling repository deletion for task: " + str(instance.id))
 
     if instance.revision_status != Task.RevisionStatus.PENDING and instance.github_url:
@@ -69,7 +74,9 @@ def schedule_repository_deletion(sender: Type[Task], instance: Task, **kwargs: A
         if match:
             user = match.group("user")
             repo = match.group("repo")
-            from breathecode.assignments.models import RepositoryDeletionOrder
+
+            if user not in BREATHECODE_USERS:
+                return
 
             order, created = RepositoryDeletionOrder.objects.get_or_create(
                 provider=RepositoryDeletionOrder.Provider.GITHUB,

@@ -10,8 +10,6 @@ import pytest
 from linked_services.django.actions import reset_app_cache
 from linked_services.django.service import Service
 
-from breathecode.assignments import signals
-
 from ...tasks import set_cohort_user_assignments
 from ..mixins import AssignmentsTestCase
 
@@ -47,7 +45,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of("assignments.Task"), [])
         self.assertEqual(self.bc.database.list_of("admissions.CohortUser"), [])
         self.assertEqual(Logger.info.call_args_list, [call("Executing set_cohort_user_assignments")])
-        self.assertEqual(Logger.error.call_args_list, [call("Task not found")])
+        self.assertEqual(Logger.error.call_args_list, [call("Task not found", exc_info=True)])
 
     """
     🔽🔽🔽 One Task
@@ -63,7 +61,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of("assignments.Task"), [self.bc.format.to_dict(model.task)])
         self.assertEqual(self.bc.database.list_of("admissions.CohortUser"), [])
         self.assertEqual(Logger.info.call_args_list, [call("Executing set_cohort_user_assignments")])
-        self.assertEqual(Logger.error.call_args_list, [call("CohortUser not found")])
+        self.assertEqual(Logger.error.call_args_list, [call("CohortUser not found", exc_info=True)])
 
     """
     🔽🔽🔽 One Task
@@ -328,7 +326,7 @@ class MediaTestSuite(AssignmentsTestCase):
                 call("History log saved"),
             ],
         )
-        self.assertEqual(Logger.error.call_args_list, [call("App rigobot not found")])
+        self.assertEqual(Logger.error.call_args_list, [call("App rigobot not found", exc_info=True)])
 
     @patch.multiple("linked_services.django.service.Service", post=MagicMock(), put=MagicMock())
     def test__rigobot_cancelled_revision(self):

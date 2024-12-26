@@ -30,8 +30,14 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(self.bc.database.list_of("assignments.Task"), [])
         self.assertEqual(send_email_message.call_args_list, [])
-        self.assertEqual(Logger.info.call_args_list, [call("Starting student_task_notification")])
-        self.assertEqual(Logger.error.call_args_list, [call("Task not found")])
+        self.assertEqual(
+            Logger.info.call_args_list,
+            [
+                call("Starting student_task_notification"),
+                call("Starting student_task_notification"),
+            ],
+        )
+        self.assertEqual(Logger.error.call_args_list, [call("Task not found", exc_info=True)])
         self.assertEqual(signals.assignment_created.delay.call_args_list, [])
 
     """

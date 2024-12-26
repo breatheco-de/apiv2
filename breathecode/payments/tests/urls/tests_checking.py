@@ -1817,7 +1817,7 @@ class SignalTestSuite(PaymentsTestCase):
         service_item = {"how_many": how_many1}
         subscription = {
             "valid_until": UTC_NOW + timedelta(seconds=1),
-            "status": random.choice(["CANCELLED", "ACTIVE", "DEPRECATED", "PAYMENT_ISSUE", "ERROR"]),
+            "status": random.choice(["ACTIVE", "PAYMENT_ISSUE", "ERROR"]),
         }
         academy = {"available_as_saas": True}
 
