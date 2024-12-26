@@ -370,6 +370,7 @@ class PublicCohortSerializer(serpy.Serializer):
     name = serpy.Field()
     never_ends = serpy.Field()
     private = serpy.Field()
+    micro_cohorts = serpy.MethodField()
     language = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
@@ -386,6 +387,10 @@ class PublicCohortSerializer(serpy.Serializer):
             return None
 
         return haversine(obj.longitude, obj.latitude, obj.academy.longitude, obj.academy.latitude)
+
+    def get_micro_cohorts(self, obj):
+        cohorts = obj.micro_cohorts.all()
+        return GetTinyCohortSerializer(cohorts, many=True).data
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
