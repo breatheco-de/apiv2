@@ -862,9 +862,23 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
+    id = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = ProfileAcademy
-        fields = ("email", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status", "plans")
+        fields = (
+            "email",
+            "user",
+            "first_name",
+            "last_name",
+            "address",
+            "phone",
+            "invite",
+            "cohort",
+            "status",
+            "plans",
+            "id",
+        )
         list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
