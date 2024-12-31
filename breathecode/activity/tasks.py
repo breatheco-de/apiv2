@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 import zstandard
+from capyc.core.managers import feature
 from celery import shared_task
 from django.core.cache import cache
 from django.utils import timezone
@@ -24,7 +25,6 @@ from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import NDB
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.redis import Lock
-from capyc.core.managers import feature
 
 from .models import StudentActivity
 
@@ -38,7 +38,7 @@ def get_activity_sampling_rate():
     return 60
 
 
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
+IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 API_URL = os.getenv("API_URL", "")
 

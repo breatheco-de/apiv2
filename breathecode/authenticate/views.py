@@ -98,6 +98,11 @@ from .serializers import (
     AppUserSerializer,
     AuthSerializer,
     AuthSettingsBigSerializer,
+    CapyAppAcademySerializer,
+    CapyAppCitySerializer,
+    CapyAppCountrySerializer,
+    CapyAppProfileAcademySerializer,
+    CapyAppUserSerializer,
     GetGitpodUserSerializer,
     GetProfileAcademySerializer,
     GetProfileAcademySmallSerializer,
@@ -760,6 +765,69 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         invite.save()
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
+
+
+class V2AppUserView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:user"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, user_id: int | None = None):
+        serializer = CapyAppUserSerializer(request)
+        if user_id:
+            return serializer.get(id=user_id)
+
+        return serializer.filter()
+
+
+class V2AppStudentView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:student"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, user_id_or_email: str | None = None):
+        serializer = CapyAppProfileAcademySerializer(request)
+        if user_id_or_email:
+            if user_id_or_email.isnumeric():
+                return serializer.get(id=int(user_id_or_email), role__slug="student")
+            else:
+                return serializer.get(email=user_id_or_email, role__slug="student")
+
+        return serializer.filter(role__slug="student")
+
+
+class V2AppAcademyView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:academy"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, academy_id: int | None = None):
+        serializer = CapyAppAcademySerializer(request)
+        if academy_id:
+            return serializer.get(id=academy_id)
+
+        return serializer.filter()
+
+
+class V2AppCityView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:city"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, city_id: int | None = None):
+        serializer = CapyAppCitySerializer(request)
+        if city_id:
+            return serializer.get(id=city_id)
+
+        return serializer.filter()
+
+
+class V2AppCountryView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:country"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, country_id: int | None = None):
+        serializer = CapyAppCountrySerializer(request)
+        if country_id:
+            return serializer.get(code=country_id)
+
+        return serializer.filter()
 
 
 class StudentView(APIView, GenerateLookupsMixin):
