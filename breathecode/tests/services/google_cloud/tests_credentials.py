@@ -76,15 +76,13 @@ class CredentialsTestCase(TestCase):
         result = resolve_credentials()
 
         self.assertEqual(result, True)
-        self.assertEqual(
-            open_mock.mock_calls,
-            [
-                call(Path(os.path.join(os.getcwd(), ".lacey_mosley.json")), "w"),
-                call().__enter__(),
-                call().write("{}\n"),
-                call().__exit__(None, None, None),
-            ],
-        )
+        assert open_mock.mock_calls == [
+            call(Path(os.path.join(os.getcwd(), ".lacey_mosley.json")), "w"),
+            call().__enter__(),
+            call().write("{}\n"),
+            call().__exit__(None, None, None),
+            call().close(),
+        ]
 
         self.assertEqual(
             exists_mock.mock_calls,

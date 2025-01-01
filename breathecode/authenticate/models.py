@@ -281,9 +281,7 @@ class ProfileAcademy(models.Model):
         regex=r"^\+?1?\d{9,15}$",
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
     )
-    phone = models.CharField(
-        validators=[phone_regex], max_length=17, blank=True, default=""
-    )  # validators should be a list
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, default="")
 
     status = models.CharField(max_length=15, choices=PROFILE_ACADEMY_STATUS, default=INVITED, db_index=True)
 
@@ -696,19 +694,6 @@ class GitpodUser(models.Model):
         blank=True,
         help_text="If a gitpod user is not connected to a real user and academy in the database, it will be deleted ASAP",
     )
-
-
-class App(models.Model):
-    """
-    The only reason for keeping this model is because this model is really indestructible.
-
-    Remove it as soon as Django team let us do it.
-    """
-
-    def __init__(self, *args, **kwargs):
-        raise DeprecationWarning("authenticate.App was deprecated, use linked_services.App instead")
-
-    name = models.CharField(max_length=25, unique=True, help_text="Descriptive and unique name of the app")
 
 
 class GoogleWebhook(models.Model):

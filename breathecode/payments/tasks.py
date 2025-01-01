@@ -43,7 +43,7 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
+IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
