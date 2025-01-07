@@ -696,6 +696,19 @@ class GitpodUser(models.Model):
     )
 
 
+class App(models.Model):
+    """
+    The only reason for keeping this model is because this model is really indestructible.
+
+    Remove it as soon as Django team let us do it.
+    """
+
+    def __init__(self, *args, **kwargs):
+        raise DeprecationWarning("authenticate.App was deprecated, use linked_services.App instead")
+
+    name = models.CharField(max_length=25, unique=True, help_text="Descriptive and unique name of the app")
+
+
 class GoogleWebhook(models.Model):
     class Status(models.TextChoices):
         PENDING = ("PENDING", "Pending")
