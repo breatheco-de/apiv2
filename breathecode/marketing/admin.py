@@ -287,7 +287,6 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
             "DRAFT": "bg-error",
             "PENDING_TRANSLATION": "bg-error",
             "PENDING": "bg-warning",
-            "WARNING": "bg-warning",
             "NOT_STARTED": "bg-error",
             "UNLISTED": "bg-warning",
         }

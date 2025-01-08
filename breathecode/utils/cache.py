@@ -1,32 +1,34 @@
 from __future__ import annotations
-import gzip
-import zlib
-import brotli
-import sys
-import functools
-import os
-from typing import Optional
-import urllib.parse, json
-from django.core.cache import cache
-from datetime import datetime, timedelta
-from django.db import models
-from circuitbreaker import circuit
 
-from django.db.models.fields.related_descriptors import (
-    ReverseManyToOneDescriptor,
-    ManyToManyDescriptor,
-    ForwardManyToOneDescriptor,
-    ReverseOneToOneDescriptor,
-    ForwardOneToOneDescriptor,
-)
+import functools
+import gzip
+import json
+import os
+import sys
+import urllib.parse
+import zlib
+from datetime import datetime, timedelta
+from typing import Optional
+
+import brotli
 import zstandard
+from circuitbreaker import circuit
+from django.core.cache import cache
+from django.db import models
+from django.db.models.fields.related_descriptors import (
+    ForwardManyToOneDescriptor,
+    ForwardOneToOneDescriptor,
+    ManyToManyDescriptor,
+    ReverseManyToOneDescriptor,
+    ReverseOneToOneDescriptor,
+)
 
 __all__ = ["Cache", "CACHE_DESCRIPTORS", "CACHE_DEPENDENCIES"]
 CACHE_DESCRIPTORS: dict[models.Model, Cache] = {}
 CACHE_DEPENDENCIES: set[models.Model] = set()
 
 ENABLE_LIST_OPTIONS = ["true", "1", "yes", "y"]
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
+IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 
 @functools.lru_cache(maxsize=1)

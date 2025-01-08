@@ -4,10 +4,10 @@ Test /academy/survey
 
 from unittest.mock import MagicMock, patch
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 
 from breathecode.feedback.tasks import generate_user_cohort_survey_answers
-from capyc.rest_framework.exceptions import ValidationException
 
 from ..mixins import FeedbackTestCase
 
@@ -108,7 +108,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "academy_id": n + 1,
                 },
                 {
-                    "title": f"How has been your experience with the platform and content?",
+                    "title": f"How has been your experience with the platform and content so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": None,
@@ -178,7 +178,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "cohort_id": None,
                 },
                 {
-                    "title": f"How has been your experience with the platform and content?",
+                    "title": f"How has been your experience with the platform and content so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": None,
@@ -236,7 +236,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "cohort_id": None,
                 },
                 {
-                    "title": f"How has been your experience with the platform and content?",
+                    "title": f"How has been your experience with the platform and content so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": None,
@@ -317,7 +317,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "academy_id": n + 1,
                 },
                 {
-                    "title": f"How has been your experience with the platform and content?",
+                    "title": f"How has been your experience with the platform and content so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": None,

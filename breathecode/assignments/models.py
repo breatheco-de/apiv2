@@ -271,6 +271,8 @@ class RepositoryDeletionOrder(models.Model):
     repository_user = models.CharField(max_length=256)
     repository_name = models.CharField(max_length=256)
 
+    notified_at = models.DateTimeField(default=None, null=True, blank=True)
+
     starts_transferring_at = models.DateTimeField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -280,11 +282,12 @@ class RepositoryDeletionOrder(models.Model):
             self.starts_transferring_at = timezone.now()
 
     def save(self, *args, **kwargs):
+        from .signals import status_updated
+
         self.full_clean()
         is_created = not self.pk
 
         super().save(*args, **kwargs)
-        from .signals import status_updated
 
         if (self.status != self._status or is_created) and self.status == RepositoryDeletionOrder.Status.TRANSFERRING:
             status_updated.delay(sender=self.__class__, instance=self)

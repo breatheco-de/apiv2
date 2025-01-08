@@ -3,9 +3,10 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls import reverse_lazy
 from rest_framework import status
-from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
+
 from ..mixins import PaymentsTestCase
 
 
@@ -70,6 +71,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "price_per_year": event.price_per_year,
         "service_items": service_items,
         "slug": event.slug,
+        "id": event.id,
         "status": event.status,
         "time_of_life": event.time_of_life,
         "time_of_life_unit": event.time_of_life_unit,

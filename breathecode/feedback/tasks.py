@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.utils import timezone
@@ -15,7 +16,6 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions as notify_actions
 from breathecode.utils import TaskPriority, getLogger
 from breathecode.utils.redis import Lock
-from capyc.rest_framework.exceptions import ValidationException
 
 from . import actions
 from .models import Answer, Survey
@@ -27,7 +27,7 @@ logger = getLogger(__name__)
 ADMIN_URL = os.getenv("ADMIN_URL", "")
 API_URL = os.getenv("API_URL", "")
 ENV = os.getenv("ENV", "")
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
+IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 
 def build_question(answer):

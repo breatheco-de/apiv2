@@ -77,6 +77,7 @@ def cohort_field(data={}):
         "timezone": "America/Caracas",
         "is_hidden_on_prework": True,
         "available_as_saas": False,
+        "color": None,
         **data,
     }
 
