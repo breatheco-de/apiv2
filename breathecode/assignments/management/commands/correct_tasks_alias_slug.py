@@ -16,9 +16,10 @@ class Command(BaseCommand):
             if asset is not None:
                 if asset.lang not in ["us", "en"]:
                     english_translation = asset.all_translations.filter(lang__in=["en", "us"]).first()
-                    english_slug = english_translation.slug
-                    task.associated_slug = english_slug
-                    task.save()
+                    if english_translation is not None:
+                        english_slug = english_translation.slug
+                        task.associated_slug = english_slug
+                        task.save()
 
                 # if the slug si different than the stored associated_slug it means that it is an alias
                 elif asset.slug != associated_slug:
