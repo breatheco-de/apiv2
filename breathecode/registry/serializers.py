@@ -504,6 +504,7 @@ class AssetExpandableSerializer(AssetMidSerializer):
 
 class AssetTechnologySerializer(ParentAssetTechnologySerializer):
     parent = ParentAssetTechnologySerializer(required=False)
+    sort_priority = serpy.Field()
     lang = serpy.Field(required=False)
 
 
