@@ -1058,6 +1058,7 @@ class StudentPostTestSuite(AuthTestCase):
             "last_name": "McKornick",
             "phone": "",
             "status": "INVITED",
+            "id": 2,
         }
 
         self.assertEqual(json, expected)
@@ -1166,6 +1167,7 @@ class StudentPostTestSuite(AuthTestCase):
             "last_name": "McKornick",
             "phone": "",
             "status": "INVITED",
+            "id": 2,
         }
 
         self.assertEqual(json, expected)
@@ -1269,6 +1271,7 @@ class StudentPostTestSuite(AuthTestCase):
             "last_name": "McKornick",
             "phone": "",
             "status": "INVITED",
+            "id": 2,
         }
 
         self.assertEqual(json, expected)
@@ -1408,6 +1411,7 @@ class StudentPostTestSuite(AuthTestCase):
             "last_name": "McKornick",
             "phone": "",
             "status": "INVITED",
+            "id": 2,
         }
 
         self.assertEqual(json, expected)
@@ -1570,6 +1574,7 @@ class StudentPostTestSuite(AuthTestCase):
             "last_name": "McKornick",
             "phone": "",
             "status": "INVITED",
+            "id": 2,
         }
 
         self.assertEqual(json, expected)
