@@ -1,4 +1,5 @@
 import logging
+from django.http import QueryDict
 
 logger = logging.getLogger(__name__)
 from breathecode.assignments.models import AssignmentTelemetry, LearnPackWebhook
