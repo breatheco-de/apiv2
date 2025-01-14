@@ -15,7 +15,7 @@ def batch(self, webhook: LearnPackWebhook):
     
     if asset is None:  
         _slug = webhook.payload["slug"]
-        asset = Asset.objects.get_by_slug(_slug)
+        asset = Asset.get_by_slug(_slug)
 
     if asset is None:
         raise Exception("Asset specified by learnpack telemetry was not found using either the payload 'asset_id' or 'slug'")
