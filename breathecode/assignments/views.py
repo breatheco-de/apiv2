@@ -9,7 +9,7 @@ from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.contrib import messages
 from django.db.models import Q
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, QueryDict
 from django.shortcuts import render
 from django.utils import timezone
 from linked_services.django.service import Service
