@@ -8,8 +8,17 @@ def batch(self, webhook: LearnPackWebhook):
     from breathecode.registry.models import Asset
     from breathecode.assignments.models import Task
 
-    _slug = webhook.payload["slug"]
-    asset = Asset.get_by_slug(_slug)
+    asset = None
+    if "asset_id" in webhook.payload: 
+        _id = webhook.payload["asset_id"]
+        asset = Asset.objects.filter(id=_id).first()
+    
+    if asset is None:  
+        _slug = webhook.payload["slug"]
+        asset = Asset.objects.get_by_slug(_slug)
+
+    if asset is None:
+        raise Exception("Asset specified by learnpack telemetry was not found using either the payload 'asset_id' or 'slug'")
 
     telemetry = AssignmentTelemetry.objects.filter(asset_slug=asset.slug, user__id=webhook.payload["user_id"]).first()
 
