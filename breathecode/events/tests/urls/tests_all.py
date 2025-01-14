@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import capyc.pytest as capy
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 
 
 def serialize_event(event):
@@ -9,14 +10,12 @@ def serialize_event(event):
         "id": event.id,
         "title": event.title,
         "starting_at": (
-            event.starting_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+            event.starting_at.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
             if isinstance(event.starting_at, datetime)
             else None
         ),
         "ending_at": (
-            event.ending_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
-            if isinstance(event.ending_at, datetime)
-            else None
+            event.ending_at.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z" if isinstance(event.ending_at, datetime) else None
         ),
         "event_type": {
             "id": event.event_type.id,
@@ -33,9 +32,7 @@ def serialize_event(event):
         "capacity": event.capacity,
         "status": event.status,
         "host": event.host,
-        "ended_at": (
-            event.ended_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z" if event.ended_at else None
-        ),
+        "ended_at": (event.ended_at.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z" if event.ended_at else None),
         "online_event": event.online_event,
         "is_public": event.is_public,
         "venue": (
@@ -119,8 +116,8 @@ def test_filter_by_technologies(client: capy.Client, database: capy.Database, fa
                 "title": "My First Event",
                 "capacity": 100,
                 "banner": "https://example.com/banner.jpg",
-                "starting_at": datetime.now(),
-                "ending_at": datetime.now() + timedelta(hours=2),
+                "starting_at": timezone.now(),
+                "ending_at": timezone.now() + timedelta(hours=2),
                 "status": "ACTIVE",
                 "event_type_id": n + 1,
             }
@@ -134,7 +131,6 @@ def test_filter_by_technologies(client: capy.Client, database: capy.Database, fa
     expected = [serialize_event(event) for event in model.event if "python" in event.event_type.technologies]
 
     assert response.status_code == 200
-    assert len(json) == 1
     assert expected == json
 
 
@@ -175,8 +171,8 @@ def test_filter_by_technologies_obtain_two(client: capy.Client, database: capy.D
                 "title": f"My Event {n + 1}",
                 "capacity": 100,
                 "banner": "https://example.com/banner.jpg",
-                "starting_at": datetime.now(),
-                "ending_at": datetime.now() + timedelta(hours=2),
+                "starting_at": timezone.now(),
+                "ending_at": timezone.now() + timedelta(hours=2),
                 "status": "ACTIVE",
                 "event_type_id": n + 1,
             }
@@ -195,7 +191,6 @@ def test_filter_by_technologies_obtain_two(client: capy.Client, database: capy.D
     ]
 
     assert response.status_code == 200
-    assert len(json) == 2
     assert expected == json
 
 
@@ -234,8 +229,8 @@ def test_all_academy_events_get_with_event_is_public_true_in_filter_is_public_tr
                 "title": f"My Event {n + 1}",
                 "capacity": 100,
                 "banner": "https://example.com/banner.jpg",
-                "starting_at": datetime.now(),
-                "ending_at": datetime.now() + timedelta(hours=2),
+                "starting_at": timezone.now(),
+                "ending_at": timezone.now() + timedelta(hours=2),
                 "status": "ACTIVE",
                 "event_type_id": n + 1,
                 "is_public": True,
@@ -250,7 +245,6 @@ def test_all_academy_events_get_with_event_is_public_true_in_filter_is_public_tr
     expected = [serialize_event(event) for event in model.event if event.is_public]
 
     assert response.status_code == 200
-    assert len(json) == len(expected)
     assert expected == json
 
 
@@ -289,8 +283,8 @@ def test_all_academy_events_get_with_event_is_public_false_in_filter_is_public_t
                 "title": f"My Event {n + 1}",
                 "capacity": 100,
                 "banner": "https://example.com/banner.jpg",
-                "starting_at": datetime.now(),
-                "ending_at": datetime.now() + timedelta(hours=2),
+                "starting_at": timezone.now(),
+                "ending_at": timezone.now() + timedelta(hours=2),
                 "status": "ACTIVE",
                 "event_type_id": n + 1,
                 "is_public": False,
@@ -305,7 +299,6 @@ def test_all_academy_events_get_with_event_is_public_false_in_filter_is_public_t
     expected = [serialize_event(event) for event in model.event if event.is_public]
 
     assert response.status_code == 200
-    assert len(json) == len(expected)
     assert expected == json
 
 
@@ -344,8 +337,8 @@ def test_all_academy_events_get_with_event_is_public_false_in_filter_is_public_f
                 "title": f"My Event {n + 1}",
                 "capacity": 100,
                 "banner": "https://example.com/banner.jpg",
-                "starting_at": datetime.now(),
-                "ending_at": datetime.now() + timedelta(hours=2),
+                "starting_at": timezone.now(),
+                "ending_at": timezone.now() + timedelta(hours=2),
                 "status": "ACTIVE",
                 "event_type_id": n + 1,
                 "is_public": False,
@@ -360,7 +353,6 @@ def test_all_academy_events_get_with_event_is_public_false_in_filter_is_public_f
     expected = [serialize_event(event) for event in model.event if event.is_public == False]
 
     assert response.status_code == 200
-    assert len(json) == len(expected)
     assert expected == json
 
 
@@ -399,8 +391,8 @@ def test_all_academy_events_get_with_event_is_public_true_in_filter_is_public_fa
                 "title": f"My Event {n + 1}",
                 "capacity": 100,
                 "banner": "https://example.com/banner.jpg",
-                "starting_at": datetime.now(),
-                "ending_at": datetime.now() + timedelta(hours=2),
+                "starting_at": timezone.now(),
+                "ending_at": timezone.now() + timedelta(hours=2),
                 "status": "ACTIVE",
                 "event_type_id": n + 1,
                 "is_public": True,
@@ -415,5 +407,4 @@ def test_all_academy_events_get_with_event_is_public_true_in_filter_is_public_fa
     expected = [serialize_event(event) for event in model.event if event.is_public == False]
 
     assert response.status_code == 200
-    assert len(json) == len(expected)
     assert expected == json

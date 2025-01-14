@@ -445,6 +445,13 @@ if IS_TEST_ENV:
     class CustomMemCache(LocMemCache):
         _cache = {}
 
+        fake = 1
+
+        def delete_pattern(self, pattern):
+            for key in self._cache.keys():
+                if fnmatch.fnmatch(key, pattern):
+                    del self._cache[key]
+
         def delete_many(self, patterns):
             for pattern in patterns:
                 self.delete(pattern)

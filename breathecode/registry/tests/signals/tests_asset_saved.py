@@ -481,7 +481,7 @@ class TestGitpodBranches:
     def msg1(self, asset: Asset):
         return (
             f"This {asset.asset_type} can be opened both locally or with click and code (This "
-            "way you don't have to install nothing and it will open automatically on gitpod or github codespaces). "
+            "way you don't have to install anything and it will open automatically on gitpod or github codespaces). "
         )
 
     def test_not_gitpod(self, database: capy.Database, signals: capy.Signals):
@@ -536,7 +536,7 @@ class TestGitpodBranches:
 class TestDurationBranches:
 
     def msg1(self, asset: Asset):
-        return f"This {asset.asset_type} will last {asset.duration}. "
+        return f"This {asset.asset_type} will last {asset.duration} hours. "
 
     @pytest.mark.parametrize("duration", [None, 0])
     def test_not_duration(self, database: capy.Database, signals: capy.Signals, duration: Optional[int]):
@@ -646,10 +646,10 @@ class TestDifficultyBranches:
 class TestReadmeBranches:
 
     def msg1(self, asset: Asset):
-        return f"The markdown file with the instructions of this {asset.asset_type} is the following: {asset.readme}."
+        return f"The markdown file with the instructions of this {asset.asset_type} is the following: {asset.html}."
 
     def msg2(self, asset: Asset):
-        return f"The markdown file with the content of this {asset.asset_type} is the following: {asset.readme}."
+        return f"The markdown file with the content of this {asset.asset_type} is the following: {asset.html}."
 
     @pytest.mark.parametrize("readme", [None, ""])
     def test_not_readme(self, database: capy.Database, signals: capy.Signals, readme: Optional[str]):
@@ -681,7 +681,7 @@ class TestReadmeBranches:
         signals.enable("breathecode.registry.signals.asset_saved")
         model = database.create(
             asset={
-                "readme": fake.text(),
+                "html": fake.text(),
                 "asset_type": "PROJECT",
             },
             asset_category=1,
@@ -707,7 +707,7 @@ class TestReadmeBranches:
         signals.enable("breathecode.registry.signals.asset_saved")
         model = database.create(
             asset={
-                "readme": fake.text(),
+                "html": fake.text(),
                 "asset_type": random.choice(["LESSON", "EXERCISE", "QUIZ", "VIDEO", "ARTICLE"]),
             },
             asset_category=1,

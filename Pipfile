@@ -142,7 +142,6 @@ django-storages = {extras = ["google"] }
 aiohttp = {extras = ["speedups"] }
 aiodns = "*"
 eventlet = "*"
-linked-services = {extras = ["django", "aiohttp", "requests"] }
 celery-task-manager = {extras = ["django"] }
 django-sql-explorer = {extras = ["xls"] }
 contextlib2 = "*"
@@ -157,3 +156,4 @@ pyright = "*"
 mypy = "*"
 python-magic = "*"
 uvicorn = {extras = ["standard"], version = "*"}
+linked-services = {extras = ["requests", "django", "aiohttp"], version = "*"}

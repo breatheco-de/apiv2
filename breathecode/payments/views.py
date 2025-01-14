@@ -83,7 +83,7 @@ from breathecode.utils.redis import Lock
 
 logger = getLogger(__name__)
 
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
+IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 
 class PlanView(APIView):

@@ -122,7 +122,7 @@ class Request:
 
         # https://datatracker.ietf.org/doc/html/rfc7519#section-4
         payload = {
-            "sub": user_id,
+            "sub": str(user_id or ""),
             "iss": os.getenv("API_URL", "http://localhost:8000"),
             "app": app.slug,
             "aud": "breathecode",

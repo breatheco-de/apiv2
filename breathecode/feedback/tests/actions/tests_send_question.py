@@ -552,7 +552,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                     "score": None,
                     "status": "SENT",
                     "survey_id": None,
-                    "title": f"¿Cómo ha sido tu experiencia estudiando {certificate}?",
+                    "title": f"¿Cómo ha sido tu experiencia estudiando {certificate} hasta este momento?",
                     "token_id": n + 1,
                     "user_id": n + 1,
                     "question_by_slug": None,

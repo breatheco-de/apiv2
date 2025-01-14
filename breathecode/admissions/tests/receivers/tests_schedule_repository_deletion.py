@@ -1,5 +1,3 @@
-import random
-
 import capyc.pytest as capy
 import pytest
 
@@ -42,9 +40,9 @@ def test_nothing_happens(
 @pytest.mark.parametrize(
     "github_url, username, repo",
     [
-        ("https://github.com/user1/repo1", "user1", "repo1"),
-        ("https://github.com/user2/repo2", "user2", "repo2"),
-        ("https://github.com/user3/repo3", "user3", "repo3"),
+        ("https://github.com/breatheco-de/repo1", "breatheco-de", "repo1"),
+        ("https://github.com/4GeeksAcademy/repo2", "4GeeksAcademy", "repo2"),
+        ("https://github.com/4geeksacademy/repo3", "4geeksacademy", "repo3"),
     ],
 )
 def test_schedule_repository_deletion(
@@ -77,5 +75,6 @@ def test_schedule_repository_deletion(
             "status": "PENDING",
             "status_text": None,
             "starts_transferring_at": None,
+            "notified_at": None,
         },
     ]

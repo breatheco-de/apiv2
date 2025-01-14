@@ -676,6 +676,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "accepts_enrollment_suggestions": True,
                     "current_day": data["current_day"],
                     "current_module": None,
+                    "cohorts_order": None,
                     "ending_date": model["cohort"].ending_date,
                     "id": model["cohort"].id,
                     "kickoff_date": model["cohort"].kickoff_date,
@@ -693,6 +694,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "timezone": None,
                     "is_hidden_on_prework": True,
                     "available_as_saas": model["cohort"].available_as_saas,
+                    "color": None,
                 }
             ],
         )
@@ -849,6 +851,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "accepts_enrollment_suggestions": True,
                     "current_day": data["current_day"],
                     "current_module": None,
+                    "cohorts_order": None,
                     "ending_date": model["cohort"].ending_date,
                     "id": model["cohort"].id,
                     "kickoff_date": model["cohort"].kickoff_date,
@@ -866,6 +869,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "timezone": "Europe/Monaco",
                     "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
                     "available_as_saas": model["cohort"].available_as_saas,
+                    "color": None,
                 }
             ],
         )
@@ -1028,6 +1032,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "accepts_enrollment_suggestions": True,
                     "current_day": data["current_day"],
                     "current_module": None,
+                    "cohorts_order": None,
                     "ending_date": model["cohort"].ending_date,
                     "id": model["cohort"].id,
                     "kickoff_date": model["cohort"].kickoff_date,
@@ -1045,6 +1050,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "timezone": None,
                     "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
                     "available_as_saas": model["cohort"].available_as_saas,
+                    "color": None,
                 }
             ],
         )
@@ -1194,6 +1200,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "accepts_enrollment_suggestions": True,
                     "current_day": data["current_day"],
                     "current_module": None,
+                    "cohorts_order": None,
                     "ending_date": model["cohort"].ending_date,
                     "id": model["cohort"].id,
                     "kickoff_date": model["cohort"].kickoff_date,
@@ -1211,6 +1218,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "timezone": None,
                     "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
                     "available_as_saas": model["cohort"].available_as_saas,
+                    "color": None,
                 }
             ],
         )

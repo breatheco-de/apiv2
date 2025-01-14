@@ -281,9 +281,7 @@ class ProfileAcademy(models.Model):
         regex=r"^\+?1?\d{9,15}$",
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
     )
-    phone = models.CharField(
-        validators=[phone_regex], max_length=17, blank=True, default=""
-    )  # validators should be a list
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, default="")
 
     status = models.CharField(max_length=15, choices=PROFILE_ACADEMY_STATUS, default=INVITED, db_index=True)
 
@@ -634,6 +632,11 @@ class Token(rest_framework.authtoken.models.Token):
             token = Token.objects.create(user=user, **kwargs)
 
         return token, created
+
+    @classmethod
+    @sync_to_async
+    def aget_or_create(cls, user, token_type: str, **kwargs: Unpack[TokenGetOrCreateArgs]) -> Tuple["Token", bool]:
+        return cls.get_or_create(user=user, token_type=token_type, **kwargs)
 
     @classmethod
     def get_valid(cls, token: str, async_mode: bool = False, **kwargs: Unpack[TokenFilterArgs]) -> "Token | None":

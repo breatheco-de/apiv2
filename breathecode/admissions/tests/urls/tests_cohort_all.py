@@ -25,6 +25,7 @@ def get_serializer(cohort, syllabus, syllabus_version, data={}):
             re.sub(r"\+00:00$", "Z", cohort.kickoff_date.isoformat()) if cohort.kickoff_date else cohort.kickoff_date
         ),
         "ending_date": cohort.ending_date,
+        "micro_cohorts": [],
         "language": cohort.language.lower(),
         "remote_available": cohort.remote_available,
         "syllabus_version": {

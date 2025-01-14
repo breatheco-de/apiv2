@@ -170,6 +170,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     is_renewable = serpy.Field()
     has_waiting_list = serpy.Field()
     owner = GetAcademySmallSerializer(required=False, many=False)
+    id = serpy.Field()
 
 
 class GetPlanOfferTranslationSerializer(serpy.Serializer):
