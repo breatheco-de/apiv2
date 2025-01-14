@@ -183,7 +183,12 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
     @has_permission("upload_assignment_telemetry")
     def post(self, request, academy_id=None):
 
-        webhook = LearnPack.add_webhook_to_log(request.data)
+        merged_data = request.data.copy()
+        if isinstance(request.query_params, QueryDict):
+            for key, value in request.query_params.items():
+                merged_data[key] = value
+        
+        webhook = LearnPack.add_webhook_to_log(merged_data)
 
         if webhook:
             tasks.async_learnpack_webhook.delay(webhook.id)
