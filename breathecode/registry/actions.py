@@ -788,8 +788,9 @@ def process_asset_config(asset, config):
         asset.with_solutions = True
         asset.with_video = True
 
-    if "agent" in config:
-        asset.agent = config["agent"]
+    if "editor" in config:
+        if "agent" in config["editor"]:
+            asset.agent = config["editor"]["agent"]
 
     if "solution" in config:
         asset.with_solutions = True
