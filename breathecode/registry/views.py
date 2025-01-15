@@ -1801,7 +1801,17 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
-        items = items.filter(**lookup)
+        lang = request.GET.get("lang", None)
+        query = []
+        if lang:
+            queryLang = Q()
+            for language in lang.split(","):
+                if language == "":
+                    continue
+                queryLang = queryLang | Q(lang__iexact=language)
+            query.append(queryLang)
+
+        items = items.filter(*query, **lookup)
         items = handler.queryset(items)
 
         serializer = KeywordClusterMidSerializer(items, many=True)
