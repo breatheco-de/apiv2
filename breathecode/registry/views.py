@@ -1804,15 +1804,12 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
         lang = request.GET.get("lang", None)
         query = []
         if lang:
-            if "," not in lang:
-                lookup["lang__iexact"] = lang
-            else:
-                queryLang = Q()
-                for language in lang.split(","):
-                    if language == "":
-                        continue
-                    queryLang = queryLang | Q(lang__iexact=language)
-                query.append(queryLang)
+            queryLang = Q()
+            for language in lang.split(","):
+                if language == "":
+                    continue
+                queryLang = queryLang | Q(lang__iexact=language)
+            query.append(queryLang)
 
         items = items.filter(*query, **lookup)
         items = handler.queryset(items)
