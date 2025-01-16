@@ -429,8 +429,8 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
 
 def clean_asset_readme(asset: Asset):
-    # if asset.readme_raw is None or asset.readme_raw == "":
-    #     return asset
+    if asset.readme_raw is None or asset.readme_raw == "":
+        return asset
 
     asset.last_cleaning_at = timezone.now()
     try:
