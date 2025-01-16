@@ -429,8 +429,8 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
 
 def clean_asset_readme(asset: Asset):
-    if asset.readme_raw is None or asset.readme_raw == "":
-        return asset
+    # if asset.readme_raw is None or asset.readme_raw == "":
+    #     return asset
 
     asset.last_cleaning_at = timezone.now()
     try:
@@ -444,6 +444,7 @@ def clean_asset_readme(asset: Asset):
 
         asset.cleaning_status = "OK"
         asset.save()
+        return
     except Exception as e:
         asset.cleaning_status = "ERROR"
         asset.cleaning_status_details = str(e)
@@ -572,7 +573,7 @@ def clean_h1s(asset: Asset):
     logger.debug("first line ends at")
     logger.debug(first_line_end)
 
-    regex = r"\s?#\s[`\-_\w]+[`\-_\w\s]*\n"
+    regex = r"\s?#\s[`\-_\w¿¡?!]+[`\-_\w\s¿¡?!]*\n"
     findings = list(re.finditer(regex, content[:first_line_end]))
     if len(findings) > 0:
         replaced = content[first_line_end:].strip()
