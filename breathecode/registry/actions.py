@@ -573,7 +573,7 @@ def clean_h1s(asset: Asset):
     logger.debug("first line ends at")
     logger.debug(first_line_end)
 
-    regex = r"\s?#\s[`\-_\w¿¡?!]+[`\-_\w\s¿¡?!]*\n"
+    regex = r"^\s?#\s[`\-_\w¿¡?!]+[`\-_\w\s¿¡?!]*\n"
     findings = list(re.finditer(regex, content[:first_line_end]))
     if len(findings) > 0:
         replaced = content[first_line_end:].strip()
