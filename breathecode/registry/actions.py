@@ -444,7 +444,6 @@ def clean_asset_readme(asset: Asset):
 
         asset.cleaning_status = "OK"
         asset.save()
-        return
     except Exception as e:
         asset.cleaning_status = "ERROR"
         asset.cleaning_status_details = str(e)
