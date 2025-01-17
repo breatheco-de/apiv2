@@ -185,3 +185,58 @@ def test_token(
             "user_id": 1,
         },
     ]
+
+
+def test_academysettings_inferred_as_none(
+    database: capy.Database, client: capy.Client, format: capy.Format, utc_now: datetime, http: staging.HTTP
+):
+    model = database.create(token={"token_type": "temporal"})
+    url = (
+        reverse_lazy("authenticate:google_callback")
+        + f"?state=token%3D{model.token.key}%26url%3Dhttps://breathecode.herokuapp.com/admin/authenticate/academyauthsettings/%26academysettings%3Dnone&code=12345&scope=profile%20https://www.googleapis.com/auth/drive.meet.readonly%20https://www.googleapis.com/auth/meetings.space.created%20https://www.googleapis.com/auth/userinfo.profile"
+    )
+
+    payload = {
+        "client_id": "123456.apps.googleusercontent.com",
+        "client_secret": "123456",
+        "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
+        "grant_type": "authorization_code",
+        "code": "12345",
+    }
+
+    http.post(
+        "https://oauth2.googleapis.com/token",
+        json=payload,
+        headers={"Accept": "application/json"},
+    ).response(
+        {
+            "access_token": "test_access_token",
+            "expires_in": 3600,
+            "refresh_token": "test_refresh_token",
+            "id_token": "test_id_token",
+        },
+        status=200,
+    )
+
+    response = client.get(url, format="json")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert (
+        response.url
+        == f"https://breathecode.herokuapp.com/admin/authenticate/academyauthsettings/?token={quote(model.token.key)}"
+    )
+
+    http.call_count == 1
+
+    assert database.list_of("authenticate.Token") == [format.to_obj_repr(model.token)]
+    assert database.list_of("authenticate.CredentialsGoogle") == [
+        {
+            "expires_at": utc_now + timedelta(seconds=3600),
+            "id": 1,
+            "google_id": "123",
+            "id_token": "test_id_token",
+            "refresh_token": "test_refresh_token",
+            "token": "test_access_token",
+            "user_id": 1,
+        },
+    ]

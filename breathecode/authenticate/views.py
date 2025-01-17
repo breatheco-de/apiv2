@@ -2162,7 +2162,7 @@ async def save_google_token(request):
 
     academies = async_iter([])
     roles = ["admin", "staff", "country_manager", "academy_token"]
-    academy_settings = state.get("academysettings", "none")
+    academy_settings = state.get("academysettings", ["none"])[0]
     if academy_settings != "none":
         if feature.is_enabled("authenticate.set-google-credentials", default=False) is False:
             raise ValidationException(
