@@ -3,10 +3,11 @@ from typing import Optional
 from capyc.core.managers import feature
 from django.db.models.query_utils import Q
 
-from breathecode.admissions.models import Cohort
+from breathecode.admissions.models import Academy, Cohort
 from breathecode.assignments.models import Task
 from breathecode.authenticate.models import User
 from breathecode.events.models import Event, LiveClass
+from breathecode.mentorship.models import MentorshipService
 from breathecode.payments.models import CohortSet, MentorshipServiceSet
 from breathecode.registry.models import Asset
 from breathecode.utils.decorators.consume import ServiceContext
@@ -127,4 +128,47 @@ def bypass_consumption(context: ServiceContext, kwargs: Optional[dict] = None, u
     return False
 
 
-feature.add(bypass_consumption)
+blocked_user_ids = {
+    "mentorship-service": {
+        # Blocked users in the entire platform (Add user ids)
+        "from_everywhere": [1],
+        # Blocked users in the academy, add user id and academy slug
+        "from_academy": [(1, "downtown-miami")],
+        # Blocked users in a cohort, add user id and cohort slug
+        "from_cohort": [(1, "4geeks-fs-1")],
+        # Blocked users of a service, add user id and mentorship service slug
+        "from_mentorship_service": [(1, "geekpal-1-1")],
+    }
+}
+
+
+@feature.availability("payments.can_access")
+def can_access(
+    to: str,
+    user: User,
+    cohort: Optional[Cohort] = None,
+    academy: Optional[Academy] = None,
+    mentorship_service: Optional[MentorshipService] = None,
+) -> bool:
+
+    if to not in blocked_user_ids:
+        return True
+
+    x = blocked_user_ids[to]
+
+    if user.id in x["from_everywhere"]:
+        return False
+
+    if academy and (academy, academy.slug) in x["from_academy"]:
+        return False
+
+    if cohort and (user.id, cohort.slug) in x["from_cohort"]:
+        return False
+
+    if mentorship_service and (user.id, mentorship_service.slug) in x["from_mentorship_service"]:
+        return False
+
+    return True
+
+
+feature.add(bypass_consumption, can_access)

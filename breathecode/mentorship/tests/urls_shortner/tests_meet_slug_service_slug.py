@@ -35,8 +35,10 @@ API_KEY = random.randint(1, 1000000000)
 
 @pytest.fixture(autouse=True)
 def setup(db, fake, monkeypatch: pytest.MonkeyPatch):
+    m = MagicMock(return_value=True)
     # os.environ['APP_URL'] = fake.url()
     monkeypatch.setenv("APP_URL", fake.url())
+    monkeypatch.setenv("capyc.core.managers.feature", "is_enabled", m)
 
     yield
 

@@ -72,6 +72,20 @@ def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs
             )
         )
 
+    if mentor_profile.user.id != request.user.id:
+        context = feature.context(to="mentorship-service", user=request.user, mentorship_service=mentorship_service)
+
+    if mentor_profile.user.id != request.user.id and feature.is_enabled("payments.can_access", context, True) is False:
+        raise ValidationException(
+            translation(
+                lang,
+                en="You have been blocked from accessing this mentorship service",
+                es="Has sido bloqueado de acceder a este servicio de mentoría",
+                slug="mentorship-service-blocked",
+            ),
+            code=403,
+        )
+
     context["consumables"] = context["consumables"].filter(
         mentorship_service_set__mentorship_services=mentorship_service
     )
