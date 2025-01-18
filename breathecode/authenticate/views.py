@@ -2164,7 +2164,7 @@ async def save_google_token(request):
     roles = ["admin", "staff", "country_manager", "academy_token"]
     academy_settings = state.get("academysettings", ["none"])[0]
     if academy_settings != "none":
-        if feature.is_enabled("authenticate.set-google-credentials", default=False) is False:
+        if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
             raise ValidationException(
                 "Setting academy google credentials is not available",
                 slug="set-google-credentials-not-available",
