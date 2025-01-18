@@ -2082,7 +2082,7 @@ def get_google_token(request, token=None):
     ]
 
     if academy_settings in ["overwrite", "set"]:
-        if feature.is_enabled("authenticate.set_google_credentials", default=True) is False:
+        if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
             raise ValidationException(
                 "Setting academy google credentials is not available",
                 slug="set-google-credentials-not-available",
