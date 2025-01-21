@@ -2126,7 +2126,7 @@ async def save_google_token(request):
             academy=academy, defaults={"google_cloud_owner": user}
         )
         if not created:
-            settings.google_cloud_owner.id = user.id
+            settings.google_cloud_owner = user
             await settings.asave()
 
     async def async_iter(iterable: list):
