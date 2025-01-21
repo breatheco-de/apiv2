@@ -523,7 +523,9 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         current_url = f"{request.scheme}://{request.get_host()}{request.get_full_path()}"
         current_url = str(base64.urlsafe_b64encode(current_url.encode("utf-8")), "utf-8")
 
-        return format_html(f"<a href='/v1/auth/academy/google?url={current_url}'>connect google</a>")
+        return format_html(
+            f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/academy/google?academysettings=set&url={current_url}'>connect google</a>"
+        )
 
 
 @admin.register(GoogleWebhook)

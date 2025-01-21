@@ -155,7 +155,7 @@ urlpatterns = [
     # google authentication oath2.0
     path("google/callback", save_google_token, name="google_callback"),
     path("google/<str:token>", get_google_token, name="google_token"),
-    path("academy/google", render_google_connect, name="academy_google_token"),
+    path("academy/google", render_google_connect, name="academy_google"),
     path("gitpod/sync", sync_gitpod_users_view, name="sync_gitpod_users"),
     # sync with gitHUB
     path("academy/github/user", GithubUserView.as_view(), name="github_user"),
