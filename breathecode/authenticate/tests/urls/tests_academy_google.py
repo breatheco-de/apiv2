@@ -18,7 +18,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-now = timezone.now()
+callback = str(base64.urlsafe_b64encode(b"https://potato.io"), "utf-8")
 
 
 @pytest.fixture(autouse=True)
@@ -165,13 +165,13 @@ def test_no_callback_url(database: capy.Database, client: APIClient, format: cap
 def test_redirect_to_google(database: capy.Database, client: APIClient, format: capy.Format, utc_now: datetime):
     model = database.create(token=1, user=1)
     print(utc_now)
-    url = reverse_lazy("authenticate:academy_google") + f"?token={model.token.key}&url=https://potato.io"
+    url = reverse_lazy("authenticate:academy_google") + f"?token={model.token.key}&url={callback}"
     response = client.get(url, headers={"Academy": 1})
 
     assert response.status_code == status.HTTP_302_FOUND
 
     query_params = {
-        "url": "https://potato.io",
+        "url": callback,
     }
     query_string = urlencode(query_params)
 
@@ -197,7 +197,7 @@ def test_no_capability_with_academy_settings(
     print(utc_now)
     url = (
         reverse_lazy("authenticate:academy_google")
-        + f"?token={model.token.key}&url=https://potato.io&academysettings={academy_settings}"
+        + f"?token={model.token.key}&url={callback}&academysettings={academy_settings}"
     )
     response = client.get(url, headers={"Academy": 1})
 
@@ -231,10 +231,9 @@ def test_redirect_to_google_with_academy_settings(
         city=1,
         country=1,
     )
-    print(utc_now)
     url = (
         reverse_lazy("authenticate:academy_google")
-        + f"?token={model.token.key}&url=https://potato.io&academysettings={academy_settings}"
+        + f"?token={model.token.key}&url={callback}&academysettings={academy_settings}"
     )
     response = client.get(url, headers={"Academy": 1})
 
@@ -242,7 +241,7 @@ def test_redirect_to_google_with_academy_settings(
 
     query_params = {
         "academysettings": academy_settings,
-        "url": "https://potato.io",
+        "url": callback,
     }
     query_string = urlencode(query_params)
 
