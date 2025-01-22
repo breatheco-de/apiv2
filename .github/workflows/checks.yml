@@ -37,20 +37,21 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
           poetry config virtualenvs.create true --local
           poetry config virtualenvs.in-project true --local
-          # Ensure the virtual environment is created before caching
-          poetry install
 
       - uses: actions/cache@v4
         name: Define a cache for the virtual environment based on the dependencies lock file
         with:
           path: ./.venv
           key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Install the project dependencies
+        run: poetry install
 
   migrations:
     needs: cache
@@ -66,7 +67,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
@@ -101,7 +102,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
@@ -148,7 +149,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
@@ -183,7 +184,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
@@ -218,7 +219,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
@@ -252,7 +253,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
@@ -295,7 +296,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
@@ -334,7 +335,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v4
 
       - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
