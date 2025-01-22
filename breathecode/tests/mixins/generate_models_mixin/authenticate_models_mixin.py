@@ -50,7 +50,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
         github_academy_user_kwargs={},
         academy_auth_settings_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         models = models.copy()
 
@@ -251,7 +251,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             models["credentials_quick_books"] = create_models(
                 credentials_quick_books,
                 "authenticate.CredentialsQuickBooks",
-                **{**kargs, **credentials_quick_books_kwargs}
+                **{**kargs, **credentials_quick_books_kwargs},
             )
 
         if not "token" in models and is_valid(token):

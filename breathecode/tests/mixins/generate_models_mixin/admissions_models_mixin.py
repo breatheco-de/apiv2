@@ -88,7 +88,7 @@ class AdmissionsModelsMixin(ModelsMixin):
         syllabus_schedule_time_slot_kwargs={},
         syllabus_version_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         models = models.copy()
 
@@ -248,7 +248,7 @@ class AdmissionsModelsMixin(ModelsMixin):
             models["syllabus_schedule_time_slot"] = create_models(
                 syllabus_schedule_time_slot,
                 "admissions.SyllabusScheduleTimeSlot",
-                **{**kargs, **syllabus_schedule_time_slot_kwargs}
+                **{**kargs, **syllabus_schedule_time_slot_kwargs},
             )
 
         if not "cohort_time_slot" in models and (is_valid(cohort_time_slot) or is_valid(live_class)):

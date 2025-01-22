@@ -26,7 +26,7 @@ class LinkedServicesMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
         first_party_webhook_log=False,
         first_party_credentials=False,
         models={},
-        **kwargs
+        **kwargs,
     ):
         models = models.copy()
 
