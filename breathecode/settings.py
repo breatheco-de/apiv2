@@ -135,8 +135,8 @@ MIDDLEWARE = [
     "django.middleware.http.ConditionalGetMiddleware",
 ]
 
-if ENVIRONMENT != "test":
-    MIDDLEWARE += ["django_minify_html.middleware.MinifyHtmlMiddleware"]
+# if ENVIRONMENT != "test":
+#     MIDDLEWARE += ["django_minify_html.middleware.MinifyHtmlMiddleware"]
 
 if os.getenv("GOOGLE_APPLICATION_CREDENTIALS") and (GS_BUCKET_NAME := os.getenv("STATIC_BUCKET")):
     from google.oauth2 import service_account

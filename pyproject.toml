@@ -132,7 +132,6 @@ dependencies = [
     "psycopg[binary,pool] (>=3.2.4,<4.0.0)",
     "adrf (>=0.1.9,<0.2.0)",
     "cryptography (>=44.0.0,<45.0.0)",
-    "django-minify-html (>=1.11.0,<2.0.0)",
     "django-storages[django] (>=1.14.4,<2.0.0)",
     "aiohttp[speedups] (>=3.11.11,<4.0.0)",
     "aiodns (>=3.2.0,<4.0.0)",
