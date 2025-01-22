@@ -167,7 +167,7 @@ jobs:
           cp .env.example .env
 
       - name: Check for undefined variables
-        run: poetry run flake8 --select=F
+        run: poetry run flake8 . --select=F
 
   naming-conventions:
     needs: cache
@@ -202,7 +202,7 @@ jobs:
           cp .env.example .env
 
       - name: Check for undefined variables
-        run: poetry run flake8 --select=N
+        run: poetry run flake8 . --select=N
 
   unexpected-behaviors:
     needs: cache
@@ -237,7 +237,7 @@ jobs:
           cp .env.example .env
 
       - name: Check for undefined variables
-        run: poetry run flake8 --select=B
+        run: poetry run flake8 . --select=B
 
   tests:
     needs: [migrations]
