@@ -272,7 +272,7 @@ jobs:
 
       - name: Run tests
         run: |
-          poetry run ptest-ci
+          poetry run test:ci
 
       # - name: Upload coverage data to coveralls.io
       #   if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
