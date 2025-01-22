@@ -22,7 +22,7 @@ def create_models(attr, path, **kwargs):
             **{
                 **kwargs,
                 **arguments,
-            }
+            },
         )
         for how_many, arguments in argument_parser(attr)
     ]

@@ -24,46 +24,33 @@ jobs:
   cache:
     runs-on: ubuntu-latest
 
-    outputs:
-      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    # outputs:
+    #   cache-hit: ${{ steps.cache.outputs.cache-hit }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+          # Ensure the virtual environment is created before caching
+          poetry install
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
         with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
-
-      # Install dependencies using Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          pip install pipenv
-          pipenv install --dev
-
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
-        run: |
-          pip install pipenv
-
-      - name: Determine Pipenv virtual environment location
-        run: |
-          echo "Virtualenv location: $(pipenv --venv)"
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
 
   migrations:
     needs: cache
@@ -71,75 +58,77 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install pipenv
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
 
       - name: Check migrations
         run: |
-          pipenv run python ./scripts/pending_migrations.py
+          poetry run python ./scripts/pending_migrations.py
 
   dependencies:
     needs: cache
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
 
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install pipenv
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
 
       - name: Calculate initial MD5 for Pipfile.lock
         id: calculate-md5-1
-        run: pipenv run pip freeze -r requirements.txt > requirements.txt
+        run: poetry run pip freeze -r requirements.txt > requirements.txt
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
 
       - name: Update dependencies
         run: |
-          pipenv update --dev --bare
+          poetry update
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
-        run: pipenv run pip freeze -r requirements2.txt > requirements2.txt
+        run: poetry run pip freeze -r requirements2.txt > requirements2.txt
 
       - name: Check Pipfile.lock is up-to-date
         run: diff requirements.txt requirements2.txt
@@ -150,101 +139,34 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install pipenv
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
 
       - name: Check for undefined variables
-        run: pipenv run flake8 --select=F
-
-  # bad-docstrings:
-  #   needs: cache
-  #   runs-on: ubuntu-latest
-  #   continue-on-error: true
-
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - name: Set up Python ${{ env.PYTHON_VERSION }}
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ env.PYTHON_VERSION }}
-
-  #     # Cache Pipenv packages
-  #     - name: Cache Pipenv packages
-  #       uses: actions/cache@v2
-  #       id: cache
-  #       with:
-  #         path: |
-  #           ~/.local/share/virtualenvs
-  #           ~/.cache/pip
-  #         key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
-
-  #     # Install Pipenv
-  #     - name: Install dependencies
-  #       if: steps.cache.outputs.cache-hit == 'true'
-  #       run: |
-  #         pip install pipenv
-
-  #     - name: Check for undefined variables
-  #       run: pipenv run flake8 --select=D
-
-  # code-complexity:
-  #   needs: cache
-  #   runs-on: ubuntu-latest
-  #   continue-on-error: true
-
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - name: Set up Python ${{ env.PYTHON_VERSION }}
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ env.PYTHON_VERSION }}
-
-  #     # Cache Pipenv packages
-  #     - name: Cache Pipenv packages
-  #       uses: actions/cache@v2
-  #       id: cache
-  #       with:
-  #         path: |
-  #           ~/.local/share/virtualenvs
-  #           ~/.cache/pip
-  #         key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
-
-  #     # Install Pipenv
-  #     - name: Install dependencies
-  #       if: steps.cache.outputs.cache-hit == 'true'
-  #       run: |
-  #         pip install pipenv
-
-  #     - name: Check for undefined variables
-  #       run: pipenv run flake8 --select=C
+        run: poetry run flake8 --select=F
 
   naming-conventions:
     needs: cache
@@ -252,33 +174,34 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install pipenv
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
 
       - name: Check for undefined variables
-        run: pipenv run flake8 --select=N
+        run: poetry run flake8 --select=N
 
   unexpected-behaviors:
     needs: cache
@@ -286,33 +209,34 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install pipenv
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
 
       - name: Check for undefined variables
-        run: pipenv run flake8 --select=B
+        run: poetry run flake8 --select=B
 
   tests:
     needs: [migrations]
@@ -320,52 +244,41 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install pipenv
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
 
       - name: Run tests
         run: |
-          pipenv run pcov_ci
+          poetry run ptest-ci
 
-      # codecov stop working
-      # - uses: codecov/codecov-action@v3
+      # - name: Upload coverage data to coveralls.io
       #   if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-      #     files: ./coverage.xml # optional
-      #     flags: unittests # optional
-      #     name: codecov-umbrella # optional
-      #     fail_ci_if_error: true # optional (default = false)
-      #     verbose: true # optional (default = false)
-
-      - name: Upload coverage data to coveralls.io
-        if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
-        run: |
-          pipenv run coveralls --service=github
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      #   run: |
+      #     poetry run coveralls --service=github
+      #   env:
+      #     GITHUB_TOKEN: ${{ github.token }}
 
   linter:
     needs: [migrations]
@@ -374,71 +287,72 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install pipenv
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
 
       - name: Linter
         run: |
-          pipenv run format
+          poetry run format
 
   pages:
     needs: [migrations]
     if: >-
       github.repository == 'breatheco-de/apiv2' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/development'
+      github.ref == 'refs/heads/main'
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Cache Pipenv packages
-      - name: Cache Pipenv packages
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: |
-            ~/.local/share/virtualenvs
-            ~/.cache/pip
-          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2
 
-      # Install Pipenv
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+      - name: Setup a local virtual environment (if no poetry.toml file)
         run: |
-          pip install pipenv
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
 
       - name: Deploy docs
-        run: pipenv run mkdocs gh-deploy --force
+        run: poetry run mkdocs gh-deploy --force
 
   dockerhub:
     needs: tests
