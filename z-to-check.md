@@ -44,3 +44,4 @@ coveralls
 # dev abandoned packages
 
 mixer -> affects the mixer version
+.
