@@ -2,7 +2,7 @@ import logging
 from collections import OrderedDict
 
 from capyc.rest_framework.exceptions import ValidationException
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.db.models import Q
 
 from breathecode.admissions.actions import ImportCohortTimeSlots
@@ -10,6 +10,8 @@ from breathecode.assignments.models import Task
 from breathecode.assignments.serializers import TaskGETSmallSerializer
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 from breathecode.utils import localize_query, serializers, serpy
+from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.serializers import SettingsSerializer, GetPermissionSmallSerializer
 
 from .actions import haversine, test_syllabus
 from .models import (
@@ -583,13 +585,16 @@ class UserMeSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
+    username = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    date_joined = serpy.Field()
     github = serpy.MethodField()
     profile = ProfileSerializer(required=False)
-    roles = serpy.MethodField()
     cohorts = serpy.MethodField()
-    date_joined = serpy.Field()
+    roles = serpy.MethodField()
+    permissions = serpy.MethodField()
+    settings = serpy.MethodField()
 
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
@@ -606,6 +611,18 @@ class UserMeSerializer(serpy.Serializer):
             Q(educational_status="DROPPED") | Q(educational_status="SUSPENDED")
         )
         return GETCohortUserSmallSerializer(cohorts, many=True).data
+
+    def get_settings(self, obj):
+        settings = get_user_settings(obj.id)
+        return SettingsSerializer(settings, many=False).data
+
+    def get_permissions(self, obj):
+        permissions = Permission.objects.none()
+
+        for group in obj.groups.all():
+            permissions |= group.permissions.all()
+
+        return GetPermissionSmallSerializer(permissions.distinct().order_by("-id"), many=True).data
 
 
 class GetSyllabusSerializer(serpy.Serializer):
