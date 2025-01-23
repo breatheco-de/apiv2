@@ -1488,6 +1488,9 @@ class Consumable(AbstractServiceItem):
                 )
             )
 
+        if self.how_many < 0 and self.service_item.how_many >= 0:
+            self.how_many = 0
+
         return super().clean()
 
     def save(self, *args, **kwargs):
