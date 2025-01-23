@@ -507,6 +507,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "crud_keywordcluster",
                 "crud_asset",
                 "read_category",
+                "read_asset_error",
             ],
         }
     )
