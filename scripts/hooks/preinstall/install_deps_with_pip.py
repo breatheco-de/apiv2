@@ -11,8 +11,10 @@ from scripts.utils.get_pip_path import get_pip_path
 pip_path = get_pip_path()
 commands = ";\n".join(
     [
+        f"{pip_path} install pipx || {pip_path} install --upgrade pipx",
         f"{pip_path} install --upgrade pip",
-        f"{pip_path} install --upgrade yapf pipenv toml",
+        f"{pip_path} install --upgrade yapf poetry toml",
+        "pipx install poetry || pipx install poetry",
         "",
     ]
 )

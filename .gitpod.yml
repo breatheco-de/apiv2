@@ -10,20 +10,31 @@ ports:
 tasks:
   - command: redis-server
   - init: |
+      python_version=$(cat .python-version) &&
+      pyenv update &&
+      echo 'source "$HOME/.gp_pyenv.d/userbase.bash"' >> $HOME/.pyenv/libexec/pyenv-global &&
+      pyenv install -s $python_version &&
+      pyenv global $python_version &&
       python -m scripts.install &&
       gp sync-done deps
-    command: pipenv run celery
+    command: poetry run celery
   - init: gp sync-await deps
     command: >
+      python_version=$(cat .python-version) &&
+      pyenv global $python_version &&
       ./scripts/utils/wait-port.sh localhost 5432 &&
       (psql -U gitpod -c 'CREATE DATABASE breathecode;' || true) &&
       (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
       export CACHE=0 &&
-      pipenv run migrate &&
-      pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
-      pipenv run python manage.py create_academy_roles &&
+      poetry run migrate &&
+      poetry run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
+      poetry run python manage.py create_academy_roles &&
       export CACHE=1 &&
-      pipenv run start;
+      poetry run start;
+  - init: gp sync-await deps
+    command: >
+      python_version=$(cat .python-version) &&
+      pyenv global $python_version
   - init: gp sync-await deps
 
 vscode:
@@ -42,4 +53,5 @@ vscode:
     - tamasfe.even-better-toml
     - ms-python.flake8
     - donjayamanne.githistory
+    - supermaven.supermaven
     - ms-python.debugpy
