@@ -82,14 +82,14 @@ def test_location_url(
     url = reverse_lazy("v2:authenticate:app_student_id", kwargs={"user_id_or_email": 1})
 
     model = database.create(
-        app={
+        linked_services__app={
             "require_an_agreement": False,
             "slug": "rigobot",
             **get_app_signature(),
         },
     )
 
-    service.sign_jwt(client, model.app)
+    service.sign_jwt(client, model.linked_services__app)
     response = client.get(url)
 
     json = response.json()
@@ -108,14 +108,14 @@ def test_location_url_(
     url = reverse_lazy("v2:authenticate:app_student_id", kwargs={"user_id_or_email": "a"})
 
     model = database.create(
-        app={
+        linked_services__app={
             "require_an_agreement": False,
             "slug": "rigobot",
             **get_app_signature(),
         },
     )
 
-    service.sign_jwt(client, model.app)
+    service.sign_jwt(client, model.linked_services__app)
     response = client.get(url)
 
     json = response.json()
