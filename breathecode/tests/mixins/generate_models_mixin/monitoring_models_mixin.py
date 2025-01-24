@@ -22,7 +22,7 @@ class MonitoringModelsMixin(ModelsMixin):
         endpoint_kwargs={},
         monitor_script_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()
@@ -69,7 +69,7 @@ class MonitoringModelsMixin(ModelsMixin):
                 "monitoring.CSVUpload",
                 **{
                     **kargs,
-                }
+                },
             )
 
         if not "stripe_event" in models and is_valid(stripe_event):
@@ -80,7 +80,7 @@ class MonitoringModelsMixin(ModelsMixin):
                 "monitoring.StripeEvent",
                 **{
                     **kargs,
-                }
+                },
             )
 
         return models

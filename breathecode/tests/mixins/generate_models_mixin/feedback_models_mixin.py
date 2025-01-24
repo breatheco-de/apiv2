@@ -26,7 +26,7 @@ class FeedbackModelsMixin(ModelsMixin):
         survey_kwargs={},
         answer_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         os.environ["EMAIL_NOTIFICATIONS_ENABLED"] = "TRUE"

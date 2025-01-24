@@ -25,7 +25,7 @@ class CertificateModelsMixin(ModelsMixin):
         layout_design_kwargs={},
         user_specialty_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()

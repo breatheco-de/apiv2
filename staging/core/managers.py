@@ -1,11 +1,12 @@
 import os
 from typing import Optional
+
 from dotenv import dotenv_values
 
 
 class EnvLoader:
-    def __init_subclass__(self) -> None:
-        self._load_flags()
+    def __init_subclass__(cls) -> None:
+        cls._load_flags()
 
     @classmethod
     def _load_flags(cls) -> None:

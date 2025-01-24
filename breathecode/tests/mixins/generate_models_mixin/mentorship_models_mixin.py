@@ -16,7 +16,7 @@ class MentorshipModelsMixin(ModelsMixin):
         mentorship_bill=False,
         mentorship_session=False,
         models={},
-        **kwargs
+        **kwargs,
     ):
         models = models.copy()
 

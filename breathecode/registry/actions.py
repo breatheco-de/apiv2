@@ -1206,8 +1206,8 @@ def add_syllabus_translations(_json: dict):
                             "title": a.title,
                         }
                         # add translations technologies as well
-                        _assetTechs = a.technologies.all()
-                        for t in _assetTechs:
+                        asset_techs = a.technologies.all()
+                        for t in asset_techs:
                             # Use the slug as a unique key to avoid duplicates
                             if t.slug not in unique_technologies:
                                 unique_technologies[t.slug] = {"slug": t.slug, "title": t.title}
@@ -1218,8 +1218,8 @@ def add_syllabus_translations(_json: dict):
                             "title": _asset.title,
                         }
 
-                    _assetTechs = _asset.technologies.all()
-                    for t in _assetTechs:
+                    asset_techs = _asset.technologies.all()
+                    for t in asset_techs:
                         # Use the slug as a unique key to avoid duplicates
                         if t.slug not in unique_technologies:
                             unique_technologies[t.slug] = {"slug": t.slug, "title": t.title}

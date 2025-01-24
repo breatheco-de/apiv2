@@ -37,7 +37,7 @@ class MarketingModelsMixin(ModelsMixin):
         lead_generation_app_kwargs={},
         downloadable_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()
@@ -53,7 +53,7 @@ class MarketingModelsMixin(ModelsMixin):
             models["active_campaign_academy"] = create_models(
                 active_campaign_academy,
                 "marketing.ActiveCampaignAcademy",
-                **{**kargs, **active_campaign_academy_kwargs}
+                **{**kargs, **active_campaign_academy_kwargs},
             )
 
         if not "automation" in models and is_valid(automation):

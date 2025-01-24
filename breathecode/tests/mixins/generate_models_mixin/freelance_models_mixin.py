@@ -20,7 +20,7 @@ class FreelanceModelsMixin(ModelsMixin):
         bill_kwargs={},
         issue_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()
