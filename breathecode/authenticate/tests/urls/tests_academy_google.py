@@ -11,8 +11,6 @@ from urllib.parse import urlencode
 
 import pytest
 from capyc import pytest as capy
-from django import shortcuts
-from django.http import JsonResponse
 from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
@@ -21,64 +19,11 @@ from rest_framework.test import APIClient
 callback = str(base64.urlsafe_b64encode(b"https://potato.io"), "utf-8")
 
 
-@pytest.fixture(autouse=True)
-def redirect_url(monkeypatch: pytest.MonkeyPatch):
-    def redirect_url(*args, **kwargs):
-
-        if args:
-            args = args[1:]
-
-        if args:
-            try:
-                kwargs["_template"] = args[0]
-            except:
-                ...
-
-            try:
-                kwargs["context"] = args[1]
-            except:
-                ...
-
-            try:
-                if args[2]:
-                    kwargs["content_type"] = args[2]
-            except:
-                ...
-
-            try:
-                if args[3]:
-                    kwargs["status"] = args[3]
-            except:
-                ...
-
-            try:
-                if args[4]:
-                    kwargs["using"] = args[4]
-            except:
-                ...
-
-        if "context" in kwargs:
-            kwargs.update(kwargs["context"])
-            del kwargs["context"]
-
-        if "academy" in kwargs:
-            kwargs["academy"] = kwargs["academy"].id
-
-        return JsonResponse(kwargs, status=kwargs["status"])
-
-    monkeypatch.setattr(
-        shortcuts,
-        "render",
-        MagicMock(side_effect=redirect_url),
-    )
-    yield
-
-
 b = os.urandom(16)
 
 
 @pytest.fixture(autouse=True)
-def setup(monkeypatch: pytest.MonkeyPatch, db):
+def setup(monkeypatch: pytest.MonkeyPatch, db, patch_render):
 
     monkeypatch.setattr("os.urandom", lambda _: b)
     monkeypatch.setattr("breathecode.authenticate.tasks.create_user_from_invite.delay", MagicMock())
@@ -164,7 +109,6 @@ def test_no_callback_url(database: capy.Database, client: APIClient, format: cap
 
 def test_redirect_to_google(database: capy.Database, client: APIClient, format: capy.Format, utc_now: datetime):
     model = database.create(token=1, user=1)
-    print(utc_now)
     url = reverse_lazy("authenticate:academy_google") + f"?token={model.token.key}&url={callback}"
     response = client.get(url, headers={"Academy": 1})
 
@@ -194,12 +138,13 @@ def test_no_capability_with_academy_settings(
     database: capy.Database, client: APIClient, format: capy.Format, utc_now: datetime, academy_settings: str
 ):
     model = database.create(token=1, user=1)
-    print(utc_now)
     url = (
         reverse_lazy("authenticate:academy_google")
         + f"?token={model.token.key}&url={callback}&academysettings={academy_settings}"
     )
     response = client.get(url, headers={"Academy": 1})
+
+    print(response.content)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     json = response.json()

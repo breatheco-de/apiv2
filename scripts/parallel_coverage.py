@@ -62,8 +62,6 @@ def run():
         f"--cov={module} --cov-report html -n auto --nomigrations --durations=1"
     )
 
-    print(command)
-
     env = os.environ.copy()
     env["ENV"] = "test"
     env["RANDOM_SEED"] = str(seed)

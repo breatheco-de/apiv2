@@ -36,16 +36,8 @@ API_KEY = random.randint(1, 1000000000)
 
 @pytest.fixture(autouse=True)
 def setup(db, fake, monkeypatch: pytest.MonkeyPatch):
-    # def is_enabled(feature, context, default):
-    #     if feature == "payments.can_access":
-    #         return True
-
-    #     return False
-
-    # m = MagicMock(side_effect=is_enabled)
 
     monkeypatch.setenv("APP_URL", fake.url())
-    # monkeypatch.setattr(feature, "is_enabled", m)
 
     yield
 
@@ -55,9 +47,6 @@ class IsEnabledFixture:
         self.monkeypatch = monkeypatch
         self.can_access = True
         self.bypass_consumption = False
-
-    # def __call__(self, feature, context, default):
-    #     ...
 
     def setup(self):
         def is_enabled(feature, context, default):
@@ -3200,8 +3189,6 @@ class AuthenticateTestSuite(MentorshipTestCase):
             }
             for x in ["ACTIVE", "UNLISTED"]
         ]
-
-        print(1, feature.is_enabled)
 
         id = 0
         for mentor_profile in mentor_profile_cases:

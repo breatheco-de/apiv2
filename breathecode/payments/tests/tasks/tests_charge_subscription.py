@@ -242,6 +242,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "status": "RENEWAL",
                         "user_id": 1,
                         "was_delivered": True,
+                        "chosen_period": "MONTH",
                     }
                 ),
             ],
