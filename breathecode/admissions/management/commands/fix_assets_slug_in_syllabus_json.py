@@ -1,6 +1,8 @@
 import json
+
 from django.core.management.base import BaseCommand
-from .models import SyllabusVersion
+
+from breathecode.admissions.models import SyllabusVersion
 from breathecode.registry.models import Asset
 
 

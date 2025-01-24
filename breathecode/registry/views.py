@@ -213,6 +213,10 @@ class TechnologyView(APIView):
             param = request.GET.get("lang")
             items = items.filter(Q(lang__iexact=param) | Q(lang="") | Q(lang__isnull=True))
 
+        if "only_lang" in request.GET:
+            param = request.GET.get("only_lang")
+            items = items.filter(Q(lang__iexact=param))
+
         if "is_deprecated" not in request.GET or request.GET.get("is_deprecated").lower() == "false":
             items = items.filter(is_deprecated=False)
 

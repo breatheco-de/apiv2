@@ -166,19 +166,23 @@ class UserAdmin(UserAdmin):
     actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password]
 
     def get_queryset(self, request):
+        self.callback_url = "https://4geeks.com"
+        self.callback_url = str(base64.urlsafe_b64encode(self.callback_url.encode("utf-8")), "utf-8")
 
-        self.github_callback = "https://4geeks.com"
-        self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode("utf-8")), "utf-8")
         return super(UserAdmin, self).get_queryset(request)
 
     def github_login(self, obj):
+
         return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/github/?user={obj.id}&url={self.github_callback}'>connect github</a>"
+            f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/github/?user={obj.id}&url={self.callback_url}'>connect github</a>"
         )
 
     def google_login(self, obj):
+        self.github_callback = "https://4geeks.com"
+        self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode("utf-8")), "utf-8")
+
         return format_html(
-            "<a rel='noopener noreferrer' target='_blank' href='/v1/auth/academy/google'>connect google</a>"
+            f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/academy/google?academysettings=set&url={self.callback_url}'>connect google</a>"
         )
 
 
@@ -494,8 +498,8 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         self.admin_request = request
 
-        self.github_callback = "https://4geeks.com"
-        self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode("utf-8")), "utf-8")
+        self.callback_url = "https://4geeks.com"
+        self.callback_url = str(base64.urlsafe_b64encode(self.callback_url.encode("utf-8")), "utf-8")
         return super(AcademyAuthSettingsAdmin, self).get_queryset(request)
 
     def github_errors(self, obj):
@@ -511,7 +515,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
 
         scopes = str(base64.urlsafe_b64encode(b"user repo admin:org"), "utf-8")
         return format_html(
-            f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.github_callback}&scope={scopes}'>connect github</a>"
+            f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.callback_url}&scope={scopes}'>connect github</a>"
         )
 
     def authenticate_google(self, obj):
@@ -523,7 +527,9 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         current_url = f"{request.scheme}://{request.get_host()}{request.get_full_path()}"
         current_url = str(base64.urlsafe_b64encode(current_url.encode("utf-8")), "utf-8")
 
-        return format_html(f"<a href='/v1/auth/academy/google?url={current_url}'>connect google</a>")
+        return format_html(
+            f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/academy/google?academysettings=set&url={current_url}'>connect google</a>"
+        )
 
 
 @admin.register(GoogleWebhook)
