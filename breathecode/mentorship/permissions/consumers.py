@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tuple[dict, tuple, dict]:
-
     context["price"] = 0
     request = context["request"]
     consumable = None
@@ -72,10 +71,15 @@ def mentorship_service_by_url_param(context: ServiceContext, args: tuple, kwargs
             )
         )
 
-    if mentor_profile.user.id != request.user.id:
-        context = feature.context(to="mentorship-service", user=request.user, mentorship_service=mentorship_service)
-
-    if mentor_profile.user.id != request.user.id and feature.is_enabled("payments.can_access", context, True) is False:
+    if (
+        mentor_profile.user.id != request.user.id
+        and feature.is_enabled(
+            "payments.can_access",
+            context=feature.context(to="mentorship-service", user=request.user, mentorship_service=mentorship_service),
+            default=True,
+        )
+        is False
+    ):
         raise ValidationException(
             translation(
                 lang,
