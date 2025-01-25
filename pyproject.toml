@@ -20,6 +20,9 @@ update-sql-keywords = "scripts.update_sql_keywords_json:write_json"
 "docker:build" = "scripts.docker_build:run"
 # flake8 = "scripts.cmd:flake8"
 
+[tool.poetry.requires-plugins]
+poetry-plugin-dotenv = ">=2.6.1"
+
 [tool.poetry]
 package-mode = true
 
