@@ -15,14 +15,14 @@ new-relic:
 release:
 	@export CORALOGIX_SUBSYSTEM=web; \
 		export NEW_RELIC_METADATA_COMMIT=${HEROKU_SLUG_COMMIT}; \
-		# newrelic-admin run-program bin/start-pgbouncer-stunnel \
+		# newrelic-admin run-program bin/start-pgbouncer \
 		gunicorn breathecode.wsgi --timeout 29 --workers ${WEB_WORKERS} \
 		--worker-connections ${WEB_WORKER_CONNECTION} --worker-class ${WEB_WORKER_CLASS}
 
 web:
 	@export CORALOGIX_SUBSYSTEM=web; \
 		export NEW_RELIC_METADATA_COMMIT=${HEROKU_SLUG_COMMIT}; \
-		# newrelic-admin run-program bin/start-pgbouncer-stunnel \
+		# newrelic-admin run-program bin/start-pgbouncer \
 		gunicorn breathecode.wsgi --timeout 29 --workers ${WEB_WORKERS} \
 		--worker-connections ${WEB_WORKER_CONNECTION} --worker-class ${WEB_WORKER_CLASS}
 

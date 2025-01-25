@@ -44,7 +44,7 @@ def install_precommit():
 
 
 def celery():
-    os.system(f"celery -A works.celery worker --loglevel=INFO {get_arguments()}")
+    os.system(f"python -m celery -A breathecode.celery worker --loglevel=INFO {get_arguments()}")
 
 
 def docs_serve():

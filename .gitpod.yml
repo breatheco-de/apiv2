@@ -30,12 +30,11 @@ tasks:
       poetry run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
       poetry run python manage.py create_academy_roles &&
       export CACHE=1 &&
-      poetry run start;
+      poetry run dev;
   - init: gp sync-await deps
     command: >
       python_version=$(cat .python-version) &&
       pyenv global $python_version
-  - init: gp sync-await deps
 
 vscode:
   extensions:
