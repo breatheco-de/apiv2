@@ -11,8 +11,16 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Generate asset context for all assets."
 
+    def add_arguments(self, parser):
+        parser.add_argument("--all", type=str, help="Allow to update or create context on all assets")
+
     def handle(self, *args, **options):
-        assets = Asset.objects.filter(assetcontext__isnull=True)
+
+        filters = {}
+        if "all" not in options or not options["all"] in ["true, True"]:
+            filters["assetcontext__isnull"] = True
+        assets = Asset.objects.filter(**filters)
+
         for asset in assets:
             try:
                 AssetContext.objects.update_or_create(asset=asset, defaults={"status": "PROCESSING"})
