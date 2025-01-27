@@ -17,9 +17,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         filters = {}
-        if "all" not in options or not options["all"] in ["true, True"]:
+        assets = Asset.objects.all()
+        if "all" not in options or options["all"] not in ["true", "True"]:
             filters["assetcontext__isnull"] = True
-        assets = Asset.objects.filter(**filters)
+        assets = assets.filter(**filters)
 
         for asset in assets:
             try:
