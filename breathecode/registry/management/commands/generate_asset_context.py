@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
         filters = {}
         assets = Asset.objects.all()
-        if "all" not in options or options["all"] not in ["true", "True"]:
+        if "all" not in options or options["all"] not in ["true", "True", "1"]:
             filters["assetcontext__isnull"] = True
         assets = assets.filter(**filters)
 
