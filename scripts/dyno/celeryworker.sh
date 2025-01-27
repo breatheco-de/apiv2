@@ -34,6 +34,6 @@ done
 wait
 
 newrelic-admin run-program bin/start-pgbouncer \
-    celery -A breathecode.celery worker --loglevel=$LOG_LEVEL \
+    python -m celery -A breathecode.celery worker --loglevel=$LOG_LEVEL \
         --prefetch-multiplier=$CELERY_PREFETCH_MULTIPLIER --pool=$CELERY_POOL \
         $SCALING
