@@ -219,6 +219,39 @@ class EventView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserEventCheckinView(APIView):
+    """
+    return future and past events of the user
+    """
+
+    def get(self, request):
+        user = request.user
+
+        user_checkins = EventCheckin.objects.filter(attendee=user).select_related("event")
+
+        event_ids = user_checkins.values_list("event_id", flat=True)
+
+        events = Event.objects.filter(id__in=event_ids)
+
+        upcoming = request.GET.get("upcoming", "").lower() == "true"
+        past = request.GET.get("past", "").lower() == "true"
+
+        if upcoming and past:
+            events = events.filter(Q(ending_at__gte=timezone.now()) | Q(starting_at__lte=timezone.now()))
+        elif upcoming:
+            events = events.filter(ending_at__gte=timezone.now())
+        elif past:
+            events = events.filter(starting_at__lte=timezone.now())
+
+        events = events.order_by("starting_at")
+
+        for event in events:
+            print(f"Event ID: {event.id}, Starting At: {event.starting_at}, Ending At: {event.ending_at}")
+
+        serializer = EventSmallSerializer(events, many=True, context={"user": user})
+        return Response(serializer.data)
+
+
 class EventMeView(APIView):
     extensions = APIViewExtensions(cache=EventCache, cache_per_user=True, paginate=True)
 
