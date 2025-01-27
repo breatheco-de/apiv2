@@ -70,6 +70,7 @@ def serialize_event(event):
                 "id": event.host_user.id,
                 "first_name": event.host_user.first_name,
                 "last_name": event.host_user.last_name,
+                "profile": getattr(event.host_user, "profile", None),
             }
         ),
         "author": (
@@ -133,17 +134,17 @@ def test_filter_by_past_events_of_a_user(client: capy.Client, database: capy.Dat
             "event": 2,
         },
     )
-
+    client.force_authenticate(model.user)
     response = client.get(f"{url}?past=true")
     json = response.json()
 
-    expected = [serialize_event(model.event[0])]
+    expected = [serialize_event(model.event)]
 
     assert response.status_code == 200
     assert expected == json
 
 
-def test_filter_by_past_events_of_a_user(client: capy.Client, database: capy.Database, fake: capy.Fake):
+def test_filter_by_future_events_of_a_user(client: capy.Client, database: capy.Database, fake: capy.Fake):
     url = reverse_lazy("events:me_event_checkin")
 
     model = database.create(
@@ -191,11 +192,11 @@ def test_filter_by_past_events_of_a_user(client: capy.Client, database: capy.Dat
             "event": 2,
         },
     )
-
+    client.force_authenticate(model.user)
     response = client.get(f"{url}?upcoming=true")
     json = response.json()
 
-    expected = [serialize_event(model.event[0])]
+    expected = [serialize_event(model.event)]
 
     assert response.status_code == 200
     assert expected == json
