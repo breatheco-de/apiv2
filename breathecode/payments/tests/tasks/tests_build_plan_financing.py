@@ -274,7 +274,7 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch("logging.Logger.error", MagicMock())
     @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
     @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
-    def test_subscription_was_created(self):
+    def test_subscription_was_created__with_price(self):
         amount = (random.random() * 99) + 1
         price = (random.random() * 99) + 1
         bag = {
