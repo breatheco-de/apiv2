@@ -373,7 +373,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             delta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
 
             subscription.next_payment_at += delta
-            while utc_now > subscription.next_payment_at:
+            while utc_now >= subscription.next_payment_at:
                 subscription.next_payment_at += delta
                 if subscription.valid_until:
                     subscription.valid_until += delta
