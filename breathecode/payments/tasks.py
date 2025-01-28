@@ -825,7 +825,13 @@ def build_subscription(
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_plan_financing(
-    self, bag_id: int, invoice_id: int, is_free: bool = False, conversion_info: Optional[str] = "", **_: Any
+    self,
+    bag_id: int,
+    invoice_id: int,
+    is_free: bool = False,
+    conversion_info: Optional[str] = "",
+    price: Optional[float] = None,
+    **_: Any,
 ):
     logger.info(f"Starting build_plan_financing for bag {bag_id}")
 
@@ -876,7 +882,7 @@ def build_plan_financing(
         selected_mentorship_service_set=mentorship_service_set,
         valid_until=invoice.paid_at + relativedelta(months=months - 1),
         plan_expires_at=invoice.paid_at + delta,
-        monthly_price=invoice.amount,
+        monthly_price=price or invoice.amount,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
     )

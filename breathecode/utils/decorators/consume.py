@@ -3,7 +3,7 @@ import logging
 import os
 import traceback
 from datetime import datetime, timedelta
-from typing import Any, Callable, Optional, TypedDict, Unpack
+from typing import Any, Callable, Optional, TypedDict, TypeVar, Unpack
 
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
@@ -23,9 +23,10 @@ from breathecode.payments.signals import consume_service
 
 from ..exceptions import ProgrammingError
 
-__all__ = ["consume", "Consumer", "ServiceContext"]
+__all__ = ["consume", "Consumer", "ServiceContext", "discount_consumption_sessions", "adiscount_consumption_sessions"]
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class Flags(TypedDict):
@@ -183,6 +184,22 @@ def render_html_error(request, kwargs, service, e):
     )
 
 
+def discount_consumption_sessions(consumables: QuerySet[T]) -> QuerySet[T]:
+    # exclude consumables that is being used in a session.
+    for item in consumables.filter(consumptionsession__status="PENDING").exclude(how_many=0):
+        sum = item.consumptionsession_set.filter(status="PENDING").aggregate(Sum("how_many"))
+
+        if item.how_many - sum["how_many__sum"] == 0:
+            consumables = consumables.exclude(id=item.id)
+
+    return consumables
+
+
+@sync_to_async
+def adiscount_consumption_sessions(consumables: QuerySet[T]) -> QuerySet[T]:
+    return discount_consumption_sessions(consumables)
+
+
 def consume(service: str, consumer: Optional[Consumer] = None, format: str = "json") -> callable:
     """Check if the current user can access to the resource through of permissions."""
 
@@ -271,13 +288,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
 
                 # exclude consumables that is being used in a session.
                 if consumer and context["lifetime"]:
-                    consumables = context["consumables"]
-                    for item in consumables.filter(consumptionsession__status="PENDING").exclude(how_many=0):
-
-                        sum = item.consumptionsession_set.filter(status="PENDING").aggregate(Sum("how_many"))
-
-                        if item.how_many - sum["how_many__sum"] == 0:
-                            context["consumables"] = context["consumables"].exclude(id=item.id)
+                    context["consumables"] = discount_consumption_sessions(context["consumables"])
 
                 if context["price"] and context["consumables"].count() == 0:
                     raise PaymentException(
@@ -386,13 +397,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
 
                 # exclude consumables that is being used in a session.
                 if consumer and context["lifetime"]:
-                    consumables: QuerySet[Consumable] = context["consumables"]
-                    for item in consumables.filter(consumptionsession__status="PENDING").exclude(how_many=0):
-
-                        sum = await item.consumptionsession_set.filter(status="PENDING").aaggregate(Sum("how_many"))
-
-                        if item.how_many - sum["how_many__sum"] == 0:
-                            context["consumables"] = context["consumables"].exclude(id=item.id)
+                    context["consumables"] = await adiscount_consumption_sessions(context["consumables"])
 
                 if context["price"] and await context["consumables"].acount() == 0:
                     raise PaymentException(
