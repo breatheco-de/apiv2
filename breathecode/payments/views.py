@@ -1634,7 +1634,7 @@ class ConsumableCheckoutView(APIView):
         mentorship_service_set = request.data.get("mentorship_service_set")
         event_type_set = request.data.get("event_type_set")
 
-        if [mentorship_service_set, event_type_set].count(None) != 1:
+        if mentorship_service_set is not None and event_type_set is not None:
             raise ValidationException(
                 translation(
                     lang,
@@ -1667,7 +1667,7 @@ class ConsumableCheckoutView(APIView):
                 code=400,
             )
 
-        elif service.type not in ["MENTORSHIP_SERVICE_SET", "EVENT_TYPE_SET"]:
+        elif service.type not in ["MENTORSHIP_SERVICE_SET", "EVENT_TYPE_SET", "VOID"]:
             raise ValidationException(
                 translation(
                     lang,
