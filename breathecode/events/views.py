@@ -221,32 +221,27 @@ class EventView(APIView):
 
 class UserEventCheckinView(APIView):
     """
-    return future and past events of the user
+    Return future and past events of the user. Accepts query parameters 'upcoming' and 'past' for filtering.
+    If no parameters are provided, returns both upcoming and past events.
     """
 
     def get(self, request):
         user = request.user
 
         user_checkins = EventCheckin.objects.filter(attendee=user).select_related("event")
-
         event_ids = user_checkins.values_list("event_id", flat=True)
 
         events = Event.objects.filter(id__in=event_ids)
 
-        upcoming = request.GET.get("upcoming", "").lower() == "true"
-        past = request.GET.get("past", "").lower() == "true"
+        lookup = {}
 
-        if upcoming and past:
-            events = events.filter(Q(ending_at__gte=timezone.now()) | Q(starting_at__lte=timezone.now()))
-        elif upcoming:
-            events = events.filter(ending_at__gte=timezone.now())
-        elif past:
-            events = events.filter(starting_at__lte=timezone.now())
+        if self.request.GET.get("upcoming", "") == "true":
+            lookup["ending_at__gte"] = timezone.now()
+        elif self.request.GET.get("past", "") == "true":
+            lookup["starting_at__lte"] = timezone.now()
 
+        events = events.filter(**lookup)
         events = events.order_by("starting_at")
-
-        for event in events:
-            print(f"Event ID: {event.id}, Starting At: {event.starting_at}, Ending At: {event.ending_at}")
 
         serializer = EventSmallSerializer(events, many=True, context={"user": user})
         return Response(serializer.data)
