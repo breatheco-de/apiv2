@@ -388,7 +388,7 @@ def patch_render(monkeypatch: pytest.MonkeyPatch):
         if "academy" in kwargs:
             kwargs["academy"] = kwargs["academy"].id
 
-        return JsonResponse(kwargs, status=kwargs["status"])
+        return JsonResponse(kwargs, status=kwargs.get("status", 999))
 
     monkeypatch.setattr(
         shortcuts,
