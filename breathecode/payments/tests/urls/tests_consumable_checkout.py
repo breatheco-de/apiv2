@@ -309,7 +309,13 @@ class SignalTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:consumable_checkout")
-        data = {"service": 1, "how_many": 1, "academy": 1}
+        data = {
+            "service": 1,
+            "how_many": 1,
+            "academy": 1,
+            "mentorship_service_set": 1,
+            "event_type_set": 1,
+        }
         response = self.client.post(url, data, format="json")
         self.client.force_authenticate(model.user)
 
