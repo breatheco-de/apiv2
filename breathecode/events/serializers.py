@@ -191,6 +191,7 @@ class EventSmallSerializer(EventTinySerializer):
     author = UserSerializer(required=False)
     asset = serpy.MethodField()
     is_public = serpy.Field()
+    recording_url = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -247,6 +248,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
     is_public = serpy.Field()
+    recording_url = serpy.Field()
 
 
 class EventPublicBigSerializer(EventSmallSerializer):
@@ -299,6 +301,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     free_for_all = serpy.Field()
     asset = serpy.MethodField()
     is_public = serpy.Field()
+    recording_url = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -358,10 +361,26 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         exclude = ()
 
+    print("EVENT*******************", Event.recording_url)
+
     def validate(self, data: dict[str, Any]):
         lang = data.get("lang", "en")
 
         academy = self.context.get("academy_id")
+
+        recording_url = data.get("recording_url")
+        if recording_url and not recording_url.startswith(("http://", "https://")):
+            raise ValidationException(
+                translation(
+                    self.context.get("lang", "en"),
+                    en="The recording URL must be a valid URL starting with http:// or https://",
+                    es="La URL de la grabación debe ser una URL válida que comience con http:// o https://",
+                    slug="invalid-recording-url",
+                )
+            )
+        if recording_url is None or recording_url == "":
+            print("No recording_url provided or it's empty", recording_url)
+        print("/////////////////////////////recording_url", recording_url)
 
         if ("tags" not in data and self.instance.tags == "") or ("tags" in data and data["tags"] == ""):
             raise ValidationException(
@@ -377,6 +396,7 @@ class EventSerializer(serializers.ModelSerializer):
 
         title = data.get("title")
         slug = data.get("slug")
+        print("TIIIIITTTTLEEEEEEEEEE", title)
 
         if slug and self.instance:
             raise ValidationException(
