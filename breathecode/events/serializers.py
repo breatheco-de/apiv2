@@ -457,7 +457,7 @@ class EventPUTSerializer(serializers.ModelSerializer):
     ending_at = serializers.DateTimeField(required=False)
     online_event = serializers.BooleanField(required=False)
     status = serializers.CharField(required=False)
-    recording_url = serializers.URLfield(required=False)
+    recording_url = serializers.URLField(required=False)
 
     class Meta:
         model = Event
