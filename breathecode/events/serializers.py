@@ -361,8 +361,6 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         exclude = ()
 
-    print("EVENT*******************", Event.recording_url)
-
     def validate(self, data: dict[str, Any]):
         lang = data.get("lang", "en")
 
@@ -378,9 +376,6 @@ class EventSerializer(serializers.ModelSerializer):
                     slug="invalid-recording-url",
                 )
             )
-        if recording_url is None or recording_url == "":
-            print("No recording_url provided or it's empty", recording_url)
-        print("/////////////////////////////recording_url", recording_url)
 
         if ("tags" not in data and self.instance.tags == "") or ("tags" in data and data["tags"] == ""):
             raise ValidationException(
@@ -396,7 +391,6 @@ class EventSerializer(serializers.ModelSerializer):
 
         title = data.get("title")
         slug = data.get("slug")
-        print("TIIIIITTTTLEEEEEEEEEE", title)
 
         if slug and self.instance:
             raise ValidationException(
