@@ -201,6 +201,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             "free_for_all": False,
             "uuid": uuid,
             "is_public": True,
+            "recording_url": None,
         }
 
         self.assertEqual(self.bc.database.list_of("events.Event"), [kwargs])
@@ -294,6 +295,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             "free_for_all": False,
             "uuid": uuid,
             "is_public": True,
+            "recording_url": None,
         }
 
         self.assertEqual(self.bc.database.list_of("events.Event"), [kwargs])
