@@ -3,22 +3,25 @@ import logging
 logger = logging.getLogger(__name__)
 from breathecode.assignments.models import AssignmentTelemetry, LearnPackWebhook
 
+
 def batch(self, webhook: LearnPackWebhook):
     # lazyload to fix circular import
     from breathecode.registry.models import Asset
     from breathecode.assignments.models import Task
 
     asset = None
-    if "asset_id" in webhook.payload: 
+    if "asset_id" in webhook.payload:
         _id = webhook.payload["asset_id"]
         asset = Asset.objects.filter(id=_id).first()
-    
-    if asset is None:  
+
+    if asset is None:
         _slug = webhook.payload["slug"]
         asset = Asset.get_by_slug(_slug)
 
     if asset is None:
-        raise Exception("Asset specified by learnpack telemetry was not found using either the payload 'asset_id' or 'slug'")
+        raise Exception(
+            "Asset specified by learnpack telemetry was not found using either the payload 'asset_id' or 'slug'"
+        )
 
     telemetry = AssignmentTelemetry.objects.filter(asset_slug=asset.slug, user__id=webhook.payload["user_id"]).first()
 

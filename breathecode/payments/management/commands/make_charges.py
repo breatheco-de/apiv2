@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
+from django.db.models import F
 from django.db.models.query_utils import Q
 from django.utils import timezone
 
@@ -47,7 +48,12 @@ class Command(BaseCommand):
             status="EXPIRED"
         )
 
-        subscriptions = Subscription.objects.filter(*subscription_args, **params)
+        fix_subscriptions = Subscription.objects.filter(*subscription_args, paid_at=F("next_payment_at"), **params)
+
+        for subscription in fix_subscriptions:
+            tasks.fix_subscription_next_payment_at.delay(subscription.id)
+
+        subscriptions = Subscription.objects.filter(*subscription_args, **params).exclude(paid_at=F("next_payment_at"))
         plan_financings = PlanFinancing.objects.filter(*financing_args, **params)
 
         for status in statuses:
