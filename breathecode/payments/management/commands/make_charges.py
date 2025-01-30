@@ -48,7 +48,7 @@ class Command(BaseCommand):
             status="EXPIRED"
         )
 
-        fix_subscriptions = Subscription.objects.filter(*subscription_args, paid_at=F("next_payment_at"), **params)
+        fix_subscriptions = Subscription.objects.filter(paid_at=F("next_payment_at"))
 
         for subscription in fix_subscriptions:
             tasks.fix_subscription_next_payment_at.delay(subscription.id)
