@@ -1,15 +1,22 @@
 import json
 from unittest.mock import MagicMock, call, patch
-from rest_framework.test import APIRequestFactory
-import breathecode.utils.views as views
-from rest_framework import status
-from django.contrib.sessions.backends.db import SessionStore
+
+import pytest
 from django.contrib import messages
+from django.contrib.sessions.backends.db import SessionStore
 from django.http import JsonResponse
+from rest_framework import status
+from rest_framework.test import APIRequestFactory
+
+import breathecode.utils.views as views
 
 from ..mixins import UtilsTestCase
 
 PERMISSION = "can_kill_kenny"
+
+
+@pytest.fixture(autouse=True)
+def setup(db, patch_render): ...
 
 
 def build_view(*args, **kwargs):
@@ -147,21 +154,20 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
         request.session = session
 
         view = build_view("can_kill_kenny")
-
         response = view(request, id=1)
 
-        url_hash = self.bc.format.to_base64(f"/they-killed-kenny?token={model.token}")
-        content = self.bc.format.from_bytes(response.content, "utf-8")
-
-        self.assertEqual(content, "")
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(response.url, f"/v1/auth/view/login?attempt=1&url={url_hash}")
-        self.bc.check.calls(
-            messages.add_message.call_args_list,
-            [
-                call(request, messages.ERROR, "You don't have permission can_kill_kenny to access this view"),
-            ],
+        self.assertEqual(
+            json.loads(response.content),
+            {
+                "status": 403,
+                "_template": "message.html",
+                "MESSAGE": "You don't have permission can_kill_kenny to access this view",
+                "BUTTON": None,
+                "BUTTON_TARGET": "_blank",
+                "LINK": None,
+            },
         )
+        self.bc.check.calls(messages.add_message.call_args_list, [])
 
     # Given: 1 Token
     # When: with token, auth url and no permission
@@ -177,21 +183,20 @@ class FunctionBasedViewTestSuite(UtilsTestCase):
 
         url = self.bc.fake.url()
         view = build_view("can_kill_kenny", url)
-
         response = view(request, id=1)
 
-        url_hash = self.bc.format.to_base64(f"/they-killed-kenny?token={model.token}")
-        content = self.bc.format.from_bytes(response.content, "utf-8")
-
-        self.assertEqual(content, "")
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(response.url, f"{url}?attempt=1&url={url_hash}")
-        self.bc.check.calls(
-            messages.add_message.call_args_list,
-            [
-                call(request, messages.ERROR, "You don't have permission can_kill_kenny to access this view"),
-            ],
+        self.assertEqual(
+            json.loads(response.content),
+            {
+                "status": 403,
+                "_template": "message.html",
+                "MESSAGE": "You don't have permission can_kill_kenny to access this view",
+                "BUTTON": None,
+                "BUTTON_TARGET": "_blank",
+                "LINK": None,
+            },
         )
+        self.bc.check.calls(messages.add_message.call_args_list, [])
 
     # Given: 1 Token
     # When: with token and not auth url

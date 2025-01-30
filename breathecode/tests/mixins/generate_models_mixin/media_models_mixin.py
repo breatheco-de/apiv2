@@ -18,7 +18,7 @@ class MediaModelsMixin(ModelsMixin):
         media_kwargs={},
         media_resolution_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         models = models.copy()
 

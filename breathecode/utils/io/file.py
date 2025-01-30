@@ -212,7 +212,7 @@ def cut_csv(
     start: Optional[int] = None,
     end: Optional[int] = None,
     first: Optional[int] = None,
-    last: Optional[int] = None
+    last: Optional[int] = None,
 ) -> StringIO | BytesIO:
     """Cut a csv file."""
 

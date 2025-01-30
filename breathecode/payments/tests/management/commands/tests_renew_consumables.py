@@ -160,7 +160,7 @@ def test_this_resource_does_not_requires_a_renovation(bc: Breathecode, entity, e
         consumable=(2, consumable),
         service_stock_scheduler=service_stock_schedulers,
         plan_service_item_handler=plan_service_item_handlers,
-        plan=plan
+        plan=plan,
     )
 
     command = Command()
@@ -210,7 +210,7 @@ def test_this_resource_requires_a_renovation(bc: Breathecode, entity, entity_att
         consumable=(2, consumable),
         service_stock_scheduler=service_stock_schedulers,
         plan_service_item_handler=plan_service_item_handlers,
-        plan=plan
+        plan=plan,
     )
 
     command = Command()

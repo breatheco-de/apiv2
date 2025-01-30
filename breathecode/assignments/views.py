@@ -187,7 +187,7 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
         if isinstance(request.query_params, QueryDict):
             for key, value in request.query_params.items():
                 merged_data[key] = value
-        
+
         webhook = LearnPack.add_webhook_to_log(merged_data)
 
         if webhook:

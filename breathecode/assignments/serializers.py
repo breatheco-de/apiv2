@@ -62,6 +62,7 @@ class TaskGETSerializer(serpy.Serializer):
     user = UserSmallSerializer()
     opened_at = serpy.Field()
     delivered_at = serpy.Field()
+    cohort = CohortSmallSerializer(required=False)
     assignment_telemetry = serpy.MethodField()
 
     created_at = serpy.Field()

@@ -140,7 +140,7 @@ def sort_schema(table):
 
     for field in schema:
         if field.field_type == "RECORD":
-            field._fields = sorted(field._fields, key=lambda v: v.name)
+            field._properties["fields"].sort(key=lambda v: v["name"])
 
     return schema
 

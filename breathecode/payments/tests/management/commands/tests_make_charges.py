@@ -16,6 +16,7 @@ UTC_NOW = timezone.now()
 def setup(db: None, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(tasks.charge_subscription, "delay", MagicMock())
     monkeypatch.setattr(tasks.charge_plan_financing, "delay", MagicMock())
+    monkeypatch.setattr(tasks.fix_subscription_next_payment_at, "delay", MagicMock())
 
 
 def test_with_zero_subscriptions(bc: Breathecode):
@@ -25,6 +26,32 @@ def test_with_zero_subscriptions(bc: Breathecode):
     assert result == None
     assert bc.database.list_of("payments.Subscription") == []
     assert tasks.charge_subscription.delay.call_args_list == []
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []
+
+
+def test_fix_next_payment_at_for_subscriptions(bc: Breathecode, utc_now):
+    model = bc.database.create(
+        subscription=[
+            {
+                "valid_until": None,
+                "next_payment_at": utc_now - relativedelta(seconds=1),
+                "paid_at": utc_now - relativedelta(seconds=1),
+            },
+            {
+                "valid_until": utc_now + relativedelta(months=1),
+                "next_payment_at": utc_now - relativedelta(days=1),
+                "paid_at": utc_now - relativedelta(days=1),
+            },
+        ]
+    )
+
+    command = Command()
+    result = command.handle()
+
+    assert result == None
+    assert bc.database.list_of("payments.Subscription") == bc.format.to_dict(model.subscription)
+    assert tasks.charge_subscription.delay.call_args_list == []
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == [call(1), call(2)]
 
 
 @pytest.mark.parametrize(
@@ -50,6 +77,7 @@ def test_with_two_subscriptions__wrong_cases(bc: Breathecode, delta, status, utc
     assert result == None
     assert bc.database.list_of("payments.Subscription") == bc.format.to_dict(model.subscription)
     assert tasks.charge_subscription.delay.call_args_list == []
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
@@ -77,6 +105,7 @@ def test_with_two_subscriptions__expired(bc: Breathecode, delta, status, status_
 
     assert bc.database.list_of("payments.Subscription") == db
     assert tasks.charge_subscription.delay.call_args_list == []
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
@@ -112,6 +141,7 @@ def test_with_two_subscriptions__payment_issue__gt_7_days(
 
     assert bc.database.list_of("payments.Subscription") == db
     assert tasks.charge_subscription.delay.call_args_list == []
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
@@ -145,6 +175,7 @@ def test_with_two_subscriptions__payment_issue__lt_7_days(
 
     assert bc.database.list_of("payments.Subscription") == db
     assert tasks.charge_subscription.delay.call_args_list == [call(1), call(2)]
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
@@ -171,6 +202,7 @@ def test_with_two_subscriptions__valid_cases(bc: Breathecode, delta, status, utc
         call(model.subscription[0].id),
         call(model.subscription[1].id),
     ]
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []
 
 
 # 🔽🔽🔽 PlanFinancing cases
@@ -214,6 +246,7 @@ def test_with_two_plan_financings__wrong_cases(bc: Breathecode, delta, status, u
     assert result == None
     assert bc.database.list_of("payments.PlanFinancing") == bc.format.to_dict(model.plan_financing)
     assert tasks.charge_plan_financing.delay.call_args_list == []
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
@@ -248,6 +281,7 @@ def test_with_two_plan_financings__expired(bc: Breathecode, delta, status, statu
 
     assert bc.database.list_of("payments.PlanFinancing") == db
     assert tasks.charge_plan_financing.delay.call_args_list == []
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []
 
 
 @pytest.mark.parametrize(
@@ -280,3 +314,4 @@ def test_with_two_plan_financings__valid_cases(bc: Breathecode, delta, status, u
         call(model.plan_financing[0].id),
         call(model.plan_financing[1].id),
     ]
+    assert tasks.fix_subscription_next_payment_at.delay.call_args_list == []

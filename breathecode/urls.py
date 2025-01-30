@@ -34,11 +34,12 @@ versions = {
         path("activity/", include("breathecode.activity.urls.v2", namespace="activity")),
         path("registry/", include("breathecode.registry.urls.v2", namespace="registry")),
         path("media/", include("breathecode.media.urls.v2", namespace="media")),
+        path("auth/", include("breathecode.authenticate.urls.v2", namespace="auth")),
     ],
 }
 
 apps = [
-    ("v1/auth/", "breathecode.authenticate.urls", "auth"),
+    ("v1/auth/", "breathecode.authenticate.urls.v1", "auth"),
     ("v1/admissions/", "breathecode.admissions.urls", "admissions"),
     ("v1/assignment/", "breathecode.assignments.urls", "assignments"),
     ("v1/freelance/", "breathecode.freelance.urls", "freelance"),

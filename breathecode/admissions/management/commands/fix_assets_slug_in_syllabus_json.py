@@ -1,5 +1,7 @@
 import json
+
 from django.core.management.base import BaseCommand
+
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.registry.models import Asset
 
@@ -9,7 +11,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            print("EXECUTING FIX SYLLABUS")
             from breathecode.certificate.actions import syllabus_weeks_to_days
 
             syllabus_list = SyllabusVersion.objects.all()

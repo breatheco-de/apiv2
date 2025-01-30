@@ -25,7 +25,7 @@ class ProvisioningModelsMixin(ModelsMixin):
         provisioning_consumption_event=False,
         provisioning_user_consumption=False,
         models={},
-        **kwargs
+        **kwargs,
     ):
         models = models.copy()
 

@@ -1,15 +1,15 @@
-from datetime import timedelta
 import math
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
-from rest_framework.authtoken.models import Token
 
 from django.urls import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 
 from breathecode.payments import signals
 
-from django.utils import timezone
 from ..mixins import PaymentsTestCase
 
 UTC_NOW = timezone.now()
@@ -64,6 +64,7 @@ def plan_serializer(self, plan, service, currency, groups=[], permissions=[], se
         "currency": currency_serializer(currency),
         "slug": plan.slug,
         "status": plan.status,
+        "id": plan.id,
         "time_of_life": plan.time_of_life,
         "time_of_life_unit": plan.time_of_life_unit,
         "trial_duration": plan.trial_duration,

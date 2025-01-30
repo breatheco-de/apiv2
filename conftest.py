@@ -1,29 +1,36 @@
 import os
-from typing import Generator, Optional
+import secrets
+from typing import Any, Callable, Generator, Optional
 from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
 from capyc.pytest.core.fixtures import Random
 from capyc.pytest.django.fixtures.signals import Signals
+from django import shortcuts
 from django.core.cache import cache
+from django.http import JsonResponse
 from django.utils import timezone
+from linked_services.django import actions
 from rest_framework.test import APIClient
 
 from breathecode.notify.utils.hook_manager import HookManagerClass
-from breathecode.utils.exceptions import TestError
 
 # set ENV as test before run django
 os.environ["ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 pytest_plugins = (
-    "staging.pytest.core",
-    "capyc.pytest.core",
-    "capyc.pytest.newrelic",
-    "capyc.pytest.django",
-    "capyc.pytest.rest_framework",
-    "capyc.pytest.circuitbreaker",
+    # "staging.pytest.core",
+    "staging.pytest",
+    # "capyc.pytest.core",
+    # "capyc.pytest.newrelic",
+    # "capyc.pytest.django",
+    # "capyc.pytest.rest_framework",
+    # "capyc.pytest.circuitbreaker",
+    "capyc.pytest",
+    "linked_services.pytest",
+    "task_manager.pytest.core",
 )
 
 from breathecode.tests.mixins.breathecode_mixin import Breathecode
@@ -142,22 +149,24 @@ def enable_signals(signals: Signals):
 
 
 @pytest.fixture
-def patch_request(monkeypatch):
+def patch_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[Callable[[Optional[list[tuple[Any, Any, int]]]], MagicMock], None, None]:
 
     def patcher(conf=None):
         if not conf:
             conf = []
 
         def wrapper(*args, **kwargs):
-            raises = True
+            found = False
 
             for c in conf:
                 if args == c[0].args and kwargs == c[0].kwargs:
-                    raises = False
+                    found = True
                     break
 
-            if raises:
-                raise TestError(f"Avoiding to make a real request to {args} {kwargs}")
+            if found is False:
+                raise Exception(f"Avoiding to make a real request to {args} {kwargs}")
 
             mock = MagicMock()
 
@@ -174,7 +183,7 @@ def patch_request(monkeypatch):
             return mock
 
         mock = MagicMock()
-        monkeypatch.setattr("requests.api.request", wrapper)
+        monkeypatch.setattr("requests.api.request", MagicMock(side_effect=wrapper))
 
         return mock
 
@@ -283,7 +292,7 @@ def sign_jwt_link():
 
         # https://datatracker.ietf.org/doc/html/rfc7519#section-4
         payload = {
-            "sub": user_id,
+            "sub": str(user_id or ""),
             "iss": os.getenv("API_URL", "http://localhost:8000"),
             "app": app.slug,
             "aud": "breathecode",
@@ -312,3 +321,78 @@ def sign_jwt_link():
         client.credentials(HTTP_AUTHORIZATION=f"Link App={app.slug},Token={token}")
 
     yield wrapper
+
+
+@pytest.fixture(autouse=True, scope="function")
+def get_app_keys() -> Generator[None, None, None]:
+    actions.get_app_keys.cache_clear()
+    actions.get_optional_scopes_set.cache_clear()
+    actions.get_app.cache_clear()
+
+    yield
+
+
+@pytest.fixture(scope="function")
+def get_app_signature() -> Generator[Callable[[], dict[str, Any]], None, None]:
+    def wrapper() -> dict[str, Any]:
+        return {
+            "algorithm": "HMAC_SHA512",
+            "strategy": "JWT",
+            "public_key": None,
+            "private_key": secrets.token_hex(64),
+        }
+
+    yield wrapper
+
+
+@pytest.fixture
+def patch_render(monkeypatch: pytest.MonkeyPatch):
+    def redirect_url(*args, **kwargs):
+
+        if args:
+            args = args[1:]
+
+        if args:
+            try:
+                kwargs["_template"] = args[0]
+            except Exception:
+                ...
+
+            try:
+                kwargs["context"] = args[1]
+            except Exception:
+                ...
+
+            try:
+                if args[2]:
+                    kwargs["content_type"] = args[2]
+            except Exception:
+                ...
+
+            try:
+                if args[3]:
+                    kwargs["status"] = args[3]
+            except Exception:
+                ...
+
+            try:
+                if args[4]:
+                    kwargs["using"] = args[4]
+            except Exception:
+                ...
+
+        if "context" in kwargs:
+            kwargs.update(kwargs["context"])
+            del kwargs["context"]
+
+        if "academy" in kwargs:
+            kwargs["academy"] = kwargs["academy"].id
+
+        return JsonResponse(kwargs, status=kwargs.get("status", 999))
+
+    monkeypatch.setattr(
+        shortcuts,
+        "render",
+        MagicMock(side_effect=redirect_url),
+    )
+    yield

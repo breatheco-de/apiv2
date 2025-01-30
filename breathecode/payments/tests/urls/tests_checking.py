@@ -1707,9 +1707,10 @@ class SignalTestSuite(PaymentsTestCase):
         service_item = {"how_many": how_many1}
         subscription = {
             "valid_until": None,
-            "next_payment_at": UTC_NOW + timedelta(seconds=1),
-            "status": random.choice(["CANCELLED", "DEPRECATED"]),
+            "next_payment_at": UTC_NOW + timedelta(seconds=1, days=2),
+            "status": random.choice(["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "ERROR", "EXPIRED"]),
         }
+
         academy = {"available_as_saas": True}
 
         model = self.bc.database.create(
@@ -1816,7 +1817,7 @@ class SignalTestSuite(PaymentsTestCase):
         service_item = {"how_many": how_many1}
         subscription = {
             "valid_until": UTC_NOW + timedelta(seconds=1),
-            "status": random.choice(["CANCELLED", "ACTIVE", "DEPRECATED", "PAYMENT_ISSUE", "ERROR"]),
+            "status": random.choice(["ACTIVE", "PAYMENT_ISSUE", "ERROR"]),
         }
         academy = {"available_as_saas": True}
 

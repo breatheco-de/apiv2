@@ -572,7 +572,7 @@ def clean_h1s(asset: Asset):
     logger.debug("first line ends at")
     logger.debug(first_line_end)
 
-    regex = r"\s?#\s[`\-_\w]+[`\-_\w\s]*\n"
+    regex = r"^\s?#\s[`\-_\w¿¡?!]+[`\-_\w\s¿¡?!]*\n"
     findings = list(re.finditer(regex, content[:first_line_end]))
     if len(findings) > 0:
         replaced = content[first_line_end:].strip()
@@ -1212,8 +1212,8 @@ def add_syllabus_translations(_json: dict):
                             "title": a.title,
                         }
                         # add translations technologies as well
-                        _assetTechs = a.technologies.all()
-                        for t in _assetTechs:
+                        asset_techs = a.technologies.all()
+                        for t in asset_techs:
                             # Use the slug as a unique key to avoid duplicates
                             if t.slug not in unique_technologies:
                                 unique_technologies[t.slug] = {"slug": t.slug, "title": t.title}
@@ -1224,8 +1224,8 @@ def add_syllabus_translations(_json: dict):
                             "title": _asset.title,
                         }
 
-                    _assetTechs = _asset.technologies.all()
-                    for t in _assetTechs:
+                    asset_techs = _asset.technologies.all()
+                    for t in asset_techs:
                         # Use the slug as a unique key to avoid duplicates
                         if t.slug not in unique_technologies:
                             unique_technologies[t.slug] = {"slug": t.slug, "title": t.title}

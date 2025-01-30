@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
-from breathecode.registry.models import Asset
+
 from breathecode.assignments.models import Task
+from breathecode.registry.models import Asset
 
 
 class Command(BaseCommand):
@@ -8,7 +9,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        print("FIX TASKS")
         tasks = Task.objects.all()
         for task in tasks:
             associated_slug = task.associated_slug

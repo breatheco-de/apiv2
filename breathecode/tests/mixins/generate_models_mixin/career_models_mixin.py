@@ -32,7 +32,7 @@ class CareerModelsMixin(ModelsMixin):
         employer_kwargs={},
         job_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()

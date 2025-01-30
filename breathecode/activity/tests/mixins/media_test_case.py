@@ -3,20 +3,20 @@ Collections of mixins used to login in authorize microservice
 """
 
 import os
+
 from rest_framework.test import APITestCase
+
+from breathecode.services.google_cloud import BigQuery
 from breathecode.tests.mixins import (
-    GenerateModelsMixin,
+    BreathecodeMixin,
     CacheMixin,
-    TokenMixin,
+    DatetimeMixin,
+    GenerateModelsMixin,
     GenerateQueriesMixin,
     HeadersMixin,
-    DatetimeMixin,
     Sha256Mixin,
-    BreathecodeMixin,
+    TokenMixin,
 )
-from breathecode.utils.sqlalchemy import BigQueryBase
-from sqlalchemy import create_engine
-from breathecode.services.google_cloud import BigQuery
 
 
 class MediaTestCase(
