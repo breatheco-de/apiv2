@@ -788,6 +788,12 @@ def process_asset_config(asset, config):
         asset.with_solutions = True
         asset.with_video = True
 
+    if "gitpod" in config:
+        if config["gitpod"] in ["True", "true", "1", True]:
+            asset.gitpod = True
+        elif config["gitpod"] in ["False", "false", "0", False]:
+            asset.gitpod = False
+
     if "editor" in config:
         if "agent" in config["editor"]:
             asset.agent = config["editor"]["agent"]
