@@ -20,10 +20,11 @@ from breathecode.media.models import Media, MediaResolution
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
 
-from .models import ASSET_STATUS, Asset, AssetErrorLog, AssetImage, AssetTechnology, ContentVariable, OriginalityScan
+from .models import ASSET_STATUS, Asset, AssetImage, AssetTechnology, ContentVariable, OriginalityScan
 from .serializers import AssetBigSerializer
 from .utils import (
     ArticleValidator,
+    AssetErrorLogType,
     AssetException,
     ExerciseValidator,
     LessonValidator,
@@ -526,7 +527,7 @@ def clean_readme_hide_comments(asset: Asset):
     findings = list(re.finditer(regex, content))
 
     if len(findings) % 2 != 0:
-        asset.log_error(AssetErrorLog.README_SYNTAX, "Readme with to many <!-- hide -> comments")
+        asset.log_error(AssetErrorLogType.README_SYNTAX, "Readme with to many <!-- hide -> comments")
         raise Exception("Readme with to many <!-- hide -> comments")
 
     replaced = ""
@@ -1055,20 +1056,20 @@ def pull_quiz_asset(github, asset: Asset):
     return asset
 
 
-def test_asset(asset: Asset):
+def test_asset(asset: Asset, log_errors=False):
     try:
 
         validator = None
         if asset.asset_type == "LESSON":
-            validator = LessonValidator(asset)
+            validator = LessonValidator(asset, log_errors)
         elif asset.asset_type == "EXERCISE":
-            validator = ExerciseValidator(asset)
+            validator = ExerciseValidator(asset, log_errors)
         elif asset.asset_type == "PROJECT":
-            validator = ProjectValidator(asset)
+            validator = ProjectValidator(asset, log_errors)
         elif asset.asset_type == "QUIZ":
-            validator = QuizValidator(asset)
+            validator = QuizValidator(asset, log_errors)
         elif asset.asset_type == "ARTICLE":
-            validator = ArticleValidator(asset)
+            validator = ArticleValidator(asset, log_errors)
 
         validator.validate()
         asset.status_text = "Test Successfull"

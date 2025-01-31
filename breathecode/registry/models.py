@@ -18,6 +18,7 @@ from breathecode.admissions.models import Academy, SyllabusVersion
 from breathecode.assessment.models import Assessment
 
 from .signals import asset_readme_modified, asset_saved, asset_slug_modified, asset_status_updated, asset_title_modified
+from .utils import AssetErrorLogType
 
 __all__ = ["AssetTechnology", "Asset", "AssetAlias"]
 logger = logging.getLogger(__name__)
@@ -706,7 +707,7 @@ class Asset(models.Model):
         if self.readme is None or self.readme == "":
             if self.asset_type != "QUIZ":
                 AssetErrorLog(
-                    slug=AssetErrorLog.EMPTY_README,
+                    slug=AssetErrorLogType.EMPTY_README,
                     path=self.slug,
                     asset_type=self.asset_type,
                     asset=self,
@@ -746,7 +747,7 @@ class Asset(models.Model):
                 readme = self.parse(readme, format="notebook")
             else:
                 AssetErrorLog(
-                    slug=AssetErrorLog.INVALID_README_URL,
+                    slug=AssetErrorLogType.INVALID_README_URL,
                     path=self.slug,
                     asset_type=self.asset_type,
                     asset=self,
@@ -851,11 +852,17 @@ class Asset(models.Model):
             is_alias = False
 
         if alias is None:
-            AssetErrorLog(slug=AssetErrorLog.SLUG_NOT_FOUND, path=asset_slug, asset_type=asset_type, user=user).save()
+            AssetErrorLog(
+                slug=AssetErrorLogType.SLUG_NOT_FOUND, path=asset_slug, asset_type=asset_type, user=user
+            ).save()
             return None
         elif asset_type is not None and alias.asset.asset_type.lower() == asset_type.lower():
             AssetErrorLog(
-                slug=AssetErrorLog.DIFFERENT_TYPE, path=asset_slug, asset=alias.asset, asset_type=asset_type, user=user
+                slug=AssetErrorLogType.DIFFERENT_TYPE,
+                path=asset_slug,
+                asset=alias.asset,
+                asset_type=asset_type,
+                user=user,
             ).save()
 
         elif is_alias:
@@ -1032,13 +1039,6 @@ ERROR_STATUS = (
 
 
 class AssetErrorLog(models.Model):
-    SLUG_NOT_FOUND = "slug-not-found"
-    DIFFERENT_TYPE = "different-type"
-    EMPTY_README = "empty-readme"
-    EMPTY_HTML = "empty-html"
-    INVALID_URL = "invalid-url"
-    INVALID_README_URL = "invalid-readme-url"
-    README_SYNTAX = "readme-syntax-error"
 
     asset_type = models.CharField(max_length=20, choices=TYPE, default=None, null=True, blank=True)
     slug = models.SlugField(max_length=200)
