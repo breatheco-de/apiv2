@@ -179,7 +179,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
     return "ERROR"
 
 
-def push_to_github(asset_slug, author=None):
+def push_to_github(asset_slug, owner=None):
 
     logger.debug(f"Push asset {asset_slug} to github")
 
@@ -194,22 +194,23 @@ def push_to_github(asset_slug, author=None):
         asset.sync_status = "PENDING"
         asset.save()
 
-        if author is None:
-            author = asset.owner
+        if owner is None:
+            if asset.owner is not None: owner = asset.owner
+            elif asset.author is not None: owner = asset.author
 
         if asset.external:
             raise Exception('Asset is marked as "external" so it cannot push to github')
 
-        if author is None:
+        if owner is None:
             raise Exception("Asset must have an owner with write permissions on the repository")
 
         if asset.readme_url is None or "github.com" not in asset.readme_url:
             raise Exception(f"Missing or invalid URL on {asset_slug}, it does not belong to github.com")
 
-        credentials = CredentialsGithub.objects.filter(user__id=author.id).first()
+        credentials = CredentialsGithub.objects.filter(user__id=owner.id).first()
         if credentials is None:
             raise Exception(
-                f"Github credentials for user {author.first_name} {author.last_name} (id: {author.id}) not found when synching asset {asset_slug}"
+                f"Github credentials for user {owner.first_name} {owner.last_name} (id: {owner.id}) not found when synching asset {asset_slug}"
             )
 
         g = Github(credentials.token)
