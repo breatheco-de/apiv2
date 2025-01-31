@@ -135,8 +135,8 @@ MIDDLEWARE = [
     "django.middleware.http.ConditionalGetMiddleware",
 ]
 
-if ENVIRONMENT != "test":
-    MIDDLEWARE += ["django_minify_html.middleware.MinifyHtmlMiddleware"]
+# if ENVIRONMENT != "test":
+#     MIDDLEWARE += ["django_minify_html.middleware.MinifyHtmlMiddleware"]
 
 if os.getenv("GOOGLE_APPLICATION_CREDENTIALS") and (GS_BUCKET_NAME := os.getenv("STATIC_BUCKET")):
     from google.oauth2 import service_account
@@ -444,6 +444,13 @@ if IS_TEST_ENV:
     # TODO: support timeout
     class CustomMemCache(LocMemCache):
         _cache = {}
+
+        fake = 1
+
+        def delete_pattern(self, pattern):
+            for key in self._cache.keys():
+                if fnmatch.fnmatch(key, pattern):
+                    del self._cache[key]
 
         def delete_many(self, patterns):
             for pattern in patterns:

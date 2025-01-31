@@ -158,6 +158,7 @@ CAPABILITIES = [
     {"slug": "delete_calendly_organization", "description": "Delete calendly integration"},
     {"slug": "crud_assessment", "description": "Manage student quizzes and assessments"},
     {"slug": "read_user_assessment", "description": "Read user assessment submissions"},
+    {"slug": "read_talent_pipeline", "description": "Read users from the talent pipeline"},
     {"slug": "read_subscription", "description": "Read subscriptions and plan financings of other users"},
     {
         "slug": "crud_subscription",
@@ -419,6 +420,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "classroom_activity",
                 "read_asset",
                 "task_delivery_details",
+                "read_talent_pipeline",
             ],
         }
     )
@@ -505,6 +507,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "crud_keywordcluster",
                 "crud_asset",
                 "read_category",
+                "read_asset_error",
             ],
         }
     )

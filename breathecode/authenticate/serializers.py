@@ -4,6 +4,7 @@ import os
 import random
 import urllib.parse
 
+import capyc.django.serializer as capy
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import Permission, User
@@ -14,7 +15,7 @@ from rest_framework.exceptions import ValidationError
 from task_manager.django.actions import schedule_task
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, Cohort, CohortUser
+from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
@@ -35,6 +36,98 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class CapyAppUserSerializer(capy.Serializer):
+    model = User
+    path = "/v1/auth/app/user"
+    fields = {
+        "default": (
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+        ),
+        "timestamps": (
+            "date_joined",
+            "last_login",
+        ),
+    }
+    filters = (
+        "id",
+        "username",
+        "first_name",
+        "last_name",
+        "email",
+        "date_joined",
+        "last_login",
+    )
+
+
+class CapyAppCountrySerializer(capy.Serializer):
+    model = Country
+    path = "/v1/auth/app/country"
+    fields = {
+        "default": ("code", "name"),
+    }
+    filters = (
+        "code",
+        "name",
+    )
+
+
+class CapyAppCitySerializer(capy.Serializer):
+    model = City
+    path = "/v1/auth/app/city"
+    fields = {"default": ("id", "name", "country"), "country": ("country[]",)}
+    filters = ("name",)
+    country = CapyAppCountrySerializer()
+
+
+class CapyAppAcademySerializer(capy.Serializer):
+    model = Academy
+    path = "/v1/auth/app/academy"
+    fields = {
+        "default": ("id", "name", "slug", "legal_name", "status"),
+        "meta": ("white_labeled", "available_as_saas", "is_hidden_on_prework", "timezone"),
+        "marketing": ("active_campaign_slug", "logistical_information"),
+        "urls": ("logo_url", "icon_url", "website_url", "white_label_url"),
+        "emails": ("marketing_email", "feedback_email"),
+        "social": ("linkedin_url", "youtube_url"),
+        "location": ("city[]", "country[]", "latitude", "longitude", "zip_code", "street_address"),
+        "timestamps": ("created_at", "updated_at"),
+    }
+    filters = ("name", "slug", "legal_name", "status", "created_at", "available_as_saas")
+    country = CapyAppCountrySerializer()
+    city = CapyAppCitySerializer()
+
+
+class CapyAppProfileAcademySerializer(capy.Serializer):
+    model = ProfileAcademy
+    path = "/v1/auth/app/student"
+    fields = {
+        "default": (
+            "id",
+            "first_name",
+            "last_name",
+            "status",
+            "email",
+            "phone",
+            "user",
+            "academy",
+        ),
+        "address": ("address",),
+        "academy": ("academy[]",),
+        "user": ("user[]",),
+        "timestamps": (
+            "created_at",
+            "updated_at",
+        ),
+    }
+    filters = ("status", "email", "id")
+    academy = CapyAppAcademySerializer()
+    user = CapyAppUserSerializer()
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
@@ -862,9 +955,23 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
+    id = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = ProfileAcademy
-        fields = ("email", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status", "plans")
+        fields = (
+            "email",
+            "user",
+            "first_name",
+            "last_name",
+            "address",
+            "phone",
+            "invite",
+            "cohort",
+            "status",
+            "plans",
+            "id",
+        )
         list_serializer_class = StudentPOSTListSerializer
 
     def validate(self, data):
@@ -1306,7 +1413,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         from breathecode.payments.models import Plan
 
         country = data["country"] if "country" in data else None
-        forbidden_countries = ["spain"]
+        forbidden_countries = ["spain", "españa"]
 
         lang = self.context.get("lang", "en")
         if "email" not in data:

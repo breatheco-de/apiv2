@@ -18,7 +18,7 @@ class AssignmentsModelsMixin(ModelsMixin):
         task_kwargs={},
         final_project=False,
         final_project_kwargs={},
-        **kwargs
+        **kwargs,
     ):
         models = models.copy()
 

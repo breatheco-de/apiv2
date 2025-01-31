@@ -267,6 +267,88 @@ class PaymentsTestSuite(PaymentsTestCase):
         )
 
     """
+    🔽🔽🔽 With Bag and Invoice with amount, passing the price
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_plan_financing.delay", MagicMock())
+    def test_subscription_was_created__with_price(self):
+        amount = (random.random() * 99) + 1
+        price = (random.random() * 99) + 1
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": random.choice(["MONTH", "QUARTER", "HALF", "YEAR"]),
+        }
+        invoice = {"status": "FULFILLED", "amount": amount}
+        plan = {"is_renewable": False}
+
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        months = model.bag.how_many_installments
+
+        build_plan_financing.delay(1, 1, price=price)
+
+        self.assertEqual(self.bc.database.list_of("admissions.Cohort"), [])
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting build_plan_financing for bag 1"),
+                call("PlanFinancing was created with id 1"),
+            ],
+        )
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(
+            self.bc.database.list_of("payments.Bag"),
+            [
+                {
+                    **self.bc.format.to_dict(model.bag),
+                    "was_delivered": True,
+                },
+            ],
+        )
+        self.assertEqual(
+            self.bc.database.list_of("payments.Invoice"),
+            [
+                {
+                    **self.bc.format.to_dict(model.invoice),
+                    # 'monthly_price': amount,
+                },
+            ],
+        )
+        self.assertEqual(
+            self.bc.database.list_of("payments.PlanFinancing"),
+            [
+                plan_financing_item(
+                    {
+                        "conversion_info": None,
+                        "monthly_price": price,
+                        "valid_until": model.invoice.paid_at + relativedelta(months=months - 1),
+                        "next_payment_at": model.invoice.paid_at + relativedelta(months=1),
+                        "plan_expires_at": model.invoice.paid_at
+                        + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit),
+                    }
+                ),
+            ],
+        )
+
+        self.assertEqual(tasks.build_service_stock_scheduler_from_plan_financing.delay.call_args_list, [call(1)])
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+
+    """
     🔽🔽🔽 With Bag with Cohort and Invoice with amount
     """
 

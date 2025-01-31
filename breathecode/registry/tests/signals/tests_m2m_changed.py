@@ -57,7 +57,7 @@ class TestAssetsRelatedBranches:
         assets_related = ", ".join([x.slug for x in asset.assets_related.all()])
         return (
             f"In case you still need to learn more about the basics of this {asset.asset_type}, "
-            "you can check these lessons, exercises, "
+            "you can check these lessons, and exercises, "
             f"and related projects to get ready for this content: {assets_related}. "
         )
 

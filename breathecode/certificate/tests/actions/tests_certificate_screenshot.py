@@ -6,6 +6,7 @@ import os
 from unittest.mock import MagicMock, PropertyMock, call, patch
 from urllib.parse import urlencode
 
+import pytest
 import requests
 
 import breathecode.certificate.signals as signals
@@ -26,6 +27,11 @@ query_string = urlencode(
         "dimension": "1024x707",
     }
 )
+
+
+@pytest.fixture(autouse=True)
+def setup(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("SCREENSHOT_MACHINE_KEY", "00000")
 
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
@@ -122,24 +128,19 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             ],
         )
 
-        self.assertEqual(
-            requests.get.call_args_list,
-            [
-                call(f"https://api.screenshotmachine.com?{query_string}", stream=True),
-            ],
-        )
-        self.assertEqual(
-            signals.user_specialty_saved.send_robust.call_args_list,
-            [
-                # Mixer
-                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
-                # Save
-                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
-            ],
-        )
+        assert requests.get.call_args_list == [
+            call(f"https://api.screenshotmachine.com?{query_string}", stream=True),
+        ]
 
-        self.assertEqual(File.upload.call_args_list, [call(b"mailgun response", public=True)])
-        self.assertEqual(File.url.call_args_list, [call()])
+        assert signals.user_specialty_saved.send_robust.call_args_list == [
+            # Mixer
+            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            # Save
+            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+        ]
+
+        assert File.upload.call_args_list == [call(b"mailgun response", public=True)]
+        assert File.url.call_args_list == [call()]
 
     """
     🔽🔽🔽 Invalid preview_url, equal to None
@@ -188,24 +189,19 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             ],
         )
 
-        self.assertEqual(
-            requests.get.call_args_list,
-            [
-                call(f"https://api.screenshotmachine.com?{query_string}", stream=True),
-            ],
-        )
-        self.assertEqual(
-            signals.user_specialty_saved.send_robust.call_args_list,
-            [
-                # Mixer
-                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
-                # Save
-                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
-            ],
-        )
+        assert requests.get.call_args_list == [
+            call(f"https://api.screenshotmachine.com?{query_string}", stream=True),
+        ]
 
-        self.assertEqual(File.upload.call_args_list, [call(b"mailgun response", public=True)])
-        self.assertEqual(File.url.call_args_list, [call()])
+        assert signals.user_specialty_saved.send_robust.call_args_list == [
+            # Mixer
+            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            # Save
+            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+        ]
+
+        assert File.upload.call_args_list == [call(b"mailgun response", public=True)]
+        assert File.url.call_args_list == [call()]
 
     """
     🔽🔽🔽 Invalid preview_url, the object exists in gcloud

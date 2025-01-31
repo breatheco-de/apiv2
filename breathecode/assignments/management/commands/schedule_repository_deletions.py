@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
 
+from breathecode.assignments import tasks
 from breathecode.assignments.models import RepositoryDeletionOrder, RepositoryWhiteList, Task
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.models import RepositorySubscription
@@ -18,8 +19,10 @@ from breathecode.services.github import Github
 class Command(BaseCommand):
     help = "Clean data from marketing module"
     github_url_pattern = re.compile(r"https?://github\.com/(?P<user>[^/\s]+)/(?P<repo>[^/\s]+)/?")
+    allowed_users = ["breatheco-de", "4GeeksAcademy", "4geeksacademy"]
 
     def handle(self, *args, **options):
+
         self.fill_whitelist()
         self.purge_deletion_orders()
         self.github()
@@ -52,6 +55,7 @@ class Command(BaseCommand):
             self.collect_transferred_orders()
             self.transfer_ownership()
             self.delete_github_repositories()
+            self.delete_invalid_orders()
 
     def check_path(self, obj: dict, *indexes: str) -> bool:
         try:
@@ -123,18 +127,25 @@ class Command(BaseCommand):
                     return event["actor"]["login"]
 
     def purge_deletion_orders(self):
+        ids = []
 
         page = 0
         to_delete = []
         while True:
-            qs = RepositoryDeletionOrder.objects.filter(
-                status=RepositoryDeletionOrder.Status.PENDING,
+            qs = RepositoryDeletionOrder.objects.exclude(
+                status__in=[RepositoryDeletionOrder.Status.TRANSFERRED, RepositoryDeletionOrder.Status.DELETED],
+                id__in=ids,
             )[page * 100 : (page + 1) * 100]
 
             if len(qs) == 0:
                 break
 
             for deletion_order in qs:
+                ids.append(deletion_order.id)
+                if deletion_order.repository_user not in self.allowed_users:
+                    to_delete.append(deletion_order.id)
+                    continue
+
                 if RepositoryWhiteList.objects.filter(
                     provider=deletion_order.provider,
                     repository_user__iexact=deletion_order.repository_user,
@@ -146,25 +157,38 @@ class Command(BaseCommand):
 
         RepositoryDeletionOrder.objects.filter(id__in=to_delete).delete()
 
+    def delete_invalid_orders(self):
+        RepositoryDeletionOrder.objects.exclude(
+            repository_user__in=self.allowed_users,
+        ).delete()
+
     def delete_github_repositories(self):
+        ids = []
 
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
                 Q(
-                    status=RepositoryDeletionOrder.Status.TRANSFERRING,
+                    status__in=[RepositoryDeletionOrder.Status.TRANSFERRING, RepositoryDeletionOrder.Status.ERROR],
                     starts_transferring_at__lte=timezone.now() - relativedelta(months=2),
                 )
                 | Q(
-                    status=RepositoryDeletionOrder.Status.PENDING,
+                    status__in=[RepositoryDeletionOrder.Status.PENDING, RepositoryDeletionOrder.Status.ERROR],
                     created_at__lte=timezone.now() - relativedelta(months=2),
                 ),
+                repository_user__in=self.allowed_users,
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
-            )[:100]
+            ).exclude(id__in=ids)[:100]
 
             if qs.count() == 0:
                 break
 
             for deletion_order in qs:
+                ids.append(deletion_order.id)
+
+                if deletion_order.repository_name.endswith(".git"):
+                    deletion_order.repository_name = deletion_order.repository_name[:-4]
+                    deletion_order.save()
+
                 try:
                     if self.github_client.repo_exists(
                         owner=deletion_order.repository_user, repo=deletion_order.repository_name
@@ -261,10 +285,16 @@ class Command(BaseCommand):
                         self.schedule_github_deletion("GITHUB", user, repo_name)
 
     def schedule_github_deletion(self, provider: str, user: str, repo_name: str):
+        if user not in self.allowed_users:
+            return
+
         if RepositoryWhiteList.objects.filter(
             provider=provider, repository_user=user, repository_name=repo_name
         ).exists():
             return
+
+        if repo_name.endswith(".git"):
+            repo_name = repo_name[:-4]
 
         status = RepositoryDeletionOrder.Status.PENDING
         if (
@@ -286,11 +316,11 @@ class Command(BaseCommand):
             order.save()
 
     def collect_transferred_orders(self):
-
         ids = []
 
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
+                repository_user__in=self.allowed_users,
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
                 status=RepositoryDeletionOrder.Status.TRANSFERRING,
                 created_at__gt=timezone.now(),
@@ -321,8 +351,9 @@ class Command(BaseCommand):
 
         while True:
             qs = RepositoryDeletionOrder.objects.filter(
+                repository_user__in=self.allowed_users,
                 provider=RepositoryDeletionOrder.Provider.GITHUB,
-                status=RepositoryDeletionOrder.Status.PENDING,
+                status__in=[RepositoryDeletionOrder.Status.PENDING, RepositoryDeletionOrder.Status.ERROR],
                 created_at__gt=timezone.now(),
             ).exclude(id__in=ids)[:100]
 
@@ -331,6 +362,11 @@ class Command(BaseCommand):
 
             for deletion_order in qs:
                 ids.append(deletion_order.id)
+
+                if deletion_order.repository_name.endswith(".git"):
+                    deletion_order.repository_name = deletion_order.repository_name[:-4]
+                    deletion_order.save()
+
                 try:
                     if self.github_client.repo_exists(
                         owner=deletion_order.repository_user, repo=deletion_order.repository_name
@@ -342,6 +378,8 @@ class Command(BaseCommand):
                         self.github_client.transfer_repo(repo=deletion_order.repository_name, new_owner=new_owner)
                         deletion_order.status = RepositoryDeletionOrder.Status.TRANSFERRING
                         deletion_order.save()
+
+                        tasks.send_repository_deletion_notification.delay(deletion_order.id, new_owner)
 
                 except Exception as e:
                     deletion_order.status = RepositoryDeletionOrder.Status.ERROR

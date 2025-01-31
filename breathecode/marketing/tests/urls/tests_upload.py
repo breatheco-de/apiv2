@@ -185,7 +185,7 @@ class MarketingTestSuite(MarketingTestCase):
                             "location": df.iloc[0]["location"],
                             "phone": df.iloc[0]["phone"],
                             "language": df.iloc[0]["language"],
-                        }
+                        },
                     ),
                     call(
                         1,
@@ -196,7 +196,7 @@ class MarketingTestSuite(MarketingTestCase):
                             "location": df.iloc[1]["location"],
                             "phone": df.iloc[1]["phone"],
                             "language": df.iloc[1]["language"],
-                        }
+                        },
                     ),
                     call(
                         1,
@@ -207,7 +207,7 @@ class MarketingTestSuite(MarketingTestCase):
                             "location": df.iloc[2]["location"],
                             "phone": df.iloc[2]["phone"],
                             "language": df.iloc[2]["language"],
-                        }
+                        },
                     ),
                 ],
             )

@@ -77,6 +77,7 @@ def cohort_field(data={}):
         "timezone": "America/Caracas",
         "is_hidden_on_prework": True,
         "available_as_saas": False,
+        "color": None,
         **data,
     }
 
@@ -901,6 +902,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": False,
+                        "cohorts_order": None,
                     }
                 ),
             ],
@@ -1002,6 +1004,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": False,
+                        "cohorts_order": None,
                     }
                 ),
             ],
@@ -1103,6 +1106,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": True,
+                        "cohorts_order": None,
                     }
                 ),
             ],
@@ -1204,6 +1208,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": False,
+                        "cohorts_order": None,
                     }
                 ),
             ],
@@ -1304,6 +1309,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                         "accepts_enrollment_suggestions": True,
                         "kickoff_date": UTC_NOW,
                         "available_as_saas": model.academy.available_as_saas,
+                        "cohorts_order": None,
                     }
                 ),
             ],

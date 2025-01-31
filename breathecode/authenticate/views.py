@@ -6,6 +6,7 @@ import os
 import re
 import urllib.parse
 from datetime import timedelta
+from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import aiohttp
@@ -97,6 +98,11 @@ from .serializers import (
     AppUserSerializer,
     AuthSerializer,
     AuthSettingsBigSerializer,
+    CapyAppAcademySerializer,
+    CapyAppCitySerializer,
+    CapyAppCountrySerializer,
+    CapyAppProfileAcademySerializer,
+    CapyAppUserSerializer,
     GetGitpodUserSerializer,
     GetProfileAcademySerializer,
     GetProfileAcademySmallSerializer,
@@ -761,6 +767,69 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         return Response(serializer.data)
 
 
+class V2AppUserView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:user"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, user_id: int | None = None):
+        serializer = CapyAppUserSerializer(request)
+        if user_id:
+            return serializer.get(id=user_id)
+
+        return serializer.filter()
+
+
+class V2AppStudentView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:student"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, user_id_or_email: str | None = None):
+        serializer = CapyAppProfileAcademySerializer(request)
+        if user_id_or_email:
+            if user_id_or_email.isnumeric():
+                return serializer.get(id=int(user_id_or_email), role__slug="student")
+            else:
+                return serializer.get(email=user_id_or_email, role__slug="student")
+
+        return serializer.filter(role__slug="student")
+
+
+class V2AppAcademyView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:academy"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, academy_id: int | None = None):
+        serializer = CapyAppAcademySerializer(request)
+        if academy_id:
+            return serializer.get(id=academy_id)
+
+        return serializer.filter()
+
+
+class V2AppCityView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:city"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, city_id: int | None = None):
+        serializer = CapyAppCitySerializer(request)
+        if city_id:
+            return serializer.get(id=city_id)
+
+        return serializer.filter()
+
+
+class V2AppCountryView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:country"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, country_id: int | None = None):
+        serializer = CapyAppCountrySerializer(request)
+        if country_id:
+            return serializer.get(code=country_id)
+
+        return serializer.filter()
+
+
 class StudentView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(paginate=True, sort="-created_at")
 
@@ -1049,7 +1118,12 @@ def get_github_token(request, token=None):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def save_github_token(request):
+async def save_github_token(request):
+    def error_message(obj: Any, default: str):
+        if isinstance(obj, dict):
+            return obj.get("error_description") or obj.get("error") or default
+
+        return default
 
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
@@ -1082,166 +1156,180 @@ def save_github_token(request):
         "code": code,
     }
     headers = {"Accept": "application/json"}
-    resp = requests.post("https://github.com/login/oauth/access_token", data=payload, headers=headers, timeout=2)
-    if resp.status_code == 200:
 
-        logger.debug("Github responded with 200")
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            "https://github.com/login/oauth/access_token", data=payload, headers=headers, timeout=30
+        ) as resp:
+            body = await resp.json()
+            logger.debug(f"https://github.com/login/oauth/access_token => {body}")
+            if resp.status != 200:
+                raise APIException(f"Github code {resp.status}: {error_message(body, 'error getting github token')}")
 
-        body = resp.json()
-        if "access_token" not in body:
-            raise APIException(body["error_description"])
+    if "access_token" not in body:
+        raise APIException(f"Github code {resp.status}: {error_message(body, 'error getting github token')}")
 
-        github_token = body["access_token"]
-        resp = requests.get(
-            "https://api.github.com/user", headers={"Authorization": "token " + github_token}, timeout=2
-        )
-        if resp.status_code == 200:
-            github_user = resp.json()
-            logger.debug(github_user)
-
-            if github_user["email"] is None:
-                resp = requests.get(
-                    "https://api.github.com/user/emails", headers={"Authorization": "token " + github_token}, timeout=2
+    github_token = body["access_token"]
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            "https://api.github.com/user", headers={"Authorization": "token " + github_token}, timeout=30
+        ) as resp:
+            github_user = await resp.json()
+            logger.debug(f"https://api.github.com/user => {github_user}")
+            if resp.status != 200:
+                raise APIException(
+                    f"Github code {resp.status}: {error_message(github_user, 'error getting github user')}"
                 )
-                if resp.status_code == 200:
-                    emails = resp.json()
+
+    if github_user["email"] is None:
+        github_token = body["access_token"]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://api.github.com/user/emails", headers={"Authorization": "token " + github_token}, timeout=30
+            ) as resp:
+                if resp.status == 200:
+                    emails = await resp.json()
+                    logger.debug(f"https://api.github.com/user/emails => {emails}")
                     primary_emails = [x for x in emails if x["primary"] == True]
                     if len(primary_emails) > 0:
                         github_user["email"] = primary_emails[0]["email"]
                     elif len(emails) > 0:
                         github_user["email"] = emails[0]["email"]
 
-            if github_user["email"] is None:
-                raise ValidationError("Impossible to retrieve user email")
+    if github_user["email"] is None:
+        raise ValidationError("Impossible to retrieve user email")
 
-            user = None  # assuming by default that its a new user
-            # is a valid token??? if not valid it will become None
-            if token is not None and token != "":
-                token = Token.get_valid(token)
-                if not token:
-                    logger.debug("Token not found or is expired")
-                    raise ValidationException(
-                        "Token was not found or is expired, please use a different token",
-                        code=404,
-                        slug="token-not-found",
-                    )
-                user = User.objects.filter(auth_token=token.id).first()
-            else:
-                # for the token to become null for easier management
-                token = None
-
-            # user can't be found thru token, lets try thru the github credentials
-            if token is None and user is None:
-                user = User.objects.filter(credentialsgithub__github_id=github_user["id"]).first()
-                if user is None:
-                    user = User.objects.filter(
-                        email__iexact=github_user["email"], credentialsgithub__isnull=True
-                    ).first()
-
-            user_does_not_exists = user is None
-            if user_does_not_exists:
-                invite = UserInvite.objects.filter(status="WAITING_LIST", email=github_user["email"]).first()
-
-            if user_does_not_exists and invite:
-                if url is None or url == "":
-                    url = get_app_url()
-
-                return render_message(
-                    request,
-                    f"You are still number {invite.id} on the waiting list, we will email you once you are "
-                    f'given access <a href="{url}">Back to 4Geeks.com</a>',
-                    academy=invite.academy,
-                )
-
-            if user_does_not_exists:
-                academy = None
-                if invite:
-                    academy = invite.academy
-
-                return render_message(
-                    request,
-                    "We could not find in our records the email associated to this github account, "
-                    'perhaps you want to signup to the platform first? <a href="' + url + '">Back to 4Geeks.com</a>',
-                    academy=academy,
-                )
-
-            github_credentials = CredentialsGithub.objects.filter(github_id=github_user["id"]).first()
-
-            # update latest credentials if the user.id doesn't match
-            if github_credentials and github_credentials.user.id != user.id:
-                github_credentials.delete()
-                github_credentials = None
-
-            # create a new credentials if it doesn't exists
-            if github_credentials is None:
-                github_credentials = CredentialsGithub(github_id=github_user["id"], user=user)
-
-            github_credentials.token = github_token
-            github_credentials.username = github_user["login"]
-            github_credentials.email = github_user["email"].lower()
-            github_credentials.avatar_url = github_user["avatar_url"]
-            github_credentials.name = github_user["name"]
-            github_credentials.blog = github_user["blog"]
-            github_credentials.bio = github_user["bio"]
-            github_credentials.company = github_user["company"]
-            github_credentials.twitter_username = github_user["twitter_username"]
-            github_credentials.save()
-
-            # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
-            # to keep it in sync when the user autenticate's with github
-            GithubAcademyUser.objects.filter(user=user).update(username=github_credentials.username)
-
-            profile = Profile.objects.filter(user=user).first()
-            if profile is None:
-                profile = Profile(
-                    user=user,
-                    avatar_url=github_user["avatar_url"],
-                    blog=github_user["blog"],
-                    bio=github_user["bio"],
-                    twitter_username=github_user["twitter_username"],
-                )
-                profile.save()
-
-            if not profile.avatar_url:
-                profile.avatar_url = github_user["avatar_url"]
-                profile.save()
-
-            student_role = Role.objects.get(slug="student")
-            cus = CohortUser.objects.filter(user=user, role="STUDENT")
-            for cu in cus:
-                profile_academy = ProfileAcademy.objects.filter(user=cu.user, academy=cu.cohort.academy).first()
-                if profile_academy is None:
-                    profile_academy = ProfileAcademy(
-                        user=cu.user,
-                        academy=cu.cohort.academy,
-                        role=student_role,
-                        email=cu.user.email,
-                        first_name=cu.user.first_name,
-                        last_name=cu.user.last_name,
-                        status="ACTIVE",
-                    )
-                    profile_academy.save()
-
-            if not token:
-                token, created = Token.get_or_create(user=user, token_type="login")
-
-            # register user in rigobot
-            rigobot_payload = {"organization": "4geeks", "user_token": token.key}
-            headers = {"Content-Type": "application/json"}
-            rigobot_resp = requests.post(
-                "https://rigobot.herokuapp.com/v1/auth/invite", timeout=2, headers=headers, json=rigobot_payload
+    user = None  # assuming by default that its a new user
+    # is a valid token??? if not valid it will become None
+    if token is not None and token != "":
+        token = await Token.aget_valid(token)
+        if not token:
+            logger.debug("Token not found or is expired")
+            raise ValidationException(
+                "Token was not found or is expired, please use a different token",
+                code=404,
+                slug="token-not-found",
             )
+        user = await User.objects.filter(auth_token=token.id).afirst()
+    else:
+        # for the token to become null for easier management
+        token = None
 
-            if rigobot_resp.status_code == 200:
+    # user can't be found thru token, lets try thru the github credentials
+    if token is None and user is None:
+        user = await User.objects.filter(credentialsgithub__github_id=github_user["id"]).afirst()
+        if user is None:
+            user = await User.objects.filter(
+                email__iexact=github_user["email"], credentialsgithub__isnull=True
+            ).afirst()
+
+    user_does_not_exists = user is None
+    if user_does_not_exists:
+        invite = await UserInvite.objects.filter(status="WAITING_LIST", email=github_user["email"]).afirst()
+
+    if user_does_not_exists and invite:
+        if url is None or url == "":
+            url = get_app_url()
+
+        return render_message(
+            request,
+            f"You are still number {invite.id} on the waiting list, we will email you once you are "
+            f'given access <a href="{url}">Back to 4Geeks.com</a>',
+            academy=invite.academy,
+        )
+
+    if user_does_not_exists:
+        academy = None
+        if invite:
+            academy = invite.academy
+
+        return render_message(
+            request,
+            "We could not find in our records the email associated to this github account, "
+            'perhaps you want to signup to the platform first? <a href="' + url + '">Back to 4Geeks.com</a>',
+            academy=academy,
+        )
+
+    github_credentials = (
+        await CredentialsGithub.objects.filter(github_id=github_user["id"]).prefetch_related("user").afirst()
+    )
+
+    # update latest credentials if the user.id doesn't match
+    if github_credentials and github_credentials.user.id != user.id:
+        await github_credentials.adelete()
+        github_credentials = None
+
+    # create a new credentials if it doesn't exists
+    if github_credentials is None:
+        github_credentials = CredentialsGithub(github_id=github_user["id"], user=user)
+
+    github_credentials.token = github_token
+    github_credentials.username = github_user["login"]
+    github_credentials.email = github_user["email"].lower()
+    github_credentials.avatar_url = github_user["avatar_url"]
+    github_credentials.name = github_user["name"]
+    github_credentials.blog = github_user["blog"]
+    github_credentials.bio = github_user["bio"]
+    github_credentials.company = github_user["company"]
+    github_credentials.twitter_username = github_user["twitter_username"]
+    await github_credentials.asave()
+
+    # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
+    # to keep it in sync when the user autenticate's with github
+    await GithubAcademyUser.objects.filter(user=user).aupdate(username=github_credentials.username)
+
+    profile = await Profile.objects.filter(user=user).afirst()
+    if profile is None:
+        profile = Profile(
+            user=user,
+            avatar_url=github_user["avatar_url"],
+            blog=github_user["blog"],
+            bio=github_user["bio"],
+            twitter_username=github_user["twitter_username"],
+        )
+        await profile.asave()
+
+    if not profile.avatar_url:
+        profile.avatar_url = github_user["avatar_url"]
+        await profile.asave()
+
+    student_role = await Role.objects.aget(slug="student")
+    cus = CohortUser.objects.filter(user=user, role="STUDENT").prefetch_related("cohort", "user", "cohort__academy")
+    async for cu in cus:
+        profile_academy = await ProfileAcademy.objects.filter(user=cu.user, academy=cu.cohort.academy).afirst()
+        if profile_academy is None:
+            profile_academy = ProfileAcademy(
+                user=cu.user,
+                academy=cu.cohort.academy,
+                role=student_role,
+                email=cu.user.email,
+                first_name=cu.user.first_name,
+                last_name=cu.user.last_name,
+                status="ACTIVE",
+            )
+            await profile_academy.asave()
+
+    if not token:
+        token, _ = await Token.aget_or_create(user=user, token_type="login")
+
+    # register user in rigobot
+    rigobot_payload = {"organization": "4geeks", "user_token": token.key}
+    headers = {"Content-Type": "application/json"}
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            "https://rigobot.herokuapp.com/v1/auth/invite",
+            headers={"Authorization": "token " + github_token},
+            json=rigobot_payload,
+            timeout=30,
+        ) as resp:
+            if resp.status == 200:
                 logger.debug("User registered on rigobot")
             else:
                 logger.error("Failed user registration on rigobot")
 
-            redirect_url = set_query_parameter(url, "token", token.key)
-            return HttpResponseRedirect(redirect_to=redirect_url)
-
-        else:
-            raise APIException("Error from github")
+    redirect_url = set_query_parameter(url, "token", token.key)
+    return HttpResponseRedirect(redirect_to=redirect_url)
 
 
 # Create your views here.
@@ -2082,7 +2170,7 @@ def get_google_token(request, token=None):
     ]
 
     if academy_settings in ["overwrite", "set"]:
-        if feature.is_enabled("authenticate.set_google_credentials", default=True) is False:
+        if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
             raise ValidationException(
                 "Setting academy google credentials is not available",
                 slug="set-google-credentials-not-available",
@@ -2126,7 +2214,7 @@ async def save_google_token(request):
             academy=academy, defaults={"google_cloud_owner": user}
         )
         if not created:
-            settings.google_cloud_owner.id = user.id
+            settings.google_cloud_owner = user
             await settings.asave()
 
     async def async_iter(iterable: list):
@@ -2162,9 +2250,9 @@ async def save_google_token(request):
 
     academies = async_iter([])
     roles = ["admin", "staff", "country_manager", "academy_token"]
-    academy_settings = state.get("academysettings", "none")
+    academy_settings = state.get("academysettings", ["none"])[0]
     if academy_settings != "none":
-        if feature.is_enabled("authenticate.set-google-credentials", default=False) is False:
+        if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
             raise ValidationException(
                 "Setting academy google credentials is not available",
                 slug="set-google-credentials-not-available",
@@ -2253,6 +2341,19 @@ async def save_google_token(request):
 
 @private_view()
 def render_google_connect(request, token):
+    academy_settings = request.GET.get("academysettings", "none")
+    query = {}
+
+    if academy_settings != "none":
+        capable = ProfileAcademy.objects.filter(
+            user=request.user.id, role__capabilities__slug="crud_academy_auth_settings"
+        )
+
+        if capable.count() == 0:
+            return render_message(request, "You don't have permission to access this view", status=403)
+
+        query["academysettings"] = academy_settings
+
     callback_url = request.GET.get("url", None)
 
     if not callback_url:
@@ -2265,11 +2366,18 @@ def render_google_connect(request, token):
             callback_url = str(base64.urlsafe_b64encode(query_params.get("url", [None])[0].encode("utf-8")), "utf-8")
 
     if callback_url is None:
-        raise ValidationException("Callback URL specified", slug="no-callback")
+        extra = {}
+        if "APP_URL" in os.environ and os.getenv("APP_URL") != "":
+            extra["btn_url"] = os.getenv("APP_URL")
+            extra["btn_label"] = "Back to 4Geeks"
 
-    token, created = Token.get_or_create(user=request.user, token_type="one_time")
+        return render_message(request, "no callback URL specified", **extra, status=400)
 
-    url = f"/v1/auth/google/{token}?url={callback_url}"
+    query["url"] = callback_url
+
+    token, _ = Token.get_or_create(user=request.user, token_type="one_time")
+
+    url = f"/v1/auth/google/{token}?{urlencode(query)}"
     return HttpResponseRedirect(redirect_to=url)
 
 

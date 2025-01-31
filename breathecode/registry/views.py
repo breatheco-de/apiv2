@@ -217,6 +217,10 @@ class TechnologyView(APIView):
             param = request.GET.get("lang")
             items = items.filter(Q(lang__iexact=param) | Q(lang="") | Q(lang__isnull=True))
 
+        if "only_lang" in request.GET:
+            param = request.GET.get("only_lang")
+            items = items.filter(Q(lang__iexact=param))
+
         if "is_deprecated" not in request.GET or request.GET.get("is_deprecated").lower() == "false":
             items = items.filter(is_deprecated=False)
 
@@ -1453,6 +1457,11 @@ class AcademyAssetErrorView(APIView, GenerateLookupsMixin):
             lookup["asset_type__in"] = [p.upper() for p in param.split(",")]
 
         items = items.filter(**lookup)
+
+        like = request.GET.get("like", None)
+        if like is not None and like != "undefined" and like != "":
+            items = items.filter(Q(slug__icontains=slugify(like)) | Q(path__icontains=like))
+
         items = handler.queryset(items)
 
         serializer = AcademyErrorSerializer(items, many=True)

@@ -120,7 +120,7 @@ def grant_service_permissions(modeladmin, request, queryset):
 class ConsumableAdmin(admin.ModelAdmin):
     list_display = ("id", "unit_type", "how_many", "service_item", "user", "valid_until")
     list_filter = ["unit_type", "service_item__service__slug"]
-    search_fields = ["service_item__service__slug"]
+    search_fields = ["service_item__service__slug", "user__email"]
     raw_id_fields = ["user", "service_item", "cohort_set", "event_type_set", "mentorship_service_set"]
     actions = [grant_service_permissions]
 
@@ -135,6 +135,11 @@ class InvoiceAdmin(admin.ModelAdmin):
 def renew_subscription_consumables(modeladmin, request, queryset):
     for item in queryset.all():
         tasks.renew_subscription_consumables.delay(item.id)
+
+
+def charge_subscription(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.charge_subscription.delay(item.id)
 
 
 @admin.register(Subscription)
@@ -158,7 +163,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "selected_mentorship_service_set",
         "selected_event_type_set",
     ]
-    actions = [renew_subscription_consumables]
+    actions = [renew_subscription_consumables, charge_subscription]
 
 
 @admin.register(SubscriptionServiceItem)
@@ -170,6 +175,11 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
 def renew_plan_financing_consumables(modeladmin, request, queryset):
     for item in queryset.all():
         tasks.renew_plan_financing_consumables.delay(item.id)
+
+
+def charge_plan_financing(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.charge_plan_financing.delay(item.id)
 
 
 @admin.register(PlanFinancing)
@@ -184,7 +194,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "selected_mentorship_service_set",
         "selected_event_type_set",
     ]
-    actions = [renew_plan_financing_consumables]
+    actions = [renew_plan_financing_consumables, charge_plan_financing]
 
 
 def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):

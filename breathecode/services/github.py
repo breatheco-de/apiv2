@@ -160,9 +160,14 @@ class Github:
         page = 0
         while True:
             page += 1
-            res = self.get(
-                f"/orgs/{organization}/repos?page={page}&type={type}&per_page={per_page}&sort={sort}&direction={direction}"
-            )
+
+            try:
+                res = self.get(
+                    f"/orgs/{organization}/repos?page={page}&type={type}&per_page={per_page}&sort={sort}&direction={direction}"
+                )
+
+            except Exception:
+                break
 
             if len(res) == 0:
                 break
@@ -203,7 +208,12 @@ class Github:
         page = 0
         while True:
             page += 1
-            res = self.get(f"/orgs/{owner}/{repo}/events?page={page}&per_page={per_page}")
+
+            try:
+                res = self.get(f"/repos/{owner}/{repo}/events?page={page}&per_page={per_page}")
+
+            except Exception:
+                break
 
             if len(res) == 0:
                 break

@@ -362,6 +362,28 @@ class Cohort(models.Model):
 
     language = models.CharField(max_length=2, default="en", db_index=True)
 
+    micro_cohorts = models.ManyToManyField(
+        "Cohort",
+        blank=True,
+        help_text="This cohorts will represent small courses inside a main course",
+        related_name="main_cohorts",
+    )
+
+    cohorts_order = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="An IDs comma separated list to indicate the order in which the micro cohorts will be displayed",
+    )
+    color = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Add the color with hexadecimal format, i.e.: #FFFFFF",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

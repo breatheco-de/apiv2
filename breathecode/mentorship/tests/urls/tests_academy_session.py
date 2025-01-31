@@ -92,6 +92,7 @@ def get_serializer(self, mentorship_session, mentor_profile, mentorship_service,
         "started_at": format_datetime(self, mentorship_session.started_at),
         "status": mentorship_session.status,
         "summary": mentorship_session.summary,
+        "rating": None,
         **data,
     }
 

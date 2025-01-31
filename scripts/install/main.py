@@ -1,4 +1,5 @@
 import os
+
 from scripts.utils.get_python_path import get_python_path
 
 __all__ = ["main"]
@@ -20,7 +21,7 @@ def install():
     print("--- Running pipenv install ---")
     print("")
 
-    os.system("pipenv install --dev")
+    os.system("poetry install")
 
 
 def postinstall_hook():

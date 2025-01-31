@@ -23,7 +23,7 @@ class NotifyModelsMixin(ModelsMixin):
         slack_user_team_kwargs={},
         slack_channel_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()
