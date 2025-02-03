@@ -137,6 +137,12 @@ def get_events(request):
     elif is_public == "false":
         lookup["is_public"] = False
 
+    recording_url = request.GET.get("recording_url", None)
+    if recording_url == "true":
+        lookup["recording_url"] = True
+    elif recording_url == "false":
+        lookup["recording_url"] = False
+
     if "technologies" in request.GET:
         values = request.GET.get("technologies").split(",")
         tech_query = Q()
