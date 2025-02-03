@@ -646,8 +646,17 @@ class ACOldClient(object):
             data = response.json()
             return self._parse(data)
         else:
-            print(self._parse(data))
-            raise Exception("Error when saving contact on AC: ")
+            try:
+                error_data = response.json()
+                error_message = error_data.get("result_message")
+                if not error_message:
+                    # Print the entire JSON as text if "result_message" is missing or empty.
+                    error_message = json.dumps(error_data)
+            except ValueError:
+                # In case the response is not valid JSON.
+                error_message = response.text
+    
+            raise Exception(f"Error when saving contact on AC: {error_message}")
 
     def _parse(self, response):
         if response["result_code"] == 1:
