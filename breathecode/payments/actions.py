@@ -540,7 +540,6 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
 
         must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(plan, user, lang)
 
-        # this prices is just used if it is generating a subscription
         if not bag.how_many_installments and (bag.chosen_period != "NO_SET" or must_it_be_charged):
             price_per_month += plan.price_per_month or 0
             price_per_quarter += plan.price_per_quarter or 0
@@ -786,7 +785,6 @@ def get_balance_by_resource(
     ids = {getattr(x, key).id for x in queryset}
     for id in ids:
         current = queryset.filter(**{f"{key}__id": id})
-        # current_virtual = [x for x in x if x[key] == id]
 
         instance = current.first()
         balance = {}
@@ -797,9 +795,6 @@ def get_balance_by_resource(
             balance[unit.lower()] = (
                 -1 if per_unit.filter(how_many=-1).exists() else per_unit.aggregate(Sum("how_many"))["how_many__sum"]
             )
-
-        # for unit in current_virtual:
-        #     ...
 
         for x in queryset:
             valid_until = x.valid_until
