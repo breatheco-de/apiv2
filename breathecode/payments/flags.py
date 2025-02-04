@@ -131,11 +131,11 @@ def bypass_consumption(context: ServiceContext, kwargs: Optional[dict] = None, u
 blocked_user_ids = {
     "mentorship-service": {
         # Blocked users in the entire platform (Add user ids)
-        "from_everywhere": [1],
-        # Blocked users in the academy, add user id and academy slug
-        "from_academy": [(1, "downtown-miami")],
-        # Blocked users in a cohort, add user id and cohort slug
-        "from_cohort": [(1, "4geeks-fs-1")],
+        "from_everywhere": [],
+        # Blocked users in the academy, add user id and academy slug. i.e.: (1, "downtown-miami")
+        "from_academy": [],
+        # Blocked users in a cohort, add user id and cohort slug. i.e.: (1, "4geeks-fs-1")
+        "from_cohort": [],
         # Blocked users of a service, add user id and mentorship service slug
         "from_mentorship_service": [(1, "geekpal-1-1")],
     }
