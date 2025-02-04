@@ -85,6 +85,7 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
 
     return {
         "id": 0,
+        "add_ons": [],
         "slug": "",
         "currency": currency.id,
         "financing_options": [x.id for x in financing_options],
