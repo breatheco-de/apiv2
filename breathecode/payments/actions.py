@@ -549,15 +549,11 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
     plans = bag.plans.all()
     add_ons: dict[int, AcademyService] = {}
     for plan in plans:
-        for add_on in plan.add_ons.all():
+        for add_on in plan.add_ons.filter(currency=currency):
             if add_on.service.id not in add_ons:
                 add_ons[add_on.service.id] = add_on
 
     for service_item in bag.service_items.all():
-        if service_item.service.currency != currency:
-            bag.service_items.remove(service_item)
-            continue
-
         if service_item.service.id in add_ons:
             add_on = add_ons[service_item.service.id]
 
@@ -569,16 +565,16 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
                 raise e
 
             if price_per_month != 0:
-                price_per_month = add_on.get_discounted_price(service_item.how_many) * 1
+                price_per_month += add_on.get_discounted_price(service_item.how_many) * 1
 
             if price_per_quarter != 0:
-                price_per_quarter = add_on.get_discounted_price(service_item.how_many) * 3
+                price_per_quarter += add_on.get_discounted_price(service_item.how_many) * 3
 
             if price_per_half != 0:
-                price_per_half = add_on.get_discounted_price(service_item.how_many) * 6
+                price_per_half += add_on.get_discounted_price(service_item.how_many) * 6
 
             if price_per_year != 0:
-                price_per_year = add_on.get_discounted_price(service_item.how_many) * 12
+                price_per_year += add_on.get_discounted_price(service_item.how_many) * 12
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 

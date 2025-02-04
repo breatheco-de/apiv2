@@ -468,10 +468,6 @@ class AcademyService(models.Model):
         EventTypeSet, blank=True, help_text="Available mentorship service sets to be sold in this service and plan"
     )
 
-    available_event_type_sets = models.ManyToManyField(
-        EventTypeSet, blank=True, help_text="Available mentorship service sets to be sold in this service and plan"
-    )
-
     available_cohort_sets = models.ManyToManyField(
         CohortSet, blank=True, help_text="Available cohort sets to be sold in this service and plan"
     )

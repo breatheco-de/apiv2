@@ -3255,7 +3255,7 @@ def test_price_is_very_high(
         cohort_set=1,
         service_item=service_item,
         service=1,
-        academy_service={"bundle_size": 4, "max_items": 7, "price_per_unit": 1},
+        academy_service={"bundle_size": 4, "max_items": 7, "price_per_unit": 1, "max_amount": 3},
         plan=plan,
         plan_service_item=1,
         currency=currency,
@@ -3305,6 +3305,123 @@ def test_price_is_very_high(
 
     queryset_with_pks(model.bag.service_items.all(), [])
     queryset_with_pks(model.bag.plans.all(), [])
+    assert activity_tasks.add_activity.delay.call_args_list == [
+        call(1, "bag_created", related_type="payments.Bag", related_id=1),
+    ]
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+def test_get_a_plan_with_add_ons(
+    database: capy.Database,
+    client: capy.Client,
+    fake: capy.Fake,
+    format: capy.Format,
+):
+    bag = {
+        "status": "CHECKING",
+        "type": "PREVIEW",
+        "plans": [],
+        "service_items": [],
+    }
+
+    currency = {"code": "USD", "name": "United States dollar"}
+
+    plan = {
+        "price_per_month": random.random() * 100,
+        "price_per_quarter": random.random() * 100,
+        "price_per_half": random.random() * 100,
+        "price_per_year": random.random() * 100,
+        "is_renewable": True,
+        "time_of_life": 0,
+        "time_of_life_unit": None,
+        "trial_duration": 0,
+        "trial_duration_unit": "MONTH",
+    }
+
+    how_many2 = random.choice([x for x in range(5, 6)])
+
+    service_item = {"how_many": how_many2}
+    academy = {"available_as_saas": True}
+
+    model = database.create(
+        user=1,
+        bag=bag,
+        academy=academy,
+        cohort=1,
+        cohort_set=1,
+        service_item=service_item,
+        service=1,
+        academy_service={"bundle_size": 4, "max_items": 7, "price_per_unit": 1, "max_amount": 7},
+        plan=plan,
+        currency=currency,
+        city=1,
+        country=1,
+    )
+
+    # issue with capy database
+    model.bag.service_items.set([])
+    model.bag.plans.set([])
+
+    client.force_authenticate(model.user)
+
+    url = reverse_lazy("payments:checking")
+    data = {
+        "academy": 1,
+        "type": "PREVIEW",
+        "plans": [1],
+        "cohort_set": 1,
+        "service_items": [{"how_many": how_many2, "service": 1}],
+    }
+
+    token = fake.slug()
+    with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+        response = client.put(url, data, format="json")
+
+    pricing = {
+        "amount_per_month": model.plan.price_per_month + model.academy_service.get_discounted_price(how_many2),
+        "amount_per_quarter": model.plan.price_per_quarter
+        + (model.academy_service.get_discounted_price(how_many2) * 3),
+        "amount_per_half": model.plan.price_per_half + (model.academy_service.get_discounted_price(how_many2) * 6),
+        "amount_per_year": model.plan.price_per_year + (model.academy_service.get_discounted_price(how_many2) * 12),
+    }
+
+    json = response.json()
+    expected = get_serializer(
+        model.bag,
+        data={
+            "expires_at": (UTC_NOW + timedelta(minutes=60)).isoformat().replace("+00:00", "Z"),
+            "token": token,
+            **pricing,
+        },
+        plans=[model.plan],
+        service_items=[model.service_item],
+        plan_service_items=[model.service_item],
+        service=model.service,
+    )
+
+    assert json == expected
+    assert response.status_code == status.HTTP_200_OK
+
+    assert database.list_of("payments.Bag") == [
+        {
+            **format.to_obj_repr(model.bag),
+            **pricing,
+            "token": token,
+            "expires_at": UTC_NOW + timedelta(minutes=60),
+        },
+    ]
+    assert database.list_of("authenticate.UserSetting") == [
+        format_user_setting(
+            {
+                "lang": "en",
+                "id": model.user.id,
+                "user_id": model.user.id,
+            }
+        ),
+    ]
+
+    queryset_with_pks(model.bag.service_items.all(), [1])
+    queryset_with_pks(model.bag.plans.all(), [1])
     assert activity_tasks.add_activity.delay.call_args_list == [
         call(1, "bag_created", related_type="payments.Bag", related_id=1),
     ]
