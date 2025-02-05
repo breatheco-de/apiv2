@@ -1,3 +1,4 @@
+from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -5,7 +6,6 @@ from rest_framework.exceptions import ValidationError
 import breathecode.feedback.actions as actions
 from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import send_survey_group
 from .models import Answer, Review, Survey
@@ -152,6 +152,10 @@ class ReviewSmallSerializer(serpy.Serializer):
     lang = serpy.Field()
     platform = ReviewPlatformSerializer()
     updated_at = serpy.Field()
+
+
+class GetSurveySerializer(serpy.Serializer):
+    scores = serpy.Field()
 
 
 class AnswerPUTSerializer(serializers.ModelSerializer):
