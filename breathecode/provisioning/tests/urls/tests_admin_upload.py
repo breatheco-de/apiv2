@@ -368,26 +368,24 @@ class MarketingTestSuite(ProvisioningTestCase):
         file = tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w+")
 
         usernames = [self.bc.fake.slug() for _ in range(0, 3)]
-        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()).split("T")[0] for _ in range(0, 3)]
+        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()).replace("+00:00", "Z") for _ in range(0, 3)]
         products = [self.bc.fake.name() for _ in range(0, 3)]
         skus = [self.bc.fake.slug() for _ in range(0, 3)]
         quantities = [random.randint(1, 10) for _ in range(0, 3)]
         unit_types = [self.bc.fake.slug() for _ in range(0, 3)]
         price_per_units = [random.random() * 100 for _ in range(0, 3)]
-        multipliers = [random.random() * 100 for _ in range(0, 3)]
         owners = [self.bc.fake.slug() for _ in range(0, 3)]
 
         # dictionary of lists
         obj = {
-            "Username": usernames,
-            "Date": dates,
-            "Product": products,
-            "SKU": skus,
-            "Quantity": quantities,
-            "Unit Type": unit_types,
-            "Price Per Unit ($)": price_per_units,
-            "Multiplier": multipliers,
-            "Owner": owners,
+            "username": usernames,
+            "usage_at": dates,
+            "product": products,
+            "sku": skus,
+            "quantity": quantities,
+            "unit_type": unit_types,
+            "applied_cost_per_quantity": price_per_units,
+            "organization": owners,
         }
 
         df = pd.DataFrame.from_dict(obj)
@@ -478,26 +476,24 @@ class MarketingTestSuite(ProvisioningTestCase):
         file = tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w+")
 
         usernames = [self.bc.fake.slug() for _ in range(0, 3)]
-        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()).split("T")[0] for _ in range(0, 3)]
+        dates = [self.bc.datetime.to_iso_string(self.bc.datetime.now()).replace("+00:00", "Z") for _ in range(0, 3)]
         products = [self.bc.fake.name() for _ in range(0, 3)]
         skus = [self.bc.fake.slug() for _ in range(0, 3)]
         quantities = [random.randint(1, 10) for _ in range(0, 3)]
         unit_types = [self.bc.fake.slug() for _ in range(0, 3)]
         price_per_units = [random.random() * 100 for _ in range(0, 3)]
-        multipliers = [random.random() * 100 for _ in range(0, 3)]
         owners = [self.bc.fake.slug() for _ in range(0, 3)]
 
         # dictionary of lists
         obj = {
-            "Username": usernames,
-            "Date": dates,
-            "Product": products,
-            "SKU": skus,
-            "Quantity": quantities,
-            "Unit Type": unit_types,
-            "Price Per Unit ($)": price_per_units,
-            "Multiplier": multipliers,
-            "Owner": owners,
+            "username": usernames,
+            "usage_at": dates,
+            "product": products,
+            "sku": skus,
+            "quantity": quantities,
+            "unit_type": unit_types,
+            "applied_cost_per_quantity": price_per_units,
+            "organization": owners,
         }
 
         df = pd.DataFrame.from_dict(obj)

@@ -317,15 +317,13 @@ class UploadView(APIView):
         if format_error:
             # codespaces
             fields = [
-                "Username",
-                "Date",
-                "Product",
-                "SKU",
-                "Quantity",
-                "Unit Type",
-                "Price Per Unit ($)",
-                "Multiplier",
-                "Owner",
+                "username",
+                "usage_at",
+                "product",
+                "sku",
+                "quantity",
+                "unit_type",
+                "applied_cost_per_quantity",
             ]
 
         if format_error and len(df.keys().intersection(fields)) == len(fields):
@@ -336,9 +334,11 @@ class UploadView(APIView):
             df2.reset_index()
 
             try:
+                first = df2["usage_at"][0].split("-")
+                last = df["usage_at"][0].split("-")
 
-                first = df["Date"][0].split("-")
-                last = df2["Date"][0].split("-")
+                first[2] = first[2].split("T")[0]
+                last[2] = last[2].split("T")[0]
 
                 first = date(int(first[0]), int(first[1]), int(first[2]))
                 last = date(int(last[0]), int(last[1]), int(last[2]))
