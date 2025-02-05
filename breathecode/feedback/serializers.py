@@ -155,7 +155,25 @@ class ReviewSmallSerializer(serpy.Serializer):
 
 
 class GetSurveySerializer(serpy.Serializer):
+    id = serpy.Field()
+    send_now = serpy.Field(required=False)
+    status = serpy.Field(required=False)
+    public_url = serpy.MethodField()
+    lang = serpy.Field(required=False)
+    max_assistants_to_ask = serpy.Field(required=False)
+    max_teachers_to_ask = serpy.Field(required=False)
+    duration = serpy.Field(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    sent_at = serpy.Field(required=False)
+    cohort = serpy.MethodField()
     scores = serpy.Field()
+
+    def get_public_url(self, obj):
+        return "https://nps.4geeks.com/survey/" + str(obj.id)
+
+    def get_cohort(self, obj):
+        return obj.cohort.id if obj.cohort else None
 
 
 class AnswerPUTSerializer(serializers.ModelSerializer):
