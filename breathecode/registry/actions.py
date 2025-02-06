@@ -20,10 +20,11 @@ from breathecode.media.models import Media, MediaResolution
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
 
-from .models import ASSET_STATUS, Asset, AssetErrorLog, AssetImage, AssetTechnology, ContentVariable, OriginalityScan
+from .models import ASSET_STATUS, Asset, AssetImage, AssetTechnology, ContentVariable, OriginalityScan
 from .serializers import AssetBigSerializer
 from .utils import (
     ArticleValidator,
+    AssetErrorLogType,
     AssetException,
     ExerciseValidator,
     LessonValidator,
@@ -179,7 +180,7 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
     return "ERROR"
 
 
-def push_to_github(asset_slug, author=None):
+def push_to_github(asset_slug, owner=None):
 
     logger.debug(f"Push asset {asset_slug} to github")
 
@@ -194,22 +195,23 @@ def push_to_github(asset_slug, author=None):
         asset.sync_status = "PENDING"
         asset.save()
 
-        if author is None:
-            author = asset.owner
+        if owner is None:
+            if asset.owner is not None: owner = asset.owner
+            elif asset.author is not None: owner = asset.author
 
         if asset.external:
             raise Exception('Asset is marked as "external" so it cannot push to github')
 
-        if author is None:
+        if owner is None:
             raise Exception("Asset must have an owner with write permissions on the repository")
 
         if asset.readme_url is None or "github.com" not in asset.readme_url:
             raise Exception(f"Missing or invalid URL on {asset_slug}, it does not belong to github.com")
 
-        credentials = CredentialsGithub.objects.filter(user__id=author.id).first()
+        credentials = CredentialsGithub.objects.filter(user__id=owner.id).first()
         if credentials is None:
             raise Exception(
-                f"Github credentials for user {author.first_name} {author.last_name} (id: {author.id}) not found when synching asset {asset_slug}"
+                f"Github credentials for user {owner.first_name} {owner.last_name} (id: {owner.id}) not found when synching asset {asset_slug}"
             )
 
         g = Github(credentials.token)
@@ -526,7 +528,7 @@ def clean_readme_hide_comments(asset: Asset):
     findings = list(re.finditer(regex, content))
 
     if len(findings) % 2 != 0:
-        asset.log_error(AssetErrorLog.README_SYNTAX, "Readme with to many <!-- hide -> comments")
+        asset.log_error(AssetErrorLogType.README_SYNTAX, "Readme with to many <!-- hide -> comments")
         raise Exception("Readme with to many <!-- hide -> comments")
 
     replaced = ""
@@ -788,12 +790,6 @@ def process_asset_config(asset, config):
         asset.with_solutions = True
         asset.with_video = True
 
-    if "gitpod" in config:
-        if config["gitpod"] in ["True", "true", "1", True]:
-            asset.gitpod = True
-        elif config["gitpod"] in ["False", "false", "0", False]:
-            asset.gitpod = False
-
     if "editor" in config:
         if "agent" in config["editor"]:
             asset.agent = config["editor"]["agent"]
@@ -813,7 +809,6 @@ def process_asset_config(asset, config):
 
     if "grading" not in config and ("projectType" not in config or config["projectType"] != "tutorial"):
         asset.interactive = False
-        asset.gitpod = False
     elif "projectType" in config and config["projectType"] == "tutorial":
         asset.gitpod = "localhostOnly" not in config or not config["localhostOnly"]
         asset.interactive = True
@@ -858,6 +853,12 @@ def process_asset_config(asset, config):
         asset.delivery_formats = "url"
         asset.delivery_regex_url = ""
 
+    if "gitpod" in config:
+        if config["gitpod"] in ["True", "true", "1", True]:
+            asset.gitpod = True
+        elif config["gitpod"] in ["False", "false", "0", False]:
+            asset.gitpod = False
+    
     asset.save()
     return asset
 
@@ -1062,20 +1063,20 @@ def pull_quiz_asset(github, asset: Asset):
     return asset
 
 
-def test_asset(asset: Asset):
+def test_asset(asset: Asset, log_errors=False):
     try:
 
         validator = None
         if asset.asset_type == "LESSON":
-            validator = LessonValidator(asset)
+            validator = LessonValidator(asset, log_errors)
         elif asset.asset_type == "EXERCISE":
-            validator = ExerciseValidator(asset)
+            validator = ExerciseValidator(asset, log_errors)
         elif asset.asset_type == "PROJECT":
-            validator = ProjectValidator(asset)
+            validator = ProjectValidator(asset, log_errors)
         elif asset.asset_type == "QUIZ":
-            validator = QuizValidator(asset)
+            validator = QuizValidator(asset, log_errors)
         elif asset.asset_type == "ARTICLE":
-            validator = ArticleValidator(asset)
+            validator = ArticleValidator(asset, log_errors)
 
         validator.validate()
         asset.status_text = "Test Successfull"
