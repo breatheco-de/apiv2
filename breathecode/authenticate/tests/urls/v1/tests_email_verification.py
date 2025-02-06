@@ -2,22 +2,13 @@
 Test cases for /emailvalidation
 """
 
-import re
-import urllib
-from unittest import mock
-
-import capyc.pytest as capy
 import pytest
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from rest_framework.test import APIClient
 from linked_services.django.actions import reset_app_cache
 
-import staging.pytest as staging
-from breathecode.authenticate.tests.mocks.mocks import FakeResponse
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
-
-from ...mocks import GithubRequestsMock
 
 
 @pytest.fixture(autouse=True)
