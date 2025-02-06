@@ -530,7 +530,7 @@ class MeProfileAcademyInvite(APIView, HeaderLimitOffsetPagination, GenerateLooku
         return Response(serializer.data)
 
 
-class EmailConfirmation(APIView):
+class EmailVerification(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, email=None):
