@@ -35,6 +35,7 @@ def serialize_event(event):
         "ended_at": (event.ended_at.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z" if event.ended_at else None),
         "online_event": event.online_event,
         "is_public": event.is_public,
+        "recording_url": event.recording_url,
         "venue": (
             None
             if not event.venue
