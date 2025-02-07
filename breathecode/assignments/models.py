@@ -219,9 +219,11 @@ class FinalProject(models.Model):
 
 
 ERROR = "ERROR"
+IGNORED = "IGNORED"
 LEARNPACK_WEBHOOK_STATUS = (
     (PENDING, "Pending"),
     (DONE, "Done"),
+    (IGNORED, "Ignored"),
     (ERROR, "Error"),
 )
 
