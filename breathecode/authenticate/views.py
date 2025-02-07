@@ -610,7 +610,12 @@ class ResendInviteView(APIView):
         get_user_language(request)
         errors: list[C] = []
 
-        invite = UserInvite.objects.filter(id=invite_id).first()
+        invite = None
+        if invite_id.isnumeric():
+            invite = UserInvite.objects.filter(id=invite_id).first()
+        else:
+            invite = UserInvite.objects.filter(email=invite_id, is_email_validated=False).first()
+
         if invite is None:
             raise ValidationException("Invite not found", code=404, slug="user-invite-not-found")
 
