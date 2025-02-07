@@ -11,7 +11,7 @@ class Command(BaseCommand):
         self.delete_old_webhooks()
 
     def delete_old_webhooks(self, batch_size=1000):
-        thirty_days_ago = timezone.now() - timedelta(days=30)
+        thirty_days_ago = timezone.now() - timedelta(days=5)
         while True:
             old_webhooks = LearnPackWebhook.objects.filter(created_at__lt=thirty_days_ago).exclude(
                 status__in=["ERROR", "PENDING"]
