@@ -21,6 +21,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
 # django.setup()
 
 settings, kwargs, REDIS_URL = get_redis_config()
+CLOUDAMQP_URL = os.getenv("CLOUDAMQP_URL")
 
 app = Celery("celery_breathecode", **kwargs)
 if os.getenv("ENV") == "test":
@@ -32,8 +33,8 @@ if os.getenv("ENV") == "test":
 #   should have a `CELERY_` prefix.
 app.config_from_object("django.conf:settings")
 app.conf.update(
-    broker_url=REDIS_URL,
-    result_backend=REDIS_URL,
+    broker_url=CLOUDAMQP_URL,
+    result_backend=CLOUDAMQP_URL,
     namespace="CELERY",
     result_expires=10,
     worker_max_memory_per_child=int(os.getenv("CELERY_MAX_MEMORY_PER_WORKER", "470000")),
