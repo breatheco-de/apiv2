@@ -4,9 +4,9 @@ Test cases for /emailvalidation
 
 import pytest
 from django.urls.base import reverse_lazy
+from linked_services.django.actions import reset_app_cache
 from rest_framework import status
 from rest_framework.test import APIClient
-from linked_services.django.actions import reset_app_cache
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
@@ -39,10 +39,10 @@ def test_email_verification_not_validated(bc: Breathecode, client: APIClient):
     response = client.get(url)
 
     json = response.json()
-    expected = {"detail": "email-not-validated", "status_code": 400}
+    expected = {"detail": "email-not-validated", "status_code": 403}
 
     assert json == expected
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 def test_email_verification(bc: Breathecode, client: APIClient):
