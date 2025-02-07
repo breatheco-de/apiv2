@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
-from assignments.models import LearnPackWebhook
+from breathecode.assignments.models import LearnPackWebhook
 
 
 class Command(BaseCommand):
