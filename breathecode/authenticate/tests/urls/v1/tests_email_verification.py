@@ -24,10 +24,10 @@ def test_email_verification_no_user(bc: Breathecode, client: APIClient):
     response = client.get(url)
 
     json = response.json()
-    expected = {"detail": "email-not-found", "status_code": 400}
+    expected = {"detail": "email-not-found", "status_code": 404}
 
     assert json == expected
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_email_verification_not_validated(bc: Breathecode, client: APIClient):

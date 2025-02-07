@@ -545,6 +545,7 @@ class EmailVerification(APIView):
                     es="No pudimos encontrar una dirección con este email",
                 ),
                 slug="email-not-found",
+                code=404,
             )
 
         if invite is not None and not invite.is_email_validated:
