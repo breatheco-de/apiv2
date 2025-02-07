@@ -31,6 +31,7 @@ from .utils import (
     OriginalityWrapper,
     ProjectValidator,
     QuizValidator,
+    StarterValidator,
 )
 
 logger = logging.getLogger(__name__)
@@ -1069,6 +1070,8 @@ def test_asset(asset: Asset, log_errors=False):
         validator = None
         if asset.asset_type == "LESSON":
             validator = LessonValidator(asset, log_errors)
+        if asset.asset_type == "STARTER":
+            validator = StarterValidator(asset, log_errors)
         elif asset.asset_type == "EXERCISE":
             validator = ExerciseValidator(asset, log_errors)
         elif asset.asset_type == "PROJECT":

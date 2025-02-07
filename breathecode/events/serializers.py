@@ -191,6 +191,7 @@ class EventSmallSerializer(EventTinySerializer):
     author = UserSerializer(required=False)
     asset = serpy.MethodField()
     is_public = serpy.Field()
+    recording_url = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -247,6 +248,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
     is_public = serpy.Field()
+    recording_url = serpy.Field()
 
 
 class EventPublicBigSerializer(EventSmallSerializer):
@@ -299,6 +301,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     free_for_all = serpy.Field()
     asset = serpy.MethodField()
     is_public = serpy.Field()
+    recording_url = serpy.Field()
 
     def get_asset(self, obj):
         if obj.asset_slug is not None:
@@ -362,6 +365,17 @@ class EventSerializer(serializers.ModelSerializer):
         lang = data.get("lang", "en")
 
         academy = self.context.get("academy_id")
+
+        recording_url = data.get("recording_url")
+        if recording_url and not recording_url.startswith(("http://", "https://")):
+            raise ValidationException(
+                translation(
+                    self.context.get("lang", "en"),
+                    en="The recording URL must be a valid URL starting with http:// or https://",
+                    es="La URL de la grabación debe ser una URL válida que comience con http:// o https://",
+                    slug="invalid-recording-url",
+                )
+            )
 
         if ("tags" not in data and self.instance.tags == "") or ("tags" in data and data["tags"] == ""):
             raise ValidationException(
@@ -457,6 +471,7 @@ class EventPUTSerializer(serializers.ModelSerializer):
     ending_at = serializers.DateTimeField(required=False)
     online_event = serializers.BooleanField(required=False)
     status = serializers.CharField(required=False)
+    recording_url = serializers.URLField(required=False)
 
     class Meta:
         model = Event

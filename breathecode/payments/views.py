@@ -2047,7 +2047,7 @@ class PayView(APIView):
 
                 elif bag.how_many_installments > 0:
                     tasks.build_plan_financing.delay(
-                        bag.id, invoice.id, conversion_info=conversion_info, price=original_price
+                        bag.id, invoice.id, conversion_info=conversion_info
                     )
 
                 else:

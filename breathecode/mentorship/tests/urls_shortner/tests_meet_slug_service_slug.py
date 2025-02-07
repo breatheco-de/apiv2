@@ -4151,3 +4151,176 @@ def test_with_mentor_profile__redirect_to_session__saas__bypass_consumption_true
         database.get_model("auth.Permission").objects.all().delete()
         database.get_model("payments.Service").objects.all().delete()
         feature.is_enabled.call_args_list = []
+
+
+@patch("breathecode.mentorship.actions.mentor_is_ready", MagicMock())
+@patch(
+    "os.getenv",
+    MagicMock(
+        side_effect=apply_get_env(
+            {
+                "DAILY_API_URL": URL,
+                "DAILY_API_KEY": API_KEY,
+            }
+        )
+    ),
+)
+@patch(
+    "requests.request",
+    apply_requests_request_mock(
+        [
+            (
+                201,
+                f"{URL}/v1/rooms",
+                {
+                    "name": ROOM_NAME,
+                    "url": ROOM_URL,
+                },
+            )
+        ]
+    ),
+)
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+def test_user_blocked_from_mentorship_service(
+    database: capy.Database,
+    client: capy.Client,
+    fake: capy.Fake,
+    format: capy.Format,
+    is_enabled_fx: IsEnabledFixture,
+):
+    is_enabled_fx.can_access = False
+
+    mentor_profile_cases = [
+        {
+            "status": x,
+            "online_meeting_url": fake.url(),
+            "booking_url": fake.url(),
+        }
+        for x in ["ACTIVE", "UNLISTED"]
+    ]
+
+    id = 0
+    for mentor_profile in mentor_profile_cases:
+        id += 1
+
+        user = {"first_name": "", "last_name": ""}
+        service = {"consumer": "JOIN_MENTORSHIP"}
+        base = database.create(user=user, token=1, service=service, country=1, city=1)
+
+        ends_at = UTC_NOW - timedelta(seconds=3600 / 2 + 1)
+
+        academy = {"available_as_saas": True}
+        mentorship_session = {
+            "mentee_id": base.user.id,
+            "ends_at": ends_at,
+        }
+        mentorship_service = {
+            "language": "en",
+            "video_provider": "DAILY",
+            "allow_mentee_to_extend": True,
+        }
+
+        token = 1
+
+        model = database.create(
+            mentor_profile=mentor_profile,
+            mentorship_service=mentorship_service,
+            mentorship_session=mentorship_session,
+            user=user,
+            token=token,
+            service=base.service,
+            academy=academy,
+            country=1,
+            city=1,
+        )
+
+        model.mentorship_session.mentee = None
+        model.mentorship_session.save()
+
+        token = base.token
+
+        querystring = to_querystring(
+            {
+                "token": token.key,
+                "extend": "true",
+                "mentee": base.user.id,
+                "session": model.mentorship_session.id,
+            }
+        )
+        url = (
+            reverse_lazy(
+                "mentorship_shortner:meet_slug_service_slug",
+                kwargs={"mentor_slug": model.mentor_profile.slug, "service_slug": model.mentorship_service.slug},
+            )
+            + f"?{querystring}"
+        )
+        response = client.get(url)
+
+        content = response.content.decode()
+        expected = render_message("mentorship-service-blocked")
+
+        # dump error in external files
+        if content != expected:
+            with open("content.html", "w") as f:
+                f.write(content)
+
+            with open("expected.html", "w") as f:
+                f.write(expected)
+
+        assert content == expected
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+        assert database.list_of("mentorship.MentorProfile") == [
+            format.to_obj_repr(model.mentor_profile),
+        ]
+        assert database.list_of("payments.Consumable") == []
+        assert database.list_of("payments.ConsumptionSession") == []
+        calls = [
+            call(
+                args[0],
+                {
+                    **args[1],
+                    "context": {
+                        **args[1]["context"],
+                        "request": type(args[1]["context"]["request"]),
+                        "consumer": callable(args[1]["context"]["consumer"]),
+                        "consumables": [x for x in args[1]["context"]["consumables"]],
+                    },
+                },
+                *args[2:],
+                **kwargs,
+            )
+            for args, kwargs in feature.is_enabled.call_args_list[:1]
+        ] + feature.is_enabled.call_args_list[1:]
+        context1 = feature.context(
+            context={
+                "utc_now": UTC_NOW,
+                "consumer": True,
+                "service": "join_mentorship",
+                "request": WSGIRequest,
+                "consumables": [],
+                "lifetime": None,
+                "price": 1,
+                "is_consumption_session": False,
+                "flags": {"bypass_consumption": False},
+            },
+            kwargs={
+                "token": base.token,
+                "mentor_profile": model.mentor_profile,
+                "mentorship_service": model.mentorship_service,
+            },
+        )
+        assert calls == [
+            call("payments.bypass_consumption", context1, False),
+            call(
+                "payments.can_access",
+                context={"to": "mentorship-service", "user": base.user, "mentorship_service": model.mentorship_service},
+                default=True,
+            ),
+        ]
+
+        # teardown
+        database.get_model("mentorship.MentorProfile").objects.all().delete()
+        database.get_model("auth.Permission").objects.all().delete()
+        database.get_model("payments.Service").objects.all().delete()
+        feature.is_enabled.call_args_list = []
