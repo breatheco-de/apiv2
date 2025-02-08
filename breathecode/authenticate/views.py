@@ -98,6 +98,11 @@ from .serializers import (
     AppUserSerializer,
     AuthSerializer,
     AuthSettingsBigSerializer,
+    CapyAppAcademySerializer,
+    CapyAppCitySerializer,
+    CapyAppCountrySerializer,
+    CapyAppProfileAcademySerializer,
+    CapyAppUserSerializer,
     GetGitpodUserSerializer,
     GetProfileAcademySerializer,
     GetProfileAcademySmallSerializer,
@@ -525,6 +530,39 @@ class MeProfileAcademyInvite(APIView, HeaderLimitOffsetPagination, GenerateLooku
         return Response(serializer.data)
 
 
+class EmailVerification(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, email=None):
+        lang = get_user_language(request)
+
+        invite = UserInvite.objects.filter(email=email).first()
+        user = User.objects.filter(email=email).first()
+        if user is None and invite is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="We could not find an account with this email",
+                    es="No pudimos encontrar una dirección con este email",
+                ),
+                slug="email-not-found",
+                code=404,
+            )
+
+        if invite is not None and not invite.is_email_validated:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You need to validate your email first",
+                    es="Debes validar tu email primero",
+                ),
+                slug="email-not-validated",
+                code=403,
+            )
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
 class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
@@ -572,7 +610,12 @@ class ResendInviteView(APIView):
         get_user_language(request)
         errors: list[C] = []
 
-        invite = UserInvite.objects.filter(id=invite_id).first()
+        invite = None
+        if invite_id.isnumeric():
+            invite = UserInvite.objects.filter(id=invite_id).first()
+        else:
+            invite = UserInvite.objects.filter(email=invite_id, is_email_validated=False).first()
+
         if invite is None:
             raise ValidationException("Invite not found", code=404, slug="user-invite-not-found")
 
@@ -760,6 +803,69 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         invite.save()
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
+
+
+class V2AppUserView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:user"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, user_id: int | None = None):
+        serializer = CapyAppUserSerializer(request)
+        if user_id:
+            return serializer.get(id=user_id)
+
+        return serializer.filter()
+
+
+class V2AppStudentView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:student"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, user_id_or_email: str | None = None):
+        serializer = CapyAppProfileAcademySerializer(request)
+        if user_id_or_email:
+            if user_id_or_email.isnumeric():
+                return serializer.get(id=int(user_id_or_email), role__slug="student")
+            else:
+                return serializer.get(email=user_id_or_email, role__slug="student")
+
+        return serializer.filter(role__slug="student")
+
+
+class V2AppAcademyView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:academy"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, academy_id: int | None = None):
+        serializer = CapyAppAcademySerializer(request)
+        if academy_id:
+            return serializer.get(id=academy_id)
+
+        return serializer.filter()
+
+
+class V2AppCityView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:city"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, city_id: int | None = None):
+        serializer = CapyAppCitySerializer(request)
+        if city_id:
+            return serializer.get(id=city_id)
+
+        return serializer.filter()
+
+
+class V2AppCountryView(APIView):
+    permission_classes = [AllowAny]
+
+    @scope(["read:country"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, country_id: int | None = None):
+        serializer = CapyAppCountrySerializer(request)
+        if country_id:
+            return serializer.get(code=country_id)
+
+        return serializer.filter()
 
 
 class StudentView(APIView, GenerateLookupsMixin):
@@ -1093,7 +1199,6 @@ async def save_github_token(request):
         async with session.post(
             "https://github.com/login/oauth/access_token", data=payload, headers=headers, timeout=30
         ) as resp:
-            print(session.post)
             body = await resp.json()
             logger.debug(f"https://github.com/login/oauth/access_token => {body}")
             if resp.status != 200:
@@ -1113,8 +1218,6 @@ async def save_github_token(request):
                 raise APIException(
                     f"Github code {resp.status}: {error_message(github_user, 'error getting github user')}"
                 )
-
-    print(github_user)
 
     if github_user["email"] is None:
         github_token = body["access_token"]
@@ -1228,7 +1331,6 @@ async def save_github_token(request):
         profile.avatar_url = github_user["avatar_url"]
         await profile.asave()
 
-    print(111)
     student_role = await Role.objects.aget(slug="student")
     cus = CohortUser.objects.filter(user=user, role="STUDENT").prefetch_related("cohort", "user", "cohort__academy")
     async for cu in cus:
@@ -2106,7 +2208,7 @@ def get_google_token(request, token=None):
     ]
 
     if academy_settings in ["overwrite", "set"]:
-        if feature.is_enabled("authenticate.set_google_credentials", default=True) is False:
+        if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
             raise ValidationException(
                 "Setting academy google credentials is not available",
                 slug="set-google-credentials-not-available",
@@ -2150,7 +2252,7 @@ async def save_google_token(request):
             academy=academy, defaults={"google_cloud_owner": user}
         )
         if not created:
-            settings.google_cloud_owner.id = user.id
+            settings.google_cloud_owner = user
             await settings.asave()
 
     async def async_iter(iterable: list):
@@ -2186,9 +2288,9 @@ async def save_google_token(request):
 
     academies = async_iter([])
     roles = ["admin", "staff", "country_manager", "academy_token"]
-    academy_settings = state.get("academysettings", "none")
+    academy_settings = state.get("academysettings", ["none"])[0]
     if academy_settings != "none":
-        if feature.is_enabled("authenticate.set-google-credentials", default=False) is False:
+        if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
             raise ValidationException(
                 "Setting academy google credentials is not available",
                 slug="set-google-credentials-not-available",
@@ -2277,6 +2379,19 @@ async def save_google_token(request):
 
 @private_view()
 def render_google_connect(request, token):
+    academy_settings = request.GET.get("academysettings", "none")
+    query = {}
+
+    if academy_settings != "none":
+        capable = ProfileAcademy.objects.filter(
+            user=request.user.id, role__capabilities__slug="crud_academy_auth_settings"
+        )
+
+        if capable.count() == 0:
+            return render_message(request, "You don't have permission to access this view", status=403)
+
+        query["academysettings"] = academy_settings
+
     callback_url = request.GET.get("url", None)
 
     if not callback_url:
@@ -2289,11 +2404,18 @@ def render_google_connect(request, token):
             callback_url = str(base64.urlsafe_b64encode(query_params.get("url", [None])[0].encode("utf-8")), "utf-8")
 
     if callback_url is None:
-        raise ValidationException("Callback URL specified", slug="no-callback")
+        extra = {}
+        if "APP_URL" in os.environ and os.getenv("APP_URL") != "":
+            extra["btn_url"] = os.getenv("APP_URL")
+            extra["btn_label"] = "Back to 4Geeks"
 
-    token, created = Token.get_or_create(user=request.user, token_type="one_time")
+        return render_message(request, "no callback URL specified", **extra, status=400)
 
-    url = f"/v1/auth/google/{token}?url={callback_url}"
+    query["url"] = callback_url
+
+    token, _ = Token.get_or_create(user=request.user, token_type="one_time")
+
+    url = f"/v1/auth/google/{token}?{urlencode(query)}"
     return HttpResponseRedirect(redirect_to=url)
 
 

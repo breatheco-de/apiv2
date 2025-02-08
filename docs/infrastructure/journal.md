@@ -88,3 +88,11 @@ Why:
 ## 06/10/2024
 
 - `[dev]` `HEROKU_POSTGRESQL_TEAL` was replaced by `HEROKU_POSTGRESQL_GOLD`.
+
+## 29/01/2025
+
+- `[dev]` switch `CELERY_CONCURRENCY` from `8` to `4`.
+
+Why:
+
+- To reduce the memory usage of the celery workers.

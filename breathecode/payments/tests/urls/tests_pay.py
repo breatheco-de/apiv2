@@ -1171,7 +1171,9 @@ def test_with_installments(bc: Breathecode, client: APIClient):
     bc.check.queryset_with_pks(model.bag.plans.all(), [1])
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
-    assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info="")]
+    assert tasks.build_plan_financing.delay.call_args_list == [
+        call(1, 1, conversion_info=""),
+    ]
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])

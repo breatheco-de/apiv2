@@ -1,8 +1,9 @@
-import os
 import json
+import os
+from pathlib import Path
+
 import requests
 from bs4 import BeautifulSoup
-from pathlib import Path
 
 url_source_of_postgres_keywords = "https://www.postgresql.org/docs/8.1/sql-keywords-appendix.html"
 
@@ -207,5 +208,7 @@ for element in soup.select("td tt"):
 
 dict = {"whitelist": WHITELIST, "blacklist": list(BLACKLIST)}
 
-with open(Path(os.getcwd()) / "breathecode" / "sql_keywords.json", "w") as f:
-    json.dump(dict, f, indent=4)
+
+def write_json():
+    with open(Path(os.getcwd()) / "breathecode" / "sql_keywords.json", "w") as f:
+        json.dump(dict, f, indent=4)

@@ -1,10 +1,12 @@
 import os
+
+from django.core.cache import cache
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.core.cache import cache
+
 from breathecode.activity import tasks
 
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
+IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 
 def db_backup_bucket():

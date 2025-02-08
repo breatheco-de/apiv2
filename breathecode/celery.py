@@ -21,6 +21,21 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
 # django.setup()
 
 settings, kwargs, REDIS_URL = get_redis_config()
+CLOUDAMQP_URL = os.getenv("CLOUDAMQP_URL", "")
+
+# Default to a safe fallback if you want (or raise an error)
+if not CLOUDAMQP_URL:
+    raise ValueError("CLOUDAMQP_URL is not set in environment variables.")
+
+# Decide SSL usage by checking the scheme
+if CLOUDAMQP_URL.startswith("amqps://"):
+    # Convert 'amqps://' to 'pyamqp://'
+    BROKER_URL = CLOUDAMQP_URL.replace("amqps://", "pyamqp://", 1)
+    BROKER_USE_SSL = True
+else:
+    # Convert 'amqp://' to 'pyamqp://'
+    BROKER_URL = CLOUDAMQP_URL.replace("amqp://", "pyamqp://", 1)
+    BROKER_USE_SSL = False
 
 app = Celery("celery_breathecode", **kwargs)
 if os.getenv("ENV") == "test":
@@ -32,8 +47,9 @@ if os.getenv("ENV") == "test":
 #   should have a `CELERY_` prefix.
 app.config_from_object("django.conf:settings")
 app.conf.update(
-    broker_url=REDIS_URL,
+    broker_url=BROKER_URL,
     result_backend=REDIS_URL,
+    broker_use_ssl=BROKER_USE_SSL,
     namespace="CELERY",
     result_expires=10,
     worker_max_memory_per_child=int(os.getenv("CELERY_MAX_MEMORY_PER_WORKER", "470000")),

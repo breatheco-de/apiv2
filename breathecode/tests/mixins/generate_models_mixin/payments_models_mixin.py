@@ -49,7 +49,7 @@ class PaymentsModelsMixin(ModelsMixin):
         seller=False,
         coupon=False,
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()

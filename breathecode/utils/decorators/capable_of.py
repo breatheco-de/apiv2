@@ -1,12 +1,12 @@
 from asgiref.sync import sync_to_async
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 
 from breathecode.utils.exceptions import ProgrammingError
-from capyc.rest_framework.exceptions import ValidationException
 
-__all__ = ["capable_of", "acapable_of"]
+__all__ = ["capable_of", "acapable_of", "get_academy_from_capability"]
 
 
 def capable_of(capability=None):

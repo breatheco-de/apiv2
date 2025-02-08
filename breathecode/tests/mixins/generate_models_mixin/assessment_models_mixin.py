@@ -25,7 +25,7 @@ class AssessmentModelsMixin(ModelsMixin):
         student_assessment_kwargs={},
         answer_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()

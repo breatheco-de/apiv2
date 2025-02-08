@@ -7,6 +7,7 @@ from typing import Any, Optional
 from capyc.core.i18n import translation
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
+from django.db.models import F
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -43,7 +44,7 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
+IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
@@ -239,6 +240,26 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
         renew_consumables.delay(scheduler.id)
 
 
+# this could be removed 01-29-2025
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def fix_subscription_next_payment_at(subscription_id: int, **_: Any):
+    """Fix a subscription next payment at."""
+
+    logger.info(f"Starting fix_subscription_next_payment_at for subscription {subscription_id}")
+
+    if not (
+        subscription := Subscription.objects.filter(id=subscription_id, paid_at=F("next_payment_at"))
+        .only("id", "paid_at", "next_payment_at")
+        .first()
+    ):
+        raise AbortTask(f"Subscription with id {subscription_id} not found")
+
+    delta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
+
+    subscription.next_payment_at += delta
+    subscription.save()
+
+
 def fallback_charge_subscription(self, subscription_id: int, exception: Exception, **_: Any):
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         return
@@ -373,7 +394,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             delta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
 
             subscription.next_payment_at += delta
-            while utc_now > subscription.next_payment_at:
+            while utc_now >= subscription.next_payment_at:
                 subscription.next_payment_at += delta
                 if subscription.valid_until:
                     subscription.valid_until += delta
@@ -823,9 +844,13 @@ def build_subscription(
     logger.info(f"Subscription was created with id {subscription.id}")
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_plan_financing(
-    self, bag_id: int, invoice_id: int, is_free: bool = False, conversion_info: Optional[str] = "", **_: Any
+    bag_id: int,
+    invoice_id: int,
+    is_free: bool = False,
+    conversion_info: Optional[str] = "",
+    **_: Any,
 ):
     logger.info(f"Starting build_plan_financing for bag {bag_id}")
 

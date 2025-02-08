@@ -1,7 +1,7 @@
 #!/bin/env python
 
-import os
 import json
+import os
 from pathlib import Path
 from shutil import which
 
@@ -20,7 +20,7 @@ vscode_setting_json = {}
 
 if os.path.isfile(vscode_setting_path):
     # import yaml
-    os.system(f"pipenv run python -m scripts.utils.fix_json {vscode_setting_path}")
+    os.system(f"poetry run python -m scripts.utils.fix_json {vscode_setting_path}")
 
     with open(vscode_setting_path, "r") as vscode_setting_file:
         vscode_setting_json = json.load(vscode_setting_file)

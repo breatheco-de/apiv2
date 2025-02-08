@@ -611,6 +611,11 @@ def get_bag_from_subscription(
     bag.currency = last_invoice.currency
     bag.user = subscription.user
     bag.is_recurrent = True
+    bag.chosen_period = last_invoice.bag.chosen_period
+
+    if bag.chosen_period == "NO_SET":
+        bag.chosen_period = "MONTH"
+
     bag.save()
 
     for service_item in subscription.service_items.all():

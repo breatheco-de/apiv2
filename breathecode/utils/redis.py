@@ -1,6 +1,6 @@
 from django.core.cache import cache
 
-IS_DJANGO_REDIS = hasattr(cache, "delete_pattern")
+IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 __all__ = ["Lock"]
 

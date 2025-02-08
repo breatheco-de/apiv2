@@ -1,10 +1,10 @@
 import base64
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
+from django import shortcuts
 from django.contrib import messages
-from django.http import HttpResponseRedirect
-from django.shortcuts import render
+from django.http import HttpRequest, HttpResponseRedirect
 from rest_framework.exceptions import PermissionDenied
 
 from breathecode.authenticate.models import Academy, Token
@@ -31,7 +31,14 @@ def set_query_parameter(url, param_name, param_value=""):
 
 
 def render_message(
-    r, msg, btn_label=None, btn_url=None, btn_target="_blank", data=None, status=None, academy: Optional[Academy] = None
+    r: HttpRequest,
+    msg: str,
+    btn_label: Optional[str] = None,
+    btn_url: Optional[str] = None,
+    btn_target: Optional[str] = "_blank",
+    data: Optional[dict[str, Any]] = None,
+    status: Optional[int] = None,
+    academy: Optional[Academy] = None,
 ):
     if data is None:
         data = {}
@@ -47,10 +54,12 @@ def render_message(
         if "heading" not in data:
             _data["heading"] = academy.name
 
-    return render(r, "message.html", {**_data, **data}, status=status)
+    return shortcuts.render(r, "message.html", {**_data, **data}, status=status)
 
 
-def private_view(permission=None, auth_url="/v1/auth/view/login"):
+def private_view(permission=None, auth_url="/v1/auth/view/login", capability=None):
+
+    from ..decorators.capable_of import get_academy_from_capability
 
     def decorator(func):
 
@@ -76,14 +85,25 @@ def private_view(permission=None, auth_url="/v1/auth/view/login"):
                 if valid_token is None:
                     raise PermissionDenied("You don't have access to this view")
 
-                if permission is not None and not validate_permission(valid_token.user, permission):
-                    raise PermissionDenied(f"You don't have permission {permission} to access this view")
-
             except Exception as e:
                 messages.add_message(req, messages.ERROR, str(e))
                 return HttpResponseRedirect(
                     redirect_to=f"{auth_url}?attempt=1&url=" + str(base64.b64encode(url.encode("utf-8")), "utf-8")
                 )
+
+            if permission and validate_permission(valid_token.user, permission) is False:
+                return render_message(req, f"You don't have permission {permission} to access this view", status=403)
+
+            if capability:
+                try:
+                    req.user = valid_token.user
+                    academy_id = get_academy_from_capability(kwargs, req, capability)
+                    kwargs["academy_id"] = academy_id
+                    req.parser_context["kwargs"]["academy_id"] = academy_id
+
+                except Exception as e:
+                    # improve this exception handler
+                    return render_message(req, str(e), status=403)
 
             # inject user in request
             args[0].user = valid_token.user

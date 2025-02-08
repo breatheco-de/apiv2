@@ -34,7 +34,7 @@ class EventsModelsMixin(ModelsMixin):
         event_checkin_kwargs={},
         eventbrite_webhook_kwargs={},
         models={},
-        **kwargs
+        **kwargs,
     ):
         """Generate models"""
         models = models.copy()
