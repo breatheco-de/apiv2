@@ -35,7 +35,6 @@ else:
 
 app = Celery("celery_breathecode", **kwargs)
 if os.getenv("ENV") == "test":
-    BROKER_URL = REDIS_URL
     app.conf.update(task_always_eager=True)
 
 if os.getenv("ENV") == "test" or not CLOUDAMQP_URL:
