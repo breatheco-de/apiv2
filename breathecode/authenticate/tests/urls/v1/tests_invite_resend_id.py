@@ -129,6 +129,64 @@ class AuthenticateTestSuite(AuthTestCase):
         )
 
     # Given: 1 UserInvite
+    # When: search by email
+    # Then: Return 200
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    def test_sent_at_none_by_email(self):
+        """Test"""
+
+        email = self.bc.fake.email()
+        user_invite = {"email": email}
+        model = self.bc.database.create(user_invite=user_invite)
+        url = reverse_lazy("authenticate:invite_resend_id", kwargs={"invite_id": email})
+
+        response = self.client.put(url)
+        json = response.json()
+        expected = post_serializer(
+            self,
+            model.user_invite,
+            data={
+                "sent_at": self.bc.datetime.to_iso_string(UTC_NOW),
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserInvite"),
+            [
+                {
+                    **self.bc.format.to_dict(model.user_invite),
+                    "sent_at": UTC_NOW,
+                },
+            ],
+        )
+
+        self.bc.check.calls(
+            actions.send_email_message.call_args_list,
+            [
+                call(
+                    "welcome_academy",
+                    model.user_invite.email,
+                    {
+                        "email": model.user_invite.email,
+                        "subject": "Invitation to join 4Geeks",
+                        "LINK": (
+                            os.getenv("API_URL", "")
+                            + "/v1/auth/member/invite/"
+                            + model.user_invite.token
+                            + "?callback=https%3A%2F%2Fadmin.4geeks.com"
+                        ),
+                        "FIST_NAME": model.user_invite.first_name,
+                    },
+                    academy=None,
+                )
+            ],
+        )
+
+    # Given: 1 UserInvite
     # When: email, status PENDING and sent_at gt 1 day from now
     # Then: Return 200
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
