@@ -50,8 +50,6 @@ services:
     ports:
       - "5672:5672"          # Example port mapping (adjust as necessary)
       - "15672:15672"        # Example management UI port (if applicable)
-    environment:
-      - LAVINMQ_ENV=production  # Example environment variable; add others as needed
     volumes:
       - lavinmq_data:/var/lib/lavinmq  # Adjust volume path based on your app's requirements
 
