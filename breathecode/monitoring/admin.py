@@ -20,6 +20,7 @@ from .models import (
     RepositorySubscription,
     RepositoryWebhook,
     Supervisor,
+    StripeEvent,
     SupervisorIssue,
 )
 from .signals import github_webhook
@@ -328,3 +329,12 @@ class NoPaginationAdmin(admin.ModelAdmin):
     list_filter = ["method"]
     search_fields = ["path", "method"]
     actions = [delete_all]
+
+
+
+@admin.register(StripeEvent)
+class StripeEventAdmin(admin.ModelAdmin):
+    list_display = ('stripe_id', 'type', 'status', 'updated_at', 'created_at')
+    list_filter = ('status', 'type')
+    search_fields = ('stripe_id',)
+
