@@ -453,8 +453,9 @@ class BillSessionSerializer(serpy.Serializer):
         return message
 
     def get_duration_string(self, obj):
-
         if obj.started_at is None:
+            if obj.status == "IGNORED":
+                return "15 min"
             return "Never started"
 
         end_date = obj.ended_at
