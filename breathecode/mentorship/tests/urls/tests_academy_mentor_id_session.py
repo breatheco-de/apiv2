@@ -50,6 +50,8 @@ def get_tooltip(obj):
 def get_duration_string(obj):
 
     if obj.started_at is None:
+        if obj.status == "IGNORED":
+            return "15 min"
         return "Never started"
 
     end_date = obj.ended_at
