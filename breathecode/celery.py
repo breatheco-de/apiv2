@@ -23,10 +23,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
 settings, kwargs, REDIS_URL = get_redis_config()
 CLOUDAMQP_URL = os.getenv("CLOUDAMQP_URL", "")
 
-# Default to a safe fallback if you want (or raise an error)
-if not CLOUDAMQP_URL:
-    raise ValueError("CLOUDAMQP_URL is not set in environment variables.")
-
 # Decide SSL usage by checking the scheme
 if CLOUDAMQP_URL.startswith("amqps://"):
     # Convert 'amqps://' to 'pyamqp://'
@@ -39,7 +35,11 @@ else:
 
 app = Celery("celery_breathecode", **kwargs)
 if os.getenv("ENV") == "test":
+    BROKER_URL = REDIS_URL
     app.conf.update(task_always_eager=True)
+
+if os.getenv("ENV") == "test" or not CLOUDAMQP_URL:
+    BROKER_URL = REDIS_URL
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

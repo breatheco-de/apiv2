@@ -2,7 +2,7 @@
 
 WEB_WORKER_CONNECTION=${WEB_WORKER_CONNECTION:-200}
 # uvicorn_worker.UvicornWorker is incompatible with new relic
-WEB_WORKER_CLASS=${WEB_WORKER_CLASS:-uvicorn.workers.UvicornWorker}
+WEB_WORKER_CLASS=${WEB_WORKER_CLASS:-uvicorn_worker.UvicornWorker}
 CELERY_POOL=${CELERY_POOL:-prefork}
 WEB_WORKERS=${WEB_WORKERS:-2}
 WEB_TIMEOUT=${WEB_TIMEOUT:-29}
@@ -22,6 +22,8 @@ else
 fi
 
 if [ "$WEB_WORKER_CLASS" = "uvicorn.workers.UvicornWorker" ]; then
+    export SERVER_TYPE=asgi;
+else if [ "$WEB_WORKER_CLASS" = "uvicorn_worker.UvicornWorker" ]; then
     export SERVER_TYPE=asgi;
 else
     export SERVER_TYPE=wsgi;
