@@ -310,7 +310,6 @@ def generate_mentor_bills(mentor, reset=False):
             allow_billing=True,
             mentor__id=mentor.id,
             status__in=["COMPLETED", "FAILED"],
-            started_at__isnull=False,
         ).order_by("started_at")
 
     without_service = MentorshipSession.objects.filter(
