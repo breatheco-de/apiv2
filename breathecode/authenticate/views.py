@@ -536,20 +536,20 @@ class EmailVerification(APIView):
     def get(self, request, email=None):
         lang = get_user_language(request)
 
-        invite = UserInvite.objects.filter(email=email).first()
         user = User.objects.filter(email=email).first()
-        if user is None and invite is None:
+        if user is None:
             raise ValidationException(
                 translation(
                     lang,
                     en="We could not find an account with this email",
-                    es="No pudimos encontrar una dirección con este email",
+                    es="No pudimos encontrar una cuenta con este email",
                 ),
                 slug="email-not-found",
                 code=404,
             )
 
-        if invite is not None and not invite.is_email_validated:
+        invite = UserInvite.objects.filter(email=email, is_email_validated=True).first()
+        if invite is None:
             raise ValidationException(
                 translation(
                     lang,
