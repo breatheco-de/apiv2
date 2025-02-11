@@ -454,7 +454,9 @@ class BillSessionSerializer(serpy.Serializer):
 
     def get_duration_string(self, obj):
         if obj.started_at is None:
-            if obj.status == "IGNORED":
+            if obj.status == "IGNORED" and obj.mentor_joined_at is not None:
+                print("+++++++++++++++++++++++++++", duration_to_str(obj.service.missed_meeting_duration))
+                # return duration_to_str(obj.service.missed_meeting_duration)
                 return "15 min"
             return "Never started"
 
