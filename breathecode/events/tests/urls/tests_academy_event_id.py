@@ -71,6 +71,7 @@ def get_serializer(event, academy, asset=None, data={}):
         "eventbrite_sync_description": event.eventbrite_sync_description,
         "asset": asset_serializer(asset) if asset else None,
         "is_public": event.is_public,
+        "recording_url": event.recording_url,
         **data,
     }
 
@@ -218,6 +219,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             "free_for_all": False,
             "uuid": str(uuid),
             "is_public": True,
+            "recording_url": None,
             **data,
         }
 
@@ -316,6 +318,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             "free_for_all": False,
             "uuid": str(uuid),
             "is_public": False,
+            "recording_url": None,
             **data,
         }
 
@@ -666,6 +669,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             "free_for_all": False,
             "uuid": str(uuid),
             "is_public": True,
+            "recording_url": None,
             **data,
         }
 
@@ -900,6 +904,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             "free_for_all": False,
             "uuid": str(uuid),
             "is_public": True,
+            "recording_url": None,
             **data,
         }
 
@@ -1001,6 +1006,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             "free_for_all": False,
             "uuid": str(uuid),
             "is_public": True,
+            "recording_url": None,
             **data,
         }
 

@@ -219,6 +219,14 @@ class Event(models.Model):
         help_text="This URL should have the URL of the meeting if it is an online event, if it's not online it should be empty.",
     )
 
+    recording_url = models.URLField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="This will be the URL of the workshop's recording, added once it's finished",
+    )
+
     starting_at = models.DateTimeField(blank=False)
     ending_at = models.DateTimeField(
         blank=False, help_text="This field contains the value of when the event is supposed to be finished."

@@ -139,7 +139,7 @@ def async_test_asset(asset_slug):
         logger.debug(f"Error: Error testing asset with slug {asset_slug}, does not exist.")
 
     try:
-        if test_asset(a):
+        if test_asset(a, log_errors=True):
             return True
     except Exception:
         logger.exception(f"Error testing asset {a.slug}")

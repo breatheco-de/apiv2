@@ -351,7 +351,7 @@ class FormEntry(models.Model):
         max_length=20, null=True, default=None, blank=True, help_text="Active Campaign Deal ID"
     )
 
-    first_name = models.CharField(max_length=150, default="")
+    first_name = models.CharField(max_length=150, default="", blank=True)
     last_name = models.CharField(max_length=150, default="", blank=True)
     email = models.CharField(max_length=150, null=True, default=None, blank=True)
 
@@ -363,7 +363,7 @@ class FormEntry(models.Model):
         validators=[phone_regex], max_length=17, blank=True, null=True, default=None
     )  # validators should be a list
 
-    course = models.CharField(max_length=70, null=True, default=None)
+    course = models.CharField(max_length=70, null=True, default=None, blank=True)
     client_comments = models.CharField(max_length=250, blank=True, null=True, default=None)
     location = models.CharField(max_length=70, blank=True, null=True, default=None)
     language = models.CharField(max_length=2, default="en")
@@ -443,6 +443,7 @@ class FormEntry(models.Model):
         on_delete=models.CASCADE,
         null=True,
         default=None,
+        blank=True,
         help_text="Other apps can send leads to breathecode but they need to be registered here",
     )
 
@@ -803,20 +804,6 @@ class Course(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     syllabus = models.ManyToManyField(Syllabus, blank=True)
     cohort = models.ForeignKey(Cohort, null=True, blank=True, default=None, on_delete=models.CASCADE)
-    cohorts_group = models.ManyToManyField(
-        Cohort,
-        blank=True,
-        help_text="The student will be added to this cohorts when he buys the course",
-        related_name="courses",
-    )
-
-    cohorts_order = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True,
-        default=None,
-        help_text="An IDs comma separated list to indicate the order in which cohorts in the cohort group will be displayed",
-    )
 
     plan_slug = models.SlugField(max_length=150, null=True, blank=True, default=None)
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
@@ -833,6 +820,7 @@ class Course(models.Model):
     visibility = models.CharField(max_length=15, choices=VISIBILITY_STATUS, default=PRIVATE)
 
     icon_url = models.URLField(help_text="Image icon to show on website")
+    banner_image = models.URLField(help_text="Banner image to show on website", null=True, blank=True, default=None)
     technologies = models.CharField(max_length=150, blank=False)
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
 

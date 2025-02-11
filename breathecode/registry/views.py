@@ -90,7 +90,7 @@ from .serializers import (
     VariableSmallSerializer,
 )
 from .tasks import async_build_asset_context, async_pull_from_github
-from .utils import is_url
+from .utils import AssetErrorLogType, is_url
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,11 @@ def forward_asset_url(request, asset_slug=None):
         logger.error(e)
         msg = f"The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon."
         AssetErrorLog(
-            slug=AssetErrorLog.INVALID_URL, path=asset_slug, asset=asset, asset_type=asset.asset_type, status_text=msg
+            slug=AssetErrorLogType.INVALID_URL,
+            path=asset_slug,
+            asset=asset,
+            asset_type=asset.asset_type,
+            status_text=msg,
         ).save()
 
         return render_message(request, msg, academy=asset.academy)
@@ -409,7 +413,7 @@ def render_readme(request, asset_slug, extension="raw"):
             response = HttpResponse(asset.html, content_type="text/html")
         else:
             asset.log_error(
-                AssetErrorLog.EMPTY_HTML, status_text="Someone requested the asset HTML via API and it was empty"
+                AssetErrorLogType.EMPTY_HTML, status_text="Someone requested the asset HTML via API and it was empty"
             )
             readme = asset.get_readme(parse=True, remove_frontmatter=request.GET.get("frontmatter", "true") != "false")
             asset.html = readme["html"]

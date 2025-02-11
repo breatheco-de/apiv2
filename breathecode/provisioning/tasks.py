@@ -236,13 +236,21 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
 
     handler = None
 
-    # edit it
+    # edit this
     fields = ["id", "credits", "startTime", "endTime", "kind", "userName", "contextURL"]
     if len(df.keys().intersection(fields)) == len(fields):
         handler = actions.add_gitpod_activity
 
     if not handler:
-        fields = ["Username", "Date", "Product", "SKU", "Quantity", "Unit Type", "Price Per Unit ($)", "Multiplier"]
+        fields = [
+            "username",
+            "usage_at",
+            "product",
+            "sku",
+            "quantity",
+            "unit_type",
+            "applied_cost_per_quantity",
+        ]
 
     if not handler and len(df.keys().intersection(fields)) == len(fields):
         handler = actions.add_codespaces_activity

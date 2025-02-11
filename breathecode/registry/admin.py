@@ -200,8 +200,7 @@ def test_asset_integrity(modeladmin, request, queryset):
 
     for a in assets:
         try:
-            async_test_asset(a.slug)
-            # test_asset(a)
+            async_test_asset.delay(a.slug)
         except Exception as e:
             messages.error(request, a.slug + ": " + str(e))
 

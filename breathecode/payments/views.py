@@ -2025,9 +2025,7 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(
-                        bag.id, invoice.id, conversion_info=conversion_info, price=original_price
-                    )
+                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
