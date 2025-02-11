@@ -78,7 +78,6 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "time_of_life_unit": event.time_of_life_unit,
         "trial_duration": event.trial_duration,
         "trial_duration_unit": event.trial_duration_unit,
-        "id": event.id,
     }
 
 
