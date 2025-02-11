@@ -47,7 +47,41 @@ def test_email_verification_not_validated(bc: Breathecode, client: APIClient):
 
 def test_email_verification(bc: Breathecode, client: APIClient):
     email = "thanos@4geeks.com"
-    model = bc.database.create(user={"email": email})
+    model = bc.database.create(user={"email": email}, user_invite={"email": email, "is_email_validated": True})
+
+    url = reverse_lazy("authenticate:email_verification", kwargs={"email": email})
+    response = client.get(url)
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+def test_email_verification_with_many_invitations_not_valid(bc: Breathecode, client: APIClient):
+    email = "thanos@4geeks.com"
+    invites = [
+        {"email": email, "is_email_validated": False},
+        {"email": email, "is_email_validated": False},
+        {"email": email, "is_email_validated": False},
+    ]
+    model = bc.database.create(user={"email": email}, user_invite=invites)
+
+    url = reverse_lazy("authenticate:email_verification", kwargs={"email": email})
+    response = client.get(url)
+
+    json = response.json()
+    expected = {"detail": "email-not-validated", "status_code": 403}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_email_verification_with_many_invitations(bc: Breathecode, client: APIClient):
+    email = "thanos@4geeks.com"
+    invites = [
+        {"email": email, "is_email_validated": True},
+        {"email": email, "is_email_validated": False},
+        {"email": email, "is_email_validated": False},
+    ]
+    model = bc.database.create(user={"email": email}, user_invite=invites)
 
     url = reverse_lazy("authenticate:email_verification", kwargs={"email": email})
     response = client.get(url)

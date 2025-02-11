@@ -536,9 +536,8 @@ class EmailVerification(APIView):
     def get(self, request, email=None):
         lang = get_user_language(request)
 
-        invite = UserInvite.objects.filter(email=email).first()
         user = User.objects.filter(email=email).first()
-        if user is None and invite is None:
+        if user is None:
             raise ValidationException(
                 translation(
                     lang,
@@ -549,7 +548,8 @@ class EmailVerification(APIView):
                 code=404,
             )
 
-        if invite is not None and not invite.is_email_validated:
+        invite = UserInvite.objects.filter(email=email, is_email_validated=True).first()
+        if invite is None:
             raise ValidationException(
                 translation(
                     lang,
