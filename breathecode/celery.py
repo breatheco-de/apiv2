@@ -5,8 +5,9 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import TypedDict
 
-# from celery import Celery, bootsteps
 from celery import Celery
+
+# from celery import Celery,
 from celery.signals import worker_process_init
 from kombu import Exchange, Queue
 
@@ -60,6 +61,29 @@ if x := os.getenv("RMQ_QUEUE_TYPE"):
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
 app.config_from_object("django.conf:settings")
+
+
+# class NoChannelGlobalQoS(bootsteps.StartStopStep):
+#     requires = {"celery.worker.consumer.tasks:Tasks"}
+
+#     def start(self, c):
+#         qos_global = False
+
+#         c.connection.default_channel.basic_qos(
+#             0,
+#             c.initial_prefetch_count,
+#             qos_global,
+#         )
+
+#         def set_prefetch_count(prefetch_count):
+#             return c.task_consumer.qos(
+#                 prefetch_count=prefetch_count,
+#                 apply_global=qos_global,
+#             )
+
+
+# app.steps["consumer"].add(NoChannelGlobalQoS)
+
 app.conf.update(
     broker_url=BROKER_URL,
     result_backend=REDIS_URL,
@@ -68,7 +92,11 @@ app.conf.update(
     result_expires=10,
     worker_max_memory_per_child=int(os.getenv("CELERY_MAX_MEMORY_PER_WORKER", "470000")),
     worker_max_tasks_per_child=int(os.getenv("CELERY_MAX_TASKS_PER_WORKER", "1000")),
+    #
     worker_disable_rate_limits=True,
+    broker_connection_retry_on_startup=True,
+    task_acks_late=True,
+    worker_prefetch_multiplier=None,
 )
 
 
@@ -103,6 +131,8 @@ app.conf.broker_transport_options = {
     "priority_steps": list(range(11)),
     "sep": ":",
     "queue_order_strategy": "priority",
+    #
+    # "confirm_publish": True,
 }
 
 
