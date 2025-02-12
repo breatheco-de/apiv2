@@ -2,7 +2,7 @@
 
 CELERY_MIN_WORKERS=${CELERY_MIN_WORKERS:-2}
 CELERY_MAX_WORKERS=${CELERY_MAX_WORKERS:-2}
-CELERY_PREFETCH_MULTIPLIER=${CELERY_PREFETCH_MULTIPLIER:-2}
+CELERY_PREFETCH_MULTIPLIER=${CELERY_PREFETCH_MULTIPLIER:-1}
 
 CELERY_POOL=${CELERY_POOL:-prefork}
 LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -36,4 +36,4 @@ wait
 newrelic-admin run-program bin/start-pgbouncer \
     python -m celery -A breathecode.celery worker --loglevel=$LOG_LEVEL \
         --prefetch-multiplier=$CELERY_PREFETCH_MULTIPLIER --pool=$CELERY_POOL \
-        $SCALING
+        $SCALING --without-gossip --without-mingle

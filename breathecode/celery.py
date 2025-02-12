@@ -54,6 +54,7 @@ app.conf.update(
     result_expires=10,
     worker_max_memory_per_child=int(os.getenv("CELERY_MAX_MEMORY_PER_WORKER", "470000")),
     worker_max_tasks_per_child=int(os.getenv("CELERY_MAX_TASKS_PER_WORKER", "1000")),
+    worker_disable_rate_limits=True,
 )
 
 # Load task modules from all registered Django app configs.
