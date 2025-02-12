@@ -40,5 +40,4 @@ newrelic-admin run-program bin/start-pgbouncer \
         --pool=$CELERY_POOL \
         $SCALING \
         --without-gossip \
-        --without-mingle \
-        --broker-heartbeat=30
+        --without-mingle
