@@ -530,6 +530,39 @@ class MeProfileAcademyInvite(APIView, HeaderLimitOffsetPagination, GenerateLooku
         return Response(serializer.data)
 
 
+class EmailVerification(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, email=None):
+        lang = get_user_language(request)
+
+        user = User.objects.filter(email=email).first()
+        if user is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="We could not find an account with this email",
+                    es="No pudimos encontrar una cuenta con este email",
+                ),
+                slug="email-not-found",
+                code=404,
+            )
+
+        invite = UserInvite.objects.filter(email=email, is_email_validated=True).first()
+        if invite is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You need to validate your email first",
+                    es="Debes validar tu email primero",
+                ),
+                slug="email-not-validated",
+                code=403,
+            )
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
 class ConfirmEmailView(APIView):
     permission_classes = [AllowAny]
 
@@ -577,7 +610,12 @@ class ResendInviteView(APIView):
         get_user_language(request)
         errors: list[C] = []
 
-        invite = UserInvite.objects.filter(id=invite_id).first()
+        invite = None
+        if invite_id.isnumeric():
+            invite = UserInvite.objects.filter(id=invite_id).first()
+        else:
+            invite = UserInvite.objects.filter(email=invite_id, is_email_validated=False).first()
+
         if invite is None:
             raise ValidationException("Invite not found", code=404, slug="user-invite-not-found")
 

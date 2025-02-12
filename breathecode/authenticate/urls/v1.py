@@ -51,6 +51,7 @@ from ..views import (
     UserMeView,
     UserSettingsView,
     WaitingListView,
+    EmailVerification,
     get_facebook_token,
     get_github_token,
     get_google_token,
@@ -89,8 +90,9 @@ if TEST_ENV and not app_url:
 
 app_name = "authenticate"
 urlpatterns = [
+    path("emailverification/<str:email>", EmailVerification.as_view(), name="email_verification"),
     path("confirmation/<str:token>", ConfirmEmailView.as_view(), name="confirmation_token"),
-    path("invite/resend/<int:invite_id>", ResendInviteView.as_view(), name="invite_resend_id"),
+    path("invite/resend/<str:invite_id>", ResendInviteView.as_view(), name="invite_resend_id"),
     path("member/invite/resend/<int:invite_id>", AcademyInviteView.as_view(), name="member_invite_resend_id"),
     path("subscribe/", WaitingListView.as_view(), name="subscribe"),
     path("user/", get_users, name="user"),

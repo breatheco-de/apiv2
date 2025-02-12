@@ -322,7 +322,7 @@ jobs:
     if: >-
       github.repository == 'breatheco-de/apiv2' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/development'
 
     runs-on: ubuntu-latest
     steps:

@@ -804,20 +804,6 @@ class Course(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     syllabus = models.ManyToManyField(Syllabus, blank=True)
     cohort = models.ForeignKey(Cohort, null=True, blank=True, default=None, on_delete=models.CASCADE)
-    cohorts_group = models.ManyToManyField(
-        Cohort,
-        blank=True,
-        help_text="The student will be added to this cohorts when he buys the course",
-        related_name="courses",
-    )
-
-    cohorts_order = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True,
-        default=None,
-        help_text="An IDs comma separated list to indicate the order in which cohorts in the cohort group will be displayed",
-    )
 
     plan_slug = models.SlugField(max_length=150, null=True, blank=True, default=None)
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
@@ -834,6 +820,7 @@ class Course(models.Model):
     visibility = models.CharField(max_length=15, choices=VISIBILITY_STATUS, default=PRIVATE)
 
     icon_url = models.URLField(help_text="Image icon to show on website")
+    banner_image = models.URLField(help_text="Banner image to show on website", null=True, blank=True, default=None)
     technologies = models.CharField(max_length=150, blank=False)
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
 

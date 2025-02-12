@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.http import HttpResponse
 from django.utils import timezone
 from PIL import Image
@@ -15,7 +16,6 @@ from breathecode.admissions.models import Academy, CohortUser
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from capyc.rest_framework.exceptions import ValidationException
 
 from .caches import AnswerCache
 from .models import Answer, Review, ReviewPlatform, Survey
@@ -23,6 +23,7 @@ from .serializers import (
     AnswerPUTSerializer,
     AnswerSerializer,
     BigAnswerSerializer,
+    GetSurveySerializer,
     ReviewPlatformSerializer,
     ReviewPUTSerializer,
     ReviewSmallSerializer,
@@ -93,6 +94,7 @@ class GetAnswerView(APIView):
             return cache
 
         items = Answer.objects.filter(academy__id=academy_id)
+
         lookup = {}
 
         users = request.GET.get("user", None)
@@ -225,13 +227,12 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of("read_survey")
     def get(self, request, survey_id=None, academy_id=None):
-
         if survey_id is not None:
             survey = Survey.objects.filter(id=survey_id).first()
             if survey is None:
                 raise NotFound("This survey does not exist")
 
-            serializer = SurveySerializer(survey)
+            serializer = GetSurveySerializer(survey)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         items = Survey.objects.filter(cohort__academy__id=academy_id)

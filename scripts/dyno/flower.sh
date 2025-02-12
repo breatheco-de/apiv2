@@ -23,21 +23,17 @@ else
 fi
 
 
-# current_timestamp=$(date +%s)
-# num_processes=$(((current_timestamp + $RANDOM) % 100))
+current_timestamp=$(date +%s)
+num_processes=$(((current_timestamp + $RANDOM) % 100))
 
 # generate a random pid
-# for ((i=1; i<=$num_processes; i++)); do
-#     true &
-# done
+for ((i=1; i<=$num_processes; i++)); do
+    true &
+done
 
-# wait
+wait
 
 newrelic-admin run-program bin/start-pgbouncer \
-    python -m celery -A breathecode.celery worker \
-        --loglevel=$LOG_LEVEL \
-        --prefetch-multiplier=$CELERY_PREFETCH_MULTIPLIER \
-        --pool=$CELERY_POOL \
-        $SCALING \
-        --without-gossip \
-        --without-mingle
+    python -m celery -A breathecode.celery flower --port=$PORT --loglevel=$LOG_LEVEL \
+        --prefetch-multiplier=$CELERY_PREFETCH_MULTIPLIER --pool=$CELERY_POOL \
+        $SCALING
