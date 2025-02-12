@@ -1836,15 +1836,29 @@ class SyllabusVersionCSVView(APIView):
             week_number = math.ceil(cumulative_days / class_days_per_week)
             if "technologies" not in day:
                 day["technologies"] = []
-
+        
+            # Handle optional language keys for day label.
+            label = day["label"]
+            if isinstance(label, dict):
+                # Try the desired language, then fallback to English, then to an empty string.
+                label = label.get(lang, label.get("en", ""))
+        
+            # Handle optional language keys for day description.
+            description = day.get("description", "")
+            if isinstance(description, dict):
+                description = description.get(lang, description.get("en", ""))
+        
+            # Write out the CSV row based on the language
             if lang == "es":
                 writer.writerow(
                     [
                         f"Semana {week_number}",
-                        f"Día {day['id']}: {day['label']}",
+                        f"Día {day['id']}: {label}",
                         ", ".join([lesson["title"] for lesson in day["lessons"]]),
-                        day.get("description", ""),
-                        ", ".join([tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]),
+                        description,
+                        ", ".join(
+                            [tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]
+                        ),
                         day.get("teacher_instructions", ""),
                     ]
                 )
@@ -1852,14 +1866,17 @@ class SyllabusVersionCSVView(APIView):
                 writer.writerow(
                     [
                         f"Week {week_number}",
-                        f"Day {day['id']}: {day['label']}",
+                        f"Day {day['id']}: {label}",
                         ", ".join([lesson["title"] for lesson in day["lessons"]]),
-                        day.get("description", ""),
-                        ", ".join([tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]),
+                        description,
+                        ", ".join(
+                            [tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]
+                        ),
                         day.get("teacher_instructions", ""),
                     ]
                 )
             cumulative_days += day["duration_in_days"] if "duration_in_days" in day else 1
+
         return response
 
 
