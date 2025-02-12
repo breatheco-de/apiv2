@@ -1,19 +1,22 @@
 from __future__ import absolute_import, unicode_literals
 
-# keeps this adobe
-import newrelic.agent
-
-newrelic.agent.initialize()
-
 # the rest of your Celery file contents go here
 import os
 from datetime import UTC, datetime, timedelta
 from typing import TypedDict
 
+# from celery import Celery, bootsteps
 from celery import Celery
 from celery.signals import worker_process_init
+from kombu import Exchange, Queue
 
 from breathecode.setup import get_redis_config
+
+# # keeps this adobe
+# import newrelic.agent
+
+# newrelic.agent.initialize()
+
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
@@ -41,6 +44,17 @@ if os.getenv("ENV") == "test":
 if os.getenv("ENV") == "test" or not CLOUDAMQP_URL:
     BROKER_URL = REDIS_URL
 
+
+if x := os.getenv("RMQ_QUEUE_TYPE"):
+    app.conf.task_queues = (
+        Queue(
+            "celery",
+            Exchange("celery"),
+            routing_key="celery",
+            queue_arguments={"x-queue-type": x},  # Explicitly set Quorum Queue
+        ),
+    )
+
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
 # - namespace='CELERY' means all celery-related configuration keys
@@ -56,6 +70,32 @@ app.conf.update(
     worker_max_tasks_per_child=int(os.getenv("CELERY_MAX_TASKS_PER_WORKER", "1000")),
     worker_disable_rate_limits=True,
 )
+
+
+# class NoChannelGlobalQoS(bootsteps.StartStopStep):
+#     requires = {"celery.worker.consumer.tasks:Tasks"}
+
+#     def start(self, c):
+#         qos_global = False
+
+#         c.connection.default_channel.basic_qos(
+#             0,
+#             c.initial_prefetch_count,
+#             qos_global,
+#         )
+
+#         def set_prefetch_count(prefetch_count):
+#             return c.task_consumer.qos(
+#                 prefetch_count=prefetch_count,
+#                 apply_global=qos_global,
+#             )
+
+#         from kombu.transport.base import QoS
+
+#         c.qos = QoS(set_prefetch_count, c.initial_prefetch_count)
+
+
+# app.steps["consumer"].add(NoChannelGlobalQoS)
 
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
