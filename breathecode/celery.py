@@ -21,7 +21,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
 # django.setup()
 
 settings, kwargs, REDIS_URL = get_redis_config()
-CLOUDAMQP_URL = os.getenv("CLOUDAMQP_URL", "")
+ENV_KEY = os.getenv("RMQ_URL_KEY", "CLOUDAMQP_URL")
+CLOUDAMQP_URL = os.getenv(ENV_KEY, "")
 
 # Decide SSL usage by checking the scheme
 if CLOUDAMQP_URL.startswith("amqps://"):
