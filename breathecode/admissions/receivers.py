@@ -61,6 +61,8 @@ async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
             },
         },
     )
+    
+    tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, "student")
 
 
 @receiver(revision_status_updated, sender=Task, weak=False)
