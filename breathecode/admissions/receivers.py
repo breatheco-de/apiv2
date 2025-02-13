@@ -10,6 +10,7 @@ import breathecode.authenticate.actions as authenticate_actions
 from breathecode.assignments.models import Task
 from breathecode.assignments.signals import revision_status_updated
 from breathecode.certificate.actions import how_many_pending_tasks
+from breathecode.admissions import tasks
 
 from ..activity import tasks as activity_tasks
 from .models import Cohort, CohortUser
