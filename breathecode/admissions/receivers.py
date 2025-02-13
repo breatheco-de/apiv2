@@ -49,19 +49,19 @@ async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
     logger.info("Signal for created cohort user: " + str(instance.id))
     await join_to_micro_cohorts(instance)
 
-    await authenticate_actions.send_webhook(
-        "rigobot",
-        "cohort_user.created",
-        user=instance.user,
-        data={
-            "user": {
-                "id": instance.user.id,
-                "email": instance.user.email,
-                "first_name": instance.user.first_name,
-                "last_name": instance.user.last_name,
-            },
-        },
-    )
+    # await authenticate_actions.send_webhook(
+    #     "rigobot",
+    #     "cohort_user.created",
+    #     user=instance.user,
+    #     data={
+    #         "user": {
+    #             "id": instance.user.id,
+    #             "email": instance.user.email,
+    #             "first_name": instance.user.first_name,
+    #             "last_name": instance.user.last_name,
+    #         },
+    #     },
+    # )
     
     tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, "student")
 
