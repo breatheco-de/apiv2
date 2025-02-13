@@ -1406,6 +1406,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             "asset_slug",
             "event_slug",
             "has_marketing_consent",
+            "academy"
         )
 
     def validate(self, data: dict[str, str]):
