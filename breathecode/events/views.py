@@ -137,6 +137,12 @@ def get_events(request):
     elif is_public == "false":
         lookup["is_public"] = False
 
+    recording_url = request.GET.get("recording_url", None)
+    if recording_url == "true":
+        lookup["recording_url"] = True
+    elif recording_url == "false":
+        lookup["recording_url"] = False
+
     if "technologies" in request.GET:
         values = request.GET.get("technologies").split(",")
         tech_query = Q()
@@ -217,6 +223,34 @@ class EventView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserEventCheckinView(APIView):
+    """
+    Return future and past events of the user. Accepts query parameters 'upcoming' and 'past' for filtering.
+    If no parameters are provided, returns both upcoming and past events.
+    """
+
+    def get(self, request):
+        user = request.user
+
+        user_checkins = EventCheckin.objects.filter(attendee=user).select_related("event")
+        event_ids = user_checkins.values_list("event_id", flat=True)
+
+        events = Event.objects.filter(id__in=event_ids)
+
+        lookup = {}
+
+        if self.request.GET.get("upcoming", "") == "true":
+            lookup["ending_at__gte"] = timezone.now()
+        elif self.request.GET.get("past", "") == "true":
+            lookup["starting_at__lte"] = timezone.now()
+
+        events = events.filter(**lookup)
+        events = events.order_by("starting_at")
+
+        serializer = EventSmallSerializer(events, many=True, context={"user": user})
+        return Response(serializer.data)
 
 
 class EventMeView(APIView):

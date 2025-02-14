@@ -7,7 +7,7 @@ flags = feature._flags
 
 @feature.availability("authenticate.set_google_credentials")
 def set_google_credentials() -> bool:
-    if os.getenv("SET_GOOGLE_CREDENTIALS") in feature.TRUE:
+    if os.environ.get("SET_GOOGLE_CREDENTIALS") in feature.TRUE:
         return True
 
     return False

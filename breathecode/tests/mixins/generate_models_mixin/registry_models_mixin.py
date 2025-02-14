@@ -21,7 +21,7 @@ class RegistryModelsMixin(ModelsMixin):
         asset_comment=False,
         asset_error_log=False,
         models={},
-        **kwargs
+        **kwargs,
     ):
         models = models.copy()
 

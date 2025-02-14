@@ -304,10 +304,12 @@ def get_multiplier() -> float:
 
 
 def add_codespaces_activity(context: ActivityContext, field: dict, position: int) -> None:
-    if isinstance(field["Username"], float):
-        field["Username"] = ""
+    field["Multiplier"] = 1
 
-    github_academy_user_log = context["github_academy_user_logs"].get(field["Username"], None)
+    if isinstance(field["username"], float):
+        field["username"] = ""
+
+    github_academy_user_log = context["github_academy_user_logs"].get(field["username"], None)
     not_found = False
     academies = []
 
@@ -316,12 +318,12 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         github_academy_user_log = GithubAcademyUserLog.objects.filter(
             Q(valid_until__isnull=True) | Q(valid_until__gte=context["limit"] - relativedelta(months=1, weeks=1)),
             created_at__lte=context["limit"],
-            academy_user__username=field["Username"],
+            academy_user__username=field["username"],
             storage_status="SYNCHED",
             storage_action="ADD",
         ).order_by("-created_at")
 
-        context["github_academy_user_logs"][field["Username"]] = github_academy_user_log
+        context["github_academy_user_logs"][field["username"]] = github_academy_user_log
 
     if github_academy_user_log:
         academies = [x.academy_user.academy for x in github_academy_user_log]
@@ -329,13 +331,13 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     if not academies:
         not_found = True
         github_academy_users = GithubAcademyUser.objects.filter(
-            username=field["Username"], storage_status="PAYMENT_CONFLICT", storage_action="IGNORE"
+            username=field["username"], storage_status="PAYMENT_CONFLICT", storage_action="IGNORE"
         )
 
         academies = [x.academy for x in github_academy_users]
 
-    if not academies and not GithubAcademyUser.objects.filter(username=field["Username"]).count():
-        academies = handle_pending_github_user(field["Owner"], field["Username"])
+    if not academies and not GithubAcademyUser.objects.filter(username=field["username"]).count():
+        academies = handle_pending_github_user(field["organization"], field["username"])
 
     if not not_found and academies:
         academies = random.choices(academies, k=1)
@@ -356,10 +358,10 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
 
     # TODO: if not academies: no academy has been found responsable for this activity
     for academy in academies:
-        ls = context["logs"].get((field["Username"], academy.id), None)
+        ls = context["logs"].get((field["username"], academy.id), None)
         if ls is None:
-            ls = get_github_academy_user_logs(academy, field["Username"], context["limit"])
-            context["logs"][(field["Username"], academy.id)] = ls
+            ls = get_github_academy_user_logs(academy, field["username"], context["limit"])
+            context["logs"][(field["username"], academy.id)] = ls
             logs[academy.id] = ls
 
         provisioning_bill = context["provisioning_bills"].get(academy.id, None)
@@ -382,20 +384,21 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             context["provisioning_bills"][academy.id] = provisioning_bill
             provisioning_bills[academy.id] = provisioning_bill
 
-    date = datetime.strptime(field["Date"], "%Y-%m-%d")
+    # change this
+    date = datetime.fromisoformat(field["usage_at"])
 
     if not_found:
         warnings.append(
-            f'We could not find enough information about {field["Username"]}, mark this user user as '
+            f'We could not find enough information about {field["username"]}, mark this user user as '
             "deleted if you don't recognize it"
         )
 
-    if not (kind := context["provisioning_activity_kinds"].get((field["Product"], field["SKU"]), None)):
+    if not (kind := context["provisioning_activity_kinds"].get((field["product"], field["sku"]), None)):
         kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
-            product_name=field["Product"],
-            sku=field["SKU"],
+            product_name=field["product"],
+            sku=field["sku"],
         )
-        context["provisioning_activity_kinds"][(field["Product"], field["SKU"])] = kind
+        context["provisioning_activity_kinds"][(field["product"], field["sku"])] = kind
 
     if not (currency := context["currencies"].get("USD", None)):
         currency, _ = Currency.objects.get_or_create(code="USD", name="US Dollar", decimals=2)
@@ -403,31 +406,31 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
 
     if not (
         price := context["provisioning_activity_prices"].get(
-            (field["Unit Type"], field["Price Per Unit ($)"], field["Multiplier"]), None
+            (field["unit_type"], field["applied_cost_per_quantity"], field["Multiplier"]), None
         )
     ):
         price, _ = ProvisioningPrice.objects.get_or_create(
             currency=currency,
-            unit_type=field["Unit Type"],
-            price_per_unit=field["Price Per Unit ($)"] * context["provisioning_multiplier"],
+            unit_type=field["unit_type"],
+            price_per_unit=field["applied_cost_per_quantity"] * context["provisioning_multiplier"],
             multiplier=field["Multiplier"],
         )
 
         context["provisioning_activity_prices"][
-            (field["Unit Type"], field["Price Per Unit ($)"], field["Multiplier"])
+            (field["unit_type"], field["applied_cost_per_quantity"], field["Multiplier"])
         ] = price
 
     pa, _ = ProvisioningUserConsumption.objects.get_or_create(
-        username=field["Username"], hash=context["hash"], kind=kind, defaults={"processed_at": timezone.now()}
+        username=field["username"], hash=context["hash"], kind=kind, defaults={"processed_at": timezone.now()}
     )
 
     item, _ = ProvisioningConsumptionEvent.objects.get_or_create(
         vendor=provisioning_vendor,
         price=price,
         registered_at=date,
-        quantity=field["Quantity"],
-        repository_url=f"https://github.com/{field['Owner']}/{field['Repository Slug']}",
-        task_associated_slug=field["Repository Slug"],
+        quantity=field["quantity"],
+        repository_url=f"https://github.com/{field['organization']}/{field['repository_name']}",
+        task_associated_slug=field["repository_name"],
         csv_row=position,
     )
 

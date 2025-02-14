@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
+from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -12,7 +13,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.authenticate.models import Permission, User
-from capyc.rest_framework.exceptions import PaymentException, ValidationException
 
 from ..exceptions import ProgrammingError
 

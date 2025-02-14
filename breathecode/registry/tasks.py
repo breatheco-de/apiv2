@@ -38,9 +38,16 @@ from .actions import (
     test_asset,
     upload_image_to_bucket,
 )
-from .models import Asset, AssetImage, AssetContext
+from .models import Asset, AssetContext, AssetImage
 
 logger = logging.getLogger(__name__)
+
+
+LANG_MAP = {
+    "en": "english",
+    "es": "spanish",
+    "it": "italian",
+}
 
 
 def google_project_id():
@@ -132,7 +139,7 @@ def async_test_asset(asset_slug):
         logger.debug(f"Error: Error testing asset with slug {asset_slug}, does not exist.")
 
     try:
-        if test_asset(a):
+        if test_asset(a, log_errors=True):
             return True
     except Exception:
         logger.exception(f"Error testing asset {a.slug}")
@@ -611,11 +618,6 @@ def async_generate_quiz_config(assessment_id):
 @shared_task(priority=TaskPriority.CONTENT.value)
 def async_build_asset_context(asset_id):
     asset = Asset.objects.get(id=asset_id)
-    LANG_MAP = {
-        "en": "english",
-        "es": "spanish",
-        "it": "italian",
-    }
 
     lang = asset.lang or asset.category.lang
     lang_name = LANG_MAP.get(lang, lang)

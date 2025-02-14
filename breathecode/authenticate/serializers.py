@@ -1413,7 +1413,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         from breathecode.payments.models import Plan
 
         country = data["country"] if "country" in data else None
-        forbidden_countries = ["spain"]
+        forbidden_countries = ["spain", "españa"]
 
         lang = self.context.get("lang", "en")
         if "email" not in data:

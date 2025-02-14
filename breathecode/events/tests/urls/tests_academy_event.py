@@ -54,6 +54,7 @@ def post_serializer(data={}):
         "live_stream_url": None,
         "host_user": None,
         "is_public": True,
+        "recording_url": None,
         **data,
     }
 
@@ -97,6 +98,7 @@ def event_table(data={}):
         "sync_with_eventbrite": False,
         "currency": "",
         "is_public": True,
+        "recording_url": None,
         **data,
     }
 
@@ -195,6 +197,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
+                "recording_url": model["event"].recording_url,
             }
         ]
 
@@ -269,6 +272,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
+                "recording_url": model["event"].recording_url,
             }
         ]
 
@@ -343,6 +347,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
+                "recording_url": model["event"].recording_url,
             }
         ]
 
@@ -398,6 +403,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
+                "recording_url": model["event"].recording_url,
             }
         ]
 
@@ -687,6 +693,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
+                "recording_url": model["event"].recording_url,
             }
         ]
         self.assertEqual(json, expected)
@@ -741,6 +748,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
+                "recording_url": model["event"].recording_url,
             }
         ]
         self.assertEqual(json, expected)
@@ -794,6 +802,7 @@ class AcademyEventTestSuite(EventTestCase):
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
+                "recording_url": model["event"].recording_url,
             }
         ]
 

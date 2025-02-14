@@ -81,6 +81,7 @@ class EventTestCase(
                 "eventbrite_sync_description": model["event"].eventbrite_sync_description,
                 "eventbrite_sync_status": model["event"].eventbrite_sync_status,
                 "is_public": model["event"].is_public,
+                "recording_url": model["event"].recording_url,
             }
             for model in models
         ]

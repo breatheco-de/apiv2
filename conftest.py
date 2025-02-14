@@ -7,7 +7,9 @@ import jwt
 import pytest
 from capyc.pytest.core.fixtures import Random
 from capyc.pytest.django.fixtures.signals import Signals
+from django import shortcuts
 from django.core.cache import cache
+from django.http import JsonResponse
 from django.utils import timezone
 from linked_services.django import actions
 from rest_framework.test import APIClient
@@ -341,3 +343,56 @@ def get_app_signature() -> Generator[Callable[[], dict[str, Any]], None, None]:
         }
 
     yield wrapper
+
+
+@pytest.fixture
+def patch_render(monkeypatch: pytest.MonkeyPatch):
+    def redirect_url(*args, **kwargs):
+
+        if args:
+            args = args[1:]
+
+        if args:
+            try:
+                kwargs["_template"] = args[0]
+            except Exception:
+                ...
+
+            try:
+                kwargs["context"] = args[1]
+            except Exception:
+                ...
+
+            try:
+                if args[2]:
+                    kwargs["content_type"] = args[2]
+            except Exception:
+                ...
+
+            try:
+                if args[3]:
+                    kwargs["status"] = args[3]
+            except Exception:
+                ...
+
+            try:
+                if args[4]:
+                    kwargs["using"] = args[4]
+            except Exception:
+                ...
+
+        if "context" in kwargs:
+            kwargs.update(kwargs["context"])
+            del kwargs["context"]
+
+        if "academy" in kwargs:
+            kwargs["academy"] = kwargs["academy"].id
+
+        return JsonResponse(kwargs, status=kwargs.get("status", 999))
+
+    monkeypatch.setattr(
+        shortcuts,
+        "render",
+        MagicMock(side_effect=redirect_url),
+    )
+    yield

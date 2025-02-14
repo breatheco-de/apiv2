@@ -1,13 +1,13 @@
 #!/bin/env python
 
+import argparse
 import os
 import random
+import shutil
 import subprocess
 import sys
-import shutil
 import webbrowser
 from pathlib import Path
-import argparse
 
 
 def python_module_to_dir(module: str) -> str:
@@ -34,7 +34,7 @@ def help_command():
     exit()
 
 
-if __name__ == "__main__":
+def run():
     args = parse_arguments()
 
     if args.seed is None:

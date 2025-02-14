@@ -66,14 +66,14 @@ def test_location_url(
     url = reverse_lazy("v2:authenticate:app_academy_id", kwargs={"academy_id": 1})
 
     model = database.create(
-        app={
+        linked_services__app={
             "require_an_agreement": False,
             "slug": "rigobot",
             **get_app_signature(),
         },
     )
 
-    service.sign_jwt(client, model.app)
+    service.sign_jwt(client, model.linked_services__app)
     response = client.get(url)
 
     json = response.json()

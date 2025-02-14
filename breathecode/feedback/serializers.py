@@ -1,3 +1,4 @@
+from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -5,7 +6,6 @@ from rest_framework.exceptions import ValidationError
 import breathecode.feedback.actions as actions
 from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import send_survey_group
 from .models import Answer, Review, Survey
@@ -152,6 +152,28 @@ class ReviewSmallSerializer(serpy.Serializer):
     lang = serpy.Field()
     platform = ReviewPlatformSerializer()
     updated_at = serpy.Field()
+
+
+class GetSurveySerializer(serpy.Serializer):
+    id = serpy.Field()
+    send_now = serpy.Field(required=False)
+    status = serpy.Field(required=False)
+    public_url = serpy.MethodField()
+    lang = serpy.Field(required=False)
+    max_assistants_to_ask = serpy.Field(required=False)
+    max_teachers_to_ask = serpy.Field(required=False)
+    duration = serpy.Field(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    sent_at = serpy.Field(required=False)
+    cohort = serpy.MethodField()
+    scores = serpy.Field()
+
+    def get_public_url(self, obj):
+        return "https://nps.4geeks.com/survey/" + str(obj.id)
+
+    def get_cohort(self, obj):
+        return obj.cohort.id if obj.cohort else None
 
 
 class AnswerPUTSerializer(serializers.ModelSerializer):

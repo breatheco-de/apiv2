@@ -79,6 +79,7 @@ from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
 from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
+from breathecode.utils.decorators.consume import discount_consumption_sessions
 from breathecode.utils.redis import Lock
 
 logger = getLogger(__name__)
@@ -1116,11 +1117,15 @@ class ConsumeView(APIView):
             if session:
                 return Response({"id": session.id, "status": "ok"}, status=status.HTTP_200_OK)
 
-        consumable = Consumable.get(user=request.user, lang=lang, service=service_slug, service_type="VOID")
-        if consumable is None:
+        consumables = Consumable.list(user=request.user, lang=lang, service=service_slug, service_type="VOID")
+
+        consumables = discount_consumption_sessions(consumables)
+        if consumables.count() == 0:
             raise PaymentException(
                 translation(lang, en="Insuficient credits", es="Créditos insuficientes", slug="insufficient-credits")
             )
+
+        consumable = consumables.first()
 
         session_duration = consumable.service_item.service.session_duration or timedelta(minutes=1)
         session = ConsumptionSession.build_session(
@@ -1634,7 +1639,7 @@ class ConsumableCheckoutView(APIView):
         mentorship_service_set = request.data.get("mentorship_service_set")
         event_type_set = request.data.get("event_type_set")
 
-        if [mentorship_service_set, event_type_set].count(None) != 1:
+        if mentorship_service_set is not None and event_type_set is not None:
             raise ValidationException(
                 translation(
                     lang,
@@ -1667,7 +1672,7 @@ class ConsumableCheckoutView(APIView):
                 code=400,
             )
 
-        elif service.type not in ["MENTORSHIP_SERVICE_SET", "EVENT_TYPE_SET"]:
+        elif service.type not in ["MENTORSHIP_SERVICE_SET", "EVENT_TYPE_SET", "VOID"]:
             raise ValidationException(
                 translation(
                     lang,
@@ -2041,7 +2046,9 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+                    tasks.build_plan_financing.delay(
+                        bag.id, invoice.id, conversion_info=conversion_info
+                    )
 
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)

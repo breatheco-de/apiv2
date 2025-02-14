@@ -1,5 +1,6 @@
 import logging
 import re
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -7,6 +8,22 @@ from breathecode.authenticate.models import CredentialsGithub
 from breathecode.services.github import Github, GithubAuthException
 
 logger = logging.getLogger(__name__)
+
+
+class AssetErrorLogType:
+    SLUG_NOT_FOUND = "slug-not-found"
+    DIFFERENT_TYPE = "different-type"
+    EMPTY_README = "empty-readme"
+    EMPTY_CATEGORY = "empty-category"
+    INVALID_OWNER = "invalid-owner"
+    MISSING_TECHNOLOGIES = "missing-technologies"
+    POOR_DESCRIPTION = "poor-description"
+    EMPTY_HTML = "empty-html"
+    INVALID_URL = "invalid-url"
+    INVALID_LANGUAGE = "invalid-language"
+    INVALID_README_URL = "invalid-readme-url"
+    INVALID_IMAGE = "invalid-image"
+    README_SYNTAX = "readme-syntax-error"
 
 
 def is_url(value):
@@ -66,14 +83,20 @@ class AssetException(Exception):
 
 class AssetValidator:
     base_warns = ["translations", "technologies"]
-    base_errors = ["lang", "urls", "category", "preview", "images", "readme_url"]
+    base_errors = ["lang", "urls", "category", "preview", "images", "readme_url", "description"]
     warns = []
     errors = []
 
-    def __init__(self, _asset):
+    def __init__(self, _asset, log_errors=False):
         self.asset = _asset
+        self.log_errors = log_errors
         self.warns = self.base_warns + self.warns
         self.errors = self.base_errors + self.errors
+
+    def error(self, type, _msg):
+        if self.log_errors:
+            self.asset.log_error(type, _msg)
+        raise Exception(_msg)
 
     def validate(self):
 
@@ -89,7 +112,6 @@ class AssetValidator:
         try:
             for validation in self.warns:
                 if hasattr(self, validation):
-                    print("validating warning " + validation)
                     getattr(self, validation)()
                 else:
                     raise Exception("Invalid asset warning validation " + validation)
@@ -99,19 +121,23 @@ class AssetValidator:
     def readme_url(self):
         if self.asset.readme_url is not None or self.asset.readme_url != "":
             if not self.asset.owner:
-                raise Exception("Asset must have an owner and the owner must have write access to the readme file")
+                self.error(
+                    AssetErrorLogType.INVALID_OWNER,
+                    "Asset must have an owner and the owner must have write access to the readme file",
+                )
 
             credentials = CredentialsGithub.objects.filter(user=self.asset.owner).first()
             if credentials is None:
-                raise Exception("Github credentials for asset owner were not found")
+                self.error(AssetErrorLogType.INVALID_OWNER, "Github credentials for asset owner were not found")
 
             gb = Github(credentials.token)
             try:
                 if not gb.file_exists(self.asset.readme_url):
-                    raise AssetException("Readme URL points to a missing file", severity="ERROR")
+                    self.error(AssetErrorLogType.INVALID_README_URL, "Readme URL points to a missing file")
             except GithubAuthException:
-                raise AssetException(
-                    "Cannot connect to github to validate readme url, please fix owner or credentials", severity="ERROR"
+                self.error(
+                    AssetErrorLogType.INVALID_OWNER,
+                    "Cannot connect to github to validate readme url, please fix owner or credentials",
                 )
             except Exception as e:
                 raise AssetException(str(e), severity="ERROR")
@@ -127,19 +153,25 @@ class AssetValidator:
     def lang(self):
 
         if self.asset.lang is None or self.asset.lang == "":
-            raise Exception("Empty default language")
+            self.error(
+                AssetErrorLogType.INVALID_LANGUAGE, "Asset is missing a language or has an invalid language assigned"
+            )
 
     def translations(self):
         if self.asset.all_translations.count() == 0:
             raise Exception("No translations")
 
     def technologies(self):
-        if self.asset.technologies.count() == 0:
-            raise Exception("No technologies")
+        if self.asset.technologies.count() < 2:
+            self.error(AssetErrorLogType.MISSING_TECHNOLOGIES, "Asset should have at least 2 technology tags")
 
     def difficulty(self):
         if self.asset.difficulty is None:
             raise Exception("No difficulty")
+
+    def description(self):
+        if self.asset.description is None or len(self.asset.description) < 100:
+            self.error(AssetErrorLogType.POOR_DESCRIPTION, "Description is too small or empty")
 
     def preview(self):
         pass
@@ -151,19 +183,20 @@ class AssetValidator:
 
     def readme(self):
         if self.asset.readme is None or self.asset.readme == "" and not self.asset.external:
-            raise Exception("Empty readme")
+            self.error(AssetErrorLogType.EMPTY_README, "Asset is missing a readme file")
 
     def category(self):
-
         if self.asset.category is None:
-            raise Exception("Empty category")
+            self.error(AssetErrorLogType.EMPTY_CATEGORY, "Asset is missing a category")
 
     def images(self):
         images = self.asset.images.all()
-        print("Validating images", images)
         for image in images:
             if image.download_status != "OK":
-                raise Exception("Check the asset images, there seems to be images not properly downloaded")
+                self.error(
+                    AssetErrorLogType.INVALID_IMAGE,
+                    "Check the asset images, there seems to be images not properly downloaded",
+                )
 
 
 class LessonValidator(AssetValidator):
@@ -175,6 +208,9 @@ class ArticleValidator(AssetValidator):
     warns = []
     errors = ["readme"]
 
+class StarterValidator(AssetValidator):
+    warns = []
+    errors = ["readme"]
 
 class ExerciseValidator(AssetValidator):
     warns = ["difficulty"]

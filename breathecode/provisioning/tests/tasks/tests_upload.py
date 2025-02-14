@@ -63,7 +63,7 @@ def datetime_to_iso(date) -> str:
 
 
 def datetime_to_show_date(date) -> str:
-    return date.strftime("%Y-%m-%d")
+    return date.isoformat().replace("+00:00", "Z")
 
 
 def response_mock(status_code=200, content=[]):
@@ -103,16 +103,15 @@ def codespaces_csv(lines=1, data={}):
 
     # dictionary of lists
     return {
-        "Repository Slug": repository_slugs,
-        "Username": usernames,
-        "Date": dates,
-        "Product": products,
-        "SKU": skus,
-        "Quantity": quantities,
-        "Unit Type": unit_types,
-        "Price Per Unit ($)": price_per_units,
-        "Multiplier": multipliers,
-        "Owner": owners,
+        "repository_name": repository_slugs,
+        "username": usernames,
+        "usage_at": dates,
+        "product": products,
+        "sku": skus,
+        "quantity": quantities,
+        "unit_type": unit_types,
+        "applied_cost_per_quantity": price_per_units,
+        "organization": owners,
         **data,
     }
 
@@ -603,8 +602,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 provisioning_activity_kind_data(
                     {
                         "id": n + 1,
-                        "product_name": csv["Product"][n],
-                        "sku": str(csv["SKU"][n]),
+                        "product_name": csv["product"][n],
+                        "sku": str(csv["sku"][n]),
                     }
                 )
                 for n in range(10)
@@ -617,9 +616,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": n + 1,
-                        "multiplier": csv["Multiplier"][n],
-                        "price_per_unit": csv["Price Per Unit ($)"][n] * 1.3,
-                        "unit_type": csv["Unit Type"][n],
+                        "multiplier": 1,
+                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "unit_type": csv["unit_type"][n],
                     }
                 )
                 for n in range(10)
@@ -632,10 +631,10 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "id": n + 1,
                         "price_id": n + 1,
-                        "quantity": float(csv["Quantity"][n]),
-                        "registered_at": datetime.strptime(csv["Date"][n], "%Y-%m-%d").replace(tzinfo=pytz.UTC),
-                        "repository_url": f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                        "task_associated_slug": csv["Repository Slug"][n],
+                        "quantity": float(csv["quantity"][n]),
+                        "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
+                        "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
+                        "task_associated_slug": csv["repository_name"][n],
                         "csv_row": n,
                     }
                 )
@@ -650,13 +649,13 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "kind_id": n + 1,
                         "hash": slug,
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                         "processed_at": UTC_NOW,
                         "status": "ERROR",
                         "status_text": ", ".join(
                             [
                                 "Provisioning vendor Codespaces not found",
-                                f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                                f"We could not find enough information about {csv['username'][n]}, mark this user user "
                                 "as deleted if you don't recognize it",
                             ]
                         ),
@@ -671,7 +670,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
         self.bc.check.calls(logging.Logger.info.call_args_list, [call(f"Starting upload for hash {slug}")])
 
         self.bc.check.calls(
-            logging.Logger.error.call_args_list, [call(f"Organization {csv['Owner'][n]} not found") for n in range(10)]
+            logging.Logger.error.call_args_list,
+            [call(f"Organization {csv['organization'][n]} not found") for n in range(10)],
         )
 
         self.bc.check.calls(tasks.upload.delay.call_args_list, [])
@@ -709,7 +709,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
         academy_auth_settings = []
 
         id = 0
-        for owner in csv["Owner"]:
+        for owner in csv["organization"]:
             academy_auth_settings.append({"github_username": owner, "academy_id": id + 1})
             academy_auth_settings.append({"github_username": owner, "academy_id": id + 2})
             id += 2
@@ -760,8 +760,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 provisioning_activity_kind_data(
                     {
                         "id": n + 1,
-                        "product_name": csv["Product"][n],
-                        "sku": str(csv["SKU"][n]),
+                        "product_name": csv["product"][n],
+                        "sku": str(csv["sku"][n]),
                     }
                 )
                 for n in range(10)
@@ -774,9 +774,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": n + 1,
-                        "multiplier": csv["Multiplier"][n],
-                        "price_per_unit": csv["Price Per Unit ($)"][n] * 1.3,
-                        "unit_type": csv["Unit Type"][n],
+                        "multiplier": 1,
+                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "unit_type": csv["unit_type"][n],
                     }
                 )
                 for n in range(10)
@@ -789,10 +789,10 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "id": n + 1,
                         "price_id": n + 1,
-                        "quantity": float(csv["Quantity"][n]),
-                        "registered_at": datetime.strptime(csv["Date"][n], "%Y-%m-%d").replace(tzinfo=pytz.UTC),
-                        "repository_url": f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                        "task_associated_slug": csv["Repository Slug"][n],
+                        "quantity": float(csv["quantity"][n]),
+                        "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
+                        "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
+                        "task_associated_slug": csv["repository_name"][n],
                         "csv_row": n,
                     }
                 )
@@ -807,13 +807,13 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "kind_id": n + 1,
                         "hash": slug,
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                         "processed_at": UTC_NOW,
                         "status": "ERROR",
                         "status_text": ", ".join(
                             [
                                 "Provisioning vendor Codespaces not found",
-                                f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                                f"We could not find enough information about {csv['username'][n]}, mark this user user "
                                 "as deleted if you don't recognize it",
                             ]
                         ),
@@ -834,7 +834,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "academy_id": id + 1,
                         "storage_action": "IGNORE",
                         "storage_status": "PAYMENT_CONFLICT",
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                     }
                 )
             )
@@ -846,7 +846,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "academy_id": id + 2,
                         "storage_action": "IGNORE",
                         "storage_status": "PAYMENT_CONFLICT",
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                     }
                 )
             )
@@ -893,12 +893,12 @@ class CodespacesTestSuite(ProvisioningTestCase):
         academy_auth_settings = []
         id = 0
 
-        for owner in csv["Owner"]:
+        for owner in csv["organization"]:
             academy_auth_settings.append({"github_username": owner, "academy_id": id + 1})
             academy_auth_settings.append({"github_username": owner, "academy_id": id + 2})
             id += 2
 
-        credentials_github = [{"username": csv["Username"][n], "user_id": n + 1} for n in range(10)]
+        credentials_github = [{"username": csv["username"][n], "user_id": n + 1} for n in range(10)]
         github_academy_users = [
             {
                 "user_id": 11,
@@ -948,8 +948,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 provisioning_activity_kind_data(
                     {
                         "id": n + 1,
-                        "product_name": csv["Product"][n],
-                        "sku": str(csv["SKU"][n]),
+                        "product_name": csv["product"][n],
+                        "sku": str(csv["sku"][n]),
                     }
                 )
                 for n in range(10)
@@ -962,9 +962,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": n + 1,
-                        "multiplier": csv["Multiplier"][n],
-                        "price_per_unit": csv["Price Per Unit ($)"][n] * 1.3,
-                        "unit_type": csv["Unit Type"][n],
+                        "multiplier": 1,
+                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "unit_type": csv["unit_type"][n],
                     }
                 )
                 for n in range(10)
@@ -977,10 +977,10 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "id": n + 1,
                         "price_id": n + 1,
-                        "quantity": float(csv["Quantity"][n]),
-                        "registered_at": datetime.strptime(csv["Date"][n], "%Y-%m-%d").replace(tzinfo=pytz.UTC),
-                        "repository_url": f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                        "task_associated_slug": csv["Repository Slug"][n],
+                        "quantity": float(csv["quantity"][n]),
+                        "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
+                        "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
+                        "task_associated_slug": csv["repository_name"][n],
                         "csv_row": n,
                     }
                 )
@@ -995,13 +995,13 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "kind_id": n + 1,
                         "hash": slug,
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                         "processed_at": UTC_NOW,
                         "status": "ERROR",
                         "status_text": ", ".join(
                             [
                                 "Provisioning vendor Codespaces not found",
-                                f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                                f"We could not find enough information about {csv['username'][n]}, mark this user user "
                                 "as deleted if you don't recognize it",
                             ]
                         ),
@@ -1023,7 +1023,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "academy_id": id + 1,
                         "storage_action": "IGNORE",
                         "storage_status": "PAYMENT_CONFLICT",
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                     }
                 )
             )
@@ -1036,7 +1036,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "academy_id": id + 2,
                         "storage_action": "IGNORE",
                         "storage_status": "PAYMENT_CONFLICT",
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                     }
                 )
             )
@@ -1085,7 +1085,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
             {
                 "username": x,
             }
-            for x in csv["Username"]
+            for x in csv["username"]
         ]
         github_academy_user_logs = [
             {
@@ -1129,8 +1129,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 provisioning_activity_kind_data(
                     {
                         "id": n + 1,
-                        "product_name": csv["Product"][n],
-                        "sku": str(csv["SKU"][n]),
+                        "product_name": csv["product"][n],
+                        "sku": str(csv["sku"][n]),
                     }
                 )
                 for n in range(10)
@@ -1143,9 +1143,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": n + 1,
-                        "multiplier": csv["Multiplier"][n],
-                        "price_per_unit": csv["Price Per Unit ($)"][n] * 1.3,
-                        "unit_type": csv["Unit Type"][n],
+                        "multiplier": 1,
+                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "unit_type": csv["unit_type"][n],
                     }
                 )
                 for n in range(10)
@@ -1159,10 +1159,10 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": n + 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["Quantity"][n]),
-                        "registered_at": datetime.strptime(csv["Date"][n], "%Y-%m-%d").replace(tzinfo=pytz.UTC),
-                        "repository_url": f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                        "task_associated_slug": csv["Repository Slug"][n],
+                        "quantity": float(csv["quantity"][n]),
+                        "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
+                        "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
+                        "task_associated_slug": csv["repository_name"][n],
                         "csv_row": n,
                     }
                 )
@@ -1177,7 +1177,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "kind_id": n + 1,
                         "hash": slug,
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                         "processed_at": UTC_NOW,
                         "status": "PERSISTED",
                     }
@@ -1235,7 +1235,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
             {
                 "username": x,
             }
-            for x in csv["Username"]
+            for x in csv["username"]
         ]
         github_academy_user_logs = [
             {
@@ -1281,8 +1281,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 provisioning_activity_kind_data(
                     {
                         "id": n + 1,
-                        "product_name": csv["Product"][n],
-                        "sku": str(csv["SKU"][n]),
+                        "product_name": csv["product"][n],
+                        "sku": str(csv["sku"][n]),
                     }
                 )
                 for n in range(10)
@@ -1295,9 +1295,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": n + 1,
-                        "multiplier": csv["Multiplier"][n],
-                        "price_per_unit": csv["Price Per Unit ($)"][n] * 1.3,
-                        "unit_type": csv["Unit Type"][n],
+                        "multiplier": 1,
+                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "unit_type": csv["unit_type"][n],
                     }
                 )
                 for n in range(10)
@@ -1311,10 +1311,10 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": n + 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["Quantity"][n]),
-                        "registered_at": datetime.strptime(csv["Date"][n], "%Y-%m-%d").replace(tzinfo=pytz.UTC),
-                        "repository_url": f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                        "task_associated_slug": csv["Repository Slug"][n],
+                        "quantity": float(csv["quantity"][n]),
+                        "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
+                        "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
+                        "task_associated_slug": csv["repository_name"][n],
                         "csv_row": n,
                     }
                 )
@@ -1329,7 +1329,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "kind_id": n + 1,
                         "hash": slug,
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                         "processed_at": UTC_NOW,
                         "status": "PERSISTED",
                     }
@@ -1396,7 +1396,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
             {
                 "username": x,
             }
-            for x in csv["Username"]
+            for x in csv["username"]
         ]
         github_academy_user_logs = [
             {
@@ -1442,8 +1442,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 provisioning_activity_kind_data(
                     {
                         "id": n + 1,
-                        "product_name": csv["Product"][n],
-                        "sku": str(csv["SKU"][n]),
+                        "product_name": csv["product"][n],
+                        "sku": str(csv["sku"][n]),
                     }
                 )
                 for n in range(10)
@@ -1456,9 +1456,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": n + 1,
-                        "multiplier": csv["Multiplier"][n],
-                        "price_per_unit": csv["Price Per Unit ($)"][n] * 1.3,
-                        "unit_type": csv["Unit Type"][n],
+                        "multiplier": 1,
+                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "unit_type": csv["unit_type"][n],
                     }
                 )
                 for n in range(10)
@@ -1472,10 +1472,10 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": n + 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["Quantity"][n]),
-                        "registered_at": datetime.strptime(csv["Date"][n], "%Y-%m-%d").replace(tzinfo=pytz.UTC),
-                        "repository_url": f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                        "task_associated_slug": csv["Repository Slug"][n],
+                        "quantity": float(csv["quantity"][n]),
+                        "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
+                        "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
+                        "task_associated_slug": csv["repository_name"][n],
                         "csv_row": n,
                     }
                 )
@@ -1490,7 +1490,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "kind_id": n + 1,
                         "hash": slug,
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                         "processed_at": UTC_NOW,
                         "status": "PERSISTED",
                     }
@@ -1546,7 +1546,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 "storage_status": "PAYMENT_CONFLICT",
                 "storage_action": "IGNORE",
             }
-            for x in csv["Username"]
+            for x in csv["username"]
         ]
 
         github_academy_users += [
@@ -1589,8 +1589,8 @@ class CodespacesTestSuite(ProvisioningTestCase):
                 provisioning_activity_kind_data(
                     {
                         "id": n + 1,
-                        "product_name": csv["Product"][n],
-                        "sku": str(csv["SKU"][n]),
+                        "product_name": csv["product"][n],
+                        "sku": str(csv["sku"][n]),
                     }
                 )
                 for n in range(10)
@@ -1603,9 +1603,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": n + 1,
-                        "multiplier": csv["Multiplier"][n],
-                        "price_per_unit": csv["Price Per Unit ($)"][n] * 1.3,
-                        "unit_type": csv["Unit Type"][n],
+                        "multiplier": 1,
+                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "unit_type": csv["unit_type"][n],
                     }
                 )
                 for n in range(10)
@@ -1619,10 +1619,10 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": n + 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["Quantity"][n]),
-                        "registered_at": datetime.strptime(csv["Date"][n], "%Y-%m-%d").replace(tzinfo=pytz.UTC),
-                        "repository_url": f"https://github.com/{csv['Owner'][n]}/{csv['Repository Slug'][n]}",
-                        "task_associated_slug": csv["Repository Slug"][n],
+                        "quantity": float(csv["quantity"][n]),
+                        "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
+                        "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
+                        "task_associated_slug": csv["repository_name"][n],
                         "csv_row": n,
                     }
                 )
@@ -1637,11 +1637,11 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "kind_id": n + 1,
                         "hash": slug,
-                        "username": csv["Username"][n],
+                        "username": csv["username"][n],
                         "processed_at": UTC_NOW,
                         "status": "WARNING",
                         "status_text": (
-                            f"We could not find enough information about {csv['Username'][n]}, mark this user user "
+                            f"We could not find enough information about {csv['username'][n]}, mark this user user "
                             "as deleted if you don't recognize it"
                         ),
                     }

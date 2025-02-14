@@ -296,7 +296,8 @@ def register_new_lead(form_entry=None):
     tags = []
     if ac_academy.crm_vendor == "BREVO":
         # brevo uses slugs instead of ID for automations
-        automations = automations.values_list("slug", flat=True)
+        if hasattr(automations, "values_list"):
+            automations = automations.values_list("slug", flat=True)
         if "tags" in form_entry and len(form_entry["tags"]) > 0:
             raise Exception("Brevo CRM does not support tags, please remove them from the contact payload")
     else:

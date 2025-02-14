@@ -1,4 +1,4 @@
-# alpine has very much issues with python
+# alpine has so much issues with python
 FROM mcr.microsoft.com/devcontainers/python:3
 
 ENV PYTHONUNBUFFERED=1
@@ -12,14 +12,14 @@ RUN apt-get update \
 RUN curl -fsSL https://get.docker.com -o get-docker.sh \
     && sh ./get-docker.sh
 
-RUN pip install pipenv
+RUN pip install poetry pipx
 
 # WORKDIR /usr/src
 
 
 
-COPY ./Pipfile ./Pipfile
-COPY ./Pipfile.lock ./Pipfile.lock
+COPY ./pyproject.toml ./pyproject.toml
+COPY ./poetry.lock ./poetry.lock
 
-RUN pipenv install --system --deploy --ignore-pipfile
+RUN poetry install
 COPY . .
