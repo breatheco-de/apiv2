@@ -123,6 +123,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                 "status": "COMPLETED",
                 "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                 "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                 "accounted_duration": datetime.timedelta(hours=1),
             },
         )
@@ -135,18 +136,21 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=1),
                 },
                 {
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 10, 17, 21, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 10, 17, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 10, 17, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=2),
                 },
                 {
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 11, 25, 21, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 11, 25, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 11, 25, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=2),
                 },
             ],
@@ -261,6 +265,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "status": "COMPLETED",
                         "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                         "bill_id": None,
                     }
                 ),
@@ -276,6 +281,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 1,
                     }
@@ -292,6 +298,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 10, 17, 21, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 10, 17, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 10, 17, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 1,
                     }
@@ -308,8 +315,258 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 11, 25, 21, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 11, 25, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 11, 25, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 2,
+                    }
+                ),
+            ],
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=NOW))
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    def test_generate_bills_when_mentee_never_joins(self):
+        """
+        Generate bills when mentee never joins
+        """
+        minutes = 10
+        missed_meeting_duration = datetime.timedelta(minutes=minutes)
+
+        models = self.bc.database.create(
+            mentor_profile=1,
+            user=1,
+            mentorship_service={"missed_meeting_duration": missed_meeting_duration},
+            mentorship_session=[
+                {
+                    "status": "COMPLETED",
+                    "started_at": None,
+                    "mentor_joined_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                    "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                }
+            ],
+        )
+        mentor = models.mentor_profile
+
+        bills = generate_mentor_bills(mentor)
+
+        list_bills = [self.bc.format.to_dict(x) for x in bills]
+
+        bill = round(minutes / 60, 2) * models.mentor_profile.price_per_hour
+
+        expected_mentorships = [
+            mentorship_bill_field(
+                {
+                    "academy_id": 1,
+                    "started_at": datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                    "ended_at": datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                    "id": 1,
+                    "mentor_id": 1,
+                    "overtime_minutes": 0,
+                    "total_duration_in_hours": 0.17,
+                    "total_duration_in_minutes": 10.0,
+                    "total_price": bill,
+                }
+            ),
+        ]
+
+        self.assertEqual(
+            list_bills,
+            expected_mentorships,
+        )
+
+        self.assertEqual(
+            self.bc.database.list_of("mentorship.MentorshipBill"),
+            expected_mentorships,
+        )
+
+        status_message = "Mentor joined but mentee never did, 10 min will be accounted for the bill."
+
+        self.assertEqual(
+            self.bc.database.list_of("mentorship.MentorshipSession"),
+            [
+                mentorship_session_field(
+                    {
+                        "accounted_duration": datetime.timedelta(minutes=10),
+                        "id": 1,
+                        "mentee_id": 1,
+                        "mentor_id": 1,
+                        "service_id": 1,
+                        "status": "COMPLETED",
+                        "status_message": status_message,
+                        "suggested_accounted_duration": datetime.timedelta(minutes=10),
+                        "started_at": None,
+                        "mentor_joined_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                        "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                        "summary": None,
+                        "bill_id": 1,
+                    }
+                ),
+            ],
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=NOW))
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    def test_generate_bills_when_ended_at_is_none(self):
+        """
+        Generate bills when ended at is none
+        """
+        minutes = 60
+        missed_meeting_duration = datetime.timedelta(minutes=minutes)
+
+        models = self.bc.database.create(
+            mentor_profile=1,
+            user=1,
+            mentorship_service={"missed_meeting_duration": missed_meeting_duration},
+            mentorship_session=[
+                {
+                    "status": "COMPLETED",
+                    "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                    "mentor_joined_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                    "ended_at": None,
+                    "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                }
+            ],
+        )
+        mentor = models.mentor_profile
+
+        bills = generate_mentor_bills(mentor)
+
+        list_bills = [self.bc.format.to_dict(x) for x in bills]
+
+        bill = round(minutes / 60, 2) * models.mentor_profile.price_per_hour
+
+        expected_mentorships = [
+            mentorship_bill_field(
+                {
+                    "academy_id": 1,
+                    "started_at": datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                    "ended_at": datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                    "id": 1,
+                    "mentor_id": 1,
+                    "overtime_minutes": 0,
+                    "total_duration_in_hours": 1.0,
+                    "total_duration_in_minutes": 60.0,
+                    "total_price": bill,
+                }
+            ),
+        ]
+
+        self.assertEqual(
+            list_bills,
+            expected_mentorships,
+        )
+
+        self.assertEqual(
+            self.bc.database.list_of("mentorship.MentorshipBill"),
+            expected_mentorships,
+        )
+
+        status_message = "The session never ended, accounting for the expected meeting duration that was 1 hr."
+
+        self.assertEqual(
+            self.bc.database.list_of("mentorship.MentorshipSession"),
+            [
+                mentorship_session_field(
+                    {
+                        "accounted_duration": datetime.timedelta(minutes=60),
+                        "id": 1,
+                        "mentee_id": 1,
+                        "mentor_id": 1,
+                        "service_id": 1,
+                        "status": "COMPLETED",
+                        "status_message": status_message,
+                        "suggested_accounted_duration": datetime.timedelta(minutes=60),
+                        "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                        "mentor_joined_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                        "ended_at": None,
+                        "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                        "summary": None,
+                        "bill_id": 1,
+                    }
+                ),
+            ],
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=NOW))
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    def test_generate_bills_when_mentee_never_joins_and_ended_at_is_none(self):
+        """
+        Generate bills when mentee never joins
+        """
+        minutes = 10
+        missed_meeting_duration = datetime.timedelta(minutes=minutes)
+
+        models = self.bc.database.create(
+            mentor_profile=1,
+            user=1,
+            mentorship_service={"missed_meeting_duration": missed_meeting_duration},
+            mentorship_session=[
+                {
+                    "status": "COMPLETED",
+                    "started_at": None,
+                    "mentor_joined_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                    "ended_at": None,
+                    "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                }
+            ],
+        )
+        mentor = models.mentor_profile
+
+        bills = generate_mentor_bills(mentor)
+
+        list_bills = [self.bc.format.to_dict(x) for x in bills]
+
+        bill = round(minutes / 60, 2) * models.mentor_profile.price_per_hour
+
+        expected_mentorships = [
+            mentorship_bill_field(
+                {
+                    "academy_id": 1,
+                    "started_at": datetime.datetime(2021, 10, 1, 0, 0, 0, 0, tzinfo=pytz.UTC),
+                    "ended_at": datetime.datetime(2021, 10, 31, 23, 59, 59, 999999, tzinfo=pytz.UTC),
+                    "id": 1,
+                    "mentor_id": 1,
+                    "overtime_minutes": 0,
+                    "total_duration_in_hours": 0.17,
+                    "total_duration_in_minutes": 10.0,
+                    "total_price": bill,
+                }
+            ),
+        ]
+
+        self.assertEqual(
+            list_bills,
+            expected_mentorships,
+        )
+
+        self.assertEqual(
+            self.bc.database.list_of("mentorship.MentorshipBill"),
+            expected_mentorships,
+        )
+
+        status_message = "Mentor joined but mentee never did, 10 min will be accounted for the bill."
+
+        self.assertEqual(
+            self.bc.database.list_of("mentorship.MentorshipSession"),
+            [
+                mentorship_session_field(
+                    {
+                        "accounted_duration": datetime.timedelta(minutes=10),
+                        "id": 1,
+                        "mentee_id": 1,
+                        "mentor_id": 1,
+                        "service_id": 1,
+                        "status": "COMPLETED",
+                        "status_message": status_message,
+                        "suggested_accounted_duration": datetime.timedelta(minutes=10),
+                        "started_at": None,
+                        "mentor_joined_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
+                        "ended_at": None,
+                        "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                        "summary": None,
+                        "bill_id": 1,
                     }
                 ),
             ],
@@ -332,6 +589,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                 "status": "COMPLETED",
                 "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                 "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                 "accounted_duration": datetime.timedelta(hours=1),
             },
             mentorship_service=1,
@@ -351,18 +609,21 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 11, 16, 22, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=1),
                 },
                 {
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 11, 17, 21, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=2),
                 },
                 {
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 12, 30, 21, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=2),
                 },
             ],
@@ -504,6 +765,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 1,
                     }
@@ -520,6 +782,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 11, 16, 22, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 2,
                     }
@@ -536,6 +799,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 11, 17, 21, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 2,
                     }
@@ -552,6 +816,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 12, 30, 21, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 3,
                     }
@@ -576,6 +841,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                 "status": "COMPLETED",
                 "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                 "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                 "accounted_duration": datetime.timedelta(hours=1),
             },
             mentorship_service=1,
@@ -595,18 +861,21 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 11, 16, 22, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=1),
                 },
                 {
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 11, 17, 21, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=2),
                 },
                 {
                     "status": "COMPLETED",
                     "started_at": datetime.datetime(2021, 12, 30, 21, 0, tzinfo=pytz.UTC),
                     "ended_at": datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
+                    "ends_at": datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
                     "accounted_duration": datetime.timedelta(hours=2),
                 },
             ],
@@ -729,6 +998,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
             ],
         )
 
+        # status_message = ""
         status_message = "The mentor never joined the meeting, no time will be " "accounted for."
 
         self.assertEqual(
@@ -746,6 +1016,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 10, 16, 22, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 10, 16, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 1,
                     }
@@ -762,6 +1033,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 11, 16, 22, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 11, 16, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 2,
                     }
@@ -778,6 +1050,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 11, 17, 21, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 11, 17, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 2,
                     }
@@ -794,6 +1067,7 @@ class GenerateMentorBillsTestCase(MentorshipTestCase):
                         "suggested_accounted_duration": datetime.timedelta(0),
                         "started_at": datetime.datetime(2021, 12, 30, 21, 0, tzinfo=pytz.UTC),
                         "ended_at": datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
+                        "ends_at": datetime.datetime(2021, 12, 30, 23, 0, tzinfo=pytz.UTC),
                         "summary": None,
                         "bill_id": 3,
                     }
