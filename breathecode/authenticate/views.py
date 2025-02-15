@@ -2284,7 +2284,7 @@ async def save_google_token(request):
         raise ValidationException("No google code specified", slug="no-code")
 
     token = None
-    if "token" in state:
+    if "token" in state and state["token"][0] != "":
         token = await Token.aget_valid(state["token"][0])
     if token is not None and token.token_type not in ["temporal", "one_time"]:
         logger.debug(f'Token {state["token"][0]} not found or is expired')
