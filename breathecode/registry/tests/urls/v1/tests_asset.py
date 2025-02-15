@@ -178,7 +178,7 @@ def test_assets_expand_technologies(bc: Breathecode, client):
     assert bc.database.list_of("registry.Asset") == bc.format.to_dict(model.asset)
 
 
-def test_assets_expand_readme_no_readme_url(bc: Breathecode, client):
+def test_assets_expand_readme_no_readme_url(bc: Breathecode, client, utc_now):
 
     technology = {"slug": "learn-react", "title": "Learn React"}
 

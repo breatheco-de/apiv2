@@ -85,6 +85,7 @@ def put_serializer(
 ):
 
     return {
+        "add_ons": [],
         "id": event.id,
         "slug": event.slug,
         "currency": currency.id,
