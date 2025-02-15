@@ -82,6 +82,7 @@ from .models import (
     CredentialsFacebook,
     CredentialsGithub,
     CredentialsGoogle,
+    NotFoundAnonGoogleUser,
     CredentialsSlack,
     GithubAcademyUser,
     GitpodUser,
@@ -2180,8 +2181,8 @@ def login_html_view(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_google_token(request, token=None):
-    if token == None:
-        raise ValidationException("No session token has been specified", slug="no-session-token")
+    # if token == None:
+    #     raise ValidationException("No session token has been specified", slug="no-session-token")
 
     url = request.query_params.get("url", None)
     if url == None:
@@ -2194,12 +2195,12 @@ def get_google_token(request, token=None):
 
         # you can only connect to google with temporal short lasting tokens
     token = Token.get_valid(token)
-    if token is None or token.token_type not in ["temporal", "one_time"]:
+    if token is not None and token.token_type not in ["temporal", "one_time"]:
         raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
 
     # set academy settings automatically
     academy_settings = request.GET.get("academysettings", "none")
-    state = f"token={token.key}&url={url}"
+    state = f"token={token.key if token is not None else ""}&url={url}"
 
     scopes = [
         "https://www.googleapis.com/auth/meetings.space.created",
@@ -2268,19 +2269,24 @@ async def save_google_token(request):
         raise APIException("Google OAuth: " + error_description)
 
     state = parse_qs(request.query_params.get("state", None))
+    print("state")
+    print(state)
 
     if state.get("url") == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
-    if state.get("token") == None:
-        raise ValidationException("No user token specified", slug="no-user-token")
+    # if not state.get("token"):
+    #     #here
+    #     raise ValidationException("No user token specified", slug="no-user-token")
 
     code = request.query_params.get("code", None)
     if code == None:
         raise ValidationException("No google code specified", slug="no-code")
 
-    token = await Token.aget_valid(state["token"][0])
-    if not token or token.token_type not in ["temporal", "one_time"]:
+    token = None
+    if "token" in state and state["token"][0] != "":
+        token = await Token.aget_valid(state["token"][0])
+    if token is not None and token.token_type not in ["temporal", "one_time"]:
         logger.debug(f'Token {state["token"][0]} not found or is expired')
         raise ValidationException(
             "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
@@ -2331,16 +2337,47 @@ async def save_google_token(request):
 
                 logger.debug(body)
 
-                user: User = token.user
                 refresh = ""
                 if "refresh_token" in body:
                     refresh = body["refresh_token"]
 
                 # set user id after because it shouldn't exists
                 google_id = ""
-                if refresh:
-                    user_info = get_user_info(body["id_token"], refresh)
-                    google_id = user_info["id"]
+                user_info = None
+                # if refresh:
+                user_info = get_user_info(body["id_token"], refresh)
+                google_id = user_info["id"]
+
+                user: User = token.user if token is not None else None
+
+                if user is None:
+                    google_creds = await CredentialsGoogle.objects.filter(google_id=google_id).afirst()
+                    if google_creds:
+                        user = google_creds.user
+
+                    if user is None:
+                        user = await User.objects.filter(email=user_info["email"]).afirst()
+
+                    if user is None:
+                        anon_user, anon_created = await NotFoundAnonGoogleUser.objects.aget_or_create(
+                            email=user_info["email"],
+                            defaults={
+                                "expires_at": timezone.now() + timedelta(seconds=body["expires_in"]),
+                                "token": body["access_token"],
+                                "refresh_token": refresh,
+                                "id_token": body["id_token"],
+                                "google_id": google_id,
+                            },
+                        )
+                        if not anon_created and refresh and anon_created.refresh_token != refresh:
+                            anon_user.refresh_token = refresh
+                            await anon_user.asave()
+                        return HttpResponseRedirect(redirect_to=state["url"][0] + "?error=google-user-not-found")
+
+                if not refresh:
+                    anon_user = await NotFoundAnonGoogleUser.objects.filter(email=user_info["email"]).afirst()
+                    if anon_user:
+                        refresh = anon_user.refresh_token
 
                 google_credentials, created = await CredentialsGoogle.objects.aget_or_create(
                     user=user,
