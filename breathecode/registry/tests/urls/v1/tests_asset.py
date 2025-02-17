@@ -81,6 +81,18 @@ def get_serializer(asset, data={}):
     }
 
 
+def get_expanded_serializer(asset, data={}):
+    return {
+        **get_serializer(asset),
+        "agent": asset.agent,
+        "with_solutions": asset.with_solutions,
+        "with_video": asset.with_solutions,
+        "updated_at": asset.updated_at,
+        "template_url": asset.template_url,
+        **data,
+    }
+
+
 def get_serializer_technology(technology, data={}):
     return {
         "slug": technology.slug,
@@ -164,7 +176,7 @@ def test_assets_expand_technologies(bc: Breathecode, client):
     json = response.json()
 
     expected = [
-        get_mid_serializer(
+        get_expanded_serializer(
             asset,
             data={
                 "updated_at": bc.datetime.to_iso_string(asset.updated_at),
@@ -197,7 +209,7 @@ def test_assets_expand_readme_no_readme_url(bc: Breathecode, client):
     asset_readme = model.asset.get_readme()
 
     expected = [
-        get_mid_serializer(
+        get_expanded_serializer(
             model.asset,
             data={
                 "updated_at": bc.datetime.to_iso_string(model.asset.updated_at),
@@ -230,7 +242,7 @@ def test_assets_expand_readme(bc: Breathecode, client):
     asset_readme = model.asset.get_readme(parse=True, remove_frontmatter=True)
 
     expected = [
-        get_mid_serializer(
+        get_expanded_serializer(
             model.asset,
             data={
                 "updated_at": bc.datetime.to_iso_string(model.asset.updated_at),
@@ -264,7 +276,7 @@ def test_assets_expand_readme_ipynb(bc: Breathecode, client):
     asset_readme = model.asset.get_readme()
 
     expected = [
-        get_mid_serializer(
+        get_expanded_serializer(
             model.asset,
             data={
                 "updated_at": bc.datetime.to_iso_string(model.asset.updated_at),
@@ -296,7 +308,7 @@ def test_assets_expand_readme_and_technologies(bc: Breathecode, client):
     asset_readme = model.asset.get_readme(parse=True, remove_frontmatter=True)
 
     expected = [
-        get_mid_serializer(
+        get_expanded_serializer(
             model.asset,
             data={
                 "updated_at": bc.datetime.to_iso_string(model.asset.updated_at),
