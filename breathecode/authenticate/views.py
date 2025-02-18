@@ -2330,12 +2330,14 @@ async def save_google_token(request):
         async with session.post("https://oauth2.googleapis.com/token", json=payload, headers=headers) as resp:
             if resp.status == 200:
                 logger.debug("Google responded with 200")
+                print("Google responded with 200")
 
                 body = await resp.json()
                 if "access_token" not in body:
                     raise APIException(body["error_description"])
 
                 logger.debug(body)
+                print(body)
 
                 refresh = ""
                 if "refresh_token" in body:
