@@ -708,14 +708,14 @@ zstd = ["zstandard (==0.22.0)"]
 
 [[package]]
 name = "celery-task-manager"
-version = "1.11.1"
+version = "1.11.2"
 description = ""
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "celery_task_manager-1.11.1-py3-none-any.whl", hash = "sha256:cecc19026de14e6e88679b2637604aafc25c1407a9867a6eac7556fe0029f86f"},
-    {file = "celery_task_manager-1.11.1.tar.gz", hash = "sha256:31b11b4e872b49bd81c23d9434d05683dc9c4e7fb91b0d2a0b186070077ffce8"},
+    {file = "celery_task_manager-1.11.2-py3-none-any.whl", hash = "sha256:73e5aa251d2c3862cd6d1193c6f5048aaa0cad7fbcc86436f655e36f92f2f5d7"},
+    {file = "celery_task_manager-1.11.2.tar.gz", hash = "sha256:68bf016e0aaaa862926025d78d8f974db750baefce1dc5dcd18d86a1b5ef006d"},
 ]
 
 [package.dependencies]
