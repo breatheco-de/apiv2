@@ -67,6 +67,7 @@ from .actions import (
     set_gitpod_user_expiration,
     sync_organization_members,
     update_gitpod_users,
+    get_github_scopes,
 )
 from .authentication import ExpiringTokenAuthentication
 from .forms import (
@@ -1084,13 +1085,15 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
+    additional_scopes = ""
     if token is not None:
         if Token.get_valid(token) is None:
             raise ValidationException("Invalid or missing token", slug="invalid-token")
         else:
             url = url + f"&user={token}"
+            additional_scopes = get_github_scopes(token.user)
 
-    scope = request.query_params.get("scope", "user repo read:org admin:org")
+    scope = request.query_params.get("scope", "user") + " " + additional_scopes
     try:
         scope = base64.b64decode(scope.encode("utf-8")).decode("utf-8")
     except Exception:
