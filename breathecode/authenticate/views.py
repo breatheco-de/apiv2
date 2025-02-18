@@ -1095,14 +1095,14 @@ def get_github_token(request, token=None):
             scopes = get_github_scopes(_tkn.user, scopes)
 
     try:
-        scope = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
+        scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
     except Exception:
         pass
 
     params = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
-        "scope": scope,
+        "scope": scopes,
     }
 
     logger.debug("Redirecting to github")
