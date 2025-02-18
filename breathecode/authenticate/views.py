@@ -2346,6 +2346,10 @@ async def save_google_token(request):
                 user_info = None
                 # if refresh:
                 user_info = get_user_info(body["id_token"], refresh)
+                print("User info")
+                print(user_info)
+                logger.debug("User info")
+                logger.debug(user_info)
                 google_id = user_info["id"]
 
                 user: User = token.user if token is not None else None
