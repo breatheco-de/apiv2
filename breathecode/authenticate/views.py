@@ -1087,11 +1087,12 @@ def get_github_token(request, token=None):
 
     scopes = request.query_params.get("scope", "user")
     if token is not None:
-        if Token.get_valid(token) is None:
+        _tkn = Token.get_valid(token)
+        if _tkn is None:
             raise ValidationException("Invalid or missing token", slug="invalid-token")
         else:
             url = url + f"&user={token}"
-            scopes = get_github_scopes(token.user, scopes)
+            scopes = get_github_scopes(_tkn.user, scopes)
 
     try:
         scope = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
