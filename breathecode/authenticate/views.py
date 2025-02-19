@@ -1092,13 +1092,10 @@ def get_github_token(request, token=None):
             raise ValidationException("Invalid or missing token", slug="invalid-token")
         else:
             url = url + f"&user={token}"
-            print('_tkn', _tkn)
             scopes = get_github_scopes(_tkn.user, scopes)
-            print('scopes', scopes)
 
     try:
         scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
-        print('scopes2', scopes)
     except Exception:
         pass
 
@@ -1107,7 +1104,6 @@ def get_github_token(request, token=None):
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
         "scope": scopes,
     }
-    print('params', params)
 
     logger.debug("Redirecting to github")
     logger.debug(params)
