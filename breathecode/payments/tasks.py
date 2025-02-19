@@ -484,7 +484,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 "SUBJECT": subject,
                 "MESSAGE": message,
                 "BUTTON": button,
-                "LINK": f"{get_app_url()}/plan-financing/{plan_financing.id}",
+                "LINK": f"{get_app_url()}/planfinancing/{plan_financing.id}",
             },
             academy=plan_financing.academy,
         )
@@ -621,7 +621,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         "SUBJECT": subject,
                         "MESSAGE": message,
                         "BUTTON": button,
-                        "LINK": f"{get_app_url()}/plan-financing/{plan_financing.id}",
+                        "LINK": f"{get_app_url()}/planfinancing/{plan_financing.id}",
                     },
                     academy=plan_financing.academy,
                 )
