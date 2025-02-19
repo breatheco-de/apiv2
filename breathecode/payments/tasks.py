@@ -304,7 +304,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 "SUBJECT": subject,
                 "MESSAGE": message,
                 "BUTTON": button,
-                "LINK": f"{get_app_url()}/subscription/{subscription.id}",
+                "LINK": f"{get_app_url()}/paymentmethod",
             },
             academy=subscription.academy,
         )
@@ -484,7 +484,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 "SUBJECT": subject,
                 "MESSAGE": message,
                 "BUTTON": button,
-                "LINK": f"{get_app_url()}/planfinancing/{plan_financing.id}",
+                "LINK": f"{get_app_url()}/paymentmethod",
             },
             academy=plan_financing.academy,
         )
@@ -621,7 +621,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         "SUBJECT": subject,
                         "MESSAGE": message,
                         "BUTTON": button,
-                        "LINK": f"{get_app_url()}/planfinancing/{plan_financing.id}",
+                        "LINK": f"{get_app_url()}/paymentmethod",
                     },
                     academy=plan_financing.academy,
                 )
