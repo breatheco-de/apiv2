@@ -1171,6 +1171,10 @@ class PlanFinancing(AbstractIOweYou):
         default=0, help_text="Monthly price, we keep this to avoid we changes him/her amount"
     )
 
+    how_many_installments = models.IntegerField(
+        default=0, help_text="How many installments to collect and build the plan financing"
+    )
+
     def __str__(self) -> str:
         return f"{self.user.email} ({self.valid_until})"
 

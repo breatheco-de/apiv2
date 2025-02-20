@@ -894,6 +894,7 @@ def build_plan_financing(
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     financing = PlanFinancing.objects.create(
         user=bag.user,
+        how_many_installments=bag.how_many_installments,
         next_payment_at=invoice.paid_at + relativedelta(months=1),
         academy=bag.academy,
         selected_cohort_set=cohort_set,

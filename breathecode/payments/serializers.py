@@ -382,6 +382,7 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     plan_expires_at = serpy.Field()
     monthly_price = serpy.Field()
+    how_many_installments = serpy.Field()
 
 
 class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
