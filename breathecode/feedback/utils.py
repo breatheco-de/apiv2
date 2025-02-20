@@ -41,7 +41,7 @@ strings = {
             "lowest": "not likely",
         },
         "mentor": {
-            "title": "How has been your experience with your mentor {} so far?",
+            "title": "How has your experience been with your mentor {} so far?",
             "highest": "very good",
             "lowest": "not good",
         },
