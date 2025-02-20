@@ -31,7 +31,6 @@ def createsuperuser():
 
 
 def test():
-    print(sys.argv)
     os.system(f"pytest --nomigrations --durations=1 {get_arguments()}")
 
 

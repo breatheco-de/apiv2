@@ -49,15 +49,15 @@ def get_github_scopes(user, default_scopes=""):
     scopes = {"user", "repo"}  # Always include "user"
     if default_scopes:  # If default_scopes is not empty
         scopes.update(default_scopes.split())
-    
+
     # belongs_to_academy = ProfileAcademy.objects.filter(user=user).exists()
     # if belongs_to_academy:
     #     scopes.add("repo")
-        
+
     owns_github_organization = AcademyAuthSettings.objects.filter(github_owner=user).exists()
     if owns_github_organization:
         scopes.update({"read:org", "admin:org", "delete_repo"})
-        
+
     return " ".join(scopes)
 
 

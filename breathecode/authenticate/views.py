@@ -61,13 +61,13 @@ from .actions import (
     aget_user_language,
     generate_academy_token,
     get_app_url,
+    get_github_scopes,
     get_user_language,
     resend_invite,
     reset_password,
     set_gitpod_user_expiration,
     sync_organization_members,
     update_gitpod_users,
-    get_github_scopes,
 )
 from .authentication import ExpiringTokenAuthentication
 from .forms import (
