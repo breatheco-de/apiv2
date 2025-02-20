@@ -491,7 +491,66 @@ class SignalTestSuite(PaymentsTestCase):
     @patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
     @patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
     @patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
-    def test__how_many_too_hight(self):
+    def test__how_many_very_low(self):
+        kwargs = {}
+
+        how_many = 1
+
+        if random.randint(0, 1) == 0:
+            service = {"type": "MENTORSHIP_SERVICE_SET"}
+            kwargs["mentorship_service_set"] = 1
+
+        else:
+            service = {"type": "EVENT_TYPE_SET"}
+            kwargs["event_type_set"] = 1
+
+        academy_service = {
+            "price_per_unit": (0.5 + (random.random() / 2)) / how_many,
+            "max_amount": 11,
+            "bundle_size": 2,
+        }
+        # how_many  * 1
+        # how_many / 2
+        model = self.bc.database.create(user=1, service=service, academy=1, academy_service=academy_service, **kwargs)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:consumable_checkout")
+        data = {"service": 1, "how_many": how_many, "academy": 1, **kwargs}
+        response = self.client.post(url, data, format="json")
+        self.client.force_authenticate(model.user)
+
+        json = response.json()
+        expected = {"detail": "the-amount-of-items-is-too-low", "status_code": 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(self.bc.database.list_of("payments.Bag"), [])
+        self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
+        self.assertEqual(self.bc.database.list_of("payments.Consumable"), [])
+        self.assertEqual(
+            self.bc.database.list_of("authenticate.UserSetting"),
+            [
+                format_user_setting({"lang": "en"}),
+            ],
+        )
+
+        self.assertEqual(stripe.Charge.create.call_args_list, [])
+        self.assertEqual(stripe.Customer.create.call_args_list, [])
+        self.assertEqual(stripe.Refund.create.call_args_list, [])
+        self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+
+    # Given: 1 User, 1 Service, 1 Academy and 1 AcademyService
+    # When: is auth, with a service, how_many and academy in body,
+    # ----> mentorship_service_set and service type is MENTORSHIP_SERVICE_SET or
+    # ----> event_type_set in body and service type is EVENT_TYPE_SET,
+    # ----> over academy_service max_items
+    # Then: return 400
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    @patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
+    @patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
+    @patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
+    def test__how_many_very_hight(self):
         kwargs = {}
 
         how_many = random.randint(2, 10)
@@ -599,7 +658,7 @@ class SignalTestSuite(PaymentsTestCase):
     @patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
     @patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
     def test__amount_to_hight(self):
-        how_many = random.randint(1, 10)
+        how_many = random.randint(3, 10)
 
         service = {"type": "MENTORSHIP_SERVICE_SET"}
         price_per_unit = (random.random() + 0.50) * 100 / how_many
@@ -639,13 +698,13 @@ class SignalTestSuite(PaymentsTestCase):
     # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 MentorshipServiceSet
     # When: is auth, with a service, how_many, academy and mentorship_service_set in body,
     # ----> academy_service price_per_unit is greater than 0.50
-    # Then: return 400
+    # Then: return 201
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     @patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
     @patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
     @patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
     def test__x_mentorship_service_set_bought(self):
-        how_many = random.randint(1, 10)
+        how_many = random.randint(3, 10)
 
         service = {"type": "MENTORSHIP_SERVICE_SET"}
         price_per_unit = random.random() * 100 / how_many
@@ -743,13 +802,13 @@ class SignalTestSuite(PaymentsTestCase):
     # Given: 1 User, 1 Service, 1 Academy, 1 AcademyService and 1 EventTypeSet
     # When: is auth, with a service, how_many, academy and event_type_set in body,
     # ----> academy_service price_per_unit is greater than 0.50
-    # Then: return 400
+    # Then: return 201
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     @patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
     @patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
     @patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
     def test__x_event_type_set_bought(self):
-        how_many = random.randint(1, 10)
+        how_many = random.randint(3, 10)
 
         service = {"type": "EVENT_TYPE_SET"}
         price_per_unit = random.random() * 100 / how_many
