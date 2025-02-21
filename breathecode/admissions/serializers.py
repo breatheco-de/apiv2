@@ -8,10 +8,10 @@ from django.db.models import Q
 from breathecode.admissions.actions import ImportCohortTimeSlots
 from breathecode.assignments.models import Task
 from breathecode.assignments.serializers import TaskGETSmallSerializer
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from breathecode.utils import localize_query, serializers, serpy
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.serializers import SettingsSerializer, GetPermissionSmallSerializer
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from breathecode.authenticate.serializers import GetPermissionSmallSerializer, SettingsSerializer
+from breathecode.utils import localize_query, serializers, serpy
 
 from .actions import haversine, test_syllabus
 from .models import (
@@ -531,6 +531,28 @@ class GetCohortUserTasksSerializer(GetCohortUserSerializer):
     def get_tasks(self, obj):
         tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort)
         return TaskGETSmallSerializer(tasks, many=True).data
+
+
+class GetPlanSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+
+
+class GetCohortUserPlansSerializer(GetCohortUserSerializer):
+    """The serializer schema definition."""
+
+    plans = serpy.MethodField()
+
+    def get_plans(self, obj):
+        from breathecode.payments.models import Plan
+
+        plans = Plan.objects.filter(
+            Q(subscription__joined_cohorts__id=obj.id) | Q(planfinancing__joined_cohorts__id=obj.id)
+        )
+        return GetPlanSerializer(plans, many=True).data
 
 
 class GETCohortTimeSlotSerializer(serpy.Serializer):
