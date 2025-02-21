@@ -2387,6 +2387,8 @@ async def save_google_token(request):
                             await anon_user.asave()
                         return HttpResponseRedirect(redirect_to=state["url"][0] + "?error=google-user-not-found")
 
+                    token, created = await Token.aget_or_create(user=user, token_type="login")
+
                 if not refresh:
                     anon_user = await NotFoundAnonGoogleUser.objects.filter(email=user_info["email"]).afirst()
                     if anon_user:
