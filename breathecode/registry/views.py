@@ -826,7 +826,7 @@ class AcademyAssetActionView(APIView):
                         f"Asset type {asset.asset_type} cannot be pushed to GitHub, please update the Github repository manually"
                     )
 
-                push_to_github(asset.slug, author=request.user)
+                push_to_github(asset.slug, owner=request.user)
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
                 report.start()
