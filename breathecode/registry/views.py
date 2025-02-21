@@ -885,7 +885,7 @@ class AcademyAssetActionView(APIView):
                             "Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
                         )
 
-                    push_to_github(asset.slug, author=request.user)
+                    push_to_github(asset.slug, owner=request.user)
                 elif action_slug == "analyze_seo":
                     report = SEOAnalyzer(asset)
                     report.start()
