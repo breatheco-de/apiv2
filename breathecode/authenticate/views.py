@@ -2204,6 +2204,7 @@ def get_google_token(request, token=None):
 
     scopes = [
         "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
     ]
 
     if token is not None:
