@@ -60,6 +60,7 @@ from .serializers import (
     GetBigAcademySerializer,
     GetCohortSerializer,
     GETCohortTimeSlotSerializer,
+    GetCohortUserPlansSerializer,
     GetCohortUserSerializer,
     GetCohortUserTasksSerializer,
     GetPublicCohortUserSerializer,
@@ -721,12 +722,15 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
 
         tasks = request.GET.get("tasks", None)
 
+        plans = request.GET.get("plans", None)
         items = handler.queryset(items)
-        serializer = (
-            GetCohortUserTasksSerializer(items, many=True)
-            if tasks is not None and tasks == "True"
-            else GetCohortUserSerializer(items, many=True)
-        )
+
+        if plans is not None:
+            serializer = GetCohortUserPlansSerializer(items, many=True)
+        elif tasks is not None:
+            serializer = GetCohortUserTasksSerializer(items, many=True)
+        else:
+            serializer = GetCohortUserSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
