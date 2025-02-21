@@ -82,11 +82,11 @@ from .models import (
     CredentialsFacebook,
     CredentialsGithub,
     CredentialsGoogle,
-    NotFoundAnonGoogleUser,
     CredentialsSlack,
     GithubAcademyUser,
     GitpodUser,
     GoogleWebhook,
+    NotFoundAnonGoogleUser,
     Profile,
     ProfileAcademy,
     Role,
@@ -2203,10 +2203,14 @@ def get_google_token(request, token=None):
     state = f"token={token.key if token is not None else ""}&url={url}"
 
     scopes = [
-        "https://www.googleapis.com/auth/meetings.space.created",
-        "https://www.googleapis.com/auth/drive.meet.readonly",
         "https://www.googleapis.com/auth/userinfo.profile",
     ]
+
+    if token is not None:
+        scopes = scopes + [
+            "https://www.googleapis.com/auth/meetings.space.created",
+            "https://www.googleapis.com/auth/drive.meet.readonly",
+        ]
 
     if academy_settings in ["overwrite", "set"]:
         if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
@@ -2262,6 +2266,8 @@ async def save_google_token(request):
 
     logger.debug("Google callback just landed")
     logger.debug(request.query_params)
+    print("Google callback just landed")
+    print(request.query_params)
 
     error = request.query_params.get("error", False)
     error_description = request.query_params.get("error_description", "")
