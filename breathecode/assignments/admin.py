@@ -165,6 +165,7 @@ class LearnPackWebhookAdmin(admin.ModelAdmin):
             "DONE": "bg-success",
             "ERROR": "bg-error",
             "PENDING": "bg-warning",
+            "IGNORED": "",
             "webhook": "bg-warning",
             None: "bg-warning",
         }
@@ -174,7 +175,9 @@ class LearnPackWebhookAdmin(admin.ModelAdmin):
                 return colors[s]
             return ""
 
-        return format_html(f"<div><span class='badge'>{obj.status}</span></div><small>{obj.status_text}</small>")
+        return format_html(
+            f"<div><span class='badge {from_status(obj.status)}'>{obj.status}</span></div><small>{obj.status_text}</small>"
+        )
 
 
 @admin.register(RepositoryDeletionOrder)
