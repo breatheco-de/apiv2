@@ -1229,7 +1229,7 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
                 item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
 
             if item is None:
-                return Response(status=status.HTTP_404_NOT_FOUND)
+                raise ValidationError(f"Cohort {cohort_id} not found", code=status.HTTP_404_NOT_FOUND)
 
             serializer = GetCohortSerializer(item, many=False)
             return handler.response(serializer.data)
@@ -1836,18 +1836,18 @@ class SyllabusVersionCSVView(APIView):
             week_number = math.ceil(cumulative_days / class_days_per_week)
             if "technologies" not in day:
                 day["technologies"] = []
-        
+
             # Handle optional language keys for day label.
             label = day["label"]
             if isinstance(label, dict):
                 # Try the desired language, then fallback to English, then to an empty string.
                 label = label.get(lang, label.get("en", ""))
-        
+
             # Handle optional language keys for day description.
             description = day.get("description", "")
             if isinstance(description, dict):
                 description = description.get(lang, description.get("en", ""))
-        
+
             # Write out the CSV row based on the language
             if lang == "es":
                 writer.writerow(
@@ -1856,9 +1856,7 @@ class SyllabusVersionCSVView(APIView):
                         f"Día {day['id']}: {label}",
                         ", ".join([lesson["title"] for lesson in day["lessons"]]),
                         description,
-                        ", ".join(
-                            [tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]
-                        ),
+                        ", ".join([tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]),
                         day.get("teacher_instructions", ""),
                     ]
                 )
@@ -1869,9 +1867,7 @@ class SyllabusVersionCSVView(APIView):
                         f"Day {day['id']}: {label}",
                         ", ".join([lesson["title"] for lesson in day["lessons"]]),
                         description,
-                        ", ".join(
-                            [tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]
-                        ),
+                        ", ".join([tech["title"] if isinstance(tech, dict) else tech for tech in day["technologies"]]),
                         day.get("teacher_instructions", ""),
                     ]
                 )
