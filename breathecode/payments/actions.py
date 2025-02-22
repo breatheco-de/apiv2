@@ -971,10 +971,33 @@ def validate_and_create_subscriptions(
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
 
-    how_many_installments = 1
+    how_many_installments = 3
+
+    cohort = data.get("cohorts", [])
+
+    cohort_found = []
+
+    if cohort:
+        for x in cohort:
+            x = Cohort.objects.filter(slug=x).first()
+            if not x:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Cohort not found: {x}",
+                        es=f"Cohorte no encontrada: {x}",
+                        slug="cohort-not-found",
+                    ),
+                    code=404,
+                )
+            cohort_found.append(x)
+
+    extra = {}
+    if cohort_found:
+        extra["cohort_set__cohorts__slug__in"] = cohort
 
     plans = data.get("plans", [])
-    plans = Plan.objects.filter(slug__in=plans)
+    plans = Plan.objects.filter(slug__in=plans, **extra).distinct()
     if plans.count() != 1:
         raise ValidationException(
             translation(
@@ -1104,6 +1127,7 @@ def validate_and_create_subscriptions(
 
     bag.save()
     bag.plans.set(plans)
+    print("&&&&&&&&&&&&&&&&&&BAG", bag)
 
     utc_now = timezone.now()
 
@@ -1121,7 +1145,7 @@ def validate_and_create_subscriptions(
     )
     invoice.save()
 
-    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort)
 
     return invoice, coupons
 
