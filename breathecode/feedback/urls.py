@@ -5,7 +5,7 @@ from .views import (
     track_survey_open,
     get_survey,
     get_survey_questions,
-    SurveyView,
+    AcademySurveyView,
     AcademyAnswerView,
     get_reviews,
     ReviewView,
