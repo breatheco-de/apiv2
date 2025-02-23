@@ -1412,6 +1412,7 @@ class StudentPostTestSuite(AuthTestCase):
             "phone": "",
             "id": 2,
             "status": "INVITED",
+            "id": 2,
         }
 
         self.assertEqual(json, expected)
@@ -1575,6 +1576,7 @@ class StudentPostTestSuite(AuthTestCase):
             "phone": "",
             "id": 2,
             "status": "INVITED",
+            "id": 2,
         }
 
         self.assertEqual(json, expected)
