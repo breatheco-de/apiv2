@@ -34,6 +34,24 @@ class AssignmentTelemetry(models.Model):
         null=True, blank=True, default=None, help_text="Incoming JSON from LearnPack with detailed telemetry info"
     )
 
+    engagement_score = models.FloatField(
+        null=True, blank=True, default=None, help_text="Calculated score from 0 to 100 based on the telemetry"
+    )
+
+    frustration_score = models.FloatField(
+        null=True, blank=True, default=None, help_text="Calculated score 0 to 100 based on the telemetry"
+    )
+    metrics_algo_version = models.FloatField(
+        null=True, blank=True, default=None, help_text="Version of the algorithm used to calculate the metrics"
+    )
+    metrics = models.JSONField(
+        null=True, blank=True, default=None, help_text="Calculated metrics based on the telemetry"
+    )
+    total_time = models.DurationField(null=True, blank=True, default=None, help_text="Total time spent on the exercise")
+    completion_rate = models.FloatField(
+        null=True, blank=True, default=None, help_text="Completion rate from 0 to 100 of the exercise in percentage"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

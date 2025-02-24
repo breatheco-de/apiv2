@@ -12,8 +12,12 @@ from task_manager.django.decorators import task
 
 import breathecode.notify.actions as actions
 from breathecode.admissions.models import CohortUser
-from breathecode.assignments.actions import NOTIFICATION_STRINGS, validate_task_for_notifications
-from breathecode.assignments.models import LearnPackWebhook
+from breathecode.assignments.actions import (
+    NOTIFICATION_STRINGS,
+    validate_task_for_notifications,
+    calculate_telemetry_indicator,
+)
+from breathecode.assignments.models import LearnPackWebhook, AssignmentTelemetry
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.notify import actions as notify_actions
 from breathecode.services.learnpack import LearnPack
@@ -320,3 +324,10 @@ def send_repository_deletion_notification(deletion_order_id: int, new_owner: str
 
     deletion_order.notified_at = timezone.now()
     deletion_order.save()
+
+
+@task(bind=True, priority=TaskPriority.ACADEMY.value)
+def async_calculate_telemetry_indicator(self, telemetry_id, **_: Any):
+    telemetry = AssignmentTelemetry.objects.filter(id=telemetry_id).first()
+    if telemetry:
+        calculate_telemetry_indicator(telemetry)

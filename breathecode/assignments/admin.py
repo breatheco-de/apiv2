@@ -21,6 +21,7 @@ from .models import (
     UserAttachment,
     UserProxy,
 )
+from .tasks import async_calculate_telemetry_indicator
 
 # Register your models here.
 logger = logging.getLogger(__name__)
@@ -145,11 +146,93 @@ def process_hook(modeladmin, request, queryset):
     messages.success(request, message="Check each updated status on the webhook list for details")
 
 
+class EngagementScoreFilter(admin.SimpleListFilter):
+    title = "Engagement Score"
+    parameter_name = "engagement_score"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("high", "High"),
+            ("medium", "Medium"),
+            ("low", "Low"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "high":
+            return queryset.filter(engagement_score__gte=70)
+        if self.value() == "medium":
+            return queryset.filter(engagement_score__gte=40, engagement_score__lt=70)
+        if self.value() == "low":
+            return queryset.filter(engagement_score__lt=40)
+        return queryset
+
+
+class FrustrationScoreFilter(admin.SimpleListFilter):
+    title = "Frustration Score"
+    parameter_name = "frustration_score"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("high", "High"),
+            ("medium", "Medium"),
+            ("low", "Low"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "high":
+            return queryset.filter(frustration_score__gte=70)
+        if self.value() == "medium":
+            return queryset.filter(frustration_score__gte=40, frustration_score__lt=70)
+        if self.value() == "low":
+            return queryset.filter(frustration_score__lt=40)
+        return queryset
+
+
+@admin.action(description="Calculate Telemetry Indicators")
+def calculate_telemetry_indicators(modeladmin, request, queryset):
+    for telemetry in queryset:
+        async_calculate_telemetry_indicator.delay(telemetry.id)
+
+
 @admin.register(AssignmentTelemetry)
 class AssignmentTelemetryAdmin(admin.ModelAdmin):
-    list_display = ("id", "asset_slug", "user", "created_at")
+    list_display = (
+        "id",
+        "asset_slug",
+        "user",
+        "created_at",
+        "engagement_score_display",
+        "frustration_score_display",
+        "total_time",
+        "completion_rate",
+    )
     search_fields = ["asset_slug", "user__email", "user__id"]
     raw_id_fields = ["user"]
+    list_filter = [EngagementScoreFilter, FrustrationScoreFilter]
+    actions = [calculate_telemetry_indicators]
+
+    def engagement_score_display(self, obj):
+        if obj.engagement_score is None:
+            return "-"
+        color = (
+            "bg-success" if obj.engagement_score >= 70 else "bg-warning" if obj.engagement_score >= 40 else "bg-danger"
+        )
+        emoji = "🥳" if obj.engagement_score >= 70 else "😐" if obj.engagement_score >= 40 else "😴"
+        return format_html(f"<span class='badge {color}'>{emoji} {obj.engagement_score}%</span>")
+
+    def frustration_score_display(self, obj):
+        if obj.frustration_score is None:
+            return "-"
+        color = (
+            "bg-danger"
+            if obj.frustration_score >= 70
+            else "bg-warning" if obj.frustration_score >= 40 else "bg-success"
+        )
+        emoji = "🤬" if obj.frustration_score >= 70 else "😤" if obj.frustration_score >= 40 else "😍"
+        return format_html(f"<span class='badge {color}'>{emoji} {obj.frustration_score}%</span>")
+
+    engagement_score_display.short_description = "Engagement Score"
+    frustration_score_display.short_description = "Frustration Score"
 
 
 @admin.register(LearnPackWebhook)
