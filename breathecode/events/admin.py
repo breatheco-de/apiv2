@@ -230,7 +230,8 @@ class LiveClassAdmin(admin.ModelAdmin):
         "did_it_close_automatically",
     )
     list_filter = ["cohort_time_slot__recurrent", "cohort_time_slot__recurrency_type", EndedFilter]
-    search_fields = ["id", "remote_meeting_url"]
+    search_fields = ["id", "remote_meeting_url", "cohort_time_slot__cohort__slug"]
+    raw_id_fields = ["cohort_time_slot"]
     actions = [mark_as_ended]
 
     def did_it_close_automatically(self, obj: LiveClass):
