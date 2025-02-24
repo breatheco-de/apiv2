@@ -155,6 +155,7 @@ class EngagementScoreFilter(admin.SimpleListFilter):
             ("high", "High"),
             ("medium", "Medium"),
             ("low", "Low"),
+            ("none", "None"),
         )
 
     def queryset(self, request, queryset):
@@ -164,6 +165,8 @@ class EngagementScoreFilter(admin.SimpleListFilter):
             return queryset.filter(engagement_score__gte=40, engagement_score__lt=70)
         if self.value() == "low":
             return queryset.filter(engagement_score__lt=40)
+        if self.value() == "none":
+            return queryset.filter(engagement_score__isnull=True)
         return queryset
 
 
@@ -176,6 +179,7 @@ class FrustrationScoreFilter(admin.SimpleListFilter):
             ("high", "High"),
             ("medium", "Medium"),
             ("low", "Low"),
+            ("none", "None"),
         )
 
     def queryset(self, request, queryset):
@@ -185,6 +189,8 @@ class FrustrationScoreFilter(admin.SimpleListFilter):
             return queryset.filter(frustration_score__gte=40, frustration_score__lt=70)
         if self.value() == "low":
             return queryset.filter(frustration_score__lt=40)
+        if self.value() == "none":
+            return queryset.filter(frustration_score__isnull=True)
         return queryset
 
 
@@ -215,21 +221,23 @@ class AssignmentTelemetryAdmin(admin.ModelAdmin):
         if obj.engagement_score is None:
             return "-"
         color = (
-            "bg-success" if obj.engagement_score >= 70 else "bg-warning" if obj.engagement_score >= 40 else "bg-danger"
+            "bg-success" if obj.engagement_score >= 70 else "bg-warning" if obj.engagement_score >= 40 else "bg-error"
         )
         emoji = "🥳" if obj.engagement_score >= 70 else "😐" if obj.engagement_score >= 40 else "😴"
-        return format_html(f"<span class='badge {color}'>{emoji} {obj.engagement_score}%</span>")
+        return format_html(
+            f"<span class='badge {color}'>{emoji} {obj.engagement_score}% v{obj.metrics_algo_version}</span>"
+        )
 
     def frustration_score_display(self, obj):
         if obj.frustration_score is None:
             return "-"
         color = (
-            "bg-danger"
-            if obj.frustration_score >= 70
-            else "bg-warning" if obj.frustration_score >= 40 else "bg-success"
+            "bg-error" if obj.frustration_score >= 70 else "bg-warning" if obj.frustration_score >= 40 else "bg-success"
         )
         emoji = "🤬" if obj.frustration_score >= 70 else "😤" if obj.frustration_score >= 40 else "😍"
-        return format_html(f"<span class='badge {color}'>{emoji} {obj.frustration_score}%</span>")
+        return format_html(
+            f"<span class='badge {color}'>{emoji} {obj.frustration_score}% v{obj.metrics_algo_version}</span>"
+        )
 
     engagement_score_display.short_description = "Engagement Score"
     frustration_score_display.short_description = "Frustration Score"

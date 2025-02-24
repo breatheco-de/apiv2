@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import os
+from datetime import datetime
 
 from django import forms
 from django.contrib.auth.models import User
@@ -639,3 +640,8 @@ class CohortTimeSlot(TimeSlot):
         super().save(*args, **kwargs)
 
         signals.timeslot_saved.send_robust(instance=self, sender=self.__class__, created=created)
+
+    def __str__(self):
+        start_time = datetime.strptime(str(self.starting_at), "%Y%m%d%H%M").strftime("%d/%m/%Y %I%p")
+        end_time = datetime.strptime(str(self.ending_at), "%Y%m%d%H%M").strftime("%I%p")
+        return f"{self.cohort.name}: {start_time}-{end_time}"

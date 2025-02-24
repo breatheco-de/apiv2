@@ -1,23 +1,25 @@
 from datetime import timedelta
-from django.contrib import admin
+
+from django.contrib import admin, messages
 from django.contrib.auth.models import User
-from django.contrib import messages
 from django.utils.html import format_html
+
 import breathecode.events.tasks as tasks
+import breathecode.marketing.tasks as marketing_tasks
+from breathecode.utils import AdminExportCsvMixin
+
+from .actions import sync_org_events, sync_org_venues
 from .models import (
     Event,
+    EventbriteWebhook,
+    EventCheckin,
+    EventType,
     EventTypeVisibilitySetting,
     LiveClass,
-    Venue,
-    EventType,
-    EventCheckin,
     Organization,
     Organizer,
-    EventbriteWebhook,
+    Venue,
 )
-from .actions import sync_org_venues, sync_org_events
-from breathecode.utils import AdminExportCsvMixin
-import breathecode.marketing.tasks as marketing_tasks
 
 
 def pull_eventbrite_venues(modeladmin, request, queryset):
@@ -187,6 +189,35 @@ class EventTypeVisibilitySettingAdmin(admin.ModelAdmin):
     raw_id_fields = ["syllabus", "cohort", "academy"]
 
 
+class EndedFilter(admin.SimpleListFilter):
+    title = "Ended"
+    parameter_name = "ended"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Yes"),
+            ("no", "No"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(ended_at__isnull=False)
+        if self.value() == "no":
+            return queryset.filter(ended_at__isnull=True)
+        return queryset
+
+
+def mark_as_ended(modeladmin, request, queryset):
+
+    for live_class in queryset:
+        if live_class.ended_at is None:
+            live_class.ended_at = live_class.ending_at + timedelta(minutes=30)
+            live_class.save()
+            modeladmin.message_user(request, f"Marked live class {live_class.id} as ended", messages.SUCCESS)
+        else:
+            modeladmin.message_user(request, f"Live class {live_class.id} is already ended", messages.WARNING)
+
+
 @admin.register(LiveClass)
 class LiveClassAdmin(admin.ModelAdmin):
     list_display = (
@@ -198,8 +229,9 @@ class LiveClassAdmin(admin.ModelAdmin):
         "ended_at",
         "did_it_close_automatically",
     )
-    list_filter = ["cohort_time_slot__recurrent", "cohort_time_slot__recurrency_type"]
+    list_filter = ["cohort_time_slot__recurrent", "cohort_time_slot__recurrency_type", EndedFilter]
     search_fields = ["id", "remote_meeting_url"]
+    actions = [mark_as_ended]
 
     def did_it_close_automatically(self, obj: LiveClass):
         if not obj.ended_at:
