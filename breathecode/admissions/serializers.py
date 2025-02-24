@@ -550,8 +550,10 @@ class GetCohortUserPlansSerializer(GetCohortUserSerializer):
         from breathecode.payments.models import Plan
 
         plans = Plan.objects.filter(
-            Q(subscription__joined_cohorts__id=obj.id) | Q(planfinancing__joined_cohorts__id=obj.id)
+            Q(subscription__joined_cohorts=obj.cohort.id, subscription__user__id=obj.user.id)
+            | Q(planfinancing__joined_cohorts=obj.cohort.id, planfinancing__user__id=obj.user.id)
         )
+
         return GetPlanSerializer(plans, many=True).data
 
 

@@ -14,6 +14,7 @@ from redis.exceptions import LockError
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
+from breathecode.admissions.models import Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.media.models import File
@@ -850,9 +851,13 @@ def build_plan_financing(
     invoice_id: int,
     is_free: bool = False,
     conversion_info: Optional[str] = "",
+    cohorts: Optional[list[str]] = None,
     **_: Any,
 ):
     logger.info(f"Starting build_plan_financing for bag {bag_id}")
+
+    if cohorts is None:
+        cohorts = []
 
     if not (bag := Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()):
         raise RetryTask(f"Bag with id {bag_id} not found")
@@ -891,6 +896,9 @@ def build_plan_financing(
         event_type_set = None
         mentorship_service_set = None
 
+    if cohorts:
+        cohorts = Cohort.objects.filter(slug__in=cohorts)
+
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     financing = PlanFinancing.objects.create(
         user=bag.user,
@@ -905,7 +913,11 @@ def build_plan_financing(
         monthly_price=invoice.amount,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
+        # joined_cohorts=cohorts,
     )
+
+    if cohorts:
+        financing.joined_cohorts.set(cohorts)
 
     financing.plans.set(plans)
 
