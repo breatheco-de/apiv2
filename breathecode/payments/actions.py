@@ -971,10 +971,9 @@ def validate_and_create_subscriptions(
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
 
-    how_many_installments = 3
+    how_many_installments = 1
 
     cohort = data.get("cohorts", [])
-
     cohort_found = []
 
     if cohort:
@@ -1127,7 +1126,6 @@ def validate_and_create_subscriptions(
 
     bag.save()
     bag.plans.set(plans)
-    print("&&&&&&&&&&&&&&&&&&BAG", bag)
 
     utc_now = timezone.now()
 
