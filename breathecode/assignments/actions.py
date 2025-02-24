@@ -156,7 +156,7 @@ def calculate_telemetry_indicator(telemetry):
 
         telemetry.engagement_score = scores["global"]["indicators"]["EngagementIndicator"]
         telemetry.frustration_score = scores["global"]["indicators"]["FrustrationIndicator"]
-        telemetry.metrics = scores["global"]["metrics"]
+        telemetry.metrics = scores
         telemetry.total_time = timedelta(seconds=scores["global"]["metrics"]["total_time_on_platform"])
         telemetry.completion_rate = scores["global"]["metrics"]["completion_rate"]
         telemetry.save()
