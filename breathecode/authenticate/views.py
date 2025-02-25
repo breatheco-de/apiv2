@@ -2251,6 +2251,12 @@ def get_google_token(request, token=None):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_google_token(request):
+    @sync_to_async
+    def aget_google_credentials(google_id):
+        google_creds = CredentialsGoogle.objects.filter(google_id=google_id).first()
+        return google_creds
+
+    @sync_to_async
     def get_user_info(access_token):
         url = "https://www.googleapis.com/oauth2/v2/userinfo?alt=json"
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -2359,7 +2365,7 @@ async def save_google_token(request):
                 google_id = ""
                 user_info = None
                 # if refresh:
-                user_info = get_user_info(body["id_token"], refresh)
+                user_info = await get_user_info(body["id_token"])
                 print("User info")
                 print(user_info)
                 logger.debug("User info")
@@ -2369,7 +2375,7 @@ async def save_google_token(request):
                 user: User = token.user if token is not None else None
 
                 if user is None:
-                    google_creds = await CredentialsGoogle.objects.filter(google_id=google_id).afirst()
+                    google_creds = await aget_google_credentials(google_id)
                     if google_creds:
                         user = google_creds.user
 
