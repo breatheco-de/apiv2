@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import aiohttp
 import requests
+import json
 from adrf.decorators import api_view
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
@@ -46,7 +47,8 @@ from breathecode.authenticate.actions import get_user_settings
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
-from breathecode.services.google_apps.google_apps import GoogleApps
+
+# from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
@@ -2252,9 +2254,18 @@ def get_google_token(request, token=None):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_google_token(request):
-    def get_user_info(id_token, refresh_token):
-        c = GoogleApps(id_token, refresh_token)
-        return c.get_user_info()
+    @sync_to_async
+    def aget_google_credentials(google_id):
+        google_creds = CredentialsGoogle.objects.filter(google_id=google_id).first()
+        return google_creds
+
+    @sync_to_async
+    def get_user_info(access_token):
+        url = "https://www.googleapis.com/oauth2/v2/userinfo?alt=json"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        res = requests.get(url, headers=headers)
+        res = json.loads(res.text)
+        return res
 
     async def set_academy_auth_settings(academy: Academy, user: User):
         settings, created = await AcademyAuthSettings.objects.aget_or_create(
@@ -2357,7 +2368,7 @@ async def save_google_token(request):
                 google_id = ""
                 user_info = None
                 # if refresh:
-                user_info = get_user_info(body["id_token"], refresh)
+                user_info = await get_user_info(body["id_token"])
                 print("User info")
                 print(user_info)
                 logger.debug("User info")
@@ -2367,7 +2378,7 @@ async def save_google_token(request):
                 user: User = token.user if token is not None else None
 
                 if user is None:
-                    google_creds = await CredentialsGoogle.objects.filter(google_id=google_id).afirst()
+                    google_creds = await aget_google_credentials(google_id)
                     if google_creds:
                         user = google_creds.user
 
@@ -2416,7 +2427,6 @@ async def save_google_token(request):
 
                     if google_id == "" or google_credentials.google_id != google_id:
                         refresh = google_credentials.refresh_token
-                        user_info = get_user_info(body["id_token"], refresh)
                         google_id = user_info["id"]
                         google_credentials.google_id = google_id
 
