@@ -214,6 +214,7 @@ class AnswerTestSuite(FeedbackTestCase):
             self.bc.database.list_of("feedback.Survey"),
             [
                 {
+                    "is_customized": False,
                     "sent_at": UTC_NOW,
                     "status": "FATAL",
                     "status_json": '{"success": [], "error": ["Survey NOT sent to '

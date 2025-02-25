@@ -18,6 +18,33 @@ from ...actions import send_question, strings
 from ..mixins import FeedbackTestCase
 
 
+def get_serializer(data={}):
+    return {
+        "id": 0,
+        "title": "",
+        "lowest": None,
+        "highest": None,
+        "lang": "en",
+        "event_id": None,
+        "mentor_id": None,
+        "cohort_id": 0,
+        "academy_id": None,
+        "token_id": None,
+        "score": None,
+        "comment": None,
+        "mentorship_session_id": None,
+        "sent_at": None,
+        "survey_id": None,
+        "status": "PENDING",
+        "user_id": 0,
+        "opened_at": None,
+        "question_by_slug": None,
+        "asset_id": None,
+        "live_class_id": None,
+        **data,
+    }
+
+
 class SendSurveyTestSuite(FeedbackTestCase):
     """
     🔽🔽🔽 Without Cohort
@@ -116,27 +143,18 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
             translations = strings[model["cohort"].language]
             expected = [
-                {
-                    "id": n + 1,
-                    "title": "",
-                    "lowest": translations["event"]["lowest"],
-                    "highest": translations["event"]["highest"],
-                    "lang": "en",
-                    "event_id": None,
-                    "mentor_id": None,
-                    "cohort_id": n + 1,
-                    "academy_id": None,
-                    "token_id": None,
-                    "score": None,
-                    "comment": None,
-                    "mentorship_session_id": None,
-                    "sent_at": None,
-                    "survey_id": None,
-                    "status": "PENDING",
-                    "user_id": n + 1,
-                    "opened_at": None,
-                    "question_by_slug": None,
-                }
+                get_serializer(
+                    {
+                        "id": n + 1,
+                        "title": "",
+                        "lowest": translations["event"]["lowest"],
+                        "highest": translations["event"]["highest"],
+                        "lang": "en",
+                        "cohort_id": n + 1,
+                        "status": "PENDING",
+                        "user_id": n + 1,
+                    }
+                ),
             ]
 
             self.assertEqual(self.bc.database.list_of("feedback.Answer"), expected)
@@ -179,27 +197,19 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
             translations = strings[model["cohort"].language]
             expected = [
-                {
-                    "id": n + 1,
-                    "title": "",
-                    "lowest": translations["event"]["lowest"],
-                    "highest": translations["event"]["highest"],
-                    "lang": "en",
-                    "event_id": None,
-                    "mentor_id": None,
-                    "cohort_id": n + 1,
-                    "academy_id": None,
-                    "token_id": None,
-                    "score": None,
-                    "comment": None,
-                    "mentorship_session_id": None,
-                    "sent_at": None,
-                    "survey_id": None,
-                    "status": "PENDING",
-                    "user_id": n + 1,
-                    "question_by_slug": None,
-                    "opened_at": None,
-                }
+                get_serializer(
+                    {
+                        "id": n + 1,
+                        "title": "",
+                        "lowest": translations["event"]["lowest"],
+                        "highest": translations["event"]["highest"],
+                        "lang": "en",
+                        "cohort_id": n + 1,
+                        "token_id": None,
+                        "status": "PENDING",
+                        "user_id": n + 1,
+                    }
+                ),
             ]
 
             self.assertEqual(self.bc.database.list_of("feedback.Answer"), expected)
@@ -244,27 +254,19 @@ class SendSurveyTestSuite(FeedbackTestCase):
             send_question(model["user"])
 
             expected = [
-                {
-                    "academy_id": None,
-                    "cohort_id": n + 1,
-                    "comment": None,
-                    "event_id": None,
-                    "highest": "very good",
-                    "id": n + 1,
-                    "lang": "en",
-                    "lowest": "not good",
-                    "mentor_id": None,
-                    "mentorship_session_id": None,
-                    "opened_at": None,
-                    "sent_at": None,
-                    "score": None,
-                    "status": "SENT",
-                    "survey_id": None,
-                    "title": f"How has been your experience studying {certificate} so far?",
-                    "token_id": n + 1,
-                    "question_by_slug": None,
-                    "user_id": n + 1,
-                }
+                get_serializer(
+                    {
+                        "cohort_id": n + 1,
+                        "highest": "very good",
+                        "id": n + 1,
+                        "lang": "en",
+                        "lowest": "not good",
+                        "status": "SENT",
+                        "title": f"How has your experience been studying {certificate} so far?",
+                        "token_id": n + 1,
+                        "user_id": n + 1,
+                    }
+                ),
             ]
 
             dicts = self.bc.database.list_of("feedback.Answer")
@@ -312,27 +314,19 @@ class SendSurveyTestSuite(FeedbackTestCase):
             send_question(model.user, model.cohort)
 
             expected = [
-                {
-                    "academy_id": None,
-                    "cohort_id": n + 1,
-                    "comment": None,
-                    "event_id": None,
-                    "highest": "very good",
-                    "id": n + 1,
-                    "lang": "en",
-                    "lowest": "not good",
-                    "mentor_id": None,
-                    "mentorship_session_id": None,
-                    "opened_at": None,
-                    "sent_at": None,
-                    "score": None,
-                    "status": "SENT",
-                    "survey_id": None,
-                    "title": f"How has been your experience studying {certificate} so far?",
-                    "token_id": n + 1,
-                    "user_id": n + 1,
-                    "question_by_slug": None,
-                }
+                get_serializer(
+                    {
+                        "cohort_id": n + 1,
+                        "highest": "very good",
+                        "id": n + 1,
+                        "lang": "en",
+                        "lowest": "not good",
+                        "status": "SENT",
+                        "title": f"How has your experience been studying {certificate} so far?",
+                        "token_id": n + 1,
+                        "user_id": n + 1,
+                    }
+                ),
             ]
 
             dicts = self.bc.database.list_of("feedback.Answer")
@@ -386,27 +380,19 @@ class SendSurveyTestSuite(FeedbackTestCase):
             send_question(model["user"])
 
             expected = [
-                {
-                    "id": n + 1,
-                    "title": f"How has been your experience studying {certificate} so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "lang": "en",
-                    "cohort_id": n + 1,
-                    "academy_id": None,
-                    "mentor_id": None,
-                    "event_id": None,
-                    "token_id": n + 1,
-                    "mentorship_session_id": None,
-                    "sent_at": None,
-                    "score": None,
-                    "comment": None,
-                    "survey_id": None,
-                    "status": "SENT",
-                    "user_id": n + 1,
-                    "opened_at": None,
-                    "question_by_slug": None,
-                }
+                get_serializer(
+                    {
+                        "id": n + 1,
+                        "title": f"How has your experience been studying {certificate} so far?",
+                        "lowest": "not good",
+                        "highest": "very good",
+                        "lang": "en",
+                        "cohort_id": n + 1,
+                        "token_id": n + 1,
+                        "status": "SENT",
+                        "user_id": n + 1,
+                    }
+                ),
             ]
 
             dicts = [answer for answer in self.bc.database.list_of("feedback.Answer")]
@@ -461,27 +447,19 @@ class SendSurveyTestSuite(FeedbackTestCase):
             send_question(model["user"])
 
             expected = [
-                {
-                    "id": n + 1,
-                    "title": f"How has been your experience studying {certificate} so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "lang": "en",
-                    "cohort_id": n + 1,
-                    "academy_id": None,
-                    "mentor_id": None,
-                    "event_id": None,
-                    "mentorship_session_id": None,
-                    "sent_at": None,
-                    "token_id": n + 1,
-                    "score": None,
-                    "comment": None,
-                    "status": "SENT",
-                    "user_id": n + 1,
-                    "survey_id": None,
-                    "opened_at": None,
-                    "question_by_slug": None,
-                }
+                get_serializer(
+                    {
+                        "id": n + 1,
+                        "title": f"How has your experience been studying {certificate} so far?",
+                        "lowest": "not good",
+                        "highest": "very good",
+                        "lang": "en",
+                        "cohort_id": n + 1,
+                        "token_id": n + 1,
+                        "status": "SENT",
+                        "user_id": n + 1,
+                    }
+                ),
             ]
 
             dicts = self.bc.database.list_of("feedback.Answer")
@@ -536,27 +514,19 @@ class SendSurveyTestSuite(FeedbackTestCase):
             send_question(model["user"])
 
             expected = [
-                {
-                    "academy_id": None,
-                    "cohort_id": n + 1,
-                    "comment": None,
-                    "event_id": None,
-                    "highest": "muy buena",
-                    "id": n + 1,
-                    "lang": "es",
-                    "lowest": "mala",
-                    "mentor_id": None,
-                    "mentorship_session_id": None,
-                    "sent_at": None,
-                    "opened_at": None,
-                    "score": None,
-                    "status": "SENT",
-                    "survey_id": None,
-                    "title": f"¿Cómo ha sido tu experiencia estudiando {certificate} hasta este momento?",
-                    "token_id": n + 1,
-                    "user_id": n + 1,
-                    "question_by_slug": None,
-                }
+                get_serializer(
+                    {
+                        "cohort_id": n + 1,
+                        "highest": "muy buena",
+                        "id": n + 1,
+                        "lang": "es",
+                        "lowest": "mala",
+                        "status": "SENT",
+                        "title": f"¿Cómo ha sido tu experiencia estudiando {certificate} hasta este momento?",
+                        "token_id": n + 1,
+                        "user_id": n + 1,
+                    }
+                ),
             ]
 
             dicts = self.bc.database.list_of("feedback.Answer")

@@ -367,7 +367,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "SUBJECT": "Your 4Geeks subscription could not be renewed",
                         "MESSAGE": "Please update your payment methods",
                         "BUTTON": "Please update your payment methods",
-                        "LINK": os.getenv("APP_URL")[:-1] + "/subscription/1",
+                        "LINK": os.getenv("APP_URL")[:-1] + "/paymentmethod",
                     },
                     academy=model.academy,
                 )

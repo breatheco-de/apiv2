@@ -32,6 +32,7 @@ def get_detailed_serializer(asset_technology, assets=[], asset_technologies=[]):
         "is_deprecated": asset_technology.is_deprecated,
         "featured_course": (
             {
+                "banner_image": asset_technology.featured_course.banner_image,
                 "slug": asset_technology.featured_course.slug,
                 "icon_url": asset_technology.featured_course.icon_url,
                 "academy": asset_technology.featured_course.academy.id,

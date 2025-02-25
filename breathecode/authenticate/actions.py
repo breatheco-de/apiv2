@@ -58,7 +58,7 @@ def get_github_scopes(user, default_scopes=""):
     if owns_github_organization:
         scopes.update({"read:org", "admin:org", "delete_repo"})
 
-    return " ".join(scopes)
+    return " ".join(sorted(scopes))
 
 
 def get_user(github_id=None, email=None):

@@ -109,9 +109,10 @@ def plan_serializer(plan):
     }
 
 
-def post_serializer(plans=[], data={}):
+def post_serializer(plans=[], academy=None, data={}):
     return {
         "id": 0,
+        "academy": academy.id if academy else None,
         "access_token": None,
         "cohort": None,
         "syllabus": None,
@@ -132,10 +133,11 @@ def post_serializer(plans=[], data={}):
     }
 
 
-def put_serializer(user_invite, cohort=None, syllabus=None, user=None, plans=[], data={}):
+def put_serializer(user_invite, cohort=None, syllabus=None, user=None, academy=None, plans=[], data={}):
     return {
         "id": user_invite.id,
         "access_token": None,
+        "academy": academy.id if academy else None,
         "cohort": cohort.id if cohort else None,
         "syllabus": syllabus.id if syllabus else None,
         "email": user_invite.email,
@@ -927,6 +929,7 @@ def test__post__course_without_syllabus(bc: Breathecode, client: APIClient, vali
     json = response.json()
     expected = post_serializer(
         plans=[],
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -1027,6 +1030,7 @@ def test__post__course_and_syllabus(bc: Breathecode, client: APIClient, validati
     json = response.json()
     expected = post_serializer(
         plans=[],
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -1176,6 +1180,7 @@ def test__post__course_and_syllabus__waiting_list(bc: Breathecode, client: APICl
     json = response.json()
     expected = post_serializer(
         plans=[],
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": None,
@@ -1248,6 +1253,7 @@ def test__post__with_other_invite__course_and_syllabus__waiting_list(bc: Breathe
     json = response.json()
     expected = post_serializer(
         plans=[],
+        academy=model.academy,
         data={
             "id": 2,
             "access_token": None,
@@ -1392,6 +1398,7 @@ def test__post__with_other_invite__cohort__waiting_list(bc: Breathecode, client:
     json = response.json()
     expected = post_serializer(
         plans=[],
+        academy=model.academy,
         data={
             "id": 2,
             "access_token": access_token,
@@ -1791,6 +1798,7 @@ def test_task__put__with_user_invite__cohort_found(bc: Breathecode, client: APIC
     json = response.json()
     expected = put_serializer(
         model.user_invite,
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -1901,6 +1909,7 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
     json = response.json()
     expected = put_serializer(
         model.user_invite,
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -2013,6 +2022,7 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
     expected = put_serializer(
         model.user_invite,
         user=model.user,
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -2137,6 +2147,7 @@ def test_task__put__with_user_invite__syllabus_found(bc: Breathecode, client: AP
 
     expected = put_serializer(
         model.user_invite,
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -2248,6 +2259,7 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
     json = response.json()
     expected = put_serializer(
         model.user_invite,
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -2363,6 +2375,7 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
     expected = put_serializer(
         model.user_invite,
         user=model.user,
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -2500,6 +2513,7 @@ def test_task__put__plan_has_waiting_list(bc: Breathecode, client: APIClient):
     json = response.json()
     expected = put_serializer(
         model.user_invite,
+        academy=model.academy,
         plans=[model.plan],
         data={
             "id": 1,
@@ -2570,6 +2584,7 @@ def test_task__put__plan_has_not_waiting_list(bc: Breathecode, client: APIClient
     json = response.json()
     expected = put_serializer(
         model.user_invite,
+        academy=model.academy,
         plans=[model.plan],
         data={
             "id": 1,
@@ -2736,6 +2751,7 @@ def test__put__course_without_syllabus(bc: Breathecode, client: APIClient, valid
     json = response.json()
     expected = post_serializer(
         plans=[],
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -2844,6 +2860,7 @@ def test__put__course_and_syllabus(bc: Breathecode, client: APIClient, validatio
     json = response.json()
     expected = post_serializer(
         plans=[],
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": access_token,
@@ -3013,6 +3030,7 @@ def test__put__course_and_syllabus__waiting_list(bc: Breathecode, client: APICli
     json = response.json()
     expected = post_serializer(
         plans=[],
+        academy=model.academy,
         data={
             "id": 1,
             "access_token": None,
