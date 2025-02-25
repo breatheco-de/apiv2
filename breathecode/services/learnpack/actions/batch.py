@@ -3,13 +3,13 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 from breathecode.assignments.models import AssignmentTelemetry, LearnPackWebhook
-from breathecode.assignments.utils.indicators import UserIndicatorCalculator, EngagementIndicator, FrustrationIndicator
+from breathecode.assignments.utils.indicators import EngagementIndicator, FrustrationIndicator, UserIndicatorCalculator
 
 
 def batch(self, webhook: LearnPackWebhook):
     # lazyload to fix circular import
-    from breathecode.registry.models import Asset
     from breathecode.assignments.models import Task
+    from breathecode.registry.models import Asset
 
     asset = None
     if "asset_id" in webhook.payload:
@@ -45,7 +45,7 @@ def batch(self, webhook: LearnPackWebhook):
     # Calculate indicators
     indicators = [EngagementIndicator(), FrustrationIndicator()]
     calculator = UserIndicatorCalculator(webhook.payload, indicators)
-    scores = calculator.calculateIndicators()
+    scores = calculator.calculate_indicators()
 
     telemetry.engagement_score = scores["global"]["indicators"]["EngagementIndicator"]
     telemetry.frustration_score = scores["global"]["indicators"]["FrustrationIndicator"]
