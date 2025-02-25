@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import hmac
+import json
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import aiohttp
 import requests
-import json
 from adrf.decorators import api_view
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
@@ -1213,6 +1213,8 @@ async def save_github_token(request):
     if "access_token" not in body:
         raise APIException(f"Github code {resp.status}: {error_message(body, 'error getting github token')}")
 
+    scopes = " ".join(sorted(body.get("scope", "").split(",")))
+
     github_token = body["access_token"]
     async with aiohttp.ClientSession() as session:
         async with session.get(
@@ -1305,7 +1307,7 @@ async def save_github_token(request):
 
     # create a new credentials if it doesn't exists
     if github_credentials is None:
-        github_credentials = CredentialsGithub(github_id=github_user["id"], user=user)
+        github_credentials = CredentialsGithub(github_id=github_user["id"], user=user, scopes=scopes)
 
     github_credentials.token = github_token
     github_credentials.username = github_user["login"]
@@ -1316,7 +1318,11 @@ async def save_github_token(request):
     github_credentials.bio = github_user["bio"]
     github_credentials.company = github_user["company"]
     github_credentials.twitter_username = github_user["twitter_username"]
+
     await github_credentials.asave()
+
+    if scopes != github_credentials.scopes:
+        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}")
 
     # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
     # to keep it in sync when the user autenticate's with github
