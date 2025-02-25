@@ -221,6 +221,7 @@ def get_plan_financing_serializer(
         "monthly_price": plan_financing.monthly_price,
         "status_message": plan_financing.status_message,
         "user": user_serializer(user),
+        "how_many_installments": 0,
     }
 
 

@@ -83,11 +83,11 @@ from .models import (
     CredentialsFacebook,
     CredentialsGithub,
     CredentialsGoogle,
-    NotFoundAnonGoogleUser,
     CredentialsSlack,
     GithubAcademyUser,
     GitpodUser,
     GoogleWebhook,
+    NotFoundAnonGoogleUser,
     Profile,
     ProfileAcademy,
     Role,
@@ -2206,10 +2206,15 @@ def get_google_token(request, token=None):
     state = f"token={token.key if token is not None else ""}&url={url}"
 
     scopes = [
-        "https://www.googleapis.com/auth/meetings.space.created",
-        "https://www.googleapis.com/auth/drive.meet.readonly",
         "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
     ]
+
+    if token is not None:
+        scopes = scopes + [
+            "https://www.googleapis.com/auth/meetings.space.created",
+            "https://www.googleapis.com/auth/drive.meet.readonly",
+        ]
 
     if academy_settings in ["overwrite", "set"]:
         if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
@@ -2265,6 +2270,8 @@ async def save_google_token(request):
 
     logger.debug("Google callback just landed")
     logger.debug(request.query_params)
+    print("Google callback just landed")
+    print(request.query_params)
 
     error = request.query_params.get("error", False)
     error_description = request.query_params.get("error_description", "")
@@ -2333,12 +2340,14 @@ async def save_google_token(request):
         async with session.post("https://oauth2.googleapis.com/token", json=payload, headers=headers) as resp:
             if resp.status == 200:
                 logger.debug("Google responded with 200")
+                print("Google responded with 200")
 
                 body = await resp.json()
                 if "access_token" not in body:
                     raise APIException(body["error_description"])
 
                 logger.debug(body)
+                print(body)
 
                 refresh = ""
                 if "refresh_token" in body:
@@ -2349,6 +2358,10 @@ async def save_google_token(request):
                 user_info = None
                 # if refresh:
                 user_info = get_user_info(body["id_token"], refresh)
+                print("User info")
+                print(user_info)
+                logger.debug("User info")
+                logger.debug(user_info)
                 google_id = user_info["id"]
 
                 user: User = token.user if token is not None else None
@@ -2376,6 +2389,8 @@ async def save_google_token(request):
                             anon_user.refresh_token = refresh
                             await anon_user.asave()
                         return HttpResponseRedirect(redirect_to=state["url"][0] + "?error=google-user-not-found")
+
+                    token, created = await Token.aget_or_create(user=user, token_type="login")
 
                 if not refresh:
                     anon_user = await NotFoundAnonGoogleUser.objects.filter(email=user_info["email"]).afirst()
