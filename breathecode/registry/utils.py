@@ -267,8 +267,8 @@ def prompt_technologies(technologies):
     lines = []
     for tech in technologies:
         if not tech.is_deprecated and tech.visibility == "PUBLIC" and tech.parent is None:
+            lines.append(f"Technology title: {tech.title}")
             lines.append(f"Slug: {tech.slug}")
-            lines.append(f"Title: {tech.title}")
             lines.append(f"Description: {tech.description}")
             lines.append(f"Language: {tech.lang}")
             lines.append(f"Priority: {tech.sort_priority}")

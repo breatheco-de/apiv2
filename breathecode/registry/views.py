@@ -235,7 +235,7 @@ class TechnologyView(APIView):
         items = handler.queryset(items)
 
         if extension == "txt":
-            technologies_text = "The following technolgies are the only ones that can be use to categorize lessons, articles, quiz, projects, exercises or any other learning asset at 4Geeks: \n"
+            technologies_text = "The following technolgies are the only ones that can be use to categorize lessons, articles, quiz, projects, exercises or any other learning asset at 4Geeks: \n\n"
             technologies_text += prompt_technologies(items)
 
             return HttpResponse(technologies_text, content_type="text/plain")
