@@ -42,7 +42,7 @@ def use_daily(modeladmin, request, queryset):
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ["slug", "name", "status", "academy"]
     search_fields = ["slug", "name"]
-    list_filter = ["academy__slug", "status"]
+    list_filter = ["academy__slug", "status", "video_provider"]
     actions = [use_google_meet, use_daily]
 
 
