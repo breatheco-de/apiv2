@@ -2374,7 +2374,7 @@ async def save_google_token(request):
                 google_id = ""
                 user_info = None
                 # if refresh:
-                user_info = await get_user_info(body["id_token"])
+                user_info = await get_user_info(body["access_token"])
                 print("User info")
                 print(user_info)
                 logger.debug("User info")
