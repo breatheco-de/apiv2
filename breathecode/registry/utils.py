@@ -270,7 +270,10 @@ def prompt_technologies(technologies):
             lines.append(f"Technology title: {tech.title}")
             lines.append(f"Slug: {tech.slug}")
             lines.append(f"Description: {tech.description}")
-            lines.append(f"Language: {tech.lang}")
+            if tech.lang:
+                lines.append(f"Language: {tech.lang}")
+            else:
+                lines.append("Language: english and spanish")
             lines.append(f"Priority: {tech.sort_priority}")
             lines.append("")  # Add a blank line between technologies
     return "\n".join(lines) + "-----------------\n"
