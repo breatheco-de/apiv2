@@ -9,23 +9,23 @@ ALGO_VERSION = 1.0  # User-defined float, update when algorithms change
 # Abstract base class for indicators
 class UserIndicator(ABC):
     @abstractmethod
-    def calculateStepIndicator(self, step, step_metrics):
+    def calculate_step_indicator(self, step, step_metrics):
         pass
 
     @abstractmethod
-    def calculateGlobalIndicator(self, step_indicators, global_metrics):
+    def calculate_global_indicator(self, step_indicators, global_metrics):
         pass
 
 
 # Indicator class for user engagement
 class EngagementIndicator(UserIndicator):
-    def calculateStepIndicator(self, step, step_metrics):
+    def calculate_step_indicator(self, step, step_metrics):
         max_time_per_step = 3600  # 1 hour in seconds
         time_spent = step_metrics["time_spent"]
         normalized_time = min(time_spent / max_time_per_step, 1) * 100
         return round(normalized_time, 2) if step_metrics["status"] not in ["skipped", "unread"] else 0
 
-    def calculateGlobalIndicator(self, step_indicators, global_metrics):
+    def calculate_global_indicator(self, step_indicators, global_metrics):
         total_time = global_metrics["total_time_on_platform"]
         num_sessions = global_metrics["num_sessions"]
         completion_rate = global_metrics["completion_rate"]
@@ -59,7 +59,7 @@ class EngagementIndicator(UserIndicator):
 
 # Indicator class for user frustration
 class FrustrationIndicator(UserIndicator):
-    def calculateStepIndicator(self, step, step_metrics):
+    def calculate_step_indicator(self, step, step_metrics):
         if step_metrics["status"] == "completed":
             max_struggles = 20
             total_struggles = step_metrics["comp_struggles"] + step_metrics["test_struggles"]
@@ -75,7 +75,7 @@ class FrustrationIndicator(UserIndicator):
         else:
             return 0.0
 
-    def calculateGlobalIndicator(self, step_indicators, global_metrics):
+    def calculate_global_indicator(self, step_indicators, global_metrics):
         steps_not_completed = global_metrics["steps_not_completed"]
         time_on_incomplete = global_metrics["time_on_incomplete"]
         avg_comp_struggles = global_metrics["avg_comp_struggles"]
@@ -132,7 +132,7 @@ class UserIndicatorCalculator:
     def parse_timestamp(self, ts):
         return datetime.fromtimestamp(ts / 1000)
 
-    def calculateStepMetrics(self, step):
+    def calculate_step_metrics(self, step):
         status = "unread"
         time_spent = 0
         comp_struggles = 0
@@ -192,8 +192,8 @@ class UserIndicatorCalculator:
             "test_struggles": test_struggles,
         }
 
-    def calculateGlobalMetrics(self):
-        step_metrics = [self.calculateStepMetrics(step) for step in self.steps]
+    def calculate_global_metrics(self):
+        step_metrics = [self.calculate_step_metrics(step) for step in self.steps]
         total_steps = len(self.steps)
         num_completed = sum(1 for sm in step_metrics if sm["status"] == "completed")
         num_attempted = sum(1 for sm in step_metrics if sm["status"] == "attempted")
@@ -224,7 +224,7 @@ class UserIndicatorCalculator:
     def _round_metrics(self, metrics):
         return {k: round(v, 2) if isinstance(v, float) else v for k, v in metrics.items()}
 
-    def calculateIndicators(self):
+    def calculate_indicators(self):
         """
         Calculate all indicators, including metrics and algo_version.
 
@@ -239,8 +239,8 @@ class UserIndicatorCalculator:
                       - metrics: Step-specific metrics.
                       - indicators: Step-specific indicator scores.
         """
-        step_metrics_list = [self.calculateStepMetrics(step) for step in self.steps]
-        global_metrics = self.calculateGlobalMetrics()
+        step_metrics_list = [self.calculate_step_metrics(step) for step in self.steps]
+        global_metrics = self.calculate_global_metrics()
 
         rounded_global_metrics = self._round_metrics(global_metrics)
 
@@ -250,14 +250,14 @@ class UserIndicatorCalculator:
             step_indicators = {"slug": step["slug"], "metrics": rounded_sm, "indicators": {}}
             for indicator in self.indicators:
                 indicator_name = indicator.__class__.__name__
-                step_indicators["indicators"][indicator_name] = indicator.calculateStepIndicator(step, sm)
+                step_indicators["indicators"][indicator_name] = indicator.calculate_step_indicator(step, sm)
             steps_results.append(step_indicators)
 
         global_indicators = {}
         for indicator in self.indicators:
             indicator_name = indicator.__class__.__name__
             step_indicators_values = [step_result["indicators"][indicator_name] for step_result in steps_results]
-            global_indicators[indicator_name] = indicator.calculateGlobalIndicator(
+            global_indicators[indicator_name] = indicator.calculate_global_indicator(
                 step_indicators_values, global_metrics
             )
 
@@ -279,7 +279,7 @@ if __name__ == "__main__":
 
     # Calculate indicators
     calculator = UserIndicatorCalculator(json_data, indicators)
-    results = calculator.calculateIndicators()
+    results = calculator.calculate_indicators()
 
     print(results)
     # Print results

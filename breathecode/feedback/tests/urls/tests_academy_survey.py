@@ -500,6 +500,7 @@ class SurveyTestSuite(FeedbackTestCase):
             "duration": "1 00:00:00",
             "sent_at": None,
             "cohort": model["cohort_user"][0].cohort.id,
+            "is_customized": False,
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -537,6 +538,7 @@ class SurveyTestSuite(FeedbackTestCase):
             "duration": "01:00:01",
             "sent_at": None,
             "cohort": model["cohort_user"][0].cohort.id,
+            "is_customized": False,
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -577,6 +579,7 @@ class SurveyTestSuite(FeedbackTestCase):
             "duration": "01:00:01",
             "sent_at": None,
             "cohort": model["cohort_user"][0].cohort.id,
+            "is_customized": False,
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

@@ -2,15 +2,14 @@
 import logging
 import re
 from typing import Any, Type
-from asgiref.sync import sync_to_async
 
+from asgiref.sync import sync_to_async
 from django.dispatch import receiver
 
-import breathecode.authenticate.actions as authenticate_actions
+from breathecode.admissions import tasks
 from breathecode.assignments.models import Task
 from breathecode.assignments.signals import revision_status_updated
 from breathecode.certificate.actions import how_many_pending_tasks
-from breathecode.admissions import tasks
 
 from ..activity import tasks as activity_tasks
 from .models import Cohort, CohortUser
@@ -62,7 +61,7 @@ async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
     #         },
     #     },
     # )
-    
+
     tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, "student")
 
 

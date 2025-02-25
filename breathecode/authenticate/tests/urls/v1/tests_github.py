@@ -37,10 +37,10 @@ class AuthenticateTestSuite(AuthTestCase):
         params = {
             "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
             "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + "?url=" + original_url_callback,
-            "scope": "user repo read:org",
+            "scope": "user",
         }
 
-        redirect = f"https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}+admin%3Aorg"
+        redirect = f"https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}"
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(response.url, redirect)

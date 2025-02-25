@@ -152,7 +152,7 @@ def calculate_telemetry_indicator(telemetry):
 
     if telemetry.telemetry:
         calculator = UserIndicatorCalculator(telemetry.telemetry, indicators)
-        scores = calculator.calculateIndicators()
+        scores = calculator.calculate_indicators()
 
         telemetry.engagement_score = scores["global"]["indicators"]["EngagementIndicator"]
         telemetry.frustration_score = scores["global"]["indicators"]["FrustrationIndicator"]

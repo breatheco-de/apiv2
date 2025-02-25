@@ -14,6 +14,7 @@ from redis.exceptions import LockError
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
+from breathecode.admissions.models import Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.media.models import File
@@ -844,17 +845,19 @@ def build_subscription(
     logger.info(f"Subscription was created with id {subscription.id}")
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_plan_financing(
-    self,
     bag_id: int,
     invoice_id: int,
     is_free: bool = False,
     conversion_info: Optional[str] = "",
-    price: Optional[float] = None,
+    cohorts: Optional[list[str]] = None,
     **_: Any,
 ):
     logger.info(f"Starting build_plan_financing for bag {bag_id}")
+
+    if cohorts is None:
+        cohorts = []
 
     if not (bag := Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()):
         raise RetryTask(f"Bag with id {bag_id} not found")
@@ -893,9 +896,13 @@ def build_plan_financing(
         event_type_set = None
         mentorship_service_set = None
 
+    if cohorts:
+        cohorts = Cohort.objects.filter(slug__in=cohorts)
+
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     financing = PlanFinancing.objects.create(
         user=bag.user,
+        how_many_installments=bag.how_many_installments,
         next_payment_at=invoice.paid_at + relativedelta(months=1),
         academy=bag.academy,
         selected_cohort_set=cohort_set,
@@ -903,10 +910,14 @@ def build_plan_financing(
         selected_mentorship_service_set=mentorship_service_set,
         valid_until=invoice.paid_at + relativedelta(months=months - 1),
         plan_expires_at=invoice.paid_at + delta,
-        monthly_price=price or invoice.amount,
+        monthly_price=invoice.amount,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
+        # joined_cohorts=cohorts,
     )
+
+    if cohorts:
+        financing.joined_cohorts.set(cohorts)
 
     financing.plans.set(plans)
 

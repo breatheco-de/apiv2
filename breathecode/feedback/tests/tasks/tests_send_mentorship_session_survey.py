@@ -19,6 +19,8 @@ UTC_NOW = timezone.now()
 
 def build_answer_dict(attrs={}):
     return {
+        "asset_id": None,
+        "live_class_id": None,
         "academy_id": None,
         "cohort_id": None,
         "comment": None,

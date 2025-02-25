@@ -6,9 +6,17 @@ from datetime import UTC, datetime, timedelta
 from typing import TypedDict
 
 from celery import Celery
+
+# from celery import Celery,
 from celery.signals import worker_process_init
 
 from breathecode.setup import get_redis_config
+
+# # keeps this adobe
+# import newrelic.agent
+
+# newrelic.agent.initialize()
+
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
