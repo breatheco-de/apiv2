@@ -22,17 +22,6 @@ else
     SCALING="--concurrency=$CELERY_MAX_WORKERS"
 fi
 
-
-# current_timestamp=$(date +%s)
-# num_processes=$(((current_timestamp + $RANDOM) % 100))
-
-# generate a random pid
-# for ((i=1; i<=$num_processes; i++)); do
-#     true &
-# done
-
-# wait
-
 newrelic-admin run-program bin/start-pgbouncer \
     python -m celery -A breathecode.celery worker \
         --loglevel=$LOG_LEVEL \

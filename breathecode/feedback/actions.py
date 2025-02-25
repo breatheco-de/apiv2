@@ -2,13 +2,13 @@ import json
 import logging
 import re
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.db.models import Avg, QuerySet
 from django.utils import timezone
 
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Token
 from breathecode.notify.actions import send_email_message, send_slack
-from capyc.rest_framework.exceptions import ValidationException
 
 from . import tasks
 from .models import Answer, Review, ReviewPlatform, Survey
@@ -17,7 +17,7 @@ from .utils import strings
 logger = logging.getLogger(__name__)
 
 
-def send_survey_group(survey=None, cohort=None):
+def send_cohort_survey_group(survey=None, cohort=None):
 
     if survey is None and cohort is None:
         raise ValidationException("Missing survey or cohort", slug="missing-survey-or-cohort")

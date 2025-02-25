@@ -511,6 +511,10 @@ class EventPUTSerializer(serializers.ModelSerializer):
         elif slug:
             slug = f'{data["slug"].lower()}'
 
+        recording_url = data.get("recording_url")
+        if recording_url == "" :
+            data["recording_url"] = None
+
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
         if (

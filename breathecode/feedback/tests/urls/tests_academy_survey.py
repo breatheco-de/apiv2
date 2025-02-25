@@ -541,7 +541,9 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    @patch("breathecode.feedback.actions.send_survey_group", MagicMock(return_value={"success": [], "error": []}))
+    @patch(
+        "breathecode.feedback.actions.send_cohort_survey_group", MagicMock(return_value={"success": [], "error": []})
+    )
     @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
     def test_academy_survey__post__when_send_survey_group_is_called(self):
@@ -579,7 +581,7 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         survey = self.bc.database.get("feedback.Survey", 1, dict=False)
-        self.assertEqual(actions.send_survey_group.call_args_list, [call(survey=survey)])
+        self.assertEqual(actions.send_cohort_survey_group.call_args_list, [call(survey=survey)])
 
     """DELETE Auth"""
 

@@ -61,6 +61,7 @@ from .actions import (
     aget_user_language,
     generate_academy_token,
     get_app_url,
+    get_github_scopes,
     get_user_language,
     resend_invite,
     reset_password,
@@ -1123,22 +1124,24 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
+    scopes = request.query_params.get("scope", "user")
     if token is not None:
-        if Token.get_valid(token) is None:
+        _tkn = Token.get_valid(token)
+        if _tkn is None:
             raise ValidationException("Invalid or missing token", slug="invalid-token")
         else:
             url = url + f"&user={token}"
+            scopes = get_github_scopes(_tkn.user, scopes)
 
-    scope = request.query_params.get("scope", "user repo read:org admin:org")
     try:
-        scope = base64.b64decode(scope.encode("utf-8")).decode("utf-8")
+        scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
     except Exception:
         pass
 
     params = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
-        "scope": scope,
+        "scope": scopes,
     }
 
     logger.debug("Redirecting to github")

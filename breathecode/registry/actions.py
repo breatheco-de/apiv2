@@ -967,13 +967,13 @@ def detect_language_version(file_name, content):
     if file_name == "requirements.txt":
         # Check for Python version in requirements.txt (e.g., python_version marker)
         if "python_version" in content:
-            return {"Python": extract_python_version(content)}
+            return {"python": extract_python_version(content)}
 
     if file_name == "pyproject.toml":
         data = tomli.loads(content)
         version = data.get("tool", {}).get("poetry", {}).get("dependencies", {}).get("python", None)
         if version:
-            return {"Python": version}
+            return {"python": version}
 
     if file_name == "package.json":
         import json
@@ -981,14 +981,14 @@ def detect_language_version(file_name, content):
         data = json.loads(content)
         engines = data.get("engines", {})
         if "node" in engines:
-            return {"Node.js": engines["node"]}
+            return {"javascript": engines["node"]}
 
     if file_name == "Pipfile":
 
         data = tomli.loads(content)
         version = data.get("requires", {}).get("python_version", None)
         if version:
-            return {"Python": version}
+            return {"python": version}
 
     return {}
 

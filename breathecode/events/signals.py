@@ -8,3 +8,5 @@ event_saved = emisor.signal("event_saved")
 event_status_updated = emisor.signal("event_status_updated")
 new_event_attendee = emisor.signal("new_event_attendee")
 new_event_order = emisor.signal("new_event_order")
+
+liveclass_ended = emisor.signal("liveclass_ended")

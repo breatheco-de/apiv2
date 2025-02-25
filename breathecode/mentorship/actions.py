@@ -310,7 +310,6 @@ def generate_mentor_bills(mentor, reset=False):
             allow_billing=True,
             mentor__id=mentor.id,
             status__in=["COMPLETED", "FAILED"],
-            started_at__isnull=False,
         ).order_by("started_at")
 
     without_service = MentorshipSession.objects.filter(
@@ -338,9 +337,9 @@ def generate_mentor_bills(mentor, reset=False):
                 bill.save()
         return []
 
-    pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list("started_at", flat=True)})
+    pending_months = sorted({(x.year, x.month) for x in unpaid_sessions.values_list("ends_at", flat=True)})
     for year, month in pending_months:
-        sessions_of_month = unpaid_sessions.filter(started_at__month=month, started_at__year=year)
+        sessions_of_month = unpaid_sessions.filter(ends_at__month=month, ends_at__year=year)
 
         start_at = datetime.datetime(year, month, 1, 0, 0, 0, 0, tzinfo=pytz.UTC)
         end_at = (

@@ -7,7 +7,7 @@ import breathecode.feedback.actions as actions
 from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
 
-from .actions import send_survey_group
+from .actions import send_cohort_survey_group
 from .models import Answer, Review, Survey
 
 
@@ -262,7 +262,7 @@ class SurveySerializer(serializers.ModelSerializer):
         result = super().create(validated_data)
 
         if send_now:
-            actions.send_survey_group(survey=result)
+            actions.send_cohort_survey_group(survey=result)
 
         return result
 
@@ -299,7 +299,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
         result = super().update(instance, validated_data)
 
         if send_now:
-            send_survey_group(survey=result)
+            send_cohort_survey_group(survey=result)
 
         return result
 

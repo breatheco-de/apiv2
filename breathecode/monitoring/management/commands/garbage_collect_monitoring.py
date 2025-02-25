@@ -3,13 +3,13 @@ from ...models import RepositoryWebhook
 from django.utils import timezone
 from datetime import timedelta
 
-
 class Command(BaseCommand):
     help = "Delete logs and other garbage"
 
     def handle(self, *args, **options):
 
-        date_limit = timezone.make_aware(timezone.now() - timedelta(days=10))
+        # No need to use make_aware, timezone.now() is already aware
+        date_limit = timezone.now() - timedelta(days=10)
 
         RepositoryWebhook.objects.filter(run_at__isnull=True).delete()
 

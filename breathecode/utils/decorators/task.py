@@ -34,7 +34,7 @@ class TaskPriority(Enum):
     REALTIME = 9  # schedule as soon as possible
     WEB_SERVICE_PAYMENT = 10  # payment in the web
     FIXER = 10  # fixes
-    SCHEDULER = 10  # fixes
+    SCHEDULER = 5  # fixes
 
 
 settings = {

@@ -52,7 +52,6 @@ urlpatterns = [
     # new endpoints (replacing above)
     path("academy/cohort/user", AcademyCohortUserView.as_view(), name="academy_cohort_user"),
     path("academy/cohort/<str:cohort_id>/log", AcademyCohortHistoryView.as_view(), name="academy_cohort_id_history"),
-    path("academy/cohort/<str:cohort_id>", AcademyCohortView.as_view(), name="academy_cohort_id"),
     path(
         "academy/cohort/<int:cohort_id>/user/<int:user_id>",
         AcademyCohortUserView.as_view(),
@@ -70,6 +69,7 @@ urlpatterns = [
         name="academy_cohort_id_timeslot_id",
     ),
     path("academy/cohort/sync/timeslot", AcademySyncCohortTimeSlotView.as_view(), name="academy_cohort_sync_timeslot"),
+    path("academy/cohort/<str:cohort_id>", AcademyCohortView.as_view(), name="academy_cohort_id"),
     # 🔽 this endpoint is deprecated 🔽
     path("academy/certificate/<int:certificate_id>/timeslot", AcademySyllabusScheduleTimeSlotView.as_view()),
     # 🔽 this endpoint is deprecated 🔽
