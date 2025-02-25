@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from capyc.core.i18n import translation
+from capyc.core.managers import feature
 from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.core.cache import cache
@@ -20,6 +21,8 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
+from breathecode.mentorship.models import MentorshipService
+
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -1105,6 +1108,26 @@ class CardView(APIView):
         return Response({"status": "ok"})
 
 
+class ServiceBlocked(APIView):
+
+    def get(self, request):
+        user = request.user
+
+        blocked_services = []
+        mentorship_services = MentorshipService.objects.all()
+
+        for service in mentorship_services:
+            can_access = feature.is_enabled(
+                "payments.can_access",
+                context=feature.context(to="mentorship-service", user=user, mentorship_service=service),
+                default=True,
+            )
+            if can_access is False:
+                blocked_services.append(service.slug)
+
+        return Response(blocked_services, status=status.HTTP_200_OK)
+
+
 class ConsumeView(APIView):
 
     def put(self, request, service_slug, hash=None):
@@ -2046,9 +2069,7 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(
-                        bag.id, invoice.id, conversion_info=conversion_info
-                    )
+                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
