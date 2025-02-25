@@ -17,6 +17,14 @@ class GetAcademySerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+class MentorshipSessionSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+    starts_at = serpy.Field()
+    ends_at = serpy.Field()
+
+
 class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -77,6 +85,19 @@ class EventTypeSmallSerializer(serpy.Serializer):
     lang = serpy.Field()
 
 
+class LiveClassSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+
+
+class AssetSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+
+
 class AnswerSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
@@ -93,6 +114,9 @@ class AnswerSerializer(serpy.Serializer):
     cohort = GetCohortSerializer(required=False)
     mentor = UserSerializer(required=False)
     event = EventTypeSmallSerializer(required=False)
+    live_class = LiveClassSmallSerializer(required=False)
+    asset = AssetSmallSerializer(required=False)
+    mentorship_session = MentorshipSessionSmallSerializer(required=False)
 
 
 class SurveySmallSerializer(serpy.Serializer):
