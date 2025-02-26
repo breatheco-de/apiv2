@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import hmac
+import json
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import aiohttp
 import requests
-import json
 from adrf.decorators import api_view
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
@@ -60,6 +60,7 @@ from breathecode.utils.views import private_view, render_message, set_query_para
 from .actions import (
     accept_invite,
     accept_invite_action,
+    aget_github_scopes,
     aget_user_language,
     generate_academy_token,
     get_app_url,
@@ -1169,6 +1170,14 @@ async def save_github_token(request):
 
         return default
 
+    async def redirect_to_get_access_token():
+        nonlocal scopes, request, token, url
+
+        if token is None:
+            token, _ = await Token.aget_or_create(user=user, token_type="login")
+
+        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}&granting=1")
+
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
 
@@ -1212,6 +1221,8 @@ async def save_github_token(request):
 
     if "access_token" not in body:
         raise APIException(f"Github code {resp.status}: {error_message(body, 'error getting github token')}")
+
+    scopes = " ".join(sorted(body.get("scope", "").split(",")))
 
     github_token = body["access_token"]
     async with aiohttp.ClientSession() as session:
@@ -1305,7 +1316,7 @@ async def save_github_token(request):
 
     # create a new credentials if it doesn't exists
     if github_credentials is None:
-        github_credentials = CredentialsGithub(github_id=github_user["id"], user=user)
+        github_credentials = CredentialsGithub(github_id=github_user["id"], user=user, scopes=scopes)
 
     github_credentials.token = github_token
     github_credentials.username = github_user["login"]
@@ -1316,7 +1327,36 @@ async def save_github_token(request):
     github_credentials.bio = github_user["bio"]
     github_credentials.company = github_user["company"]
     github_credentials.twitter_username = github_user["twitter_username"]
+
     await github_credentials.asave()
+
+    print(f"scopes: {scopes}")
+    print(f"github_credentials.scopes: {github_credentials.scopes}")
+    print(f"token: {token}")
+    logger.error(f"scopes: {scopes}")
+    logger.error(f"github_credentials.scopes: {github_credentials.scopes}")
+    logger.error(f"token: {token}")
+
+    if token is None:
+        if not github_credentials.scopes:
+            github_credentials.scopes = scopes
+            github_credentials.granted = False
+            await github_credentials.asave()
+
+        return await redirect_to_get_access_token()
+
+    required_scopes = await aget_github_scopes(user, "user")
+
+    if required_scopes != github_credentials.scopes or required_scopes != scopes:
+        github_credentials.scopes = required_scopes
+        github_credentials.granted = False
+        await github_credentials.asave()
+
+        return await redirect_to_get_access_token()
+
+    elif github_credentials.granted is False:
+        github_credentials.granted = True
+        await github_credentials.asave()
 
     # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
     # to keep it in sync when the user autenticate's with github
