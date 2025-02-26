@@ -1173,6 +1173,14 @@ async def save_github_token(request):
 
         return default
 
+    async def redirect_to_get_access_token():
+        nonlocal scopes, request, token, url
+
+        if token is None:
+            token, _ = await Token.aget_or_create(user=user, token_type="login")
+
+        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}&granting=1")
+
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
 
@@ -1326,12 +1334,12 @@ async def save_github_token(request):
 
     await github_credentials.asave()
 
-    if scopes != github_credentials.scopes:
+    if scopes != github_credentials.scopes or token is None:
         github_credentials.scopes = scopes
         github_credentials.granted = False
         await github_credentials.asave()
 
-        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}&granting=1")
+        return redirect_to_get_access_token()
 
     elif (
         # Check if the GitHub credentials have not been granted
@@ -1343,6 +1351,9 @@ async def save_github_token(request):
     ):
         github_credentials.granted = True
         await github_credentials.asave()
+
+    elif github_credentials.granted is False:
+        return redirect_to_get_access_token()
 
     # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
     # to keep it in sync when the user autenticate's with github
