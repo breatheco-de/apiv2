@@ -555,7 +555,7 @@ class NotFoundAnonGoogleUser(models.Model):
 
     token = models.CharField(max_length=255)
     refresh_token = models.CharField(max_length=255)
-    id_token = models.CharField(max_length=1152, default="")
+    id_token = models.CharField(max_length=1400, default="")
     google_id = models.CharField(max_length=24, default="")
     expires_at = models.DateTimeField()
 
