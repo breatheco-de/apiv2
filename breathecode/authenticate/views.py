@@ -1336,8 +1336,18 @@ async def save_github_token(request):
     logger.error(f"github_credentials.scopes: {github_credentials.scopes}")
     logger.error(f"token: {token}")
 
-    if scopes != github_credentials.scopes or token is None:
-        github_credentials.scopes = scopes
+    if token is None:
+        if not github_credentials.scopes:
+            github_credentials.scopes = scopes
+            github_credentials.granted = False
+            await github_credentials.asave()
+
+        return await redirect_to_get_access_token()
+
+    required_scopes = get_github_scopes(user, "user")
+
+    if required_scopes != github_credentials.scopes or required_scopes != scopes:
+        github_credentials.scopes = required_scopes
         github_credentials.granted = False
         await github_credentials.asave()
 
