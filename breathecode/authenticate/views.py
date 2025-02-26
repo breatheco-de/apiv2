@@ -1123,7 +1123,6 @@ def get_roles(request, role_slug=None):
 def get_github_token(request, token=None):
 
     url = request.query_params.get("url", None)
-    granting = request.query_params.get("granting", None)
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
@@ -1135,9 +1134,6 @@ def get_github_token(request, token=None):
         else:
             url = url + f"&user={token}"
             scopes = get_github_scopes(_tkn.user, scopes)
-
-    if granting == "1":
-        url = url + f"&granting={granting}"
 
     try:
         scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
@@ -1204,7 +1200,6 @@ async def save_github_token(request):
         raise ValidationException("No github code specified", slug="no-code")
 
     token = request.query_params.get("user", None)
-    granting = request.query_params.get("granting", None)
 
     payload = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
@@ -1341,19 +1336,9 @@ async def save_github_token(request):
 
         return await redirect_to_get_access_token()
 
-    elif (
-        # Check if the GitHub credentials have not been granted
-        github_credentials.granted is False
-        # Check if the granting parameter is set to "1"
-        and granting == "1"
-        # Check if the credentials were updated within the last minute
-        and github_credentials.updated_at >= timezone.now() - timedelta(minutes=1)
-    ):
+    elif github_credentials.granted is False:
         github_credentials.granted = True
         await github_credentials.asave()
-
-    elif github_credentials.granted is False:
-        return await redirect_to_get_access_token()
 
     # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
     # to keep it in sync when the user autenticate's with github
