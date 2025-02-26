@@ -1339,7 +1339,7 @@ async def save_github_token(request):
         github_credentials.granted = False
         await github_credentials.asave()
 
-        return redirect_to_get_access_token()
+        return await redirect_to_get_access_token()
 
     elif (
         # Check if the GitHub credentials have not been granted
@@ -1353,7 +1353,7 @@ async def save_github_token(request):
         await github_credentials.asave()
 
     elif github_credentials.granted is False:
-        return redirect_to_get_access_token()
+        return await redirect_to_get_access_token()
 
     # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
     # to keep it in sync when the user autenticate's with github
