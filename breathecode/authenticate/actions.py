@@ -61,6 +61,11 @@ def get_github_scopes(user, default_scopes=""):
     return " ".join(sorted(scopes))
 
 
+@sync_to_async
+def aget_github_scopes(user, default_scopes=""):
+    return get_github_scopes(user, default_scopes)
+
+
 def get_user(github_id=None, email=None):
     user = None
     if email is not None:

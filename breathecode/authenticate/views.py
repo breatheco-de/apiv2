@@ -60,6 +60,7 @@ from breathecode.utils.views import private_view, render_message, set_query_para
 from .actions import (
     accept_invite,
     accept_invite_action,
+    aget_github_scopes,
     aget_user_language,
     generate_academy_token,
     get_app_url,
@@ -1344,7 +1345,7 @@ async def save_github_token(request):
 
         return await redirect_to_get_access_token()
 
-    required_scopes = get_github_scopes(user, "user")
+    required_scopes = await aget_github_scopes(user, "user")
 
     if required_scopes != github_credentials.scopes or required_scopes != scopes:
         github_credentials.scopes = required_scopes
