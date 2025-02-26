@@ -2251,22 +2251,24 @@ def get_google_token(request, token=None):
         return HttpResponseRedirect(redirect_to=redirect)
 
 
+@sync_to_async
+def aget_google_credentials(google_id):
+    google_creds = CredentialsGoogle.objects.filter(google_id=google_id).first()
+    return google_creds.user
+
+
+@sync_to_async
+def get_user_info(access_token):
+    url = "https://www.googleapis.com/oauth2/v2/userinfo?alt=json"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    res = requests.get(url, headers=headers)
+    res = json.loads(res.text)
+    return res
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_google_token(request):
-    @sync_to_async
-    def aget_google_credentials(google_id):
-        google_creds = CredentialsGoogle.objects.filter(google_id=google_id).first()
-        return google_creds
-
-    @sync_to_async
-    def get_user_info(access_token):
-        url = "https://www.googleapis.com/oauth2/v2/userinfo?alt=json"
-        headers = {"Authorization": f"Bearer {access_token}"}
-        res = requests.get(url, headers=headers)
-        res = json.loads(res.text)
-        return res
-
     async def set_academy_auth_settings(academy: Academy, user: User):
         settings, created = await AcademyAuthSettings.objects.aget_or_create(
             academy=academy, defaults={"google_cloud_owner": user}
@@ -2378,9 +2380,9 @@ async def save_google_token(request):
                 user: User = token.user if token is not None else None
 
                 if user is None:
-                    google_creds = await aget_google_credentials(google_id)
-                    if google_creds:
-                        user = google_creds.user
+                    google_user = await aget_google_credentials(google_id)
+                    if google_user:
+                        user = google_user
 
                     if user is None:
                         user = await User.objects.filter(email=user_info["email"]).afirst()
