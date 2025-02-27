@@ -1176,7 +1176,7 @@ async def save_github_token(request):
         if token is None:
             token, _ = await Token.aget_or_create(user=user, token_type="login")
 
-        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}&granting=1")
+        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}")
 
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
@@ -1329,13 +1329,6 @@ async def save_github_token(request):
     github_credentials.twitter_username = github_user["twitter_username"]
 
     await github_credentials.asave()
-
-    print(f"scopes: {scopes}")
-    print(f"github_credentials.scopes: {github_credentials.scopes}")
-    print(f"token: {token}")
-    logger.error(f"scopes: {scopes}")
-    logger.error(f"github_credentials.scopes: {github_credentials.scopes}")
-    logger.error(f"token: {token}")
 
     if token is None:
         if not github_credentials.scopes:
