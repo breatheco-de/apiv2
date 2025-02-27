@@ -12,7 +12,9 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
     def paginate_queryset(self, queryset, request, view=None):
         self.use_envelope = True
         if str(request.GET.get("envelope")).lower() in ["false", "0"]:
+            print("//////////////////", self.use_envelope)
             self.use_envelope = False
+            print("*******************", self.use_envelope)
         result = self._paginate_queryset(queryset, request, view)
         if hasattr(queryset, "filter"):
             return result
@@ -85,8 +87,7 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
         if self.offset <= 0:
             return None
         url = self.request.build_absolute_uri()
-        url = remove_query_param(url, self.offset_query_param)
-        return replace_query_param(url, "envelope", "false")
+        return remove_query_param(url, self.offset_query_param)
 
     def get_last_link(self):
         if self.offset + self.limit >= self.count:
@@ -95,8 +96,7 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
         url = self.request.build_absolute_uri()
         url = replace_query_param(url, self.limit_query_param, self.limit)
         offset = self.count - self.limit
-        url = replace_query_param(url, self.offset_query_param, offset)
-        return replace_query_param(url, "envelope", "false")
+        return replace_query_param(url, self.offset_query_param, offset)
 
     def is_paginate(self, request):
         return request.GET.get(self.limit_query_param) or request.GET.get(self.offset_query_param)

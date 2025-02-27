@@ -873,7 +873,7 @@ class V2AppCountryView(APIView):
         return serializer.filter()
 
 
-class StudentView(APIView, GenerateLookupsMixin):
+class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     extensions = APIViewExtensions(paginate=True, sort="-created_at")
 
     @capable_of("read_student")
