@@ -43,7 +43,7 @@ from rest_framework.schemas.openapi import AutoSchema
 import breathecode.activity.tasks as tasks_activity
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.actions import get_user_settings, sync_with_rigobot
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
@@ -1390,20 +1390,7 @@ async def save_github_token(request):
         token, _ = await Token.aget_or_create(user=user, token_type="login")
 
     # register user in rigobot
-    rigobot_payload = {"organization": "4geeks", "user_token": token.key}
-    headers = {"Content-Type": "application/json"}
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            "https://rigobot.herokuapp.com/v1/auth/invite",
-            headers={"Authorization": "token " + github_token},
-            json=rigobot_payload,
-            timeout=30,
-        ) as resp:
-            if resp.status == 200:
-                logger.debug("User registered on rigobot")
-            else:
-                logger.error("Failed user registration on rigobot")
+    await sync_with_rigobot(token.key)
 
     redirect_url = set_query_parameter(url, "token", token.key)
     return HttpResponseRedirect(redirect_to=redirect_url)
