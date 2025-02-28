@@ -100,6 +100,7 @@ class AssetSmallSerializer(serpy.Serializer):
 
 class AnswerSerializer(serpy.Serializer):
     id = serpy.Field()
+    question_by_slug = serpy.Field()
     title = serpy.Field()
     lowest = serpy.Field()
     highest = serpy.Field()
