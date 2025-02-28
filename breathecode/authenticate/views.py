@@ -1176,7 +1176,11 @@ async def save_github_token(request):
         if token is None:
             token, _ = await Token.aget_or_create(user=user, token_type="login")
 
-        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}")
+        redirect = f"/v1/auth/github/{token.key}?scope={scopes}&url={url}"
+        if settings.DEBUG or "admin" in scopes:
+            return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+
+        return HttpResponseRedirect(redirect_to=redirect)
 
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
