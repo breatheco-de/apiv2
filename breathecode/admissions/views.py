@@ -1233,7 +1233,7 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
                 item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
 
             if item is None:
-                raise ValidationError(f"Cohort {cohort_id} not found", code=status.HTTP_404_NOT_FOUND)
+                raise ValidationException(f"Cohort {cohort_id} not found", code=status.HTTP_404_NOT_FOUND)
 
             serializer = GetCohortSerializer(item, many=False)
             return handler.response(serializer.data)
