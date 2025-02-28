@@ -1,11 +1,13 @@
-from collections import OrderedDict
 import os
+from collections import OrderedDict
 from typing import Any, Optional
+
+from django.db.models import QuerySet
+from rest_framework.utils.urls import remove_query_param, replace_query_param
+
 from breathecode.utils.api_view_extensions.extension_base import ExtensionBase
 from breathecode.utils.api_view_extensions.priorities.mutator_order import MutatorOrder
 from breathecode.utils.api_view_extensions.priorities.response_order import ResponseOrder
-from django.db.models import QuerySet
-from rest_framework.utils.urls import replace_query_param, remove_query_param
 
 __all__ = ["PaginationExtension"]
 
@@ -59,22 +61,25 @@ class PaginationExtension(ExtensionBase):
         return bool(self._request.GET.get(LIMIT_QUERY_PARAM) or self._request.GET.get(OFFSET_QUERY_PARAM))
 
     def _apply_queryset_mutation(self, queryset: QuerySet[Any]):
-        self._use_envelope = False
+
+        envelope = self._request.GET.get("envelope", "").lower()
+        if envelope:
+            self._use_envelope = self._request.GET.get("envelope", "").lower() not in [
+                "false",
+                "f",
+                "0",
+                "no",
+                "n",
+                "off",
+                "",
+            ]
+        else:
+            self._use_envelope = self._is_paginate()
+
         self._is_list = True
         self._count = self._get_count(queryset)
         self._offset = self._get_offset()
         self._limit = self._get_limit()
-
-        if self._is_paginate() and self._request.GET.get("envelope", "").lower() in [
-            "false",
-            "f",
-            "0",
-            "no",
-            "n",
-            "off",
-            "",
-        ]:
-            self._use_envelope = True
 
         self._queryset = queryset[self._offset : self._offset + self._limit]
         return self._queryset
