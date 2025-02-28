@@ -312,6 +312,8 @@ class CredentialsGithub(models.Model):
     bio = models.CharField(max_length=255, blank=True, null=True)
     company = models.CharField(max_length=150, blank=True, null=True)
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
+    scopes = models.CharField(max_length=64, default="")
+    granted = models.BooleanField(default=False, help_text="If true, the user has granted the scopes to the app")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -553,7 +555,7 @@ class NotFoundAnonGoogleUser(models.Model):
 
     token = models.CharField(max_length=255)
     refresh_token = models.CharField(max_length=255)
-    id_token = models.CharField(max_length=1152, default="")
+    id_token = models.CharField(max_length=1400, default="")
     google_id = models.CharField(max_length=24, default="")
     expires_at = models.DateTimeField()
 

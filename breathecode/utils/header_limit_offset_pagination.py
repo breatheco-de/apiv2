@@ -1,7 +1,8 @@
 from collections import OrderedDict
+
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
-from rest_framework.utils.urls import replace_query_param, remove_query_param
+from rest_framework.utils.urls import remove_query_param, replace_query_param
 
 __all__ = ["HeaderLimitOffsetPagination"]
 
@@ -83,7 +84,6 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
     def get_first_link(self):
         if self.offset <= 0:
             return None
-
         url = self.request.build_absolute_uri()
         return remove_query_param(url, self.offset_query_param)
 

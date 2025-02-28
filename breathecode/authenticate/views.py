@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import hmac
+import json
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import aiohttp
 import requests
-import json
 from adrf.decorators import api_view
 from adrf.views import APIView
 from asgiref.sync import sync_to_async
@@ -43,7 +43,7 @@ from rest_framework.schemas.openapi import AutoSchema
 import breathecode.activity.tasks as tasks_activity
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.actions import get_user_settings, sync_with_rigobot
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
@@ -60,6 +60,7 @@ from breathecode.utils.views import private_view, render_message, set_query_para
 from .actions import (
     accept_invite,
     accept_invite_action,
+    aget_github_scopes,
     aget_user_language,
     generate_academy_token,
     get_app_url,
@@ -1169,6 +1170,14 @@ async def save_github_token(request):
 
         return default
 
+    async def redirect_to_get_access_token():
+        nonlocal scopes, request, token, url
+
+        if token is None:
+            token, _ = await Token.aget_or_create(user=user, token_type="login")
+
+        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}")
+
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
 
@@ -1212,6 +1221,8 @@ async def save_github_token(request):
 
     if "access_token" not in body:
         raise APIException(f"Github code {resp.status}: {error_message(body, 'error getting github token')}")
+
+    scopes = " ".join(sorted(body.get("scope", "").split(",")))
 
     github_token = body["access_token"]
     async with aiohttp.ClientSession() as session:
@@ -1305,7 +1316,7 @@ async def save_github_token(request):
 
     # create a new credentials if it doesn't exists
     if github_credentials is None:
-        github_credentials = CredentialsGithub(github_id=github_user["id"], user=user)
+        github_credentials = CredentialsGithub(github_id=github_user["id"], user=user, scopes=scopes)
 
     github_credentials.token = github_token
     github_credentials.username = github_user["login"]
@@ -1316,7 +1327,29 @@ async def save_github_token(request):
     github_credentials.bio = github_user["bio"]
     github_credentials.company = github_user["company"]
     github_credentials.twitter_username = github_user["twitter_username"]
+
     await github_credentials.asave()
+
+    if token is None:
+        if not github_credentials.scopes:
+            github_credentials.scopes = scopes
+            github_credentials.granted = False
+            await github_credentials.asave()
+
+        return await redirect_to_get_access_token()
+
+    required_scopes = await aget_github_scopes(user, "user")
+
+    if required_scopes != github_credentials.scopes or required_scopes != scopes:
+        github_credentials.scopes = required_scopes
+        github_credentials.granted = False
+        await github_credentials.asave()
+
+        return await redirect_to_get_access_token()
+
+    elif github_credentials.granted is False:
+        github_credentials.granted = True
+        await github_credentials.asave()
 
     # IMPORTANT! The GithubAcademyUser.username is used for billing purposes on the provisioning activity, we have
     # to keep it in sync when the user autenticate's with github
@@ -1357,20 +1390,7 @@ async def save_github_token(request):
         token, _ = await Token.aget_or_create(user=user, token_type="login")
 
     # register user in rigobot
-    rigobot_payload = {"organization": "4geeks", "user_token": token.key}
-    headers = {"Content-Type": "application/json"}
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            "https://rigobot.herokuapp.com/v1/auth/invite",
-            headers={"Authorization": "token " + github_token},
-            json=rigobot_payload,
-            timeout=30,
-        ) as resp:
-            if resp.status == 200:
-                logger.debug("User registered on rigobot")
-            else:
-                logger.error("Failed user registration on rigobot")
+    await sync_with_rigobot(token.key)
 
     redirect_url = set_query_parameter(url, "token", token.key)
     return HttpResponseRedirect(redirect_to=redirect_url)
@@ -2251,22 +2271,26 @@ def get_google_token(request, token=None):
         return HttpResponseRedirect(redirect_to=redirect)
 
 
+@sync_to_async
+def aget_google_credentials(google_id):
+    google_creds = CredentialsGoogle.objects.filter(google_id=google_id).first()
+    if google_creds is not None:
+        return google_creds.user
+    return None
+
+
+@sync_to_async
+def get_user_info(access_token):
+    url = "https://www.googleapis.com/oauth2/v2/userinfo?alt=json"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    res = requests.get(url, headers=headers)
+    res = json.loads(res.text)
+    return res
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_google_token(request):
-    @sync_to_async
-    def aget_google_credentials(google_id):
-        google_creds = CredentialsGoogle.objects.filter(google_id=google_id).first()
-        return google_creds
-
-    @sync_to_async
-    def get_user_info(access_token):
-        url = "https://www.googleapis.com/oauth2/v2/userinfo?alt=json"
-        headers = {"Authorization": f"Bearer {access_token}"}
-        res = requests.get(url, headers=headers)
-        res = json.loads(res.text)
-        return res
-
     async def set_academy_auth_settings(academy: Academy, user: User):
         settings, created = await AcademyAuthSettings.objects.aget_or_create(
             academy=academy, defaults={"google_cloud_owner": user}
@@ -2279,26 +2303,15 @@ async def save_google_token(request):
         for item in iterable:
             yield item
 
-    logger.debug("Google callback just landed")
-    logger.debug(request.query_params)
-    print("Google callback just landed")
-    print(request.query_params)
-
     error = request.query_params.get("error", False)
     error_description = request.query_params.get("error_description", "")
     if error:
         raise APIException("Google OAuth: " + error_description)
 
     state = parse_qs(request.query_params.get("state", None))
-    print("state")
-    print(state)
 
     if state.get("url") == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
-
-    # if not state.get("token"):
-    #     #here
-    #     raise ValidationException("No user token specified", slug="no-user-token")
 
     code = request.query_params.get("code", None)
     if code == None:
@@ -2351,14 +2364,10 @@ async def save_google_token(request):
         async with session.post("https://oauth2.googleapis.com/token", json=payload, headers=headers) as resp:
             if resp.status == 200:
                 logger.debug("Google responded with 200")
-                print("Google responded with 200")
 
                 body = await resp.json()
                 if "access_token" not in body:
                     raise APIException(body["error_description"])
-
-                logger.debug(body)
-                print(body)
 
                 refresh = ""
                 if "refresh_token" in body:
@@ -2368,19 +2377,15 @@ async def save_google_token(request):
                 google_id = ""
                 user_info = None
                 # if refresh:
-                user_info = await get_user_info(body["id_token"])
-                print("User info")
-                print(user_info)
-                logger.debug("User info")
-                logger.debug(user_info)
+                user_info = await get_user_info(body["access_token"])
                 google_id = user_info["id"]
 
                 user: User = token.user if token is not None else None
 
                 if user is None:
-                    google_creds = await aget_google_credentials(google_id)
-                    if google_creds:
-                        user = google_creds.user
+                    google_user = await aget_google_credentials(google_id)
+                    if google_user:
+                        user = google_user
 
                     if user is None:
                         user = await User.objects.filter(email=user_info["email"]).afirst()
