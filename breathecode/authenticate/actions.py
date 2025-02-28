@@ -4,6 +4,7 @@ import os
 import random
 import re
 import string
+import aiohttp
 import urllib.parse
 from random import randint
 
@@ -911,6 +912,23 @@ def accept_invite_action(data=None, token=None, lang="en"):
     invite.save()
 
     return invite
+
+
+async def sync_with_rigobot(token_key):
+    rigobot_payload = {"organization": "4geeks", "user_token": token_key}
+    rigobot_host = os.getenv("RIGOBOT_HOST", "https://rigobot.herokuapp.com")
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{rigobot_host}/v1/auth/invite",
+            headers={"Authorization": "token " + token_key},
+            json=rigobot_payload,
+            timeout=30,
+        ) as resp:
+            if resp.status == 200:
+                logger.debug("User registered on rigobot")
+            else:
+                logger.error("Failed user registration on rigobot")
 
 
 class WebhookException(Exception):
