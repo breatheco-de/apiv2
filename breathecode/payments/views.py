@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 from capyc.core.i18n import translation
-from capyc.core.managers import feature
 from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.core.cache import cache
@@ -21,7 +20,6 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
-from breathecode.mentorship.models import MentorshipService
 
 from breathecode.payments.actions import (
     PlanFinder,
@@ -1113,17 +1111,27 @@ class ServiceBlocked(APIView):
     def get(self, request):
         user = request.user
 
-        blocked_services = []
-        mentorship_services = MentorshipService.objects.all()
+        # mentorship_services = MentorshipService.objects.all()
+        from breathecode.payments.flags import blocked_user_ids
 
-        for service in mentorship_services:
-            can_access = feature.is_enabled(
-                "payments.can_access",
-                context=feature.context(to="mentorship-service", user=user, mentorship_service=service),
-                default=True,
-            )
-            if can_access is False:
-                blocked_services.append(service.slug)
+        fields = ["from_academy", "from_cohort", "from_mentorship_service"]
+
+        blocked_services = {
+            "mentorship-service": {
+                "from_everywhere": False,
+                "from_academy": [],
+                "from_cohort": [],
+                "from_mentorship_service": [],
+            }
+        }
+
+        blocked_services["mentorship-service"]["from_everywhere"] = (
+            True if user.id in blocked_user_ids["mentorship-service"]["from_everywhere"] else False
+        )
+
+        for field in fields:
+            blocked_ids = blocked_user_ids["mentorship-service"][field]
+            blocked_services["mentorship-service"][field] = [slug for id_, slug in blocked_ids if id_ == user.id]
 
         return Response(blocked_services, status=status.HTTP_200_OK)
 
