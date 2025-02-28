@@ -12,9 +12,7 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
     def paginate_queryset(self, queryset, request, view=None):
         self.use_envelope = True
         if str(request.GET.get("envelope")).lower() in ["false", "0"]:
-            print("//////////////////", self.use_envelope)
             self.use_envelope = False
-            print("*******************", self.use_envelope)
         result = self._paginate_queryset(queryset, request, view)
         if hasattr(queryset, "filter"):
             return result
