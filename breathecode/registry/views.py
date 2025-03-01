@@ -1802,9 +1802,9 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
         if "lang" in request.GET:
-            param = request.GET.get("lang")
-            if param:
-                items = items.filter(Q(lang__iexact=param) | Q(lang="") | Q(lang__isnull=True))
+            lang = request.GET.get("lang")
+            if lang:
+                lookup["lang__iexact"] = lang
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
