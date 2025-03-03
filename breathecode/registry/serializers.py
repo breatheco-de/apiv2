@@ -472,7 +472,7 @@ class AssetExpandableSerializer(AssetMidSerializer):
                     elem["technologies"] = self.format_technologies(obj)
 
                 elem["template_url"] = obj.template_url if hasattr(obj, "template_url") else None
-                elem["dependencies"] = obj.template_url if hasattr(obj, "template_url") else None
+                elem["dependencies"] = obj.dependencies if hasattr(obj, "dependencies") else None
 
                 if "readme" in self.expand:
                     url = obj.readme_url
