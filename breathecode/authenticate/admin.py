@@ -553,7 +553,13 @@ class LogEntryAdmin(admin.ModelAdmin):
         "action_flag",
         "change_message",
     )
-    search_fields = ["user__email", "user__first_name", "user__last_name"]
+    search_fields = [
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "content_type__app_label",
+        "content_type__model",
+    ]
     list_filter = ("action_flag", "content_type")
     raw_id_fields = ["user"]
 
