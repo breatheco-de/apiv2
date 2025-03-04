@@ -4,10 +4,10 @@ import os
 import random
 import re
 import string
-import aiohttp
 import urllib.parse
 from random import randint
 
+import aiohttp
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -57,7 +57,7 @@ def get_github_scopes(user, default_scopes=""):
 
     owns_github_organization = AcademyAuthSettings.objects.filter(github_owner=user).exists()
     if owns_github_organization:
-        scopes.update({"read:org", "admin:org", "delete_repo"})
+        scopes.update({"admin:org", "delete_repo"})
 
     return " ".join(sorted(scopes))
 

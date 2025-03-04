@@ -280,6 +280,15 @@ def release_sessions_from_bill(modeladmin, request, queryset):
 class MentorshipBillAdmin(admin.ModelAdmin):
     list_display = ("id", "mentor", "status", "total_duration_in_hours", "total_price", "paid_at", "invoice_url")
     list_filter = ["status"]
+    search_fields = [
+        "mentor__name",
+        "mentor__user__first_name",
+        "mentor__user__last_name",
+        "mentor__email",
+        "mentor__user__email",
+        "mentor__slug",
+    ]
+
     actions = [release_sessions_from_bill] + change_field(["DUE", "APPROVED", "PAID", "IGNORED"], name="status")
 
     def invoice_url(self, obj):

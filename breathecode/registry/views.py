@@ -90,7 +90,7 @@ from .serializers import (
     VariableSmallSerializer,
 )
 from .tasks import async_build_asset_context, async_pull_from_github
-from .utils import AssetErrorLogType, is_url
+from .utils import AssetErrorLogType, is_url, prompt_technologies
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +175,7 @@ class TechnologyView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(cache=TechnologyCache, paginate=True, sort="sort_priority")
 
-    def get(self, request, tech_slug=None):
+    def get(self, request, tech_slug=None, extension=None):
         lang = request.GET.get("lang", "en")
         if lang == "en":
             lang = "us"
@@ -225,6 +225,12 @@ class TechnologyView(APIView):
             items = items.filter(visibility__iexact=visibility_param)
 
         items = handler.queryset(items)
+
+        if extension == "txt":
+            technologies_text = "The following technolgies are the only ones that can be use to categorize lessons, articles, quiz, projects, exercises or any other learning asset at 4Geeks: \n\n"
+            technologies_text += prompt_technologies(items)
+
+            return HttpResponse(technologies_text, content_type="text/plain")
 
         serializer = AssetTechnologySerializer(items, many=True)
         return handler.response(serializer.data)

@@ -31,6 +31,16 @@ class CohortProxy(Cohort):
         proxy = True
 
 
+# class AcademyFeedbackSettings(models.Model):
+#     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, related_name='feedback_settings')
+#     survey_translations = models.JSONField(help_text="String translations for all available surveys for this academy.")
+#     allowed_surveys = models.CharField(max_length=255, help_text="Comma separated list of allowed survey slugs.")
+#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+#     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+#     def __str__(self):
+#         return f"Feedback settings for {self.academy.name}"
+
 PENDING = "PENDING"
 SENT = "SENT"
 PARTIAL = "PARTIAL"
