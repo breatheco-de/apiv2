@@ -20,6 +20,7 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
+
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -1105,6 +1106,36 @@ class CardView(APIView):
         return Response({"status": "ok"})
 
 
+class ServiceBlocked(APIView):
+
+    def get(self, request):
+        user = request.user
+
+        # mentorship_services = MentorshipService.objects.all()
+        from breathecode.payments.flags import blocked_user_ids
+
+        fields = ["from_academy", "from_cohort", "from_mentorship_service"]
+
+        blocked_services = {
+            "mentorship-service": {
+                "from_everywhere": False,
+                "from_academy": [],
+                "from_cohort": [],
+                "from_mentorship_service": [],
+            }
+        }
+
+        blocked_services["mentorship-service"]["from_everywhere"] = (
+            True if user.id in blocked_user_ids["mentorship-service"]["from_everywhere"] else False
+        )
+
+        for field in fields:
+            blocked_ids = blocked_user_ids["mentorship-service"][field]
+            blocked_services["mentorship-service"][field] = [slug for id_, slug in blocked_ids if id_ == user.id]
+
+        return Response(blocked_services, status=status.HTTP_200_OK)
+
+
 class ConsumeView(APIView):
 
     def put(self, request, service_slug, hash=None):
@@ -2046,9 +2077,7 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(
-                        bag.id, invoice.id, conversion_info=conversion_info
-                    )
+                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)

@@ -159,7 +159,7 @@ def can_access(
     if user.id in x["from_everywhere"]:
         return False
 
-    if academy and (academy, academy.slug) in x["from_academy"]:
+    if academy and (user.id, academy.slug) in x["from_academy"]:
         return False
 
     if cohort and (user.id, cohort.slug) in x["from_cohort"]:
