@@ -919,8 +919,9 @@ class StudentView(APIView, GenerateLookupsMixin):
         serializer = StudentPOSTSerializer(data=request.data, context={"academy_id": academy_id, "request": request})
 
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            result = serializer.save()
+            result = GetProfileAcademySmallSerializer(result, many=False)
+            return Response(result.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_student")

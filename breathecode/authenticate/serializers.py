@@ -10,10 +10,12 @@ from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import Permission, User
 from django.db import IntegrityError
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from task_manager.django.actions import schedule_task
 from asgiref.sync import async_to_sync
+from dateutil.relativedelta import relativedelta
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
@@ -1114,6 +1116,13 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if len(cohort) == 0:
                 cohort = [None]
 
+            user = User(
+                email=email,
+                username=email,
+                first_name=validated_data["first_name"],
+                last_name=validated_data["last_name"],
+            )
+            user.save()
             for single_cohort in cohort:
                 # prevent duplicate token (very low probability)
                 while True:
@@ -1121,7 +1130,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     if not UserInvite.objects.filter(token=token).exists():
                         break
 
+                now = timezone.now()
+
                 invite = UserInvite(
+                    user=user,
                     email=email,
                     first_name=validated_data["first_name"],
                     last_name=validated_data["last_name"],
@@ -1130,6 +1142,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     role=role,
                     author=self.context.get("request").user,
                     token=token,
+                    expires_at=now + relativedelta(months=6),
                 )
                 invite.save()
 

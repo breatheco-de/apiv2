@@ -93,6 +93,7 @@ def generate_user_invite(data: dict) -> dict:
         "longitude": None,
         "email_quality": None,
         "email_status": None,
+        "expires_at": None,
         **data,
     }
 
