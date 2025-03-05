@@ -432,6 +432,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     "longitude": None,
                     "email_quality": None,
                     "email_status": None,
+                    "expires_at": None,
                 }
             ],
         )
