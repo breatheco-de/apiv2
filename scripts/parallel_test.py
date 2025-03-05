@@ -6,7 +6,8 @@ import os
 import subprocess
 import sys
 
-if __name__ == "__main__":
+
+def run():
     args = ""
 
     if len(sys.argv) > 1:
