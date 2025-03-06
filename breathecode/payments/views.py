@@ -20,7 +20,6 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
-
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -995,6 +994,36 @@ class AcademySubscriptionView(APIView):
         serializer = GetSubscriptionSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    def put(self, request, subscription_id, academy_id=None):
+        lang = get_user_language(request)
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+            raise ValidationException(
+                translation(lang, en="Subscription not found", es="No existe la suscripción", slug="not-found"),
+                code=404,
+            )
+
+        valid_statuses = [choice[0] for choice in Subscription._meta.get_field("status").choices]
+
+        allowed_fields = ["status", "valid_until", "plan"]
+        for field, value in request.data.items():
+            if field == "status" and value not in valid_statuses:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"{field}: '{value}' is not a valid choice.",
+                        es=f"{field}: '{value}' no es una opción válida.",
+                        slug="invalid-choice",
+                    ),
+                    code=400,
+                )
+            if field in allowed_fields:
+                setattr(subscription, field, value)
+
+        subscription.save()
+
+        return Response({"detail": "Subscription updated successfully"}, status=status.HTTP_200_OK)
 
 
 class MeInvoiceView(APIView):
