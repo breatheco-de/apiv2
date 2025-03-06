@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from adrf.views import APIView
 from capyc.core.i18n import translation
 from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
@@ -8,18 +9,20 @@ from django.db import transaction
 from django.db.models import CharField, Q, Value
 from django.utils import timezone
 from django_redis import get_redis_connection
+from linked_services.rest_framework.decorators import scope
+from linked_services.rest_framework.types import LinkedApp, LinkedHttpRequest, LinkedToken
 from redis.exceptions import LockError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
+
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -608,6 +611,22 @@ class MeConsumableView(APIView):
         return Response(balance)
 
 
+class AppConsumableView(MeConsumableView):
+    permission_classes = [AllowAny]
+
+    # created for mocking purposes
+    def get_user(self, request: LinkedHttpRequest):
+        return request.get_user()
+
+    @scope(["read:consumable"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken):
+        request.user = self.get_user(request)
+        if request.user is None or request.user.is_anonymous:
+            raise ValidationException("User not provided", code=400)
+
+        return super().get(request)
+
+
 class MentorshipServiceSetView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(sort="-id", paginate=True)
@@ -1105,6 +1124,36 @@ class CardView(APIView):
         return Response({"status": "ok"})
 
 
+class ServiceBlocked(APIView):
+
+    def get(self, request):
+        user = request.user
+
+        # mentorship_services = MentorshipService.objects.all()
+        from breathecode.payments.flags import blocked_user_ids
+
+        fields = ["from_academy", "from_cohort", "from_mentorship_service"]
+
+        blocked_services = {
+            "mentorship-service": {
+                "from_everywhere": False,
+                "from_academy": [],
+                "from_cohort": [],
+                "from_mentorship_service": [],
+            }
+        }
+
+        blocked_services["mentorship-service"]["from_everywhere"] = (
+            True if user.id in blocked_user_ids["mentorship-service"]["from_everywhere"] else False
+        )
+
+        for field in fields:
+            blocked_ids = blocked_user_ids["mentorship-service"][field]
+            blocked_services["mentorship-service"][field] = [slug for id_, slug in blocked_ids if id_ == user.id]
+
+        return Response(blocked_services, status=status.HTTP_200_OK)
+
+
 class ConsumeView(APIView):
 
     def put(self, request, service_slug, hash=None):
@@ -1141,6 +1190,22 @@ class ConsumeView(APIView):
         return Response({"id": session.id, "status": "ok"}, status=status.HTTP_201_CREATED)
 
 
+class AppConsumeView(ConsumeView):
+    permission_classes = [AllowAny]
+
+    # created for mocking purposes
+    def get_user(self, request: LinkedHttpRequest):
+        return request.get_user()
+
+    @scope(["read:consumable"])
+    def put(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, service_slug, hash=None):
+        request.user = self.get_user(request)
+        if request.user is None or request.user.is_anonymous:
+            raise ValidationException("User not provided", code=400)
+
+        return super().put(request, service_slug, hash)
+
+
 class CancelConsumptionView(APIView):
 
     def put(self, request, service_slug, consumptionsession_id):
@@ -1169,6 +1234,22 @@ class CancelConsumptionView(APIView):
         session.save()
 
         return Response({"id": session.id, "status": "reversed"}, status=status.HTTP_200_OK)
+
+
+class AppCancelConsumptionView(CancelConsumptionView):
+    permission_classes = [AllowAny]
+
+    # created for mocking purposes
+    def get_user(self, request: LinkedHttpRequest):
+        return request.get_user()
+
+    @scope(["read:consumable"])
+    def put(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, service_slug, consumptionsession_id):
+        request.user = self.get_user(request)
+        if request.user is None or request.user.is_anonymous:
+            raise ValidationException("User not provided", code=400)
+
+        return super().put(request, service_slug, consumptionsession_id)
 
 
 class PlanOfferView(APIView):
@@ -2046,9 +2127,7 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(
-                        bag.id, invoice.id, conversion_info=conversion_info
-                    )
+                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)

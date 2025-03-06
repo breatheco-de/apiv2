@@ -8,6 +8,9 @@ from .views import (
     AcademyPlanView,
     AcademyServiceView,
     AcademySubscriptionView,
+    AppCancelConsumptionView,
+    AppConsumableView,
+    AppConsumeView,
     BagCouponView,
     BagView,
     CancelConsumptionView,
@@ -29,6 +32,7 @@ from .views import (
     PlanView,
     ServiceItemView,
     ServiceView,
+    ServiceBlocked,
 )
 
 app_name = "payments"
@@ -58,6 +62,7 @@ urlpatterns = [
     path("eventtypeset", EventTypeSetView.as_view(), name="eventtypeset"),
     path("eventtypeset/<int:event_type_set_id>", EventTypeSetView.as_view(), name="eventtypeset_id"),
     path("me/service/consumable", MeConsumableView.as_view(), name="me_service_consumable"),
+    path("app/service/consumable", AppConsumableView.as_view(), name="app_service_consumable"),
     path("consumable/checkout", ConsumableCheckoutView.as_view(), name="consumable_checkout"),
     path("me/subscription", MeSubscriptionView.as_view(), name="me_subscription"),
     path("me/subscription/charge", MeSubscriptionChargeView.as_view(), name="me_subscription_charge"),
@@ -74,9 +79,14 @@ urlpatterns = [
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view()),
     path("coupon", CouponView.as_view(), name="coupon"),
     path(
+        "me/service/blocked",
+        ServiceBlocked.as_view(),
+        name="me_service_blocked",
+    ),
+    path(
         "me/service/<str:service_slug>/consumptionsession",
         ConsumeView.as_view(),
-        name="me_service_slug_consumptionsession",
+        name="me_service_blocked",
     ),
     path(
         "me/service/<str:service_slug>/consumptionsession/<int:consumptionsession_id>",
@@ -87,6 +97,21 @@ urlpatterns = [
         "me/service/<str:service_slug>/consumptionsession/<str:hash>",
         ConsumeView.as_view(),
         name="me_service_slug_consumptionsession_hash",
+    ),
+    path(
+        "app/service/<str:service_slug>/consumptionsession",
+        AppConsumeView.as_view(),
+        name="app_service_slug_consumptionsession",
+    ),
+    path(
+        "app/service/<str:service_slug>/consumptionsession/<int:consumptionsession_id>",
+        AppCancelConsumptionView.as_view(),
+        name="app_service_slug_consumptionsession_id",
+    ),
+    path(
+        "app/service/<str:service_slug>/consumptionsession/<str:hash>",
+        AppConsumeView.as_view(),
+        name="app_service_slug_consumptionsession_hash",
     ),
     path("card", CardView.as_view(), name="card"),
     path("bag", BagView.as_view()),
