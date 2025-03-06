@@ -1216,6 +1216,9 @@ class Subscription(AbstractIOweYou):
     # in this day the subscription needs being paid again
     next_payment_at = models.DateTimeField(help_text="Next payment date")
 
+    # in this day the subscription was created
+    created_at = models.DateTimeField(default=timezone.now, help_text="Date the subscription was created")
+
     # in this moment the subscription will be expired
     valid_until = models.DateTimeField(
         default=None,
