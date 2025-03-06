@@ -32,22 +32,23 @@ strings = {
             "lowest": "mala",
         },
         "live_class": {
+            "survey_subject": "¿Cómo fue la clase de hoy?",
             "title": "¿Cómo fue la clase de hoy?",
             "highest": "muy buena",
             "lowest": "mala",
         },
         "live_class_mentor": {
-            "title": "¿Valora el desempeño de tu profesor/profesora {} el día de hoy?",
+            "title": "¿Valora el desempeño de tu profe el día de hoy?",
             "highest": "muy bien",
             "lowest": "mal",
         },
         "live_class_mentor_communication": {
-            "title": "¿Qué tan claro fue el profesor/profesora al explicar los conceptos?",
+            "title": "¿Qué tan claro fue @l profe al explicar los conceptos?",
             "highest": "muy bueno",
             "lowest": "malo",
         },
         "live_class_mentor_practice": {
-            "title": "¿El profesor/profesora fomentó la participación y resolvió tus dudas de manera efectiva?",
+            "title": "¿@l profe fomentó la participación y resolvió tus dudas de manera efectiva?",
             "highest": "muy bien",
             "lowest": "mal",
         },
@@ -88,6 +89,7 @@ strings = {
             "lowest": "not good",
         },
         "live_class": {
+            "survey_subject": "How was today's class?",
             "title": "How was today's class?",
             "highest": "very good",
             "lowest": "not good",

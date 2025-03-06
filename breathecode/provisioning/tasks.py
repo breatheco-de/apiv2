@@ -69,15 +69,13 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
 
     elif bills[0].vendor.name == "Codespaces":
         fields = [
-            "Username",
-            "Date",
-            "Product",
-            "SKU",
-            "Quantity",
-            "Unit Type",
-            "Price Per Unit ($)",
-            "Multiplier",
-            "Owner",
+            "username",
+            "usage_at",
+            "product",
+            "sku",
+            "quantity",
+            "unit_type",
+            "applied_cost_per_quantity",
         ]
 
     elif bills[0].vendor.name == "Rigobot":
@@ -127,8 +125,8 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         last = df1["startTime"][0].split("-")
 
     elif bills[0].vendor.name == "Codespaces":
-        first = df1["Date"][0].split("-")
-        last = df2["Date"][0].split("-")
+        first = df1["usage_at"][0].split("-")
+        last = df2["usage_at"][0].split("-")
 
     elif bills[0].vendor.name == "Rigobot":
         first = df1["consumption_period_start"][0].split("-")

@@ -32,6 +32,7 @@ from .views import (
     PlanView,
     ServiceItemView,
     ServiceView,
+    ServiceBlocked,
 )
 
 app_name = "payments"
@@ -78,9 +79,14 @@ urlpatterns = [
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view()),
     path("coupon", CouponView.as_view(), name="coupon"),
     path(
+        "me/service/blocked",
+        ServiceBlocked.as_view(),
+        name="me_service_blocked",
+    ),
+    path(
         "me/service/<str:service_slug>/consumptionsession",
         ConsumeView.as_view(),
-        name="me_service_slug_consumptionsession",
+        name="me_service_blocked",
     ),
     path(
         "me/service/<str:service_slug>/consumptionsession/<int:consumptionsession_id>",

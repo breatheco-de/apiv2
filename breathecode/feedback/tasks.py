@@ -448,7 +448,6 @@ def send_liveclass_survey(liveclass_id, **_):
                     status="SENT",
                     survey=survey,
                     lang=cohort.language,
-                    mentor=teacher.user,
                     academy=cohort.academy,
                     cohort=cohort,
                 )

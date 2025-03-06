@@ -208,9 +208,11 @@ class ArticleValidator(AssetValidator):
     warns = []
     errors = ["readme"]
 
+
 class StarterValidator(AssetValidator):
     warns = []
     errors = ["readme"]
+
 
 class ExerciseValidator(AssetValidator):
     warns = ["difficulty"]
@@ -259,3 +261,21 @@ class OriginalityWrapper:
             msg = f"Error {response.status_code} while request originality API"
             logger.error(msg)
             raise Exception(msg)
+
+
+def prompt_technologies(technologies):
+    lines = []
+    for tech in technologies:
+        if not tech.is_deprecated and tech.visibility in ["PUBLIC", "UNLISTED"] and tech.parent is None:
+            lines.append(f"Technology title: {tech.title}")
+            lines.append(f"Slug: {tech.slug}")
+            lines.append(f"Description: {tech.description}")
+            if tech.lang:
+                lines.append(f"Language: {tech.lang}")
+            else:
+                lines.append("Language: english and spanish")
+            lines.append(f"Priority: {tech.sort_priority}")
+            lines.append("")  # Add a blank line between technologies
+            lines.append("---------------------")  # Add a blank line between technologies
+            lines.append("")  # Add a blank line between technologies
+    return "\n".join(lines)

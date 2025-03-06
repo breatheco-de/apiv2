@@ -1176,7 +1176,11 @@ async def save_github_token(request):
         if token is None:
             token, _ = await Token.aget_or_create(user=user, token_type="login")
 
-        return HttpResponseRedirect(redirect_to=f"/v1/auth/github/{token.key}?scope={scopes}&url={url}")
+        redirect = f"/v1/auth/github/{token.key}?scope={scopes}&url={url}"
+        if settings.DEBUG:
+            return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+
+        return HttpResponseRedirect(redirect_to=redirect)
 
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
@@ -2685,6 +2689,28 @@ class AcademyAuthSettingsView(APIView, GenerateLookupsMixin):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyAuthSettingsLogView(APIView, GenerateLookupsMixin):
+
+    @capable_of("get_academy_auth_settings")
+    def get(self, request, academy_id):
+        lang = get_user_language(request)
+
+        settings = AcademyAuthSettings.objects.filter(academy_id=academy_id).first()
+        if settings is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy has not github authentication settings",
+                    es="La academia no tiene configurada la integracion con github",
+                    slug="no-github-auth-settings",
+                )
+            )
+
+        github_error_log = settings.github_error_log if settings.github_error_log is not None else []
+
+        return Response(github_error_log)
 
 
 class GitpodUserView(APIView, GenerateLookupsMixin):

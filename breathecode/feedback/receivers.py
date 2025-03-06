@@ -14,11 +14,10 @@ from breathecode.mentorship.signals import mentorship_session_saved
 
 from .models import Answer
 from .signals import survey_answered
-from .tasks import (
+from .tasks import (  # send_liveclass_survey,
     process_answer_received,
     process_student_graduation,
     send_event_survey,
-    send_liveclass_survey,
     send_mentorship_session_survey,
 )
 
@@ -62,7 +61,7 @@ def post_liveclass_ended(sender: Type[LiveClass], instance: LiveClass, **kwargs)
         return
 
     logger.debug(f"Sending survey survey about live class {instance.id}")
-    send_liveclass_survey(instance.id)
+    # send_liveclass_survey(instance.id)
 
 
 @receiver(event_status_updated, sender=Event)
@@ -70,4 +69,4 @@ def post_event_ended(sender: Type[Event], instance: Event, **kwargs):
     if instance.status == "FINISHED" and Answer.objects.filter(event__id=instance.id).exists() is False:
         if instance.ended_at is not None:
             logger.debug("Sending survey for event")
-            send_event_survey(instance.id)
+            send_event_survey.delay(instance.id)

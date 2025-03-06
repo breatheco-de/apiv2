@@ -22,6 +22,7 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
+
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -968,7 +969,7 @@ class AcademySubscriptionView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     @capable_of("read_subscription")
-    def get(self, request, subscription_id=None):
+    def get(self, request, subscription_id=None, academy_id=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
@@ -1121,6 +1122,36 @@ class CardView(APIView):
             raise ValidationException(str(e), code=400)
 
         return Response({"status": "ok"})
+
+
+class ServiceBlocked(APIView):
+
+    def get(self, request):
+        user = request.user
+
+        # mentorship_services = MentorshipService.objects.all()
+        from breathecode.payments.flags import blocked_user_ids
+
+        fields = ["from_academy", "from_cohort", "from_mentorship_service"]
+
+        blocked_services = {
+            "mentorship-service": {
+                "from_everywhere": False,
+                "from_academy": [],
+                "from_cohort": [],
+                "from_mentorship_service": [],
+            }
+        }
+
+        blocked_services["mentorship-service"]["from_everywhere"] = (
+            True if user.id in blocked_user_ids["mentorship-service"]["from_everywhere"] else False
+        )
+
+        for field in fields:
+            blocked_ids = blocked_user_ids["mentorship-service"][field]
+            blocked_services["mentorship-service"][field] = [slug for id_, slug in blocked_ids if id_ == user.id]
+
+        return Response(blocked_services, status=status.HTTP_200_OK)
 
 
 class ConsumeView(APIView):

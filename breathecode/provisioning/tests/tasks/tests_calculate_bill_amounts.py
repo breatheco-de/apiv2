@@ -78,22 +78,20 @@ def codespaces_csv(lines=1, data={}):
     quantities = [random.randint(1, 10) for _ in range(lines)]
     unit_types = [fake.slug() for _ in range(lines)]
     price_per_units = [round(random.random() * 100, 6) for _ in range(lines)]
-    multipliers = [round(random.random() * 100, 6) for _ in range(lines)]
     repository_slugs = [fake.slug() for _ in range(lines)]
     owners = [fake.slug() for _ in range(lines)]
 
     # dictionary of lists
     return {
-        "Repository Slug": repository_slugs,
-        "Username": usernames,
-        "Date": dates,
-        "Product": products,
-        "SKU": skus,
-        "Quantity": quantities,
-        "Unit Type": unit_types,
-        "Price Per Unit ($)": price_per_units,
-        "Multiplier": multipliers,
-        "Owner": owners,
+        "repository_name": repository_slugs,
+        "username": usernames,
+        "usage_at": dates,
+        "product": products,
+        "sku": skus,
+        "quantity": quantities,
+        "unit_type": unit_types,
+        "applied_cost_per_quantity": price_per_units,
+        "organization": owners,
         **data,
     }
 

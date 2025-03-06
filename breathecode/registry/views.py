@@ -90,7 +90,7 @@ from .serializers import (
     VariableSmallSerializer,
 )
 from .tasks import async_build_asset_context, async_pull_from_github
-from .utils import AssetErrorLogType, is_url
+from .utils import AssetErrorLogType, is_url, prompt_technologies
 
 logger = logging.getLogger(__name__)
 
@@ -127,11 +127,7 @@ def forward_asset_url(request, asset_slug=None):
         logger.error(e)
         msg = f"The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon."
         AssetErrorLog(
-            slug=AssetErrorLogType.INVALID_URL,
-            path=asset_slug,
-            asset=asset,
-            asset_type=asset.asset_type,
-            status_text=msg,
+            slug=AssetErrorLogType.INVALID_URL, path=asset_slug, asset=asset, asset_type=asset.asset_type, status_text=msg
         ).save()
 
         return render_message(request, msg, academy=asset.academy)
@@ -179,7 +175,7 @@ class TechnologyView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(cache=TechnologyCache, paginate=True, sort="sort_priority")
 
-    def get(self, request, tech_slug=None):
+    def get(self, request, tech_slug=None, extension=None):
         lang = request.GET.get("lang", "en")
         if lang == "en":
             lang = "us"
@@ -217,10 +213,6 @@ class TechnologyView(APIView):
             param = request.GET.get("lang")
             items = items.filter(Q(lang__iexact=param) | Q(lang="") | Q(lang__isnull=True))
 
-        if "only_lang" in request.GET:
-            param = request.GET.get("only_lang")
-            items = items.filter(Q(lang__iexact=param))
-
         if "is_deprecated" not in request.GET or request.GET.get("is_deprecated").lower() == "false":
             items = items.filter(is_deprecated=False)
 
@@ -233,6 +225,12 @@ class TechnologyView(APIView):
             items = items.filter(visibility__iexact=visibility_param)
 
         items = handler.queryset(items)
+
+        if extension == "txt":
+            technologies_text = "The following technolgies are the only ones that can be use to categorize lessons, articles, quiz, projects, exercises or any other learning asset at 4Geeks: \n\n"
+            technologies_text += prompt_technologies(items)
+
+            return HttpResponse(technologies_text, content_type="text/plain")
 
         serializer = AssetTechnologySerializer(items, many=True)
         return handler.response(serializer.data)
@@ -1808,6 +1806,11 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
+
+        if "lang" in request.GET:
+            lang = request.GET.get("lang")
+            if lang:
+                lookup["lang__iexact"] = lang
 
         items = items.filter(**lookup)
         items = handler.queryset(items)
