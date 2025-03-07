@@ -22,7 +22,6 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
-
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -1009,10 +1008,50 @@ class AcademySubscriptionView(APIView):
         if plan_slugs := request.GET.get("plan_slugs"):
             items = items.filter(plans__slug__in=plan_slugs.split(","))
 
+        if user_id := request.GET.get("users"):
+            items = items.filter(user__id=user_id)
+
         items = handler.queryset(items)
         serializer = GetSubscriptionSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    def put(self, request, subscription_id, academy_id=None):
+        lang = get_user_language(request)
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+            raise ValidationException(
+                translation(lang, en="Subscription not found", es="No existe la suscripción", slug="not-found"),
+                code=404,
+            )
+
+        def update_subscription(subscription, data):
+            valid_statuses = [choice[0] for choice in Subscription._meta.get_field("status").choices]
+            allowed_fields = ["status", "valid_until", "plan"]
+
+            for field, value in data.items():
+                if field == "status" and value not in valid_statuses:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"{field}: '{value}' is not a valid choice.",
+                            es=f"{field}: '{value}' no es una opción válida.",
+                            slug="invalid-choice",
+                        ),
+                        code=400,
+                    )
+                if field in allowed_fields:
+                    setattr(subscription, field, value)
+
+        if isinstance(request.data, list):
+            for data in request.data:
+                update_subscription(subscription, data)
+        else:
+            update_subscription(subscription, request.data)
+
+        subscription.save()
+
+        return Response({"detail": "Subscription updated successfully"}, status=status.HTTP_200_OK)
 
 
 class MeInvoiceView(APIView):
