@@ -2,6 +2,7 @@ import datetime
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.core.exceptions import ValidationError
 
 import breathecode.feedback.signals as signals
 from breathecode.admissions.models import Academy, Cohort, CohortUser
@@ -9,8 +10,9 @@ from breathecode.authenticate.models import Token
 from breathecode.events.models import Event, LiveClass
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.registry.models import Asset
+from breathecode.feedback.utils import strings
 
-__all__ = ["UserProxy", "CohortUserProxy", "CohortProxy", "Survey", "Answer"]
+__all__ = ["UserProxy", "CohortUserProxy", "CohortProxy", "Survey", "Answer", "SurveyTemplate"]
 
 
 class UserProxy(User):
@@ -30,16 +32,6 @@ class CohortProxy(Cohort):
     class Meta:
         proxy = True
 
-
-# class AcademyFeedbackSettings(models.Model):
-#     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, related_name='feedback_settings')
-#     survey_translations = models.JSONField(help_text="String translations for all available surveys for this academy.")
-#     allowed_surveys = models.CharField(max_length=255, help_text="Comma separated list of allowed survey slugs.")
-#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-#     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-#     def __str__(self):
-#         return f"Feedback settings for {self.academy.name}"
 
 PENDING = "PENDING"
 SENT = "SENT"
@@ -221,3 +213,234 @@ class Review(models.Model):
         if self.cohort is not None:
             cohort = self.cohort.slug
         return f"{self.author.first_name} {self.author.last_name} for {cohort}"
+
+
+def validate_question_structure(value):
+    """Validate that the JSON question structure contains all required fields"""
+    if value is None:
+        return
+
+    required_keys = ["title", "highest", "lowest", "survey_subject"]
+
+    if not isinstance(value, dict):
+        raise ValidationError("Value must be a dictionary")
+
+    missing_keys = [key for key in required_keys if key not in value]
+    if missing_keys:
+        raise ValidationError(f'Missing required keys: {", ".join(missing_keys)}')
+
+
+class SurveyTemplate(models.Model):
+    """Template used to create surveys with predefined questions"""
+
+    slug = models.SlugField(max_length=100, unique=True)
+    lang = models.CharField(max_length=2, help_text="Two-letter language code")
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    is_shared = models.BooleanField(default=False, help_text="If true, other academies can use this template")
+
+    # JSON fields for different question types
+    when_asking_event = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about an event",
+        default=dict(
+            title=strings["en"]["event"]["title"],
+            highest=strings["en"]["event"]["highest"],
+            lowest=strings["en"]["event"]["lowest"],
+            survey_subject=strings["en"]["event"]["survey_subject"],
+        ),
+    )
+    when_asking_mentor = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about a mentor",
+        default=dict(
+            title=strings["en"]["mentor"]["title"],
+            highest=strings["en"]["mentor"]["highest"],
+            lowest=strings["en"]["mentor"]["lowest"],
+            survey_subject=strings["en"]["mentor"]["survey_subject"],
+        ),
+    )
+    when_asking_cohort = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about a cohort",
+        default=dict(
+            title=strings["en"]["cohort"]["title"],
+            highest=strings["en"]["cohort"]["highest"],
+            lowest=strings["en"]["cohort"]["lowest"],
+            survey_subject=strings["en"]["cohort"]["survey_subject"],
+        ),
+    )
+    when_asking_academy = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about the academy",
+        default=dict(
+            title=strings["en"]["academy"]["title"],
+            highest=strings["en"]["academy"]["highest"],
+            lowest=strings["en"]["academy"]["lowest"],
+            survey_subject=strings["en"]["academy"]["survey_subject"],
+        ),
+    )
+    when_asking_mentorshipsession = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about a mentorship session",
+        default=dict(
+            title=strings["en"]["mentorship_session"]["title"],
+            highest=strings["en"]["mentorship_session"]["highest"],
+            lowest=strings["en"]["mentorship_session"]["lowest"],
+            survey_subject=strings["en"]["mentorship_session"]["survey_subject"],
+        ),
+    )
+    when_asking_platform = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about the 4Geeks.com platform",
+        default=dict(
+            title=strings["en"]["platform"]["title"],
+            highest=strings["en"]["platform"]["highest"],
+            lowest=strings["en"]["platform"]["lowest"],
+            survey_subject=strings["en"]["platform"]["survey_subject"],
+        ),
+    )
+    when_asking_liveclass_mentor = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about a live class mentor",
+        default=dict(
+            title=strings["en"]["live_class_mentor"]["title"],
+            highest=strings["en"]["live_class_mentor"]["highest"],
+            lowest=strings["en"]["live_class_mentor"]["lowest"],
+            survey_subject=strings["en"]["live_class_mentor"]["survey_subject"],
+        ),
+    )
+    when_asking_mentor_communication = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about mentor communication during class",
+        default=dict(
+            title=strings["en"]["live_class_mentor_communication"]["title"],
+            highest=strings["en"]["live_class_mentor_communication"]["highest"],
+            lowest=strings["en"]["live_class_mentor_communication"]["lowest"],
+            survey_subject=strings["en"]["live_class_mentor_communication"]["survey_subject"],
+        ),
+    )
+    when_asking_mentor_participation = models.JSONField(
+        null=True,
+        blank=True,
+        validators=[validate_question_structure],
+        help_text="Questions to ask about class how the mentor answers and encoursges participation",
+        default=dict(
+            title=strings["en"]["live_class_mentor_practice"]["title"],
+            highest=strings["en"]["live_class_mentor_practice"]["highest"],
+            lowest=strings["en"]["live_class_mentor_practice"]["lowest"],
+            survey_subject=strings["en"]["live_class_mentor_practice"]["survey_subject"],
+        ),
+    )
+    additional_questions = models.JSONField(
+        null=True, blank=True, help_text="Additional custom questions in the same structure"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        """Validate additional_questions if present"""
+        if self.additional_questions:
+            if not isinstance(self.additional_questions, dict):
+                raise ValidationError({"additional_questions": "Must be a dictionary"})
+
+            for key, value in self.additional_questions.items():
+                try:
+                    validate_question_structure(value)
+                except ValidationError as e:
+                    raise ValidationError({"additional_questions": f'Invalid structure for question "{key}": {str(e)}'})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.slug} ({self.lang})"
+
+    class Meta:
+        unique_together = ["slug", "lang"]
+
+
+class AcademyFeedbackSettings(models.Model):
+    """Settings for feedback surveys per academy"""
+
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE, related_name="feedback_settings")
+
+    cohort_survey_template = models.ForeignKey(
+        SurveyTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cohort_survey_academies",
+        help_text="Template used for monthly cohort quality surveys, leave empty to disable",
+    )
+
+    liveclass_survey_template = models.ForeignKey(
+        SurveyTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="liveclass_survey_academies",
+        help_text="Template used for live class quality surveys, leave empty to disable",
+    )
+
+    liveclass_survey_cohort_exclusions = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Comma separated list of cohort IDs to exclude from live class surveys, leave empty to disable",
+    )
+
+    event_survey_template = models.ForeignKey(
+        SurveyTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="event_survey_academies",
+        help_text="Template used for event quality surveys, leave empty to disable",
+    )
+
+    mentorship_session_survey_template = models.ForeignKey(
+        SurveyTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="mentorship_survey_academies",
+        help_text="Template used for mentorship session quality surveys, leave empty to disable",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"Feedback settings for {self.academy.name}"
+
+    def get_excluded_cohort_ids(self):
+        """Returns list of excluded cohort IDs for live class surveys"""
+        if not self.liveclass_survey_cohort_exclusions:
+            return []
+
+        try:
+            return [int(x.strip()) for x in self.liveclass_survey_cohort_exclusions.split(",") if x.strip()]
+        except ValueError:
+            return []
+
+    class Meta:
+        verbose_name = "Academy Feedback Settings"
+        verbose_name_plural = "Academy Feedback Settings"

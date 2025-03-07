@@ -13,13 +13,12 @@ class Command(BaseCommand):
         self.delete_old_webhooks()
 
     def delete_old_webhooks(self, batch_size=1000):
-        thirty_days_ago = timezone.now() - timedelta(days=5)
+        five_days_ago = timezone.now() - timedelta(days=5)
         self.stdout.write(self.style.NOTICE("Starting garbage collection of old webhooks..."))
 
+        total_deleted = 0
         while True:
-            old_webhooks = LearnPackWebhook.objects.filter(created_at__lt=thirty_days_ago).exclude(
-                status__in=["ERROR", "PENDING"]
-            )[:batch_size]
+            old_webhooks = LearnPackWebhook.objects.filter(created_at__lt=five_days_ago)[:batch_size]
 
             if not old_webhooks.exists():
                 self.stdout.write(self.style.SUCCESS("No more old webhooks to delete."))
@@ -29,5 +28,8 @@ class Command(BaseCommand):
             ids_to_delete = list(old_webhooks.values_list("id", flat=True))
             LearnPackWebhook.objects.filter(id__in=ids_to_delete).delete()
             self.stdout.write(self.style.SUCCESS(f"Deleted {count} old webhooks."))
+            total_deleted += count
 
-        self.stdout.write(self.style.SUCCESS("Garbage collection for assignments completed."))
+        self.stdout.write(
+            self.style.SUCCESS(f"Garbage collection for assignments completed. Deleted {total_deleted} webhooks.")
+        )

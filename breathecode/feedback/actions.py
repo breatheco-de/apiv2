@@ -117,16 +117,13 @@ def send_question(user, cohort=None):
 
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user, status="SENT").count()
 
-    question = tasks.build_question(answer)
+    answer = tasks.build_question(answer)
 
     if question_was_sent_previously:
         answer = Answer.objects.filter(cohort=answer.cohort, user=user, status="SENT").first()
         Token.objects.filter(id=answer.token_id).delete()
 
     else:
-        answer.title = question["title"]
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
         answer.lang = answer.cohort.language.lower()
         answer.save()
 
@@ -137,10 +134,10 @@ def send_question(user, cohort=None):
     answer.save()
 
     data = {
-        "QUESTION": question["title"],
+        "QUESTION": answer.title,
         "HIGHEST": answer.highest,
         "LOWEST": answer.lowest,
-        "SUBJECT": question["title"],
+        "SUBJECT": answer.title,
         "ANSWER_ID": answer.id,
         "BUTTON": strings[answer.cohort.language.lower()]["button_label"],
         "LINK": f"https://nps.4geeks.com/{answer.id}?token={token.key}",
