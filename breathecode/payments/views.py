@@ -1004,22 +1004,29 @@ class AcademySubscriptionView(APIView):
                 code=404,
             )
 
-        valid_statuses = [choice[0] for choice in Subscription._meta.get_field("status").choices]
+        def update_subscription(subscription, data):
+            valid_statuses = [choice[0] for choice in Subscription._meta.get_field("status").choices]
+            allowed_fields = ["status", "valid_until", "plan"]
 
-        allowed_fields = ["status", "valid_until", "plan"]
-        for field, value in request.data.items():
-            if field == "status" and value not in valid_statuses:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en=f"{field}: '{value}' is not a valid choice.",
-                        es=f"{field}: '{value}' no es una opción válida.",
-                        slug="invalid-choice",
-                    ),
-                    code=400,
-                )
-            if field in allowed_fields:
-                setattr(subscription, field, value)
+            for field, value in data.items():
+                if field == "status" and value not in valid_statuses:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"{field}: '{value}' is not a valid choice.",
+                            es=f"{field}: '{value}' no es una opción válida.",
+                            slug="invalid-choice",
+                        ),
+                        code=400,
+                    )
+                if field in allowed_fields:
+                    setattr(subscription, field, value)
+
+        if isinstance(request.data, list):
+            for data in request.data:
+                update_subscription(subscription, data)
+        else:
+            update_subscription(subscription, request.data)
 
         subscription.save()
 
