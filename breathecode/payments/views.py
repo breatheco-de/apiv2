@@ -990,6 +990,9 @@ class AcademySubscriptionView(APIView):
         if plan_slugs := request.GET.get("plan_slugs"):
             items = items.filter(plans__slug__in=plan_slugs.split(","))
 
+        if user_id := request.GET.get("users"):
+            items = items.filter(user__id=user_id)
+
         items = handler.queryset(items)
         serializer = GetSubscriptionSerializer(items, many=True)
 
