@@ -43,7 +43,7 @@ def invoice_serializer(self, invoice, currency, user):
         "amount": invoice.amount,
         "currency": currency_serializer(currency),
         "paid_at": self.bc.datetime.to_iso_string(invoice.paid_at),
-        "status": invoice.status,
+        "status": str(invoice.status),
         "user": user_serializer(user),
     }
 
@@ -246,6 +246,7 @@ def get_subscription_serializer(
     cohorts=[],
 ):
     valid_until = self.bc.datetime.to_iso_string(subscription.valid_until) if subscription.valid_until else None
+    created_at = self.bc.datetime.to_iso_string(subscription.created_at)
 
     if cohort_set:
         cohort_set = get_cohort_set_serializer(cohort_set, academy, cohorts=cohorts)
@@ -264,6 +265,7 @@ def get_subscription_serializer(
         "invoices": [invoice_serializer(self, invoice, currency, user) for invoice in invoices],
         "paid_at": self.bc.datetime.to_iso_string(subscription.paid_at),
         "valid_until": valid_until,
+        "created_at": created_at,
         "plans": [plan_serializer(self, plan, service, groups, permissions, service_items) for plan in plans],
         "status": subscription.status,
         "status_message": subscription.status_message,

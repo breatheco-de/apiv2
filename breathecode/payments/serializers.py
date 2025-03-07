@@ -395,6 +395,7 @@ class GetSubscriptionHookSerializer(GetAbstractIOweYouSerializer):
 
 class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
     paid_at = serpy.Field()
+    created_at = serpy.Field()
     is_refundable = serpy.Field()
 
     pay_every = serpy.Field()
