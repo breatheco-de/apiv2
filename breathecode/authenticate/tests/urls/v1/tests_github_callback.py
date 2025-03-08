@@ -35,21 +35,6 @@ def setup(
     github_token: str,
 ):
 
-    http.post(
-        "https://github.com/login/oauth/access_token",
-        data={
-            "client_id": "123456",
-            "client_secret": "123456",
-            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
-            "code": "Konan",
-        },
-        headers={"Accept": "application/json"},
-        timeout=30,
-    ).response(
-        {"access_token": github_token, "scope": "repo,gist", "token_type": "bearer"},
-        status=200,
-    )
-
     http.get(
         "https://api.github.com/user",
         headers={"Authorization": f"token {github_token}"},
@@ -68,19 +53,6 @@ def setup(
         status=200,
     )
 
-    routes = {
-        "https://github.com/login/oauth/access_token": FakeResponse(
-            status_code=200,
-            data={"access_token": GithubRequestsMock.token, "scope": "repo,gist", "token_type": "bearer"},
-        ),
-        "https://rigobot.herokuapp.com/v1/auth/invite": FakeResponse(status_code=200, data={}),
-    }
-
-    def post_mock(url, *args, **kwargs):
-        return routes.get(url, FakeResponse(status_code=404, data={"status": "fake request, not found"}))
-
-    monkeypatch.setattr("requests.get", GithubRequestsMock.apply_get_requests_mock())
-    monkeypatch.setattr("requests.post", post_mock)
     monkeypatch.setattr("django.db.models.signals.pre_delete.send_robust", mock.MagicMock(return_value=None))
     monkeypatch.setattr(
         "breathecode.admissions.signals.student_edu_status_updated.send_robust", mock.MagicMock(return_value=None)
@@ -200,11 +172,17 @@ def get_credentials_github_fields(data={}):
         "twitter_username": None,
         "user_id": 1,
         "username": "jefer94",
+        "scopes": "repo user",
+        "granted": True,
         **data,
     }
 
 
-def test_github_callback__without_code(bc: Breathecode, client: APIClient):
+def test_without_code(
+    bc: Breathecode,
+    client: APIClient,
+    http: staging.HTTP,
+):
     """Test /github/callback without auth"""
     url = reverse_lazy("authenticate:github_callback")
     params = {"url": "https://google.co.ve"}
@@ -221,8 +199,27 @@ def test_github_callback__without_code(bc: Breathecode, client: APIClient):
     assert bc.database.list_of("authenticate.ProfileAcademy") == []
 
 
-def test_github_callback__user_not_exist(bc: Breathecode, client: APIClient):
-    """Test /github/callback"""
+def test_user_not_exist(
+    bc: Breathecode,
+    client: APIClient,
+    http: staging.HTTP,
+    github_token: str,
+):
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
 
     original_url_callback = "https://google.co.ve"
     code = "Konan"
@@ -256,10 +253,28 @@ def test_github_callback__user_not_exist(bc: Breathecode, client: APIClient):
     assert bc.database.list_of("authenticate.ProfileAcademy") == []
 
 
-def test_github_callback__user_not_exist_but_waiting_list(
-    bc: Breathecode, client: APIClient, github_user_emails: list[str, dict]
+def test_user_not_exist_but_waiting_list(
+    bc: Breathecode,
+    client: APIClient,
+    github_user_emails: list[str, dict],
+    http: staging.HTTP,
+    github_token: str,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
 
     user_invite = {"status": "WAITING_LIST", "email": github_user_emails[0]["email"]}
     bc.database.create(user_invite=user_invite)
@@ -294,7 +309,12 @@ def test_github_callback__user_not_exist_but_waiting_list(
     assert bc.database.list_of("authenticate.ProfileAcademy") == []
 
 
-def test_github_callback__with_user(bc: Breathecode, client: APIClient, github_token: str):
+def test_with_user(
+    bc: Breathecode,
+    client: APIClient,
+    github_token: str,
+    http: staging.HTTP,
+):
     """Test /github/callback"""
     user_kwargs = {"email": "JDEFREITASPINTO@GMAIL.COM"}
     role_kwargs = {"slug": "student", "name": "Student"}
@@ -326,20 +346,40 @@ def test_github_callback__with_user(bc: Breathecode, client: APIClient, github_t
     ]
 
 
-def test_github_callback__with_user__with_email_in_uppercase(
-    bc: Breathecode, client: APIClient, github_user: dict, github_token: str, github_user_emails: list[str, dict]
+def test_with_user__with_email_in_uppercase(
+    bc: Breathecode,
+    client: APIClient,
+    github_user: dict,
+    github_token: str,
+    github_user_emails: list[str, dict],
+    http: staging.HTTP,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     user_kwargs = {"email": github_user_emails[0]["email"].upper()}
     role_kwargs = {"slug": "student", "name": "Student"}
-    model = bc.database.create(role=True, user=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs)
+    model = bc.database.create(role=True, user=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs, token=True)
 
     original_url_callback = "https://google.co.ve"
     token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
     code = "Konan"
 
     url = reverse_lazy("authenticate:github_callback")
-    params = {"url": original_url_callback, "code": code}
+    params = {"url": original_url_callback, "code": code, "user": model.token.key}
     response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
 
     with open("content.html", "w") as f:
@@ -372,10 +412,29 @@ def test_github_callback__with_user__with_email_in_uppercase(
     assert bc.database.list_of("authenticate.ProfileAcademy") == []
 
 
-def test_github_callback__with_bad_user_in_querystring(
-    bc: Breathecode, client: APIClient, github_user_emails: list[str, dict]
+def test_with_bad_user_in_querystring(
+    bc: Breathecode,
+    client: APIClient,
+    github_user_emails: list[str, dict],
+    http: staging.HTTP,
+    github_token: str,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     user_kwargs = {"email": github_user_emails[0]["email"].upper()}
     role_kwargs = {"slug": "student", "name": "Student"}
     model = bc.database.create(
@@ -401,13 +460,29 @@ def test_github_callback__with_bad_user_in_querystring(
     ]
 
 
-def test_github_callback__with_user(
+def test_with_user(
     bc: Breathecode,
     client: APIClient,
     github_user: dict,
     github_token: str,
+    http: staging.HTTP,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     user_kwargs = {"email": "JDEFREITASPINTO@GMAIL.COM"}
     role_kwargs = {"slug": "student", "name": "Student"}
     model = bc.database.create(
@@ -453,13 +528,29 @@ def test_github_callback__with_user(
     ]
 
 
-def test_github_callback__with_user__profile_without_avatar_url(
+def test_with_user__profile_without_avatar_url(
     bc: Breathecode,
     client: APIClient,
     github_user: dict,
     github_token: str,
+    http: staging.HTTP,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     user_kwargs = {"email": "JDEFREITASPINTO@GMAIL.COM"}
     role_kwargs = {"slug": "student", "name": "Student"}
     model = bc.database.create(
@@ -513,13 +604,29 @@ def test_github_callback__with_user__profile_without_avatar_url(
     ]
 
 
-def test_github_callback__with_user__profile_with_avatar_url(
+def test_with_user__profile_with_avatar_url(
     bc: Breathecode,
     client: APIClient,
     github_user: dict,
     github_token: str,
+    http: staging.HTTP,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     user_kwargs = {"email": "JDEFREITASPINTO@GMAIL.COM"}
     role_kwargs = {"slug": "student", "name": "Student"}
     profile = {"avatar_url": bc.fake.url()}
@@ -574,13 +681,29 @@ def test_github_callback__with_user__profile_with_avatar_url(
     ]
 
 
-def test_github_callback__with_user_different_email__without_credetials_of_github__without_cohort_user(
+def test_with_user_different_email__without_credetials_of_github__without_cohort_user(
     bc: Breathecode,
     client: APIClient,
     github_user: dict,
     github_token: str,
+    http: staging.HTTP,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     user = {"email": "FJOSE123@GMAIL.COM"}
     role = {"slug": "student", "name": "Student"}
     model = bc.database.create(role=role, user=user, profile_academy=True, token=True)
@@ -624,13 +747,29 @@ def test_github_callback__with_user_different_email__without_credetials_of_githu
     ]
 
 
-def test_github_callback__with_user_different_email__without_credetials_of_github__with_cohort_user(
+def test_with_user_different_email__without_credetials_of_github__with_cohort_user(
     bc: Breathecode,
     client: APIClient,
     github_user: dict,
     github_token: str,
+    http: staging.HTTP,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     user = {"email": "FJOSE123@GMAIL.COM"}
     role = {"slug": "student", "name": "Student"}
     model = bc.database.create(role=role, user=user, profile_academy=True, cohort_user=1, token=True)
@@ -674,16 +813,32 @@ def test_github_callback__with_user_different_email__without_credetials_of_githu
     ]
 
 
-def test_github_callback__with_user_different_email__with_credentials_of_github__without_cohort_user(
+def test_with_user_different_email__with_credentials_of_github__without_cohort_user(
     bc: Breathecode,
     client: APIClient,
     github_user: dict,
     github_token: str,
+    http: staging.HTTP,
 ):
-    """Test /github/callback"""
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     users = [{"email": "FJOSE123@GMAIL.COM"}, {"email": "jdefreitaspinto@gmail.com"}]
     role = {"slug": "student", "name": "Student"}
-    credentials_github = {"github_id": 3018142}
+    credentials_github = {"github_id": 3018142, "granted": True, "scopes": "gist repo"}
     token = {"user_id": 2}
     model = bc.database.create(
         role=role, user=users, profile_academy=True, credentials_github=credentials_github, token=token
@@ -730,7 +885,7 @@ def test_github_callback__with_user_different_email__with_credentials_of_github_
     ]
 
 
-def test_github_callback__with_user_different_email__with_credentials_of_github__with_cohort_user(
+def test_with_user_different_email__with_credentials_of_github__with_cohort_user(
     bc: Breathecode,
     client: APIClient,
     http: staging.HTTP,
@@ -738,9 +893,287 @@ def test_github_callback__with_user_different_email__with_credentials_of_github_
     github_token: str,
 ):
 
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
     users = [{"email": "FJOSE123@GMAIL.COM"}, {"email": "jdefreitaspinto@gmail.com"}]
     role = {"slug": "student", "name": "Student"}
     credentials_github = {"github_id": 3018142}
+    token = {"user_id": 2}
+    cohort_user = {"user_id": 2}
+    model = bc.database.create(
+        role=role,
+        user=users,
+        cohort_user=cohort_user,
+        profile_academy=True,
+        credentials_github=credentials_github,
+        token=token,
+    )
+
+    http.post(
+        "https://rigobot.herokuapp.com/v1/auth/invite",
+        data={"organization": "4geeks", "user_token": model.token.key},
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {},
+        status=200,
+    )
+
+    original_url_callback = "https://google.co.ve"
+    token_pattern = re.compile("^" + original_url_callback.replace(".", r"\.") + r"\?token=[0-9a-zA-Z]{,40}$")
+    code = "Konan"
+
+    token = model.token
+
+    url = reverse_lazy("authenticate:github_callback")
+    params = {"url": original_url_callback, "code": code, "user": token}
+    response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert bool(token_pattern.match(response.url)) == True
+
+    assert bc.database.list_of("auth.User") == bc.format.to_dict(model.user)
+
+    assert bc.database.list_of("authenticate.Profile") == [
+        get_profile_fields(
+            data={
+                "user_id": 2,
+                **pick_github_data(github_user, fields=["blog", "bio", "avatar_url", "twitter_username"]),
+            }
+        ),
+    ]
+    assert bc.database.list_of("authenticate.CredentialsGithub") == [
+        get_credentials_github_fields(
+            data={
+                "user_id": 2,
+                "token": github_token,
+                **pick_github_data(
+                    github_user,
+                    fields=["blog", "bio", "avatar_url", "twitter_username", "login", "company", "name", "email"],
+                    overwrite={"login": "username"},
+                ),
+            }
+        ),
+    ]
+
+    assert bc.database.list_of("authenticate.ProfileAcademy") == [
+        bc.format.to_dict(model.profile_academy),
+        {
+            "academy_id": 1,
+            "address": None,
+            "email": "jdefreitaspinto@gmail.com",
+            "first_name": model.user[1].first_name,
+            "id": 2,
+            "last_name": model.user[1].last_name,
+            "phone": "",
+            "role_id": "student",
+            "status": "ACTIVE",
+            "user_id": 2,
+        },
+    ]
+
+
+def test_no_token(
+    bc: Breathecode,
+    client: APIClient,
+    http: staging.HTTP,
+    github_user: dict,
+    github_token: str,
+):
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
+    users = [{"email": "FJOSE123@GMAIL.COM"}, {"email": "jdefreitaspinto@gmail.com"}]
+    role = {"slug": "student", "name": "Student"}
+    credentials_github = {"github_id": 3018142}
+    cohort_user = {"user_id": 2}
+    model = bc.database.create(
+        role=role,
+        user=users,
+        cohort_user=cohort_user,
+        profile_academy=True,
+        credentials_github=credentials_github,
+    )
+
+    # http.post(
+    #     "https://rigobot.herokuapp.com/v1/auth/invite",
+    #     data={"organization": "4geeks", "user_token": model.token.key},
+    #     headers={"Accept": "application/json"},
+    #     timeout=30,
+    # ).response(
+    #     {},
+    #     status=200,
+    # )
+
+    original_url_callback = "https://google.co.ve"
+    code = "Konan"
+
+    url = reverse_lazy("authenticate:github_callback")
+    params = {"url": original_url_callback, "code": code}
+    response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
+
+    assert response.status_code == status.HTTP_302_FOUND
+
+    token = bc.database.get("authenticate.Token", pk=1, dict=False)
+    assert response.url == f"/v1/auth/github/{token.key}?scope=repo%20user&url=https://google.co.ve"
+
+    assert bc.database.list_of("auth.User") == bc.format.to_dict(model.user)
+
+    assert bc.database.list_of("authenticate.Profile") == []
+    assert bc.database.list_of("authenticate.CredentialsGithub") == [
+        get_credentials_github_fields(
+            data={
+                "user_id": 1,
+                "token": github_token,
+                "granted": False,
+                **pick_github_data(
+                    github_user,
+                    fields=["blog", "bio", "avatar_url", "twitter_username", "login", "company", "name", "email"],
+                    overwrite={"login": "username"},
+                ),
+            }
+        ),
+    ]
+
+    assert bc.database.list_of("authenticate.ProfileAcademy") == [
+        bc.format.to_dict(model.profile_academy),
+    ]
+
+
+def test_scopes_does_not_match(
+    bc: Breathecode,
+    client: APIClient,
+    http: staging.HTTP,
+    github_user: dict,
+    github_token: str,
+):
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo", "token_type": "bearer"},
+        status=200,
+    )
+
+    users = [{"email": "FJOSE123@GMAIL.COM"}, {"email": "jdefreitaspinto@gmail.com"}]
+    role = {"slug": "student", "name": "Student"}
+    credentials_github = {"github_id": 3018142}
+    token = {"user_id": 2}
+    cohort_user = {"user_id": 2}
+    model = bc.database.create(
+        role=role,
+        user=users,
+        cohort_user=cohort_user,
+        profile_academy=True,
+        credentials_github=credentials_github,
+        token=token,
+    )
+
+    http.post(
+        "https://rigobot.herokuapp.com/v1/auth/invite",
+        data={"organization": "4geeks", "user_token": model.token.key},
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {},
+        status=200,
+    )
+
+    original_url_callback = "https://google.co.ve"
+    code = "Konan"
+
+    token = model.token
+
+    url = reverse_lazy("authenticate:github_callback")
+    params = {"url": original_url_callback, "code": code, "user": token}
+    response = client.get(f"{url}?{urllib.parse.urlencode(params)}")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    assert response.url == f"/v1/auth/github/{model.token.key}?scope=repo&url=https://google.co.ve"
+
+    assert bc.database.list_of("auth.User") == bc.format.to_dict(model.user)
+
+    assert bc.database.list_of("authenticate.Profile") == []
+    assert bc.database.list_of("authenticate.CredentialsGithub") == [
+        get_credentials_github_fields(
+            data={
+                "user_id": 2,
+                "token": github_token,
+                "granted": False,
+                **pick_github_data(
+                    github_user,
+                    fields=["blog", "bio", "avatar_url", "twitter_username", "login", "company", "name", "email"],
+                    overwrite={"login": "username"},
+                ),
+            }
+        ),
+    ]
+
+    assert bc.database.list_of("authenticate.ProfileAcademy") == [
+        bc.format.to_dict(model.profile_academy),
+    ]
+
+
+def test_scopes_not_granted(
+    bc: Breathecode,
+    client: APIClient,
+    http: staging.HTTP,
+    github_user: dict,
+    github_token: str,
+):
+
+    http.post(
+        "https://github.com/login/oauth/access_token",
+        data={
+            "client_id": "123456",
+            "client_secret": "123456",
+            "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+            "code": "Konan",
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    ).response(
+        {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+        status=200,
+    )
+
+    users = [{"email": "FJOSE123@GMAIL.COM"}, {"email": "jdefreitaspinto@gmail.com"}]
+    role = {"slug": "student", "name": "Student"}
+    credentials_github = {"github_id": 3018142, "granted": False}
     token = {"user_id": 2}
     cohort_user = {"user_id": 2}
     model = bc.database.create(

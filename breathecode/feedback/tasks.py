@@ -1,5 +1,5 @@
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
@@ -12,6 +12,7 @@ from task_manager.django.decorators import task
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.models import Token
+from breathecode.events.models import Event, EventCheckin, LiveClass
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.notify import actions as notify_actions
 from breathecode.utils import TaskPriority, getLogger
@@ -33,7 +34,12 @@ IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 def build_question(answer):
     lang = answer.lang.lower()
     question = {"title": "", "lowest": "", "highest": ""}
-    if answer.mentorship_session is not None:
+    if answer.question_by_slug is not None and answer.question_by_slug != "":
+        slug = answer.question_by_slug.lower()
+        question["title"] = strings[lang][slug]["title"]
+        question["lowest"] = strings[lang][slug]["lowest"]
+        question["highest"] = strings[lang][slug]["highest"]
+    elif answer.mentorship_session is not None:
         question["title"] = strings[lang]["session"]["title"].format(
             f"{answer.mentorship_session.mentor.user.first_name} {answer.mentorship_session.mentor.user.last_name}"
         )
@@ -43,6 +49,10 @@ def build_question(answer):
         question["title"] = strings[lang]["event"]["title"]
         question["lowest"] = strings[lang]["event"]["lowest"]
         question["highest"] = strings[lang]["event"]["highest"]
+    elif answer.live_class is not None:
+        question["title"] = strings[lang]["live_class"]["title"]
+        question["lowest"] = strings[lang]["live_class"]["lowest"]
+        question["highest"] = strings[lang]["live_class"]["highest"]
     elif answer.mentor is not None:
         question["title"] = strings[lang]["mentor"]["title"].format(
             answer.mentor.first_name + " " + answer.mentor.last_name
@@ -63,11 +73,6 @@ def build_question(answer):
         question["title"] = strings[lang]["academy"]["title"].format(answer.academy.name)
         question["lowest"] = strings[lang]["academy"]["lowest"]
         question["highest"] = strings[lang]["academy"]["highest"]
-    elif answer.question_by_slug is not None and answer.question_by_slug != "":
-        slug = answer.question_by_slug.lower()
-        question["title"] = strings[lang][slug]["title"]
-        question["lowest"] = strings[lang][slug]["lowest"]
-        question["highest"] = strings[lang][slug]["highest"]
 
     return question
 
@@ -353,3 +358,143 @@ def send_mentorship_session_survey(session_id, **_):
         if notify_actions.send_email_message("nps_survey", session.mentee.email, data, academy=session.mentor.academy):
             answer.sent_at = timezone.now()
             answer.save()
+
+
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def send_event_survey(event_id, **_):
+    logger.info("Starting event survey")
+    event = Event.objects.filter(id=event_id).first()
+    if event is None:
+        raise RetryTask("Event not found")
+
+    if not event.ended_at:
+        raise AbortTask("This event hasn't finished")
+
+    if Answer.objects.filter(event__id=event.id).exists():
+        raise AbortTask("There is already a survey for this event")
+
+    try:
+        checkins = EventCheckin.objects.filter(event=event, attended_at__isnull=False, attendee__isnull=False)
+        for checkin in checkins:
+            answer = Answer(event=event, user=checkin.attendee, status="SENT", lang=event.lang, academy=event.academy)
+            question = build_question(answer)
+            answer.title = question["title"]
+            answer.lowest = question["lowest"]
+            answer.highest = question["highest"]
+            answer.save()
+
+            token, _ = Token.get_or_create(answer.user, token_type="temporal", hours_length=48)
+
+            # lazyload api url in test environment
+            api_url = API_URL if ENV != "test" else os.getenv("API_URL", "")
+            data = {
+                "SUBJECT": (
+                    question["survey_subject"]
+                    if "survey_subject" in question
+                    else strings[answer.lang.lower()]["survey_subject"]
+                ),
+                "MESSAGE": answer.title,
+                "TRACKER_URL": f"{api_url}/v1/feedback/answer/{answer.id}/tracker.png",
+                "BUTTON": strings[answer.lang.lower()]["button_label"],
+                "LINK": f"https://nps.4geeks.com/{answer.id}?token={token.key}",
+            }
+
+            if notify_actions.send_email_message("nps_survey", answer.user.email, data, academy=event.academy):
+                answer.sent_at = timezone.now()
+                answer.save()
+
+    except Exception as e:
+        raise AbortTask(str(e))
+
+
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def send_liveclass_survey(liveclass_id, **_):
+    logger.info("Starting liveclass survey")
+    live = LiveClass.objects.filter(id=liveclass_id).first()
+    if live is None:
+        raise RetryTask("LiveClass doesn't found")
+
+    if not live.ended_at:
+        raise AbortTask("This class hasn't finished")
+
+    if timezone.now() - live.ended_at > timedelta(days=1):
+        raise AbortTask("This live class finished more than one day ago")
+
+    if Answer.objects.filter(live_class__id=live.id).exists():
+        raise AbortTask("There is already a survey for this live class")
+
+    try:
+
+        cohort = live.cohort_time_slot.cohort
+        history_log = cohort.history_log or {}
+        attended_user_ids = []
+
+        for day_log in history_log.values():
+            day_creation_datetime = datetime.fromisoformat(day_log.get("updated_at"))
+            if day_creation_datetime - live.ended_at < timedelta(days=1):
+                attended_user_ids = day_log.get("attendance_ids", [])
+                break
+
+        survey = Survey(cohort=cohort, lang=cohort.language.lower(), is_customized=True)
+        survey.sent_at = timezone.now()
+        survey.save()
+        for user_id in attended_user_ids:
+            cu = CohortUser.objects.filter(user_id=user_id, cohort=cohort, role="STUDENT").first()
+            if cu is not None:
+                teacher = CohortUser.objects.filter(cohort=cohort, role="TEACHER").first()
+                answer = Answer(
+                    live_class=live,
+                    user=cu.user,
+                    status="SENT",
+                    survey=survey,
+                    lang=cohort.language,
+                    academy=cohort.academy,
+                    cohort=cohort,
+                )
+                question = build_question(answer)
+                answer.title = question["title"]
+                answer.lowest = question["lowest"]
+                answer.highest = question["highest"]
+                answer.save()
+
+                questions = ["live_class_mentor", "live_class_mentor_communication", "live_class_mentor_practice"]
+                for slug in questions:
+                    a = Answer(
+                        question_by_slug=slug,
+                        live_class=live,
+                        user=cu.user,
+                        status="SENT",
+                        survey=survey,
+                        lang=cohort.language,
+                        mentor=teacher.user,
+                        academy=cohort.academy,
+                        cohort=cohort,
+                    )
+                    _q = build_question(a)
+                    a.title = _q["title"]
+                    a.lowest = _q["lowest"]
+                    a.highest = _q["highest"]
+                    a.save()
+
+                token, _ = Token.get_or_create(answer.user, token_type="temporal", hours_length=48)
+
+                # lazyload api url in test environment
+                api_url = API_URL if ENV != "test" else os.getenv("API_URL", "")
+                data = {
+                    "SUBJECT": (
+                        question["survey_subject"]
+                        if "survey_subject" in question
+                        else strings[survey.lang.lower()]["survey_subject"]
+                    ),
+                    "MESSAGE": answer.title,
+                    "TRACKER_URL": f"{api_url}/v1/feedback/survey/{survey.id}/tracker.png",
+                    "BUTTON": strings[survey.lang.lower()]["button_label"],
+                    "LINK": f"https://nps.4geeks.com/survey/{survey.id}?token={token.key}",
+                }
+
+                if notify_actions.send_email_message("nps_survey", answer.user.email, data, academy=cohort.academy):
+                    answer.sent_at = timezone.now()
+                    answer.save()
+
+    except LockError:
+        raise RetryTask("Could not acquire lock for activity, operation timed out.")

@@ -1,13 +1,15 @@
 import logging
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 from breathecode.assignments.models import AssignmentTelemetry, LearnPackWebhook
+from breathecode.assignments.utils.indicators import EngagementIndicator, FrustrationIndicator, UserIndicatorCalculator
 
 
 def batch(self, webhook: LearnPackWebhook):
     # lazyload to fix circular import
-    from breathecode.registry.models import Asset
     from breathecode.assignments.models import Task
+    from breathecode.registry.models import Asset
 
     asset = None
     if "asset_id" in webhook.payload:
@@ -36,7 +38,18 @@ def batch(self, webhook: LearnPackWebhook):
         for a in assets:
             a.telemetry = telemetry
             a.save()
-
     else:
         telemetry.telemetry = webhook.payload
         telemetry.save()
+
+    # Calculate indicators
+    indicators = [EngagementIndicator(), FrustrationIndicator()]
+    calculator = UserIndicatorCalculator(webhook.payload, indicators)
+    scores = calculator.calculate_indicators()
+
+    telemetry.engagement_score = scores["global"]["indicators"]["EngagementIndicator"]
+    telemetry.frustration_score = scores["global"]["indicators"]["FrustrationIndicator"]
+    telemetry.metrics = scores["global"]["metrics"]
+    telemetry.total_time = timedelta(seconds=scores["global"]["metrics"]["total_time_on_platform"])
+    telemetry.completion_rate = scores["global"]["metrics"]["completion_rate"]
+    telemetry.save()

@@ -447,6 +447,7 @@ class GetCourseSerializer(GetCourseSmallSerializer):
     academy = GetAcademySmallSerializer()
     cohort = serpy.MethodField()
     status = serpy.Field()
+    is_listed = serpy.Field()
     visibility = serpy.Field()
 
     def get_syllabus(self, obj):

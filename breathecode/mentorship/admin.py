@@ -42,7 +42,7 @@ def use_daily(modeladmin, request, queryset):
 class ServiceAdmin(admin.ModelAdmin):
     list_display = ["slug", "name", "status", "academy"]
     search_fields = ["slug", "name"]
-    list_filter = ["academy__slug", "status"]
+    list_filter = ["academy__slug", "status", "video_provider"]
     actions = [use_google_meet, use_daily]
 
 
@@ -166,7 +166,7 @@ class MentorAdmin(admin.ModelAdmin):
     list_display = ["slug", "user", "name", "email", "current_status", "unique_url", "meet_url", "academy"]
     raw_id_fields = ["user", "services"]
     search_fields = ["name", "user__first_name", "user__last_name", "email", "user__email", "slug"]
-    list_filter = ["services__academy__slug", "status", "services__slug"]
+    list_filter = ["services__academy__slug", "status", "services__slug", "services__video_provider"]
     readonly_fields = ("token",)
     filter_horizontal = ("syllabus", "services")
     actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(
@@ -280,6 +280,15 @@ def release_sessions_from_bill(modeladmin, request, queryset):
 class MentorshipBillAdmin(admin.ModelAdmin):
     list_display = ("id", "mentor", "status", "total_duration_in_hours", "total_price", "paid_at", "invoice_url")
     list_filter = ["status"]
+    search_fields = [
+        "mentor__name",
+        "mentor__user__first_name",
+        "mentor__user__last_name",
+        "mentor__email",
+        "mentor__user__email",
+        "mentor__slug",
+    ]
+
     actions = [release_sessions_from_bill] + change_field(["DUE", "APPROVED", "PAID", "IGNORED"], name="status")
 
     def invoice_url(self, obj):

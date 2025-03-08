@@ -9,7 +9,7 @@ from slugify import slugify
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, Syllabus
 from breathecode.utils.validators.language import validate_language_code
 
-from .signals import event_status_updated, new_event_attendee, new_event_order
+from .signals import event_status_updated, liveclass_ended, new_event_attendee, new_event_order
 
 PENDING = "PENDING"
 PERSISTED = "PERSISTED"
@@ -360,12 +360,14 @@ class EventCheckin(models.Model):
         if self.__old_status != self.status:
             status_updated = True
 
-        super().save(*args, **kwargs)
+        _result = super().save(*args, **kwargs)
 
         if creating:
             new_event_order.send_robust(instance=self, sender=EventCheckin)
         elif status_updated and self.status == "DONE":
             new_event_attendee.send_robust(instance=self, sender=EventCheckin)
+
+        return _result
 
 
 # PENDING = 'PENDING'
@@ -405,6 +407,10 @@ class LiveClass(models.Model):
     It represents a live class that will be built from a CohortTimeSlot
     """
 
+    def __init__(self, *args, **kwargs):
+        super(LiveClass, self).__init__(*args, **kwargs)
+        self.__old_ended_at = self.ended_at
+
     cohort_time_slot = models.ForeignKey(CohortTimeSlot, on_delete=models.CASCADE)
     log = models.JSONField(default=dict)
     remote_meeting_url = models.URLField()
@@ -428,4 +434,13 @@ class LiveClass(models.Model):
         if not self.pk:
             self.hash = self._get_hash()
 
-        return super().save(*args, **kwargs)
+        is_ending = False
+        if self.__old_ended_at is None and self.__old_ended_at != self.ended_at:
+            is_ending = True
+
+        _result = super().save(*args, **kwargs)
+
+        if is_ending:
+            liveclass_ended.send_robust(instance=self, sender=LiveClass)
+
+        return _result

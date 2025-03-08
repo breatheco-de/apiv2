@@ -1,19 +1,22 @@
 from __future__ import absolute_import, unicode_literals
 
-# keeps this adobe
-import newrelic.agent
-
-newrelic.agent.initialize()
-
 # the rest of your Celery file contents go here
 import os
 from datetime import UTC, datetime, timedelta
 from typing import TypedDict
 
 from celery import Celery
+
+# from celery import Celery,
 from celery.signals import worker_process_init
 
 from breathecode.setup import get_redis_config
+
+# # keeps this adobe
+# import newrelic.agent
+
+# newrelic.agent.initialize()
+
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
@@ -21,7 +24,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
 # django.setup()
 
 settings, kwargs, REDIS_URL = get_redis_config()
-CLOUDAMQP_URL = os.getenv("CLOUDAMQP_URL", "")
+ENV_KEY = os.getenv("RMQ_URL_KEY", "CLOUDAMQP_URL")
+CLOUDAMQP_URL = os.getenv(ENV_KEY, "")
 
 # Decide SSL usage by checking the scheme
 if CLOUDAMQP_URL.startswith("amqps://"):
@@ -40,11 +44,14 @@ if os.getenv("ENV") == "test":
 if os.getenv("ENV") == "test" or not CLOUDAMQP_URL:
     BROKER_URL = REDIS_URL
 
+
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
 app.config_from_object("django.conf:settings")
+
+
 app.conf.update(
     broker_url=BROKER_URL,
     result_backend=REDIS_URL,
@@ -53,7 +60,12 @@ app.conf.update(
     result_expires=10,
     worker_max_memory_per_child=int(os.getenv("CELERY_MAX_MEMORY_PER_WORKER", "470000")),
     worker_max_tasks_per_child=int(os.getenv("CELERY_MAX_TASKS_PER_WORKER", "1000")),
+    worker_disable_rate_limits=True,
+    broker_connection_retry_on_startup=True,
+    worker_cancel_long_running_tasks_on_connection_loss=True,
+    broker_heartbeat=30,
 )
+
 
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()

@@ -374,7 +374,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "SUBJECT": "Your installment at 4Geeks was successfully charged",
                         "MESSAGE": "The amount was $0.0",
                         "BUTTON": "See the invoice",
-                        "LINK": os.getenv("APP_URL")[:-1] + "/plan-financing/1",
+                        "LINK": os.getenv("APP_URL")[:-1] + "/paymentmethod",
                     },
                     academy=model.academy,
                 )
@@ -458,7 +458,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                     "SUBJECT": "Your 4Geeks subscription could not be renewed",
                     "MESSAGE": "Please update your payment methods",
                     "BUTTON": "Please update your payment methods",
-                    "LINK": os.getenv("APP_URL")[:-1] + "/plan-financing/1",
+                    "LINK": os.getenv("APP_URL")[:-1] + "/paymentmethod",
                 },
                 academy=model.academy,
             )

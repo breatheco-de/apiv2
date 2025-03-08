@@ -6,8 +6,9 @@ from django.db import models
 import breathecode.feedback.signals as signals
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.authenticate.models import Token
-from breathecode.events.models import Event
+from breathecode.events.models import Event, LiveClass
 from breathecode.mentorship.models import MentorshipSession
+from breathecode.registry.models import Asset
 
 __all__ = ["UserProxy", "CohortUserProxy", "CohortProxy", "Survey", "Answer"]
 
@@ -29,6 +30,16 @@ class CohortProxy(Cohort):
     class Meta:
         proxy = True
 
+
+# class AcademyFeedbackSettings(models.Model):
+#     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, related_name='feedback_settings')
+#     survey_translations = models.JSONField(help_text="String translations for all available surveys for this academy.")
+#     allowed_surveys = models.CharField(max_length=255, help_text="Comma separated list of allowed survey slugs.")
+#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+#     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+#     def __str__(self):
+#         return f"Feedback settings for {self.academy.name}"
 
 PENDING = "PENDING"
 SENT = "SENT"
@@ -53,9 +64,12 @@ class Survey(models.Model):
     lang = models.CharField(max_length=3, blank=True, default="en")
 
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
+    is_customized = models.BooleanField(
+        default=False, help_text="Customized surveys are not based on the default questions for a cohort"
+    )
 
-    max_assistants_to_ask = models.IntegerField(default=2)
-    max_teachers_to_ask = models.IntegerField(default=1)
+    max_assistants_to_ask = models.IntegerField(default=2, blank=True, null=True)
+    max_teachers_to_ask = models.IntegerField(default=1, blank=True, null=True)
 
     scores = models.JSONField(default=None, blank=True, null=True)
     response_rate = models.FloatField(default=None, blank=True, null=True)
@@ -87,9 +101,6 @@ SURVEY_STATUS = (
     (EXPIRED, "Expired"),
 )
 
-PLATFORM = "PLATFORM"
-QUESTION_SLUGS = ((PLATFORM, "Platform"),)
-
 
 class Answer(models.Model):
 
@@ -102,8 +113,12 @@ class Answer(models.Model):
     highest = models.CharField(max_length=50, default="very likely")
     lang = models.CharField(max_length=3, blank=True, default="en")
 
-    question_by_slug = models.CharField(max_length=30, choices=QUESTION_SLUGS, default=None, blank=True, null=True)
+    question_by_slug = models.CharField(
+        max_length=100, default=None, blank=True, null=True, help_text="Ideal to create new standarized questions"
+    )
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    live_class = models.ForeignKey(LiveClass, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    asset = models.ForeignKey(Asset, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     mentorship_session = models.ForeignKey(
         MentorshipSession, on_delete=models.SET_NULL, default=None, blank=True, null=True
     )

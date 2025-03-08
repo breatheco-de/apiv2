@@ -6,6 +6,7 @@ import urllib.parse
 
 from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
+from django.contrib.admin.models import LogEntry
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Q, QuerySet
 from django.utils import timezone
@@ -538,3 +539,38 @@ class GoogleWebhookAdmin(admin.ModelAdmin):
     search_fields = ["status", "status_text"]
     list_filter = ("type", "status")
     actions = []
+
+
+@admin.register(LogEntry)
+class LogEntryAdmin(admin.ModelAdmin):
+    list_display = ("action_time", "user", "content_type", "object_id", "object_repr", "action_flag", "change_message")
+    readonly_fields = (
+        "action_time",
+        "user",
+        "content_type",
+        "object_id",
+        "object_repr",
+        "action_flag",
+        "change_message",
+    )
+    search_fields = [
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "content_type__app_label",
+        "content_type__model",
+    ]
+    list_filter = ("action_flag", "content_type")
+    raw_id_fields = ["user"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user", "content_type")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -77,6 +77,21 @@ def get_survey_questions(request, survey_id=None):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@api_view(["GET"])
+def get_survey(request, survey_id=None):
+
+    survey = Survey.objects.filter(id=survey_id).first()
+    if survey is None:
+        raise ValidationException("Survey not found", 404)
+
+    utc_now = timezone.now()
+    if utc_now > survey.sent_at + survey.duration:
+        raise ValidationException("This survey has already expired", 400)
+
+    serializer = SurveySerializer(survey)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 # Create your views here.
 class GetAnswerView(APIView):
     """
@@ -190,7 +205,7 @@ class AcademyAnswerView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademySurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """

@@ -23,6 +23,7 @@ from breathecode.authenticate.actions import get_user_language
 
 from ..views import (
     AcademyAuthSettingsView,
+    AcademyAuthSettingsLogView,
     AcademyGithubSyncView,
     AcademyInviteView,
     AcademyTokenView,
@@ -155,6 +156,8 @@ urlpatterns = [
     path("user/me/invite", MeInviteView.as_view(), name="user_me_invite"),
     path("user/me/invite/<slug:new_status>", MeInviteView.as_view(), name="user_me_invite_status"),
     path("academy/settings", AcademyAuthSettingsView.as_view(), name="academy_settings"),
+    path("academy/settings/log", AcademyAuthSettingsLogView.as_view(), name="academy_settings_log"),
+    path("google", get_google_token, name="google_authentication"),
     path("google/webhook", receive_google_webhook, name="google_webhook"),
     # google authentication oath2.0
     path("google/callback", save_google_token, name="google_callback"),

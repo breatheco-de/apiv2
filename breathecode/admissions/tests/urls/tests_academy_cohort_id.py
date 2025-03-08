@@ -1344,7 +1344,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         url = reverse_lazy("admissions:academy_cohort_id", kwargs={"cohort_id": "they-killed-kenny"})
         response = self.client.get(url)
 
-        self.assertEqual(response.data, None)
+        self.assertEqual(response.data, {"status_code": 404, "detail": "Cohort they-killed-kenny not found"})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 

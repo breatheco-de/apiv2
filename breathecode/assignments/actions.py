@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import timedelta
 
 import requests
 from capyc.rest_framework.exceptions import ValidationException
@@ -8,6 +9,7 @@ from task_manager.core.exceptions import AbortTask
 from breathecode.admissions.models import CohortUser
 
 from .models import Task
+from .utils.indicators import EngagementIndicator, FrustrationIndicator, UserIndicatorCalculator
 
 logger = logging.getLogger(__name__)
 
@@ -143,3 +145,18 @@ def validate_task_for_notifications(task: Task) -> bool:
 
     if language not in NOTIFICATION_STRINGS:
         raise AbortTask(f"The language {language} is not implemented in teacher_task_notification")
+
+
+def calculate_telemetry_indicator(telemetry):
+    indicators = [EngagementIndicator(), FrustrationIndicator()]
+
+    if telemetry.telemetry:
+        calculator = UserIndicatorCalculator(telemetry.telemetry, indicators)
+        scores = calculator.calculate_indicators()
+
+        telemetry.engagement_score = scores["global"]["indicators"]["EngagementIndicator"]
+        telemetry.frustration_score = scores["global"]["indicators"]["FrustrationIndicator"]
+        telemetry.metrics = scores
+        telemetry.total_time = timedelta(seconds=scores["global"]["metrics"]["total_time_on_platform"])
+        telemetry.completion_rate = scores["global"]["metrics"]["completion_rate"]
+        telemetry.save()

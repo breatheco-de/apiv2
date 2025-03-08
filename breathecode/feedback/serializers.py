@@ -7,7 +7,7 @@ import breathecode.feedback.actions as actions
 from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
 
-from .actions import send_survey_group
+from .actions import send_cohort_survey_group
 from .models import Answer, Review, Survey
 
 
@@ -15,6 +15,14 @@ class GetAcademySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
+
+class MentorshipSessionSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+    starts_at = serpy.Field()
+    ends_at = serpy.Field()
 
 
 class GetCohortSerializer(serpy.Serializer):
@@ -77,8 +85,22 @@ class EventTypeSmallSerializer(serpy.Serializer):
     lang = serpy.Field()
 
 
+class LiveClassSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+
+
+class AssetSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+
+
 class AnswerSerializer(serpy.Serializer):
     id = serpy.Field()
+    question_by_slug = serpy.Field()
     title = serpy.Field()
     lowest = serpy.Field()
     highest = serpy.Field()
@@ -93,6 +115,9 @@ class AnswerSerializer(serpy.Serializer):
     cohort = GetCohortSerializer(required=False)
     mentor = UserSerializer(required=False)
     event = EventTypeSmallSerializer(required=False)
+    live_class = LiveClassSmallSerializer(required=False)
+    asset = AssetSmallSerializer(required=False)
+    mentorship_session = MentorshipSessionSmallSerializer(required=False)
 
 
 class SurveySmallSerializer(serpy.Serializer):
@@ -262,7 +287,7 @@ class SurveySerializer(serializers.ModelSerializer):
         result = super().create(validated_data)
 
         if send_now:
-            actions.send_survey_group(survey=result)
+            actions.send_cohort_survey_group(survey=result)
 
         return result
 
@@ -299,7 +324,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
         result = super().update(instance, validated_data)
 
         if send_now:
-            send_survey_group(survey=result)
+            send_cohort_survey_group(survey=result)
 
         return result
 

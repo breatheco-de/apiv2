@@ -361,6 +361,7 @@ class AssetMidSerializer(AssetSerializer):
     with_video = serpy.Field()
     updated_at = serpy.Field()
     agent = serpy.Field()
+    config = serpy.Field()
 
 
 class AssetBigSerializer(AssetMidSerializer):
@@ -470,6 +471,8 @@ class AssetExpandableSerializer(AssetMidSerializer):
                 obj = filter[0]
                 if "technologies" in self.expand:
                     elem["technologies"] = self.format_technologies(obj)
+
+                elem["template_url"] = obj.template_url if hasattr(obj, "template_url") else None
 
                 if "readme" in self.expand:
                     url = obj.readme_url
@@ -618,6 +621,8 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
         if "lang" not in validated_data or validated_data["lang"] is None:
             raise ValidationException("Asset is missing a language", slug="no-language")
+
+        validated_data["lang"] = validated_data["lang"].lower()
 
         if "category" not in data or data["category"] is None:
             if "all_translations" not in validated_data or len(validated_data["all_translations"]) == 0:

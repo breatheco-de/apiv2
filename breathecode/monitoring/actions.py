@@ -5,9 +5,15 @@ import os
 import re
 import sys
 import time
+from functools import lru_cache
 from io import StringIO
+from typing import Callable, Type
 
 import requests
+from capyc.rest_framework.exceptions import ValidationException
+from django.contrib import admin
+from django.db.models import Model, QuerySet
+from django.http import HttpRequest
 from django.utils import timezone
 
 from breathecode.admissions.models import Academy
@@ -16,7 +22,6 @@ from breathecode.services.github import Github
 from breathecode.services.slack.actions.monitoring import render_snooze_script, render_snooze_text_endpoint
 from breathecode.utils import ScriptNotification
 from breathecode.utils.script_notification import WrongScriptConfiguration
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import CSVDownload, Endpoint, RepositorySubscription, RepositoryWebhook, StripeEvent
 
@@ -502,3 +507,43 @@ def add_stripe_webhook(context: dict) -> StripeEvent:
         raise ValidationException("Invalid stripe webhook payload", code=400, slug="invalid-stripe-webhook-payload")
 
     return event
+
+
+class DjangoAdminActions:
+    actions: dict[str, Callable[[Type[admin.ModelAdmin], HttpRequest, QuerySet], None]]
+    model: Type[Model]
+    model_admin: Type[admin.ModelAdmin]
+
+    def __init__(self, model_admin: Type[admin.ModelAdmin], model: Type[Model]):
+        self.actions = {}
+
+        for action in model_admin.actions:
+            if callable(action) is False:
+                continue
+
+            self.actions[action.__name__] = action
+
+        self.model = model
+        self.model_admin = model_admin
+
+    def serialize(self):
+        return {
+            "model": f"{self.model.__module__}.{self.model.__name__}",
+            "model_admin": f"{self.model_admin.__module__}.{self.model_admin.__class__.__name__}",
+            "actions": list(self.actions.keys()),
+            "properties": {
+                "search_fields": list([x for x in self.model_admin.search_fields if isinstance(x, str)]),
+                "list_display": list([x for x in self.model_admin.list_display if isinstance(x, str)]),
+                "list_filter": list([x for x in self.model_admin.list_filter if isinstance(x, str)]),
+            },
+        }
+
+
+@lru_cache(maxsize=1)
+def get_admin_actions():
+    x: dict[str, DjangoAdminActions] = {}
+
+    for model, model_admin in admin.site._registry.items():
+        x[f"{model_admin.__module__}.{model_admin.__class__.__name__}"] = DjangoAdminActions(model_admin, model)
+
+    return x

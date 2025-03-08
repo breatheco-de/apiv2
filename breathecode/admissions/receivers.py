@@ -2,11 +2,11 @@
 import logging
 import re
 from typing import Any, Type
-from asgiref.sync import sync_to_async
 
+from asgiref.sync import sync_to_async
 from django.dispatch import receiver
 
-import breathecode.authenticate.actions as authenticate_actions
+from breathecode.admissions import tasks
 from breathecode.assignments.models import Task
 from breathecode.assignments.signals import revision_status_updated
 from breathecode.certificate.actions import how_many_pending_tasks
@@ -48,19 +48,21 @@ async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
     logger.info("Signal for created cohort user: " + str(instance.id))
     await join_to_micro_cohorts(instance)
 
-    await authenticate_actions.send_webhook(
-        "rigobot",
-        "cohort_user.created",
-        user=instance.user,
-        data={
-            "user": {
-                "id": instance.user.id,
-                "email": instance.user.email,
-                "first_name": instance.user.first_name,
-                "last_name": instance.user.last_name,
-            },
-        },
-    )
+    # await authenticate_actions.send_webhook(
+    #     "rigobot",
+    #     "cohort_user.created",
+    #     user=instance.user,
+    #     data={
+    #         "user": {
+    #             "id": instance.user.id,
+    #             "email": instance.user.email,
+    #             "first_name": instance.user.first_name,
+    #             "last_name": instance.user.last_name,
+    #         },
+    #     },
+    # )
+
+    tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, "student")
 
 
 @receiver(revision_status_updated, sender=Task, weak=False)

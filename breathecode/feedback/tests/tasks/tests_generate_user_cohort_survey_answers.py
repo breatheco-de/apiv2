@@ -35,6 +35,8 @@ def answer(data={}):
         "token_id": None,
         "user_id": 0,
         "question_by_slug": None,
+        "asset_id": None,
+        "live_class_id": None,
         **data,
     }
 
@@ -80,15 +82,17 @@ class SendCohortSurvey(FeedbackTestCase):
 
             answers = [
                 {
-                    "title": f"How has been your experience studying {model.cohort.name} so far?",
+                    "title": f"How has your experience been studying {model.cohort.name} so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": n + 1,
                     "academy_id": n + 1,
                     "token_id": None,
+                    "asset_id": None,
+                    "live_class_id": None,
                 },
                 {
-                    "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
+                    "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
                     "lang": "en",
                     "mentor_id": n + 1,
                     "lowest": "not good",
@@ -108,7 +112,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "academy_id": n + 1,
                 },
                 {
-                    "title": f"How has been your experience with the platform and content so far?",
+                    "title": f"How has your experience been with the platform and content so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": None,
@@ -150,7 +154,7 @@ class SendCohortSurvey(FeedbackTestCase):
 
             answers = [
                 {
-                    "title": f"How has been your experience studying {model.cohort.name} so far?",
+                    "title": f"How has your experience been studying {model.cohort.name} so far?",
                     "lowest": "not good",
                     "cohort_id": n + 1,
                     "academy_id": n + 1,
@@ -158,7 +162,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "token_id": None,
                 },
                 {
-                    "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
+                    "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
                     "lang": "en",
                     "mentor_id": n + 1,
                     "cohort_id": n + 1,
@@ -178,7 +182,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "cohort_id": None,
                 },
                 {
-                    "title": f"How has been your experience with the platform and content so far?",
+                    "title": f"How has your experience been with the platform and content so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": None,
@@ -221,7 +225,7 @@ class SendCohortSurvey(FeedbackTestCase):
 
             answers = [
                 {
-                    "title": f"How has been your experience studying {model.cohort.name} so far?",
+                    "title": f"How has your experience been studying {model.cohort.name} so far?",
                     "lowest": "not good",
                     "cohort_id": n + 1,
                     "academy_id": n + 1,
@@ -236,7 +240,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "cohort_id": None,
                 },
                 {
-                    "title": f"How has been your experience with the platform and content so far?",
+                    "title": f"How has your experience been with the platform and content so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": None,
@@ -281,7 +285,7 @@ class SendCohortSurvey(FeedbackTestCase):
 
             answers = [
                 {
-                    "title": f"How has been your experience studying {model.cohort.name} so far?",
+                    "title": f"How has your experience been studying {model.cohort.name} so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": n + 1,
@@ -289,7 +293,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "token_id": None,
                 },
                 {
-                    "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
+                    "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
                     "lang": "en",
                     "mentor_id": n + 1,
                     "lowest": "not good",
@@ -302,7 +306,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "academy_id": n + 1,
                 },
                 {
-                    "title": f"How has been your experience with your mentor {model.user.first_name} {model.user.last_name} so far?",
+                    "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": n + 1,
@@ -317,7 +321,7 @@ class SendCohortSurvey(FeedbackTestCase):
                     "academy_id": n + 1,
                 },
                 {
-                    "title": f"How has been your experience with the platform and content so far?",
+                    "title": f"How has your experience been with the platform and content so far?",
                     "lowest": "not good",
                     "highest": "very good",
                     "cohort_id": None,

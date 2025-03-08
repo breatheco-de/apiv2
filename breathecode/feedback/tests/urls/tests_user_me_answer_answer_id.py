@@ -237,6 +237,8 @@ def test_answer_id_put_with_all_valid_scores(bc: Breathecode, client: APIClient,
         "mentor": model["answer"].mentor.id,
         "event": model["answer"].event,
         "user": model["answer"].user.id,
+        "asset": None,
+        "live_class": None,
     }
 
     del json["updated_at"]

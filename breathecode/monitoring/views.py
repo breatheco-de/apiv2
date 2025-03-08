@@ -6,11 +6,11 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
 from django.db.models import Q
-from django.http import StreamingHttpResponse
+from django.http import HttpRequest, StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -20,7 +20,7 @@ from breathecode.monitoring import signals
 from breathecode.utils import GenerateLookupsMixin, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 
-from .actions import add_github_webhook, add_stripe_webhook
+from .actions import add_github_webhook, add_stripe_webhook, get_admin_actions
 from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
 from .serializers import (
     CSVDownloadSmallSerializer,
@@ -36,6 +36,46 @@ logger = logging.getLogger(__name__)
 
 def get_stripe_webhook_secret():
     return os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+
+class DjangoAdminView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request: HttpRequest):
+        registry = get_admin_actions()
+        return Response(dict([(k, v.serialize()) for k, v in registry.items()]))
+
+    def post(self, request: HttpRequest):
+
+        arguments = request.data.get("arguments", {})
+        if not isinstance(arguments, dict):
+            raise ValidationException("Arguments must be a dictionary", slug="arguments-must-be-a-dictionary")
+
+        registry = get_admin_actions()
+
+        model_admin = request.data.get("model_admin", "")
+        if model_admin not in registry:
+            raise ValidationException(f"Model admin {model_admin} not found", slug="model-admin-not-found")
+
+        model_admin = registry[model_admin]
+
+        action = request.data.get("action", "")
+        if action not in model_admin.actions:
+            raise ValidationException(f"Action {action} not found", slug="action-not-found")
+
+        action = model_admin.actions.get(action)
+
+        model = model_admin.model
+        model_admin = model_admin.model_admin
+
+        try:
+            qs = model.objects.filter(**arguments)
+            action(model_admin, request, qs)
+
+        except Exception as e:
+            raise ValidationException(f"Error at processing action {action}: {e}", slug="action-error")
+
+        return Response({"success": True})
 
 
 @api_view(["GET"])

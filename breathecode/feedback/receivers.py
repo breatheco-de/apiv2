@@ -3,15 +3,23 @@ from datetime import timedelta
 from typing import Type
 
 from django.dispatch import receiver
+from django.utils import timezone
 
 from breathecode.admissions.models import CohortUser
 from breathecode.admissions.signals import student_edu_status_updated
+from breathecode.events.models import Event, LiveClass
+from breathecode.events.signals import event_status_updated, liveclass_ended
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_saved
 
 from .models import Answer
 from .signals import survey_answered
-from .tasks import process_answer_received, process_student_graduation, send_mentorship_session_survey
+from .tasks import (  # send_liveclass_survey,
+    process_answer_received,
+    process_student_graduation,
+    send_event_survey,
+    send_mentorship_session_survey,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,3 +51,22 @@ def post_mentorin_session_ended(sender: Type[MentorshipSession], instance: Mento
         if duration > timedelta(minutes=5) and instance.mentor and instance.mentee:
             logger.debug(f"Session lasted for {str(duration.seconds/60)} minutes, sending survey")
             send_mentorship_session_survey.delay(instance.id)
+
+
+@receiver(liveclass_ended, sender=LiveClass)
+def post_liveclass_ended(sender: Type[LiveClass], instance: LiveClass, **kwargs):
+
+    if instance.ended_at is not None and (timezone.now() - instance.ended_at) > timedelta(hours=24):
+        logger.debug("LiveClass ended more than 24 hours ago, not sending survey")
+        return
+
+    logger.debug(f"Sending survey survey about live class {instance.id}")
+    # send_liveclass_survey(instance.id)
+
+
+@receiver(event_status_updated, sender=Event)
+def post_event_ended(sender: Type[Event], instance: Event, **kwargs):
+    if instance.status == "FINISHED" and Answer.objects.filter(event__id=instance.id).exists() is False:
+        if instance.ended_at is not None:
+            logger.debug("Sending survey for event")
+            send_event_survey.delay(instance.id)

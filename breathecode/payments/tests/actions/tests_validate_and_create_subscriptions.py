@@ -334,7 +334,7 @@ def test_schedule_plan_financing(
         ),
     ]
 
-    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None)]
+    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[])]
 
     assert len(result) == 2
 

@@ -7,6 +7,7 @@ import string
 import urllib.parse
 from random import randint
 
+import aiohttp
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -44,19 +45,26 @@ def get_app_url():
     return url
 
 
-def get_github_scopes(user):
+def get_github_scopes(user, default_scopes=""):
+    # Start with mandatory "user" scope and add any additional default scopes
+    scopes = {"user", "repo"}  # Always include "user"
+    if default_scopes:  # If default_scopes is not empty
+        scopes.update(default_scopes.split())
 
-    scopes = ["user"]
-
-    belongs_to_academy = ProfileAcademy.objects.filter(user=user).exists()
-    if belongs_to_academy:
-        scopes.append("repo")
+    # belongs_to_academy = ProfileAcademy.objects.filter(user=user).exists()
+    # if belongs_to_academy:
+    #     scopes.add("repo")
 
     owns_github_organization = AcademyAuthSettings.objects.filter(github_owner=user).exists()
     if owns_github_organization:
-        scopes.append("admin:org")
+        scopes.update({"admin:org", "delete_repo"})
 
-    return " ".join(scopes)
+    return " ".join(sorted(scopes))
+
+
+@sync_to_async
+def aget_github_scopes(user, default_scopes=""):
+    return get_github_scopes(user, default_scopes)
 
 
 def get_user(github_id=None, email=None):
@@ -904,6 +912,23 @@ def accept_invite_action(data=None, token=None, lang="en"):
     invite.save()
 
     return invite
+
+
+async def sync_with_rigobot(token_key):
+    rigobot_payload = {"organization": "4geeks", "user_token": token_key}
+    rigobot_host = os.getenv("RIGOBOT_HOST", "https://rigobot.herokuapp.com")
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{rigobot_host}/v1/auth/invite",
+            headers={"Authorization": "token " + token_key},
+            json=rigobot_payload,
+            timeout=30,
+        ) as resp:
+            if resp.status == 200:
+                logger.debug("User registered on rigobot")
+            else:
+                logger.error("Failed user registration on rigobot")
 
 
 class WebhookException(Exception):

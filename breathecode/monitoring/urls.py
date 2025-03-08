@@ -1,16 +1,19 @@
 from django.urls import path
+
 from .views import (
+    DjangoAdminView,
+    RepositorySubscriptionView,
     get_apps,
-    get_endpoints,
     get_download,
+    get_endpoints,
     get_upload,
     process_github_webhook,
     process_stripe_webhook,
-    RepositorySubscriptionView,
 )
 
 app_name = "monitoring"
 urlpatterns = [
+    path("admin/actions", DjangoAdminView.as_view(), name="admin_actions"),
     path("application", get_apps),
     path("endpoint", get_endpoints),
     path("download", get_download),

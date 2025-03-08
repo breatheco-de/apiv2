@@ -12,7 +12,7 @@ from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
 
 from . import actions
-from .actions import create_user_graduation_reviews, send_survey_group
+from .actions import create_user_graduation_reviews, send_cohort_survey_group
 from .models import Answer, CohortProxy, CohortUserProxy, Review, ReviewPlatform, Survey, UserProxy
 
 logger = logging.getLogger(__name__)
@@ -178,9 +178,20 @@ class AnswerTypeFilter(admin.SimpleListFilter):
 
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    list_display = ("status", "user", "academy", "cohort", "mentor", "score", "opened_at", "created_at", "answer_url")
+    list_display = (
+        "status",
+        "user",
+        "academy",
+        "cohort",
+        "title",
+        "mentor",
+        "score",
+        "opened_at",
+        "created_at",
+        "answer_url",
+    )
     search_fields = ["user__first_name", "user__last_name", "user__email", "cohort__slug"]
-    list_filter = [AnswerTypeFilter, "status", "score", "academy__slug", "cohort__slug"]
+    list_filter = [AnswerTypeFilter, "status", "score", "academy__slug", "cohort__slug", "question_by_slug"]
     actions = ["export_as_csv", add_academy_to_answer]
     raw_id_fields = ["user", "cohort", "mentor", "event", "mentorship_session", "survey"]
 
@@ -202,7 +213,7 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
         logger.debug(f"Sending survey {s.id}")
 
         try:
-            send_survey_group(survey=s)
+            send_cohort_survey_group(survey=s)
         except Exception as e:
             s.status = "FATAL"
             s.status_json = json.dumps({"errors": [str(e)]})

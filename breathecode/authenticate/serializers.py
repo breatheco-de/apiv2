@@ -13,10 +13,11 @@ from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from task_manager.django.actions import schedule_task
+from asgiref.sync import async_to_sync
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
-from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.authenticate.actions import get_app_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
@@ -1406,6 +1407,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             "asset_slug",
             "event_slug",
             "has_marketing_consent",
+            "academy",
         )
 
     def validate(self, data: dict[str, str]):
@@ -1714,6 +1716,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         self.instance.save()
 
         token, _ = Token.get_or_create(user=self.user, token_type="login")
+        async_to_sync(sync_with_rigobot)(token.key)
         return token.key
 
     def get_plans(self, obj: UserInvite):

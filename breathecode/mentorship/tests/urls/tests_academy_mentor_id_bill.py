@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
 from django.utils import timezone
+from datetime import timedelta
 from rest_framework import status
 
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
@@ -269,11 +270,13 @@ class AcademyServiceTestSuite(MentorshipTestCase):
 
         for current in range(0, 2):
             started_at = timezone.now()
+            ends_at = started_at + timedelta(minutes=60)
             mentorship_session = {
                 "started_at": None,
                 "allow_billing": True,
                 "status": statuses[current],
                 "started_at": started_at,
+                "ends_at": ends_at,
             }
             model = self.bc.database.create(
                 user=1,

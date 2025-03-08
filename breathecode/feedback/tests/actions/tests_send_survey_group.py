@@ -5,12 +5,12 @@ Test /answer
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 
 import breathecode.feedback.tasks as tasks
-from capyc.rest_framework.exceptions import ValidationException
 
-from ...actions import send_survey_group
+from ...actions import send_cohort_survey_group
 from ..mixins import FeedbackTestCase
 
 UTC_NOW = timezone.now()
@@ -25,7 +25,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         with self.assertRaisesMessage(ValidationException, "missing-survey-or-cohort"):
 
-            send_survey_group()
+            send_cohort_survey_group()
         self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [])
 
     @patch("breathecode.feedback.tasks.send_cohort_survey.delay", MagicMock())
@@ -37,7 +37,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         with self.assertRaisesMessage(ValidationException, "survey-does-not-match-cohort"):
 
-            send_survey_group(model.survey, model.cohort[1])
+            send_cohort_survey_group(model.survey, model.cohort[1])
         self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [])
 
     @patch("breathecode.feedback.tasks.send_cohort_survey.delay", MagicMock())
@@ -52,7 +52,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
             with self.assertRaisesMessage(ValidationException, "cohort-must-have-teacher-assigned-to-survey"):
 
-                send_survey_group(model.survey, model.cohort)
+                send_cohort_survey_group(model.survey, model.cohort)
             self.assertEqual(tasks.send_cohort_survey.delay.call_args_list, [])
 
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
@@ -71,7 +71,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
             survey = self.bc.format.to_dict(model.survey)
 
-            result = send_survey_group(model.survey, model.cohort)
+            result = send_cohort_survey_group(model.survey, model.cohort)
 
             expected = {"success": [f"Survey scheduled to send for {model.user.email}"], "error": []}
 
@@ -113,7 +113,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
             survey = self.bc.format.to_dict(model.survey)
 
-            result = send_survey_group(model.survey, model.cohort)
+            result = send_cohort_survey_group(model.survey, model.cohort)
 
             expected = {
                 "success": [],
@@ -153,7 +153,7 @@ class AnswerTestSuite(FeedbackTestCase):
 
         survey = self.bc.format.to_dict(model.survey)
 
-        result = send_survey_group(model.survey, model.cohort)
+        result = send_cohort_survey_group(model.survey, model.cohort)
 
         expected = {
             "success": [f"Survey scheduled to send for {model.user.email}"],
@@ -201,7 +201,7 @@ class AnswerTestSuite(FeedbackTestCase):
             ],
         )
 
-        result = send_survey_group(cohort=model.cohort)
+        result = send_cohort_survey_group(cohort=model.cohort)
 
         expected = {
             "success": [],
@@ -214,6 +214,7 @@ class AnswerTestSuite(FeedbackTestCase):
             self.bc.database.list_of("feedback.Survey"),
             [
                 {
+                    "is_customized": False,
                     "sent_at": UTC_NOW,
                     "status": "FATAL",
                     "status_json": '{"success": [], "error": ["Survey NOT sent to '
