@@ -10,7 +10,11 @@ from django.db.models import CharField, Q, Value
 from django.utils import timezone
 from django_redis import get_redis_connection
 from linked_services.rest_framework.decorators import scope
-from linked_services.rest_framework.types import LinkedApp, LinkedHttpRequest, LinkedToken
+from linked_services.rest_framework.types import (
+    LinkedApp,
+    LinkedHttpRequest,
+    LinkedToken,
+)
 from redis.exceptions import LockError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -22,7 +26,6 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
-
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -1471,6 +1474,10 @@ class BagView(APIView):
 
         plan = bag.plans.first()
         if plan:
+            bag.is_recurrent = True
+            bag.save()
+
+        if plan and bag.coupons.count() == 0:
             coupons = get_available_coupons(plan, request.data.get("coupons", []))
             bag.coupons.set(coupons)
 
@@ -1598,6 +1605,10 @@ class CheckingView(APIView):
                             add_items_to_bag(request, bag, lang)
 
                             plan = bag.plans.first()
+                            if plan:
+                                bag.is_recurrent = True
+                                bag.save()
+
                             if plan and bag.coupons.count() == 0:
                                 coupons = get_available_coupons(plan, request.data.get("coupons", []))
                                 bag.coupons.set(coupons)
@@ -2114,9 +2125,11 @@ class PayView(APIView):
                         code=500,
                     )
 
+                # If the bag has plans, it must be recurrent
+                # If it only has service items, use the user's choice
+                bag.is_recurrent = bag.plans.exists() or recurrent
                 bag.chosen_period = chosen_period or "NO_SET"
                 bag.status = "PAID"
-                bag.is_recurrent = recurrent
                 bag.token = None
                 bag.expires_at = None
                 bag.save()
