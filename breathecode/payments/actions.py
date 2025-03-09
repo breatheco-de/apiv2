@@ -644,9 +644,6 @@ def get_bag_from_subscription(
 
     bag.save()
 
-    for service_item in subscription.service_items.all():
-        bag.service_items.add(service_item)
-
     for plan in subscription.plans.all():
         bag.plans.add(plan)
 
@@ -1196,7 +1193,9 @@ class ConsumableBalance(TypedDict):
 
 
 def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
-    from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
+    from breathecode.admissions.actions import (
+        is_no_saas_student_up_to_date_in_any_cohort,
+    )
     from breathecode.payments.data import get_virtual_consumables
 
     if is_no_saas_student_up_to_date_in_any_cohort(user, default=False) is False:
