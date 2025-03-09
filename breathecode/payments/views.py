@@ -2125,9 +2125,23 @@ class PayView(APIView):
                         code=500,
                     )
 
-                # If the bag has plans, it must be recurrent
-                # If it only has service items, use the user's choice
-                bag.is_recurrent = bag.plans.exists() or recurrent
+                # Calculate is_recurrent based on:
+                # 1. If it's a free trial -> False
+                # 2. If it's a free plan -> True
+                # 3. If it has paid plans -> True
+                # 4. If only service items -> use user's choice (recurrent parameter)
+                is_free_trial = available_for_free_trial
+                is_free_plan = available_free
+                has_plans = bag.plans.exists()
+                plan = bag.plans.first() if has_plans else None
+
+                if is_free_trial:
+                    bag.is_recurrent = False
+                elif (is_free_plan and plan) or has_plans:
+                    bag.is_recurrent = True
+                else:
+                    bag.is_recurrent = recurrent
+
                 bag.chosen_period = chosen_period or "NO_SET"
                 bag.status = "PAID"
                 bag.token = None
