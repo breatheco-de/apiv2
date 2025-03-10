@@ -4,6 +4,7 @@ from .views import (
     AcademyAcademyServiceView,
     AcademyCohortSetCohortView,
     AcademyInvoiceView,
+    AcademyPlanFinancingView,
     AcademyPlanSubscriptionView,
     AcademyPlanView,
     AcademyServiceView,
@@ -27,9 +28,9 @@ from .views import (
     PayView,
     PlanOfferView,
     PlanView,
+    ServiceBlocked,
     ServiceItemView,
     ServiceView,
-    ServiceBlocked,
 )
 
 app_name = "payments"
@@ -67,6 +68,7 @@ urlpatterns = [
         MeSubscriptionCancelView.as_view(),
         name="me_subscription_id_cancel",
     ),
+    path("academy/planfinancing", AcademyPlanFinancingView.as_view()),
     path("academy/subscription", AcademySubscriptionView.as_view()),
     path("academy/subscription/<int:subscription_id>", AcademySubscriptionView.as_view()),
     path("me/invoice", MeInvoiceView.as_view()),

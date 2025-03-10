@@ -1044,6 +1044,68 @@ class AcademySubscriptionView(APIView):
         return Response({"detail": "Subscription updated successfully"}, status=status.HTTP_200_OK)
 
 
+class AcademyPlanFinancingView(APIView):
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request, financing_id=None, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+        now = timezone.now()
+
+        if financing_id:
+            item = PlanFinancing.objects.filter(valid_until__gte=now, id=financing_id).first()
+
+            if not item:
+                raise ValidationException(
+                    translation(
+                        lang, en="Plan financing not found", es="No existe el plan de financiamiento", slug="not-found"
+                    ),
+                    code=404,
+                )
+
+            serializer = GetPlanFinancingSerializer(item, many=False)
+            return handler.response(serializer.data)
+
+        items = PlanFinancing.objects.filter(valid_until__gte=now)
+
+        if user_id := request.GET.get("users"):
+            items = items.filter(user__id=int(user_id))
+
+        items = handler.queryset(items)
+        serializer = GetPlanFinancingSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    def put(self, request, financing_id, academy_id=None):
+        lang = get_user_language(request)
+
+        if not (financing := PlanFinancing.objects.filter(id=financing_id).first()):
+            raise ValidationException(
+                translation(
+                    lang, en="Plan financing not found", es="No existe el plan de financiamiento", slug="not-found"
+                ),
+                code=404,
+            )
+
+        allowed_fields = ["next_payment_at", "valid_until", "plan_expires_at", "monthly_price", "how_many_installments"]
+
+        def update_financing(financing, data):
+            for field, value in data.items():
+                if field in allowed_fields:
+                    setattr(financing, field, value)
+
+        if isinstance(request.data, list):
+            for data in request.data:
+                update_financing(financing, data)
+        else:
+            update_financing(financing, request.data)
+
+        financing.save()
+
+        return Response({"detail": "Plan financing updated successfully"}, status=status.HTTP_200_OK)
+
+
 class MeInvoiceView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
