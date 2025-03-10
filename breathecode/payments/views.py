@@ -10,11 +10,7 @@ from django.db.models import CharField, Q, Value
 from django.utils import timezone
 from django_redis import get_redis_connection
 from linked_services.rest_framework.decorators import scope
-from linked_services.rest_framework.types import (
-    LinkedApp,
-    LinkedHttpRequest,
-    LinkedToken,
-)
+from linked_services.rest_framework.types import LinkedApp, LinkedHttpRequest, LinkedToken
 from redis.exceptions import LockError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -1473,9 +1469,30 @@ class BagView(APIView):
         add_items_to_bag(request, bag, lang)
 
         plan = bag.plans.first()
-        if plan:
+        is_free_trial = plan.trial_duration > 0 if plan else False
+
+        # free trial took
+        if is_free_trial and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists():
+            is_free_trial = False
+
+        is_free_plan = (
+            plan.price_per_month == 0
+            and plan.price_per_quarter == 0
+            and plan.price_per_half == 0
+            and plan.price_per_year == 0
+            if plan
+            else False
+        )
+        recurrent = request.data.get("recurrent")
+
+        if is_free_trial:
+            bag.is_recurrent = False
+        elif is_free_plan or plan:
             bag.is_recurrent = True
-            bag.save()
+        else:
+            bag.is_recurrent = recurrent or False
+
+        bag.save()
 
         if plan and bag.coupons.count() == 0:
             coupons = get_available_coupons(plan, request.data.get("coupons", []))
@@ -1605,9 +1622,33 @@ class CheckingView(APIView):
                             add_items_to_bag(request, bag, lang)
 
                             plan = bag.plans.first()
-                            if plan:
+                            is_free_trial = plan.trial_duration > 0 if plan else False
+
+                            # free trial took
+                            if (
+                                is_free_trial
+                                and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists()
+                            ):
+                                is_free_trial = False
+
+                            is_free_plan = (
+                                plan.price_per_month == 0
+                                and plan.price_per_quarter == 0
+                                and plan.price_per_half == 0
+                                and plan.price_per_year == 0
+                                if plan
+                                else False
+                            )
+                            recurrent = request.data.get("recurrent")
+
+                            if is_free_trial:
+                                bag.is_recurrent = False
+                            elif is_free_plan or plan:
                                 bag.is_recurrent = True
-                                bag.save()
+                            else:
+                                bag.is_recurrent = recurrent or False
+
+                            bag.save()
 
                             if plan and bag.coupons.count() == 0:
                                 coupons = get_available_coupons(plan, request.data.get("coupons", []))
