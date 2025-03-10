@@ -1,5 +1,6 @@
 import logging
 
+from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound
@@ -13,7 +14,6 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import generate_certificate
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty
@@ -23,11 +23,36 @@ from .tasks import async_generate_certificate
 logger = logging.getLogger(__name__)
 
 
+# @api_view(["GET"])
+# @permission_classes([AllowAny])
+# def get_academy_specialties(request):
+#     items = Specialty.objects.all()
+#     serializer = SpecialtySerializer(items, many=True)
+#     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def get_specialties(request):
+def get_academy_specialties(request):
     items = Specialty.objects.all()
-    serializer = SpecialtySerializer(items, many=True)
+
+    like = request.GET.get("like", None)
+    if like:
+        items = query_like_by_full_name(like=like, items=items, prefix="")
+
+    syllabus_slug = request.GET.get("syllabus_slug", None)
+    if syllabus_slug:
+        items = items.filter(syllabus__slug=syllabus_slug)
+
+    sort = request.GET.get("sort", "-created_at")
+    items = items.order_by(sort)
+
+    page = HeaderLimitOffsetPagination().paginate_queryset(items, request)
+    serializer = SpecialtySerializer(page, many=True)
+
+    if HeaderLimitOffsetPagination().is_paginate(request):
+        return HeaderLimitOffsetPagination().get_paginated_response(serializer.data)
+
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

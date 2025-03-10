@@ -1,7 +1,7 @@
-from breathecode.utils import serpy
-from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.serializers import GetSmallSyllabusScheduleSerializer
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.authenticate.serializers import GetProfileAcademyTinySerializer
+from breathecode.utils import serpy
 
 
 class ProfileSmallSerializer(serpy.Serializer):
