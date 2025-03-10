@@ -975,6 +975,7 @@ class AcademySubscriptionView(APIView):
             return handler.response(serializer.data)
 
         items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None))
+        print("ITEMS SUBSCRIPTION!!!!!!!!!!!!!!!", items)
 
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
@@ -988,13 +989,20 @@ class AcademySubscriptionView(APIView):
             items = items.filter(services__slug__in=service_slugs.split(","))
 
         if plan_slugs := request.GET.get("plan_slugs"):
+            print("plan!!!!!!!!!!!!!!", plan_slugs)
             items = items.filter(plans__slug__in=plan_slugs.split(","))
 
+        print("userrrrrrrrrrrrrrrrr", items)
         if user_id := request.GET.get("users"):
-            items = items.filter(user__id=user_id)
+            print("userrrr en if", user_id)
+            # items = items.filter(user__id__in=[int(u) for u in user_id.split(",")])
+            items = items.filter(user__id=int(user_id))
+            print("USERRRRRRRR despues del if", items)
 
         items = handler.queryset(items)
+        print("ITEMS HANDLER", items)
         serializer = GetSubscriptionSerializer(items, many=True)
+        print("FINAL!!", serializer)
 
         return handler.response(serializer.data)
 
