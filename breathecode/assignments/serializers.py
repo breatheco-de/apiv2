@@ -46,6 +46,16 @@ class TaskAttachmentSerializer(serpy.Serializer):
     mime = serpy.Field()
 
 
+class RepositoryDeletionOrderSerializer(serpy.Serializer):
+    user = UserSmallSerializer()
+    id = serpy.Field()
+    repository_name = serpy.Field()
+    repository_user = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    starts_transferring_at = serpy.Field()
+
+
 class TaskGETSerializer(serpy.Serializer):
     """The serializer schema definition."""
 

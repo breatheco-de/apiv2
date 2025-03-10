@@ -292,6 +292,7 @@ class RepositoryDeletionOrder(models.Model):
     repository_name = models.CharField(max_length=256)
 
     notified_at = models.DateTimeField(default=None, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
 
     starts_transferring_at = models.DateTimeField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

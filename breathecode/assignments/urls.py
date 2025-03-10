@@ -20,6 +20,7 @@ from .views import (
     FinalProjectCohortView,
     CompletionJobView,
     SyncTasksView,
+    RepositoryDeletionsMeView,
 )
 
 app_name = "assignments"
@@ -75,4 +76,5 @@ urlpatterns = [
     path("task/<int:task_id>", TaskMeView.as_view(), name="task_id"),
     path("sync/cohort/<int:cohort_id>/task", sync_cohort_tasks_view, name="sync_cohort_id_task"),
     path("completion_job/<int:task_id>", CompletionJobView.as_view(), name="completion_job"),
+    path("me/deletion_order", RepositoryDeletionsMeView.as_view(), name="me_deletion_order"),
 ]
