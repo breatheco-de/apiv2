@@ -66,6 +66,7 @@ nav:
                   - essential/4geeks/services/first-party/writing-services.md
                   - essential/4geeks/services/first-party/token.md
   - Advanced:
+      - "advanced/supervisor.md"
       - Celery:
           - "advanced/celery/application.md"
           - "advanced/celery/canvas.md"

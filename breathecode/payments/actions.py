@@ -1292,3 +1292,31 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
             how_many = virtual["service_item"]["how_many"]
             unit_type = virtual["service_item"]["unit_type"]
             append("cohort_sets", id, slug, how_many, unit_type)
+
+
+def retry_pending_bag(bag: Bag):
+    """
+    This function retries the delivery of bags that are paid but not delivered.
+    It is intended to be called periodically by a scheduler.
+    """
+
+    if bag.status != Bag.Status.PAID:
+        return "not-paid"
+
+    if bag.was_delivered:
+        return "done"
+
+    invoice: Invoice | None = bag.invoices.first()
+    if invoice is None:
+        return "no-invoice"
+
+    if bag.how_many_installments > 0:
+        tasks.build_plan_financing.delay(bag.id, invoice.id)
+
+    elif invoice.amount > 0:
+        tasks.build_subscription.delay(bag.id, invoice.id)
+
+    else:
+        tasks.build_free_subscription.delay(bag.id, invoice.id)
+
+    return "scheduled"

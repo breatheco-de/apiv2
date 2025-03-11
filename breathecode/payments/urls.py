@@ -119,7 +119,7 @@ urlpatterns = [
         name="app_service_slug_consumptionsession_hash",
     ),
     path("card", CardView.as_view(), name="card"),
-    path("bag", BagView.as_view()),
+    path("bag", BagView.as_view(), name="bag"),
     path("bag/<int:bag_id>/coupon", BagCouponView.as_view(), name="bag_id_coupon"),
     path("checking", CheckingView.as_view(), name="checking"),
     path("pay", PayView.as_view(), name="pay"),
