@@ -67,19 +67,7 @@ def build_question(answer, surveytemplate_slug=None):
 
     # If no template from settings, try finding it by slug
     if template is None:
-        # First try to find template for this academy
-        if academy:
-            if surveytemplate_slug:
-                template = SurveyTemplate.objects.filter(slug=surveytemplate_slug, lang=lang, academy=academy).first()
-            else:
-                template = SurveyTemplate.objects.filter(lang=lang, academy=academy).first()
-
-        # If no template found for academy, look for shared templates
-        if template is None:
-            if surveytemplate_slug:
-                template = SurveyTemplate.objects.filter(slug=surveytemplate_slug, lang=lang, is_shared=True).first()
-            else:
-                template = SurveyTemplate.objects.filter(lang=lang, is_shared=True).first()
+        template = SurveyTemplate.get_template(slug=surveytemplate_slug, lang=lang, academy=academy)
 
     if template is None:
         raise ValidationException(

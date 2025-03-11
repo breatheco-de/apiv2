@@ -3,6 +3,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 import breathecode.feedback.signals as signals
 from breathecode.admissions.models import Academy, Cohort, CohortUser
@@ -236,6 +237,7 @@ class SurveyTemplate(models.Model):
     slug = models.SlugField(max_length=100, unique=True)
     lang = models.CharField(max_length=2, help_text="Two-letter language code")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
     is_shared = models.BooleanField(default=False, help_text="If true, other academies can use this template")
 
     # JSON fields for different question types
@@ -354,8 +356,10 @@ class SurveyTemplate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    original = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="translations")
+
     def clean(self):
-        """Validate additional_questions if present"""
+        """Validate additional_questions if present and language/original relationships"""
         if self.additional_questions:
             if not isinstance(self.additional_questions, dict):
                 raise ValidationError({"additional_questions": "Must be a dictionary"})
@@ -366,15 +370,72 @@ class SurveyTemplate(models.Model):
                 except ValidationError as e:
                     raise ValidationError({"additional_questions": f'Invalid structure for question "{key}": {str(e)}'})
 
+        # Validate language and original relationships
+        if self.lang != "en" and self.original is None:
+            raise ValidationError({"original": "Non-English templates must have an original template"})
+
+        if self.lang == "en" and self.original is not None:
+            raise ValidationError({"original": "English templates cannot have an original template"})
+
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.slug} ({self.lang})"
+        if self.original:
+            return f"{self.title} ({self.lang} translation of {self.original.title})"
+        return f"{self.title} ({self.lang} original)"
 
     class Meta:
-        unique_together = ["slug", "lang"]
+        unique_together = [
+            ("original", "lang"),  # Ensure only one translation per language
+        ]
+
+    def get_template(slug, lang, academy=None):
+        """
+        Get a SurveyTemplate by slug and language, with optional academy filtering.
+
+        Args:
+            slug (str): The template slug to search for
+            lang (str): The preferred language code (e.g., 'en', 'es')
+            academy (Academy, optional): The academy to filter templates by
+
+        Returns:
+            SurveyTemplate: The matching template or None if not found
+
+        Logic:
+            1. Try to find a template with the exact slug and language:
+               a. If academy is provided, look for templates that either belong to that academy OR are shared
+               b. If academy is not provided, only look for shared templates
+            2. If not found in the requested language, try English as fallback with the same logic
+               a. Check for translations of English templates in the requested language
+        """
+        # Build the query filter based on whether academy is provided
+        if academy:
+            # Look for templates that either belong to the academy OR are shared
+            academy_filter = Q(academy=academy) | Q(is_shared=True)
+        else:
+            # Only look for shared templates
+            academy_filter = Q(is_shared=True)
+
+        # Try to find exact match by slug and language
+        template = SurveyTemplate.objects.filter(slug=slug, lang=lang).filter(academy_filter).first()
+        if template:
+            return template
+
+        # If not found in the requested language, try English as fallback
+        if lang != "en":
+            # Try to find English template with the same academy filter
+            template = SurveyTemplate.objects.filter(slug=slug, lang="en").filter(academy_filter).first()
+            if template:
+                # If there's a translation in the requested language
+                translation = template.translations.filter(lang=lang).first()
+                if translation:
+                    return translation
+                return template
+
+        # No template found
+        return None
 
 
 class AcademyFeedbackSettings(models.Model):
