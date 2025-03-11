@@ -565,16 +565,16 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
                 raise e
 
             if price_per_month != 0:
-                price_per_month += add_on.get_discounted_price(service_item.how_many) * 1
+                price_per_month += add_on.get_discounted_price(service_item.how_many)
 
             if price_per_quarter != 0:
-                price_per_quarter += add_on.get_discounted_price(service_item.how_many) * 3
+                price_per_quarter += add_on.get_discounted_price(service_item.how_many)
 
             if price_per_half != 0:
-                price_per_half += add_on.get_discounted_price(service_item.how_many) * 6
+                price_per_half += add_on.get_discounted_price(service_item.how_many)
 
             if price_per_year != 0:
-                price_per_year += add_on.get_discounted_price(service_item.how_many) * 12
+                price_per_year += add_on.get_discounted_price(service_item.how_many)
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -1193,9 +1193,7 @@ class ConsumableBalance(TypedDict):
 
 
 def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
-    from breathecode.admissions.actions import (
-        is_no_saas_student_up_to_date_in_any_cohort,
-    )
+    from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
     from breathecode.payments.data import get_virtual_consumables
 
     if is_no_saas_student_up_to_date_in_any_cohort(user, default=False) is False:
