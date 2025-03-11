@@ -102,14 +102,14 @@ blocked_user_ids = {
 
 Users can check their block status for different services by making a GET request to the `/v1/payments/me/service/blocked` endpoint. The response will indicate if they are blocked and from where:
 
-```json
+```python
 {
   "mentorship-service": {
     // Service identifier
-    "from_everywhere": false, // Not blocked platform-wide
-    "from_academy": ["academy-slug"], // Blocked in these academies
-    "from_cohort": ["cohort-slug"], // Blocked in these cohorts
-    "from_mentorship_service": ["service-slug"] // Blocked from these specific services
+    "from_everywhere": 1, // Not blocked platform-wide
+    "from_academy": [(1, "academy-slug")], // Blocked in these academies
+    "from_cohort": [(1, "cohort-slug")], // Blocked in these cohorts
+    "from_mentorship_service": [(1, "service-slug")] // Blocked from these specific services
   }
 }
 ```
