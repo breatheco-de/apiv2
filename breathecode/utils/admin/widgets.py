@@ -39,6 +39,18 @@ class PrettyJSONWidget(widgets.AdminTextareaWidget):
                 return value
         return json.dumps(value, indent=4, sort_keys=True)
 
+    def value_from_datadict(self, data, files, name):
+        """Parse the JSON string value from form data"""
+        value = super().value_from_datadict(data, files, name)
+        if value:
+            try:
+                # Parse the JSON string to ensure it's valid and convert to Python object
+                return json.loads(value)
+            except json.JSONDecodeError:
+                # Return the raw string if it's not valid JSON
+                return value
+        return value
+
     def render(self, name, value, attrs=None, renderer=None):
         formatted_value = self.format_value(value)
         textarea = super().render(name, formatted_value, attrs, renderer)

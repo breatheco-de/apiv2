@@ -16,7 +16,17 @@ from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from . import actions
 from .actions import create_user_graduation_reviews, send_cohort_survey_group
-from .models import Answer, CohortProxy, CohortUserProxy, Review, ReviewPlatform, Survey, UserProxy, SurveyTemplate
+from .models import (
+    Answer,
+    CohortProxy,
+    CohortUserProxy,
+    Review,
+    ReviewPlatform,
+    Survey,
+    UserProxy,
+    SurveyTemplate,
+    AcademyFeedbackSettings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -364,7 +374,7 @@ class SurveyTemplateAdmin(admin.ModelAdmin):
     search_fields = ("slug", "academy__name")
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
-        (None, {"fields": ("slug", "lang", "academy", "is_shared")}),
+        (None, {"fields": ("slug", "lang", "academy", "is_shared", "created_at", "updated_at")}),
         ("When asking for event feedback", {"fields": ("when_asking_event",), "classes": ("collapse",)}),
         (
             "When asking about a mentor during a cohort",
@@ -387,7 +397,6 @@ class SurveyTemplateAdmin(admin.ModelAdmin):
             {"fields": ("when_asking_liveclass_mentor", "when_asking_mentorshipsession"), "classes": ("collapse",)},
         ),
         ("Additional Questions", {"fields": ("additional_questions",), "classes": ("collapse",)}),
-        ("Timestamps", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
 
     def get_fieldsets(self, request, obj=None):
@@ -396,3 +405,11 @@ class SurveyTemplateAdmin(admin.ModelAdmin):
         if request:
             request.is_popup = False  # Force full-width display
         return fieldsets
+
+
+@admin.register(AcademyFeedbackSettings)
+class AcademyFeedbackSettingsAdmin(admin.ModelAdmin):
+    list_display = ("academy", "created_at", "updated_at")
+    search_fields = ("academy__name", "academy__slug")
+    raw_id_fields = ("academy",)
+    readonly_fields = ("created_at", "updated_at")
