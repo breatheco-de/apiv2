@@ -50,6 +50,7 @@ def get_serializer(self, subscription, academy, user, data={}):
         "status_message": subscription.status_message,
         "user": user_serializer(user),
         "valid_until": self.bc.datetime.to_iso_string(subscription.valid_until) if subscription.valid_until else None,
+        "created_at": self.bc.datetime.to_iso_string(subscription.created_at),
         **data,
     }
 

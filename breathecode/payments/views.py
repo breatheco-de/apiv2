@@ -22,7 +22,6 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
-
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -1470,7 +1469,32 @@ class BagView(APIView):
         add_items_to_bag(request, bag, lang)
 
         plan = bag.plans.first()
-        if plan:
+        is_free_trial = plan.trial_duration > 0 if plan else False
+
+        # free trial took
+        if is_free_trial and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists():
+            is_free_trial = False
+
+        is_free_plan = (
+            plan.price_per_month == 0
+            and plan.price_per_quarter == 0
+            and plan.price_per_half == 0
+            and plan.price_per_year == 0
+            if plan
+            else False
+        )
+        recurrent = request.data.get("recurrent")
+
+        if is_free_trial:
+            bag.is_recurrent = False
+        elif is_free_plan or plan:
+            bag.is_recurrent = True
+        else:
+            bag.is_recurrent = recurrent or False
+
+        bag.save()
+
+        if plan and bag.coupons.count() == 0:
             coupons = get_available_coupons(plan, request.data.get("coupons", []))
             bag.coupons.set(coupons)
 
@@ -1598,6 +1622,34 @@ class CheckingView(APIView):
                             add_items_to_bag(request, bag, lang)
 
                             plan = bag.plans.first()
+                            is_free_trial = plan.trial_duration > 0 if plan else False
+
+                            # free trial took
+                            if (
+                                is_free_trial
+                                and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists()
+                            ):
+                                is_free_trial = False
+
+                            is_free_plan = (
+                                plan.price_per_month == 0
+                                and plan.price_per_quarter == 0
+                                and plan.price_per_half == 0
+                                and plan.price_per_year == 0
+                                if plan
+                                else False
+                            )
+                            recurrent = request.data.get("recurrent")
+
+                            if is_free_trial:
+                                bag.is_recurrent = False
+                            elif is_free_plan or plan:
+                                bag.is_recurrent = True
+                            else:
+                                bag.is_recurrent = recurrent or False
+
+                            bag.save()
+
                             if plan and bag.coupons.count() == 0:
                                 coupons = get_available_coupons(plan, request.data.get("coupons", []))
                                 bag.coupons.set(coupons)
@@ -2093,9 +2145,25 @@ class PayView(APIView):
                         code=500,
                     )
 
+                # Calculate is_recurrent based on:
+                # 1. If it's a free trial -> False
+                # 2. If it's a free plan -> True
+                # 3. If it has paid plans -> True
+                # 4. If only service items -> use user's choice (recurrent parameter)
+                is_free_trial = available_for_free_trial
+                is_free_plan = available_free
+                has_plans = bag.plans.exists()
+                plan = bag.plans.first() if has_plans else None
+
+                if is_free_trial:
+                    bag.is_recurrent = False
+                elif (is_free_plan and plan) or has_plans:
+                    bag.is_recurrent = True
+                else:
+                    bag.is_recurrent = recurrent
+
                 bag.chosen_period = chosen_period or "NO_SET"
                 bag.status = "PAID"
-                bag.is_recurrent = recurrent
                 bag.token = None
                 bag.expires_at = None
                 bag.save()

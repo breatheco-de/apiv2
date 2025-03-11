@@ -243,6 +243,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": 0.0,
                     "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                     "token": token,
+                    "is_recurrent": False,
                 },
             )
 
@@ -260,6 +261,7 @@ class SignalTestSuite(PaymentsTestCase):
                         "amount_per_year": 0.0,
                         "expires_at": UTC_NOW + timedelta(minutes=60),
                         "token": token,
+                        "is_recurrent": False,
                     },
                 ],
             )
@@ -795,6 +797,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": price_per_year,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -812,6 +815,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": price_per_year,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -920,6 +924,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": 0,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": False,
             },
         )
 
@@ -937,6 +942,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": 0,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": False,
                 },
             ],
         )
@@ -1040,6 +1046,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": 0,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -1057,6 +1064,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": 0,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -1155,6 +1163,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": 0,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -1172,6 +1181,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": 0,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -1286,6 +1296,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": price_per_year,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -1303,6 +1314,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": price_per_year,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -1523,6 +1535,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": price_per_year,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -1540,6 +1553,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": price_per_year,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -1973,6 +1987,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": price_per_year,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -1990,6 +2005,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": price_per_year,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -2100,6 +2116,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": price_per_year,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -2117,6 +2134,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": price_per_year,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -2225,6 +2243,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": price_per_year,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -2242,6 +2261,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": price_per_year,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -2353,6 +2373,7 @@ class SignalTestSuite(PaymentsTestCase):
                 "amount_per_year": price_per_year,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
+                "is_recurrent": True,
             },
         )
 
@@ -2370,6 +2391,7 @@ class SignalTestSuite(PaymentsTestCase):
                     "amount_per_year": price_per_year,
                     "expires_at": UTC_NOW + timedelta(minutes=60),
                     "token": token,
+                    "is_recurrent": True,
                 },
             ],
         )
@@ -2619,6 +2641,7 @@ def test_providing_coupons(bc: Breathecode, client: APIClient, how_many_offers, 
             "amount_per_year": price_per_year,
             "expires_at": bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
             "token": token,
+            "is_recurrent": True,
         },
     )
 
@@ -2634,6 +2657,7 @@ def test_providing_coupons(bc: Breathecode, client: APIClient, how_many_offers, 
             "amount_per_year": price_per_year,
             "expires_at": UTC_NOW + timedelta(minutes=60),
             "token": token,
+            "is_recurrent": True,
         },
     ]
     assert bc.database.list_of("authenticate.UserSetting") == [
@@ -2800,6 +2824,7 @@ def test_getting_coupons(
             "amount_per_year": price_per_year,
             "expires_at": bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
             "token": token,
+            "is_recurrent": False,
         },
     )
 
@@ -2815,6 +2840,7 @@ def test_getting_coupons(
             "amount_per_year": price_per_year,
             "expires_at": UTC_NOW + timedelta(minutes=60),
             "token": token,
+            "is_recurrent": False,
         },
         bc.format.to_dict(model.bag[1]),
     ]
@@ -2985,6 +3011,7 @@ def test_exausted_coupons(
             "amount_per_year": price_per_year,
             "expires_at": bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
             "token": token,
+            "is_recurrent": False,
         },
     )
 
@@ -3000,6 +3027,7 @@ def test_exausted_coupons(
             "amount_per_year": price_per_year,
             "expires_at": UTC_NOW + timedelta(minutes=60),
             "token": token,
+            "is_recurrent": False,
         },
         bc.format.to_dict(model.bag[1]),
     ]
