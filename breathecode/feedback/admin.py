@@ -1,10 +1,10 @@
 import json
 import logging
 
+
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
-from django.contrib.admin import widgets
 from django import forms
 
 from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
@@ -335,13 +335,20 @@ class SurveyTemplateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Format JSON fields for better readability in admin
         for field_name, field in self.fields.items():
-            if isinstance(field.widget, widgets.AdminTextareaWidget):
+            if isinstance(field.widget, PrettyJSONWidget):
                 if self.initial.get(field_name):
-                    self.initial[field_name] = json.dumps(self.initial[field_name], indent=2)
+                    # No need to convert to string here, PrettyJSONWidget will handle it
+                    pass
 
     def clean(self):
         cleaned_data = super().clean()
-        # Parse JSON fields back to dict
+        # No need to parse JSON fields here as PrettyJSONWidget.value_from_datadict already does it
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # Ensure all JSON fields are properly saved as Python objects, not strings
         json_fields = [
             "when_asking_event",
             "when_asking_mentor",
@@ -356,14 +363,18 @@ class SurveyTemplateForm(forms.ModelForm):
         ]
 
         for field in json_fields:
-            if cleaned_data.get(field):
+            value = getattr(instance, field, None)
+            if isinstance(value, str) and value:
                 try:
-                    if isinstance(cleaned_data[field], str):
-                        cleaned_data[field] = json.loads(cleaned_data[field])
-                except json.JSONDecodeError as e:
-                    self.add_error(field, f"Invalid JSON format: {str(e)}")
+                    setattr(instance, field, json.loads(value))
+                except json.JSONDecodeError:
+                    # Keep as is if not valid JSON
+                    pass
 
-        return cleaned_data
+        if commit:
+            instance.save()
+
+        return instance
 
 
 @admin.register(SurveyTemplate)
