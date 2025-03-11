@@ -30,9 +30,9 @@ from .views import (
     PayView,
     PlanOfferView,
     PlanView,
+    ServiceBlocked,
     ServiceItemView,
     ServiceView,
-    ServiceBlocked,
 )
 
 app_name = "payments"
@@ -97,6 +97,11 @@ urlpatterns = [
         "me/service/<str:service_slug>/consumptionsession/<str:hash>",
         ConsumeView.as_view(),
         name="me_service_slug_consumptionsession_hash",
+    ),
+    path(
+        "me/service/<str:service_slug>/consumptionsession",
+        ConsumeView.as_view(),
+        name="me_service_slug_consumptionsession",
     ),
     path(
         "app/service/<str:service_slug>/consumptionsession",
