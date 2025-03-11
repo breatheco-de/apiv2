@@ -383,8 +383,8 @@ class SurveyTemplate(models.Model):
 
     def __str__(self):
         if self.original:
-            return f"{self.title} ({self.lang} translation of {self.original.title})"
-        return f"{self.title} ({self.lang} original)"
+            return f"{self.slug} ({self.lang} translation of {self.original.slug})"
+        return f"{self.slug} ({self.lang} original)"
 
     class Meta:
         unique_together = [
