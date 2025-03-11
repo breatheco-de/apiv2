@@ -3407,10 +3407,9 @@ def test_get_a_plan_with_add_ons(
 
     pricing = {
         "amount_per_month": model.plan.price_per_month + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_quarter": model.plan.price_per_quarter
-        + (model.academy_service.get_discounted_price(how_many2) * 3),
-        "amount_per_half": model.plan.price_per_half + (model.academy_service.get_discounted_price(how_many2) * 6),
-        "amount_per_year": model.plan.price_per_year + (model.academy_service.get_discounted_price(how_many2) * 12),
+        "amount_per_quarter": model.plan.price_per_quarter + model.academy_service.get_discounted_price(how_many2),
+        "amount_per_half": model.plan.price_per_half + model.academy_service.get_discounted_price(how_many2),
+        "amount_per_year": model.plan.price_per_year + model.academy_service.get_discounted_price(how_many2),
     }
 
     json = response.json()
@@ -3419,6 +3418,7 @@ def test_get_a_plan_with_add_ons(
         data={
             "expires_at": (UTC_NOW + timedelta(minutes=60)).isoformat().replace("+00:00", "Z"),
             "token": token,
+            "is_recurrent": True,
             **pricing,
         },
         plans=[model.plan],
@@ -3436,6 +3436,7 @@ def test_get_a_plan_with_add_ons(
             **pricing,
             "token": token,
             "expires_at": UTC_NOW + timedelta(minutes=60),
+            "is_recurrent": True,
         },
     ]
     assert database.list_of("authenticate.UserSetting") == [
