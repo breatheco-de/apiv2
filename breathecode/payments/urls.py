@@ -72,6 +72,7 @@ urlpatterns = [
         MeSubscriptionCancelView.as_view(),
         name="me_subscription_id_cancel",
     ),
+    path("academy/planfinancing/<int:financing_id>", AcademyPlanFinancingView.as_view()),
     path("academy/planfinancing", AcademyPlanFinancingView.as_view()),
     path("academy/subscription", AcademySubscriptionView.as_view()),
     path("academy/subscription/<int:subscription_id>", AcademySubscriptionView.as_view()),

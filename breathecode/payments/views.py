@@ -993,7 +993,7 @@ class AcademySubscriptionView(APIView):
             return handler.response(serializer.data)
 
         items = Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None))
-        print("ITEMS SUBSCRIPTION!!!!!!!!!!!!!!!", items)
+        # print("ITEMS SUBSCRIPTION!!!!!!!!!!!!!!!", items)
 
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
@@ -1007,20 +1007,20 @@ class AcademySubscriptionView(APIView):
             items = items.filter(services__slug__in=service_slugs.split(","))
 
         if plan_slugs := request.GET.get("plan_slugs"):
-            print("plan!!!!!!!!!!!!!!", plan_slugs)
+            # print("plan!!!!!!!!!!!!!!", plan_slugs)
             items = items.filter(plans__slug__in=plan_slugs.split(","))
 
-        print("userrrrrrrrrrrrrrrrr", items)
+        # print("userrrrrrrrrrrrrrrrr", items)
         if user_id := request.GET.get("users"):
-            print("userrrr en if", user_id)
+            # print("userrrr en if", user_id)
             # items = items.filter(user__id__in=[int(u) for u in user_id.split(",")])
             items = items.filter(user__id=int(user_id))
-            print("USERRRRRRRR despues del if", items)
+            # print("USERRRRRRRR despues del if", items)
 
         items = handler.queryset(items)
-        print("ITEMS HANDLER", items)
+        # print("ITEMS HANDLER", items)
         serializer = GetSubscriptionSerializer(items, many=True)
-        print("FINAL!!", serializer)
+        # print("FINAL!!", serializer)
 
         return handler.response(serializer.data)
 
@@ -1086,9 +1086,12 @@ class AcademyPlanFinancingView(APIView):
             return handler.response(serializer.data)
 
         items = PlanFinancing.objects.filter(valid_until__gte=now)
+        print("ITEMS planfinancing!!!!!!!!!!!!!!!", items)
 
         if user_id := request.GET.get("users"):
+            print("user_idddddddddd", user_id)
             items = items.filter(user__id=int(user_id))
+            print("items user id!!!!!!!!!!!!!!", items)
 
         items = handler.queryset(items)
         serializer = GetPlanFinancingSerializer(items, many=True)
@@ -1097,8 +1100,21 @@ class AcademyPlanFinancingView(APIView):
 
     def put(self, request, financing_id, academy_id=None):
         lang = get_user_language(request)
+        print(f"PUT request received with financing_id: {financing_id}")
+        print(f"Request data: {request.data}")
 
-        if not (financing := PlanFinancing.objects.filter(id=financing_id).first()):
+        if not financing_id:
+            print("Error: Missing financing_id")
+            raise ValidationException(
+                translation(lang, en="Missing financing_id", es="Falta el ID del financiamiento", slug="missing-id"),
+                code=400,
+            )
+
+        financing = PlanFinancing.objects.filter(id=financing_id).first()
+        print(f"Queried financing object: {financing}")
+
+        if not financing:
+            print("Error: Plan financing not found")
             raise ValidationException(
                 translation(
                     lang, en="Plan financing not found", es="No existe el plan de financiamiento", slug="not-found"
@@ -1106,11 +1122,19 @@ class AcademyPlanFinancingView(APIView):
                 code=404,
             )
 
-        allowed_fields = ["next_payment_at", "valid_until", "plan_expires_at", "monthly_price", "how_many_installments"]
+        allowed_fields = [
+            "next_payment_at",
+            "valid_until",
+            "plan_expires_at",
+            "monthly_price",
+            "how_many_installments",
+            "status",
+        ]
 
         def update_financing(financing, data):
             for field, value in data.items():
                 if field in allowed_fields:
+                    print(f"Updating field {field} to {value}")
                     setattr(financing, field, value)
 
         if isinstance(request.data, list):
@@ -1119,7 +1143,9 @@ class AcademyPlanFinancingView(APIView):
         else:
             update_financing(financing, request.data)
 
+        print(f"Final object before save: {financing.__dict__}")
         financing.save()
+        print("Financing updated successfully")
 
         return Response({"detail": "Plan financing updated successfully"}, status=status.HTTP_200_OK)
 
