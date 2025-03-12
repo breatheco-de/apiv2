@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from adrf.views import APIView
 from capyc.core.i18n import translation
 from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
@@ -8,12 +9,13 @@ from django.db import transaction
 from django.db.models import CharField, Q, Value
 from django.utils import timezone
 from django_redis import get_redis_connection
+from linked_services.rest_framework.decorators import scope
+from linked_services.rest_framework.types import LinkedApp, LinkedHttpRequest, LinkedToken
 from redis.exceptions import LockError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions import tasks as admissions_tasks
@@ -606,6 +608,22 @@ class MeConsumableView(APIView):
             actions.set_virtual_balance(balance, request.user)
 
         return Response(balance)
+
+
+class AppConsumableView(MeConsumableView):
+    permission_classes = [AllowAny]
+
+    # created for mocking purposes
+    def get_user(self, request: LinkedHttpRequest):
+        return request.get_user()
+
+    @scope(["read:consumable"])
+    def get(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken):
+        request.user = self.get_user(request)
+        if request.user is None or request.user.is_anonymous:
+            raise ValidationException("User not provided", code=400)
+
+        return super().get(request)
 
 
 class MentorshipServiceSetView(APIView):
@@ -1281,6 +1299,22 @@ class ConsumeView(APIView):
         return Response({"id": session.id, "status": "ok"}, status=status.HTTP_201_CREATED)
 
 
+class AppConsumeView(ConsumeView):
+    permission_classes = [AllowAny]
+
+    # created for mocking purposes
+    def get_user(self, request: LinkedHttpRequest):
+        return request.get_user()
+
+    @scope(["read:consumable"])
+    def put(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, service_slug, hash=None):
+        request.user = self.get_user(request)
+        if request.user is None or request.user.is_anonymous:
+            raise ValidationException("User not provided", code=400)
+
+        return super().put(request, service_slug, hash)
+
+
 class CancelConsumptionView(APIView):
 
     def put(self, request, service_slug, consumptionsession_id):
@@ -1309,6 +1343,22 @@ class CancelConsumptionView(APIView):
         session.save()
 
         return Response({"id": session.id, "status": "reversed"}, status=status.HTTP_200_OK)
+
+
+class AppCancelConsumptionView(CancelConsumptionView):
+    permission_classes = [AllowAny]
+
+    # created for mocking purposes
+    def get_user(self, request: LinkedHttpRequest):
+        return request.get_user()
+
+    @scope(["read:consumable"])
+    def put(self, request: LinkedHttpRequest, app: LinkedApp, token: LinkedToken, service_slug, consumptionsession_id):
+        request.user = self.get_user(request)
+        if request.user is None or request.user.is_anonymous:
+            raise ValidationException("User not provided", code=400)
+
+        return super().put(request, service_slug, consumptionsession_id)
 
 
 class PlanOfferView(APIView):
@@ -1529,7 +1579,32 @@ class BagView(APIView):
         add_items_to_bag(request, bag, lang)
 
         plan = bag.plans.first()
-        if plan:
+        is_free_trial = plan.trial_duration > 0 if plan else False
+
+        # free trial took
+        if is_free_trial and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists():
+            is_free_trial = False
+
+        is_free_plan = (
+            plan.price_per_month == 0
+            and plan.price_per_quarter == 0
+            and plan.price_per_half == 0
+            and plan.price_per_year == 0
+            if plan
+            else False
+        )
+        recurrent = request.data.get("recurrent")
+
+        if is_free_trial:
+            bag.is_recurrent = False
+        elif is_free_plan or plan:
+            bag.is_recurrent = True
+        else:
+            bag.is_recurrent = recurrent or False
+
+        bag.save()
+
+        if plan and bag.coupons.count() == 0:
             coupons = get_available_coupons(plan, request.data.get("coupons", []))
             bag.coupons.set(coupons)
 
@@ -1657,6 +1732,34 @@ class CheckingView(APIView):
                             add_items_to_bag(request, bag, lang)
 
                             plan = bag.plans.first()
+                            is_free_trial = plan.trial_duration > 0 if plan else False
+
+                            # free trial took
+                            if (
+                                is_free_trial
+                                and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists()
+                            ):
+                                is_free_trial = False
+
+                            is_free_plan = (
+                                plan.price_per_month == 0
+                                and plan.price_per_quarter == 0
+                                and plan.price_per_half == 0
+                                and plan.price_per_year == 0
+                                if plan
+                                else False
+                            )
+                            recurrent = request.data.get("recurrent")
+
+                            if is_free_trial:
+                                bag.is_recurrent = False
+                            elif is_free_plan or plan:
+                                bag.is_recurrent = True
+                            else:
+                                bag.is_recurrent = recurrent or False
+
+                            bag.save()
+
                             if plan and bag.coupons.count() == 0:
                                 coupons = get_available_coupons(plan, request.data.get("coupons", []))
                                 bag.coupons.set(coupons)
@@ -2173,9 +2276,25 @@ class PayView(APIView):
                         code=500,
                     )
 
+                # Calculate is_recurrent based on:
+                # 1. If it's a free trial -> False
+                # 2. If it's a free plan -> True
+                # 3. If it has paid plans -> True
+                # 4. If only service items -> use user's choice (recurrent parameter)
+                is_free_trial = available_for_free_trial
+                is_free_plan = available_free
+                has_plans = bag.plans.exists()
+                plan = bag.plans.first() if has_plans else None
+
+                if is_free_trial:
+                    bag.is_recurrent = False
+                elif (is_free_plan and plan) or has_plans:
+                    bag.is_recurrent = True
+                else:
+                    bag.is_recurrent = recurrent
+
                 bag.chosen_period = chosen_period or "NO_SET"
                 bag.status = "PAID"
-                bag.is_recurrent = recurrent
                 bag.token = None
                 bag.expires_at = None
                 bag.save()

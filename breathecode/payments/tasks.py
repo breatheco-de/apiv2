@@ -1264,3 +1264,69 @@ def process_google_webhook(hook_id: int, **_: Any):
 
     google = Google()
     google.run_webhook(hook, credentials)
+
+
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def retry_pending_bag_delivery(self, bag_id: int, **_: Any):
+    """
+    Task to retry the delivery of a bag that was paid but not delivered.
+    This task will attempt to create a subscription or plan financing based on the bag's configuration.
+    It will retry twice with a delay between attempts.
+    """
+    logger.info(f"Starting retry_pending_bag_delivery for bag {bag_id}")
+
+    if not (bag := Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()):
+        logger.info(f"Bag with id {bag_id} not found or already delivered")
+        return
+
+    # Get the latest fulfilled invoice for this bag
+    invoice = Invoice.objects.filter(bag=bag, status="FULFILLED").order_by("-paid_at").first()
+
+    if not invoice:
+        logger.error(f"No fulfilled invoice found for bag {bag_id}")
+        return
+
+    # Determine if this is a free subscription
+    is_free = invoice.amount == 0
+
+    # Determine if this is a plan financing or a subscription
+    if bag.how_many_installments > 1:
+        # This is a plan financing
+        logger.info(f"Attempting to build plan financing for bag {bag_id}")
+        build_plan_financing.delay(bag_id=bag.id, invoice_id=invoice.id, is_free=is_free)
+    elif is_free:
+        # This is a free subscription
+        logger.info(f"Attempting to build free subscription for bag {bag_id}")
+        build_free_subscription.delay(bag_id=bag.id, invoice_id=invoice.id)
+    else:
+        # This is a regular subscription
+        logger.info(f"Attempting to build subscription for bag {bag_id}")
+        build_subscription.delay(bag_id=bag.id, invoice_id=invoice.id)
+
+    # Schedule a second attempt after 30 minutes if the bag is still not delivered
+    self.apply_async(
+        kwargs={"bag_id": bag_id},
+        countdown=1800,  # 30 minutes in seconds
+    )
+
+
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def check_and_retry_pending_bags(**_: Any):
+    """
+    Task to check for bags that are paid but not delivered and retry their delivery.
+    This task is meant to be scheduled periodically.
+    """
+    logger.info("Starting check_and_retry_pending_bags")
+
+    # Find bags that are paid but not delivered for more than 1 hour
+    utc_now = timezone.now()
+    pending_bags = Bag.objects.filter(status="PAID", was_delivered=False, updated_at__lte=utc_now - timedelta(hours=1))
+
+    count = pending_bags.count()
+    logger.info(f"Found {count} pending bags to be delivered")
+
+    # Schedule retry for each pending bag
+    for bag in pending_bags:
+        retry_pending_bag_delivery.delay(bag_id=bag.id)
+
+    return count

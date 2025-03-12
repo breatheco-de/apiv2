@@ -1,5 +1,5 @@
 """
-    🔽🔽🔽 Testing Asset Creation without category
+🔽🔽🔽 Testing Asset Creation without category
 """
 
 from unittest.mock import MagicMock, call, patch
@@ -96,6 +96,7 @@ def post_serializer(academy, category, data={}):
             "title": category.title,
         },
         "agent": None,
+        "config": None,
         "delivery_formats": "url",
         "delivery_instructions": None,
         "delivery_regex_url": None,

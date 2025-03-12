@@ -84,11 +84,13 @@ def get_serializer(asset, data={}):
 def get_expanded_serializer(asset, data={}):
     return {
         **get_serializer(asset),
+        "config": asset.config,
         "agent": asset.agent,
         "with_solutions": asset.with_solutions,
         "with_video": asset.with_solutions,
         "updated_at": asset.updated_at,
         "template_url": asset.template_url,
+        "dependencies": asset.dependencies,
         **data,
     }
 
