@@ -1116,13 +1116,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if len(cohort) == 0:
                 cohort = [None]
 
-            user = User(
+            user, _ = User.objects.get_or_create(
                 email=email,
                 username=email,
-                first_name=validated_data["first_name"],
-                last_name=validated_data["last_name"],
+                defaults={
+                    "first_name": validated_data["first_name"],
+                    "last_name": validated_data["last_name"],
+                },
             )
-            user.save()
+
             for single_cohort in cohort:
                 # prevent duplicate token (very low probability)
                 while True:
