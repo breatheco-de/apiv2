@@ -544,7 +544,12 @@ class RepositoryDeletionsMeView(APIView):
 
         user = request.user
 
-        items = RepositoryDeletionOrder.objects.filter(user=user, status=RepositoryDeletionOrder.Status.TRANSFERRING)
+        items = RepositoryDeletionOrder.objects.filter(user=user)
+
+        status = request.GET.get("status", None)
+        if status is not None:
+            status = status.upper()
+            items = items.filter(status=status)
 
         serializer = RepositoryDeletionOrderSerializer(items, many=True)
         return Response(serializer.data)

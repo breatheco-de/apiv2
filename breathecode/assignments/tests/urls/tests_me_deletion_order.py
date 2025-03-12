@@ -68,9 +68,9 @@ def test_no_deletion_orders(database: capyc.Database, client: capyc.Client):
     assert response.status_code == status.HTTP_200_OK
 
 
-# When: Deletion orders with no status TRANSFERRING
+# When: There is one deletion order
 # Then: response 200
-def test_no_transferring_deletion_order(database: capyc.Database, client: capyc.Client):
+def test_one_transferring_deletion_order(database: capyc.Database, client: capyc.Client):
 
     model = database.create(user=1)
     client.force_authenticate(model.user)
@@ -82,32 +82,37 @@ def test_no_transferring_deletion_order(database: capyc.Database, client: capyc.
     response = client.get(url)
     json = response.json()
 
-    expected = []
+    order_transferring = deletion_model.repository_deletion_order
+
+    expected = [get_deletion_order_serializer(order_transferring)]
 
     assert json == expected
     assert response.status_code == status.HTTP_200_OK
 
 
-def test_one_transferring_deletion_order(database: capyc.Database, client: capyc.Client):
+def test_one_transferring_deletion_order_querying_status(database: capyc.Database, client: capyc.Client):
 
     model = database.create(user=1)
     client.force_authenticate(model.user)
 
-    deletion_model = database.create(repository_deletion_order={"user": model.user, "status": "TRANSFERRING"})
+    deletion_model = database.create(
+        repository_deletion_order=[
+            {"user": model.user, "status": "PENDING"},
+            {"user": model.user, "status": "TRANSFERRING"},
+        ]
+    )
 
-    url = reverse_lazy("assignments:me_deletion_order")
+    url = reverse_lazy("assignments:me_deletion_order") + "?status=transferring"
 
     response = client.get(url)
     json = response.json()
 
-    starts_transferring_at = re.sub(
-        r"\+00:00$", "Z", deletion_model.repository_deletion_order.starts_transferring_at.isoformat()
-    )
+    order_transferring = deletion_model.repository_deletion_order[1]
+
+    starts_transferring_at = re.sub(r"\+00:00$", "Z", order_transferring.starts_transferring_at.isoformat())
 
     expected = [
-        get_deletion_order_serializer(
-            deletion_model.repository_deletion_order, data={"starts_transferring_at": starts_transferring_at}
-        )
+        get_deletion_order_serializer(order_transferring, data={"starts_transferring_at": starts_transferring_at})
     ]
 
     assert json == expected
