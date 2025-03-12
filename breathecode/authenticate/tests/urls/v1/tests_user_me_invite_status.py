@@ -211,6 +211,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     "longitude": None,
                     "email_quality": None,
                     "email_status": None,
+                    "expires_at": None,
                 },
                 {
                     "user_id": 1,
@@ -239,6 +240,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     "latitude": None,
                     "longitude": None,
                     "email_quality": None,
+                    "expires_at": None,
                     "email_status": None,
                 },
             ],

@@ -90,6 +90,7 @@ def user_invite_db_item(data={}):
         "last_name": None,
         "latitude": None,
         "longitude": None,
+        "expires_at": None,
         "phone": "",
         **data,
     }
@@ -2623,6 +2624,7 @@ def test_task__put__plan_has_not_waiting_list(bc: Breathecode, client: APIClient
             "longitude": None,
             "email_quality": None,
             "email_status": None,
+            "expires_at": None,
             **data,
         },
     ]
