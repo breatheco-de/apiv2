@@ -23,14 +23,6 @@ from .tasks import async_generate_certificate
 logger = logging.getLogger(__name__)
 
 
-# @api_view(["GET"])
-# @permission_classes([AllowAny])
-# def get_academy_specialties(request):
-#     items = Specialty.objects.all()
-#     serializer = SpecialtySerializer(items, many=True)
-#     return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_academy_specialties(request):
