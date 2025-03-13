@@ -377,15 +377,33 @@ class SurveyTemplateForm(forms.ModelForm):
         return instance
 
 
+class OriginalTemplateFilter(admin.SimpleListFilter):
+    title = "Original Status"
+    parameter_name = "is_original"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Original Templates"),
+            ("no", "Derived Templates"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(original__isnull=True)
+        if self.value() == "no":
+            return queryset.filter(original__isnull=False)
+
+
 @admin.register(SurveyTemplate)
 class SurveyTemplateAdmin(admin.ModelAdmin):
     form = SurveyTemplateForm
-    list_display = ("slug", "lang", "academy", "is_shared", "created_at", "updated_at")
-    list_filter = ("lang", "academy", "is_shared")
+    list_display = ("slug_with_original", "lang", "academy", "is_shared", "created_at", "updated_at")
+    list_filter = ("lang", "academy", "is_shared", OriginalTemplateFilter)
     search_fields = ("slug", "academy__name")
+    raw_id_fields = ("academy", "original")
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
-        (None, {"fields": ("slug", "lang", "academy", "is_shared", "created_at", "updated_at")}),
+        (None, {"fields": ("slug", "lang", "academy", "is_shared", "original", "created_at", "updated_at")}),
         ("When asking for event feedback", {"fields": ("when_asking_event",), "classes": ("collapse",)}),
         (
             "When asking about a mentor during a cohort",
@@ -409,6 +427,16 @@ class SurveyTemplateAdmin(admin.ModelAdmin):
         ),
         ("Additional Questions", {"fields": ("additional_questions",), "classes": ("collapse",)}),
     )
+
+    def slug_with_original(self, obj):
+        if obj.original:
+            return format_html(
+                '{} <span style="color: #777; font-size: 0.9em;"> → {}</span>', obj.slug, obj.original.slug
+            )
+        return obj.slug
+
+    slug_with_original.short_description = "Slug"
+    slug_with_original.admin_order_field = "slug"
 
     def get_fieldsets(self, request, obj=None):
         fieldsets = super().get_fieldsets(request, obj)
