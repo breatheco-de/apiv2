@@ -11,6 +11,7 @@ from django.utils.html import format_html
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from .actions import (
     bind_formentry_with_webhook,
@@ -631,7 +632,18 @@ class CourseAdmin(admin.ModelAdmin):
     actions = [validate_course_modules]
 
 
+class CourseTranslationForm(forms.ModelForm):
+    class Meta:
+        model = CourseTranslation
+        fields = "__all__"
+        widgets = {
+            "course_modules": PrettyJSONWidget(),
+            "landing_variables": PrettyJSONWidget(),
+        }
+
+
 @admin.register(CourseTranslation)
 class CourseTranslationAdmin(admin.ModelAdmin):
+    form = CourseTranslationForm
     list_display = ("course", "lang", "title", "description")
     list_filter = ["course__academy__slug", "course__status", "course__visibility"]

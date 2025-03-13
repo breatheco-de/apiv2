@@ -19,6 +19,7 @@ def validate_conversion_info(conversion_info, lang):
 
         expected_keys = [
             "utm_placement",
+            "utm_referrer",
             "utm_medium",
             "utm_source",
             "utm_term",

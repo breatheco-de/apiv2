@@ -130,6 +130,18 @@ class UserIndicatorCalculator:
         self.indicators = indicators
 
     def parse_timestamp(self, ts):
+        if ts is None:
+            return None
+
+        # Check if ts is a string and convert it to a number if needed
+        if isinstance(ts, str):
+            try:
+                ts = float(ts)  # Convert string to float
+            except ValueError:
+                # If it's not a numeric string, it might be a date string format
+                # You could add additional parsing here if needed
+                return None
+
         return datetime.fromtimestamp(ts / 1000)
 
     def calculate_step_metrics(self, step):
@@ -149,8 +161,9 @@ class UserIndicatorCalculator:
                 completed_at = self.parse_timestamp(step["completed_at"])
                 time_spent = (completed_at - opened_at).total_seconds()
 
-                compilations = sorted(compilations, key=lambda x: x["starting_at"])
-                tests = sorted(tests, key=lambda x: x["starting_at"])
+                # Sort compilations, handling missing keys or None values
+                compilations = sorted(compilations, key=lambda x: x.get("starting_at") or 0)
+                tests = sorted(tests, key=lambda x: x.get("starting_at") or 0)
 
                 first_success_comp = next((i for i, comp in enumerate(compilations) if comp["exit_code"] == 0), None)
                 if first_success_comp is not None:
@@ -169,14 +182,16 @@ class UserIndicatorCalculator:
                     comp_ended_ats = [self.parse_timestamp(comp["ended_at"]) for comp in compilations]
                     test_ended_ats = [self.parse_timestamp(test["ended_at"]) for test in tests]
                     all_ended_ats = comp_ended_ats + test_ended_ats
+                    all_ended_ats = [ts for ts in all_ended_ats if ts is not None]
 
                     if all_ended_ats:
                         last_interaction_in_step = max(all_ended_ats)
                     else:
                         last_interaction_in_step = self.last_interaction_at
 
-                    time_spent = (last_interaction_in_step - opened_at).total_seconds()
-                    time_spent = min(time_spent, 1800)  # Cap at 30 minutes
+                    if last_interaction_in_step is not None:
+                        time_spent = (last_interaction_in_step - opened_at).total_seconds()
+                        time_spent = min(time_spent, 1800)  # Cap at 30 minutes
 
                     comp_struggles = sum(1 for comp in compilations if comp["exit_code"] != 0)
                     test_struggles = sum(1 for test in tests if test["exit_code"] != 0)
