@@ -38,20 +38,22 @@ def get_academy_specialties(request):
 
     like = request.GET.get("like", None)
     if like:
-        items = query_like_by_full_name(like=like, items=items, prefix="")
+        items = items.filter(name__icontains=like)
 
     syllabus_slug = request.GET.get("syllabus_slug", None)
     if syllabus_slug:
-        items = items.filter(syllabus__slug=syllabus_slug)
+        items = items.filter(syllabus_many__slug=syllabus_slug)
 
     sort = request.GET.get("sort", "-created_at")
     items = items.order_by(sort)
 
-    page = HeaderLimitOffsetPagination().paginate_queryset(items, request)
+    paginator = HeaderLimitOffsetPagination()
+    page = paginator.paginate_queryset(items, request)
+
     serializer = SpecialtySerializer(page, many=True)
 
-    if HeaderLimitOffsetPagination().is_paginate(request):
-        return HeaderLimitOffsetPagination().get_paginated_response(serializer.data)
+    if paginator.is_paginate(request):
+        return paginator.get_paginated_response(serializer.data)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
 

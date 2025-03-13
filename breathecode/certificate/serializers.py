@@ -130,6 +130,11 @@ class SpecialtySerializer(serpy.Serializer):
     updated_at = serpy.Field()
     created_at = serpy.Field()
 
+    syllabus_many = serpy.MethodField()
+
+    def get_syllabus_many(self, obj):
+        return [s.slug for s in obj.syllabus_many.all()]
+
 
 class BadgeSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
