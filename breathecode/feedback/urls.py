@@ -10,6 +10,7 @@ from .views import (
     get_reviews,
     ReviewView,
     get_review_platform,
+    AcademyFeedbackSettingsView,
 )
 
 app_name = "feedback"
@@ -28,4 +29,5 @@ urlpatterns = [
     path("review_platform/<str:platform_slug>", get_review_platform, name="review_platform"),
     # TODO: missing tests
     path("academy/answer/<int:answer_id>", AcademyAnswerView.as_view(), name="academy_answer_id"),
+    path("academy/feedbacksettings", AcademyFeedbackSettingsView.as_view(), name="academy_feedback_settings"),
 ]

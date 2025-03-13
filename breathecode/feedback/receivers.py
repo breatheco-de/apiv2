@@ -77,5 +77,12 @@ def post_liveclass_ended(sender: Type[LiveClass], instance: LiveClass, **kwargs)
 def post_event_ended(sender: Type[Event], instance: Event, **kwargs):
     if instance.status == "FINISHED" and Answer.objects.filter(event__id=instance.id).exists() is False:
         if instance.ended_at is not None:
-            logger.debug("Sending survey for event")
-            send_event_survey.delay(instance.id)
+
+            settings = AcademyFeedbackSettings.objects.filter(academy=instance.academy).first()
+            if settings and settings.event_survey_template:
+                logger.debug("Sending survey for event")
+                send_event_survey.delay(instance.id)
+            else:
+                logger.debug(
+                    f"No event survey template configured for academy {instance.academy.name}, skipping survey"
+                )

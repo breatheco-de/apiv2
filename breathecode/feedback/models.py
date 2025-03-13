@@ -391,6 +391,7 @@ class SurveyTemplate(models.Model):
             ("original", "lang"),  # Ensure only one translation per language
         ]
 
+    @staticmethod
     def get_template(slug, lang, academy=None):
         """
         Get a SurveyTemplate by slug and language, with optional academy filtering.
@@ -426,7 +427,11 @@ class SurveyTemplate(models.Model):
         # If not found in the requested language, try English as fallback
         if lang != "en":
             # Try to find English template with the same academy filter
-            template = SurveyTemplate.objects.filter(slug=slug, lang="en").filter(academy_filter).first()
+            if slug is None:
+                template = SurveyTemplate.objects.filter(lang="en", is_shared=True).first()
+            else:
+                template = SurveyTemplate.objects.filter(slug=slug, lang="en").filter(academy_filter).first()
+
             if template:
                 # If there's a translation in the requested language
                 translation = template.translations.filter(lang=lang).first()
