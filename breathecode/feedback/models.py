@@ -240,6 +240,8 @@ class SurveyTemplate(models.Model):
 
     is_shared = models.BooleanField(default=False, help_text="If true, other academies can use this template")
 
+    original = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="translations")
+
     # JSON fields for different question types
     when_asking_event = models.JSONField(
         null=True,
@@ -355,8 +357,6 @@ class SurveyTemplate(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    original = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="translations")
 
     def clean(self):
         """Validate additional_questions if present and language/original relationships"""
