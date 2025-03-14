@@ -130,10 +130,10 @@ class SpecialtySerializer(serpy.Serializer):
     updated_at = serpy.Field()
     created_at = serpy.Field()
 
-    syllabus_many = serpy.MethodField()
+    syllabus_list = serpy.MethodField()
 
-    def get_syllabus_many(self, obj):
-        return [s.slug for s in obj.syllabus_many.all()]
+    def get_syllabus_list(self, obj):
+        return [s.slug for s in obj.syllabus_list.all()]
 
 
 class BadgeSmallSerializer(serpy.Serializer):

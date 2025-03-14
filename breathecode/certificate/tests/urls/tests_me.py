@@ -38,7 +38,7 @@ def get_serializer(self, user_specialty, academy, specialty, user):
             "logo_url": specialty.logo_url,
             "name": specialty.name,
             "slug": specialty.slug,
-            "syllabus_many": [s.slug for s in specialty.syllabus_many.all()],
+            "syllabus_list": [s.slug for s in specialty.syllabus_list.all()],
             "updated_at": self.bc.datetime.to_iso_string(specialty.updated_at),
         },
         "status": user_specialty.status,

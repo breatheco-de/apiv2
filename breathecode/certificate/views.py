@@ -34,7 +34,7 @@ def get_academy_specialties(request):
 
     syllabus_slug = request.GET.get("syllabus_slug", None)
     if syllabus_slug:
-        items = items.filter(syllabus_many__slug=syllabus_slug)
+        items = items.filter(syllabus_list__slug=syllabus_slug)
 
     sort = request.GET.get("sort", "-created_at")
     items = items.order_by(sort)
