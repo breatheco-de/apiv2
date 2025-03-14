@@ -388,6 +388,9 @@ class Asset(models.Model):
     )
     interactive = models.BooleanField(default=False, db_index=True, help_text="If true, it means is learnpack enabled")
     with_solutions = models.BooleanField(default=False, db_index=True)
+    feature = models.BooleanField(
+        default=False, help_text="If true, it will be shown in the landing pages of the website for marketing purposes"
+    )
     with_video = models.BooleanField(default=False, db_index=True)
     graded = models.BooleanField(default=False, db_index=True)
     gitpod = models.BooleanField(

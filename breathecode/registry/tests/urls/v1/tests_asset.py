@@ -25,6 +25,7 @@ def get_serializer(asset, data={}):
         "asset_type": asset.asset_type,
         "enable_table_of_content": asset.enable_table_of_content,
         "interactive": asset.interactive,
+        "feature": asset.feature,
         "category": {
             "id": asset.category.id,
             "slug": asset.category.slug,
