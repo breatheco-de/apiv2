@@ -2210,8 +2210,6 @@ def login_html_view(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_google_token(request, token=None):
-    # if token == None:
-    #     raise ValidationException("No session token has been specified", slug="no-session-token")
 
     url = request.query_params.get("url", None)
     if url == None:
@@ -2408,7 +2406,9 @@ async def save_google_token(request):
                         if not anon_created and refresh and anon_created.refresh_token != refresh:
                             anon_user.refresh_token = refresh
                             await anon_user.asave()
-                        return HttpResponseRedirect(redirect_to=state["url"][0] + "?error=google-user-not-found")
+
+                        redirect_url = set_query_parameter(state["url"][0], "error", "google-user-not-found")
+                        return HttpResponseRedirect(redirect_to=redirect_url)
 
                     token, created = await Token.aget_or_create(user=user, token_type="login")
 
@@ -2444,7 +2444,8 @@ async def save_google_token(request):
                 async for academy in academies:
                     await set_academy_auth_settings(academy, user)
 
-                return HttpResponseRedirect(redirect_to=state["url"][0] + "?token=" + token.key)
+                redirect_url = set_query_parameter(state["url"][0], "token", token.key)
+                return HttpResponseRedirect(redirect_to=redirect_url)
 
             else:
                 logger.error(await resp.json())
