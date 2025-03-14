@@ -1,7 +1,7 @@
-from breathecode.utils import serpy
-from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.serializers import GetSmallSyllabusScheduleSerializer
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.authenticate.serializers import GetProfileAcademyTinySerializer
+from breathecode.utils import serpy
 
 
 class ProfileSmallSerializer(serpy.Serializer):
@@ -129,6 +129,11 @@ class SpecialtySerializer(serpy.Serializer):
 
     updated_at = serpy.Field()
     created_at = serpy.Field()
+
+    syllabus_list = serpy.MethodField()
+
+    def get_syllabus_list(self, obj):
+        return [s.slug for s in obj.syllabus_list.all()]
 
 
 class BadgeSmallSerializer(serpy.Serializer):
