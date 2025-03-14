@@ -140,6 +140,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
         self.assertEqual(self.bc.database.list_of("payments.Subscription"), [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 Subscription with zero Invoice
@@ -189,6 +190,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         )
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 Subscription process to charge
@@ -298,6 +300,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        delta = timedelta(days=((UTC_NOW + relativedelta(months=unit) - relativedelta(days=25) - UTC_NOW).days))
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_subscription",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": next_payment_at,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
 
     """
     🔽🔽🔽 Subscription error when try to charge
@@ -380,6 +397,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 Subscription is over
@@ -441,6 +459,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             [
                 {
                     **self.bc.format.to_dict(model.subscription),
+                    "status": "EXPIRED",
                 },
             ],
         )
@@ -451,6 +470,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 Subscription was paid
@@ -523,6 +543,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 Subscription try to charge, but a undexpected exception is raised, the database is rollbacked
@@ -602,6 +623,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
@@ -676,3 +698,4 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []

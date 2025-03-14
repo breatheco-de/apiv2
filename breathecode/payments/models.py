@@ -18,7 +18,7 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.admissions.models import DRAFT, Academy, Cohort, Country
+from breathecode.admissions.models import Academy, Cohort, Country
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserInvite
 from breathecode.events.models import EventType
@@ -523,21 +523,15 @@ class AcademyService(models.Model):
         return super().save(*args, **kwargs)
 
 
-ACTIVE = "ACTIVE"
-UNLISTED = "UNLISTED"
-DELETED = "DELETED"
-DISCONTINUED = "DISCONTINUED"
-PLAN_STATUS = [
-    (DRAFT, "Draft"),
-    (ACTIVE, "Active"),
-    (UNLISTED, "Unlisted"),
-    (DELETED, "Deleted"),
-    (DISCONTINUED, "Discontinued"),
-]
-
-
 class Plan(AbstractPriceByTime):
     """A plan is a group of services that can be purchased by a user."""
+
+    class Status(models.TextChoices):
+        DRAFT = ("DRAFT", "Draft")
+        ACTIVE = ("ACTIVE", "Active")
+        UNLISTED = ("UNLISTED", "Unlisted")
+        DELETED = ("DELETED", "Deleted")
+        DISCONTINUED = ("DISCONTINUED", "Discontinued")
 
     slug = models.CharField(
         max_length=60,
@@ -552,7 +546,7 @@ class Plan(AbstractPriceByTime):
         default=True, help_text="Is if true, it will create a renewable subscription instead of a plan financing"
     )
 
-    status = models.CharField(max_length=12, choices=PLAN_STATUS, default=DRAFT, help_text="Status")
+    status = models.CharField(max_length=12, choices=Status, default=Status.DRAFT, help_text="Status")
 
     time_of_life = models.IntegerField(default=1, blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
     time_of_life_unit = models.CharField(
@@ -1070,32 +1064,20 @@ class Invoice(models.Model):
         return f"{self.user.email} {self.amount} ({self.currency.code})"
 
 
-FREE_TRIAL = "FREE_TRIAL"
-ACTIVE = "ACTIVE"
-CANCELLED = "CANCELLED"
-DEPRECATED = "DEPRECATED"
-PAYMENT_ISSUE = "PAYMENT_ISSUE"
-ERROR = "ERROR"
-FULLY_PAID = "FULLY_PAID"
-EXPIRED = "EXPIRED"
-SUBSCRIPTION_STATUS = [
-    (FREE_TRIAL, "Free trial"),
-    (ACTIVE, "Active"),
-    (CANCELLED, "Cancelled"),
-    (DEPRECATED, "Deprecated"),
-    (PAYMENT_ISSUE, "Payment issue"),
-    (ERROR, "Error"),
-    (FULLY_PAID, "Fully Paid"),
-    (EXPIRED, "Expired"),
-]
-
-
 class AbstractIOweYou(models.Model):
     """Common fields for all I owe you."""
 
-    status = models.CharField(
-        max_length=13, choices=SUBSCRIPTION_STATUS, default=ACTIVE, help_text="Status", db_index=True
-    )
+    class Status(models.TextChoices):
+        FREE_TRIAL = "FREE_TRIAL", "Free trial"
+        ACTIVE = "ACTIVE", "Active"
+        CANCELLED = "CANCELLED", "Cancelled"
+        DEPRECATED = "DEPRECATED", "Deprecated"
+        PAYMENT_ISSUE = "PAYMENT_ISSUE", "Payment issue"
+        ERROR = "ERROR", "Error"
+        FULLY_PAID = "FULLY_PAID", "Fully paid"
+        EXPIRED = "EXPIRED", "Expired"
+
+    status = models.CharField(max_length=13, choices=Status, default=Status.ACTIVE, help_text="Status", db_index=True)
     status_message = models.CharField(
         max_length=250, null=True, blank=True, default=None, help_text="Error message if status is ERROR"
     )
@@ -1189,6 +1171,15 @@ class PlanFinancing(AbstractIOweYou):
         if not self.plan_expires_at:
             raise forms.ValidationError(
                 translation(settings.lang, en="Plan expires at is required", es="Plan expires at es requerido")
+            )
+
+        if self.status == self.Status.DEPRECATED:
+            raise forms.ValidationError(
+                translation(
+                    settings.lang,
+                    en="Plan financing cannot be deprecated",
+                    es="Plan financing no puede ser descontinuado",
+                )
             )
 
         return super().clean()

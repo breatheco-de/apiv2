@@ -650,7 +650,7 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__with_many_items__with_wrong_statuses(self):
-        wrong_statuses = ["PAYMENT_ISSUE", "DEPRECATED", "CANCELLED"]
+        wrong_statuses = ["PAYMENT_ISSUE", "CANCELLED"]
         subscriptions = [
             {
                 "valid_until": x,

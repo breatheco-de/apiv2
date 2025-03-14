@@ -5,6 +5,7 @@ Test /answer
 import logging
 import os
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -141,6 +142,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
         self.assertEqual(self.bc.database.list_of("payments.PlanFinancing"), [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 PlanFinancing with zero Invoice
@@ -194,6 +196,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         )
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 PlanFinancing process to charge
@@ -275,6 +278,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 PlanFinancing process to charge
@@ -354,13 +358,14 @@ class PaymentsTestSuite(PaymentsTestCase):
             ],
         )
 
+        next_payment_at = model.plan_financing.next_payment_at + (delta + relativedelta(months=1))
         self.assertEqual(
             self.bc.database.list_of("payments.PlanFinancing"),
             [
                 {
                     **self.bc.format.to_dict(model.plan_financing),
                     "status": "ACTIVE",
-                    "next_payment_at": model.plan_financing.next_payment_at + (delta + relativedelta(months=1)),
+                    "next_payment_at": next_payment_at,
                 },
             ],
         )
@@ -387,6 +392,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        delta = timedelta(days=((UTC_NOW + relativedelta(months=1) - UTC_NOW).days))
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_plan_financing",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": next_payment_at,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
 
     """
     🔽🔽🔽 PlanFinancing error when try to charge
@@ -470,6 +490,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 PlanFinancing is over
@@ -530,6 +551,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             [
                 {
                     **self.bc.format.to_dict(model.plan_financing),
+                    "status": "EXPIRED",
                 },
             ],
         )
@@ -540,6 +562,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 PlanFinancing was paid
@@ -611,6 +634,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 PlanFinancing try to charge, but a undexpected exception is raised, the database is rollbacked
@@ -695,6 +719,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
@@ -774,3 +799,4 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
