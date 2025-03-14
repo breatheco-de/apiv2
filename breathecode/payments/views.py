@@ -967,6 +967,7 @@ class AcademySubscriptionView(APIView):
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
+    @capable_of("read_subscription")
     def get(self, request, subscription_id=None, academy_id=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
