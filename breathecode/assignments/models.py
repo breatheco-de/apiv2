@@ -123,6 +123,20 @@ class Task(models.Model):
     live_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=450, blank=True)
     opened_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        db_index=True,
+        help_text="The moment when the student checked the revision",
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=None,
+        db_index=True,
+        help_text="The moment when the teacher marks the task as ACCEPTED or REJECTED",
+    )
     delivered_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
 
     subtasks = models.JSONField(
@@ -152,6 +166,11 @@ class Task(models.Model):
         self.full_clean()
 
         creating = not self.pk
+
+        # Set reviewed_at when revision status changes to REJECTED or APPROVED
+        if not creating and self.revision_status != self._current_revision_status:
+            if self.revision_status in [self.RevisionStatus.REJECTED, self.RevisionStatus.APPROVED]:
+                self.reviewed_at = timezone.now()
 
         super().save(*args, **kwargs)
         if not creating and self.task_status != self._current_task_status:
