@@ -2,13 +2,14 @@
 Test sync_cohort_user_tasks
 """
 
-import pytest
 from unittest.mock import MagicMock, call, patch
 
+import pytest
+
+from breathecode.assignments.signals import assignment_created
 
 from ...tasks import sync_cohort_user_tasks
 from ..mixins import AssignmentsTestCase
-from breathecode.assignments.signals import assignment_created
 
 
 @pytest.fixture(autouse=True)
@@ -28,6 +29,8 @@ def serialize_task(data={}):
         "github_url": None,
         "live_url": None,
         "opened_at": None,
+        "read_at": None,
+        "reviewed_at": None,
         "revision_status": "PENDING",
         "rigobot_repository_id": None,
         "subtasks": None,
