@@ -18,7 +18,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .caches import AnswerCache
-from .models import Answer, Review, ReviewPlatform, Survey
+from .models import Answer, Review, ReviewPlatform, Survey, AcademyFeedbackSettings, SurveyTemplate
 from .serializers import (
     AnswerPUTSerializer,
     AnswerSerializer,
@@ -30,6 +30,8 @@ from .serializers import (
     SurveyPUTSerializer,
     SurveySerializer,
     SurveySmallSerializer,
+    AcademyFeedbackSettingsSerializer,
+    AcademyFeedbackSettingsPUTSerializer,
 )
 from .tasks import generate_user_cohort_survey_answers
 
@@ -461,3 +463,48 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             item.save()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyFeedbackSettingsView(APIView):
+    @capable_of("get_academy_feedback_settings")
+    def get(self, request, academy_id):
+
+        try:
+            settings = AcademyFeedbackSettings.objects.get(academy__id=academy_id)
+        except AcademyFeedbackSettings.DoesNotExist:
+            raise ValidationException("Academy feedback settings not found", code=400)
+
+        serializer = AcademyFeedbackSettingsSerializer(settings)
+        return Response(serializer.data)
+
+    @capable_of("crud_academy_feedback_settings")
+    def put(self, request, academy_id):
+        academy = Academy.objects.get(id=academy_id)
+        # Look for a shared English template to use as default
+        default_template = SurveyTemplate.objects.filter(
+            is_shared=True, lang="en", original__isnull=True  # Only get original templates
+        ).first()
+
+        defaults = {}
+
+        # Add template to defaults if found
+        if "cohort_survey_template" not in request.data:
+            defaults["cohort_survey_template"] = default_template
+        if "liveclass_survey_template" not in request.data:
+            defaults["liveclass_survey_template"] = default_template
+        if "event_survey_template" not in request.data:
+            defaults["event_survey_template"] = default_template
+        if "mentorship_session_survey_template" not in request.data:
+            defaults["mentorship_session_survey_template"] = default_template
+
+        settings, created = AcademyFeedbackSettings.objects.get_or_create(academy=academy, defaults=defaults)
+
+        serializer = AcademyFeedbackSettingsPUTSerializer(
+            settings, data=request.data, context={"request": request, "academy_id": academy_id}
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(AcademyFeedbackSettingsSerializer(settings).data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

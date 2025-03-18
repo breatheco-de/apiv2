@@ -883,9 +883,8 @@ def build_service_stock_scheduler_from_plan_financing(
     renew_plan_financing_consumables.delay(plan_financing.id)
 
 
-@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_subscription(
-    self,
     bag_id: int,
     invoice_id: int,
     start_date: Optional[datetime] = None,
@@ -941,7 +940,6 @@ def build_subscription(
     )
 
     subscription.plans.set(bag.plans.all())
-    subscription.service_items.set(bag.service_items.all())
 
     subscription.save()
     subscription.invoices.add(invoice)

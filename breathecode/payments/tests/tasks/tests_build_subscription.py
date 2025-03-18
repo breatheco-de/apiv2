@@ -46,6 +46,10 @@ def setup(monkeypatch):
     yield
 
 
+def assert_subscription_with_no_service_items(subscription):
+    assert subscription.service_items.count() == 0
+
+
 # FIXME: create_v2 fail in this test file
 class PaymentsTestSuite(PaymentsTestCase):
     """
@@ -225,6 +229,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 "id": 1,
             },
         ]
+        assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
     🔽🔽🔽 With Bag and Invoice and conversion_info
@@ -328,6 +333,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 "id": 1,
             },
         ]
+        assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
     🔽🔽🔽 With Bag, Invoice and Cohort
@@ -441,6 +447,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 "id": 1,
             },
         ]
+        assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
     🔽🔽🔽 With Bag, Invoice and EventTypeSet
@@ -548,6 +555,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 "id": 1,
             },
         ]
+        assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
     🔽🔽🔽 With Bag, Invoice and MentorshipServiceSet
@@ -655,3 +663,96 @@ class PaymentsTestSuite(PaymentsTestCase):
                 "id": 1,
             },
         ]
+        assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
+
+    """
+    🔽🔽🔽 With Bag with service items
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch.object(timezone, "now", MagicMock(return_value=UTC_NOW))
+    @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", MagicMock())
+    def test_subscription_was_created__bag_with_service_items(self):
+        bag = {
+            "status": "PAID",
+            "was_delivered": False,
+            "chosen_period": random.choice(["MONTH", "QUARTER", "HALF", "YEAR"]),
+        }
+        invoice = {"status": "FULFILLED"}
+        months = 1
+
+        if bag["chosen_period"] == "QUARTER":
+            months = 3
+
+        elif bag["chosen_period"] == "HALF":
+            months = 6
+
+        elif bag["chosen_period"] == "YEAR":
+            months = 12
+
+        plan = {
+            "time_of_life": None,
+            "time_of_life_unit": None,
+        }
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plan, service_items=2)
+
+        # remove prints from mixer
+        logging.Logger.info.call_args_list = []
+        logging.Logger.error.call_args_list = []
+
+        build_subscription.delay(1, 1)
+
+        self.assertEqual(self.bc.database.list_of("admissions.Cohort"), [])
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting build_subscription for bag 1"),
+                call("Subscription was created with id 1"),
+            ],
+        )
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(
+            self.bc.database.list_of("payments.Bag"),
+            [
+                {
+                    **self.bc.format.to_dict(model.bag),
+                    "was_delivered": True,
+                },
+            ],
+        )
+        self.assertEqual(
+            self.bc.database.list_of("payments.Invoice"),
+            [
+                self.bc.format.to_dict(model.invoice),
+            ],
+        )
+        self.assertEqual(
+            self.bc.database.list_of("payments.Subscription"),
+            [
+                subscription_item(
+                    {
+                        "conversion_info": None,
+                        "paid_at": model.invoice.paid_at,
+                        "valid_until": None,
+                        "next_payment_at": model.invoice.paid_at + relativedelta(months=months),
+                    }
+                ),
+            ],
+        )
+
+        self.assertEqual(
+            tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list,
+            [
+                call(1),
+            ],
+        )
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+        assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))

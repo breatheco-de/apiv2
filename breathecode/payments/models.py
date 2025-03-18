@@ -438,20 +438,23 @@ class EventTypeSetTranslation(models.Model):
 
 
 class AcademyService(models.Model):
-    service = models.OneToOneField(Service, on_delete=models.CASCADE, help_text="Service")
+    _price: float | None = None
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy")
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
+    service = models.OneToOneField(Service, on_delete=models.CASCADE, help_text="Service")
 
     price_per_unit = models.FloatField(default=1, help_text="Price per unit (e.g. 1, 2, 3, ...)")
-    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
-
     bundle_size = models.FloatField(
         default=1,
         help_text="Minimum unit size allowed to be bought, example: bundle_size=5, then you are "
         "allowed to buy a minimum of 5 units. Related to the discount ratio",
     )
+
     max_items = models.FloatField(
         default=1, help_text="How many items can be bought in total, it doesn't matter the bundle size"
     )
+
     max_amount = models.FloatField(default=1, help_text="Limit total amount, it doesn't matter the bundle size")
     discount_ratio = models.FloatField(default=1, help_text="Will be used when calculated by the final price")
 
@@ -465,13 +468,52 @@ class AcademyService(models.Model):
         EventTypeSet, blank=True, help_text="Available mentorship service sets to be sold in this service and plan"
     )
 
+    available_cohort_sets = models.ManyToManyField(
+        CohortSet, blank=True, help_text="Available cohort sets to be sold in this service and plan"
+    )
+
     def __str__(self) -> str:
         return f"{self.academy.slug} -> {self.service.slug}"
 
-    def get_discounted_price(self, num_items) -> float:
-        if num_items > self.max_items:
-            raise ValueError("num_items cannot be greater than max_items")
+    def validate_transaction(self, total_items: float, lang: Optional[str] = "en") -> None:
+        if total_items < self.bundle_size:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"The amount of items is too low (min {self.bundle_size})",
+                    es=f"La cantidad de elementos es demasiado baja (min {self.bundle_size})",
+                    slug="the-amount-of-items-is-too-low",
+                ),
+                code=400,
+            )
 
+        if total_items > self.max_items:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"The amount of items is too high (max {self.max_items})",
+                    es=f"La cantidad de elementos es demasiado alta (máx {self.max_items})",
+                    slug="the-amount-of-items-is-too-high",
+                ),
+                code=400,
+            )
+
+        amount = self._price if self._price is not None else self.get_discounted_price(total_items)
+
+        if amount > self.max_amount:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"The amount of items is too high (max {self.max_amount})",
+                    es=f"La cantidad de elementos es demasiado alta (máx {self.max_amount})",
+                    slug="the-amount-is-too-high",
+                ),
+                code=400,
+            )
+
+        self._price = amount
+
+    def get_discounted_price(self, num_items: float) -> float:
         total_discount_ratio = 0
         current_discount_ratio = self.discount_ratio
         discount_nerf = 0.1
@@ -520,6 +562,7 @@ class AcademyService(models.Model):
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
+        self._price = None
         return super().save(*args, **kwargs)
 
 
@@ -568,6 +611,10 @@ class Plan(AbstractPriceByTime):
 
     service_items = models.ManyToManyField(
         ServiceItem, blank=True, through="PlanServiceItem", through_fields=("plan", "service_item")
+    )
+
+    add_ons = models.ManyToManyField(
+        AcademyService, blank=True, help_text="Service item bundles that can be purchased with this plan"
     )
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")

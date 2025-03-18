@@ -36,7 +36,7 @@ from breathecode.utils.multi_status_response import MultiStatusResponse
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
 from .forms import DeliverAssigntmentForm
-from .models import FinalProject, Task, UserAttachment
+from .models import FinalProject, Task, UserAttachment, RepositoryDeletionOrder
 from .serializers import (
     FinalProjectGETSerializer,
     PostFinalProjectSerializer,
@@ -47,6 +47,7 @@ from .serializers import (
     TaskGETDeliverSerializer,
     TaskGETSerializer,
     UserAttachmentSerializer,
+    RepositoryDeletionOrderSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -535,6 +536,23 @@ class CohortTaskView(APIView, GenerateLookupsMixin):
 
         serializer = TaskGETSerializer(items, many=True)
         return handler.response(serializer.data)
+
+
+class RepositoryDeletionsMeView(APIView):
+
+    def get(self, request):
+
+        user = request.user
+
+        items = RepositoryDeletionOrder.objects.filter(user=user)
+
+        status = request.GET.get("status", None)
+        if status is not None:
+            status = status.upper()
+            items = items.filter(status=status)
+
+        serializer = RepositoryDeletionOrderSerializer(items, many=True)
+        return Response(serializer.data)
 
 
 class TaskMeAttachmentView(APIView):

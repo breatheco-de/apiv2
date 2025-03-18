@@ -8,7 +8,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
 
 from .actions import send_cohort_survey_group
-from .models import Answer, Review, Survey
+from .models import Answer, Review, Survey, AcademyFeedbackSettings
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -83,6 +83,24 @@ class EventTypeSmallSerializer(serpy.Serializer):
     excerpt = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
+
+
+class SurveyTemplateSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    lang = serpy.Field()
+    is_shared = serpy.Field()
+    original = serpy.Field()
+    when_asking_event = serpy.Field()
+    when_asking_mentor = serpy.Field()
+    when_asking_cohort = serpy.Field()
+    when_asking_academy = serpy.Field()
+    when_asking_mentorshipsession = serpy.Field()
+    when_asking_platform = serpy.Field()
+    when_asking_liveclass_mentor = serpy.Field()
+    when_asking_mentor_communication = serpy.Field()
+    when_asking_mentor_participation = serpy.Field()
+    additional_questions = serpy.Field()
 
 
 class LiveClassSmallSerializer(serpy.Serializer):
@@ -199,6 +217,19 @@ class GetSurveySerializer(serpy.Serializer):
 
     def get_cohort(self, obj):
         return obj.cohort.id if obj.cohort else None
+
+
+class AcademyFeedbackSettingsSerializer(serpy.Serializer):
+    """Serializer for AcademyFeedbackSettings"""
+
+    id = serpy.Field()
+    cohort_survey_template = SurveyTemplateSerializer(required=False)
+    liveclass_survey_template = SurveyTemplateSerializer(required=False)
+    event_survey_template = SurveyTemplateSerializer(required=False)
+    mentorship_session_survey_template = SurveyTemplateSerializer(required=False)
+    liveclass_survey_cohort_exclusions = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class AnswerPUTSerializer(serializers.ModelSerializer):
@@ -354,3 +385,11 @@ class ReviewPUTSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         result = super().update(instance, validated_data)
         return result
+
+
+class AcademyFeedbackSettingsPUTSerializer(serializers.ModelSerializer):
+    """Serializer for updating AcademyFeedbackSettings"""
+
+    class Meta:
+        model = AcademyFeedbackSettings
+        exclude = ("academy", "created_at", "updated_at")
