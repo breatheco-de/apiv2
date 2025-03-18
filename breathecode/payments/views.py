@@ -1955,33 +1955,12 @@ class ConsumableCheckoutView(APIView):
 
         currency = academy_service.currency
 
-        if total_items > academy_service.max_items:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"The amount of items is too high (max {academy_service.max_items})",
-                    es=f"La cantidad de elementos es demasiado alta (máx {academy_service.max_items})",
-                    slug="the-amount-of-items-is-too-high",
-                ),
-                code=400,
-            )
-
+        academy_service.validate_transaction(total_items, lang)
         amount = academy_service.get_discounted_price(total_items)
 
         if amount <= 0.5:
             raise ValidationException(
                 translation(lang, en="The amount is too low", es="El monto es muy bajo", slug="the-amount-is-too-low"),
-                code=400,
-            )
-
-        if amount > academy_service.max_amount:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"The amount is too high (max {academy_service.max_amount})",
-                    es=f"El monto es demasiado alto (máx {academy_service.max_amount})",
-                    slug="the-amount-is-too-high",
-                ),
                 code=400,
             )
 
