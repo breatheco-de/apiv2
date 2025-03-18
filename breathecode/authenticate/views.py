@@ -2220,10 +2220,11 @@ def get_google_token(request, token=None):
     except Exception:
         pass
 
+    if token is not None:
         # you can only connect to google with temporal short lasting tokens
-    token = Token.get_valid(token)
-    if token is not None and token.token_type not in ["temporal", "one_time"]:
-        raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
+        token = Token.get_valid(token)
+        if token is None or token.token_type not in ["temporal", "one_time"]:
+            raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
 
     # set academy settings automatically
     academy_settings = request.GET.get("academysettings", "none")
@@ -2322,11 +2323,11 @@ async def save_google_token(request):
     token = None
     if "token" in state and state["token"][0] != "":
         token = await Token.aget_valid(state["token"][0])
-    if token is not None and token.token_type not in ["temporal", "one_time"]:
-        logger.debug(f'Token {state["token"][0]} not found or is expired')
-        raise ValidationException(
-            "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
-        )
+        if not token or token.token_type not in ["temporal", "one_time"]:
+            logger.debug(f'Token {state["token"][0]} not found or is expired')
+            raise ValidationException(
+                "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
+            )
 
     academies = async_iter([])
     roles = ["admin", "staff", "country_manager", "academy_token"]
