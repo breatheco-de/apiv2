@@ -310,7 +310,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         subject = translation(
             settings.lang,
             en=f"Your 4Geeks subscription to {plan.slug} has been discontinued",
-            es=f"Tu suscripción 4Geeks a {plan.slug} ha sido discontinuada",
+            es=f"Tu suscripción 4Geeks a {plan.slug} ha sido descontinuada",
         )
 
         obj = {
