@@ -127,7 +127,11 @@ def forward_asset_url(request, asset_slug=None):
         logger.error(e)
         msg = f"The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon."
         AssetErrorLog(
-            slug=AssetErrorLogType.INVALID_URL, path=asset_slug, asset=asset, asset_type=asset.asset_type, status_text=msg
+            slug=AssetErrorLogType.INVALID_URL,
+            path=asset_slug,
+            asset=asset,
+            asset_type=asset.asset_type,
+            status_text=msg,
         ).save()
 
         return render_message(request, msg, academy=asset.academy)
@@ -677,6 +681,15 @@ class AssetView(APIView, GenerateLookupsMixin):
                     | Q(title__icontains=like)
                     | Q(assetalias__slug__icontains=slugify(like))
                 )
+
+        if "learnpack_deploy_url" in self.request.GET:
+            param = self.request.GET.get("learnpack_deploy_url")
+            if param.lower() == "true":
+                items = items.exclude(learnpack_deploy_url__isnull=True).exclude(learnpack_deploy_url="")
+            elif param.lower() == "false":
+                items = items.filter(Q(learnpack_deploy_url__isnull=True) | Q(learnpack_deploy_url=""))
+            elif is_url(param):
+                items = items.filter(learnpack_deploy_url=param)
 
         if "slug" in self.request.GET:
             asset_type = self.request.GET.get("asset_type", None)
