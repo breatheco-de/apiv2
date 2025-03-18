@@ -142,6 +142,14 @@ CAPABILITIES = [
         "slug": "crud_academy_auth_settings",
         "description": "Settings related to authentication, for example the github auth integration",
     },
+    {
+        "slug": "get_academy_feedback_settings",
+        "description": "Settings related to feedback module, for example the chosen template for a cohort survey",
+    },
+    {
+        "slug": "crud_academy_feedback_settings",
+        "description": "Settings related to feedback module, for example the chosen template for a cohort survey",
+    },
     {"slug": "start_or_end_event", "description": "Start or end event"},
     {"slug": "read_provisioning_bill", "description": "Read provisioning activities and bills"},
     {"slug": "crud_provisioning_activity", "description": "Create, update or delete provisioning activities"},
@@ -578,6 +586,8 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "reset_calendly_organization",
                 "create_calendly_organization",
                 "delete_calendly_organization",
+                "get_academy_feedback_settings",
+                "crud_academy_feedback_settings",
             ],
         }
     )

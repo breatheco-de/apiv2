@@ -29,7 +29,7 @@ def batch(self, webhook: LearnPackWebhook):
 
     assets = Task.objects.filter(associated_slug=asset.slug, user__id=webhook.student.id)
     if assets.count() == 0:
-        raise Exception(f"Student with id {webhook.student.id} has not tasks with associated slug {_slug}")
+        raise Exception(f"Student with id {webhook.student.id} has not tasks with associated slug {asset.slug}")
 
     if telemetry is None:
         telemetry = AssignmentTelemetry(user=webhook.student, asset_slug=asset.slug, telemetry=webhook.payload)

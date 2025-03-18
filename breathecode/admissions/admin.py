@@ -382,9 +382,10 @@ def async_test_syllabus_integrity(modeladmin, request, queryset):
 
 @admin.register(SyllabusVersion)
 class SyllabusVersionAdmin(admin.ModelAdmin):
-    list_display = ("version", "syllabus", "integrity", "owner", "url_path")
+    list_display = ("version", "syllabus", "integrity", "owner", "url_path", "created_at", "updated_at")
     search_fields = ["syllabus__name", "syllabus__slug"]
     list_filter = ["syllabus__private", "syllabus__academy_owner"]
+    readonly_fields = ["created_at", "updated_at"]
     actions = [
         test_syllabus_integrity,
         async_test_syllabus_integrity,
