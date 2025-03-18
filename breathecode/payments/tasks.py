@@ -301,7 +301,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         plan = subscription.plans.first()
         link = None
 
-        if plan and (offer := PlanOffer.objects.filter(original_plan=subscription.plan).first()):
+        if plan and (offer := PlanOffer.objects.filter(original_plan=plan).first()):
             link = f"{get_app_url()}/checkout?plan={offer.suggested_plan.slug}"
 
         elif plan is None:
@@ -309,8 +309,8 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
         subject = translation(
             settings.lang,
-            en=f"Your 4Geeks subscription to {plan.title} has been discontinued",
-            es=f"Tu suscripción 4Geeks a {plan.title} ha sido discontinuada",
+            en=f"Your 4Geeks subscription to {plan.slug} has been discontinued",
+            es=f"Tu suscripción 4Geeks a {plan.slug} ha sido discontinuada",
         )
 
         obj = {
@@ -328,15 +328,15 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             message = translation(
                 settings.lang,
-                en=f"We regret to inform you that your 4Geeks subscription to {plan.title} has been discontinued. Please check our suggested plans for alternatives.",
-                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.title} ha sido discontinuada. Por favor, revisa nuestros planes sugeridos para alternativas.",
+                en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued. Please check our suggested plans for alternatives.",
+                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido discontinuada. Por favor, revisa nuestros planes sugeridos para alternativas.",
             )
 
         else:
             message = translation(
                 settings.lang,
-                en=f"We regret to inform you that your 4Geeks subscription to {plan.title} has been discontinued.",
-                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.title} ha sido discontinuada.",
+                en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued.",
+                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido discontinuada.",
             )
 
         obj["MESSAGE"] = message
@@ -368,6 +368,8 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             utc_now = timezone.now()
 
+            settings = get_user_settings(subscription.user.id)
+
             if subscription.status == Subscription.Status.DEPRECATED:
                 handle_deprecated_subscription()
 
@@ -379,7 +381,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             # 1. Check if subscription is accionable
             # 2. Check if subscription is over
             # 3. Expire the subscription if it is over
-            if subscription.status not in statuses or (subscription.valid_until and subscription.valid_until < utc_now):
+            if subscription.valid_until and subscription.valid_until < utc_now and subscription.status in statuses:
                 if subscription.status != Subscription.Status.EXPIRED:
                     subscription.status = Subscription.Status.EXPIRED
                     subscription.save()
@@ -387,8 +389,6 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             if subscription.next_payment_at > utc_now:
                 raise AbortTask(f"The subscription with id {subscription_id} was paid this month")
-
-            settings = get_user_settings(subscription.user.id)
 
             if subscription.externally_managed:
                 invoice = (
@@ -410,7 +410,12 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                         es="Por favor realiza tu pago en tu academia",
                     )
                     alert_payment_issue(message, button)
-                    return
+
+                    manager = schedule_task(charge_subscription, "1d")
+                    if not manager.exists(subscription.id):
+                        manager.call(subscription.id)
+
+                    raise AbortTask(f"Payment to Subscription {subscription_id} failed")
 
                 bag = invoice.bag
 
@@ -421,6 +426,11 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     subscription.status = "ERROR"
                     subscription.status_message = str(e)
                     subscription.save()
+
+                    manager = schedule_task(charge_subscription, "1d")
+                    if not manager.exists(subscription.id):
+                        manager.call(subscription.id)
+
                     raise AbortTask(f"Error getting bag from subscription {subscription_id}: {e}")
 
                 amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
@@ -443,7 +453,12 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                         es="Por favor actualiza tus métodos de pago",
                     )
                     alert_payment_issue(message, button)
-                    return
+
+                    manager = schedule_task(charge_subscription, "1d")
+                    if not manager.exists(subscription.id):
+                        manager.call(subscription.id)
+
+                    raise AbortTask(f"Payment to Subscription {subscription_id} failed")
 
             subscription.paid_at = utc_now
             delta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
@@ -579,10 +594,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             utc_now = timezone.now()
 
-            if plan_financing.status not in statuses or plan_financing.plan_expires_at < utc_now:
-                if plan_financing.status != PlanFinancing.Status.EXPIRED:
-                    plan_financing.status = PlanFinancing.Status.EXPIRED
-                    plan_financing.save()
+            if plan_financing.status in statuses and (
+                plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now
+            ):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} is over")
 
             if plan_financing.next_payment_at > utc_now:
@@ -632,7 +646,12 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                             es="Por favor realiza tu pago en tu academia",
                         )
                         alert_payment_issue(message, button)
-                        return
+
+                        manager = schedule_task(charge_plan_financing, "1d")
+                        if not manager.exists(plan_financing.id):
+                            manager.call(plan_financing.id)
+
+                        raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
 
                     bag = invoice.bag
 
@@ -643,6 +662,10 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         plan_financing.status = "ERROR"
                         plan_financing.status_message = str(e)
                         plan_financing.save()
+
+                        manager = schedule_task(charge_plan_financing, "1d")
+                        if not manager.exists(plan_financing.id):
+                            manager.call(plan_financing.id)
 
                         raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
 
@@ -665,7 +688,12 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                             es="Por favor actualiza tus métodos de pago",
                         )
                         alert_payment_issue(message, button)
-                        return
+
+                        manager = schedule_task(charge_plan_financing, "1d")
+                        if not manager.exists(plan_financing.id):
+                            manager.call(plan_financing.id)
+
+                        raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
 
                 if utc_now > plan_financing.valid_until:
                     remaining_installments -= 1

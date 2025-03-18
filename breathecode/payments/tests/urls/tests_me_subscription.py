@@ -706,7 +706,7 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_statuses(self):
-        statuses = ["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "DEPRECATED", "CANCELLED", "ERROR"]
+        statuses = ["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "CANCELLED", "ERROR"]
         chosen_statuses = [random.choice(statuses) for _ in range(2)]
         subscriptions = [
             {
@@ -813,7 +813,7 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_wrong_invoice(self):
-        statuses = ["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "DEPRECATED", "CANCELLED", "ERROR"]
+        statuses = ["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "CANCELLED", "ERROR"]
         chosen_statuses = [random.choice(statuses) for _ in range(2)]
         subscriptions = [
             {
@@ -973,7 +973,7 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_wrong_service(self):
-        statuses = ["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "DEPRECATED", "CANCELLED", "ERROR"]
+        statuses = ["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "CANCELLED", "ERROR"]
         chosen_statuses = [random.choice(statuses) for _ in range(2)]
         subscriptions = [
             {
@@ -1138,7 +1138,7 @@ class SignalTestSuite(PaymentsTestCase):
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__with_many_items__filter_by_wrong_plan(self):
-        statuses = ["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "DEPRECATED", "CANCELLED", "ERROR"]
+        statuses = ["FREE_TRIAL", "ACTIVE", "PAYMENT_ISSUE", "CANCELLED", "ERROR"]
         chosen_statuses = [random.choice(statuses) for _ in range(2)]
         subscriptions = [
             {

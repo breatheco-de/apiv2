@@ -2,6 +2,7 @@
 Test /answer
 """
 
+import datetime
 import logging
 import os
 import random
@@ -444,7 +445,9 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call("Starting charge_plan_financing for id 1"),
             ],
         )
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(
+            logging.Logger.error.call_args_list, [call("Payment to PlanFinancing 1 failed", exc_info=True)]
+        )
 
         self.assertEqual(
             self.bc.database.list_of("payments.Bag"),
@@ -490,7 +493,22 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
-        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "arguments": {
+                    "args": [
+                        1,
+                    ],
+                    "kwargs": {},
+                },
+                "duration": timedelta(days=1),
+                "eta": UTC_NOW + timedelta(days=1),
+                "id": 1,
+                "status": "PENDING",
+                "task_module": "breathecode.payments.tasks",
+                "task_name": "charge_plan_financing",
+            },
+        ]
 
     """
     🔽🔽🔽 PlanFinancing is over
@@ -504,12 +522,13 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_plan_financing_is_over(self):
         plan_financing = {
-            "valid_until": UTC_NOW + relativedelta(months=random.randint(1, 12)),
+            "valid_until": UTC_NOW - relativedelta(months=random.randint(1, 12)),
             "monthly_price": (random.random() * 99) + 1,
             "plan_expires_at": UTC_NOW - relativedelta(minutes=1),
         }
         plan = {"is_renewable": False}
-        model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan)
+        with patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW - relativedelta(days=6))):
+            model = self.bc.database.create(plan_financing=plan_financing, invoice=1, plan=plan)
 
         with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock(side_effect=Exception("fake error"))):
             # remove prints from mixer
@@ -551,7 +570,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             [
                 {
                     **self.bc.format.to_dict(model.plan_financing),
-                    "status": "EXPIRED",
+                    "status": "ACTIVE",  # status does not change
                 },
             ],
         )
@@ -800,3 +819,183 @@ class PaymentsTestSuite(PaymentsTestCase):
             ],
         )
         assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    """
+    🔽🔽🔽 PlanFinancing was paid earlier (within 5 days)
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_was_paid_earlier(self):
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(minutes=1),
+            "next_payment_at": UTC_NOW - relativedelta(minutes=1),
+            "monthly_price": (random.random() * 99) + 1,
+            "plan_expires_at": UTC_NOW + relativedelta(months=random.randint(1, 12)),
+        }
+        plan = {"is_renewable": False}
+        # Invoice created less than 5 days ago
+        invoice = {"paid_at": UTC_NOW - relativedelta(days=2), "created_at": UTC_NOW - relativedelta(days=2)}
+        bag = {"how_many_installments": 3}
+        model = self.bc.database.create(plan_financing=plan_financing, invoice=invoice, plan=plan, bag=bag)
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock(side_effect=Exception("fake error"))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_plan_financing.delay(1)
+
+        self.assertEqual(self.bc.database.list_of("admissions.Cohort"), [])
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting charge_plan_financing for id 1"),
+            ],
+        )
+        self.assertEqual(
+            logging.Logger.error.call_args_list,
+            [
+                call("PlanFinancing with id 1 was paid earlier", exc_info=True),
+            ],
+        )
+
+        self.assertEqual(
+            self.bc.database.list_of("payments.Bag"),
+            [
+                self.bc.format.to_dict(model.bag),
+            ],
+        )
+        self.assertEqual(
+            self.bc.database.list_of("payments.Invoice"),
+            [
+                self.bc.format.to_dict(model.invoice),
+            ],
+        )
+
+        self.assertEqual(
+            self.bc.database.list_of("payments.PlanFinancing"),
+            [
+                {
+                    **self.bc.format.to_dict(model.plan_financing),
+                },
+            ],
+        )
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    """
+    🔽🔽🔽 PlanFinancing with all installments completed (fully paid)
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("breathecode.payments.tasks.renew_plan_financing_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_plan_financing_fully_paid(self):
+        plan_financing = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "monthly_price": (random.random() * 99) + 1,
+            "plan_expires_at": UTC_NOW + relativedelta(years=1),
+            "how_many_installments": 3,
+        }
+        plan = {"is_renewable": False}
+        bag = {"how_many_installments": 3}
+
+        # Create 3 invoices (all installments paid)
+        with patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW - relativedelta(days=6))):
+            model = self.bc.database.create(
+                plan_financing=plan_financing,
+                invoice=[
+                    {"paid_at": UTC_NOW - relativedelta(days=90), "created_at": UTC_NOW - relativedelta(days=90)},
+                    {"paid_at": UTC_NOW - relativedelta(days=60), "created_at": UTC_NOW - relativedelta(days=60)},
+                    {"paid_at": UTC_NOW - relativedelta(days=30), "created_at": UTC_NOW - relativedelta(days=30)},
+                ],
+                plan=plan,
+                bag=bag,
+            )
+
+        # Add all invoices to plan_financing to ensure they're counted
+        for invoice in model.invoice:
+            model.plan_financing.invoices.add(invoice)
+
+        with patch(
+            "breathecode.payments.services.stripe.Stripe.pay",
+            MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy)),
+        ):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_plan_financing.delay(1)
+
+        self.assertEqual(self.bc.database.list_of("admissions.Cohort"), [])
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting charge_plan_financing for id 1"),
+            ],
+        )
+        # Expect the "was paid earlier" error message
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+        self.assertEqual(
+            self.bc.database.list_of("payments.Bag"),
+            [
+                self.bc.format.to_dict(model.bag),
+            ],
+        )
+
+        # No new invoice should be created
+        self.assertEqual(len(self.bc.database.list_of("payments.Invoice")), 3)
+
+        # Status should remain unchanged
+        self.assertEqual(
+            self.bc.database.list_of("payments.PlanFinancing"),
+            [
+                {
+                    **self.bc.format.to_dict(model.plan_financing),
+                    "next_payment_at": model.plan_financing.next_payment_at + relativedelta(months=1),
+                    "status": "FULLY_PAID",
+                },
+            ],
+        )
+
+        self.assertEqual(notify_actions.send_email_message.call_args_list, [])
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "arguments": {
+                    "args": [
+                        1,
+                    ],
+                    "kwargs": {},
+                },
+                "duration": (model.plan_financing.next_payment_at + relativedelta(months=1)) - UTC_NOW,
+                "eta": model.plan_financing.next_payment_at + relativedelta(months=1),
+                "id": 1,
+                "status": "PENDING",
+                "task_module": "breathecode.payments.tasks",
+                "task_name": "charge_plan_financing",
+            },
+        ]
