@@ -110,7 +110,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 0.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": None},
+                    "scores": {"academy": None, "cohort": None, "live_class": None, "mentors": [], "total": None},
                 }
             ],
         )
@@ -148,7 +148,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 100.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": 7.0},
+                    "scores": {"academy": None, "cohort": None, "live_class": None, "mentors": [], "total": 7.0},
                 }
             ],
         )
@@ -168,7 +168,14 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         from breathecode.notify.actions import send_email_message
 
-        answer = {"score": 7, "status": "ANSWERED"}
+        base_model = self.generate_models(academy=1)
+
+        answer = {
+            "score": 7,
+            "status": "ANSWERED",
+            "mentor": None,
+            "cohort": None,
+        }
         with patch("breathecode.activity.tasks.get_attendancy_log.delay", MagicMock()):
             model = self.generate_models(answer=answer, survey=1, academy=1)
         survey_db = self.model_to_dict(model, "survey")
@@ -186,7 +193,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 100.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": 7.0},
+                    "scores": {"academy": 7, "cohort": None, "live_class": None, "mentors": [], "total": 7.0},
                 }
             ],
         )
@@ -231,7 +238,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 0.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": None},
+                    "scores": {"academy": None, "cohort": None, "live_class": None, "mentors": [], "total": None},
                 }
             ],
         )
@@ -288,7 +295,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 0.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": None},
+                    "scores": {"academy": None, "cohort": None, "live_class": None, "mentors": [], "total": None},
                 }
             ],
         )
@@ -349,7 +356,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 0.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": None},
+                    "scores": {"academy": None, "cohort": None, "live_class": None, "mentors": [], "total": None},
                 }
             ],
         )
@@ -411,7 +418,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 0.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": None},
+                    "scores": {"academy": None, "cohort": None, "live_class": None, "mentors": [], "total": None},
                 }
             ],
         )
@@ -475,7 +482,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 0.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": None},
+                    "scores": {"academy": None, "cohort": None, "live_class": None, "mentors": [], "total": None},
                 }
             ],
         )
@@ -495,7 +502,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         from breathecode.notify.actions import send_email_message
 
-        answer = {"score": 10, "status": "ANSWERED"}
+        answer = {"score": 10, "status": "ANSWERED", "mentor": None, "academy": None}
         with patch("breathecode.activity.tasks.get_attendancy_log.delay", MagicMock()):
             model = self.generate_models(answer=answer, survey=1, academy=1, user=1)
         survey_db = self.model_to_dict(model, "survey")
@@ -513,7 +520,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                 {
                     **survey_db,
                     "response_rate": 100.0,
-                    "scores": {"academy": None, "cohort": None, "mentors": [], "total": 10.0},
+                    "scores": {"academy": None, "cohort": None, "live_class": None, "mentors": [], "total": 10.0},
                 }
             ],
         )

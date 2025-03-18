@@ -12,13 +12,14 @@ from breathecode.events.signals import event_status_updated, liveclass_ended
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_saved
 
-from .models import Answer
+from .models import Answer, AcademyFeedbackSettings
 from .signals import survey_answered
-from .tasks import (  # send_liveclass_survey,
+from .tasks import (
     process_answer_received,
     process_student_graduation,
     send_event_survey,
     send_mentorship_session_survey,
+    send_liveclass_survey,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,13 +61,28 @@ def post_liveclass_ended(sender: Type[LiveClass], instance: LiveClass, **kwargs)
         logger.debug("LiveClass ended more than 24 hours ago, not sending survey")
         return
 
-    logger.debug(f"Sending survey survey about live class {instance.id}")
-    # send_liveclass_survey(instance.id)
+    # Check if academy has liveclass survey template configured
+    if instance.cohort_time_slot and instance.cohort_time_slot.cohort:
+        academy = instance.cohort_time_slot.cohort.academy
+        settings = AcademyFeedbackSettings.objects.filter(academy=academy).first()
+
+        if settings and settings.liveclass_survey_template:
+            logger.debug(f"Sending survey about live class {instance.id}")
+            send_liveclass_survey.delay(instance.id)
+        else:
+            logger.debug(f"No liveclass survey template configured for academy {academy.name}, skipping survey")
 
 
 @receiver(event_status_updated, sender=Event)
 def post_event_ended(sender: Type[Event], instance: Event, **kwargs):
     if instance.status == "FINISHED" and Answer.objects.filter(event__id=instance.id).exists() is False:
         if instance.ended_at is not None:
-            logger.debug("Sending survey for event")
-            send_event_survey.delay(instance.id)
+
+            settings = AcademyFeedbackSettings.objects.filter(academy=instance.academy).first()
+            if settings and settings.event_survey_template:
+                logger.debug("Sending survey for event")
+                send_event_survey.delay(instance.id)
+            else:
+                logger.debug(
+                    f"No event survey template configured for academy {instance.academy.name}, skipping survey"
+                )

@@ -4,10 +4,12 @@ import os
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
+from django import forms
 
 from breathecode.assignments.tasks import async_learnpack_webhook
 from breathecode.authenticate.models import Token
 from breathecode.services.learnpack import LearnPack
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from .actions import sync_student_tasks
 from .models import (
@@ -243,8 +245,18 @@ class AssignmentTelemetryAdmin(admin.ModelAdmin):
     frustration_score_display.short_description = "Frustration Score"
 
 
+class LearnPackWebhookForm(forms.ModelForm):
+    class Meta:
+        model = LearnPackWebhook
+        fields = "__all__"
+        widgets = {
+            "payload": PrettyJSONWidget(attrs={"help_text": "Edit the JSON payload here"}),
+        }
+
+
 @admin.register(LearnPackWebhook)
 class LearnPackWebhookAdmin(admin.ModelAdmin):
+    form = LearnPackWebhookForm
     list_display = ("id", "event", "status", "student", "created_at")
     search_fields = ["telemetry__asset_slug", "telemetry__user__email"]
     list_filter = ["status", "event"]
@@ -276,6 +288,7 @@ class RepositoryDeletionOrderAdmin(admin.ModelAdmin):
     list_display = ("provider", "status", "repository_user", "repository_name")
     search_fields = ["repository_user", "repository_name"]
     list_filter = ["provider", "status"]
+    raw_id_fields = ["user"]
 
 
 @admin.register(RepositoryWhiteList)

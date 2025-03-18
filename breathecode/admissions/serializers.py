@@ -4,6 +4,7 @@ from collections import OrderedDict
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import Permission, User
 from django.db.models import Q
+from django.utils import timezone
 
 from breathecode.admissions.actions import ImportCohortTimeSlots
 from breathecode.assignments.models import Task
@@ -1250,11 +1251,17 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
 
+        # Add initial change log entry for creation
+        user = self.context["request"].user
+        timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+        change_log = f"{timestamp} - {user.first_name} {user.last_name} (ID: {user.id}) created the syllabus version."
+
         return super(SyllabusVersionSerializer, self).create(
             {
                 **validated_data,
                 "syllabus": syllabus,
                 "version": version,
+                "change_log_details": change_log,
             }
         )
 
@@ -1265,7 +1272,7 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ["json", "version", "syllabus", "status"]
+        fields = ["json", "version", "syllabus", "status", "change_log_details"]
         exclude = ()
         extra_kwargs = {
             "syllabus": {"read_only": True},
@@ -1289,6 +1296,82 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
                 raise ValidationException(f"Error when testing the syllabus: {str(e)}", slug="syllabus-with-errors")
 
         return _data
+
+    def update(self, instance, validated_data):
+        # If JSON is being updated, add an entry to the change log
+        if "json" in validated_data:
+            user = self.context["request"].user
+            timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Generate a summary of changes
+            change_summary = self.generate_json_change_summary(instance.json, validated_data["json"])
+
+            # Append to existing change log or create new one
+            new_log_entry = (
+                f"{timestamp} - {user.first_name} {user.last_name} (ID: {user.id}) updated the syllabus version."
+            )
+            if change_summary:
+                new_log_entry += f"\nChanges: {change_summary}"
+
+            if instance.change_log_details:
+                validated_data["change_log_details"] = f"{new_log_entry}\n{instance.change_log_details}"
+            else:
+                validated_data["change_log_details"] = new_log_entry
+
+        return super().update(instance, validated_data)
+
+    def generate_json_change_summary(self, old_json, new_json):
+        """Generate a summary of changes between old and new JSON"""
+        changes = []
+
+        # Check for changes in basic metadata
+        if old_json.get("title") != new_json.get("title"):
+            changes.append(f"Title changed from '{old_json.get('title')}' to '{new_json.get('title')}'")
+
+        if old_json.get("description") != new_json.get("description"):
+            changes.append("Description updated")
+
+        # Check for changes in days structure
+        old_days = old_json.get("days", [])
+        new_days = new_json.get("days", [])
+
+        if len(old_days) != len(new_days):
+            changes.append(f"Number of days changed from {len(old_days)} to {len(new_days)}")
+
+        # Check for added/modified/removed assignments
+        old_assignments = self.extract_assignments(old_json)
+        new_assignments = self.extract_assignments(new_json)
+
+        added = set(new_assignments.keys()) - set(old_assignments.keys())
+        removed = set(old_assignments.keys()) - set(new_assignments.keys())
+
+        if added:
+            changes.append(f"Added assignments: {', '.join(added)}")
+
+        if removed:
+            changes.append(f"Removed assignments: {', '.join(removed)}")
+
+        # Check for modified assignments
+        common = set(old_assignments.keys()) & set(new_assignments.keys())
+        modified = [slug for slug in common if old_assignments[slug] != new_assignments[slug]]
+
+        if modified:
+            changes.append(f"Modified assignments: {', '.join(modified)}")
+
+        return "; ".join(changes) if changes else "No significant changes detected"
+
+    def extract_assignments(self, json_data):
+        """Extract all assignments from the syllabus JSON"""
+        assignments = {}
+
+        for day in json_data.get("days", []):
+            for assignment in day.get("assignments", []):
+                slug = assignment.get("slug")
+                if slug:
+                    # Store a hash of the assignment to detect changes
+                    assignments[slug] = hash(str(assignment))
+
+        return assignments
 
 
 class AcademyReportSerializer(serpy.Serializer):

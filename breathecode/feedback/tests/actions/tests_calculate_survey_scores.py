@@ -44,7 +44,7 @@ class SurveyTestSuite(FeedbackTestCase):
         )
 
         json = calculate_survey_scores(1)
-        expected = {"academy": None, "cohort": None, "mentors": [], "total": None}
+        expected = {"academy": None, "cohort": None, "mentors": [], "total": None, "live_class": None}
 
         self.assertEqual(json, expected)
         self.assertEqual(
@@ -70,7 +70,7 @@ class SurveyTestSuite(FeedbackTestCase):
         )
 
         json = calculate_survey_scores(1)
-        expected = {"academy": None, "cohort": None, "mentors": [], "total": None}
+        expected = {"academy": None, "cohort": None, "mentors": [], "total": None, "live_class": None}
 
         self.assertEqual(json, expected)
         self.assertEqual(
@@ -98,7 +98,7 @@ class SurveyTestSuite(FeedbackTestCase):
         )
 
         json = calculate_survey_scores(1)
-        expected = {"academy": None, "cohort": None, "mentors": [], "total": None}
+        expected = {"academy": None, "cohort": None, "mentors": [], "total": None, "live_class": None}
 
         self.assertEqual(json, expected)
         self.assertEqual(
@@ -128,11 +128,30 @@ class SurveyTestSuite(FeedbackTestCase):
             size_of_academy_answers + size_of_cohort_answers + size_of_mentor1_answers + size_of_mentor2_answers
         )
 
+        base_model = self.generate_models(
+            academy=1,
+            user=[{"first_name": "asd1", "last_name": "asd1"}, {"first_name": "asd2", "last_name": "asd2"}],
+        )
+
+        mentors_model = self.generate_models(
+            mentor_profile=[{"name": "asd1", "user": base_model.user[0]}, {"name": "asd2", "user": base_model.user[1]}],
+        )
+
+        mentorships_model = self.generate_models(
+            mentorship_session=[
+                {"mentor": mentors_model.mentor_profile[0]},
+                {"mentor": mentors_model.mentor_profile[1]},
+            ]
+        )
+
         academy_answers = [
             {
                 "status": "ANSWERED",
                 "score": random.randint(1, 11),
                 "title": strings["en"]["academy"]["title"].format("asd"),
+                "academy": base_model.academy,
+                "cohort": None,
+                "mentor": None,
             }
             for _ in range(0, size_of_academy_answers)
         ]
@@ -142,6 +161,7 @@ class SurveyTestSuite(FeedbackTestCase):
                 "status": "ANSWERED",
                 "score": random.randint(1, 11),
                 "title": strings["en"]["cohort"]["title"].format("asd"),
+                "mentor": None,
             }
             for _ in range(0, size_of_cohort_answers)
         ]
@@ -150,7 +170,9 @@ class SurveyTestSuite(FeedbackTestCase):
             {
                 "status": "ANSWERED",
                 "score": random.randint(1, 11),
-                "title": strings["en"]["mentor"]["title"].format("asd1"),
+                "title": strings["en"]["mentor"]["title"].format("asd1 asd1"),
+                "mentorship_session": mentorships_model.mentorship_session[0],
+                "mentor": None,
             }
             for _ in range(0, size_of_mentor1_answers)
         ]
@@ -159,7 +181,9 @@ class SurveyTestSuite(FeedbackTestCase):
             {
                 "status": "ANSWERED",
                 "score": random.randint(1, 11),
-                "title": strings["en"]["mentor"]["title"].format("asd2"),
+                "title": strings["en"]["mentor"]["title"].format("asd2 asd2"),
+                "mentorship_session": mentorships_model.mentorship_session[1],
+                "mentor": None,
             }
             for _ in range(0, size_of_mentor2_answers)
         ]
@@ -177,14 +201,15 @@ class SurveyTestSuite(FeedbackTestCase):
             "cohort": sum([x["score"] for x in cohort_answers]) / size_of_cohort_answers,
             "mentors": [
                 {
-                    "name": "asd1",
+                    "name": "asd1 asd1",
                     "score": sum([x["score"] for x in mentor1_answers]) / size_of_mentor1_answers,
                 },
                 {
-                    "name": "asd2",
+                    "name": "asd2 asd2",
                     "score": sum([x["score"] for x in mentor2_answers]) / size_of_mentor2_answers,
                 },
             ],
+            "live_class": None,
             "total": sum([x.score for x in model.answer]) / size_of_answers,
         }
 
