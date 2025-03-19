@@ -1,5 +1,6 @@
 import logging
 
+from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound
@@ -13,7 +14,6 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import generate_certificate
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty
@@ -23,11 +23,42 @@ from .tasks import async_generate_certificate
 logger = logging.getLogger(__name__)
 
 
+from django.db.models import Q
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def get_specialties(request):
+@capable_of("read_certificate")
+def get_academy_specialties(request):
     items = Specialty.objects.all()
-    serializer = SpecialtySerializer(items, many=True)
+
+    academy_id = request.headers.get("Academy_id")
+    if academy_id:
+        try:
+            academy_id = int(academy_id)
+            items = items.filter(academy_id=academy_id)
+        except ValueError:
+            return Response({"detail": "Invalid Academy-ID format"}, status=status.HTTP_400_BAD_REQUEST)
+
+    like = request.GET.get("like", None)
+    if like:
+        items = items.filter(Q(name__icontains=like) | Q(syllabus__name__icontains=like))
+
+    syllabus_slug = request.GET.get("syllabus_slug", None)
+    if syllabus_slug:
+        items = items.filter(syllabus__slug=syllabus_slug).distinct()
+
+    sort = request.GET.get("sort", "-created_at")
+    items = items.order_by(sort)
+
+    paginator = HeaderLimitOffsetPagination()
+    page = paginator.paginate_queryset(items, request)
+
+    serializer = SpecialtySerializer(page, many=True)
+
+    if paginator.is_paginate(request):
+        return paginator.get_paginated_response(serializer.data)
+
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

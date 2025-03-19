@@ -33,13 +33,8 @@ class Specialty(models.Model):
     # how long it takes to expire, leave null for unlimited
     expiration_day_delta = models.IntegerField(blank=True, null=True, default=None)
 
-    syllabus = models.OneToOneField(
-        Syllabus,
-        on_delete=models.CASCADE,
-        help_text="This specialty represents only one certificate",
-        blank=True,
-        null=True,
-        default=None,
+    syllabus = models.ManyToManyField(
+        Syllabus, help_text="This specialty can be earned from multiple courses", blank=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
