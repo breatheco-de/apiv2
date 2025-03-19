@@ -1270,6 +1270,12 @@ class CourseView(APIView):
 
             items = items.filter(query)
 
+        if is_listed := request.GET.get("is_listed"):
+            if is_listed.lower() in ["true", "1"]:
+                items = items.filter(is_listed=True)
+            elif is_listed.lower() in ["false", "0"]:
+                items = items.filter(is_listed=False)
+
         items = items.annotate(lang=Value(lang, output_field=CharField()))
         items = items.order_by("created_at")
         items = handler.queryset(items)

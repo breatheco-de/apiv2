@@ -21,6 +21,7 @@ def course_translation_serializer(course_translation):
         "landing_variables": course_translation.landing_variables,
         "description": course_translation.description,
         "short_description": course_translation.short_description,
+        "featured_assets": course_translation.featured_assets,
         "lang": course_translation.lang,
         "title": course_translation.title,
         "landing_url": course_translation.landing_url,
@@ -65,6 +66,7 @@ def get_serializer(course, academy, syllabus=[], course_translation=None, data={
         "cohort": course.cohort,
         "color": course.color,
         "plan_slug": course.plan_slug,
+        "is_listed": course.is_listed,
         "banner_image": course.banner_image,
         **data,
     }

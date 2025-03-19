@@ -25,6 +25,7 @@ def get_serializer(asset, data={}):
         "asset_type": asset.asset_type,
         "enable_table_of_content": asset.enable_table_of_content,
         "interactive": asset.interactive,
+        "feature": asset.feature,
         "category": {
             "id": asset.category.id,
             "slug": asset.category.slug,
@@ -84,11 +85,13 @@ def get_serializer(asset, data={}):
 def get_expanded_serializer(asset, data={}):
     return {
         **get_serializer(asset),
+        "config": asset.config,
         "agent": asset.agent,
         "with_solutions": asset.with_solutions,
         "with_video": asset.with_solutions,
         "updated_at": asset.updated_at,
         "template_url": asset.template_url,
+        "dependencies": asset.dependencies,
         **data,
     }
 
@@ -190,7 +193,7 @@ def test_assets_expand_technologies(bc: Breathecode, client):
     assert bc.database.list_of("registry.Asset") == bc.format.to_dict(model.asset)
 
 
-def test_assets_expand_readme_no_readme_url(bc: Breathecode, client):
+def test_assets_expand_readme_no_readme_url(bc: Breathecode, client, utc_now):
 
     technology = {"slug": "learn-react", "title": "Learn React"}
 

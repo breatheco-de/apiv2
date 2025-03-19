@@ -22,7 +22,6 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_user_language
 from breathecode.payments import actions, tasks
-
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
@@ -1009,10 +1008,128 @@ class AcademySubscriptionView(APIView):
         if plan_slugs := request.GET.get("plan_slugs"):
             items = items.filter(plans__slug__in=plan_slugs.split(","))
 
+        if user_id := request.GET.get("users"):
+            items = items.filter(user__id=int(user_id))
+
         items = handler.queryset(items)
         serializer = GetSubscriptionSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+    def put(self, request, subscription_id, academy_id=None):
+        lang = get_user_language(request)
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+            raise ValidationException(
+                translation(lang, en="Subscription not found", es="No existe la suscripción", slug="not-found"),
+                code=404,
+            )
+
+        def update_subscription(subscription, data):
+            valid_statuses = [choice[0] for choice in Subscription._meta.get_field("status").choices]
+            allowed_fields = ["status", "valid_until", "plan"]
+
+            for field, value in data.items():
+                if field == "status" and value not in valid_statuses:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"{field}: '{value}' is not a valid choice.",
+                            es=f"{field}: '{value}' no es una opción válida.",
+                            slug="invalid-choice",
+                        ),
+                        code=400,
+                    )
+                if field in allowed_fields:
+                    setattr(subscription, field, value)
+
+        if isinstance(request.data, list):
+            for data in request.data:
+                update_subscription(subscription, data)
+        else:
+            update_subscription(subscription, request.data)
+
+        subscription.save()
+
+        return Response({"detail": "Subscription updated successfully"}, status=status.HTTP_200_OK)
+
+
+class AcademyPlanFinancingView(APIView):
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request, financing_id=None, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+        now = timezone.now()
+
+        if financing_id:
+            item = PlanFinancing.objects.filter(valid_until__gte=now, id=financing_id).first()
+
+            if not item:
+                raise ValidationException(
+                    translation(
+                        lang, en="Plan financing not found", es="No existe el plan de financiamiento", slug="not-found"
+                    ),
+                    code=404,
+                )
+
+            serializer = GetPlanFinancingSerializer(item, many=False)
+            return handler.response(serializer.data)
+
+        items = PlanFinancing.objects.filter(valid_until__gte=now)
+
+        if user_id := request.GET.get("users"):
+            items = items.filter(user__id=int(user_id))
+
+        items = handler.queryset(items)
+        serializer = GetPlanFinancingSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    def put(self, request, financing_id, academy_id=None):
+        lang = get_user_language(request)
+
+        if not financing_id:
+            raise ValidationException(
+                translation(lang, en="Missing financing_id", es="Falta el ID del financiamiento", slug="missing-id"),
+                code=400,
+            )
+
+        financing = PlanFinancing.objects.filter(id=financing_id).first()
+
+        if not financing:
+            raise ValidationException(
+                translation(
+                    lang, en="Plan financing not found", es="No existe el plan de financiamiento", slug="not-found"
+                ),
+                code=404,
+            )
+
+        allowed_fields = [
+            "next_payment_at",
+            "valid_until",
+            "plan_expires_at",
+            "monthly_price",
+            "how_many_installments",
+            "status",
+        ]
+
+        def update_financing(financing, data):
+            for field, value in data.items():
+                if field in allowed_fields:
+                    print(f"Updating field {field} to {value}")
+                    setattr(financing, field, value)
+
+        if isinstance(request.data, list):
+            for data in request.data:
+                update_financing(financing, data)
+        else:
+            update_financing(financing, request.data)
+
+        financing.save()
+
+        return Response({"detail": "Plan financing updated successfully"}, status=status.HTTP_200_OK)
 
 
 class MeInvoiceView(APIView):
@@ -1470,7 +1587,32 @@ class BagView(APIView):
         add_items_to_bag(request, bag, lang)
 
         plan = bag.plans.first()
-        if plan:
+        is_free_trial = plan.trial_duration > 0 if plan else False
+
+        # free trial took
+        if is_free_trial and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists():
+            is_free_trial = False
+
+        is_free_plan = (
+            plan.price_per_month == 0
+            and plan.price_per_quarter == 0
+            and plan.price_per_half == 0
+            and plan.price_per_year == 0
+            if plan
+            else False
+        )
+        recurrent = request.data.get("recurrent")
+
+        if is_free_trial:
+            bag.is_recurrent = False
+        elif is_free_plan or plan:
+            bag.is_recurrent = True
+        else:
+            bag.is_recurrent = recurrent or False
+
+        bag.save()
+
+        if plan and bag.coupons.count() == 0:
             coupons = get_available_coupons(plan, request.data.get("coupons", []))
             bag.coupons.set(coupons)
 
@@ -1598,6 +1740,34 @@ class CheckingView(APIView):
                             add_items_to_bag(request, bag, lang)
 
                             plan = bag.plans.first()
+                            is_free_trial = plan.trial_duration > 0 if plan else False
+
+                            # free trial took
+                            if (
+                                is_free_trial
+                                and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists()
+                            ):
+                                is_free_trial = False
+
+                            is_free_plan = (
+                                plan.price_per_month == 0
+                                and plan.price_per_quarter == 0
+                                and plan.price_per_half == 0
+                                and plan.price_per_year == 0
+                                if plan
+                                else False
+                            )
+                            recurrent = request.data.get("recurrent")
+
+                            if is_free_trial:
+                                bag.is_recurrent = False
+                            elif is_free_plan or plan:
+                                bag.is_recurrent = True
+                            else:
+                                bag.is_recurrent = recurrent or False
+
+                            bag.save()
+
                             if plan and bag.coupons.count() == 0:
                                 coupons = get_available_coupons(plan, request.data.get("coupons", []))
                                 bag.coupons.set(coupons)
@@ -1785,33 +1955,12 @@ class ConsumableCheckoutView(APIView):
 
         currency = academy_service.currency
 
-        if total_items > academy_service.max_items:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"The amount of items is too high (max {academy_service.max_items})",
-                    es=f"La cantidad de elementos es demasiado alta (máx {academy_service.max_items})",
-                    slug="the-amount-of-items-is-too-high",
-                ),
-                code=400,
-            )
-
+        academy_service.validate_transaction(total_items, lang)
         amount = academy_service.get_discounted_price(total_items)
 
         if amount <= 0.5:
             raise ValidationException(
                 translation(lang, en="The amount is too low", es="El monto es muy bajo", slug="the-amount-is-too-low"),
-                code=400,
-            )
-
-        if amount > academy_service.max_amount:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"The amount is too high (max {academy_service.max_amount})",
-                    es=f"El monto es demasiado alto (máx {academy_service.max_amount})",
-                    slug="the-amount-is-too-high",
-                ),
                 code=400,
             )
 
@@ -2114,9 +2263,25 @@ class PayView(APIView):
                         code=500,
                     )
 
+                # Calculate is_recurrent based on:
+                # 1. If it's a free trial -> False
+                # 2. If it's a free plan -> True
+                # 3. If it has paid plans -> True
+                # 4. If only service items -> use user's choice (recurrent parameter)
+                is_free_trial = available_for_free_trial
+                is_free_plan = available_free
+                has_plans = bag.plans.exists()
+                plan = bag.plans.first() if has_plans else None
+
+                if is_free_trial:
+                    bag.is_recurrent = False
+                elif (is_free_plan and plan) or has_plans:
+                    bag.is_recurrent = True
+                else:
+                    bag.is_recurrent = recurrent
+
                 bag.chosen_period = chosen_period or "NO_SET"
                 bag.status = "PAID"
-                bag.is_recurrent = recurrent
                 bag.token = None
                 bag.expires_at = None
                 bag.save()

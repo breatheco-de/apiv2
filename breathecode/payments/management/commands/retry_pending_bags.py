@@ -3,13 +3,13 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from ... import tasks
-from ...models import Bag, Invoice
+from breathecode.payments.actions import retry_pending_bag
+
+from ...models import Bag
 
 
-# renew the credits every 1 hours
 class Command(BaseCommand):
-    help = "Renew credits"
+    help = "Retry pending bags that have not been delivered"
 
     def handle(self, *args, **options):
         now = timezone.now()
@@ -18,18 +18,13 @@ class Command(BaseCommand):
         hm_failed = 0
 
         for bag in bags:
-            invoice: Invoice | None = bag.invoices.first()
-            if invoice is None:
-                continue
-
-            if bag.how_many_installments > 0:
-                tasks.build_plan_financing.delay(bag.id, invoice.id)
-
-            elif invoice.amount > 0:
-                tasks.build_subscription.delay(bag.id, invoice.id)
-
+            result = retry_pending_bag(bag)
+            if result == "scheduled":
+                hm_processed += 1
+            elif result == "done":
+                hm_processed += 1
             else:
-                tasks.build_free_subscription.delay(bag.id, invoice.id)
+                hm_failed += 1
 
         total = hm_processed + hm_failed
         self.stdout.write(
