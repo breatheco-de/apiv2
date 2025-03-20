@@ -133,7 +133,7 @@ class SpecialtySerializer(serpy.Serializer):
     syllabus = serpy.MethodField()
 
     def get_syllabus(self, obj):
-        return [syllabus.slug for syllabus in obj.syllabus.only("slug").all()]
+        return [syllabus.slug for syllabus in obj.syllabus.only("slug").all() if syllabus.slug]
 
 
 class BadgeSmallSerializer(serpy.Serializer):

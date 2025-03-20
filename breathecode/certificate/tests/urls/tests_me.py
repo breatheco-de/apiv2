@@ -38,6 +38,7 @@ def get_serializer(self, user_specialty, academy, specialty, user):
             "logo_url": specialty.logo_url,
             "name": specialty.name,
             "slug": specialty.slug,
+            "syllabus": [s.slug for s in specialty.syllabus.all()] if hasattr(specialty, "syllabus") else [],
             "updated_at": self.bc.datetime.to_iso_string(specialty.updated_at),
         },
         "status": user_specialty.status,

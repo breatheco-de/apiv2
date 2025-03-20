@@ -208,6 +208,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "logo_url": None,
                 "name": model["specialty"].name,
                 "slug": model["specialty"].slug,
+                "syllabus": [],
                 "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
             },
             "status": "PERSISTED",
