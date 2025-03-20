@@ -258,6 +258,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "preview_url": model["user_specialty"].preview_url,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": model["specialty"].academy.id if model["specialty"].academy else None,
                     "created_at": self.datetime_to_iso(model["specialty"].created_at),
                     "description": model.specialty.description,
                     "id": 1,
@@ -460,6 +461,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "preview_url": models[0].user_specialty.preview_url,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": models[0].specialty.academy.id if models[0].specialty.academy else None,
                     "created_at": self.datetime_to_iso(models[0].specialty.created_at),
                     "description": models[0].specialty.description,
                     "id": 1,
@@ -516,6 +518,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "preview_url": models[1].user_specialty.preview_url,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": models[1].specialty.academy.id if models[1].specialty.academy else None,
                     "created_at": self.datetime_to_iso(models[1].specialty.created_at),
                     "description": models[1].specialty.description,
                     "id": 1,
@@ -695,6 +698,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "signed_by": models[0].user_specialty.signed_by,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": models[0].specialty.academy.id if models[0].specialty.academy else None,
                     "created_at": self.datetime_to_iso(models[0].specialty.created_at),
                     "description": models[0].specialty.description,
                     "id": 1,
@@ -815,6 +819,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "signed_by": models[0].user_specialty.signed_by,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": models[0].specialty.academy.id if models[0].specialty.academy else None,
                     "created_at": self.datetime_to_iso(models[0].specialty.created_at),
                     "description": models[0].specialty.description,
                     "id": 1,
@@ -931,6 +936,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "issued_at": models[0].user_specialty.issued_at,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": models[0].specialty.academy.id if models[0].specialty.academy else None,
                     "created_at": self.datetime_to_iso(models[0].specialty.created_at),
                     "description": models[0].specialty.description,
                     "id": 1,
@@ -1048,6 +1054,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "signed_by": models[0].user_specialty.signed_by,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": models[0].specialty.academy.id if models[0].specialty.academy else None,
                     "created_at": self.datetime_to_iso(models[0].specialty.created_at),
                     "description": models[0].specialty.description,
                     "id": 1,

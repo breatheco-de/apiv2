@@ -409,6 +409,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": model["specialty"].academy.id if model["specialty"].academy else None,
                     "created_at": self.datetime_to_iso(model["specialty"].created_at),
                     "description": model["specialty"].description,
                     "id": 1,
@@ -563,6 +564,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": model["specialty"].academy.id if model["specialty"].academy else None,
                     "created_at": self.datetime_to_iso(model["specialty"].created_at),
                     "description": model["specialty"].description,
                     "id": 1,
@@ -707,6 +709,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": model["specialty"].academy.id if model["specialty"].academy else None,
                     "created_at": self.datetime_to_iso(model["specialty"].created_at),
                     "description": model["specialty"].description,
                     "id": 1,
@@ -873,6 +876,7 @@ class CertificateTestSuite(CertificateTestCase):
                 "signed_by": teacher_model["user"].first_name + " " + teacher_model["user"].last_name,
                 "signed_by_role": "Director",
                 "specialty": {
+                    "academy_id": model["specialty"].academy.id if model["specialty"].academy else None,
                     "created_at": self.datetime_to_iso(model["specialty"].created_at),
                     "description": model["specialty"].description,
                     "id": 1,

@@ -32,6 +32,7 @@ def get_serializer(self, user_specialty, academy, specialty, user):
         "signed_by": user_specialty.signed_by,
         "signed_by_role": user_specialty.signed_by_role,
         "specialty": {
+            "academy_id": specialty.academy.id if specialty.academy else None,
             "created_at": self.bc.datetime.to_iso_string(specialty.created_at),
             "description": specialty.description,
             "id": specialty.id,
