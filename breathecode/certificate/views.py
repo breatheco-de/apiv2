@@ -30,13 +30,13 @@ from django.db.models import Q
 @permission_classes([AllowAny])
 @capable_of("read_certificate")
 def get_academy_specialties(request, academy_id=None):
-    print("HEADERS RECIBIDOS:", dict(request.headers))
-
     if academy_id is None:
+        academy_id = request.headers.get("Academy")
+
+    if not academy_id:
         return Response({"detail": "Academy ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
     items = Specialty.objects.filter(academy__id=academy_id)
-    print(f"Academy ID filtrado: {academy_id}, Total resultados: {items.count()}")
 
     like = request.GET.get("like")
     if like:

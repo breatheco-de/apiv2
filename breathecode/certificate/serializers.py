@@ -131,9 +131,13 @@ class SpecialtySerializer(serpy.Serializer):
     created_at = serpy.Field()
 
     syllabus = serpy.MethodField()
+    academy_id = serpy.MethodField()
 
     def get_syllabus(self, obj):
         return [syllabus.slug for syllabus in obj.syllabus.only("slug").all() if syllabus.slug]
+
+    def get_academy_id(self, obj):
+        return obj.academy.id if obj.academy else None
 
 
 class BadgeSmallSerializer(serpy.Serializer):
