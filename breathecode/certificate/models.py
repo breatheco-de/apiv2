@@ -25,6 +25,7 @@ class CohortProxy(Cohort):
 
 # For example: Full-Stack Web Development
 class Specialty(models.Model):
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, related_name="specialties", null=True, blank=True)
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
     logo_url = models.CharField(max_length=250, blank=True, null=True, default=None)

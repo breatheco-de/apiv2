@@ -29,37 +29,38 @@ from django.db.models import Q
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @capable_of("read_certificate")
-def get_academy_specialties(request):
-    items = Specialty.objects.all()
+def get_academy_specialties(request, academy_id=None):
+    print("HEADERS RECIBIDOS:", dict(request.headers))
 
-    academy_id = request.headers.get("Academy_id")
-    if academy_id:
-        try:
-            academy_id = int(academy_id)
-            items = items.filter(academy_id=academy_id)
-        except ValueError:
-            return Response({"detail": "Invalid Academy-ID format"}, status=status.HTTP_400_BAD_REQUEST)
+    if academy_id is None:
+        return Response({"detail": "Academy ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    like = request.GET.get("like", None)
+    items = Specialty.objects.filter(academy__id=academy_id)
+    print(f"Academy ID filtrado: {academy_id}, Total resultados: {items.count()}")
+
+    like = request.GET.get("like")
     if like:
         items = items.filter(Q(name__icontains=like) | Q(syllabus__name__icontains=like))
 
-    syllabus_slug = request.GET.get("syllabus_slug", None)
+    syllabus_slug = request.GET.get("syllabus_slug")
     if syllabus_slug:
         items = items.filter(syllabus__slug=syllabus_slug).distinct()
 
+    allowed_sort_fields = ["created_at", "-created_at", "name", "-name"]
     sort = request.GET.get("sort", "-created_at")
+    if sort not in allowed_sort_fields:
+        return Response({"detail": "Invalid sort field"}, status=status.HTTP_400_BAD_REQUEST)
     items = items.order_by(sort)
 
     paginator = HeaderLimitOffsetPagination()
     page = paginator.paginate_queryset(items, request)
-
     serializer = SpecialtySerializer(page, many=True)
 
-    if paginator.is_paginate(request):
-        return paginator.get_paginated_response(serializer.data)
-
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return (
+        paginator.get_paginated_response(serializer.data)
+        if paginator.is_paginate(request)
+        else Response(serializer.data, status=status.HTTP_200_OK)
+    )
 
 
 @api_view(["GET"])
