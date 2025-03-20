@@ -156,6 +156,7 @@ class Task(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._current_task_status = self.task_status
+        self._current_revision_status = self.revision_status
 
     # def clean(self):
     #     if self.cohort is None:
