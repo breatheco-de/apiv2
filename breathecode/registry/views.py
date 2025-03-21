@@ -197,7 +197,39 @@ class TechnologyView(APIView):
             serializer = AssetBigTechnologySerializer(technology)
             return Response(serializer.data)
 
-        items = AssetTechnology.objects.filter(parent__isnull=True)
+        # Initialize items queryset
+        items = AssetTechnology.objects.all()
+
+        # Handle parent filter
+        if "parent" in request.GET:
+            parent_param = request.GET.get("parent")
+            if parent_param.lower() == "true":
+                # Filter out all technologies that are children (have a parent)
+                items = items.filter(parent__isnull=True)
+            elif parent_param.isdigit():
+                # Keep only technologies whose parent is an asset with that id
+                items = items.filter(parent_id=parent_param)
+        else:
+            # Default behavior: filter out children technologies
+            items = items.filter(parent__isnull=True)
+
+        # Handle priority filter (comma-separated integers)
+        if "priority" in request.GET:
+            priority_param = request.GET.get("priority")
+            try:
+                # Split by comma and convert to list of integers
+                priority_values = [int(p) for p in priority_param.split(",") if p.strip()]
+                if priority_values:
+                    items = items.filter(sort_priority__in=priority_values)
+            except ValueError:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="The priority parameter must contain comma-separated integers",
+                        es="El parametro priority debe contener enteros separados por coma",
+                        slug="priority-format-invalid",
+                    )
+                )
 
         if "sort_priority" in request.GET:
             try:
