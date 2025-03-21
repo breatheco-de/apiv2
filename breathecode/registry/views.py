@@ -214,7 +214,7 @@ class TechnologyView(APIView):
             items = items.filter(parent__isnull=True)
 
         # Handle priority filter (comma-separated integers)
-        if "priority" in request.GET:
+        if "sort_priority" in request.GET:
             priority_param = request.GET.get("priority")
             try:
                 # Split by comma and convert to list of integers
@@ -228,20 +228,6 @@ class TechnologyView(APIView):
                         en="The priority parameter must contain comma-separated integers",
                         es="El parametro priority debe contener enteros separados por coma",
                         slug="priority-format-invalid",
-                    )
-                )
-
-        if "sort_priority" in request.GET:
-            try:
-                param = int(request.GET.get("sort_priority"))
-                items = items.filter(sort_priority__exact=param)
-            except ValueError:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en="The parameter must be an integer, nothing else",
-                        es="El parametró debera ser un entero y nada mas ",
-                        slug="integer-not-found",
                     )
                 )
 
