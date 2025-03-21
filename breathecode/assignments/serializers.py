@@ -1,6 +1,7 @@
 import logging
 import os
 
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
@@ -8,7 +9,6 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy, Token
 from breathecode.utils import serpy
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import AssignmentTelemetry, FinalProject, Task, UserAttachment
 
@@ -46,6 +46,16 @@ class TaskAttachmentSerializer(serpy.Serializer):
     mime = serpy.Field()
 
 
+class RepositoryDeletionOrderSerializer(serpy.Serializer):
+    user = UserSmallSerializer()
+    id = serpy.Field()
+    repository_name = serpy.Field()
+    repository_user = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    starts_transferring_at = serpy.Field()
+
+
 class TaskGETSerializer(serpy.Serializer):
     """The serializer schema definition."""
 
@@ -61,6 +71,8 @@ class TaskGETSerializer(serpy.Serializer):
     task_type = serpy.Field()
     user = UserSmallSerializer()
     opened_at = serpy.Field()
+    read_at = serpy.Field()
+    reviewed_at = serpy.Field()
     delivered_at = serpy.Field()
     cohort = CohortSmallSerializer(required=False)
     assignment_telemetry = serpy.MethodField()

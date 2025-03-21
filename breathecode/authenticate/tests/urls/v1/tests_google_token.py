@@ -83,9 +83,10 @@ def test_redirect(database: capy.Database, client: capy.Client, token: Any):
         "access_type": "offline",
         "scope": " ".join(
             [
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/userinfo.email",
                 "https://www.googleapis.com/auth/meetings.space.created",
                 "https://www.googleapis.com/auth/drive.meet.readonly",
-                "https://www.googleapis.com/auth/userinfo.profile",
             ]
         ),
         "state": f"token={model.token.key}&url={callback_url}&academysettings=none",
@@ -127,9 +128,10 @@ def test_redirect_with_academy_settings(
         "access_type": "offline",
         "scope": " ".join(
             [
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/userinfo.email",
                 "https://www.googleapis.com/auth/meetings.space.created",
                 "https://www.googleapis.com/auth/drive.meet.readonly",
-                "https://www.googleapis.com/auth/userinfo.profile",
                 "https://www.googleapis.com/auth/pubsub",
             ]
         ),

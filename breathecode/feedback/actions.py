@@ -1,9 +1,9 @@
 import json
 import logging
-import re
 
 from capyc.rest_framework.exceptions import ValidationException
-from django.db.models import Avg, QuerySet
+from django.db.models import Avg, QuerySet, Q
+from django.contrib.auth.models import User
 from django.utils import timezone
 
 from breathecode.admissions.models import CohortUser
@@ -117,16 +117,13 @@ def send_question(user, cohort=None):
 
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user, status="SENT").count()
 
-    question = tasks.build_question(answer)
+    answer = tasks.build_question(answer)
 
     if question_was_sent_previously:
         answer = Answer.objects.filter(cohort=answer.cohort, user=user, status="SENT").first()
         Token.objects.filter(id=answer.token_id).delete()
 
     else:
-        answer.title = question["title"]
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
         answer.lang = answer.cohort.language.lower()
         answer.save()
 
@@ -137,10 +134,10 @@ def send_question(user, cohort=None):
     answer.save()
 
     data = {
-        "QUESTION": question["title"],
+        "QUESTION": answer.title,
         "HIGHEST": answer.highest,
         "LOWEST": answer.lowest,
-        "SUBJECT": question["title"],
+        "SUBJECT": answer.title,
         "ANSWER_ID": answer.id,
         "BUTTON": strings[answer.cohort.language.lower()]["button_label"],
         "LINK": f"https://nps.4geeks.com/{answer.id}?token={token.key}",
@@ -234,30 +231,51 @@ def calculate_survey_scores(survey_id: int) -> dict:
     answers = Answer.objects.filter(survey=survey, status="ANSWERED")
     total = get_average(answers)
 
-    academy_pattern = strings[survey.lang]["academy"]["title"].split("{}")
-    cohort_pattern = strings[survey.lang]["cohort"]["title"].split("{}")
-    mentor_pattern = strings[survey.lang]["mentor"]["title"].split("{}")
+    # Get academy answers - answers that have academy field set but no mentor, cohort, or live_class
+    academy = get_average(
+        answers.filter(
+            academy__isnull=False,
+            mentor__isnull=True,
+            cohort__isnull=True,
+            live_class__isnull=True,
+            mentorship_session__isnull=True,
+        )
+    )
 
-    academy = get_average(answers.filter(title__startswith=academy_pattern[0], title__endswith=academy_pattern[1]))
+    # Get cohort answers - answers that have cohort field set but no mentor or live_class
+    cohort = get_average(
+        answers.filter(
+            cohort__isnull=False, mentor__isnull=True, live_class__isnull=True, mentorship_session__isnull=True
+        )
+    )
 
-    cohort = get_average(answers.filter(title__startswith=cohort_pattern[0], title__endswith=cohort_pattern[1]))
+    # Get live class answers - answers that have live_class field set
+    live_class = get_average(answers.filter(live_class__isnull=False))
 
-    all_mentors = {
-        x.title for x in answers.filter(title__startswith=mentor_pattern[0], title__endswith=mentor_pattern[1])
-    }
+    # Get mentor answers - combining both direct assignments and mentorship sessions
+    mentor_answers = answers.filter(Q(mentor__isnull=False) | Q(mentorship_session__isnull=False))
 
-    full_mentor_pattern = mentor_pattern[0].replace("?", "\\?") + r"([\w ]+)" + mentor_pattern[1].replace("?", "\\?")
+    # Get unique mentors from both direct assignments and mentorship sessions
+    mentor_ids = set()
+    mentor_ids.update(mentor_answers.values_list("mentor_id", flat=True).distinct())
+    mentor_ids.update(
+        mentor_answers.filter(mentorship_session__isnull=False)
+        .values_list("mentorship_session__mentor__user_id", flat=True)
+        .distinct()
+    )
+    mentor_ids.discard(None)  # Remove None values if any
 
     mentors = []
-    for mentor in all_mentors:
-        name = re.findall(full_mentor_pattern, mentor)[0]
-        score = get_average(answers.filter(title=mentor))
-
-        mentors.append({"name": name, "score": score})
+    for mentor in User.objects.filter(id__in=mentor_ids):
+        # Calculate average score for this mentor combining both types of answers
+        mentor_score = get_average(mentor_answers.filter(Q(mentor=mentor) | Q(mentorship_session__mentor__user=mentor)))
+        if mentor_score is not None:
+            mentors.append({"name": f"{mentor.first_name} {mentor.last_name}", "score": mentor_score})
 
     return {
         "total": total,
         "academy": academy,
         "cohort": cohort,
+        "live_class": live_class,
         "mentors": sorted(mentors, key=lambda x: x["name"]),
     }
