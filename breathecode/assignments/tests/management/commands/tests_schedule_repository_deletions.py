@@ -2,11 +2,14 @@
 Test /answer
 """
 
-from typing import Any
+import re
+from datetime import datetime
+from typing import Any, Optional
 from unittest.mock import MagicMock, call
 
 import capyc.pytest as capyc
 import pytest
+import requests
 from dateutil.relativedelta import relativedelta
 from linked_services.django.actions import reset_app_cache
 
@@ -164,6 +167,7 @@ def test_two_repos(database: capyc.Database, patch_get):
             "status_text": None,
             "starts_transferring_at": None,
             "notified_at": None,
+            "user_id": 1,
         },
         {
             "id": 2,
@@ -174,6 +178,7 @@ def test_two_repos(database: capyc.Database, patch_get):
             "status_text": None,
             "starts_transferring_at": None,
             "notified_at": None,
+            "user_id": 1,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
@@ -277,6 +282,7 @@ def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, s
             "status_text": None,
             "starts_transferring_at": None,
             "notified_at": None,
+            "user_id": 1,
         },
         {
             "id": 2,
@@ -287,6 +293,7 @@ def test_two_repos__deleting_repositories(database: capyc.Database, patch_get, s
             "status_text": None,
             "starts_transferring_at": None,
             "notified_at": None,
+            "user_id": 1,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
@@ -362,6 +369,7 @@ def test_two_repos__repository_transferred(database: capyc.Database, patch_get, 
             "status_text": None,
             "starts_transferring_at": utc_now,
             "notified_at": None,
+            "user_id": 1,
         },
         {
             "id": 2,
@@ -372,6 +380,7 @@ def test_two_repos__repository_transferred(database: capyc.Database, patch_get, 
             "status_text": None,
             "starts_transferring_at": utc_now,
             "notified_at": None,
+            "user_id": 1,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
@@ -447,6 +456,7 @@ def test_two_repos__repository_does_not_exists(database: capyc.Database, patch_g
             "status_text": "Repository does not exist: breatheco-de/curso-nodejs-4geeks",
             "starts_transferring_at": None,
             "notified_at": None,
+            "user_id": 1,
         },
         {
             "id": 2,
@@ -457,6 +467,7 @@ def test_two_repos__repository_does_not_exists(database: capyc.Database, patch_g
             "status_text": "Repository does not exist: 4GeeksAcademy/curso-nodejs-4geeks",
             "starts_transferring_at": None,
             "notified_at": None,
+            "user_id": 1,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
@@ -525,6 +536,7 @@ def test_one_repo__pending__user_not_found(database: capyc.Database, patch_get, 
             "status_text": None,
             "starts_transferring_at": None,
             "notified_at": None,
+            "user_id": 1,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
@@ -699,6 +711,7 @@ def test_one_repo__pending__user_found__inferred(database: capyc.Database, patch
             "status_text": None,
             "starts_transferring_at": utc_now - delta,
             "notified_at": None,
+            "user_id": 1,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
@@ -768,6 +781,7 @@ def test_one_repo__transferring__repo_found(database: capyc.Database, patch_get,
             "status_text": None,
             "starts_transferring_at": utc_now,
             "notified_at": None,
+            "user_id": 1,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
@@ -835,104 +849,11 @@ def test_one_repo__transferring__repo_not_found(database: capyc.Database, patch_
             "status_text": None,
             "starts_transferring_at": utc_now,
             "notified_at": None,
+            "user_id": 1,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []
     assert tasks.send_repository_deletion_notification.delay.call_args_list == []
-
-
-# def test_two_repos__deleting_repositories__got_an_error(database: capyc.Database, patch_get, set_datetime, utc_now):
-
-#     delta = relativedelta(months=2, hours=1)
-#     model = database.create(
-#         academy_auth_settings=1,
-#         city=1,
-#         country=1,
-#         user=1,
-#         credentials_github=1,
-#         repository_deletion_order=[
-#             {
-#                 "provider": "GITHUB",
-#                 "repository_name": "curso-nodejs-4geeks",
-#                 "repository_user": "breatheco-de",
-#                 "status": "PENDING",
-#                 "status_text": None,
-#             },
-#             {
-#                 "provider": "GITHUB",
-#                 "repository_name": "curso-nodejs-4geeks",
-#                 "repository_user": "4GeeksAcademy",
-#                 "status": "PENDING",
-#                 "status_text": None,
-#             },
-#         ],
-#     )
-#     set_datetime(utc_now + delta)
-
-#     patch_get(
-#         [
-#             {
-#                 "method": "GET",
-#                 "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/repos?page=1&type=forks&per_page=30&sort=created&direction=desc",
-#                 "expected": [
-#                     {
-#                         "private": False,
-#                         "html_url": "https://github.com/breatheco-de/curso-nodejs-4geeks",
-#                         "fork": True,
-#                         "created_at": "2024-04-05T19:22:39Z",
-#                         "is_template": False,
-#                         "allow_forking": True,
-#                     },
-#                     {
-#                         "private": False,
-#                         "html_url": "https://github.com/4GeeksAcademy/curso-nodejs-4geeks",
-#                         "fork": True,
-#                         "created_at": "2024-04-05T19:22:39Z",
-#                         "is_template": False,
-#                         "allow_forking": True,
-#                     },
-#                 ],
-#                 "code": 200,
-#                 "headers": {},
-#             },
-#             {
-#                 "method": "HEAD",
-#                 "url": "https://api.github.com/repos/breatheco-de/curso-nodejs-4geeks",
-#                 "expected": None,
-#                 "code": 404,
-#                 "headers": {},
-#             },
-#             {
-#                 "method": "HEAD",
-#                 "url": "https://api.github.com/repos/4GeeksAcademy/curso-nodejs-4geeks",
-#                 "expected": None,
-#                 "code": 404,
-#                 "headers": {},
-#             },
-#         ]
-#     )
-#     command = Command()
-#     command.handle()
-
-#     assert database.list_of("assignments.RepositoryDeletionOrder") == [
-#         {
-#             "id": 1,
-#             "provider": "GITHUB",
-#             "repository_name": "curso-nodejs-4geeks",
-#             "repository_user": "breatheco-de",
-#             "status": "ERROR",
-#             "status_text": "Repository does not exist: breatheco-de/curso-nodejs-4geeks",
-#         },
-#         {
-#             "id": 2,
-#             "provider": "GITHUB",
-#             "repository_name": "curso-nodejs-4geeks",
-#             "repository_user": "4GeeksAcademy",
-#             "status": "ERROR",
-#             "status_text": "Repository does not exist: 4GeeksAcademy/curso-nodejs-4geeks",
-#         },
-#     ]
-#     assert database.list_of("assignments.RepositoryWhiteList") == []
 
 
 def test_two_repos_in_the_whitelist(database: capyc.Database, patch_get):
@@ -1441,3 +1362,116 @@ def test_two_repos_scheduled_and_in_this_execution_was_added_to_the_assets(
         },
     ]
     assert tasks.send_repository_deletion_notification.delay.call_args_list == []
+
+
+def test_one_repo__pending__user_found_via_collaborators(
+    database: capyc.Database, patch_get, set_datetime, utc_now, format: capyc.Format
+):
+    """Test that get_username correctly finds and returns a collaborator's username."""
+    delta = relativedelta(months=2, hours=1)
+    github_username = "4GeeksAcademy"
+    collaborator_username = "student-user"
+    model = database.create(
+        academy_auth_settings={"github_username": github_username},
+        city=1,
+        country=1,
+        user=1,
+        credentials_github=1,
+        repository_deletion_order=[
+            {
+                "provider": "GITHUB",
+                "repository_name": "curso-nodejs-4geeks",
+                "repository_user": github_username,
+                "status": "PENDING",
+                "status_text": None,
+            },
+        ],
+    )
+    set_datetime(utc_now - delta)
+
+    # Make sure we mock every URL pattern needed
+    mock_responses = [
+        # Get Organization Repos
+        {
+            "method": "GET",
+            "url": f"https://api.github.com/orgs/{model.academy_auth_settings.github_username}/repos?page=1&type=forks&per_page=30&sort=created&direction=desc",
+            "expected": [
+                {
+                    "private": False,
+                    "html_url": f"https://github.com/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks",
+                    "fork": True,
+                    "created_at": "2024-04-05T19:22:39Z",
+                    "is_template": False,
+                    "allow_forking": True,
+                },
+            ],
+            "code": 200,
+            "headers": {},
+        },
+        # Check if repo exists
+        {
+            "method": "HEAD",
+            "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks",
+            "expected": None,
+            "code": 200,
+            "headers": {},
+        },
+        # Get collaborators - try both URL patterns
+        {
+            "method": "GET",
+            "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/collaborators",
+            "expected": [
+                {
+                    "login": collaborator_username,
+                    "type": "User",
+                    "permissions": {"admin": True, "maintain": True, "push": True, "triage": True, "pull": True},
+                }
+            ],
+            "code": 200,
+            "headers": {},
+        },
+        {
+            "method": "GET",
+            "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/collaborators?per_page=30&page=1",
+            "expected": [
+                {
+                    "login": collaborator_username,
+                    "type": "User",
+                    "permissions": {"admin": True, "maintain": True, "push": True, "triage": True, "pull": True},
+                }
+            ],
+            "code": 200,
+            "headers": {},
+        },
+        # Transfer repo
+        {
+            "method": "POST",
+            "url": f"https://api.github.com/repos/{model.academy_auth_settings.github_username}/curso-nodejs-4geeks/transfer",
+            "expected": {"id": 1, "name": "curso-nodejs-4geeks"},
+            "code": 202,
+            "headers": {},
+        },
+    ]
+    patch_get(mock_responses)
+
+    command = Command()
+    command.handle()
+
+    actual_orders = database.list_of("assignments.RepositoryDeletionOrder")
+    assert len(actual_orders) == 1
+
+    # Compare important fields
+    assert database.list_of("assignments.RepositoryDeletionOrder") == [
+        {
+            **format.to_obj_repr(model.repository_deletion_order),
+            "status": "TRANSFERRING",
+            "repository_name": "curso-nodejs-4geeks",
+            "repository_user": github_username,
+            "starts_transferring_at": utc_now - delta,
+        }
+    ]
+
+    assert database.list_of("assignments.RepositoryWhiteList") == []
+    assert tasks.send_repository_deletion_notification.delay.call_args_list == [
+        call(1, collaborator_username),
+    ]

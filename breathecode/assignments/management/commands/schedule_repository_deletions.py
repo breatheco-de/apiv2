@@ -79,6 +79,44 @@ class Command(BaseCommand):
         )
 
     def get_username(self, owner: str, repo: str) -> Optional[str]:
+        """
+        Get the username to transfer the repository to by fetching collaborators from the GitHub API.
+
+        Instead of trying to determine the owner from the repository name, which is unreliable,
+        we now get the list of collaborators from the repository and choose the most appropriate one.
+        """
+        # Get collaborators for the repository - treating it as an iterator
+        eligible_collaborators = []
+
+        for collaborators_page in self.github_client.get_repo_collaborators(owner, repo):
+            # Filter out organization accounts and the allowed users (our own accounts)
+            for collab in collaborators_page:
+                if (
+                    collab.get("login")
+                    and collab.get("login") not in self.allowed_users
+                    and collab.get("type") == "User"
+                ):
+                    eligible_collaborators.append(collab)
+
+            # If we found at least one eligible collaborator, we can stop
+            if eligible_collaborators:
+                break
+
+        if eligible_collaborators:
+            # If we have eligible collaborators, return the first one
+            return eligible_collaborators[0]["login"]
+
+        # As a fallback, try to get the forker of the repository
+        for events in self.github_client.get_repo_events(owner, repo):
+            for event in events:
+                if (
+                    self.check_path(event, "type")
+                    and event["type"] == "ForkEvent"
+                    and self.check_path(event, "actor", "login")
+                ):
+                    return event["actor"]["login"]
+
+        # If there was an error, fall back to the old method as a last resort
         r = repo
         repo = repo.lower()
         index = -1
