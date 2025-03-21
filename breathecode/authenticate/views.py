@@ -543,7 +543,7 @@ class EmailVerification(APIView):
         if email is not None:
             email = email.lower()
 
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         if user is None:
             raise ValidationException(
                 translation(
