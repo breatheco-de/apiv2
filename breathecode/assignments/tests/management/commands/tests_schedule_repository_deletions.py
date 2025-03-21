@@ -167,7 +167,7 @@ def test_two_repos(database: capyc.Database, patch_get):
             "status_text": None,
             "starts_transferring_at": None,
             "notified_at": None,
-            "user_id": 1,
+            "user_id": None,
         },
         {
             "id": 2,
@@ -178,7 +178,7 @@ def test_two_repos(database: capyc.Database, patch_get):
             "status_text": None,
             "starts_transferring_at": None,
             "notified_at": None,
-            "user_id": 1,
+            "user_id": None,
         },
     ]
     assert database.list_of("assignments.RepositoryWhiteList") == []

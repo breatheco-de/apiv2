@@ -334,23 +334,37 @@ class Command(BaseCommand):
         if repo_name.endswith(".git"):
             repo_name = repo_name[:-4]
 
+        # Default status
         status = RepositoryDeletionOrder.Status.PENDING
-        if (
-            Task.objects.filter(github_url__icontains=f"github.com/{user}/{repo_name}")
-            .exclude(revision_status=Task.RevisionStatus.PENDING)
-            .exists()
-        ):
+
+        # Try to find tasks related to this repository
+        related_tasks = Task.objects.filter(github_url__icontains=f"github.com/{user}/{repo_name}")
+
+        # Check if we have tasks that aren't pending
+        if related_tasks.exclude(revision_status=Task.RevisionStatus.PENDING).exists():
             status = RepositoryDeletionOrder.Status.NO_STARTED
 
+        # Try to find a user to associate with the deletion order
+        user_id = None
+        if possible_user := related_tasks.exclude(user_id=None).only("user_id").first():
+            user_id = possible_user.user_id
+
+        # Create or get the deletion order
         order, _ = RepositoryDeletionOrder.objects.get_or_create(
             provider=provider,
             repository_user=user,
             repository_name=repo_name,
-            defaults={"status": status},
+            defaults={"status": status, "user_id": user_id},
         )
 
+        # Update status if needed
         if order.status != status:
             order.status = status
+            order.save()
+
+        # If the order doesn't have a user but we found one, update it
+        if order.user_id is None and user_id is not None:
+            order.user_id = user_id
             order.save()
 
     def collect_transferred_orders(self):
