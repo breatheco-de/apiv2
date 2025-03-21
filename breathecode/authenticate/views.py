@@ -540,6 +540,8 @@ class EmailVerification(APIView):
 
     def get(self, request, email=None):
         lang = get_user_language(request)
+        if email is not None:
+            email = email.lower()
 
         user = User.objects.filter(email=email).first()
         if user is None:
