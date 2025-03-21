@@ -177,6 +177,42 @@ class Github:
             if len(res) < per_page:
                 break
 
+    def get_repo_collaborators(self, owner: str, repo: str, per_page: int = 30) -> Generator[list[dict], None, None]:
+        """
+        Get a list of collaborators for a repository.
+
+        Args:
+            owner: The repository owner (username or organization)
+            repo: The repository name
+            per_page: Number of results per page (max 100)
+
+        Returns:
+            A list of collaborator objects
+        """
+        if per_page > 100:
+            raise Exception("per_page cannot be greater than 100")
+
+        page = 1
+
+        while True:
+            try:
+                result = self.get(
+                    f"/repos/{owner}/{repo}/collaborators", request_data={"per_page": per_page, "page": page}
+                )
+
+            except Exception:
+                break
+
+            if len(result) == 0:
+                break
+
+            yield result
+
+            if len(result) < per_page:
+                break
+
+            page += 1
+
     def delete_org_repo(self, owner: str, repo: str):
         res = self.delete(f"/repos/{owner}/{repo}")
         return res
