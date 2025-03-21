@@ -401,6 +401,7 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
 
 class GetCourseTranslationSerializer(serpy.Serializer):
     title = serpy.Field()
+    featured_assets = serpy.Field()
     description = serpy.Field()
     short_description = serpy.Field()
     lang = serpy.Field()
@@ -447,6 +448,7 @@ class GetCourseSerializer(GetCourseSmallSerializer):
     academy = GetAcademySmallSerializer()
     cohort = serpy.MethodField()
     status = serpy.Field()
+    is_listed = serpy.Field()
     visibility = serpy.Field()
 
     def get_syllabus(self, obj):

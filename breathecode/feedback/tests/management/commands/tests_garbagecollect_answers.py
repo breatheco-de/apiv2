@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from breathecode.feedback.management.commands.remove_invalid_answers import Command
+from breathecode.feedback.management.commands.garbagecollect_answers import Command
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 from breathecode.tests.mixins.legacy import LegacyAPITestCase
 

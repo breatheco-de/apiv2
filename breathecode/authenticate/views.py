@@ -540,8 +540,10 @@ class EmailVerification(APIView):
 
     def get(self, request, email=None):
         lang = get_user_language(request)
+        if email is not None:
+            email = email.lower()
 
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         if user is None:
             raise ValidationException(
                 translation(
@@ -2210,8 +2212,6 @@ def login_html_view(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_google_token(request, token=None):
-    # if token == None:
-    #     raise ValidationException("No session token has been specified", slug="no-session-token")
 
     url = request.query_params.get("url", None)
     if url == None:
@@ -2222,10 +2222,11 @@ def get_google_token(request, token=None):
     except Exception:
         pass
 
+    if token is not None:
         # you can only connect to google with temporal short lasting tokens
-    token = Token.get_valid(token)
-    if token is not None and token.token_type not in ["temporal", "one_time"]:
-        raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
+        token = Token.get_valid(token)
+        if token is None or token.token_type not in ["temporal", "one_time"]:
+            raise ValidationException("Invalid or inactive token", code=403, slug="invalid-token")
 
     # set academy settings automatically
     academy_settings = request.GET.get("academysettings", "none")
@@ -2324,11 +2325,11 @@ async def save_google_token(request):
     token = None
     if "token" in state and state["token"][0] != "":
         token = await Token.aget_valid(state["token"][0])
-    if token is not None and token.token_type not in ["temporal", "one_time"]:
-        logger.debug(f'Token {state["token"][0]} not found or is expired')
-        raise ValidationException(
-            "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
-        )
+        if not token or token.token_type not in ["temporal", "one_time"]:
+            logger.debug(f'Token {state["token"][0]} not found or is expired')
+            raise ValidationException(
+                "Token was not found or is expired, please use a different token", code=404, slug="token-not-found"
+            )
 
     academies = async_iter([])
     roles = ["admin", "staff", "country_manager", "academy_token"]
@@ -2408,7 +2409,9 @@ async def save_google_token(request):
                         if not anon_created and refresh and anon_created.refresh_token != refresh:
                             anon_user.refresh_token = refresh
                             await anon_user.asave()
-                        return HttpResponseRedirect(redirect_to=state["url"][0] + "?error=google-user-not-found")
+
+                        redirect_url = set_query_parameter(state["url"][0], "error", "google-user-not-found")
+                        return HttpResponseRedirect(redirect_to=redirect_url)
 
                     token, created = await Token.aget_or_create(user=user, token_type="login")
 
@@ -2444,7 +2447,8 @@ async def save_google_token(request):
                 async for academy in academies:
                     await set_academy_auth_settings(academy, user)
 
-                return HttpResponseRedirect(redirect_to=state["url"][0] + "?token=" + token.key)
+                redirect_url = set_query_parameter(state["url"][0], "token", token.key)
+                return HttpResponseRedirect(redirect_to=redirect_url)
 
             else:
                 logger.error(await resp.json())

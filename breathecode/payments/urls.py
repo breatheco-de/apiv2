@@ -4,6 +4,7 @@ from .views import (
     AcademyAcademyServiceView,
     AcademyCohortSetCohortView,
     AcademyInvoiceView,
+    AcademyPlanFinancingView,
     AcademyPlanSubscriptionView,
     AcademyPlanView,
     AcademyServiceView,
@@ -30,9 +31,9 @@ from .views import (
     PayView,
     PlanOfferView,
     PlanView,
+    ServiceBlocked,
     ServiceItemView,
     ServiceView,
-    ServiceBlocked,
 )
 
 app_name = "payments"
@@ -71,6 +72,8 @@ urlpatterns = [
         MeSubscriptionCancelView.as_view(),
         name="me_subscription_id_cancel",
     ),
+    path("academy/planfinancing/<int:financing_id>", AcademyPlanFinancingView.as_view()),
+    path("academy/planfinancing", AcademyPlanFinancingView.as_view()),
     path("academy/subscription", AcademySubscriptionView.as_view()),
     path("academy/subscription/<int:subscription_id>", AcademySubscriptionView.as_view()),
     path("me/invoice", MeInvoiceView.as_view()),
@@ -99,6 +102,11 @@ urlpatterns = [
         name="me_service_slug_consumptionsession_hash",
     ),
     path(
+        "me/service/<str:service_slug>/consumptionsession",
+        ConsumeView.as_view(),
+        name="me_service_slug_consumptionsession",
+    ),
+    path(
         "app/service/<str:service_slug>/consumptionsession",
         AppConsumeView.as_view(),
         name="app_service_slug_consumptionsession",
@@ -114,7 +122,7 @@ urlpatterns = [
         name="app_service_slug_consumptionsession_hash",
     ),
     path("card", CardView.as_view(), name="card"),
-    path("bag", BagView.as_view()),
+    path("bag", BagView.as_view(), name="bag"),
     path("bag/<int:bag_id>/coupon", BagCouponView.as_view(), name="bag_id_coupon"),
     path("checking", CheckingView.as_view(), name="checking"),
     path("pay", PayView.as_view(), name="pay"),

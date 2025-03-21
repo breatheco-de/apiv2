@@ -288,6 +288,7 @@ class RepositoryDeletionOrderAdmin(admin.ModelAdmin):
     list_display = ("provider", "status", "repository_user", "repository_name")
     search_fields = ["repository_user", "repository_name"]
     list_filter = ["provider", "status"]
+    raw_id_fields = ["user"]
 
 
 @admin.register(RepositoryWhiteList)

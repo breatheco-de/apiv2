@@ -1,5 +1,5 @@
 """
-    🔽🔽🔽 Testing Asset Creation without category
+🔽🔽🔽 Testing Asset Creation without category
 """
 
 from unittest.mock import MagicMock, call, patch
@@ -21,6 +21,7 @@ def database_item(academy, category, data={}):
         "academy_id": academy.id,
         "learnpack_deploy_url": None,
         "agent": None,
+        "feature": False,
         "assessment_id": None,
         "asset_type": "PROJECT",
         "author_id": None,
@@ -96,6 +97,7 @@ def post_serializer(academy, category, data={}):
             "title": category.title,
         },
         "agent": None,
+        "config": None,
         "delivery_formats": "url",
         "delivery_instructions": None,
         "delivery_regex_url": None,
@@ -106,6 +108,7 @@ def post_serializer(academy, category, data={}):
         "gitpod": False,
         "graded": False,
         "id": academy.id,
+        "feature": False,
         "interactive": False,
         "intro_video_url": None,
         "lang": None,
@@ -157,6 +160,7 @@ def put_serializer(academy, category, asset, data={}):
         "clusters": [],
         "assets_related": [],
         "previous_versions": [],
+        "feature": asset.feature,
         "description": None,
         "difficulty": None,
         "readme_updated_at": None,

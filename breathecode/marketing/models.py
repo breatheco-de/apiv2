@@ -804,6 +804,7 @@ class Course(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     syllabus = models.ManyToManyField(Syllabus, blank=True)
     cohort = models.ForeignKey(Cohort, null=True, blank=True, default=None, on_delete=models.CASCADE)
+    is_listed = models.BooleanField(default=True, help_text="controls inclusion in browser listings and sitemaps")
 
     plan_slug = models.SlugField(max_length=150, null=True, blank=True, default=None)
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
@@ -862,6 +863,13 @@ class CourseTranslation(models.Model):
     short_description = models.CharField(max_length=120, null=True, default=None, blank=True)
     video_url = models.URLField(
         default=None, null=True, blank=True, help_text="Video that introduces/promotes this course"
+    )
+    featured_assets = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Comma separated list of asset slugs featured in this course translation.",
     )
     landing_url = models.URLField(
         default=None,

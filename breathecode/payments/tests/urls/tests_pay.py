@@ -781,6 +781,7 @@ def test_free_plan__is_renewable(bc: Breathecode, client: APIClient):
             "token": None,
             "status": "PAID",
             "expires_at": None,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [format_invoice_item()]
@@ -836,6 +837,7 @@ def test_free_plan__not_is_renewable(bc: Breathecode, client: APIClient):
             "token": None,
             "status": "PAID",
             "expires_at": None,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [format_invoice_item()]
@@ -896,6 +898,7 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
             "status": "PAID",
             "expires_at": None,
             "chosen_period": chosen_period,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [
@@ -964,6 +967,7 @@ def test_with_chosen_period__amount_set_with_conversion_info(bc: Breathecode, cl
             "status": "PAID",
             "expires_at": None,
             "chosen_period": chosen_period,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [
@@ -1154,6 +1158,7 @@ def test_with_installments(bc: Breathecode, client: APIClient):
             #  'chosen_period': 'NO_SET',
             "expires_at": None,
             "how_many_installments": how_many_installments,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [
@@ -1236,6 +1241,7 @@ def test_with_installments_with_conversion_info(bc: Breathecode, client: APIClie
             #  'chosen_period': 'NO_SET',
             "expires_at": None,
             "how_many_installments": how_many_installments,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [
@@ -1341,6 +1347,7 @@ def test_coupons__with_installments(bc: Breathecode, client: APIClient):
             #  'chosen_period': 'NO_SET',
             "expires_at": None,
             "how_many_installments": how_many_installments,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [
@@ -1433,6 +1440,7 @@ def test_coupons__with_chosen_period__amount_set(bc: Breathecode, client: APICli
             "status": "PAID",
             "expires_at": None,
             "chosen_period": chosen_period,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [
@@ -1526,6 +1534,7 @@ def test_coupons__with_chosen_period__amount_set_with_conversion_info(bc: Breath
             "status": "PAID",
             "expires_at": None,
             "chosen_period": chosen_period,
+            "is_recurrent": True,
         }
     ]
     assert bc.database.list_of("payments.Invoice") == [
