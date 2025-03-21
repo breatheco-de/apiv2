@@ -1,0 +1,43 @@
+---
+description: About 4geeks.com infrasctructure, frontend, backend, IA provider, and cloud provider
+globs:
+alwaysApply: false
+---
+# Infrastructure
+
+## apiv2
+
+This is the largest API serving 4geeks.com
+
+### Cloud
+
+Heroku
+
+- [Procfile](mdc:Procfile)
+
+### Dynos
+
+- [release.sh](mdc:scripts/dyno/release.sh)
+- [celeryworker.sh](mdc:scripts/dyno/celeryworker.sh) and [celery.py](mdc:breathecode/celery.py)
+- [web.sh](mdc:scripts/dyno/web.sh) , [settings.py](mdc:breathecode/settings.py)
+
+### Docker compose
+
+- [docker-compose.yml](mdc:docker-compose.yml)
+
+## app
+
+4geeks.com frontend https://github.com/breatheco-de/app at Vercel
+
+## admin
+
+The frontend used by the staff https://github.com/breatheco-de/admin at Vercel
+
+## rigobot
+
+IA assistant for teaching and more at Heroku
+
+- https://chromewebstore.google.com/detail/rigobot-gpt/nafkfoblmejhkpamppohfglpkiohikbb
+- https://github.com/breatheco-de/rigobot
+- https://github.com/breatheco-de/rigobot-extension
+- https://github.com/breatheco-de/chat-bubble-rigobot
