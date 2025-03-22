@@ -792,15 +792,24 @@ def build_subscription(
         raise RetryTask(f"Invoice with id {invoice_id} not found")
 
     months = 1
+    pay_every_unit = "MONTH"
 
     if bag.chosen_period == "QUARTER":
         months = 3
+        pay_every_unit = "MONTH"
+        pay_every = 3
 
     elif bag.chosen_period == "HALF":
         months = 6
+        pay_every_unit = "MONTH"
+        pay_every = 6
 
     elif bag.chosen_period == "YEAR":
         months = 12
+        pay_every_unit = "YEAR"
+        pay_every = 1
+    else:
+        pay_every = 1
 
     plan = bag.plans.first()
 
@@ -815,6 +824,8 @@ def build_subscription(
         mentorship_service_set = None
 
     subscription_start_at = start_date or invoice.paid_at
+    if isinstance(subscription_start_at, str):
+        subscription_start_at = datetime.fromisoformat(subscription_start_at)
 
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     subscription = Subscription.objects.create(
@@ -828,6 +839,8 @@ def build_subscription(
         next_payment_at=subscription_start_at + relativedelta(months=months),
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
+        pay_every_unit=pay_every_unit,
+        pay_every=pay_every,
     )
 
     subscription.plans.set(bag.plans.all())
