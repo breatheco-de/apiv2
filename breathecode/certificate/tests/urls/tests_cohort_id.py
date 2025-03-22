@@ -416,6 +416,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": model["specialty"].name,
                     "slug": model["specialty"].slug,
                     "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabus.all()
+                    ],
                 },
                 "status": "ERROR",
                 "issued_at": None,
@@ -569,6 +572,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": model["specialty"].name,
                     "slug": model["specialty"].slug,
                     "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabus.all()
+                    ],
                 },
                 "status": "ERROR",
                 "issued_at": None,
@@ -712,6 +718,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": model["specialty"].name,
                     "slug": model["specialty"].slug,
                     "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabus.all()
+                    ],
                 },
                 "status": "ERROR",
                 "issued_at": None,
@@ -877,6 +886,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": model["specialty"].name,
                     "slug": model["specialty"].slug,
                     "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabus.all()
+                    ],
                 },
                 "status": "PERSISTED",
                 "status_text": "Certificate successfully queued for PDF generation",

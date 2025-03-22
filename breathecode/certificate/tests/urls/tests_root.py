@@ -265,6 +265,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": model["specialty"].name,
                     "slug": model["specialty"].slug,
                     "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabus.all()
+                    ],
                 },
                 "status": "PENDING",
                 "status_text": None,
@@ -466,6 +469,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabus.all()
+                    ],
                 },
                 "status": "PENDING",
                 "status_text": None,
@@ -521,6 +527,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": models[1].specialty.name,
                     "slug": models[1].specialty.slug,
                     "updated_at": self.datetime_to_iso(models[1].specialty.updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabus.all()
+                    ],
                 },
                 "status": "PENDING",
                 "status_text": None,
@@ -699,6 +708,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabus.all()
+                    ],
                 },
                 "status": "PENDING",
                 "status_text": None,
@@ -818,6 +830,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabus.all()
+                    ],
                 },
                 "status": "PENDING",
                 "status_text": None,
@@ -933,6 +948,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabus.all()
+                    ],
                 },
                 "status": "PENDING",
                 "status_text": None,
@@ -1049,6 +1067,9 @@ class CertificateTestSuite(CertificateTestCase):
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
+                    "syllabus": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabus.all()
+                    ],
                 },
                 "status": "PENDING",
                 "status_text": None,

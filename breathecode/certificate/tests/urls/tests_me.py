@@ -39,6 +39,7 @@ def get_serializer(self, user_specialty, academy, specialty, user):
             "name": specialty.name,
             "slug": specialty.slug,
             "updated_at": self.bc.datetime.to_iso_string(specialty.updated_at),
+            "syllabus": [{"id": s.id, "name": s.name, "slug": s.slug} for s in specialty.syllabus.all()],
         },
         "status": user_specialty.status,
         "status_text": user_specialty.status_text,
