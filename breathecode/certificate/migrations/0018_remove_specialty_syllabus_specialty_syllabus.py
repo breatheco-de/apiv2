@@ -16,8 +16,8 @@ def migrate_syllabus(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("admissions", "0068_merge_20241216_1552"),
         ("certificate", "0017_layoutdesign_foot_note"),
+        ("admissions", "0068_merge_20241216_1552"),
     ]
 
     operations = [
