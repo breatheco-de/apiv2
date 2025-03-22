@@ -1,5 +1,6 @@
 import logging
 
+from capyc.rest_framework.exceptions import ValidationException
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound
@@ -11,9 +12,9 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.api_view_extensions.extensions.lookup_extension import Q
 from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from capyc.rest_framework.exceptions import ValidationException
 
 from .actions import generate_certificate
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty
@@ -25,10 +26,38 @@ logger = logging.getLogger(__name__)
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def get_specialties(request):
-    items = Specialty.objects.all()
-    serializer = SpecialtySerializer(items, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+@capable_of("read_certificate")
+def get_academy_specialties(request, academy_id=None):
+    academy_id = request.headers.get("Academy") or request.headers.get("academy")
+    if not academy_id or not academy_id.isdigit():
+        return Response({"detail": "Valid academy ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+    academy_id = int(academy_id)
+
+    items = Specialty.objects.filter(syllabus__academy_owner=academy_id).distinct()
+
+    like = request.GET.get("like")
+    if like:
+        items = items.filter(Q(name__icontains=like) | Q(syllabus__name__icontains=like))
+
+    syllabus_slug = request.GET.get("syllabus_slug")
+    if syllabus_slug:
+        items = items.filter(syllabus__slug=syllabus_slug).distinct()
+
+    allowed_sort_fields = ["created_at", "-created_at", "name", "-name"]
+    sort = request.GET.get("sort", "-created_at")
+    if sort not in allowed_sort_fields:
+        return Response({"detail": "Invalid sort field"}, status=status.HTTP_400_BAD_REQUEST)
+    items = items.order_by(sort)
+
+    paginator = HeaderLimitOffsetPagination()
+    page = paginator.paginate_queryset(items, request)
+    serializer = SpecialtySerializer(page, many=True)
+
+    return (
+        paginator.get_paginated_response(serializer.data)
+        if paginator.is_paginate(request)
+        else Response(serializer.data, status=status.HTTP_200_OK)
+    )
 
 
 @api_view(["GET"])
