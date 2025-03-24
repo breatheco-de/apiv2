@@ -266,6 +266,7 @@ class AssetSerializer(serpy.Serializer):
     gitpod = serpy.Field()
     enable_table_of_content = serpy.Field()
     interactive = serpy.Field()
+    feature = serpy.Field()
     preview = serpy.Field()
     external = serpy.Field()
     solution_video_url = serpy.Field()
@@ -308,6 +309,7 @@ class AcademyAssetSerializer(AssetSerializer):
     published_at = serpy.Field()
     readme_updated_at = serpy.Field()
     authors_username = serpy.Field()
+    feature = serpy.Field()
 
     requirements = serpy.Field()
 
@@ -473,6 +475,7 @@ class AssetExpandableSerializer(AssetMidSerializer):
                     elem["technologies"] = self.format_technologies(obj)
 
                 elem["template_url"] = obj.template_url if hasattr(obj, "template_url") else None
+                elem["dependencies"] = obj.dependencies if hasattr(obj, "dependencies") else None
 
                 if "readme" in self.expand:
                     url = obj.readme_url
@@ -924,6 +927,7 @@ class AssetPUTSerializer(serializers.ModelSerializer):
     status = serializers.CharField(required=False)
     visibility = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
+    feature = serializers.BooleanField(required=False)
 
     class Meta:
         model = Asset

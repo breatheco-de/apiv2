@@ -864,6 +864,13 @@ class CourseTranslation(models.Model):
     video_url = models.URLField(
         default=None, null=True, blank=True, help_text="Video that introduces/promotes this course"
     )
+    featured_assets = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Comma separated list of asset slugs featured in this course translation.",
+    )
     landing_url = models.URLField(
         default=None,
         null=True,

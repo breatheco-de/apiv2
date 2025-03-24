@@ -1,0 +1,9 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+# Services
+
+- breathecode/services/\*\* shared third party services

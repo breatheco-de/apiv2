@@ -32,6 +32,8 @@ def db_item(data={}):
         "id": 1,
         "live_url": None,
         "opened_at": None,
+        "read_at": None,
+        "reviewed_at": None,
         "revision_status": "PENDING",
         "rigobot_repository_id": None,
         "subtasks": None,
@@ -40,26 +42,6 @@ def db_item(data={}):
         "telemetry_id": None,
         "title": "Richard Stephens",
         "user_id": 1,
-        **data,
-    }
-
-
-def put_serializer(self, task, data={}):
-
-    return {
-        "associated_slug": task.associated_slug,
-        "cohort": task.cohort,
-        "created_at": self.bc.datetime.to_iso_string(task.created_at),
-        "description": task.description,
-        "github_url": task.github_url,
-        "id": task.id,
-        "live_url": task.live_url,
-        "revision_status": task.revision_status,
-        "task_status": task.task_status,
-        "task_type": task.task_type,
-        "title": task.title,
-        "updated_at": self.bc.datetime.to_iso_string(task.updated_at),
-        "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
         **data,
     }
 
@@ -79,6 +61,8 @@ def get_serializer(self, task, user):
         "assignment_telemetry": task.telemetry.telemetry if task.telemetry else None,
         "description": task.description,
         "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
+        "read_at": self.bc.datetime.to_iso_string(task.read_at) if task.read_at else task.read_at,
+        "reviewed_at": self.bc.datetime.to_iso_string(task.reviewed_at) if task.reviewed_at else task.reviewed_at,
         "delivered_at": self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         "user": {"first_name": user.first_name, "id": user.id, "last_name": user.last_name},
         "cohort": {"id": task.cohort.id, "name": task.cohort.name, "slug": task.cohort.slug},
@@ -97,6 +81,8 @@ def post_serializer(data={}):
         "id": 1,
         "live_url": None,
         "opened_at": None,
+        "read_at": None,
+        "reviewed_at": None,
         "revision_status": "PENDING",
         "rigobot_repository_id": None,
         "subtasks": None,
@@ -127,6 +113,8 @@ def put_serializer(self, task, data={}):
         "subtasks": task.subtasks,
         "telemetry": task.telemetry,
         "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
+        "read_at": self.bc.datetime.to_iso_string(task.read_at) if task.read_at else task.read_at,
+        "reviewed_at": self.bc.datetime.to_iso_string(task.reviewed_at) if task.reviewed_at else task.reviewed_at,
         "delivered_at": self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         **data,
     }
@@ -629,6 +617,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch("breathecode.assignments.signals.assignment_status_updated.send_robust", MagicMock())
     @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test__put__with_task__one_item_in_body__passing_revision_status__teacher_token(self):
         statuses = ["APPROVED", "REJECTED"]
         for index in range(0, 2):
@@ -656,19 +645,21 @@ class MediaTestSuite(AssignmentsTestCase):
                     "revision_status": next_status,
                 }
             ]
-            start = timezone.now()
             with patch("breathecode.activity.tasks.get_attendancy_log.delay", MagicMock()):
                 response = self.client.put(url, data, format="json")
-            end = timezone.now()
 
             json = response.json()
-            json = [
-                x
-                for x in json
-                if self.bc.check.datetime_in_range(start, end, self.bc.datetime.from_iso_string(x["updated_at"]))
-                or x.pop("updated_at")
+            expected = [
+                put_serializer(
+                    self,
+                    model.task,
+                    data={
+                        "revision_status": next_status,
+                        "reviewed_at": self.bc.datetime.to_iso_string(UTC_NOW),
+                        "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
+                    },
+                )
             ]
-            expected = [put_serializer(self, model.task, data={"revision_status": next_status})]
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -678,6 +669,7 @@ class MediaTestSuite(AssignmentsTestCase):
                     {
                         **self.bc.format.to_dict(model.task),
                         "revision_status": next_status,
+                        "reviewed_at": UTC_NOW,
                     },
                 ],
             )
