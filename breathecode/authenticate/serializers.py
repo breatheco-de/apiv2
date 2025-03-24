@@ -1707,10 +1707,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             settings.save()
 
             args = (obj.id,)
-
-            manager = schedule_task(verify_user_invite_email, "1d")
-            if not manager.exists(*args):
-                manager.call(*args)
+            verify_user_invite_email.delay()
 
         self.instance.user = self.user
         self.instance.save()
