@@ -1707,7 +1707,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             settings.save()
 
             args = (obj.id,)
-            verify_user_invite_email.delay()
+            verify_user_invite_email.delay(*args)
 
         self.instance.user = self.user
         self.instance.save()
