@@ -1,0 +1,41 @@
+{
+    "mcpServers": {
+        "Github": {
+            "command": "bunx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-github"
+            ]
+        },
+        "memory": {
+            "command": "bunx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-memory"
+            ]
+        },
+        "sequential-thinking": {
+            "command": "bunx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sequential-thinking"
+            ]
+        },
+        "postgres": {
+            "command": "bunx",
+            "args": [
+              "-y",
+              "@modelcontextprotocol/server-postgres",
+              "postgresql://user:pass@localhost:5432/breathecode"
+            ]
+        },
+        "redis": {
+            "command": "bunx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-redis",
+                "redis://localhost:6379"
+            ]
+        }
+    }
+}

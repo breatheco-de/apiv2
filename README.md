@@ -1,4 +1,4 @@
-<h1 align="center"> 
+<h1 align="center">
   <br>
   <a href="https://breatheco.de/"><img src="https://raw.githubusercontent.com/breatheco-de/apiv2/main/breathecode/static/assets/logo.png" alt="4Geeks" width="128"></a>
   <br>
@@ -24,16 +24,17 @@ You can find the development documentation [on the website](https://breatheco-de
 
 Check out the [Postman docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef), [Swagger](https://breathecode.herokuapp.com/swagger/) or [Redoc](https://breathecode.herokuapp.com/swagger/).
 
+For Cursor IDE users, check the [docs.md](./docs.md) file which contains documentation links that can be accessed using the `@docs` symbol.
+
 The documentation is divided into several sections:
 
-
--   [Run 4Geeks in Codespaces (no installation)](#run-4geeks-in-codespaces-no-instalation)
--   [Install Docker](#install-docker)
--   [Run 4Geeks API as docker service](#run-4geeks-api-as-docker-service)
--   [Run 4Geeks in your local machine](#run-4geeks-api-in-your-local-machine)
-    -   [Installation](#installation)
-    -   [Run 4Geeks API](#run-4geeks-api)
--   [Run tests](#run-tests)
+- [Run 4Geeks in Codespaces (no installation)](#run-4geeks-in-codespaces-no-instalation)
+- [Install Docker](#install-docker)
+- [Run 4Geeks API as docker service](#run-4geeks-api-as-docker-service)
+- [Run 4Geeks in your local machine](#run-4geeks-api-in-your-local-machine)
+  - [Installation](#installation)
+  - [Run 4Geeks API](#run-4geeks-api)
+- [Run tests](#run-tests)
 
 ## Run 4Geeks in Codespaces (no installation)
 
