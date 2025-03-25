@@ -40,6 +40,14 @@ class Specialty(models.Model):
         blank=True,
         null=True,
         default=None,
+        related_name="specialty_with_one_syllabus",
+    )
+
+    syllabuses = models.ManyToManyField(
+        Syllabus,
+        help_text="This specialty can have multiple syllabi",
+        blank=True,
+        related_name="specialties_with_many_syllabus",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
