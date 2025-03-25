@@ -401,6 +401,7 @@ class GetSyllabusSmallSerializer(serpy.Serializer):
 
 class GetCourseTranslationSerializer(serpy.Serializer):
     title = serpy.Field()
+    featured_assets = serpy.Field()
     description = serpy.Field()
     short_description = serpy.Field()
     lang = serpy.Field()
