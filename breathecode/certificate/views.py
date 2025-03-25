@@ -28,10 +28,6 @@ logger = logging.getLogger(__name__)
 @permission_classes([AllowAny])
 @capable_of("read_certificate")
 def get_academy_specialties(request, academy_id=None):
-    academy_id = request.headers.get("Academy") or request.headers.get("academy")
-    if not academy_id or not academy_id.isdigit():
-        return Response({"detail": "Valid academy ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-    academy_id = int(academy_id)
 
     items = Specialty.objects.filter(syllabus__academy_owner=academy_id).distinct()
 
@@ -47,17 +43,15 @@ def get_academy_specialties(request, academy_id=None):
     sort = request.GET.get("sort", "-created_at")
     if sort not in allowed_sort_fields:
         return Response({"detail": "Invalid sort field"}, status=status.HTTP_400_BAD_REQUEST)
+
     items = items.order_by(sort)
 
-    paginator = HeaderLimitOffsetPagination()
-    page = paginator.paginate_queryset(items, request)
+    page = HeaderLimitOffsetPagination().paginate_queryset(items, request)
     serializer = SpecialtySerializer(page, many=True)
 
-    return (
-        paginator.get_paginated_response(serializer.data)
-        if paginator.is_paginate(request)
-        else Response(serializer.data, status=status.HTTP_200_OK)
-    )
+    if HeaderLimitOffsetPagination().is_paginate(request):
+        return HeaderLimitOffsetPagination().get_paginated_response(serializer.data)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
