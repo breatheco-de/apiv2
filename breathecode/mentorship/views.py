@@ -1472,6 +1472,9 @@ class BillView(APIView, HeaderLimitOffsetPagination):
                 if not (elem := MentorshipBill.objects.filter(id=obj["id"]).first()):
                     raise ValidationException(f'Bill {obj["id"]} not found', code=404, slug="some-not-found")
 
+                if elem.status == "PAID":
+                    raise ValidationException("Paid bills cannot be modified", code=400, slug="read-only-paid-bill")
+
                 if elem.status == "RECALCULATE" and "status" in obj and obj["status"] != "RECALCULATE":
                     raise ValidationException(
                         "This bill must be regenerated before you can update its status",
@@ -1488,6 +1491,9 @@ class BillView(APIView, HeaderLimitOffsetPagination):
             bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
             if bill is None:
                 raise ValidationException("This bill does not exist for this academy", code=404, slug="not-found")
+
+            if bill.status == "PAID":
+                raise ValidationException("Paid bills cannot be modified", code=400, slug="read-only-paid-bill")
 
             if bill.status == "RECALCULATE" and "status" in request.data and request.data["status"] != "RECALCULATE":
                 raise ValidationException(

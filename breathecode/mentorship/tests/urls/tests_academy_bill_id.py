@@ -658,6 +658,42 @@ class AcademyServiceTestSuite(MentorshipTestCase):
         )
 
     """
+    🔽🔽🔽 PUT prevent modify paid bills
+    """
+
+    def test__put__prevent_modify_paid_bills(self):
+        mentorship_bill = {"status": "PAID"}
+        model = self.bc.database.create(
+            user=1,
+            role=1,
+            capability="crud_mentorship_bill",
+            mentorship_session=1,
+            mentor_profile=1,
+            mentorship_service=1,
+            mentorship_bill=mentorship_bill,
+            profile_academy=1,
+        )
+
+        self.bc.request.set_headers(academy=1)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("mentorship:academy_bill_id", kwargs={"bill_id": 1})
+        data = {"status": random.choice(["DUE", "APPROVED", "IGNORED", "RECALCULATE"])}
+        response = self.client.put(url, data, format="json")
+
+        json = response.json()
+        expected = {"detail": "read-only-paid-bill", "status_code": 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.bc.database.list_of("mentorship.MentorshipBill"),
+            [
+                self.bc.format.to_dict(model.mentorship_bill),
+            ],
+        )
+
+    """
     🔽🔽🔽 PUT with one MentorshipSession, MentorProfile and MentorshipService, passing forbidden fields
     """
 
