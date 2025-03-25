@@ -130,14 +130,17 @@ class SpecialtySerializer(serpy.Serializer):
     updated_at = serpy.Field()
     created_at = serpy.Field()
 
-    # Incluir el viejo syllabus (OneToOneField)
-    syllabus = serpy.Field()
+    # old syllabus
+    syllabus = serpy.MethodField()
 
-    # Incluir el nuevo syllabus_many (ManyToManyField) como lista de IDs
+    # new syllabuses
     syllabuses = serpy.MethodField()
 
+    def get_syllabus(self, obj):
+        return {"id": obj.syllabus.id, "name": obj.syllabus.name, "slug": obj.syllabus.slug} if obj.syllabus else None
+
     def get_syllabuses(self, obj):
-        return [{"id": s.id, "name": s.name} for s in obj.syllabuses.all()]
+        return [{"id": s.id, "name": s.name, "slug": s.slug} for s in obj.syllabuses.all()]
 
 
 class BadgeSmallSerializer(serpy.Serializer):

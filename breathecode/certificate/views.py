@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 @capable_of("read_certificate")
 def get_academy_specialties(request, academy_id=None):
 
-    # Filtra por el viejo syllabus (OneToOneField) y el nuevo syllabuses (ManyToManyField)
+    # Filter by the old syllabus (OneToOneField) and the new syllabuses (ManyToManyField)
     items = Specialty.objects.filter(
         Q(syllabus__academy_owner=academy_id) | Q(syllabuses__academy_owner=academy_id)
     ).distinct()
@@ -51,11 +51,14 @@ def get_academy_specialties(request, academy_id=None):
 
     items = items.order_by(sort)
 
-    page = HeaderLimitOffsetPagination().paginate_queryset(items, request)
+    paginator = HeaderLimitOffsetPagination()
+    page = paginator.paginate_queryset(items, request)
+
     serializer = SpecialtySerializer(page, many=True)
 
-    if HeaderLimitOffsetPagination().is_paginate(request):
-        return HeaderLimitOffsetPagination().get_paginated_response(serializer.data)
+    if paginator.is_paginate(request):
+        return paginator.get_paginated_response(serializer.data)
+
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

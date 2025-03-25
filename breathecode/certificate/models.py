@@ -33,6 +33,7 @@ class Specialty(models.Model):
     # how long it takes to expire, leave null for unlimited
     expiration_day_delta = models.IntegerField(blank=True, null=True, default=None)
 
+    # old syllabus
     syllabus = models.OneToOneField(
         Syllabus,
         on_delete=models.CASCADE,
@@ -42,7 +43,7 @@ class Specialty(models.Model):
         default=None,
         related_name="specialty_with_one_syllabus",
     )
-
+    # new syllabuses
     syllabuses = models.ManyToManyField(
         Syllabus,
         help_text="This specialty can have multiple syllabi",
