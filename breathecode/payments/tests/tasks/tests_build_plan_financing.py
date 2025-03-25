@@ -2,6 +2,7 @@
 Test /answer
 """
 
+import datetime
 import logging
 import random
 from unittest.mock import MagicMock, call, patch
@@ -73,6 +74,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
         self.assertEqual(self.bc.database.list_of("payments.PlanFinancing"), [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 With Bag
@@ -111,6 +113,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 With Bag and Invoice
@@ -185,6 +188,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 With Bag and Invoice with amount
@@ -266,6 +270,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_plan_financing",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
 
     """
     🔽🔽🔽 With Bag with Cohort and Invoice with amount
@@ -359,6 +378,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_plan_financing",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
 
     """
     🔽🔽🔽 With Bag with EventTypeSet and Invoice with amount
@@ -446,6 +480,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_plan_financing",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
 
     """
     🔽🔽🔽 With Bag with MentorshipServiceSet and Invoice with amount
@@ -533,6 +582,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_plan_financing",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
 
     """
     🔽🔽🔽 With Bag with MentorshipServiceSet and Invoice with amount and conversion_info
@@ -620,3 +684,18 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = datetime.timedelta(days=(model.invoice.paid_at + relativedelta(months=1) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_plan_financing",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]

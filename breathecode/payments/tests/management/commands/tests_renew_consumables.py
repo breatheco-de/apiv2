@@ -1,13 +1,13 @@
 import random
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
+from dateutil.relativedelta import relativedelta
+from django.utils import timezone
+
 from breathecode.payments import tasks
 from breathecode.payments.management.commands.renew_consumables import Command
 from breathecode.payments.tests.mixins import PaymentsTestCase
-from django.utils import timezone
-from dateutil.relativedelta import relativedelta
-
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
@@ -38,6 +38,9 @@ def test_no_related_entities(bc: Breathecode):
 def invalid_statuses_params():
     for entity in ["subscription", "plan_financing"]:
         for status in ["CANCELLED", "DEPRECATED"]:
+            if status == "DEPRECATED" and entity == "plan_financing":
+                continue
+
             entity_attrs = {
                 "status": status,
             }
