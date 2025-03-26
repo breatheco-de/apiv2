@@ -784,6 +784,10 @@ class EventTypeView(APIView):
             value = self.request.GET.get("allow_shared_creation", "").lower()
             lookup["allow_shared_creation"] = value == "true"
 
+        if "lang" in self.request.GET:
+            value = self.request.GET.get("lang")
+            lookup["lang"] = value
+
         items = items.filter(**lookup).order_by("-created_at")
 
         serializer = EventTypeSerializer(items, many=True)
