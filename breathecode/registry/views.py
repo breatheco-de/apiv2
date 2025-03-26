@@ -215,7 +215,7 @@ class TechnologyView(APIView):
 
         # Handle priority filter (comma-separated integers)
         if "sort_priority" in request.GET:
-            priority_param = request.GET.get("priority")
+            priority_param = request.GET.get("sort_priority")
             try:
                 # Split by comma and convert to list of integers
                 priority_values = [int(p) for p in priority_param.split(",") if p.strip()]
