@@ -217,3 +217,70 @@ class AcademyEventTestSuite(EventTestCase):
                 }
             ],
         )
+
+    def test_filter_by_lang_en_with_results(self):
+        """Test filtering event types by lang=en and getting results"""
+
+        event_type_kwargs = {
+            "slug": "potato",
+            "name": "Potato",
+            "created_at": timezone.now(),
+            "updated_at": timezone.now(),
+            "icon_url": "https://www.google.com",
+            "lang": "en",  # setting lang to en specifically
+            "technologies": None,
+        }
+        model = self.generate_models(
+            authenticate=True, event=True, event_type=True, event_type_kwargs=event_type_kwargs
+        )
+        url = reverse_lazy("events:eventype") + "?lang=en"
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = [get_serializer(model.event_type, model.academy, model.city)]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            self.all_event_type_dict(),
+            [
+                {
+                    **self.model_to_dict(model, "event_type"),
+                }
+            ],
+        )
+
+    def test_filter_by_lang_es_no_results(self):
+        """Test filtering event types by lang=es and getting empty results"""
+
+        event_type_kwargs = {
+            "slug": "potato",
+            "name": "Potato",
+            "created_at": timezone.now(),
+            "updated_at": timezone.now(),
+            "icon_url": "https://www.google.com",
+            "lang": "en",  # setting lang to en, so filtering by es should return empty
+            "technologies": None,
+        }
+        model = self.generate_models(
+            authenticate=True, event=True, event_type=True, event_type_kwargs=event_type_kwargs
+        )
+        url = reverse_lazy("events:eventype") + "?lang=es"
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = []  # Empty array because no event type has lang=es
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+
+        # Verify the model still exists in database but wasn't returned in results
+        self.assertEqual(
+            self.all_event_type_dict(),
+            [
+                {
+                    **self.model_to_dict(model, "event_type"),
+                }
+            ],
+        )
