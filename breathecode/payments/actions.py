@@ -10,8 +10,7 @@ from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
-from django.db.models import QuerySet, Sum
-from django.db.models.query_utils import Q
+from django.db.models import Q, QuerySet, Sum
 from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
@@ -27,6 +26,7 @@ from breathecode.utils.validate_conversion_info import validate_conversion_info
 
 from .models import (
     SERVICE_UNITS,
+    AcademyService,
     Bag,
     CohortSet,
     Consumable,
@@ -411,7 +411,7 @@ class BagHandler:
                 else:
                     kwargs["slug"] = service_item["service"]
 
-                if not Service.objects.filter(**kwargs):
+                if Service.objects.filter(**kwargs).count() == 0:
                     self.service_items_not_found.add(service_item["service"])
 
     def _get_plans_that_not_found(self):
@@ -431,7 +431,7 @@ class BagHandler:
                 elif self.selected_cohort_set and isinstance(self.selected_cohort_set, str):
                     kwargs["cohort_set__slug"] = self.selected_cohort_set
 
-                if not Plan.objects.filter(**kwargs).exclude(**exclude):
+                if Plan.objects.filter(**kwargs).exclude(**exclude).count() == 0:
                     self.plans_not_found.add(plan)
 
     def _report_items_not_found(self):
@@ -450,6 +450,27 @@ class BagHandler:
 
     def _add_service_items_to_bag(self):
         if isinstance(self.service_items, list):
+            add_ons: dict[int, AcademyService] = {}
+
+            for plan in self.bag.plans.all():
+                for add_on in plan.add_ons.all():
+                    add_ons[add_on.service.id] = add_on
+
+            for service_item in self.service_items:
+
+                if service_item["service"] not in add_ons:
+                    self.bag.service_items.filter(service__id=service_item["service"]).delete()
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en=f"The service {service_item['service']} is not available for the selected plans",
+                            es=f"El servicio {service_item['service']} no está disponible para los planes seleccionados",
+                        ),
+                        slug="service-item-not-valid",
+                    )
+
+                add_ons[service_item["service"]].validate_transaction(service_item["how_many"], lang=self.lang)
+
             for service_item in self.service_items:
                 args, kwargs = self._lookups(service_item["service"])
 
@@ -476,18 +497,6 @@ class BagHandler:
 
             raise ValidationException(self._more_than_one_generator(en="plan", es="plan"), code=400)
 
-    def _validate_buy_plans_or_service_items(self):
-        if self.bag.plans.count() and self.bag.service_items.count():
-            raise ValidationException(
-                translation(
-                    self.lang,
-                    en="You can't select a plan and a services at the same time",
-                    es="No puedes seleccionar un plan y servicios al mismo tiempo",
-                    slug="one-plan-and-many-services",
-                ),
-                code=400,
-            )
-
     def _ask_to_add_plan_and_charge_it_in_the_bag(self):
         for plan in self.bag.plans.all():
             ask_to_add_plan_and_charge_it_in_the_bag(plan, self.bag.user, self.lang)
@@ -501,11 +510,9 @@ class BagHandler:
         self._get_service_items_that_not_found()
         self._get_plans_that_not_found()
         self._report_items_not_found()
-        self._add_service_items_to_bag()
         self._add_plans_to_bag()
+        self._add_service_items_to_bag()
         self._validate_just_one_plan()
-
-        self._validate_buy_plans_or_service_items()
 
         self._ask_to_add_plan_and_charge_it_in_the_bag()
 
@@ -526,16 +533,6 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
     if not currency:
         currency, _ = Currency.objects.get_or_create(code="USD", name="United States dollar")
 
-    for service_item in bag.service_items.all():
-        if service_item.service.currency != currency:
-            bag.service_items.remove(service_item)
-            continue
-
-        price_per_month += service_item.service.price_per_unit * service_item.how_many
-        price_per_quarter += service_item.service.price_per_unit * service_item.how_many * 3
-        price_per_half += service_item.service.price_per_unit * service_item.how_many * 6
-        price_per_year += service_item.service.price_per_unit * service_item.how_many * 12
-
     for plan in bag.plans.all():
         if plan.currency != currency:
             bag.plans.remove(plan)
@@ -543,12 +540,41 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
 
         must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(plan, user, lang)
 
-        # this prices is just used if it are generating a subscription
         if not bag.how_many_installments and (bag.chosen_period != "NO_SET" or must_it_be_charged):
             price_per_month += plan.price_per_month or 0
             price_per_quarter += plan.price_per_quarter or 0
             price_per_half += plan.price_per_half or 0
             price_per_year += plan.price_per_year or 0
+
+    plans = bag.plans.all()
+    add_ons: dict[int, AcademyService] = {}
+    for plan in plans:
+        for add_on in plan.add_ons.filter(currency=currency):
+            if add_on.service.id not in add_ons:
+                add_ons[add_on.service.id] = add_on
+
+    for service_item in bag.service_items.all():
+        if service_item.service.id in add_ons:
+            add_on = add_ons[service_item.service.id]
+
+            try:
+                add_on.validate_transaction(service_item.how_many, lang)
+            except Exception as e:
+                bag.service_items.filter().delete()
+                bag.plans.filter().delete()
+                raise e
+
+            if price_per_month != 0:
+                price_per_month += add_on.get_discounted_price(service_item.how_many)
+
+            if price_per_quarter != 0:
+                price_per_quarter += add_on.get_discounted_price(service_item.how_many)
+
+            if price_per_half != 0:
+                price_per_half += add_on.get_discounted_price(service_item.how_many)
+
+            if price_per_year != 0:
+                price_per_year += add_on.get_discounted_price(service_item.how_many)
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -617,9 +643,6 @@ def get_bag_from_subscription(
         bag.chosen_period = "MONTH"
 
     bag.save()
-
-    for service_item in subscription.service_items.all():
-        bag.service_items.add(service_item)
 
     for plan in subscription.plans.all():
         bag.plans.add(plan)
@@ -755,7 +778,6 @@ def get_balance_by_resource(
     ids = {getattr(x, key).id for x in queryset}
     for id in ids:
         current = queryset.filter(**{f"{key}__id": id})
-        # current_virtual = [x for x in x if x[key] == id]
 
         instance = current.first()
         balance = {}
@@ -766,9 +788,6 @@ def get_balance_by_resource(
             balance[unit.lower()] = (
                 -1 if per_unit.filter(how_many=-1).exists() else per_unit.aggregate(Sum("how_many"))["how_many__sum"]
             )
-
-        # for unit in current_virtual:
-        #     ...
 
         for x in queryset:
             valid_until = x.valid_until
@@ -1292,3 +1311,31 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
             how_many = virtual["service_item"]["how_many"]
             unit_type = virtual["service_item"]["unit_type"]
             append("cohort_sets", id, slug, how_many, unit_type)
+
+
+def retry_pending_bag(bag: Bag):
+    """
+    This function retries the delivery of bags that are paid but not delivered.
+    It is intended to be called periodically by a scheduler.
+    """
+
+    if bag.status != Bag.Status.PAID:
+        return "not-paid"
+
+    if bag.was_delivered:
+        return "done"
+
+    invoice: Invoice | None = bag.invoices.first()
+    if invoice is None:
+        return "no-invoice"
+
+    if bag.how_many_installments > 0:
+        tasks.build_plan_financing.delay(bag.id, invoice.id)
+
+    elif invoice.amount > 0:
+        tasks.build_subscription.delay(bag.id, invoice.id)
+
+    else:
+        tasks.build_free_subscription.delay(bag.id, invoice.id)
+
+    return "scheduled"

@@ -197,29 +197,43 @@ class TechnologyView(APIView):
             serializer = AssetBigTechnologySerializer(technology)
             return Response(serializer.data)
 
-        items = AssetTechnology.objects.filter(parent__isnull=True)
+        # Initialize items queryset
+        items = AssetTechnology.objects.all()
 
+        # Handle parent filter
+        if "parent" in request.GET:
+            parent_param = request.GET.get("parent")
+            if parent_param.lower() == "true":
+                # Filter out all technologies that are children (have a parent)
+                items = items.filter(parent__isnull=True)
+            elif parent_param.isdigit():
+                # Keep only technologies whose parent is an asset with that id
+                items = items.filter(parent_id=parent_param)
+        else:
+            # Default behavior: filter out children technologies
+            items = items.filter(parent__isnull=True)
+
+        # Handle priority filter (comma-separated integers)
         if "sort_priority" in request.GET:
+            priority_param = request.GET.get("sort_priority")
             try:
-                param = int(request.GET.get("sort_priority"))
-                items = items.filter(sort_priority__exact=param)
+                # Split by comma and convert to list of integers
+                priority_values = [int(p) for p in priority_param.split(",") if p.strip()]
+                if priority_values:
+                    items = items.filter(sort_priority__in=priority_values)
             except ValueError:
                 raise ValidationException(
                     translation(
                         lang,
-                        en="The parameter must be an integer, nothing else",
-                        es="El parametró debera ser un entero y nada mas ",
-                        slug="integer-not-found",
+                        en="The priority parameter must contain comma-separated integers",
+                        es="El parametro priority debe contener enteros separados por coma",
+                        slug="priority-format-invalid",
                     )
                 )
 
         if "lang" in request.GET:
             param = request.GET.get("lang")
             items = items.filter(Q(lang__iexact=param) | Q(lang="") | Q(lang__isnull=True))
-
-        if "only_lang" in request.GET:
-            param = request.GET.get("only_lang")
-            items = items.filter(Q(lang__iexact=param))
 
         if "is_deprecated" not in request.GET or request.GET.get("is_deprecated").lower() == "false":
             items = items.filter(is_deprecated=False)
@@ -685,6 +699,15 @@ class AssetView(APIView, GenerateLookupsMixin):
                     | Q(title__icontains=like)
                     | Q(assetalias__slug__icontains=slugify(like))
                 )
+
+        if "learnpack_deploy_url" in self.request.GET:
+            param = self.request.GET.get("learnpack_deploy_url")
+            if param.lower() == "true":
+                items = items.exclude(learnpack_deploy_url__isnull=True).exclude(learnpack_deploy_url="")
+            elif param.lower() == "false":
+                items = items.filter(Q(learnpack_deploy_url__isnull=True) | Q(learnpack_deploy_url=""))
+            elif is_url(param):
+                items = items.filter(learnpack_deploy_url=param)
 
         if "slug" in self.request.GET:
             asset_type = self.request.GET.get("asset_type", None)
@@ -1814,6 +1837,11 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
         like = request.GET.get("like", None)
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
+
+        if "lang" in request.GET:
+            lang = request.GET.get("lang")
+            if lang:
+                lookup["lang__iexact"] = lang
 
         items = items.filter(**lookup)
         items = handler.queryset(items)

@@ -365,6 +365,12 @@ class AcademyAuthSettings(models.Model):
     auto_sync_content = models.BooleanField(
         default=False, help_text="If true, will attempt to create WebhookSubscription on each asset repo"
     )
+    github_whitelist_exemption_users = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="github_whitelist_exemptions",
+        help_text="Users that will never be removed from GitHub organization regardless of their cohort status",
+    )
 
     def add_error(self, msg):
         if self.github_error_log is None:

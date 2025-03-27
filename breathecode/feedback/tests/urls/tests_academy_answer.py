@@ -2,19 +2,91 @@
 Test /answer
 """
 
-import re, urllib
+import re
+import urllib
 from unittest.mock import MagicMock, call, patch
+
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
 from breathecode.feedback.caches import AnswerCache
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_google_cloud_bucket_mock,
+    apply_google_cloud_client_mock,
 )
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
+
 from ..mixins import FeedbackTestCase
+
+
+def get_serializer(self, answer, cohort=None, academy=None, mentor=None, user=None, event=None, profile=None, data={}):
+    if cohort:
+        cohort = {
+            "id": cohort.id,
+            "name": cohort.name,
+            "slug": cohort.slug,
+        }
+
+    if profile:
+        profile = {
+            "avatar_url": profile.avatar_url,
+        }
+
+    if mentor:
+        mentor = {
+            "first_name": mentor.first_name,
+            "id": mentor.id,
+            "last_name": mentor.last_name,
+            "profile": profile,
+        }
+
+    if academy:
+        academy = {
+            "id": academy.id,
+            "name": academy.name,
+            "slug": academy.slug,
+        }
+
+    if user:
+        user = {
+            "first_name": user.first_name,
+            "id": user.id,
+            "last_name": user.last_name,
+            "profile": profile,
+        }
+
+    if event:
+        event = {
+            "description": event.description,
+            "excerpt": event.excerpt,
+            "id": event.id,
+            "lang": event.lang,
+            "title": event.title,
+        }
+
+    return {
+        "created_at": self.datetime_to_iso(answer.created_at),
+        "academy": academy,
+        "cohort": cohort,
+        "asset": None,
+        "mentorship_session": None,
+        "question_by_slug": None,
+        "live_class": None,
+        "comment": answer.comment,
+        "event": event,
+        "highest": answer.highest,
+        "id": answer.id,
+        "lang": answer.lang,
+        "lowest": answer.lowest,
+        "mentor": mentor,
+        "score": answer.score,
+        "status": answer.status,
+        "title": answer.title,
+        "user": user,
+        **data,
+    }
 
 
 class AnswerTestSuite(FeedbackTestCase):
@@ -95,40 +167,22 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(
             json,
             [
-                {
-                    "created_at": None,
-                    "academy": {
-                        "id": model["answer"].academy.id,
-                        "name": model["answer"].academy.name,
-                        "slug": model["answer"].academy.slug,
+                get_serializer(
+                    self,
+                    model.answer,
+                    cohort=model.cohort,
+                    academy=model.academy,
+                    user=model.user,
+                    data={
+                        "mentor": {
+                            "first_name": model.user.first_name,
+                            "id": model.user.id,
+                            "last_name": model.user.last_name,
+                            "profile": None,
+                        },
+                        "created_at": None,
                     },
-                    "cohort": {
-                        "id": model["answer"].cohort.id,
-                        "name": model["answer"].cohort.name,
-                        "slug": model["answer"].cohort.slug,
-                    },
-                    "comment": model["answer"].comment,
-                    "event": model["answer"].event,
-                    "highest": model["answer"].highest,
-                    "id": model["answer"].id,
-                    "lang": model["answer"].lang,
-                    "lowest": model["answer"].lowest,
-                    "mentor": {
-                        "first_name": model["answer"].mentor.first_name,
-                        "id": model["answer"].mentor.id,
-                        "last_name": model["answer"].mentor.last_name,
-                        "profile": None,
-                    },
-                    "score": model["answer"].score,
-                    "status": model["answer"].status,
-                    "title": model["answer"].title,
-                    "user": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": None,
-                    },
-                }
+                ),
             ],
         )
 
@@ -159,44 +213,23 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(
             json,
             [
-                {
-                    "created_at": None,
-                    "academy": {
-                        "id": model["answer"].academy.id,
-                        "name": model["answer"].academy.name,
-                        "slug": model["answer"].academy.slug,
-                    },
-                    "cohort": {
-                        "id": model["answer"].cohort.id,
-                        "name": model["answer"].cohort.name,
-                        "slug": model["answer"].cohort.slug,
-                    },
-                    "comment": model["answer"].comment,
-                    "event": model["answer"].event,
-                    "highest": model["answer"].highest,
-                    "id": model["answer"].id,
-                    "lang": model["answer"].lang,
-                    "lowest": model["answer"].lowest,
-                    "mentor": {
-                        "first_name": model["answer"].mentor.first_name,
-                        "id": model["answer"].mentor.id,
-                        "last_name": model["answer"].mentor.last_name,
-                        "profile": {
-                            "avatar_url": None,
+                get_serializer(
+                    self,
+                    model.answer,
+                    cohort=model.cohort,
+                    academy=model.academy,
+                    user=model.user,
+                    profile=model.profile,
+                    data={
+                        "mentor": {
+                            "first_name": model.user.first_name,
+                            "id": model.user.id,
+                            "last_name": model.user.last_name,
+                            "profile": {"avatar_url": None},
                         },
+                        "created_at": None,
                     },
-                    "score": model["answer"].score,
-                    "status": model["answer"].status,
-                    "title": model["answer"].title,
-                    "user": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": {
-                            "avatar_url": None,
-                        },
-                    },
-                }
+                ),
             ],
         )
 
@@ -256,40 +289,22 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(
             json,
             [
-                {
-                    "created_at": None,
-                    "academy": {
-                        "id": model["answer"].academy.id,
-                        "name": model["answer"].academy.name,
-                        "slug": model["answer"].academy.slug,
+                get_serializer(
+                    self,
+                    model.answer,
+                    cohort=model.cohort,
+                    academy=model.academy,
+                    user=model.user,
+                    data={
+                        "mentor": {
+                            "first_name": model.user.first_name,
+                            "id": model.user.id,
+                            "last_name": model.user.last_name,
+                            "profile": None,
+                        },
+                        "created_at": None,
                     },
-                    "cohort": {
-                        "id": model["answer"].cohort.id,
-                        "name": model["answer"].cohort.name,
-                        "slug": model["answer"].cohort.slug,
-                    },
-                    "comment": model["answer"].comment,
-                    "event": model["answer"].event,
-                    "highest": model["answer"].highest,
-                    "id": model["answer"].id,
-                    "lang": model["answer"].lang,
-                    "lowest": model["answer"].lowest,
-                    "mentor": {
-                        "first_name": model["answer"].mentor.first_name,
-                        "id": model["answer"].mentor.id,
-                        "last_name": model["answer"].mentor.last_name,
-                        "profile": None,
-                    },
-                    "score": model["answer"].score,
-                    "status": model["answer"].status,
-                    "title": model["answer"].title,
-                    "user": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": None,
-                    },
-                }
+                ),
             ],
         )
 
@@ -353,40 +368,22 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(
             json,
             [
-                {
-                    "created_at": None,
-                    "academy": {
-                        "id": model["answer"].academy.id,
-                        "name": model["answer"].academy.name,
-                        "slug": model["answer"].academy.slug,
+                get_serializer(
+                    self,
+                    model.answer,
+                    cohort=model.cohort,
+                    academy=model.academy,
+                    user=model.user,
+                    data={
+                        "mentor": {
+                            "first_name": model.user.first_name,
+                            "id": model.user.id,
+                            "last_name": model.user.last_name,
+                            "profile": None,
+                        },
+                        "created_at": None,
                     },
-                    "cohort": {
-                        "id": model["cohort"].id,
-                        "name": model["cohort"].name,
-                        "slug": model["cohort"].slug,
-                    },
-                    "comment": model["answer"].comment,
-                    "event": model["answer"].event,
-                    "highest": model["answer"].highest,
-                    "id": model["answer"].id,
-                    "lang": model["answer"].lang,
-                    "lowest": model["answer"].lowest,
-                    "mentor": {
-                        "first_name": model["answer"].mentor.first_name,
-                        "id": model["answer"].mentor.id,
-                        "last_name": model["answer"].mentor.last_name,
-                        "profile": None,
-                    },
-                    "score": model["answer"].score,
-                    "status": model["answer"].status,
-                    "title": model["answer"].title,
-                    "user": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": None,
-                    },
-                }
+                ),
             ],
         )
 
@@ -423,40 +420,22 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(
             json,
             [
-                {
-                    "created_at": None,
-                    "academy": {
-                        "id": model["answer"].academy.id,
-                        "name": model["answer"].academy.name,
-                        "slug": model["answer"].academy.slug,
+                get_serializer(
+                    self,
+                    model.answer,
+                    cohort=model.cohort,
+                    academy=model.academy,
+                    user=model.user,
+                    data={
+                        "mentor": {
+                            "first_name": model.user.first_name,
+                            "id": model.user.id,
+                            "last_name": model.user.last_name,
+                            "profile": None,
+                        },
+                        "created_at": None,
                     },
-                    "cohort": {
-                        "id": model["cohort"].id,
-                        "name": model["cohort"].name,
-                        "slug": model["cohort"].slug,
-                    },
-                    "comment": model["answer"].comment,
-                    "event": model["answer"].event,
-                    "highest": model["answer"].highest,
-                    "id": model["answer"].id,
-                    "lang": model["answer"].lang,
-                    "lowest": model["answer"].lowest,
-                    "mentor": {
-                        "first_name": model["answer"].mentor.first_name,
-                        "id": model["answer"].mentor.id,
-                        "last_name": model["answer"].mentor.last_name,
-                        "profile": None,
-                    },
-                    "score": model["answer"].score,
-                    "status": model["answer"].status,
-                    "title": model["answer"].title,
-                    "user": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": None,
-                    },
-                }
+                ),
             ],
         )
 
@@ -522,40 +501,22 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(
             json,
             [
-                {
-                    "created_at": None,
-                    "academy": {
-                        "id": model["answer"].academy.id,
-                        "name": model["answer"].academy.name,
-                        "slug": model["answer"].academy.slug,
+                get_serializer(
+                    self,
+                    model.answer,
+                    cohort=model.cohort,
+                    academy=model.academy,
+                    user=model.user,
+                    data={
+                        "mentor": {
+                            "first_name": model.user.first_name,
+                            "id": model.user.id,
+                            "last_name": model.user.last_name,
+                            "profile": None,
+                        },
+                        "created_at": None,
                     },
-                    "cohort": {
-                        "id": model["cohort"].id,
-                        "name": model["cohort"].name,
-                        "slug": model["cohort"].slug,
-                    },
-                    "comment": model["answer"].comment,
-                    "event": model["answer"].event,
-                    "highest": model["answer"].highest,
-                    "id": model["answer"].id,
-                    "lang": model["answer"].lang,
-                    "lowest": model["answer"].lowest,
-                    "mentor": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": None,
-                    },
-                    "score": model["answer"].score,
-                    "status": model["answer"].status,
-                    "title": model["answer"].title,
-                    "user": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": None,
-                    },
-                }
+                ),
             ],
         )
 
@@ -623,46 +584,23 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(
             json,
             [
-                {
-                    "created_at": None,
-                    "academy": {
-                        "id": model["answer"].academy.id,
-                        "name": model["answer"].academy.name,
-                        "slug": model["answer"].academy.slug,
+                get_serializer(
+                    self,
+                    model.answer,
+                    cohort=model.cohort,
+                    academy=model.academy,
+                    user=model.user,
+                    event=model.event,
+                    data={
+                        "mentor": {
+                            "first_name": model.user.first_name,
+                            "id": model.user.id,
+                            "last_name": model.user.last_name,
+                            "profile": None,
+                        },
+                        "created_at": None,
                     },
-                    "cohort": {
-                        "id": model["cohort"].id,
-                        "name": model["cohort"].name,
-                        "slug": model["cohort"].slug,
-                    },
-                    "comment": model["answer"].comment,
-                    "event": {
-                        "id": model["event"].id,
-                        "description": model["event"].description,
-                        "excerpt": model["event"].excerpt,
-                        "lang": model["event"].lang,
-                        "title": model["event"].title,
-                    },
-                    "highest": model["answer"].highest,
-                    "id": model["answer"].id,
-                    "lang": model["answer"].lang,
-                    "lowest": model["answer"].lowest,
-                    "mentor": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": None,
-                    },
-                    "score": model["answer"].score,
-                    "status": model["answer"].status,
-                    "title": model["answer"].title,
-                    "user": {
-                        "first_name": model["user"].first_name,
-                        "id": model["user"].id,
-                        "last_name": model["user"].last_name,
-                        "profile": None,
-                    },
-                }
+                ),
             ],
         )
 
@@ -742,46 +680,23 @@ class AnswerTestSuite(FeedbackTestCase):
             self.assertEqual(
                 json,
                 [
-                    {
-                        "created_at": None,
-                        "academy": {
-                            "id": model["answer"].academy.id,
-                            "name": model["answer"].academy.name,
-                            "slug": model["answer"].academy.slug,
+                    get_serializer(
+                        self,
+                        model.answer,
+                        cohort=model.cohort,
+                        academy=model.academy,
+                        user=model.user,
+                        event=model.event,
+                        data={
+                            "mentor": {
+                                "first_name": model.user.first_name,
+                                "id": model.user.id,
+                                "last_name": model.user.last_name,
+                                "profile": None,
+                            },
+                            "created_at": None,
                         },
-                        "cohort": {
-                            "id": model["cohort"].id,
-                            "name": model["cohort"].name,
-                            "slug": model["cohort"].slug,
-                        },
-                        "comment": model["answer"].comment,
-                        "event": {
-                            "id": model["event"].id,
-                            "description": model["event"].description,
-                            "excerpt": model["event"].excerpt,
-                            "lang": model["event"].lang,
-                            "title": model["event"].title,
-                        },
-                        "highest": model["answer"].highest,
-                        "id": model["answer"].id,
-                        "lang": model["answer"].lang,
-                        "lowest": model["answer"].lowest,
-                        "mentor": {
-                            "first_name": model["user"].first_name,
-                            "id": model["user"].id,
-                            "last_name": model["user"].last_name,
-                            "profile": None,
-                        },
-                        "score": score,
-                        "status": model["answer"].status,
-                        "title": model["answer"].title,
-                        "user": {
-                            "first_name": model["user"].first_name,
-                            "id": model["user"].id,
-                            "last_name": model["user"].last_name,
-                            "profile": None,
-                        },
-                    }
+                    ),
                 ],
             )
 
@@ -826,40 +741,21 @@ class AnswerTestSuite(FeedbackTestCase):
         json = response.json()
 
         expected = [
-            {
-                "created_at": self.datetime_to_iso(models[0].answer.created_at),
-                "academy": {
-                    "id": models[0].answer.academy.id,
-                    "name": models[0].answer.academy.name,
-                    "slug": models[0].answer.academy.slug,
+            get_serializer(
+                self,
+                models[0].answer,
+                cohort=models[0].cohort,
+                academy=models[0].academy,
+                user=models[0].user,
+                data={
+                    "mentor": {
+                        "first_name": models[0].user.first_name,
+                        "id": models[0].user.id,
+                        "last_name": models[0].user.last_name,
+                        "profile": None,
+                    },
                 },
-                "cohort": {
-                    "id": models[0].cohort.id,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                },
-                "comment": models[0].answer.comment,
-                "event": models[0].answer.event,
-                "highest": models[0].answer.highest,
-                "id": models[0].answer.id,
-                "lang": models[0].answer.lang,
-                "lowest": models[0].answer.lowest,
-                "mentor": {
-                    "first_name": models[0].answer.mentor.first_name,
-                    "id": models[0].answer.mentor.id,
-                    "last_name": models[0].answer.mentor.last_name,
-                    "profile": None,
-                },
-                "score": models[0].answer.score,
-                "status": models[0].answer.status,
-                "title": models[0].answer.title,
-                "user": {
-                    "first_name": "Rene",
-                    "id": 2,
-                    "last_name": "Descartes",
-                    "profile": None,
-                },
-            }
+            ),
         ]
 
         self.assertEqual(json, expected)
@@ -896,40 +792,21 @@ class AnswerTestSuite(FeedbackTestCase):
         json = response.json()
 
         expected = [
-            {
-                "created_at": self.datetime_to_iso(models[0].answer.created_at),
-                "academy": {
-                    "id": models[0].answer.academy.id,
-                    "name": models[0].answer.academy.name,
-                    "slug": models[0].answer.academy.slug,
+            get_serializer(
+                self,
+                models[0].answer,
+                cohort=models[0].cohort,
+                academy=models[0].academy,
+                user=models[0].user,
+                data={
+                    "mentor": {
+                        "first_name": models[0].user.first_name,
+                        "id": models[0].user.id,
+                        "last_name": models[0].user.last_name,
+                        "profile": None,
+                    },
                 },
-                "cohort": {
-                    "id": models[0].cohort.id,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                },
-                "comment": models[0].answer.comment,
-                "event": models[0].answer.event,
-                "highest": models[0].answer.highest,
-                "id": models[0].answer.id,
-                "lang": models[0].answer.lang,
-                "lowest": models[0].answer.lowest,
-                "mentor": {
-                    "first_name": models[0].answer.mentor.first_name,
-                    "id": models[0].answer.mentor.id,
-                    "last_name": models[0].answer.mentor.last_name,
-                    "profile": None,
-                },
-                "score": models[0].answer.score,
-                "status": models[0].answer.status,
-                "title": models[0].answer.title,
-                "user": {
-                    "first_name": "Rene",
-                    "id": 2,
-                    "last_name": "Descartes",
-                    "profile": None,
-                },
-            }
+            ),
         ]
 
         self.assertEqual(json, expected)
@@ -966,40 +843,21 @@ class AnswerTestSuite(FeedbackTestCase):
         json = response.json()
 
         expected = [
-            {
-                "created_at": self.datetime_to_iso(models[0].answer.created_at),
-                "academy": {
-                    "id": models[0].answer.academy.id,
-                    "name": models[0].answer.academy.name,
-                    "slug": models[0].answer.academy.slug,
+            get_serializer(
+                self,
+                models[0].answer,
+                cohort=models[0].cohort,
+                academy=models[0].academy,
+                user=models[0].user,
+                data={
+                    "mentor": {
+                        "first_name": models[0].user.first_name,
+                        "id": models[0].user.id,
+                        "last_name": models[0].user.last_name,
+                        "profile": None,
+                    },
                 },
-                "cohort": {
-                    "id": models[0].cohort.id,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                },
-                "comment": models[0].answer.comment,
-                "event": models[0].answer.event,
-                "highest": models[0].answer.highest,
-                "id": models[0].answer.id,
-                "lang": models[0].answer.lang,
-                "lowest": models[0].answer.lowest,
-                "mentor": {
-                    "first_name": models[0].answer.mentor.first_name,
-                    "id": models[0].answer.mentor.id,
-                    "last_name": models[0].answer.mentor.last_name,
-                    "profile": None,
-                },
-                "score": models[0].answer.score,
-                "status": models[0].answer.status,
-                "title": models[0].answer.title,
-                "user": {
-                    "first_name": "Rene",
-                    "id": 2,
-                    "last_name": "Descartes",
-                    "profile": None,
-                },
-            }
+            ),
         ]
 
         self.assertEqual(json, expected)
@@ -1036,40 +894,21 @@ class AnswerTestSuite(FeedbackTestCase):
         json = response.json()
 
         expected = [
-            {
-                "created_at": self.datetime_to_iso(models[0].answer.created_at),
-                "academy": {
-                    "id": models[0].answer.academy.id,
-                    "name": models[0].answer.academy.name,
-                    "slug": models[0].answer.academy.slug,
+            get_serializer(
+                self,
+                models[0].answer,
+                cohort=models[0].cohort,
+                academy=models[0].academy,
+                user=models[0].user,
+                data={
+                    "mentor": {
+                        "first_name": models[0].user.first_name,
+                        "id": models[0].user.id,
+                        "last_name": models[0].user.last_name,
+                        "profile": None,
+                    },
                 },
-                "cohort": {
-                    "id": models[0].cohort.id,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                },
-                "comment": models[0].answer.comment,
-                "event": models[0].answer.event,
-                "highest": models[0].answer.highest,
-                "id": models[0].answer.id,
-                "lang": models[0].answer.lang,
-                "lowest": models[0].answer.lowest,
-                "mentor": {
-                    "first_name": models[0].answer.mentor.first_name,
-                    "id": models[0].answer.mentor.id,
-                    "last_name": models[0].answer.mentor.last_name,
-                    "profile": None,
-                },
-                "score": models[0].answer.score,
-                "status": models[0].answer.status,
-                "title": models[0].answer.title,
-                "user": {
-                    "first_name": "Rene",
-                    "id": 2,
-                    "last_name": "Descartes",
-                    "profile": None,
-                },
-            }
+            ),
         ]
 
         self.assertEqual(json, expected)

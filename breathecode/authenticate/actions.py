@@ -474,6 +474,16 @@ def remove_from_organization(cohort_id, user_id, force=False):
     user = cohort_user.user
     github_user = GithubAcademyUser.objects.filter(user=user, academy=academy).first()
     try:
+        # Check if user is whitelisted
+        settings = AcademyAuthSettings.objects.filter(academy=academy).first()
+        if settings and settings.github_whitelist_exemption_users.filter(id=user.id).exists() and not force:
+            raise ValidationException(
+                translation(
+                    en=f"Cannot remove user={user.id} from organization because they are whitelisted",
+                    es=f"No se pudo remover usuario id={user.id} de la organization porque está en la lista blanca",
+                ),
+                slug="user-whitelisted",
+            )
 
         active_cohorts_in_academy = CohortUser.objects.filter(
             user=user, cohort__academy=academy, cohort__never_ends=False, educational_status="ACTIVE"

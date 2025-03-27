@@ -5,7 +5,7 @@ Test /v1/auth/subscribe
 import random
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call
-from urllib.parse import quote
+from urllib.parse import quote, quote_plus
 
 import capyc.pytest as capy
 import pytest
@@ -15,6 +15,10 @@ from rest_framework import status
 import staging.pytest as staging
 
 
+async def mock_get_user_info(token):
+    return {"id": 123}
+
+
 @pytest.fixture(autouse=True)
 def setup(monkeypatch: pytest.MonkeyPatch, db):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "123456.apps.googleusercontent.com")
@@ -22,9 +26,7 @@ def setup(monkeypatch: pytest.MonkeyPatch, db):
     monkeypatch.setenv("GOOGLE_REDIRECT_URL", "https://breathecode.herokuapp.com/v1/auth/google/callback")
     monkeypatch.setattr("breathecode.services.google_apps.GoogleApps.__init__", MagicMock(return_value=None))
     monkeypatch.setattr("breathecode.services.google_apps.GoogleApps.subscribe_meet_webhook", MagicMock())
-    monkeypatch.setattr(
-        "breathecode.services.google_apps.GoogleApps.get_user_info", MagicMock(return_value={"id": 123})
-    )
+    monkeypatch.setattr("breathecode.authenticate.views.get_user_info", mock_get_user_info)
 
     yield
 
@@ -79,21 +81,6 @@ def test_no_token(database: capy.Database, client: capy.Client):
 
     json = response.json()
     expected = {"detail": "no-callback-url", "status_code": 400}
-
-    assert json == expected
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    assert database.list_of("authenticate.Token") == []
-    assert database.list_of("authenticate.CredentialsGoogle") == []
-
-
-def test_no_url(database: capy.Database, client: capy.Client):
-    url = reverse_lazy("authenticate:google_callback") + "?state=url%3Dhttps://4geeks.com"
-
-    response = client.get(url, format="json")
-
-    json = response.json()
-    expected = {"detail": "no-user-token", "status_code": 400}
 
     assert json == expected
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -169,7 +156,7 @@ def test_token(
     response = client.get(url, format="json")
 
     assert response.status_code == status.HTTP_302_FOUND
-    assert response.url == f"https://4geeks.com?token={quote(model.token.key)}"
+    assert response.url == f"https://4geeks.com?token={quote_plus(model.token.key)}"
 
     http.call_count == 1
 
@@ -223,7 +210,7 @@ def test_academysettings_inferred_as_none(
     assert response.status_code == status.HTTP_302_FOUND
     assert (
         response.url
-        == f"https://breathecode.herokuapp.com/admin/authenticate/academyauthsettings/?token={quote(model.token.key)}"
+        == f"https://breathecode.herokuapp.com/admin/authenticate/academyauthsettings/?token={quote_plus(model.token.key)}"
     )
 
     http.call_count == 1

@@ -19,7 +19,7 @@ from breathecode.utils import TaskPriority, getLogger
 from breathecode.utils.redis import Lock
 
 from . import actions
-from .models import Answer, Survey
+from .models import Answer, Survey, SurveyTemplate, AcademyFeedbackSettings
 from .utils import strings
 
 # Get an instance of a logger
@@ -31,50 +31,124 @@ ENV = os.getenv("ENV", "")
 IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 
-def build_question(answer):
+def build_question(answer, surveytemplate_slug=None):
+    """Build question details from SurveyTemplate based on answer type and update the answer object"""
     lang = answer.lang.lower()
-    question = {"title": "", "lowest": "", "highest": ""}
+    academy = None
+
+    # Determine which academy to use
+    if answer.academy:
+        academy = answer.academy
+    elif answer.cohort:
+        academy = answer.cohort.academy
+    elif answer.mentorship_session:
+        academy = answer.mentorship_session.mentor.academy
+    elif answer.event:
+        academy = answer.event.academy
+    elif answer.live_class and answer.live_class.cohort_time_slot:
+        academy = answer.live_class.cohort_time_slot.cohort.academy
+
+    # Get academy settings if they exist
+    settings = None
+    if academy:
+        settings = AcademyFeedbackSettings.objects.filter(academy=academy).first()
+
+    # If we have settings, try to get the appropriate template
+    template = None
+    if settings:
+        if answer.mentorship_session is not None:
+            template = settings.mentorship_session_survey_template
+        elif answer.event is not None:
+            template = settings.event_survey_template
+        elif answer.live_class is not None:
+            template = settings.liveclass_survey_template
+        elif answer.cohort is not None:
+            template = settings.cohort_survey_template
+
+    # If no template from settings, try finding it by slug
+    if template is None:
+        template = SurveyTemplate.get_template(slug=surveytemplate_slug, lang=lang, academy=academy)
+
+    if template is None:
+        raise ValidationException(
+            f"No survey template found for language {lang}"
+            + (f" and slug {surveytemplate_slug}" if surveytemplate_slug else "")
+        )
+
     if answer.question_by_slug is not None and answer.question_by_slug != "":
-        slug = answer.question_by_slug.lower()
-        question["title"] = strings[lang][slug]["title"]
-        question["lowest"] = strings[lang][slug]["lowest"]
-        question["highest"] = strings[lang][slug]["highest"]
+        # Check additional questions first
+        if template.additional_questions and answer.question_by_slug in template.additional_questions:
+            q = template.additional_questions[answer.question_by_slug]
+            answer.title = q["title"]
+            answer.lowest = q["lowest"]
+            answer.highest = q["highest"]
+        # Then check if it matches any of the standard question fields
+        elif hasattr(template, f"when_asking_{answer.question_by_slug.lower()}"):
+            q = getattr(template, f"when_asking_{answer.question_by_slug.lower()}")
+            answer.title = q["title"]
+            answer.lowest = q["lowest"]
+            answer.highest = q["highest"]
+
     elif answer.mentorship_session is not None:
-        question["title"] = strings[lang]["session"]["title"].format(
-            f"{answer.mentorship_session.mentor.user.first_name} {answer.mentorship_session.mentor.user.last_name}"
-        )
-        question["lowest"] = strings[lang]["session"]["lowest"]
-        question["highest"] = strings[lang]["session"]["highest"]
+        if template.when_asking_mentorshipsession:
+            q = template.when_asking_mentorshipsession
+            answer.title = q["title"]
+            answer.lowest = q["lowest"]
+            answer.highest = q["highest"]
+            # Format mentor name into title
+            if "{}" in answer.title:
+                answer.title = answer.title.format(
+                    f"{answer.mentorship_session.mentor.user.first_name} {answer.mentorship_session.mentor.user.last_name}"
+                )
+
     elif answer.event is not None:
-        question["title"] = strings[lang]["event"]["title"]
-        question["lowest"] = strings[lang]["event"]["lowest"]
-        question["highest"] = strings[lang]["event"]["highest"]
+        if template.when_asking_event:
+            answer.title = template.when_asking_event["title"]
+            answer.lowest = template.when_asking_event["lowest"]
+            answer.highest = template.when_asking_event["highest"]
+
     elif answer.live_class is not None:
-        question["title"] = strings[lang]["live_class"]["title"]
-        question["lowest"] = strings[lang]["live_class"]["lowest"]
-        question["highest"] = strings[lang]["live_class"]["highest"]
+        if template.when_asking_liveclass_mentor:
+            answer.title = template.when_asking_liveclass_mentor["title"]
+            answer.lowest = template.when_asking_liveclass_mentor["lowest"]
+            answer.highest = template.when_asking_liveclass_mentor["highest"]
+
     elif answer.mentor is not None:
-        question["title"] = strings[lang]["mentor"]["title"].format(
-            answer.mentor.first_name + " " + answer.mentor.last_name
-        )
-        question["lowest"] = strings[lang]["mentor"]["lowest"]
-        question["highest"] = strings[lang]["mentor"]["highest"]
+        if template.when_asking_mentor:
+            q = template.when_asking_mentor
+            answer.title = q["title"]
+            answer.lowest = q["lowest"]
+            answer.highest = q["highest"]
+            # Format mentor name into title
+            if "{}" in answer.title:
+                answer.title = answer.title.format(answer.mentor.first_name + " " + answer.mentor.last_name)
+
     elif answer.cohort is not None:
-        title = (
-            answer.cohort.syllabus_version.syllabus.name
-            if answer.cohort.syllabus_version and answer.cohort.syllabus_version.syllabus.name
-            else answer.cohort.name
-        )
+        if template.when_asking_cohort:
+            q = template.when_asking_cohort
+            answer.title = q["title"]
+            answer.lowest = q["lowest"]
+            answer.highest = q["highest"]
+            # Format cohort name into title
+            if "{}" in answer.title:
+                title = (
+                    answer.cohort.syllabus_version.syllabus.name
+                    if answer.cohort.syllabus_version and answer.cohort.syllabus_version.syllabus.name
+                    else answer.cohort.name
+                )
+                answer.title = answer.title.format(title)
 
-        question["title"] = strings[lang]["cohort"]["title"].format(title)
-        question["lowest"] = strings[lang]["cohort"]["lowest"]
-        question["highest"] = strings[lang]["cohort"]["highest"]
     elif answer.academy is not None:
-        question["title"] = strings[lang]["academy"]["title"].format(answer.academy.name)
-        question["lowest"] = strings[lang]["academy"]["lowest"]
-        question["highest"] = strings[lang]["academy"]["highest"]
+        if template.when_asking_academy:
+            q = template.when_asking_academy
+            answer.title = q["title"]
+            answer.lowest = q["lowest"]
+            answer.highest = q["highest"]
+            # Format academy name into title
+            if "{}" in answer.title:
+                answer.title = answer.title.format(answer.academy.name)
 
-    return question
+    return answer
 
 
 def get_system_email():
@@ -100,11 +174,12 @@ def generate_user_cohort_survey_answers(user, survey, status="OPENED"):
     if cohort_teacher.count() == 0:
         raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
 
+    # Get settings once for all answers
+    settings = AcademyFeedbackSettings.objects.filter(academy=survey.cohort.academy).first()
+    template_slug = settings.cohort_survey_template.slug if settings and settings.cohort_survey_template else None
+
     def new_answer(answer: Answer):
-        question = build_question(answer)
-        answer.title = question["title"]
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
+        answer = build_question(answer, template_slug)
         answer.user = user
         answer.status = status
         answer.survey = survey
@@ -317,6 +392,14 @@ def send_mentorship_session_survey(session_id, **_):
     if IS_DJANGO_REDIS:
         client = get_redis_connection("default")
 
+    # Get settings once before the lock
+    settings = AcademyFeedbackSettings.objects.filter(academy=session.mentor.academy).first()
+    template_slug = (
+        settings.mentorship_session_survey_template.slug
+        if settings and settings.mentorship_session_survey_template
+        else None
+    )
+
     try:
         with Lock(client, f"lock:session:{session.id}:answer", timeout=30, blocking_timeout=30):
             answer = Answer.objects.filter(mentorship_session__id=session.id).first()
@@ -324,10 +407,7 @@ def send_mentorship_session_survey(session_id, **_):
                 answer = Answer(
                     mentorship_session=session, academy=session.mentor.academy, lang=session.service.language
                 )
-                question = build_question(answer)
-                answer.title = question["title"]
-                answer.lowest = question["lowest"]
-                answer.highest = question["highest"]
+                answer = build_question(answer, template_slug)
                 answer.user = session.mentee
                 answer.status = "SENT"
                 answer.save()
@@ -374,13 +454,14 @@ def send_event_survey(event_id, **_):
         raise AbortTask("There is already a survey for this event")
 
     try:
+        # Get settings once for all answers
+        settings = AcademyFeedbackSettings.objects.filter(academy=event.academy).first()
+        template_slug = settings.event_survey_template.slug if settings and settings.event_survey_template else None
+
         checkins = EventCheckin.objects.filter(event=event, attended_at__isnull=False, attendee__isnull=False)
         for checkin in checkins:
             answer = Answer(event=event, user=checkin.attendee, status="SENT", lang=event.lang, academy=event.academy)
-            question = build_question(answer)
-            answer.title = question["title"]
-            answer.lowest = question["lowest"]
-            answer.highest = question["highest"]
+            answer = build_question(answer, template_slug)
             answer.save()
 
             token, _ = Token.get_or_create(answer.user, token_type="temporal", hours_length=48)
@@ -388,11 +469,7 @@ def send_event_survey(event_id, **_):
             # lazyload api url in test environment
             api_url = API_URL if ENV != "test" else os.getenv("API_URL", "")
             data = {
-                "SUBJECT": (
-                    question["survey_subject"]
-                    if "survey_subject" in question
-                    else strings[answer.lang.lower()]["survey_subject"]
-                ),
+                "SUBJECT": answer.title,
                 "MESSAGE": answer.title,
                 "TRACKER_URL": f"{api_url}/v1/feedback/answer/{answer.id}/tracker.png",
                 "BUTTON": strings[answer.lang.lower()]["button_label"],
@@ -424,8 +501,20 @@ def send_liveclass_survey(liveclass_id, **_):
         raise AbortTask("There is already a survey for this live class")
 
     try:
-
         cohort = live.cohort_time_slot.cohort
+        academy = cohort.academy
+
+        # Get settings once for all answers
+        settings = AcademyFeedbackSettings.objects.filter(academy=academy).first()
+        if settings:
+            excluded_cohorts = settings.get_excluded_cohort_ids()
+            if cohort.id in excluded_cohorts:
+                raise AbortTask(f"Cohort {cohort.id} is excluded from live class surveys")
+
+        template_slug = (
+            settings.liveclass_survey_template.slug if settings and settings.liveclass_survey_template else None
+        )
+
         history_log = cohort.history_log or {}
         attended_user_ids = []
 
@@ -442,21 +531,21 @@ def send_liveclass_survey(liveclass_id, **_):
             cu = CohortUser.objects.filter(user_id=user_id, cohort=cohort, role="STUDENT").first()
             if cu is not None:
                 teacher = CohortUser.objects.filter(cohort=cohort, role="TEACHER").first()
+
+                # Main answer
                 answer = Answer(
                     live_class=live,
                     user=cu.user,
                     status="SENT",
                     survey=survey,
                     lang=cohort.language,
-                    academy=cohort.academy,
+                    academy=academy,
                     cohort=cohort,
                 )
-                question = build_question(answer)
-                answer.title = question["title"]
-                answer.lowest = question["lowest"]
-                answer.highest = question["highest"]
+                answer = build_question(answer, template_slug)
                 answer.save()
 
+                # Additional questions
                 questions = ["live_class_mentor", "live_class_mentor_communication", "live_class_mentor_practice"]
                 for slug in questions:
                     a = Answer(
@@ -467,13 +556,11 @@ def send_liveclass_survey(liveclass_id, **_):
                         survey=survey,
                         lang=cohort.language,
                         mentor=teacher.user,
-                        academy=cohort.academy,
+                        academy=academy,
                         cohort=cohort,
                     )
-                    _q = build_question(a)
-                    a.title = _q["title"]
-                    a.lowest = _q["lowest"]
-                    a.highest = _q["highest"]
+                    # Use same template for additional questions
+                    a = build_question(a, template_slug)
                     a.save()
 
                 token, _ = Token.get_or_create(answer.user, token_type="temporal", hours_length=48)
@@ -481,20 +568,18 @@ def send_liveclass_survey(liveclass_id, **_):
                 # lazyload api url in test environment
                 api_url = API_URL if ENV != "test" else os.getenv("API_URL", "")
                 data = {
-                    "SUBJECT": (
-                        question["survey_subject"]
-                        if "survey_subject" in question
-                        else strings[survey.lang.lower()]["survey_subject"]
-                    ),
+                    "SUBJECT": answer.title,
                     "MESSAGE": answer.title,
                     "TRACKER_URL": f"{api_url}/v1/feedback/survey/{survey.id}/tracker.png",
                     "BUTTON": strings[survey.lang.lower()]["button_label"],
                     "LINK": f"https://nps.4geeks.com/survey/{survey.id}?token={token.key}",
                 }
 
-                if notify_actions.send_email_message("nps_survey", answer.user.email, data, academy=cohort.academy):
+                if notify_actions.send_email_message("nps_survey", answer.user.email, data, academy=academy):
                     answer.sent_at = timezone.now()
                     answer.save()
+        survey.status = 'SENT'
+        survey.save()
 
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")

@@ -6,11 +6,14 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 
 import breathecode.activity.tasks as activity_tasks
 
 from ..mixins import AssignmentsTestCase
+
+UTC_NOW = timezone.now()
 
 
 def get_serializer(self, task, user):
@@ -29,6 +32,8 @@ def get_serializer(self, task, user):
         "description": task.description,
         "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
         "delivered_at": self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
+        "read_at": self.bc.datetime.to_iso_string(task.read_at) if task.read_at else task.read_at,
+        "reviewed_at": self.bc.datetime.to_iso_string(task.reviewed_at) if task.reviewed_at else task.reviewed_at,
         "user": {"first_name": user.first_name, "id": user.id, "last_name": user.last_name},
         "cohort": {"id": task.cohort.id, "name": task.cohort.name, "slug": task.cohort.slug},
     }
@@ -54,6 +59,8 @@ def put_serializer(self, task, data={}):
         "telemetry": task.telemetry,
         "rigobot_repository_id": task.rigobot_repository_id,
         "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
+        "read_at": self.bc.datetime.to_iso_string(task.read_at) if task.read_at else task.read_at,
+        "reviewed_at": None,
         "delivered_at": self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         **data,
     }
@@ -74,6 +81,8 @@ def task_row(self, task, data={}):
         "user_id": task.user.id,
         "subtasks": task.subtasks,
         "opened_at": self.bc.datetime.to_iso_string(task.opened_at) if task.opened_at else task.opened_at,
+        "read_at": self.bc.datetime.to_iso_string(task.read_at) if task.read_at else task.read_at,
+        "reviewed_at": self.bc.datetime.to_iso_string(task.reviewed_at) if task.reviewed_at else task.reviewed_at,
         "delivered_at": self.bc.datetime.to_iso_string(task.delivered_at) if task.delivered_at else task.delivered_at,
         "rigobot_repository_id": task.rigobot_repository_id,
         "telemetry_id": task.telemetry,
@@ -376,6 +385,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch("breathecode.assignments.tasks.teacher_task_notification", MagicMock())
     @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_task_id__put__with_one_task__with_revision_status__teacher_auth__good_statuses(self):
         from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
@@ -403,22 +413,35 @@ class MediaTestSuite(AssignmentsTestCase):
                 "title": "They killed kenny",
                 "revision_status": next_status,
             }
-            start = self.bc.datetime.now()
             response = self.client.put(url, data, format="json")
-            end = self.bc.datetime.now()
 
             json = response.json()
-            updated_at = self.bc.datetime.from_iso_string(json["updated_at"])
-            self.bc.check.datetime_in_range(start, end, updated_at)
-
-            del json["updated_at"]
-
-            expected = put_serializer(self, model.task, data=data)
+            expected = put_serializer(
+                self,
+                model.task,
+                data={
+                    **data,
+                    "reviewed_at": self.bc.datetime.to_iso_string(UTC_NOW) if next_status != "PENDING" else None,
+                    "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
+                },
+            )
 
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-            self.assertEqual(self.bc.database.list_of("assignments.Task"), [task_row(self, model.task, data=data)])
+            self.assertEqual(
+                self.bc.database.list_of("assignments.Task"),
+                [
+                    task_row(
+                        self,
+                        model.task,
+                        data={
+                            **data,
+                            "reviewed_at": UTC_NOW if next_status != "PENDING" else None,
+                        },
+                    )
+                ],
+            )
             self.assertEqual(student_task_notification.delay.call_args_list, [call(index + 1)])
             self.assertEqual(teacher_task_notification.delay.call_args_list, [])
 
@@ -511,6 +534,7 @@ class MediaTestSuite(AssignmentsTestCase):
     @patch("breathecode.assignments.tasks.teacher_task_notification", MagicMock())
     @patch("django.db.models.signals.pre_delete.send_robust", MagicMock(return_value=None))
     @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_task_id__put__with_one_task__with_revision_status__staff_auth(self):
         from breathecode.assignments.tasks import student_task_notification, teacher_task_notification
 
@@ -527,21 +551,25 @@ class MediaTestSuite(AssignmentsTestCase):
             "title": "They killed kenny",
             "revision_status": "APPROVED",
         }
-        start = self.bc.datetime.now()
         response = self.client.put(url, data, format="json")
-        end = self.bc.datetime.now()
 
         json = response.json()
-        updated_at = self.bc.datetime.from_iso_string(json["updated_at"])
-        self.bc.check.datetime_in_range(start, end, updated_at)
-
-        del json["updated_at"]
-
-        expected = put_serializer(self, model.task, data=data)
+        expected = put_serializer(
+            self,
+            model.task,
+            data={
+                **data,
+                "reviewed_at": self.bc.datetime.to_iso_string(UTC_NOW),
+                "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
+            },
+        )
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of("assignments.Task"), [task_row(self, model.task, data=data)])
+        self.assertEqual(
+            self.bc.database.list_of("assignments.Task"),
+            [task_row(self, model.task, data={**data, "reviewed_at": UTC_NOW})],
+        )
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])

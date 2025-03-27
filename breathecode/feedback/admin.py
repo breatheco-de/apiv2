@@ -1,19 +1,32 @@
 import json
 import logging
 
+
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
+from django import forms
 
 from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from breathecode.admissions.admin import CohortUserAdmin as AdmissionsCohortUserAdmin
 from breathecode.feedback.tasks import recalculate_survey_scores
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from . import actions
 from .actions import create_user_graduation_reviews, send_cohort_survey_group
-from .models import Answer, CohortProxy, CohortUserProxy, Review, ReviewPlatform, Survey, UserProxy
+from .models import (
+    Answer,
+    CohortProxy,
+    CohortUserProxy,
+    Review,
+    ReviewPlatform,
+    Survey,
+    UserProxy,
+    SurveyTemplate,
+    AcademyFeedbackSettings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +76,7 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
         try:
             actions.send_question(cu.user, cu.cohort)
         except Exception as e:
+            raise e
             error = str(e)
 
             if error in errors:
@@ -296,3 +310,145 @@ class ReviewAdmin(admin.ModelAdmin):
 @admin.register(ReviewPlatform)
 class ReviewPlatformAdmin(admin.ModelAdmin):
     list_display = ("slug", "name")
+
+
+class SurveyTemplateForm(forms.ModelForm):
+    """Form for SurveyTemplate with formatted JSON fields"""
+
+    class Meta:
+        model = SurveyTemplate
+        fields = "__all__"
+        widgets = {
+            "when_asking_event": PrettyJSONWidget(),
+            "when_asking_mentor": PrettyJSONWidget(),
+            "when_asking_cohort": PrettyJSONWidget(),
+            "when_asking_academy": PrettyJSONWidget(),
+            "when_asking_mentorshipsession": PrettyJSONWidget(),
+            "when_asking_platform": PrettyJSONWidget(),
+            "when_asking_liveclass_mentor": PrettyJSONWidget(),
+            "when_asking_mentor_communication": PrettyJSONWidget(),
+            "when_asking_mentor_participation": PrettyJSONWidget(),
+            "additional_questions": PrettyJSONWidget(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Format JSON fields for better readability in admin
+        for field_name, field in self.fields.items():
+            if isinstance(field.widget, PrettyJSONWidget):
+                if self.initial.get(field_name):
+                    # No need to convert to string here, PrettyJSONWidget will handle it
+                    pass
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # No need to parse JSON fields here as PrettyJSONWidget.value_from_datadict already does it
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # Ensure all JSON fields are properly saved as Python objects, not strings
+        json_fields = [
+            "when_asking_event",
+            "when_asking_mentor",
+            "when_asking_cohort",
+            "when_asking_academy",
+            "when_asking_mentorshipsession",
+            "when_asking_platform",
+            "when_asking_liveclass_mentor",
+            "when_asking_mentor_communication",
+            "when_asking_mentor_participation",
+            "additional_questions",
+        ]
+
+        for field in json_fields:
+            value = getattr(instance, field, None)
+            if isinstance(value, str) and value:
+                try:
+                    setattr(instance, field, json.loads(value))
+                except json.JSONDecodeError:
+                    # Keep as is if not valid JSON
+                    pass
+
+        if commit:
+            instance.save()
+
+        return instance
+
+
+class OriginalTemplateFilter(admin.SimpleListFilter):
+    title = "Original Status"
+    parameter_name = "is_original"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Original Templates"),
+            ("no", "Derived Templates"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(original__isnull=True)
+        if self.value() == "no":
+            return queryset.filter(original__isnull=False)
+
+
+@admin.register(SurveyTemplate)
+class SurveyTemplateAdmin(admin.ModelAdmin):
+    form = SurveyTemplateForm
+    list_display = ("slug_with_original", "lang", "academy", "is_shared", "created_at", "updated_at")
+    list_filter = ("lang", "academy", "is_shared", OriginalTemplateFilter)
+    search_fields = ("slug", "academy__name")
+    raw_id_fields = ("academy", "original")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (None, {"fields": ("slug", "lang", "academy", "is_shared", "original", "created_at", "updated_at")}),
+        ("When asking for event feedback", {"fields": ("when_asking_event",), "classes": ("collapse",)}),
+        (
+            "When asking about a mentor during a cohort",
+            {
+                "fields": (
+                    "when_asking_mentor",
+                    "when_asking_mentor_communication",
+                    "when_asking_mentor_participation",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "When asking about the academy",
+            {"fields": ("when_asking_academy", "when_asking_platform"), "classes": ("collapse",)},
+        ),
+        ("When asking about a cohort", {"fields": ("when_asking_cohort",), "classes": ("collapse",)}),
+        (
+            "When asking about a particular live class",
+            {"fields": ("when_asking_liveclass_mentor", "when_asking_mentorshipsession"), "classes": ("collapse",)},
+        ),
+        ("Additional Questions", {"fields": ("additional_questions",), "classes": ("collapse",)}),
+    )
+
+    def slug_with_original(self, obj):
+        if obj.original:
+            return format_html(
+                '{} <span style="color: #777; font-size: 0.9em;"> → {}</span>', obj.slug, obj.original.slug
+            )
+        return obj.slug
+
+    slug_with_original.short_description = "Slug"
+    slug_with_original.admin_order_field = "slug"
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        # Add custom CSS for CodeMirror editors
+        if request:
+            request.is_popup = False  # Force full-width display
+        return fieldsets
+
+
+@admin.register(AcademyFeedbackSettings)
+class AcademyFeedbackSettingsAdmin(admin.ModelAdmin):
+    list_display = ("academy", "created_at", "updated_at")
+    search_fields = ("academy__name", "academy__slug")
+    raw_id_fields = ("academy",)
+    readonly_fields = ("created_at", "updated_at")
