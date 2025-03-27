@@ -53,6 +53,7 @@ alwaysApply: true
   - Use Django’s cache framework with backend support (e.g., Redis) to reduce database load.
   - Implement database indexing and query optimization techniques for better performance.
   - Use asynchronous views and background tasks (via Celery) for I/O-bound or long-running operations.
+  - If any HTTP method is asynchronous in a view, each other methods (of this view) must be asynchronous for ADRF compability
   - Optimize static file handling with Django’s static file management system (e.g., WhiteNoise or CDN integration).
   - Do not use sync HTTP like `requests` on Django Views, use async views with `aiohhtp` instead
   - Do not use BigQuery over a sync view, use async instead

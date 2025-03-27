@@ -3,7 +3,11 @@ import os
 import re
 from pathlib import Path
 
+import aiohttp
 import requests
+from adrf.decorators import api_view
+from adrf.views import APIView
+from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
@@ -13,10 +17,9 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.views.decorators.clickjacking import xframe_options_exempt
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from slugify import slugify
 
 from breathecode.admissions.models import Academy
@@ -27,14 +30,16 @@ from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.views import render_message
 
 from .actions import (
     AssetThumbnailGenerator,
-    clean_asset_readme,
-    pull_from_github,
-    push_to_github,
-    scan_asset_originality,
+    aclean_asset_readme,
+    apull_from_github,
+    apush_to_github,
+    ascan_asset_originality,
+    atest_asset,
     test_asset,
 )
 from .caches import AssetCache, AssetCommentCache, CategoryCache, ContentVariableCache, KeywordCache, TechnologyCache
@@ -127,7 +132,11 @@ def forward_asset_url(request, asset_slug=None):
         logger.error(e)
         msg = f"The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon."
         AssetErrorLog(
-            slug=AssetErrorLogType.INVALID_URL, path=asset_slug, asset=asset, asset_type=asset.asset_type, status_text=msg
+            slug=AssetErrorLogType.INVALID_URL,
+            path=asset_slug,
+            asset=asset,
+            asset_type=asset.asset_type,
+            status_text=msg,
         ).save()
 
         return render_message(request, msg, academy=asset.academy)
@@ -490,25 +499,24 @@ class AssetThumbnailView(APIView):
 
     permission_classes = [AllowAny]
 
-    def get(self, request, asset_slug):
+    async def get(self, request, asset_slug):
         width = int(request.GET.get("width", "0"))
         height = int(request.GET.get("height", "0"))
 
-        asset = Asset.objects.filter(slug=asset_slug).first()
+        asset = await Asset.objects.filter(slug=asset_slug).afirst()
         generator = AssetThumbnailGenerator(asset, width, height)
 
-        url, permanent = generator.get_thumbnail_url()
+        url, permanent = await generator.aget_thumbnail_url()
         return redirect(url, permanent=permanent)
 
-    # this method will force to reset the thumbnail
-    @capable_of("crud_asset")
-    def post(self, request, asset_slug, academy_id):
+    @acapable_of("crud_asset")
+    async def post(self, request, asset_slug, academy_id):
         lang = get_user_language(request)
 
         width = int(request.GET.get("width", "0"))
         height = int(request.GET.get("height", "0"))
 
-        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        asset = await Asset.objects.filter(slug=asset_slug, academy__id=academy_id).afirst()
         if asset is None:
             raise ValidationException(
                 f"Asset with slug {asset_slug} not found for this academy", slug="asset-slug-not-found", code=400
@@ -518,7 +526,7 @@ class AssetThumbnailView(APIView):
 
         # wait one second
         try:
-            asset = generator.create(delay=1500)
+            asset = await generator.acreate(delay=1500)
 
         except CircuitBreakerError:
             raise ValidationException(
@@ -533,6 +541,8 @@ class AssetThumbnailView(APIView):
                 silent=True,
                 code=503,
             )
+        except aiohttp.ClientError as e:
+            raise ValidationException(f"Error calling service to generate thumbnail screenshot: {str(e)}", code=500)
 
         serializer = AcademyAssetSerializer(asset)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -795,13 +805,13 @@ class AcademyAssetActionView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    @capable_of("crud_asset")
-    def put(self, request, asset_slug, action_slug, academy_id=None):
+    @acapable_of("crud_asset")
+    async def put(self, request, asset_slug, action_slug, academy_id=None):
 
         if asset_slug is None:
             raise ValidationException("Missing asset_slug")
 
-        asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
+        asset = await Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).afirst()
         if asset is None:
             raise ValidationException(f"This asset {asset_slug} does not exist for this academy {academy_id}", 404)
 
@@ -810,29 +820,29 @@ class AcademyAssetActionView(APIView):
             raise ValidationException(f"Invalid action {action_slug}")
         try:
             if action_slug == "test":
-                test_asset(asset)
+                await atest_asset(asset)
             elif action_slug == "clean":
-                clean_asset_readme(asset)
+                await aclean_asset_readme(asset)
             elif action_slug == "pull":
                 override_meta = False
                 if request.data and "override_meta" in request.data:
                     override_meta = request.data["override_meta"]
-                pull_from_github(asset.slug, override_meta=override_meta)
+                await apull_from_github(asset.slug, override_meta=override_meta)
             elif action_slug == "push":
                 if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ"]:
                     raise ValidationException(
                         f"Asset type {asset.asset_type} cannot be pushed to GitHub, please update the Github repository manually"
                     )
 
-                push_to_github(asset.slug, owner=request.user)
+                await apush_to_github(asset.slug, owner=request.user)
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
-                report.start()
+                await report.astart()
             elif action_slug == "originality":
 
                 if asset.asset_type not in ["ARTICLE", "LESSON"]:
                     raise ValidationException("Only lessons and articles can be scanned for originality")
-                scan_asset_originality(asset)
+                await ascan_asset_originality(asset)
 
         except Exception as e:
             logger.exception(e)
@@ -843,12 +853,12 @@ class AcademyAssetActionView(APIView):
                 "; ".join([k.capitalize() + ": " + "".join(v) for k, v in e.message_dict.items()])
             )
 
-        asset = Asset.objects.filter(slug=asset_slug, academy__id=academy_id).first()
+        asset = await Asset.objects.filter(slug=asset_slug, academy__id=academy_id).afirst()
         serializer = AcademyAssetSerializer(asset)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(await sync_to_async(serializer.data), status=status.HTTP_200_OK)
 
-    @capable_of("crud_asset")
-    def post(self, request, action_slug, academy_id=None):
+    @acapable_of("crud_asset")
+    async def post(self, request, action_slug, academy_id=None):
         if action_slug not in ["test", "pull", "push", "analyze_seo"]:
             raise ValidationException(f"Invalid action {action_slug}")
 
@@ -863,30 +873,30 @@ class AcademyAssetActionView(APIView):
         invalid_assets = []
 
         for asset_slug in assets:
-            asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
+            asset = await Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).afirst()
             if asset is None:
                 invalid_assets.append(asset_slug)
                 continue
             try:
                 if action_slug == "test":
-                    test_asset(asset)
+                    await atest_asset(asset)
                 elif action_slug == "clean":
-                    clean_asset_readme(asset)
+                    await aclean_asset_readme(asset)
                 elif action_slug == "pull":
                     override_meta = False
                     if request.data and "override_meta" in request.data:
                         override_meta = request.data["override_meta"]
-                    pull_from_github(asset.slug, override_meta=override_meta)
+                    await apull_from_github(asset.slug, override_meta=override_meta)
                 elif action_slug == "push":
                     if asset.asset_type not in ["ARTICLE", "LESSON"]:
                         raise ValidationException(
                             "Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
                         )
 
-                    push_to_github(asset.slug, owner=request.user)
+                    await apush_to_github(asset.slug, owner=request.user)
                 elif action_slug == "analyze_seo":
                     report = SEOAnalyzer(asset)
-                    report.start()
+                    await report.astart()
 
             except Exception as e:
                 logger.exception(e)

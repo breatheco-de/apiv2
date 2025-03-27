@@ -7,15 +7,14 @@ import json
 import logging
 import os
 from typing import Optional
-from urllib.parse import urlencode
 
-import requests
+from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.utils import timezone
 
 from breathecode.admissions.models import FULLY_PAID, UP_TO_DATE, CohortUser, SyllabusVersion
 from breathecode.assignments.models import Task
-from capyc.rest_framework.exceptions import ValidationException
+from breathecode.registry.actions import generate_screenshot
 
 from ..services.google_cloud import Storage
 from .models import ERROR, PERSISTED, LayoutDesign, Specialty, UserSpecialty
@@ -262,20 +261,13 @@ def certificate_screenshot(certificate_id: int):
 
         # if the file does not exist
         if file.blob is None:
-            query_string = urlencode(
-                {
-                    "key": os.environ.get("SCREENSHOT_MACHINE_KEY"),
-                    "url": f"https://certificate.4geeks.com/preview/{certificate.token}",
-                    "device": "desktop",
-                    "cacheLimit": "0",
-                    "dimension": "1024x707",
-                }
-            )
-            r = requests.get(f"https://api.screenshotmachine.com?{query_string}", stream=True)
+            url = f"https://certificate.4geeks.com/preview/{certificate.token}"
+            r = generate_screenshot(url, "1024x707", device="desktop", cacheLimit="0")
+
             if r.status_code == 200:
                 file.upload(r.content, public=True)
             else:
-                print("Invalid reponse code: ", r.status_code)
+                print("Invalid response code: ", r.status_code)
 
         # after created, lets save the URL
         if file.blob is not None:

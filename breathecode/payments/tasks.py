@@ -932,10 +932,10 @@ def build_subscription(
         mentorship_service_set = None
 
     subscription_start_at = start_date or invoice.paid_at
-    next_payment_at = subscription_start_at + relativedelta(months=months)
-
     if isinstance(subscription_start_at, str):
         subscription_start_at = datetime.fromisoformat(subscription_start_at)
+
+    next_payment_at = subscription_start_at + relativedelta(months=months)
 
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     subscription = Subscription.objects.create(
