@@ -8,7 +8,9 @@ import re
 from typing import Optional
 from urllib.parse import urlencode
 
+import aiohttp
 import requests
+from asgiref.sync import sync_to_async
 from django.db.models import Q
 from django.template.loader import get_template
 from django.utils import timezone
@@ -181,6 +183,11 @@ def pull_from_github(asset_slug, author_id=None, override_meta=False):
     return "ERROR"
 
 
+@sync_to_async
+def apull_from_github(asset_slug, author_id=None, override_meta=False):
+    return pull_from_github(asset_slug, author_id, override_meta)
+
+
 def push_to_github(asset_slug, owner=None):
 
     logger.debug(f"Push asset {asset_slug} to github")
@@ -197,8 +204,10 @@ def push_to_github(asset_slug, owner=None):
         asset.save()
 
         if owner is None:
-            if asset.owner is not None: owner = asset.owner
-            elif asset.author is not None: owner = asset.author
+            if asset.owner is not None:
+                owner = asset.owner
+            elif asset.author is not None:
+                owner = asset.author
 
         if asset.external:
             raise Exception('Asset is marked as "external" so it cannot push to github')
@@ -244,6 +253,11 @@ def push_to_github(asset_slug, owner=None):
     return "ERROR"
 
 
+@sync_to_async
+def apush_to_github(asset_slug, owner=None):
+    return push_to_github(asset_slug, owner)
+
+
 def get_blob_content(repo, path_name, branch="main"):
 
     if "?" in path_name:
@@ -281,17 +295,55 @@ def set_blob_content(repo, path_name, content, file_name, branch="main"):
     return repo.update_file(file[0].path, f"Update {file_name}", content, file[0].sha)
 
 
-def generate_screenshot(url: str, dimension: str = "1200x630", **kwargs):
+def get_screenshot_machine_params(url: str, dimension: str = "1200x630", **kwargs):
     screenshot_key = os.getenv("SCREENSHOT_MACHINE_KEY", "")
     params = {
         "key": screenshot_key,
         "url": url,
         "dimension": dimension,
+        "device": "desktop",
+        "delay": kwargs.get("delay", "1000"),
+        "cacheLimit": "0",
         **kwargs,
     }
-    request = requests.request("GET", "https://api.screenshotmachine.com", params=params, timeout=8)
 
-    return request
+    # Remove these parameters from kwargs since they're now in params
+    if "device" in kwargs:
+        del kwargs["device"]
+    if "delay" in kwargs:
+        del kwargs["delay"]
+    if "cacheLimit" in kwargs:
+        del kwargs["cacheLimit"]
+
+    return params
+
+
+def generate_screenshot(url: str, dimension: str = "1200x630", **kwargs):
+    params = get_screenshot_machine_params(url, dimension, **kwargs)
+
+    # Always use stream=True for screenshot downloads to handle large files properly
+    return requests.get(f"https://api.screenshotmachine.com?{urlencode(params)}", timeout=25, stream=True)
+
+
+async def agenerate_screenshot(url: str, dimension: str = "1200x630", **kwargs):
+    """
+    Asynchronous version of generate_screenshot using aiohttp instead of requests.
+    This should only be used in async views, not in Celery tasks.
+    """
+
+    params = get_screenshot_machine_params(url, dimension, **kwargs)
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://api.screenshotmachine.com/", params=params, timeout=25) as response:
+            if response.status != 200:
+                logger.error(f"Screenshot service returned error code: {response.status}")
+                return response
+
+            content = await response.read()
+
+            response.content = content
+            response.status_code = response.status
+            return response
 
 
 def push_github_asset(github, asset: Asset):
@@ -453,6 +505,11 @@ def clean_asset_readme(asset: Asset):
         asset.save()
 
     return asset
+
+
+@sync_to_async
+def aclean_asset_readme(asset: Asset):
+    return clean_asset_readme(asset)
 
 
 def clean_content_variables(asset: Asset):
@@ -644,6 +701,10 @@ class AssetThumbnailGenerator:
 
         return (f"{media.url}-{media_resolution.width}x{media_resolution.height}", True)
 
+    @sync_to_async
+    def aget_thumbnail_url(self):
+        return self.get_thumbnail_url()
+
     def _get_default_url(self) -> str:
         return os.getenv("DEFAULT_ASSET_PREVIEW_URL", "")
 
@@ -667,7 +728,10 @@ class AssetThumbnailGenerator:
 
         return bool((self.width and not self.height) or (not self.width and self.height))
 
-    def create(self, delay=600):
+    def create(self, delay=25000, **kwargs):
+        """
+        Create a thumbnail image for an asset. This method runs synchronously.
+        """
 
         preview_url = self.asset.get_preview_generation_url()
         if preview_url is None:
@@ -679,17 +743,7 @@ class AssetThumbnailGenerator:
         response = None
         try:
             logger.debug(f"Generating screenshot with URL {url}")
-            query_string = urlencode(
-                {
-                    "key": os.environ.get("SCREENSHOT_MACHINE_KEY"),
-                    "url": url,
-                    "device": "desktop",
-                    "delay": delay,
-                    "cacheLimit": "0",
-                    "dimension": "1024x707",
-                }
-            )
-            response = requests.get(f"https://api.screenshotmachine.com?{query_string}", stream=True)
+            response = generate_screenshot(url, "1024x707", delay=delay)
 
         except Exception as e:
             raise Exception("Error calling service to generate thumbnail screenshot: " + str(e))
@@ -706,6 +760,41 @@ class AssetThumbnailGenerator:
 
         self.asset.preview = cloud_file.url()
         self.asset.save()
+
+        return self.asset
+
+    async def acreate(self, delay=25000):
+        """
+        Asynchronous version of the create method for use in async views.
+        """
+
+        preview_url = self.asset.get_preview_generation_url()
+        if preview_url is None:
+            raise Exception("Not able to retrieve a preview generation url")
+
+        filename = self.asset.get_thumbnail_name()
+        url = set_query_parameter(preview_url, "slug", self.asset.slug)
+
+        response = None
+        try:
+            logger.debug(f"Generating screenshot with URL {url}")
+            response = await agenerate_screenshot(url, "1024x707", delay=delay)
+
+        except Exception as e:
+            raise Exception("Error calling service to generate thumbnail screenshot: " + str(e))
+
+        if response.status_code >= 400:
+            raise Exception(
+                "Unhandled error with async_create_asset_thumbnail, the cloud function `screenshots` "
+                f"returns status code {response.status_code}"
+            )
+
+        storage = Storage()
+        cloud_file = storage.file(screenshots_bucket(), filename)
+        await cloud_file.aupload(response.content)
+
+        self.asset.preview = cloud_file.url()
+        await self.asset.asave()
 
         return self.asset
 
@@ -755,7 +844,6 @@ def process_asset_config(asset, config):
                     config["video"]["intro"]["en"] = config["video"]["intro"]["us"]
 
                 if asset.lang in config["video"]["intro"]:
-                    print("get_video_url", get_video_url(str(config["video"]["intro"][asset.lang])))
                     asset.intro_video_url = get_video_url(str(config["video"]["intro"][asset.lang]))
 
         if "solution" in config["video"] and config["video"]["solution"] is not None:
@@ -859,7 +947,7 @@ def process_asset_config(asset, config):
             asset.gitpod = True
         elif config["gitpod"] in ["False", "false", "0", False]:
             asset.gitpod = False
-    
+
     asset.save()
     return asset
 
@@ -1093,14 +1181,17 @@ def test_asset(asset: Asset, log_errors=False):
         asset.last_test_at = timezone.now()
         asset.save()
         raise e
-        return False
     except Exception as e:
         asset.status_text = str(e)
         asset.test_status = "ERROR"
         asset.last_test_at = timezone.now()
         asset.save()
         raise e
-        return False
+
+
+@sync_to_async
+def atest_asset(asset: Asset, log_errors=False):
+    return test_asset(asset, log_errors)
 
 
 def scan_asset_originality(asset: Asset):
@@ -1143,6 +1234,11 @@ def scan_asset_originality(asset: Asset):
 
     scan.status = "COMPLETED"
     scan.save()
+
+
+@sync_to_async
+def ascan_asset_originality(asset: Asset):
+    return scan_asset_originality(asset)
 
 
 def upload_image_to_bucket(img: AssetImage, asset=None):

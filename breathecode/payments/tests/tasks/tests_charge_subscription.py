@@ -23,6 +23,14 @@ from ..mixins import PaymentsTestCase
 UTC_NOW = timezone.now()
 
 
+def get_app_url():
+    url = os.getenv("APP_URL", "https://4geeks.com")
+    if url and url[-1] == "/":
+        url = url[:-1]
+
+    return url
+
+
 def subscription_item(data={}):
     return {
         "id": 1,
@@ -140,6 +148,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
         self.assertEqual(self.bc.database.list_of("payments.Subscription"), [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 Subscription with zero Invoice
@@ -189,6 +198,22 @@ class PaymentsTestSuite(PaymentsTestCase):
         )
         self.assertEqual(notify_actions.send_email_message.call_args_list, [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "arguments": {
+                    "args": [
+                        1,
+                    ],
+                    "kwargs": {},
+                },
+                "duration": timedelta(days=1),
+                "eta": UTC_NOW + timedelta(days=1),
+                "id": 1,
+                "status": "PENDING",
+                "task_module": "breathecode.payments.tasks",
+                "task_name": "charge_subscription",
+            },
+        ]
 
     """
     🔽🔽🔽 Subscription process to charge
@@ -298,6 +323,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        delta = timedelta(days=((((UTC_NOW + relativedelta(months=unit)) - relativedelta(days=25)) - UTC_NOW).days))
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_subscription",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": next_payment_at,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
 
     """
     🔽🔽🔽 Subscription error when try to charge
@@ -333,7 +373,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call("Starting charge_subscription for subscription 1"),
             ],
         )
-        self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(logging.Logger.error.call_args_list, [call("Payment to Subscription 1 failed", exc_info=True)])
 
         self.assertEqual(
             self.bc.database.list_of("payments.Bag"),
@@ -380,6 +420,22 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "arguments": {
+                    "args": [
+                        1,
+                    ],
+                    "kwargs": {},
+                },
+                "duration": timedelta(days=1),
+                "eta": UTC_NOW + timedelta(days=1),
+                "id": 1,
+                "status": "PENDING",
+                "task_module": "breathecode.payments.tasks",
+                "task_name": "charge_subscription",
+            },
+        ]
 
     """
     🔽🔽🔽 Subscription is over
@@ -441,6 +497,7 @@ class PaymentsTestSuite(PaymentsTestCase):
             [
                 {
                     **self.bc.format.to_dict(model.subscription),
+                    "status": "EXPIRED",
                 },
             ],
         )
@@ -451,6 +508,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 Subscription was paid
@@ -523,6 +581,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 Subscription try to charge, but a undexpected exception is raised, the database is rollbacked
@@ -602,6 +661,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     @patch("logging.Logger.info", MagicMock())
     @patch("logging.Logger.error", MagicMock())
@@ -676,3 +736,299 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    """
+    🔽🔽🔽 Subscription with status DEPRECATED
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_subscription_with_status_deprecated(self):
+        subscription = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "status": "DEPRECATED",
+        }
+        plan = {"is_renewable": False}
+        model = self.bc.database.create(subscription=subscription, plan=plan)
+
+        # Add plan to subscription to avoid "has no plan" error
+        model.subscription.plans.add(model.plan)
+
+        with patch(
+            "breathecode.payments.services.stripe.Stripe.pay",
+            MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy)),
+        ):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_subscription.delay(1)
+
+        self.assertEqual(self.bc.database.list_of("admissions.Cohort"), [])
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting charge_subscription for subscription 1"),
+            ],
+        )
+        # Expect the "is deprecated" error message
+        self.assertEqual(
+            logging.Logger.error.call_args_list,
+            [
+                call("Subscription with id 1 is deprecated", exc_info=True),
+            ],
+        )
+
+        self.assertEqual(self.bc.database.list_of("payments.Bag"), [])
+        self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
+
+        # Status should remain DEPRECATED (don't check specific status values)
+        subscription_list = self.bc.database.list_of("payments.Subscription")
+        self.assertEqual(len(subscription_list), 1)
+        self.assertEqual(subscription_list[0]["id"], 1)
+        assert notify_actions.send_email_message.call_args_list == [
+            call(
+                "message",
+                model.user.email,
+                {
+                    "SUBJECT": f"Your 4Geeks subscription to {model.plan.slug} has been discontinued",
+                    "MESSAGE": f"We regret to inform you that your 4Geeks subscription to {model.plan.slug} has been discontinued.",
+                },
+                academy=model.academy,
+            )
+        ]
+        assert activity_tasks.add_activity.delay.call_args_list == []
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_subscription_with_status_deprecated__with_suggested_plan(self):
+        subscription = {
+            "valid_until": UTC_NOW + relativedelta(months=6),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "status": "DEPRECATED",
+        }
+        plan = {"is_renewable": False}
+        model = self.bc.database.create(subscription=subscription, plan=plan, plan_offer=1)
+
+        # Add plan to subscription to avoid "has no plan" error
+        model.subscription.plans.add(model.plan)
+
+        with patch(
+            "breathecode.payments.services.stripe.Stripe.pay",
+            MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy)),
+        ):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_subscription.delay(1)
+
+        self.assertEqual(self.bc.database.list_of("admissions.Cohort"), [])
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting charge_subscription for subscription 1"),
+            ],
+        )
+        # Expect the "is deprecated" error message
+        self.assertEqual(
+            logging.Logger.error.call_args_list,
+            [
+                call("Subscription with id 1 is deprecated", exc_info=True),
+            ],
+        )
+
+        self.assertEqual(self.bc.database.list_of("payments.Bag"), [])
+        self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
+
+        # Status should remain DEPRECATED (don't check specific status values)
+        subscription_list = self.bc.database.list_of("payments.Subscription")
+        self.assertEqual(len(subscription_list), 1)
+        self.assertEqual(subscription_list[0]["id"], 1)
+        assert notify_actions.send_email_message.call_args_list == [
+            call(
+                "message",
+                model.user.email,
+                {
+                    "SUBJECT": f"Your 4Geeks subscription to {model.plan.slug} has been discontinued",
+                    "MESSAGE": f"We regret to inform you that your 4Geeks subscription to {model.plan.slug} has been discontinued. Please check our suggested plans for alternatives.",
+                    "LINK": f"{get_app_url()}/checkout?plan={model.plan_offer.suggested_plan.slug}",
+                    "BUTTON": "See suggested plan",
+                },
+                academy=model.academy,
+            )
+        ]
+        assert activity_tasks.add_activity.delay.call_args_list == []
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    """
+    🔽🔽🔽 Subscription with plan status DISCONTINUED
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("breathecode.payments.tasks.renew_subscription_consumables.delay", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_subscription_with_plan_status_discontinued(self):
+        unit = random.choice([1, 3, 6, 12])
+        unit_type = "MONTH"
+        subscription = {
+            "pay_every": unit,
+            "pay_every_unit": unit_type,
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "valid_until": UTC_NOW + relativedelta(months=6),
+        }
+        plan = {
+            "is_renewable": False,
+            "trial_duration": 0,
+            "status": "DISCONTINUED",
+        }
+        model = self.bc.database.create(subscription=subscription, invoice=1, plan=plan)
+
+        # Add plan to subscription
+        model.subscription.plans.add(model.plan)
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock(side_effect=Exception("fake error"))):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_subscription.delay(1)
+
+        self.assertEqual(self.bc.database.list_of("admissions.Cohort"), [])
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting charge_subscription for subscription 1"),
+            ],
+        )
+        # Expect the error message
+        self.assertEqual(
+            logging.Logger.error.call_args_list,
+            [
+                call("Subscription with id 1 is deprecated", exc_info=True),
+            ],
+        )
+
+        self.assertEqual(
+            self.bc.database.list_of("payments.Bag"),
+            [
+                self.bc.format.to_dict(model.bag),
+            ],
+        )
+        self.assertEqual(
+            self.bc.database.list_of("payments.Invoice"),
+            [
+                self.bc.format.to_dict(model.invoice),
+            ],
+        )
+
+        # Status should be changed to ERROR with appropriate message
+        self.assertEqual(
+            self.bc.database.list_of("payments.Subscription"),
+            [
+                {
+                    **self.bc.format.to_dict(model.subscription),
+                    "status": "DEPRECATED",
+                },
+            ],
+        )
+        assert notify_actions.send_email_message.call_args_list == [
+            call(
+                "message",
+                model.user.email,
+                {
+                    "SUBJECT": f"Your 4Geeks subscription to {model.plan.slug} has been discontinued",
+                    "MESSAGE": f"We regret to inform you that your 4Geeks subscription to {model.plan.slug} has been discontinued.",
+                },
+                academy=model.academy,
+            )
+        ]
+        assert activity_tasks.add_activity.delay.call_args_list == [
+            call(1, "bag_created", related_type="payments.Bag", related_id=1),
+        ]
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    """
+    🔽🔽🔽 Expiring subscription
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_subscription_expiring_it(self):
+        subscription = {
+            "valid_until": UTC_NOW - relativedelta(months=6),
+            "next_payment_at": UTC_NOW - relativedelta(days=1),
+            "status": random.choice(
+                [
+                    "ERROR",
+                    "ACTIVE",
+                    "PAYMENT_ISSUE",
+                ]
+            ),
+        }
+        plan = {"is_renewable": False}
+        model = self.bc.database.create(subscription=subscription, plan=plan)
+
+        # Add plan to subscription to avoid "has no plan" error
+        model.subscription.plans.add(model.plan)
+
+        with patch(
+            "breathecode.payments.services.stripe.Stripe.pay",
+            MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW, academy=model.academy)),
+        ):
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_subscription.delay(1)
+
+        self.assertEqual(self.bc.database.list_of("admissions.Cohort"), [])
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting charge_subscription for subscription 1"),
+            ],
+        )
+        # Expect the "is free trial" error message
+        self.assertEqual(
+            logging.Logger.error.call_args_list,
+            [
+                call("The subscription 1 is over", exc_info=True),
+            ],
+        )
+
+        self.assertEqual(self.bc.database.list_of("payments.Bag"), [])
+        self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
+
+        # Status should be changed to EXPIRED
+        self.assertEqual(
+            self.bc.database.list_of("payments.Subscription"),
+            [
+                {
+                    **self.bc.format.to_dict(model.subscription),
+                    "status": "EXPIRED",
+                },
+            ],
+        )
+        assert notify_actions.send_email_message.call_args_list == []
+        assert activity_tasks.add_activity.delay.call_args_list == []
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []

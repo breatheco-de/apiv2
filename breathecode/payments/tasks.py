@@ -7,11 +7,11 @@ from typing import Any, Optional
 from capyc.core.i18n import translation
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
-from django.db.models import F
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
 from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.actions import schedule_task
 from task_manager.django.decorators import task
 
 from breathecode.admissions.models import Cohort
@@ -35,6 +35,7 @@ from .models import (
     Invoice,
     Plan,
     PlanFinancing,
+    PlanOffer,
     PlanServiceItem,
     PlanServiceItemHandler,
     ProofOfPayment,
@@ -241,26 +242,6 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
         renew_consumables.delay(scheduler.id)
 
 
-# this could be removed 01-29-2025
-@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def fix_subscription_next_payment_at(subscription_id: int, **_: Any):
-    """Fix a subscription next payment at."""
-
-    logger.info(f"Starting fix_subscription_next_payment_at for subscription {subscription_id}")
-
-    if not (
-        subscription := Subscription.objects.filter(id=subscription_id, paid_at=F("next_payment_at"))
-        .only("id", "paid_at", "next_payment_at")
-        .first()
-    ):
-        raise AbortTask(f"Subscription with id {subscription_id} not found")
-
-    delta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
-
-    subscription.next_payment_at += delta
-    subscription.save()
-
-
 def fallback_charge_subscription(self, subscription_id: int, exception: Exception, **_: Any):
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         return
@@ -316,10 +297,69 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         subscription.status = "PAYMENT_ISSUE"
         subscription.save()
 
+    def handle_deprecated_subscription():
+        plan = subscription.plans.first()
+        link = None
+
+        if plan and (offer := PlanOffer.objects.filter(original_plan=plan).first()):
+            link = f"{get_app_url()}/checkout?plan={offer.suggested_plan.slug}"
+
+        elif plan is None:
+            raise AbortTask(f"Deprecated subscription with id {subscription.id} has no plan")
+
+        subject = translation(
+            settings.lang,
+            en=f"Your 4Geeks subscription to {plan.slug} has been discontinued",
+            es=f"Tu suscripción 4Geeks a {plan.slug} ha sido descontinuada",
+        )
+
+        obj = {
+            "SUBJECT": subject,
+        }
+
+        if link:
+            button = translation(
+                settings.lang,
+                en="See suggested plan",
+                es="Ver plan sugerido",
+            )
+            obj["LINK"] = link
+            obj["BUTTON"] = button
+
+            message = translation(
+                settings.lang,
+                en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued. Please check our suggested plans for alternatives.",
+                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido discontinuada. Por favor, revisa nuestros planes sugeridos para alternativas.",
+            )
+
+        else:
+            message = translation(
+                settings.lang,
+                en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued.",
+                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido discontinuada.",
+            )
+
+        obj["MESSAGE"] = message
+
+        notify_actions.send_email_message(
+            "message",
+            subscription.user.email,
+            obj,
+            academy=subscription.academy,
+        )
+        raise AbortTask(f"Subscription with id {subscription.id} is deprecated")
+
     bag = None
     client = None
     if IS_DJANGO_REDIS:
         client = get_redis_connection("default")
+
+    statuses = [
+        Subscription.Status.ERROR,
+        Subscription.Status.ACTIVE,
+        Subscription.Status.PAYMENT_ISSUE,
+        Subscription.Status.FULLY_PAID,
+    ]
 
     try:
         with Lock(client, f"lock:subscription:{subscription_id}", timeout=30, blocking_timeout=30):
@@ -328,13 +368,27 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             utc_now = timezone.now()
 
-            if subscription.valid_until and subscription.valid_until < utc_now:
+            settings = get_user_settings(subscription.user.id)
+
+            if subscription.status == Subscription.Status.DEPRECATED:
+                handle_deprecated_subscription()
+
+            elif subscription.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+                subscription.status = Subscription.Status.DEPRECATED
+                subscription.save()
+                handle_deprecated_subscription()
+
+            # 1. Check if subscription is accionable
+            # 2. Check if subscription is over
+            # 3. Expire the subscription if it is over
+            if subscription.valid_until and subscription.valid_until < utc_now and subscription.status in statuses:
+                if subscription.status != Subscription.Status.EXPIRED:
+                    subscription.status = Subscription.Status.EXPIRED
+                    subscription.save()
                 raise AbortTask(f"The subscription {subscription.id} is over")
 
             if subscription.next_payment_at > utc_now:
                 raise AbortTask(f"The subscription with id {subscription_id} was paid this month")
-
-            settings = get_user_settings(subscription.user.id)
 
             if subscription.externally_managed:
                 invoice = (
@@ -356,7 +410,12 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                         es="Por favor realiza tu pago en tu academia",
                     )
                     alert_payment_issue(message, button)
-                    return
+
+                    manager = schedule_task(charge_subscription, "1d")
+                    if not manager.exists(subscription.id):
+                        manager.call(subscription.id)
+
+                    raise AbortTask(f"Payment to Subscription {subscription_id} failed")
 
                 bag = invoice.bag
 
@@ -367,6 +426,11 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     subscription.status = "ERROR"
                     subscription.status_message = str(e)
                     subscription.save()
+
+                    manager = schedule_task(charge_subscription, "1d")
+                    if not manager.exists(subscription.id):
+                        manager.call(subscription.id)
+
                     raise AbortTask(f"Error getting bag from subscription {subscription_id}: {e}")
 
                 amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
@@ -389,7 +453,12 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                         es="Por favor actualiza tus métodos de pago",
                     )
                     alert_payment_issue(message, button)
-                    return
+
+                    manager = schedule_task(charge_subscription, "1d")
+                    if not manager.exists(subscription.id):
+                        manager.call(subscription.id)
+
+                    raise AbortTask(f"Payment to Subscription {subscription_id} failed")
 
             subscription.paid_at = utc_now
             delta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
@@ -399,6 +468,9 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 subscription.next_payment_at += delta
                 if subscription.valid_until:
                     subscription.valid_until += delta
+
+            if subscription.valid_until and subscription.next_payment_at > subscription.valid_until:
+                subscription.next_payment_at = subscription.valid_until
 
             subscription.invoices.add(invoice)
             subscription.status = "ACTIVE"
@@ -433,6 +505,12 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             bag.save()
 
             renew_subscription_consumables.delay(subscription.id)
+
+            # Schedule next charge based on days until next_payment_at
+            days_until_next_payment = (subscription.next_payment_at - utc_now).days
+            manager = schedule_task(charge_subscription, f"{days_until_next_payment}d")
+            if not manager.exists(subscription.id):
+                manager.call(subscription.id)
 
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")
@@ -501,6 +579,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
     if IS_DJANGO_REDIS:
         client = get_redis_connection("default")
 
+    statuses = [
+        PlanFinancing.Status.ERROR,
+        PlanFinancing.Status.ACTIVE,
+        PlanFinancing.Status.PAYMENT_ISSUE,
+        PlanFinancing.Status.FULLY_PAID,
+    ]
+
     try:
         with Lock(client, f"lock:plan_financing:{plan_financing_id}", timeout=30, blocking_timeout=30):
 
@@ -509,7 +594,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             utc_now = timezone.now()
 
-            if plan_financing.plan_expires_at < utc_now:
+            if plan_financing.status in statuses and (
+                plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now
+            ):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} is over")
 
             if plan_financing.next_payment_at > utc_now:
@@ -559,7 +646,12 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                             es="Por favor realiza tu pago en tu academia",
                         )
                         alert_payment_issue(message, button)
-                        return
+
+                        manager = schedule_task(charge_plan_financing, "1d")
+                        if not manager.exists(plan_financing.id):
+                            manager.call(plan_financing.id)
+
+                        raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
 
                     bag = invoice.bag
 
@@ -570,6 +662,10 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         plan_financing.status = "ERROR"
                         plan_financing.status_message = str(e)
                         plan_financing.save()
+
+                        manager = schedule_task(charge_plan_financing, "1d")
+                        if not manager.exists(plan_financing.id):
+                            manager.call(plan_financing.id)
 
                         raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
 
@@ -592,7 +688,12 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                             es="Por favor actualiza tus métodos de pago",
                         )
                         alert_payment_issue(message, button)
-                        return
+
+                        manager = schedule_task(charge_plan_financing, "1d")
+                        if not manager.exists(plan_financing.id):
+                            manager.call(plan_financing.id)
+
+                        raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
 
                 if utc_now > plan_financing.valid_until:
                     remaining_installments -= 1
@@ -643,6 +744,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 bag.save()
 
             renew_plan_financing_consumables.delay(plan_financing.id)
+
+            # Schedule next charge if plan is still active and has remaining installments
+            days_until_next_payment = (plan_financing.next_payment_at - utc_now).days
+            if days_until_next_payment > 0:  # Only schedule if there are days remaining
+                manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
+                if not manager.exists(plan_financing_id):
+                    manager.call(plan_financing_id)
 
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")
@@ -792,15 +900,24 @@ def build_subscription(
         raise RetryTask(f"Invoice with id {invoice_id} not found")
 
     months = 1
+    pay_every_unit = "MONTH"
 
     if bag.chosen_period == "QUARTER":
         months = 3
+        pay_every_unit = "MONTH"
+        pay_every = 3
 
     elif bag.chosen_period == "HALF":
         months = 6
+        pay_every_unit = "MONTH"
+        pay_every = 6
 
     elif bag.chosen_period == "YEAR":
         months = 12
+        pay_every_unit = "YEAR"
+        pay_every = 1
+    else:
+        pay_every = 1
 
     plan = bag.plans.first()
 
@@ -815,6 +932,10 @@ def build_subscription(
         mentorship_service_set = None
 
     subscription_start_at = start_date or invoice.paid_at
+    if isinstance(subscription_start_at, str):
+        subscription_start_at = datetime.fromisoformat(subscription_start_at)
+
+    next_payment_at = subscription_start_at + relativedelta(months=months)
 
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     subscription = Subscription.objects.create(
@@ -825,9 +946,11 @@ def build_subscription(
         selected_event_type_set=event_type_set,
         selected_mentorship_service_set=mentorship_service_set,
         valid_until=None,
-        next_payment_at=subscription_start_at + relativedelta(months=months),
+        next_payment_at=next_payment_at,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
+        pay_every_unit=pay_every_unit,
+        pay_every=pay_every,
     )
 
     subscription.plans.set(bag.plans.all())
@@ -839,6 +962,12 @@ def build_subscription(
     bag.save()
 
     build_service_stock_scheduler_from_subscription.delay(subscription.id)
+
+    # Schedule the next charge task based on days until next_payment_at
+    days_until_next_payment = (next_payment_at - subscription.paid_at).days
+    manager = schedule_task(charge_subscription, f"{days_until_next_payment}d")
+    if not manager.exists(subscription.id):
+        manager.call(subscription.id)
 
     logger.info(f"Subscription was created with id {subscription.id}")
 
@@ -897,11 +1026,13 @@ def build_plan_financing(
     if cohorts:
         cohorts = Cohort.objects.filter(slug__in=cohorts)
 
+    next_payment_at = invoice.paid_at + relativedelta(months=1)
+
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
     financing = PlanFinancing.objects.create(
         user=bag.user,
         how_many_installments=bag.how_many_installments,
-        next_payment_at=invoice.paid_at + relativedelta(months=1),
+        next_payment_at=next_payment_at,
         academy=bag.academy,
         selected_cohort_set=cohort_set,
         selected_event_type_set=event_type_set,
@@ -911,7 +1042,6 @@ def build_plan_financing(
         monthly_price=invoice.amount,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
-        # joined_cohorts=cohorts,
     )
 
     if cohorts:
@@ -926,6 +1056,12 @@ def build_plan_financing(
     bag.save()
 
     build_service_stock_scheduler_from_plan_financing.delay(financing.id)
+
+    # Schedule monthly charges based on days until next payment
+    days_until_next_payment = (invoice.paid_at + relativedelta(months=1) - invoice.paid_at).days
+    manager = schedule_task(charge_plan_financing, f"{days_until_next_payment}d")
+    if not manager.exists(financing.id):
+        manager.call(financing.id)
 
     logger.info(f"PlanFinancing was created with id {financing.id}")
 

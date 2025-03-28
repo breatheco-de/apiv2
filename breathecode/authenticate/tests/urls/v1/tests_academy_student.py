@@ -3,12 +3,14 @@ Test cases for /academy/student
 """
 
 import os
+import datetime
 import urllib.parse
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
 from django.utils import dateparse, timezone
 from rest_framework import status
+from dateutil.relativedelta import relativedelta
 
 import breathecode.notify.actions as actions
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
@@ -54,6 +56,7 @@ def generate_user_invite(data: dict) -> dict:
 
 
 UTC_NOW = timezone.now()
+UTC_PAST_DATE = timezone.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
 
 A_YEAR_AGO = dateparse.parse_date("2014-01-01")
 
@@ -1051,6 +1054,8 @@ class StudentPostTestSuite(AuthTestCase):
 
         response = self.client.post(url, data, format="json", headers={"academy": 1})
         json = response.json()
+
+        created_at = UTC_NOW.replace(tzinfo=None).isoformat(timespec="microseconds") + "Z"
         expected = {
             "address": None,
             "email": model.user[1].email,
@@ -1059,6 +1064,24 @@ class StudentPostTestSuite(AuthTestCase):
             "phone": "",
             "status": "INVITED",
             "id": 2,
+            "created_at": created_at,
+            "role": {
+                "id": "student",
+                "slug": "student",
+                "name": "student",
+            },
+            "user": {
+                "id": model.user[1].id,
+                "email": model.user[1].email,
+                "first_name": model.user[1].first_name,
+                "last_name": model.user[1].last_name,
+                "profile": None,
+            },
+            "academy": {
+                "id": model.academy.id,
+                "name": model.academy.name,
+                "slug": model.academy.slug,
+            },
         }
 
         self.assertEqual(json, expected)
@@ -1160,6 +1183,9 @@ class StudentPostTestSuite(AuthTestCase):
 
         response = self.client.post(url, data, format="json", headers={"academy": 1})
         json = response.json()
+
+        created_at = UTC_NOW.replace(tzinfo=None).isoformat(timespec="microseconds") + "Z"
+
         expected = {
             "address": None,
             "email": model.user[1].email,
@@ -1168,6 +1194,24 @@ class StudentPostTestSuite(AuthTestCase):
             "phone": "",
             "status": "INVITED",
             "id": 2,
+            "created_at": created_at,
+            "role": {
+                "id": "student",
+                "slug": "student",
+                "name": "student",
+            },
+            "user": {
+                "id": model.user[1].id,
+                "email": model.user[1].email,
+                "first_name": model.user[1].first_name,
+                "last_name": model.user[1].last_name,
+                "profile": None,
+            },
+            "academy": {
+                "id": model.academy.id,
+                "name": model.academy.name,
+                "slug": model.academy.slug,
+            },
         }
 
         self.assertEqual(json, expected)
@@ -1247,6 +1291,7 @@ class StudentPostTestSuite(AuthTestCase):
 
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_PAST_DATE))
     def test_academy_student__post__without_user_in_data(self):
         """Test /academy/:id/member"""
 
@@ -1264,6 +1309,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         response = self.client.post(url, data, format="json", headers={"academy": 1})
         json = response.json()
+        created_at = UTC_PAST_DATE.isoformat(timespec="seconds").replace("+00:00", "Z")
         expected = {
             "address": None,
             "email": "dude@dude.dude",
@@ -1272,6 +1318,24 @@ class StudentPostTestSuite(AuthTestCase):
             "phone": "",
             "status": "INVITED",
             "id": 2,
+            "created_at": created_at,
+            "role": {
+                "id": "student",
+                "slug": "student",
+                "name": "student",
+            },
+            "user": {
+                "id": 2,
+                "email": "dude@dude.dude",
+                "first_name": "Kenny",
+                "last_name": "McKornick",
+                "profile": None,
+            },
+            "academy": {
+                "id": model.academy.id,
+                "name": model.academy.name,
+                "slug": model.academy.slug,
+            },
         }
 
         self.assertEqual(json, expected)
@@ -1290,7 +1354,7 @@ class StudentPostTestSuite(AuthTestCase):
                     "phone": "",
                     "role_id": "student",
                     "status": "INVITED",
-                    "user_id": None,
+                    "user_id": 2,
                 },
             ],
         )
@@ -1314,6 +1378,8 @@ class StudentPostTestSuite(AuthTestCase):
                         "role_id": "student",
                         "token": TOKEN,
                         "syllabus_id": None,
+                        "expires_at": UTC_PAST_DATE + relativedelta(months=6),
+                        "user_id": 2,
                     }
                 ),
             ],
@@ -1383,6 +1449,7 @@ class StudentPostTestSuite(AuthTestCase):
 
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_PAST_DATE))
     def test_academy_student__post__without_user_in_data__with_plan(self):
         """Test /academy/:id/member"""
 
@@ -1404,6 +1471,8 @@ class StudentPostTestSuite(AuthTestCase):
 
         response = self.client.post(url, data, format="json", headers={"academy": 1})
         json = response.json()
+
+        created_at = UTC_PAST_DATE.isoformat(timespec="seconds").replace("+00:00", "Z")
         expected = {
             "address": None,
             "email": "dude@dude.dude",
@@ -1412,6 +1481,24 @@ class StudentPostTestSuite(AuthTestCase):
             "phone": "",
             "id": 2,
             "status": "INVITED",
+            "created_at": created_at,
+            "role": {
+                "id": "student",
+                "slug": "student",
+                "name": "student",
+            },
+            "user": {
+                "id": 2,
+                "email": "dude@dude.dude",
+                "first_name": "Kenny",
+                "last_name": "McKornick",
+                "profile": None,
+            },
+            "academy": {
+                "id": model.academy.id,
+                "name": model.academy.name,
+                "slug": model.academy.slug,
+            },
         }
 
         self.assertEqual(json, expected)
@@ -1430,7 +1517,7 @@ class StudentPostTestSuite(AuthTestCase):
                     "phone": "",
                     "role_id": "student",
                     "status": "INVITED",
-                    "user_id": None,
+                    "user_id": 2,
                 },
             ],
         )
@@ -1446,6 +1533,7 @@ class StudentPostTestSuite(AuthTestCase):
                 generate_user_invite(
                     {
                         "id": 1,
+                        "user_id": 2,
                         "academy_id": 1,
                         "author_id": 1,
                         "email": "dude@dude.dude",
@@ -1458,6 +1546,7 @@ class StudentPostTestSuite(AuthTestCase):
                         "country": None,
                         "latitude": None,
                         "longitude": None,
+                        "expires_at": UTC_PAST_DATE + relativedelta(months=6),
                     }
                 ),
             ],
@@ -1539,6 +1628,7 @@ class StudentPostTestSuite(AuthTestCase):
 
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_PAST_DATE))
     def test_academy_student__post__without_user_in_data__invite_already_exists__diff_cohort_in_data(self):
         """Test /academy/:id/member"""
 
@@ -1567,6 +1657,7 @@ class StudentPostTestSuite(AuthTestCase):
 
         response = self.client.post(url, data, format="json", headers={"academy": 1})
         json = response.json()
+        created_at = UTC_PAST_DATE.isoformat(timespec="seconds").replace("+00:00", "Z")
         expected = {
             "address": None,
             "email": "dude2@dude.dude",
@@ -1575,6 +1666,24 @@ class StudentPostTestSuite(AuthTestCase):
             "phone": "",
             "id": 2,
             "status": "INVITED",
+            "created_at": created_at,
+            "role": {
+                "id": "student",
+                "slug": "student",
+                "name": "student",
+            },
+            "user": {
+                "id": 2,
+                "email": "dude2@dude.dude",
+                "first_name": "Kenny",
+                "last_name": "McKornick",
+                "profile": None,
+            },
+            "academy": {
+                "id": model.academy.id,
+                "name": model.academy.name,
+                "slug": model.academy.slug,
+            },
         }
 
         self.assertEqual(json, expected)
@@ -1593,7 +1702,7 @@ class StudentPostTestSuite(AuthTestCase):
                     "phone": "",
                     "role_id": "student",
                     "status": "INVITED",
-                    "user_id": None,
+                    "user_id": 2,
                 },
             ],
         )
@@ -1615,6 +1724,7 @@ class StudentPostTestSuite(AuthTestCase):
                         "role_id": "student",
                         "token": model.user_invite.token,
                         "syllabus_id": None,
+                        "expires_at": None,
                     }
                 ),
                 generate_user_invite(
@@ -1629,6 +1739,8 @@ class StudentPostTestSuite(AuthTestCase):
                         "role_id": "student",
                         "token": TOKEN,
                         "syllabus_id": None,
+                        "expires_at": UTC_PAST_DATE + relativedelta(months=6),
+                        "user_id": 2,
                     }
                 ),
             ],

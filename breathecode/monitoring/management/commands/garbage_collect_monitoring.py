@@ -3,6 +3,7 @@ from ...models import RepositoryWebhook
 from django.utils import timezone
 from datetime import timedelta
 
+
 class Command(BaseCommand):
     help = "Delete logs and other garbage"
 

@@ -1,7 +1,12 @@
-import os, logging, re
+import logging
+import os
+import re
+
+from asgiref.sync import sync_to_async
+from django.utils import timezone
+
 import breathecode.services.seo.actions as actions
 from breathecode.registry.models import SEOReport
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +73,10 @@ class SEOAnalyzer:
         self.asset.seo_json_status = {"rating": rating, "log": log}
         self.asset.save()
         return self.asset.seo_json_status
+
+    @sync_to_async
+    def astart(self):
+        return self.start()
 
     def execute_report(self, script_slug):
 

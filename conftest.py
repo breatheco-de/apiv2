@@ -347,6 +347,10 @@ def get_app_signature() -> Generator[Callable[[], dict[str, Any]], None, None]:
 
 @pytest.fixture
 def patch_render(monkeypatch: pytest.MonkeyPatch):
+    """
+    Patch the render function to return a JsonResponse with the provided status code and other parameters.
+    """
+
     def redirect_url(*args, **kwargs):
 
         if args:
@@ -388,7 +392,9 @@ def patch_render(monkeypatch: pytest.MonkeyPatch):
         if "academy" in kwargs:
             kwargs["academy"] = kwargs["academy"].id
 
-        return JsonResponse(kwargs, status=kwargs.get("status", 999))
+        status = kwargs.get("status", 503)
+
+        return JsonResponse(kwargs, status=status)
 
     monkeypatch.setattr(
         shortcuts,

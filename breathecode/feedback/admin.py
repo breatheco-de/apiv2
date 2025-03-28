@@ -1,11 +1,10 @@
 import json
 import logging
 
-
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
-from django import forms
 
 from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from breathecode.admissions.admin import CohortUserAdmin as AdmissionsCohortUserAdmin
@@ -17,15 +16,15 @@ from breathecode.utils.admin.widgets import PrettyJSONWidget
 from . import actions
 from .actions import create_user_graduation_reviews, send_cohort_survey_group
 from .models import (
+    AcademyFeedbackSettings,
     Answer,
     CohortProxy,
     CohortUserProxy,
     Review,
     ReviewPlatform,
     Survey,
-    UserProxy,
     SurveyTemplate,
-    AcademyFeedbackSettings,
+    UserProxy,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,7 +75,6 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
         try:
             actions.send_question(cu.user, cu.cohort)
         except Exception as e:
-            raise e
             error = str(e)
 
             if error in errors:

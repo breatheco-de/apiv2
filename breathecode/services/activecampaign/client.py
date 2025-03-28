@@ -655,7 +655,7 @@ class ACOldClient(object):
             except ValueError:
                 # In case the response is not valid JSON.
                 error_message = response.text
-    
+
             raise Exception(f"Error when saving contact on AC: {error_message}")
 
     def _parse(self, response):

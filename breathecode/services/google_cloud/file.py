@@ -2,6 +2,7 @@ import logging
 from io import BufferedReader, BytesIO, StringIO, TextIOWrapper
 from typing import Optional, overload
 
+from asgiref.sync import sync_to_async
 from circuitbreaker import circuit
 from google.cloud.storage import Blob, Bucket
 
@@ -49,6 +50,11 @@ class File:
 
         if public:
             self.blob.make_public()
+
+    @sync_to_async
+    def aupload(self, content, public: bool = False, content_type: str = "text/plain") -> None:
+        """Async version of upload - Upload Blob from Bucket"""
+        self.upload(content, public, content_type)
 
     @circuit
     def exists(self) -> bool:

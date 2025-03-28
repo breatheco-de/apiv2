@@ -79,6 +79,44 @@ class Command(BaseCommand):
         )
 
     def get_username(self, owner: str, repo: str) -> Optional[str]:
+        """
+        Get the username to transfer the repository to by fetching collaborators from the GitHub API.
+
+        Instead of trying to determine the owner from the repository name, which is unreliable,
+        we now get the list of collaborators from the repository and choose the most appropriate one.
+        """
+        # Get collaborators for the repository - treating it as an iterator
+        eligible_collaborators = []
+
+        for collaborators_page in self.github_client.get_repo_collaborators(owner, repo):
+            # Filter out organization accounts and the allowed users (our own accounts)
+            for collab in collaborators_page:
+                if (
+                    collab.get("login")
+                    and collab.get("login") not in self.allowed_users
+                    and collab.get("type") == "User"
+                ):
+                    eligible_collaborators.append(collab)
+
+            # If we found at least one eligible collaborator, we can stop
+            if eligible_collaborators:
+                break
+
+        if eligible_collaborators:
+            # If we have eligible collaborators, return the first one
+            return eligible_collaborators[0]["login"]
+
+        # As a fallback, try to get the forker of the repository
+        for events in self.github_client.get_repo_events(owner, repo):
+            for event in events:
+                if (
+                    self.check_path(event, "type")
+                    and event["type"] == "ForkEvent"
+                    and self.check_path(event, "actor", "login")
+                ):
+                    return event["actor"]["login"]
+
+        # If there was an error, fall back to the old method as a last resort
         r = repo
         repo = repo.lower()
         index = -1
@@ -296,23 +334,37 @@ class Command(BaseCommand):
         if repo_name.endswith(".git"):
             repo_name = repo_name[:-4]
 
+        # Default status
         status = RepositoryDeletionOrder.Status.PENDING
-        if (
-            Task.objects.filter(github_url__icontains=f"github.com/{user}/{repo_name}")
-            .exclude(revision_status=Task.RevisionStatus.PENDING)
-            .exists()
-        ):
+
+        # Try to find tasks related to this repository
+        related_tasks = Task.objects.filter(github_url__icontains=f"github.com/{user}/{repo_name}")
+
+        # Check if we have tasks that aren't pending
+        if related_tasks.exclude(revision_status=Task.RevisionStatus.PENDING).exists():
             status = RepositoryDeletionOrder.Status.NO_STARTED
 
+        # Try to find a user to associate with the deletion order
+        user_id = None
+        if possible_user := related_tasks.exclude(user_id=None).only("user_id").first():
+            user_id = possible_user.user_id
+
+        # Create or get the deletion order
         order, _ = RepositoryDeletionOrder.objects.get_or_create(
             provider=provider,
             repository_user=user,
             repository_name=repo_name,
-            defaults={"status": status},
+            defaults={"status": status, "user_id": user_id},
         )
 
+        # Update status if needed
         if order.status != status:
             order.status = status
+            order.save()
+
+        # If the order doesn't have a user but we found one, update it
+        if order.user_id is None and user_id is not None:
+            order.user_id = user_id
             order.save()
 
     def collect_transferred_orders(self):

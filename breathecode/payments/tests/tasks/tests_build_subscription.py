@@ -4,9 +4,11 @@ Test /answer
 
 import logging
 import random
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from capyc import pytest as capyc
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
@@ -81,6 +83,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(self.bc.database.list_of("payments.Invoice"), [])
         self.assertEqual(self.bc.database.list_of("payments.Subscription"), [])
         self.bc.check.calls(activity_tasks.add_activity.delay.call_args_list, [])
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 With Bag
@@ -124,6 +127,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
     """
     🔽🔽🔽 With Bag and Invoice
@@ -194,6 +198,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "paid_at": model.invoice.paid_at,
                         "valid_until": None,
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=months),
+                        "pay_every": months if months != 12 else 1,
+                        "pay_every_unit": "MONTH" if months != 12 else "YEAR",
                     }
                 ),
             ],
@@ -211,6 +217,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = timedelta(days=(model.invoice.paid_at + relativedelta(months=months) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_subscription",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
         assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
@@ -283,6 +304,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "paid_at": model.invoice.paid_at,
                         "valid_until": None,
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=months),
+                        "pay_every": months if months != 12 else 1,
+                        "pay_every_unit": "MONTH" if months != 12 else "YEAR",
                     }
                 ),
             ],
@@ -300,6 +323,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = timedelta(days=(model.invoice.paid_at + relativedelta(months=months) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_subscription",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
         assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
@@ -382,6 +420,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "valid_until": None,
                         "selected_cohort_set_id": 1,
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=months),
+                        "pay_every": months if months != 12 else 1,
+                        "pay_every_unit": "MONTH" if months != 12 else "YEAR",
                     }
                 ),
             ],
@@ -399,6 +439,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = timedelta(days=(model.invoice.paid_at + relativedelta(months=months) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_subscription",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
         assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
@@ -475,6 +530,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "valid_until": None,
                         "selected_event_type_set_id": 1,
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=months),
+                        "pay_every": months if months != 12 else 1,
+                        "pay_every_unit": "MONTH" if months != 12 else "YEAR",
                     }
                 ),
             ],
@@ -492,6 +549,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = timedelta(days=(model.invoice.paid_at + relativedelta(months=months) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_subscription",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
         assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
@@ -568,6 +640,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "valid_until": None,
                         "selected_mentorship_service_set_id": 1,
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=months),
+                        "pay_every": months if months != 12 else 1,
+                        "pay_every_unit": "MONTH" if months != 12 else "YEAR",
                     }
                 ),
             ],
@@ -585,6 +659,21 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=1),
             ],
         )
+        delta = timedelta(days=(model.invoice.paid_at + relativedelta(months=months) - model.invoice.paid_at).days)
+        assert self.bc.database.list_of("task_manager.ScheduledTask") == [
+            {
+                "task_name": "charge_subscription",
+                "task_module": "breathecode.payments.tasks",
+                "arguments": {
+                    "args": [1],
+                    "kwargs": {},
+                },
+                "duration": delta,
+                "eta": UTC_NOW + delta,
+                "status": "PENDING",
+                "id": 1,
+            },
+        ]
         assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
 
     """
@@ -660,6 +749,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "paid_at": model.invoice.paid_at,
                         "valid_until": None,
                         "next_payment_at": model.invoice.paid_at + relativedelta(months=months),
+                        "pay_every": months if months != 12 else 1,
+                        "pay_every_unit": "MONTH" if months != 12 else "YEAR",
                     }
                 ),
             ],
@@ -678,3 +769,83 @@ class PaymentsTestSuite(PaymentsTestCase):
             ],
         )
         assert_subscription_with_no_service_items(self.bc.database.get("payments.Subscription", 1, dict=False))
+
+
+@pytest.mark.parametrize(
+    "chosen_period,expected_months,expected_pay_every,expected_pay_every_unit",
+    [
+        ("MONTH", 1, 1, "MONTH"),
+        ("QUARTER", 3, 3, "MONTH"),
+        ("HALF", 6, 6, "MONTH"),
+        ("YEAR", 12, 1, "YEAR"),
+    ],
+)
+def test_build_subscription_with_different_chosen_periods(
+    database: capyc.Database,
+    monkeypatch,
+    chosen_period,
+    expected_months,
+    expected_pay_every,
+    expected_pay_every_unit,
+    format: capyc.Format,
+):
+    """Test build_subscription with different chosen periods"""
+    from breathecode.payments import tasks
+
+    # Arrange
+    utc_now = timezone.now()
+
+    logger_info = MagicMock()
+    monkeypatch.setattr("logging.Logger.info", logger_info)
+
+    logger_error = MagicMock()
+    monkeypatch.setattr("logging.Logger.error", logger_error)
+
+    build_scheduler = MagicMock()
+    monkeypatch.setattr(
+        "breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", build_scheduler
+    )
+
+    # Create test data
+    bag = {"status": "PAID", "was_delivered": False, "chosen_period": chosen_period}
+    invoice = {"status": "FULFILLED"}
+    model = database.create(invoice=invoice, bag=bag, city=1, country=1)
+
+    # Act
+    tasks.build_subscription.delay(model.bag.id, model.invoice.id, start_date=utc_now)
+
+    # Assert
+    assert database.list_of("payments.Subscription") == [
+        {
+            "conversion_info": None,
+            "academy_id": 1,
+            "paid_at": model.invoice.paid_at,
+            "valid_until": None,
+            "next_payment_at": utc_now + relativedelta(months=expected_months),
+            "pay_every": expected_pay_every,
+            "pay_every_unit": expected_pay_every_unit,
+            "externally_managed": False,
+            "id": 1,
+            "is_refundable": True,
+            "selected_cohort_set_id": None,
+            "selected_event_type_set_id": None,
+            "selected_mentorship_service_set_id": None,
+            "status": "ACTIVE",
+            "status_message": None,
+            "user_id": 1,
+        }
+    ]
+
+    # Check that the invoice is linked to the subscription
+    assert database.list_of("payments.Invoice") == [{**format.to_obj_repr(model.invoice)}]
+
+    # Check that the bag was marked as delivered
+    assert database.list_of("payments.Bag") == [{**format.to_obj_repr(model.bag), "was_delivered": True}]
+
+    # Verify logging and task calls
+    assert logger_info.call_args_list == [
+        call(f"Starting build_subscription for bag {model.bag.id}"),
+        call(f"Subscription was created with id 1"),
+    ]
+    assert logger_error.call_args_list == []
+    assert build_scheduler.call_args_list == [call(1)]

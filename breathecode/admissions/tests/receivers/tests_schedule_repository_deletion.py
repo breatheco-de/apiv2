@@ -76,5 +76,6 @@ def test_schedule_repository_deletion(
             "status_text": None,
             "starts_transferring_at": None,
             "notified_at": None,
+            "user_id": 1,
         },
     ]

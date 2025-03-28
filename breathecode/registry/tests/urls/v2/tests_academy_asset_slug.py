@@ -1,8 +1,4 @@
-"""
-    🔽🔽🔽 Testing Asset Creation without category
-"""
-
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock
 
 import pytest
 from django.urls.base import reverse_lazy
@@ -44,6 +40,7 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
         "intro_video_url": None,
         "is_seo_tracked": True,
         "lang": asset.lang,
+        "feature": False,
         "last_synch_at": None,
         "last_test_at": None,
         "last_cleaning_at": None,

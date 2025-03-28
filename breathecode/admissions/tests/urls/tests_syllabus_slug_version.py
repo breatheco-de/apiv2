@@ -3,12 +3,13 @@ Test /certificate
 """
 
 import random
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+from django.urls.base import reverse_lazy
+from django.utils import timezone
+from rest_framework import status
 
 from breathecode.services import datetime_to_iso_format
-from django.urls.base import reverse_lazy
-from rest_framework import status
-from django.utils import timezone
 
 from ..mixins import AdmissionsTestCase
 
@@ -62,6 +63,11 @@ def generate_syllabus_json(lesson_slug, quiz_slug=None, reply_slug=None, project
             for _ in range(n)
         ]
     }
+
+
+def get_change_log(user):
+    timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+    return f"{timestamp} - {user.first_name} {user.last_name} (ID: {user.id}) created the syllabus version."
 
 
 class CertificateTestSuite(AdmissionsTestCase):
@@ -251,7 +257,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             "syllabus": 1,
-            "change_log_details": None,
+            "change_log_details": get_change_log(model.user),
             "status": "PUBLISHED",
             "version": 1,
             **data,
@@ -267,7 +273,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                     "integrity_check_at": None,
                     "integrity_report": None,
                     "integrity_status": "PENDING",
-                    "change_log_details": None,
+                    "change_log_details": get_change_log(model.user),
                     "status": "PUBLISHED",
                     "json": data["json"],
                     "syllabus_id": 1,
@@ -303,7 +309,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             "syllabus": 1,
-            "change_log_details": None,
+            "change_log_details": get_change_log(model.user),
             "status": "PUBLISHED",
             "version": model.syllabus_version.version + 1,
             **data,
@@ -320,7 +326,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                     "integrity_check_at": None,
                     "integrity_report": None,
                     "integrity_status": "PENDING",
-                    "change_log_details": None,
+                    "change_log_details": get_change_log(model.user),
                     "status": "PUBLISHED",
                     "json": {},
                     "syllabus_id": 1,

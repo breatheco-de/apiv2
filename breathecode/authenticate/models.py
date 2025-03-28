@@ -212,6 +212,7 @@ class UserInvite(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
+    expires_at = models.DateTimeField(default=None, null=True, blank=True)
 
     country = models.CharField(max_length=30, null=True, default=None, blank=True)
     city = models.CharField(max_length=30, null=True, default=None, blank=True)

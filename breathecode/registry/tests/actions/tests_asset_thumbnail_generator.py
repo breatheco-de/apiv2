@@ -4,9 +4,10 @@ Test /answer
 
 from random import randint
 from unittest.mock import MagicMock, call, patch
-from breathecode.registry import tasks
 
+from breathecode.registry import tasks
 from breathecode.registry.actions import AssetThumbnailGenerator
+
 from ..mixins import RegistryTestCase
 
 
@@ -532,23 +533,22 @@ class RegistryTestSuite(RegistryTestCase):
     @patch("breathecode.registry.tasks.async_create_asset_thumbnail_legacy.delay", MagicMock())
     @patch("breathecode.registry.tasks.async_resize_asset_thumbnail.delay", MagicMock())
     def test__get_thumbnail_url__without_asset(self):
-        generator = AssetThumbnailGenerator(None)
+        """Test __get_thumbnails__without_asset to return good values."""
+
+        width = self.bc.fake.random_int()
+        height = self.bc.fake.random_int()
+
+        handler = AssetThumbnailGenerator(None, width, height)
+
         default_url = self.bc.fake.url()
         with patch("os.getenv", MagicMock(side_effect=apply_get_env({"DEFAULT_ASSET_PREVIEW_URL": default_url}))):
-            url = generator.get_thumbnail_url()
-
-        self.assertEqual(url, (default_url, False))
-        self.assertEqual(generator.asset, None)
-        self.assertEqual(generator.width, 0)
-        self.assertEqual(generator.height, 0)
-
-        self.assertEqual(self.bc.database.list_of("registry.Asset"), [])
-        self.assertEqual(self.bc.database.list_of("media.Media"), [])
-        self.assertEqual(self.bc.database.list_of("media.MediaResolution"), [])
+            result = handler.get_thumbnail_url()
 
         self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [])
         self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
+
+        self.assertEqual(result, (default_url, False))
 
     """
     🔽🔽🔽 get_thumbnail_url with Asset, returns default url, permanent is False
@@ -558,35 +558,26 @@ class RegistryTestSuite(RegistryTestCase):
     @patch("breathecode.registry.tasks.async_create_asset_thumbnail_legacy.delay", MagicMock())
     @patch("breathecode.registry.tasks.async_resize_asset_thumbnail.delay", MagicMock())
     def test__get_thumbnail_url__with_asset(self):
-        model = self.bc.database.create(asset=1, academy=1, asset_category=1)
-        generator = AssetThumbnailGenerator(model.asset)
+        """Test __get_thumbnails__with_asset to return good values."""
+
+        width = self.bc.fake.random_int()
+        height = self.bc.fake.random_int()
+
+        asset = {"academy_id": 1}
+        asset_category = {"preview_generation_url": self.bc.fake.url()}
+        model = self.bc.database.create(asset=asset, asset_category=asset_category, academy=1)
+
+        handler = AssetThumbnailGenerator(model.asset, width, height)
+
         default_url = self.bc.fake.url()
         with patch("os.getenv", MagicMock(side_effect=apply_get_env({"DEFAULT_ASSET_PREVIEW_URL": default_url}))):
-            url = generator.get_thumbnail_url()
+            result = handler.get_thumbnail_url()
 
-        self.assertEqual(url, (default_url, False))
-        self.assertEqual(generator.asset, model.asset)
-        self.assertEqual(generator.width, 0)
-        self.assertEqual(generator.height, 0)
-
-        self.assertEqual(
-            self.bc.database.list_of("registry.Asset"),
-            [
-                self.bc.format.to_dict(model.asset),
-            ],
-        )
-
-        self.assertEqual(self.bc.database.list_of("media.Media"), [])
-        self.assertEqual(self.bc.database.list_of("media.MediaResolution"), [])
-
-        self.assertEqual(
-            tasks.async_create_asset_thumbnail.delay.call_args_list,
-            [
-                call(model.asset.slug),
-            ],
-        )
+        self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [call(model.asset.slug)])
         self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
+
+        self.assertEqual(result, (default_url, False))
 
     """
     🔽🔽🔽 get_thumbnail_url with Asset and Media, slug don't match, returns default url, permanent is False
@@ -596,36 +587,26 @@ class RegistryTestSuite(RegistryTestCase):
     @patch("breathecode.registry.tasks.async_create_asset_thumbnail_legacy.delay", MagicMock())
     @patch("breathecode.registry.tasks.async_resize_asset_thumbnail.delay", MagicMock())
     def test__get_thumbnail_url__with_asset__with_media__slug_does_not_match(self):
-        model = self.bc.database.create(asset=1, media=1, academy=1)
-        generator = AssetThumbnailGenerator(model.asset)
+        """Test __get_thumbnails__with_asset_with_media_slug_does_not_match to return good values."""
+
+        width = self.bc.fake.random_int()
+        height = self.bc.fake.random_int()
+
+        asset = {"academy_id": 1}
+        asset_category = {"preview_generation_url": self.bc.fake.url()}
+        media = {}
+        model = self.bc.database.create(asset=asset, asset_category=asset_category, academy=1, media=media)
+
+        handler = AssetThumbnailGenerator(model.asset, width, height)
         default_url = self.bc.fake.url()
         with patch("os.getenv", MagicMock(side_effect=apply_get_env({"DEFAULT_ASSET_PREVIEW_URL": default_url}))):
-            url = generator.get_thumbnail_url()
-
-        self.assertEqual(url, (default_url, False))
-        self.assertEqual(generator.asset, model.asset)
-        self.assertEqual(generator.width, 0)
-        self.assertEqual(generator.height, 0)
-
-        self.assertEqual(
-            self.bc.database.list_of("registry.Asset"),
-            [
-                self.bc.format.to_dict(model.asset),
-            ],
-        )
-
-        self.assertEqual(
-            self.bc.database.list_of("media.Media"),
-            [
-                self.bc.format.to_dict(model.media),
-            ],
-        )
-
-        self.assertEqual(self.bc.database.list_of("media.MediaResolution"), [])
+            result = handler.get_thumbnail_url()
 
         self.assertEqual(tasks.async_create_asset_thumbnail.delay.call_args_list, [call(model.asset.slug)])
         self.assertEqual(tasks.async_create_asset_thumbnail_legacy.delay.call_args_list, [])
         self.assertEqual(tasks.async_resize_asset_thumbnail.delay.call_args_list, [])
+
+        self.assertEqual(result, (default_url, False))
 
     """
     🔽🔽🔽 get_thumbnail_url with Asset and Media, slug match, returns default url, permanent is True

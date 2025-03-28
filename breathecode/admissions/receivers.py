@@ -85,6 +85,7 @@ def schedule_repository_deletion(sender: Type[Task], instance: Task, **kwargs: A
                 repository_user=user,
                 repository_name=repo,
                 defaults={"status": RepositoryDeletionOrder.Status.PENDING},
+                user=instance.user,
             )
 
             if not created and order.status in [

@@ -4,14 +4,33 @@ Test /academy/survey
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+from capyc import pytest as capy
 from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 
 from breathecode.feedback.tasks import generate_user_cohort_survey_answers
 
-from ..mixins import FeedbackTestCase
+from ...actions import strings
 
 UTC_NOW = timezone.now()
+
+
+def get_translations(lang, template):
+    return {
+        "title": strings[lang][template]["title"],
+        "highest": strings[lang][template]["highest"],
+        "lowest": strings[lang][template]["lowest"],
+        "survey_subject": strings[lang][template]["survey_subject"],
+    }
+
+
+@pytest.fixture(autouse=True)
+def setup(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        "breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock(return_value=None)
+    )
+    monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 
 
 def answer(data={}):
@@ -41,309 +60,320 @@ def answer(data={}):
     }
 
 
-class SendCohortSurvey(FeedbackTestCase):
+def test_when_student_is_not_assigned(database: capy.Database):
 
-    def test_when_student_is_not_assigned(self):
+    model = database.create(city=1, country=1, cohort=1, user=1, survey=1)
 
-        model = self.generate_models(cohort=1, user=1, survey=1)
+    with pytest.raises(ValidationException, match="This student does not belong to this cohort"):
+        generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
-        with self.assertRaisesMessage(ValidationException, "This student does not belong to this cohort"):
-            generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
+    assert database.list_of("feedback.Answer") == []
 
-        self.assertEqual(self.bc.database.list_of("feedback.Answer"), [])
 
-    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
-    def test_when_teacher_is_not_assigned(self):
-        statuses = ["ACTIVE", "GRADUATED"]
+@pytest.mark.parametrize("status", ["ACTIVE", "GRADUATED"])
+def test_when_teacher_is_not_assigned(database: capy.Database, status: str):
+    cohort_user = {"educational_status": status}
 
-        for c in statuses:
-            cohort_user = {"educational_status": c}
-            model = self.generate_models(cohort=1, user=1, survey=1, cohort_user=cohort_user)
+    model = database.create(city=1, country=1, cohort=1, user=1, survey=1, cohort_user=cohort_user)
 
-            with self.assertRaisesMessage(
-                ValidationException, "This cohort must have a teacher assigned to be able to survey it"
-            ):
-                generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
+    with pytest.raises(ValidationException, match="This cohort must have a teacher assigned to be able to survey it"):
+        generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
-            self.assertEqual(self.bc.database.list_of("feedback.Answer"), [])
+    assert database.list_of("feedback.Answer") == []
 
-    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
-    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_when_teacher_is_assigned(self):
-        statuses = ["ACTIVE", "GRADUATED"]
 
-        for n in range(0, 2):
-            c = statuses[n]
-            cohort_users = [{"educational_status": c}, {"role": "TEACHER", "educational_status": c}]
+@pytest.mark.parametrize(
+    "survey_template",
+    [
+        [
+            {"lang": "en", "is_shared": True, "when_asking_cohort": get_translations("en", "cohort")},
+            {"lang": "es", "is_shared": True, "when_asking_cohort": get_translations("es", "cohort"), "original_id": 1},
+        ],
+    ],
+)
+@pytest.mark.parametrize("status", ["ACTIVE", "GRADUATED"])
+def test_when_teacher_is_assigned(database: capy.Database, survey_template: list[dict], status: str):
+    cohort_users = [{"educational_status": status}, {"role": "TEACHER", "educational_status": status}]
 
-            model = self.bc.database.create(cohort=1, user=1, survey=1, cohort_user=cohort_users)
+    model = database.create(
+        city=1, country=1, cohort=1, user=1, survey=1, cohort_user=cohort_users, survey_template=survey_template
+    )
 
-            generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
+    generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
-            answers = [
-                {
-                    "title": f"How has your experience been studying {model.cohort.name} so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "cohort_id": n + 1,
-                    "academy_id": n + 1,
-                    "token_id": None,
-                    "asset_id": None,
-                    "live_class_id": None,
-                },
-                {
-                    "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
-                    "lang": "en",
-                    "mentor_id": n + 1,
-                    "lowest": "not good",
-                    "mentorship_session_id": None,
-                    "score": None,
-                    "sent_at": None,
-                    "status": "OPENED",
-                    "highest": "very good",
-                    "cohort_id": n + 1,
-                    "academy_id": n + 1,
-                },
-                {
-                    "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
-                    "lowest": "not likely",
-                    "highest": "very likely",
-                    "cohort_id": None,
-                    "academy_id": n + 1,
-                },
-                {
-                    "title": f"How has your experience been with the platform and content so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "cohort_id": None,
-                    "academy_id": None,
-                    "question_by_slug": "PLATFORM",
-                },
-            ]
+    answers = [
+        {
+            "title": f"How has your experience been studying {model.cohort.name} so far?",
+            "lowest": "not good",
+            "highest": "very good",
+            "cohort_id": 1,
+            "academy_id": 1,
+            "token_id": None,
+            "asset_id": None,
+            "live_class_id": None,
+        },
+        {
+            "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
+            "lang": "en",
+            "mentor_id": 1,
+            "lowest": "not good",
+            "mentorship_session_id": None,
+            "score": None,
+            "sent_at": None,
+            "status": "OPENED",
+            "highest": "very good",
+            "cohort_id": 1,
+            "academy_id": 1,
+        },
+        {
+            "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
+            "lowest": "not likely",
+            "highest": "very likely",
+            "cohort_id": None,
+            "academy_id": 1,
+        },
+        {
+            "title": f"How has your experience been with the platform and content so far?",
+            "lowest": "not good",
+            "highest": "very good",
+            "cohort_id": None,
+            "academy_id": None,
+            "question_by_slug": "PLATFORM",
+        },
+    ]
 
-            self.assertEqual(
-                self.bc.database.list_of("feedback.Answer"),
-                [
-                    answer(
-                        {
-                            "id": (n * len(answers)) + (index + 1),
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            **elem,
-                        }
-                    )
-                    for index, elem in enumerate(answers)
-                ],
-            )
+    assert database.list_of("feedback.Answer") == [
+        answer(
+            {
+                "id": index + 1,
+                "user_id": 1,
+                "survey_id": 1,
+                **elem,
+            }
+        )
+        for index, elem in enumerate(answers)
+    ]
 
-            # teardown
-            self.bc.database.delete("feedback.Answer")
 
-    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
-    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_when_cohort_has_syllabus(self):
-        statuses = ["ACTIVE", "GRADUATED"]
+@pytest.mark.parametrize(
+    "survey_template",
+    [
+        [
+            {"lang": "en", "is_shared": True, "when_asking_cohort": get_translations("en", "cohort")},
+            {"lang": "es", "is_shared": True, "when_asking_cohort": get_translations("es", "cohort"), "original_id": 1},
+        ],
+    ],
+)
+@pytest.mark.parametrize("status", ["ACTIVE", "GRADUATED"])
+def test_when_cohort_has_syllabus(database: capy.Database, survey_template: list[dict], status: str):
+    cohort_users = [{"educational_status": status}, {"role": "TEACHER", "educational_status": status}]
 
-        for n in range(0, 2):
-            c = statuses[n]
-            cohort_users = [{"educational_status": c}, {"role": "TEACHER", "educational_status": c}]
+    model = database.create(
+        city=1,
+        country=1,
+        cohort=1,
+        user=1,
+        survey=1,
+        cohort_user=cohort_users,
+        syllabus_version=1,
+        survey_template=survey_template,
+    )
 
-            model = self.bc.database.create(cohort=1, user=1, survey=1, cohort_user=cohort_users, syllabus_version=1)
+    generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
-            generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
+    answers = [
+        {
+            "title": f"How has your experience been studying {model.cohort.name} so far?",
+            "lowest": "not good",
+            "cohort_id": 1,
+            "academy_id": 1,
+            "highest": "very good",
+            "token_id": None,
+        },
+        {
+            "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
+            "lang": "en",
+            "mentor_id": 1,
+            "cohort_id": 1,
+            "academy_id": 1,
+            "lowest": "not good",
+            "mentorship_session_id": None,
+            "score": None,
+            "sent_at": None,
+            "status": "OPENED",
+            "highest": "very good",
+        },
+        {
+            "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
+            "academy_id": 1,
+            "lowest": "not likely",
+            "highest": "very likely",
+            "cohort_id": None,
+        },
+        {
+            "title": f"How has your experience been with the platform and content so far?",
+            "lowest": "not good",
+            "highest": "very good",
+            "cohort_id": None,
+            "academy_id": None,
+            "question_by_slug": "PLATFORM",
+        },
+    ]
+    assert database.list_of("feedback.Answer") == [
+        answer(
+            {
+                "id": index + 1,
+                "user_id": 1,
+                "survey_id": 1,
+                **elem,
+            }
+        )
+        for index, elem in enumerate(answers)
+    ]
 
-            answers = [
-                {
-                    "title": f"How has your experience been studying {model.cohort.name} so far?",
-                    "lowest": "not good",
-                    "cohort_id": n + 1,
-                    "academy_id": n + 1,
-                    "highest": "very good",
-                    "token_id": None,
-                },
-                {
-                    "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
-                    "lang": "en",
-                    "mentor_id": n + 1,
-                    "cohort_id": n + 1,
-                    "academy_id": n + 1,
-                    "lowest": "not good",
-                    "mentorship_session_id": None,
-                    "score": None,
-                    "sent_at": None,
-                    "status": "OPENED",
-                    "highest": "very good",
-                },
-                {
-                    "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
-                    "academy_id": n + 1,
-                    "lowest": "not likely",
-                    "highest": "very likely",
-                    "cohort_id": None,
-                },
-                {
-                    "title": f"How has your experience been with the platform and content so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "cohort_id": None,
-                    "academy_id": None,
-                    "question_by_slug": "PLATFORM",
-                },
-            ]
-            self.assertEqual(
-                self.bc.database.list_of("feedback.Answer"),
-                [
-                    answer(
-                        {
-                            "id": (n * len(answers)) + (index + 1),
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            **elem,
-                        }
-                    )
-                    for index, elem in enumerate(answers)
-                ],
-            )
 
-            # teardown
-            self.bc.database.delete("feedback.Answer")
+@pytest.mark.parametrize(
+    "survey_template",
+    [
+        [
+            {"lang": "en", "is_shared": True, "when_asking_cohort": get_translations("en", "cohort")},
+            {"lang": "es", "is_shared": True, "when_asking_cohort": get_translations("es", "cohort"), "original_id": 1},
+        ],
+    ],
+)
+@pytest.mark.parametrize("status", ["ACTIVE", "GRADUATED"])
+def test_when_cohort_is_available_as_saas(database: capy.Database, survey_template: list[dict], status: str):
+    cohort_users = [{"educational_status": status}, {"role": "TEACHER", "educational_status": status}]
 
-    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
-    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_when_cohort_is_available_as_saas(self):
-        statuses = ["ACTIVE", "GRADUATED"]
+    model = database.create(
+        city=1,
+        country=1,
+        cohort={"available_as_saas": True},
+        user=1,
+        survey=1,
+        cohort_user=cohort_users,
+        syllabus_version=1,
+        survey_template=survey_template,
+    )
 
-        for n in range(0, 2):
-            c = statuses[n]
-            cohort_users = [{"educational_status": c}, {"role": "TEACHER", "educational_status": c}]
+    generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
-            model = self.bc.database.create(
-                cohort={"available_as_saas": True}, user=1, survey=1, cohort_user=cohort_users, syllabus_version=1
-            )
+    answers = [
+        {
+            "title": f"How has your experience been studying {model.cohort.name} so far?",
+            "lowest": "not good",
+            "cohort_id": 1,
+            "academy_id": 1,
+            "highest": "very good",
+            "token_id": None,
+        },
+        {
+            "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
+            "academy_id": 1,
+            "lowest": "not likely",
+            "highest": "very likely",
+            "cohort_id": None,
+        },
+        {
+            "title": f"How has your experience been with the platform and content so far?",
+            "lowest": "not good",
+            "highest": "very good",
+            "cohort_id": None,
+            "academy_id": None,
+            "question_by_slug": "PLATFORM",
+        },
+    ]
+    assert database.list_of("feedback.Answer") == [
+        answer(
+            {
+                "id": index + 1,
+                "user_id": 1,
+                "survey_id": 1,
+                **elem,
+            }
+        )
+        for index, elem in enumerate(answers)
+    ]
 
-            generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
-            answers = [
-                {
-                    "title": f"How has your experience been studying {model.cohort.name} so far?",
-                    "lowest": "not good",
-                    "cohort_id": n + 1,
-                    "academy_id": n + 1,
-                    "highest": "very good",
-                    "token_id": None,
-                },
-                {
-                    "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
-                    "academy_id": n + 1,
-                    "lowest": "not likely",
-                    "highest": "very likely",
-                    "cohort_id": None,
-                },
-                {
-                    "title": f"How has your experience been with the platform and content so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "cohort_id": None,
-                    "academy_id": None,
-                    "question_by_slug": "PLATFORM",
-                },
-            ]
-            self.assertEqual(
-                self.bc.database.list_of("feedback.Answer"),
-                [
-                    answer(
-                        {
-                            "id": (n * len(answers)) + (index + 1),
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            **elem,
-                        }
-                    )
-                    for index, elem in enumerate(answers)
-                ],
-            )
+@pytest.mark.parametrize(
+    "survey_template",
+    [
+        [
+            {"lang": "en", "is_shared": True, "when_asking_cohort": get_translations("en", "cohort")},
+            {"lang": "es", "is_shared": True, "when_asking_cohort": get_translations("es", "cohort"), "original_id": 1},
+        ],
+    ],
+)
+@pytest.mark.parametrize("status", ["ACTIVE", "GRADUATED"])
+def test_role_assistant(database: capy.Database, survey_template: list[dict], status: str):
+    cohort_users = [
+        {"role": "TEACHER", "educational_status": status},
+        {"role": "ASSISTANT", "educational_status": status},
+        {"educational_status": status},
+    ]
 
-            # teardown
-            self.bc.database.delete("feedback.Answer")
+    model = database.create(
+        city=1, country=1, cohort=1, user=1, survey=1, cohort_user=cohort_users, survey_template=survey_template
+    )
 
-    @patch("breathecode.admissions.signals.student_edu_status_updated.send_robust", MagicMock())
-    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_role_assistant(self):
-        statuses = ["ACTIVE", "GRADUATED"]
+    generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
 
-        for n in range(0, 2):
-            c = statuses[n]
-            cohort_users = [
-                {"role": "TEACHER", "educational_status": c},
-                {"role": "ASSISTANT", "educational_status": c},
-                {"educational_status": c},
-            ]
+    answers = [
+        {
+            "title": f"How has your experience been studying {model.cohort.name} so far?",
+            "lowest": "not good",
+            "highest": "very good",
+            "cohort_id": 1,
+            "academy_id": 1,
+            "token_id": None,
+        },
+        {
+            "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
+            "lang": "en",
+            "mentor_id": 1,
+            "lowest": "not good",
+            "mentorship_session_id": None,
+            "score": None,
+            "sent_at": None,
+            "status": "OPENED",
+            "highest": "very good",
+            "cohort_id": 1,
+            "academy_id": 1,
+        },
+        {
+            "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
+            "lowest": "not good",
+            "highest": "very good",
+            "cohort_id": 1,
+            "academy_id": 1,
+            "mentor_id": 1,
+        },
+        {
+            "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
+            "lowest": "not likely",
+            "highest": "very likely",
+            "cohort_id": None,
+            "academy_id": 1,
+        },
+        {
+            "title": f"How has your experience been with the platform and content so far?",
+            "lowest": "not good",
+            "highest": "very good",
+            "cohort_id": None,
+            "academy_id": None,
+            "question_by_slug": "PLATFORM",
+        },
+    ]
 
-            model = self.bc.database.create(cohort=1, user=1, survey=1, cohort_user=cohort_users)
-
-            generate_user_cohort_survey_answers(model.user, model.survey, status="OPENED")
-
-            answers = [
-                {
-                    "title": f"How has your experience been studying {model.cohort.name} so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "cohort_id": n + 1,
-                    "academy_id": n + 1,
-                    "token_id": None,
-                },
-                {
-                    "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
-                    "lang": "en",
-                    "mentor_id": n + 1,
-                    "lowest": "not good",
-                    "mentorship_session_id": None,
-                    "score": None,
-                    "sent_at": None,
-                    "status": "OPENED",
-                    "highest": "very good",
-                    "cohort_id": n + 1,
-                    "academy_id": n + 1,
-                },
-                {
-                    "title": f"How has your experience been with your mentor {model.user.first_name} {model.user.last_name} so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "cohort_id": n + 1,
-                    "academy_id": n + 1,
-                    "mentor_id": n + 1,
-                },
-                {
-                    "title": f"How likely are you to recommend {model.academy.name} to your friends " "and family?",
-                    "lowest": "not likely",
-                    "highest": "very likely",
-                    "cohort_id": None,
-                    "academy_id": n + 1,
-                },
-                {
-                    "title": f"How has your experience been with the platform and content so far?",
-                    "lowest": "not good",
-                    "highest": "very good",
-                    "cohort_id": None,
-                    "academy_id": None,
-                    "question_by_slug": "PLATFORM",
-                },
-            ]
-
-            self.assertEqual(
-                self.bc.database.list_of("feedback.Answer"),
-                [
-                    answer(
-                        {
-                            "id": (n * len(answers)) + (index + 1),
-                            "user_id": n + 1,
-                            "survey_id": n + 1,
-                            **elem,
-                        }
-                    )
-                    for index, elem in enumerate(answers)
-                ],
-            )
-
-            # teardown
-            self.bc.database.delete("feedback.Answer")
+    assert database.list_of("feedback.Answer") == [
+        answer(
+            {
+                "id": index + 1,
+                "user_id": 1,
+                "survey_id": 1,
+                **elem,
+            }
+        )
+        for index, elem in enumerate(answers)
+    ]
