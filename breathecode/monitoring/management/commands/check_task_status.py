@@ -55,10 +55,10 @@ class Command(BaseCommand):
 
     def _handle_logic(self, hours, check_execution, limit, now, time_threshold):
         """Main command logic extracted to allow output redirection"""
-        print(f"[Line ~58] Starting task status check for tasks older than {hours} hours...")
+        print(f"Starting task status check for tasks older than {hours} hours...")
 
         # Get tasks that have been stuck in SCHEDULED status
-        print("[Line ~51] Querying database for stuck tasks... This may take a moment")
+        print("Querying database for stuck tasks... This may take a moment")
         stuck_tasks = (
             TaskManager.objects.filter(Q(status="SCHEDULED") | Q(status="PENDING"), last_run__lte=time_threshold)
             .values("task_module", "task_name")
@@ -68,16 +68,11 @@ class Command(BaseCommand):
             )
             .order_by("-count")
         )
-        print("[Line ~71] Database query complete. Processing results...")
+        print("Database query complete")
 
         # Process the queryset results to calculate hours correctly
         processed_tasks = []
-        task_count = 0
         for task in stuck_tasks:
-            task_count += 1
-            if task_count % 100 == 0:
-                print(f"[Line ~64] Processed {task_count} task types...")
-
             task_copy = task.copy()
             if isinstance(task["duration"], timedelta):
                 # Convert timedelta to hours
@@ -88,70 +83,66 @@ class Command(BaseCommand):
             processed_tasks.append(task_copy)
 
         # Sort by count and replace the original queryset results
-        print(f"[Line ~91] Processing complete. Found {len(processed_tasks)} stuck task types.")
+        print(f"Found {len(processed_tasks)} stuck task types")
         processed_tasks.sort(key=lambda x: x["count"], reverse=True)
 
         print(f"\nAnalyzing tasks stuck for more than {hours} hours:")
         print("=" * 80)
 
-        # Add task type counter
-        task_type_count = 0
-        for task in processed_tasks:
-            task_type_count += 1
+        # Add task type counter and limit to top tasks if too many
+        task_count = min(len(processed_tasks), 20)  # Limit to top 20 task types
+        print(f"Showing top {task_count} task types (out of {len(processed_tasks)})")
+
+        for i, task in enumerate(processed_tasks[:task_count]):
             print(
-                f"[Line ~102] Analyzing task type {task_type_count}/{len(processed_tasks)}: {task['task_module']}.{task['task_name']}"
-            )
-            print(
-                f"\nTask: {task['task_module']}.{task['task_name']}\n"
+                f"\nTask {i+1}/{task_count}: {task['task_module']}.{task['task_name']}\n"
                 f"Count: {task['count']}\n"
                 f"Max Hours Stuck: {task['max_hours']:.2f}\n"
             )
 
             # Get sample of stuck tasks for this task type
-            print(f"[Line ~111] Fetching sample tasks for {task['task_module']}.{task['task_name']}...")
             sample_tasks = TaskManager.objects.filter(
                 status="SCHEDULED",
                 task_module=task["task_module"],
                 task_name=task["task_name"],
                 last_run__lte=time_threshold,
             ).order_by("-last_run")[:limit]
-            print(f"[Line ~118] Found {len(sample_tasks)} sample tasks")
 
-            print("\nSample Tasks:")
-            sample_count = 0
-            for sample in sample_tasks:
-                sample_count += 1
-                print(f"[Line ~124] Processing sample {sample_count}/{len(sample_tasks)} (ID: {sample.id})")
-                print(
-                    f"ID: {sample.id}\n"
-                    f"Arguments: {sample.arguments}\n"
-                    f"Last Run: {sample.last_run}\n"
-                    f"Task ID: {sample.task_id}\n"
-                    f"Status Message: {sample.status_message}\n"
-                    f"Attempts: {sample.attempts}\n"
-                )
+            if len(sample_tasks) > 0:
+                print(f"Showing {len(sample_tasks)} sample tasks:")
 
-                # Check if task was actually executed by examining Celery task state
-                if check_execution and sample.task_id:
-                    print(f"[Line ~136] Checking Celery execution state for task_id {sample.task_id}...")
-                    try:
-                        result = AsyncResult(sample.task_id)
-                        print(f"Celery Task State: {result.state}")
-                        if result.state == "SUCCESS":
-                            print("Task executed successfully in Celery but TaskManager not updated!")
-                        elif result.state == "FAILURE":
-                            print(f"Task failed in Celery: {result.traceback}")
-                    except Exception as e:
-                        print(f"Could not fetch Celery task state: {str(e)}")
+                print("\nSample Tasks:")
+                for sample in sample_tasks:
+                    print(
+                        f"ID: {sample.id}\n"
+                        f"Arguments: {sample.arguments}\n"
+                        f"Last Run: {sample.last_run}\n"
+                        f"Task ID: {sample.task_id}\n"
+                        f"Status Message: {sample.status_message}\n"
+                        f"Attempts: {sample.attempts}\n"
+                    )
 
-                    # Try to verify if task function was actually executed based on its expected effects
-                    print(f"[Line ~148] Verifying task execution for {task['task_module']}.{task['task_name']}...")
-                    self.verify_task_execution(sample)
+                    # Check if task was actually executed by examining Celery task state
+                    if check_execution and sample.task_id:
+                        try:
+                            result = AsyncResult(sample.task_id)
+                            print(f"Celery Task State: {result.state}")
+                            if result.state == "SUCCESS":
+                                print("Task executed successfully in Celery but TaskManager not updated!")
+                            elif result.state == "FAILURE":
+                                print(f"Task failed in Celery: {result.traceback}")
+                        except Exception as e:
+                            print(f"Could not fetch Celery task state: {str(e)}")
 
-                print("-" * 40)
+                        # Try to verify if task function was actually executed based on its expected effects
+                        self.verify_task_execution(sample)
+
+                    print("-" * 40)
+            else:
+                print("No sample tasks found")
 
         # Check for tasks that might be stuck in other states
-        print("[Line ~154] Checking for tasks stuck in other states...")
+        print("Checking for tasks stuck in other states...")
         other_stuck = (
             TaskManager.objects.filter(
                 ~Q(status__in=["DONE", "CANCELLED", "REVERSED", "ERROR", "ABORTED"]), last_run__lte=time_threshold
@@ -159,16 +150,16 @@ class Command(BaseCommand):
             .values("status")
             .annotate(count=Count("id"))
         )
-        print(f"[Line ~162] Found {len(other_stuck)} other status types with stuck tasks")
 
-        print("\nOther potentially stuck tasks by status:")
-        print("=" * 80)
-        for status in other_stuck:
-            print(f"\nStatus: {status['status']}")
-            print(f"Count: {status['count']}")
+        if other_stuck:
+            print("\nOther potentially stuck tasks by status:")
+            print("=" * 80)
+            for status in other_stuck:
+                print(f"Status: {status['status']}, Count: {status['count']}")
+        else:
+            print("No tasks stuck in other states")
 
         # Recommendations
-        print("[Line ~171] Generating recommendations...")
         print("\nRecommendations:")
         print("=" * 80)
         if processed_tasks:
@@ -183,7 +174,7 @@ class Command(BaseCommand):
         else:
             print("\nNo significant task status issues found")
 
-        print("[Line ~186] Task status check complete!")
+        print("Task status check complete!")
 
     def verify_task_execution(self, task):
         """Verify task execution by checking related model changes"""
@@ -191,14 +182,16 @@ class Command(BaseCommand):
         task_name = task.task_name
         arguments = task.arguments
 
-        print(f"[Line ~194] Verifying execution for {module_name}.{task_name} (ID: {task.id})...")
+        # Only print for specific verification checks we're actually doing
+        verification_done = False
 
         # Special checks based on task type
         if module_name == "breathecode.assignments.tasks" and task_name == "async_learnpack_webhook":
             # Check if webhook was processed
             if "webhook_id" in arguments:
                 webhook_id = arguments.get("webhook_id")
-                print(f"[Line ~201] Checking webhook processing for ID {webhook_id}")
+                verification_done = True
+                print(f"Verifying webhook (ID: {webhook_id}):")
                 try:
                     # Try to import LearnPackWebhook
                     from breathecode.assignments.models import LearnPackWebhook
@@ -218,13 +211,12 @@ class Command(BaseCommand):
                 except Exception as e:
                     print(f"Error checking webhook: {str(e)}")
 
-                print("[Line ~221] Webhook verification complete")
-
         elif module_name == "breathecode.notify.tasks" and task_name == "async_deliver_hook":
             # Check if hook was delivered
             if "hook_id" in arguments:
                 hook_id = arguments.get("hook_id")
-                print(f"[Line ~227] Checking hook delivery for ID {hook_id}")
+                verification_done = True
+                print(f"Verifying hook (ID: {hook_id}):")
                 try:
                     # Try to import Hook model
                     from breathecode.notify.models import Hook
@@ -243,4 +235,9 @@ class Command(BaseCommand):
                 except Exception as e:
                     print(f"Error checking hook: {str(e)}")
 
-                print("[Line ~246] Hook verification complete")
+        # Only print a generic verification message if we didn't do any specific verifications
+        if not verification_done:
+            print(f"No specific verification available for {module_name}.{task_name}")
+
+        else:
+            print(f"Verification complete for {module_name}.{task_name}")
