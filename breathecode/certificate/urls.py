@@ -1,18 +1,19 @@
 from django.urls import path
+
 from .views import (
-    get_specialties,
+    CertificateAcademyView,
+    CertificateCohortView,
+    CertificateMeView,
+    CertificateView,
+    LayoutView,
+    get_academy_specialties,
     get_badges,
     get_certificate,
-    CertificateView,
-    CertificateCohortView,
-    CertificateAcademyView,
-    LayoutView,
-    CertificateMeView,
 )
 
 app_name = "certificate"
 urlpatterns = [
-    path("specialty", get_specialties),
+    path("academy/specialty", get_academy_specialties),
     path("badge", get_badges),
     path("academy/layout", LayoutView.as_view()),
     path("token/<str:token>/", get_certificate),

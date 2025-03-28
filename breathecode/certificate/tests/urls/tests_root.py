@@ -264,6 +264,18 @@ class CertificateTestSuite(CertificateTestCase):
                     "logo_url": None,
                     "name": model["specialty"].name,
                     "slug": model["specialty"].slug,
+                    "syllabus": (
+                        {
+                            "id": model["specialty"].syllabus.id if model["specialty"].syllabus else None,
+                            "name": model["specialty"].syllabus.name if model["specialty"].syllabus else None,
+                            "slug": model["specialty"].syllabus.slug if model["specialty"].syllabus else None,
+                        }
+                        if model["specialty"].syllabus
+                        else None
+                    ),
+                    "syllabuses": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabuses.all()
+                    ],
                     "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
                 },
                 "status": "PENDING",
@@ -465,6 +477,18 @@ class CertificateTestSuite(CertificateTestCase):
                     "logo_url": None,
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
+                    "syllabus": (
+                        {
+                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
+                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
+                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
+                        }
+                        if models[0].specialty.syllabus
+                        else None
+                    ),
+                    "syllabuses": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
+                    ],
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
                 },
                 "status": "PENDING",
@@ -520,6 +544,18 @@ class CertificateTestSuite(CertificateTestCase):
                     "logo_url": None,
                     "name": models[1].specialty.name,
                     "slug": models[1].specialty.slug,
+                    "syllabus": (
+                        {
+                            "id": models[1].specialty.syllabus.id if models[1].specialty.syllabus else None,
+                            "name": models[1].specialty.syllabus.name if models[1].specialty.syllabus else None,
+                            "slug": models[1].specialty.syllabus.slug if models[1].specialty.syllabus else None,
+                        }
+                        if models[1].specialty.syllabus
+                        else None
+                    ),
+                    "syllabuses": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[1].specialty.syllabuses.all()
+                    ],
                     "updated_at": self.datetime_to_iso(models[1].specialty.updated_at),
                 },
                 "status": "PENDING",
@@ -698,6 +734,18 @@ class CertificateTestSuite(CertificateTestCase):
                     "logo_url": None,
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
+                    "syllabus": (
+                        {
+                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
+                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
+                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
+                        }
+                        if models[0].specialty.syllabus
+                        else None
+                    ),
+                    "syllabuses": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
+                    ],
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
                 },
                 "status": "PENDING",
@@ -817,6 +865,18 @@ class CertificateTestSuite(CertificateTestCase):
                     "logo_url": None,
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
+                    "syllabus": (
+                        {
+                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
+                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
+                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
+                        }
+                        if models[0].specialty.syllabus
+                        else None
+                    ),
+                    "syllabuses": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
+                    ],
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
                 },
                 "status": "PENDING",
@@ -932,6 +992,18 @@ class CertificateTestSuite(CertificateTestCase):
                     "logo_url": None,
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
+                    "syllabus": (
+                        {
+                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
+                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
+                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
+                        }
+                        if models[0].specialty.syllabus
+                        else None
+                    ),
+                    "syllabuses": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
+                    ],
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
                 },
                 "status": "PENDING",
@@ -1048,6 +1120,18 @@ class CertificateTestSuite(CertificateTestCase):
                     "logo_url": None,
                     "name": models[0].specialty.name,
                     "slug": models[0].specialty.slug,
+                    "syllabus": (
+                        {
+                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
+                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
+                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
+                        }
+                        if models[0].specialty.syllabus
+                        else None
+                    ),
+                    "syllabuses": [
+                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
+                    ],
                     "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
                 },
                 "status": "PENDING",

@@ -38,6 +38,16 @@ def get_serializer(self, user_specialty, academy, specialty, user):
             "logo_url": specialty.logo_url,
             "name": specialty.name,
             "slug": specialty.slug,
+            "syllabus": (
+                {
+                    "id": specialty.syllabus.id if specialty.syllabus else None,
+                    "name": specialty.syllabus.name if specialty.syllabus else None,
+                    "slug": specialty.syllabus.slug if specialty.syllabus else None,
+                }
+                if specialty.syllabus
+                else None
+            ),
+            "syllabuses": [{"id": s.id, "name": s.name, "slug": s.slug} for s in specialty.syllabuses.all()],
             "updated_at": self.bc.datetime.to_iso_string(specialty.updated_at),
         },
         "status": user_specialty.status,
