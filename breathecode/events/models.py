@@ -209,6 +209,14 @@ class Event(models.Model):
         default=None,
         help_text="URL can be blank if the event will be synched with EventBrite, it will be filled automatically by the API.",
     )
+
+    recap = models.TextField(
+        blank=True,
+        default=None,
+        null=True,
+        help_text="This field will be filled automatically using AI after the event finishes.",
+    )
+
     banner = models.URLField(max_length=255)
     capacity = models.IntegerField()
     live_stream_url = models.URLField(

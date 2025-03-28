@@ -8,8 +8,9 @@ from breathecode.admissions.models import CohortTimeSlot
 from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import TaskPriority
 from breathecode.utils.datetime_integer import DatetimeInteger
+from linked_services.django.service import Service
 
-from .models import EventbriteWebhook, LiveClass, Organization
+from .models import EventbriteWebhook, LiveClass, Organization, Event
 
 logger = logging.getLogger(__name__)
 
@@ -199,3 +200,44 @@ def fix_live_class_dates(timeslot_id: int):
 
         starting_at += delta
         ending_at += delta
+
+
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
+def generate_event_recap(self, event_id: int):
+    """
+    Generate a recap of the event using rigobot AI.
+    This task will be triggered when an event changes to FINISHED status.
+    """
+    logger.info(f"Starting generate_event_recap for event {event_id}")
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        logger.error(f"Event {event_id} not found")
+        return
+
+    if event.recap:
+        logger.info(f"Event {event_id} already has a recap, skipping")
+        return
+
+    try:
+        logger.info(f"Attempting to generate recap for event {event_id} using rigobot service")
+
+        with Service("rigobot", event_id) as s:
+            event_data = {
+                "event_title": event.title,
+                "event_description": event.description,
+                "event_type": event.tags[0] if event.tags and len(event.tags) > 0 else "",
+            }
+
+            response = s.post("/v1/prompting/completion/event-recap/", json={"inputs": event_data})
+
+            if response.status_code == 200:
+                result = response.json()
+                recap_text = result.get("content", "")
+                event.recap = recap_text
+                event.save()
+                logger.info(f"Successfully generated recap for event {event_id}")
+            else:
+                logger.error(f"Failed to generate recap: {response.text}")
+    except Exception as e:
+        logger.error(f"Error generating recap for event {event_id}: {str(e)}")
