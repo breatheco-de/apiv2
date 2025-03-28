@@ -4,7 +4,6 @@ import os
 from contextlib import redirect_stdout
 from datetime import timedelta
 
-from celery.result import AsyncResult
 from django.core.management.base import BaseCommand
 from django.db.models import Count, DurationField, ExpressionWrapper, F, Q
 from django.utils import timezone
@@ -124,15 +123,8 @@ class Command(BaseCommand):
 
                     # Check if task was actually executed by examining Celery task state
                     if check_execution and sample.task_id:
-                        try:
-                            result = AsyncResult(sample.task_id)
-                            print(f"Celery Task State: {result.state}")
-                            if result.state == "SUCCESS":
-                                print("Task executed successfully in Celery but TaskManager not updated!")
-                            elif result.state == "FAILURE":
-                                print(f"Task failed in Celery: {result.traceback}")
-                        except Exception as e:
-                            print(f"Could not fetch Celery task state: {str(e)}")
+                        # Skipping Celery task state check and focusing on database verification
+                        print("Verifying task execution based on database results:")
 
                         # Try to verify if task function was actually executed based on its expected effects
                         self.verify_task_execution(sample)
@@ -182,8 +174,11 @@ class Command(BaseCommand):
         task_name = task.task_name
         arguments = task.arguments
 
-        # Only print for specific verification checks we're actually doing
+        # Flag to track if we performed any specific verification
         verification_done = False
+        verification_result = None  # Will be set to True/False if verification was conclusive
+
+        print(f"Verifying execution for {module_name}.{task_name}:")
 
         # Special checks based on task type
         if module_name == "breathecode.assignments.tasks" and task_name == "async_learnpack_webhook":
@@ -191,32 +186,66 @@ class Command(BaseCommand):
             if "webhook_id" in arguments:
                 webhook_id = arguments.get("webhook_id")
                 verification_done = True
-                print(f"Verifying webhook (ID: {webhook_id}):")
                 try:
                     # Try to import LearnPackWebhook
                     from breathecode.assignments.models import LearnPackWebhook
 
-                    # Use getattr to check if fields exist
+                    # Check if the webhook exists and its status
                     webhook = LearnPackWebhook.objects.filter(id=webhook_id).first()
                     if webhook:
                         status = getattr(webhook, "status", None)
                         status_text = getattr(webhook, "status_text", None)
-                        print(f"Webhook Status: {status}")
+                        print(f"  Webhook (ID: {webhook_id}) Status: {status}")
                         if status == "DONE":
-                            print("Webhook was processed successfully but TaskManager not updated!")
+                            print("  Webhook was processed successfully but TaskManager not updated!")
+                            verification_result = True
                         elif status == "ERROR":
-                            print(f"Webhook processing failed: {status_text}")
+                            print(f"  Webhook processing failed: {status_text}")
+                            verification_result = True  # Task ran but had an error
+                        elif status == "PENDING":
+                            print("  Webhook exists but was not processed")
+                            verification_result = False
+                        else:
+                            print(f"  Webhook has status: {status}")
                     else:
-                        print("Webhook not found - may have been deleted")
+                        print("  Webhook not found - either it was deleted or the task never ran")
                 except Exception as e:
-                    print(f"Error checking webhook: {str(e)}")
+                    print(f"  Error checking webhook: {str(e)}")
+
+        elif module_name == "breathecode.assignments.tasks" and task_name == "set_cohort_user_assignments":
+            verification_done = True
+            try:
+                from breathecode.assignments.models import Task as AssignmentTask
+
+                # Extract arguments
+                cohort_id = arguments.get("cohort_id")
+                user_id = arguments.get("user_id")
+
+                if cohort_id and user_id:
+                    # Check if assignments were created for this user in this cohort
+                    assignments = AssignmentTask.objects.filter(cohort_id=cohort_id, user_id=user_id)
+                    assignment_count = assignments.count()
+
+                    if assignment_count > 0:
+                        print(
+                            f"  Found {assignment_count} assignments created for user {user_id} in cohort {cohort_id}"
+                        )
+                        print("  Task appears to have executed successfully but TaskManager not updated!")
+                        verification_result = True
+                    else:
+                        print(f"  No assignments found for user {user_id} in cohort {cohort_id}")
+                        print("  Task likely did not execute or failed during execution")
+                        verification_result = False
+                else:
+                    print(f"  Missing required arguments: cohort_id={cohort_id}, user_id={user_id}")
+            except Exception as e:
+                print(f"  Error checking assignments: {str(e)}")
 
         elif module_name == "breathecode.notify.tasks" and task_name == "async_deliver_hook":
             # Check if hook was delivered
             if "hook_id" in arguments:
                 hook_id = arguments.get("hook_id")
                 verification_done = True
-                print(f"Verifying hook (ID: {hook_id}):")
                 try:
                     # Try to import Hook model
                     from breathecode.notify.models import Hook
@@ -225,19 +254,35 @@ class Command(BaseCommand):
                     if hook:
                         status = getattr(hook, "status", None)
                         status_text = getattr(hook, "status_text", None)
-                        print(f"Hook Status: {status}")
+                        print(f"  Hook (ID: {hook_id}) Status: {status}")
                         if status in ["DONE", "DELIVERED", "SUCCESS"]:
-                            print("Hook was delivered successfully but TaskManager not updated!")
+                            print("  Hook was delivered successfully but TaskManager not updated!")
+                            verification_result = True
                         elif status in ["ERROR", "FAILED"]:
-                            print(f"Hook delivery failed: {status_text or 'No details'}")
+                            print(f"  Hook delivery failed: {status_text or 'No details'}")
+                            verification_result = True  # Task ran but had an error
+                        else:
+                            print(f"  Hook has status: {status}")
                     else:
-                        print("Hook not found - may have been deleted")
+                        print("  Hook not found - either it was deleted or the task never ran")
                 except Exception as e:
-                    print(f"Error checking hook: {str(e)}")
+                    print(f"  Error checking hook: {str(e)}")
+
+        # Add more task verifications here as needed
 
         # Only print a generic verification message if we didn't do any specific verifications
         if not verification_done:
-            print(f"No specific verification available for {module_name}.{task_name}")
-
+            print(f"  No specific verification available for {module_name}.{task_name}")
+            print("  Check task arguments to identify what objects might have been created:")
+            for arg_name, arg_value in arguments.items():
+                print(f"    {arg_name}: {arg_value}")
         else:
-            print(f"Verification complete for {module_name}.{task_name}")
+            # Provide a clear conclusion based on verification results
+            if verification_result is True:
+                print("  CONCLUSION: Task appears to have EXECUTED successfully but TaskManager status not updated")
+            elif verification_result is False:
+                print("  CONCLUSION: Task appears to have FAILED or NOT EXECUTED")
+            else:
+                print("  CONCLUSION: Task execution status is INCONCLUSIVE based on database evidence")
+
+            print(f"  Verification complete for {module_name}.{task_name}")
