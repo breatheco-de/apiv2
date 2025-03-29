@@ -102,7 +102,7 @@ def async_slack_command(post_data):
 
 
 @task(priority=TaskPriority.DEFAULT.value)
-def async_deliver_hook(target, payload, hook_id=None, **kwargs):
+def async_deliver_hook(target, payload, hook_id=None, **_):
     """
     Deliver a hook.
 
@@ -155,7 +155,7 @@ def async_deliver_hook(target, payload, hook_id=None, **kwargs):
 
         encoded_payload = json.dumps(payload, cls=DjangoJSONEncoder)
         response = requests.post(
-            url=target, data=encoded_payload, headers={"Content-Type": "application/json"}, timeout=2
+            url=target, data=encoded_payload, headers={"Content-Type": "application/json"}, timeout=60
         )
         has_response = True
 

@@ -9,6 +9,8 @@ from django.db.models import Count, DurationField, ExpressionWrapper, F, Q
 from django.utils import timezone
 from task_manager.models import TaskManager
 
+from breathecode.admissions.models import CohortUser
+
 logger = logging.getLogger(__name__)
 
 
@@ -194,79 +196,150 @@ class Command(BaseCommand):
                     webhook = LearnPackWebhook.objects.filter(id=webhook_id).first()
                     if webhook:
                         status = getattr(webhook, "status", None)
-                        status_text = getattr(webhook, "status_text", None)
-                        print(f"  Webhook (ID: {webhook_id}) Status: {status}")
-                        if status == "DONE":
-                            print("  Webhook was processed successfully but TaskManager not updated!")
-                            verification_result = True
-                        elif status == "ERROR":
-                            print(f"  Webhook processing failed: {status_text}")
-                            verification_result = True  # Task ran but had an error
-                        elif status == "PENDING":
+                        if status == "PENDING":
                             print("  Webhook exists but was not processed")
                             verification_result = False
+
                         else:
-                            print(f"  Webhook has status: {status}")
+                            print("  Webhook was processed successfully but TaskManager not updated!")
+                            verification_result = True
+
                     else:
                         print("  Webhook not found - either it was deleted or the task never ran")
                 except Exception as e:
                     print(f"  Error checking webhook: {str(e)}")
 
+        elif module_name == "breathecode.admissions.tasks" and task_name == "build_profile_academy":
+            academy_id = arguments.get("academy_id")
+            user_id = arguments.get("user_id")
+            role = arguments.get("role")
+
+            # Check if webhook was processed
+            if academy_id and user_id and role:
+                verification_done = True
+                try:
+                    # Try to import ProfileAcademy
+                    from breathecode.authenticate.models import ProfileAcademy
+
+                    # Check if the webhook exists and its status
+                    exists_profile_academy = ProfileAcademy.objects.filter(
+                        academy__id=academy_id, user__id=user_id, role__slug=role
+                    ).exists()
+
+                    if exists_profile_academy:
+                        print("  ProfileAcademy was processed successfully but TaskManager not updated!")
+                        verification_result = True
+
+                    else:
+                        print("  ProfileAcademy not found - either it was deleted or the task never ran")
+                        verification_result = False
+
+                except Exception as e:
+                    print(f"  Error checking ProfileAcademy: {str(e)}")
+
+        elif module_name == "breathecode.monitoring.tasks" and task_name == "fix_issue":
+            issue_id = arguments.get("issue_id")
+
+            # Check if webhook was processed
+            if issue_id:
+                verification_done = True
+                try:
+                    # Try to import ProfileAcademy
+                    from breathecode.monitoring.models import SupervisorIssue
+
+                    # Check if the webhook exists and its status
+                    supervisor_issue = SupervisorIssue.objects.filter(id=issue_id).first()
+
+                    if supervisor_issue and supervisor_issue.fixed is not None:
+                        print("  SupervisorIssue was processed successfully but TaskManager not updated!")
+                        verification_result = True
+
+                    elif supervisor_issue and supervisor_issue.fixed is None:
+                        print("  SupervisorIssue was not processed")
+                        verification_result = False
+
+                    else:
+                        print("  SupervisorIssue not found - either it was deleted or the task never ran")
+                        verification_result = False
+
+                except Exception as e:
+                    print(f"  Error checking SupervisorIssue: {str(e)}")
+
         elif module_name == "breathecode.assignments.tasks" and task_name == "set_cohort_user_assignments":
-            verification_done = True
             try:
                 from breathecode.assignments.models import Task as AssignmentTask
 
                 # Extract arguments
-                cohort_id = arguments.get("cohort_id")
-                user_id = arguments.get("user_id")
+                task_id = arguments.get("task_id")
 
-                if cohort_id and user_id:
+                if task_id:
+                    verification_done = True
+
                     # Check if assignments were created for this user in this cohort
-                    assignments = AssignmentTask.objects.filter(cohort_id=cohort_id, user_id=user_id)
-                    assignment_count = assignments.count()
+                    assignment = AssignmentTask.objects.filter(id=task_id).first()
+                    cohort_user = CohortUser.objects.filter(
+                        cohort=assignment.cohort, user=assignment.user, role="STUDENT"
+                    ).first()
 
-                    if assignment_count > 0:
-                        print(
-                            f"  Found {assignment_count} assignments created for user {user_id} in cohort {cohort_id}"
-                        )
-                        print("  Task appears to have executed successfully but TaskManager not updated!")
-                        verification_result = True
+                    if assignment and cohort_user:
+                        user_history_log = cohort_user.history_log or {}
+                        delivered_assignments = [
+                            x["id"] for x in user_history_log.get("delivered_assignments", []) if x["id"] != task_id
+                        ]
+                        pending_assignments = [
+                            x["id"] for x in user_history_log.get("pending_assignments", []) if x["id"] != task_id
+                        ]
+
+                        if assignment.task_status == "PENDING" and task_id in pending_assignments:
+                            verification_result = True
+
+                        elif assignment.task_status == "DONE" and task_id in delivered_assignments:
+                            verification_result = True
+
+                        else:
+                            verification_result = False
                     else:
-                        print(f"  No assignments found for user {user_id} in cohort {cohort_id}")
-                        print("  Task likely did not execute or failed during execution")
                         verification_result = False
+
+                    if verification_result is True:
+                        print(f"  Found assignment created for task {task_id}")
+                        print("  Task appears to have executed successfully but TaskManager not updated!")
+
+                    elif verification_result is False:
+                        print(f"  No assignments found for task {task_id}")
+                        print("  Task likely did not execute or failed during execution")
+
                 else:
-                    print(f"  Missing required arguments: cohort_id={cohort_id}, user_id={user_id}")
+                    print(f"  Missing required arguments: task_id={task_id}")
             except Exception as e:
                 print(f"  Error checking assignments: {str(e)}")
 
-        elif module_name == "breathecode.notify.tasks" and task_name == "async_deliver_hook":
-            # Check if hook was delivered
-            if "hook_id" in arguments:
-                hook_id = arguments.get("hook_id")
-                verification_done = True
-                try:
-                    # Try to import Hook model
-                    from breathecode.notify.models import Hook
+        # elif module_name == "breathecode.notify.tasks" and task_name == "async_deliver_hook":
+        #     # Check if hook was delivered
+        #     if "hook_id" in arguments:
+        #         hook_id = arguments.get("hook_id")
+        #         verification_done = True
+        #         try:
+        #             # Try to import Hook model
+        #             from breathecode.notify.models import Hook
 
-                    hook = Hook.objects.filter(id=hook_id).first()
-                    if hook:
-                        status = getattr(hook, "status", None)
-                        status_text = getattr(hook, "status_text", None)
-                        print(f"  Hook (ID: {hook_id}) Status: {status}")
-                        if status in ["DONE", "DELIVERED", "SUCCESS"]:
-                            print("  Hook was delivered successfully but TaskManager not updated!")
-                            verification_result = True
-                        elif status in ["ERROR", "FAILED"]:
-                            print(f"  Hook delivery failed: {status_text or 'No details'}")
-                            verification_result = True  # Task ran but had an error
-                        else:
-                            print(f"  Hook has status: {status}")
-                    else:
-                        print("  Hook not found - either it was deleted or the task never ran")
-                except Exception as e:
-                    print(f"  Error checking hook: {str(e)}")
+        #             hook = Hook.objects.filter(id=hook_id).first()
+        #             if hook:
+        #                 status = getattr(hook, "status", None)
+        #                 status_text = getattr(hook, "status_text", None)
+        #                 print(f"  Hook (ID: {hook_id}) Status: {status}")
+        #                 if status in ["DONE", "DELIVERED", "SUCCESS"]:
+        #                     print("  Hook was delivered successfully but TaskManager not updated!")
+        #                     verification_result = True
+        #                 elif status in ["ERROR", "FAILED"]:
+        #                     print(f"  Hook delivery failed: {status_text or 'No details'}")
+        #                     verification_result = True  # Task ran but had an error
+        #                 else:
+        #                     print(f"  Hook has status: {status}")
+        #             else:
+        #                 print("  Hook not found - either it was deleted or the task never ran")
+        #         except Exception as e:
+        #             print(f"  Error checking hook: {str(e)}")
 
         # Add more task verifications here as needed
 
@@ -285,4 +358,4 @@ class Command(BaseCommand):
             else:
                 print("  CONCLUSION: Task execution status is INCONCLUSIVE based on database evidence")
 
-            print(f"  Verification complete for {module_name}.{task_name}")
+            print(f"  Verification complete for {module_name}.{task_name} with id {task.id}")
