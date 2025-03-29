@@ -91,10 +91,10 @@ class Command(BaseCommand):
         print("=" * 80)
 
         # Add task type counter and limit to top tasks if too many
-        task_count = min(len(processed_tasks), 20)  # Limit to top 20 task types
+        task_count = len(processed_tasks)  # Limit to top 20 task types
         print(f"Showing top {task_count} task types (out of {len(processed_tasks)})")
 
-        for i, task in enumerate(processed_tasks[:task_count]):
+        for i, task in enumerate(processed_tasks):
             print(
                 f"\nTask {i+1}/{task_count}: {task['task_module']}.{task['task_name']}\n"
                 f"Count: {task['count']}\n"
@@ -107,7 +107,7 @@ class Command(BaseCommand):
                 task_module=task["task_module"],
                 task_name=task["task_name"],
                 last_run__lte=time_threshold,
-            ).order_by("-last_run")[:limit]
+            ).order_by("-last_run")
 
             if len(sample_tasks) > 0:
                 print(f"Showing {len(sample_tasks)} sample tasks:")
@@ -184,9 +184,12 @@ class Command(BaseCommand):
 
         # Special checks based on task type
         if module_name == "breathecode.assignments.tasks" and task_name == "async_learnpack_webhook":
+            args = arguments.get("args", [])
+
             # Check if webhook was processed
-            if "webhook_id" in arguments:
-                webhook_id = arguments.get("webhook_id")
+            if len(args) >= 1:
+                webhook_id = args[0]
+
                 verification_done = True
                 try:
                     # Try to import LearnPackWebhook
@@ -210,12 +213,18 @@ class Command(BaseCommand):
                     print(f"  Error checking webhook: {str(e)}")
 
         elif module_name == "breathecode.admissions.tasks" and task_name == "build_profile_academy":
-            academy_id = arguments.get("academy_id")
-            user_id = arguments.get("user_id")
-            role = arguments.get("role")
+            args = arguments.get("args", [])
 
             # Check if webhook was processed
-            if academy_id and user_id and role:
+            if len(args) >= 2:
+                academy_id = args[0]
+                user_id = args[1]
+
+                if len(args) >= 3:
+                    role = args[2]
+                else:
+                    role = "student"
+
                 verification_done = True
                 try:
                     # Try to import ProfileAcademy
@@ -238,10 +247,11 @@ class Command(BaseCommand):
                     print(f"  Error checking ProfileAcademy: {str(e)}")
 
         elif module_name == "breathecode.monitoring.tasks" and task_name == "fix_issue":
-            issue_id = arguments.get("issue_id")
+            args = arguments.get("args", [])
 
             # Check if webhook was processed
-            if issue_id:
+            if len(args) >= 1:
+                issue_id = args[0]
                 verification_done = True
                 try:
                     # Try to import ProfileAcademy
@@ -266,13 +276,15 @@ class Command(BaseCommand):
                     print(f"  Error checking SupervisorIssue: {str(e)}")
 
         elif module_name == "breathecode.assignments.tasks" and task_name == "set_cohort_user_assignments":
+            args = arguments.get("args", [])
+
             try:
                 from breathecode.assignments.models import Task as AssignmentTask
 
                 # Extract arguments
-                task_id = arguments.get("task_id")
 
-                if task_id:
+                if len(args) >= 1:
+                    task_id = args[0]
                     verification_done = True
 
                     # Check if assignments were created for this user in this cohort
@@ -313,35 +325,6 @@ class Command(BaseCommand):
                     print(f"  Missing required arguments: task_id={task_id}")
             except Exception as e:
                 print(f"  Error checking assignments: {str(e)}")
-
-        # elif module_name == "breathecode.notify.tasks" and task_name == "async_deliver_hook":
-        #     # Check if hook was delivered
-        #     if "hook_id" in arguments:
-        #         hook_id = arguments.get("hook_id")
-        #         verification_done = True
-        #         try:
-        #             # Try to import Hook model
-        #             from breathecode.notify.models import Hook
-
-        #             hook = Hook.objects.filter(id=hook_id).first()
-        #             if hook:
-        #                 status = getattr(hook, "status", None)
-        #                 status_text = getattr(hook, "status_text", None)
-        #                 print(f"  Hook (ID: {hook_id}) Status: {status}")
-        #                 if status in ["DONE", "DELIVERED", "SUCCESS"]:
-        #                     print("  Hook was delivered successfully but TaskManager not updated!")
-        #                     verification_result = True
-        #                 elif status in ["ERROR", "FAILED"]:
-        #                     print(f"  Hook delivery failed: {status_text or 'No details'}")
-        #                     verification_result = True  # Task ran but had an error
-        #                 else:
-        #                     print(f"  Hook has status: {status}")
-        #             else:
-        #                 print("  Hook not found - either it was deleted or the task never ran")
-        #         except Exception as e:
-        #             print(f"  Error checking hook: {str(e)}")
-
-        # Add more task verifications here as needed
 
         # Only print a generic verification message if we didn't do any specific verifications
         if not verification_done:
