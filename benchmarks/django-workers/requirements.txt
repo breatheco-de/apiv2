@@ -44,7 +44,7 @@ defusedxml==0.7.1
 Deprecated==1.2.14
 distro==1.9.0
 dj-database-url==2.1.0
-Django==5.0.1
+Django==5.0.14
 django-cors-headers==4.3.1
 django-heroku==0.3.1
 django-phonenumber-field==7.3.0
