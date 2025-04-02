@@ -211,6 +211,7 @@ class Event(models.Model):
     )
 
     recap = models.TextField(
+        max_length=850,
         blank=True,
         default=None,
         null=True,

@@ -145,6 +145,7 @@ def get_serializer(
         "venue": event.venue,
         "is_public": event.is_public,
         "recording_url": event.recording_url,
+        "recap": event.recap,
         **data,
     }
 
