@@ -271,6 +271,7 @@ class CohortAdmin(admin.ModelAdmin):
     search_fields = ["slug", "name", "academy__city__name"]
     list_display = ("id", "slug", "stage", "name", "kickoff_date", "syllabus_version", "schedule", "academy")
     list_filter = ["stage", "academy__slug", "schedule__name", "syllabus_version__version"]
+    filter_horizontal = ("micro_cohorts",)
 
     if os.getenv("ENV") == "development":
         actions = cohort_actions + [link_randomly_relations_to_cohorts]
