@@ -252,7 +252,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
 
 
 class EventPublicBigSerializer(EventSmallSerializer):
-    recap = serpy.Field()
+    recap = serpy.MethodField()
     currency = serpy.Field()
     host_user = UserBigSerializer(required=False)
     free_for_bootcamps = serpy.Field()
@@ -260,6 +260,11 @@ class EventPublicBigSerializer(EventSmallSerializer):
     published_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+    def get_recap(self, obj):
+        if hasattr(obj, "context") and obj.context:
+            return obj.context.recap
+        return None
 
 
 class EventBigSerializer(EventPublicBigSerializer):

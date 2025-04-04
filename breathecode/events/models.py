@@ -24,7 +24,16 @@ SYNC_STATUS = (
     (SYNCHED, "Synched"),
 )
 
-__all__ = ["Organization", "Organizer", "Venue", "EventType", "Event", "EventCheckin", "EventbriteWebhook"]
+__all__ = [
+    "Organization",
+    "Organizer",
+    "Venue",
+    "EventType",
+    "Event",
+    "EventCheckin",
+    "EventbriteWebhook",
+    "EventContext",
+]
 
 
 class Organization(models.Model):
@@ -171,6 +180,28 @@ CURRENCIES = (
 )
 
 
+class EventContext(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        SUCCESS = "SUCCESS", "Success"
+        ERROR = "ERROR", "Error"
+
+    event = models.OneToOneField("Event", on_delete=models.CASCADE, related_name="context")
+    recap = models.TextField(
+        max_length=850,
+        blank=True,
+        help_text="This field will be filled automatically using AI after the event finishes.",
+    )
+    status = models.CharField(max_length=9, choices=Status.choices, default=Status.PENDING)
+    status_text = models.CharField(max_length=255, blank=True, help_text="Fill if error happened in the task")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"Context for event {self.event.id}"
+
+
 class Event(models.Model):
 
     def __init__(self, *args, **kwargs):
@@ -208,14 +239,6 @@ class Event(models.Model):
         blank=True,
         default=None,
         help_text="URL can be blank if the event will be synched with EventBrite, it will be filled automatically by the API.",
-    )
-
-    recap = models.TextField(
-        max_length=850,
-        blank=True,
-        default=None,
-        null=True,
-        help_text="This field will be filled automatically using AI after the event finishes.",
     )
 
     banner = models.URLField(max_length=255)

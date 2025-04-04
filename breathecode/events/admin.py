@@ -13,6 +13,7 @@ from .models import (
     Event,
     EventbriteWebhook,
     EventCheckin,
+    EventContext,
     EventType,
     EventTypeVisibilitySetting,
     LiveClass,
@@ -239,3 +240,11 @@ class LiveClassAdmin(admin.ModelAdmin):
             return False
 
         return obj.ending_at + timedelta(minutes=30) == obj.ended_at
+
+
+@admin.register(EventContext)
+class EventContextAdmin(admin.ModelAdmin):
+    list_display = ("event", "status", "status_text", "created_at", "updated_at")
+    list_filter = ["status"]
+    search_fields = ["event__title", "event__slug", "status_text"]
+    raw_id_fields = ["event"]
