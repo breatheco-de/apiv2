@@ -458,6 +458,10 @@ class AcademyService(models.Model):
     max_amount = models.FloatField(default=1, help_text="Limit total amount, it doesn't matter the bundle size")
     discount_ratio = models.FloatField(default=1, help_text="Will be used when calculated by the final price")
 
+    pricing_ratio_exceptions = models.JSONField(
+        default=dict, blank=True, help_text="Exceptions to the general pricing ratios per country"
+    )
+
     available_mentorship_service_sets = models.ManyToManyField(
         MentorshipServiceSet,
         blank=True,
@@ -620,6 +624,10 @@ class Plan(AbstractPriceByTime):
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     is_onboarding = models.BooleanField(default=False, help_text="Is onboarding plan?", db_index=True)
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
+
+    pricing_ratio_exceptions = models.JSONField(
+        default=dict, blank=True, help_text="Exceptions to the general pricing ratios per country"
+    )
 
     cohort_set = models.ForeignKey(
         CohortSet,
@@ -900,6 +908,10 @@ def limit_coupon_choices():
 class Bag(AbstractAmountByTime):
     """Represents a credit that can be used by a user to use a service."""
 
+    @staticmethod
+    def _default_pricing_ratio_explanation():
+        return {"plans": [], "service_items": []}
+
     class Status(models.TextChoices):
         RENEWAL = ("RENEWAL", "Renewal")
         CHECKING = ("CHECKING", "Checking")
@@ -945,6 +957,12 @@ class Bag(AbstractAmountByTime):
     is_recurrent = models.BooleanField(default=False, help_text="will it be a recurrent payment?")
     was_delivered = models.BooleanField(default=False, help_text="Was it delivered to the user?")
 
+    pricing_ratio_explanation = models.JSONField(
+        default=_default_pricing_ratio_explanation,
+        blank=True,
+        help_text="Explanation of which exceptions were applied to calculate price",
+    )
+
     token = models.CharField(
         max_length=40, db_index=True, default=None, null=True, blank=True, help_text="Token of the bag"
     )
@@ -953,6 +971,14 @@ class Bag(AbstractAmountByTime):
         blank=True,
         null=True,
         help_text="Expiration date of the bag, used for preview bag together with the token",
+    )
+
+    country_code = models.CharField(
+        max_length=2,
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Country code used for pricing ratio calculations",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -1888,3 +1914,29 @@ class FinancialReputation(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.email} -> {self.get_reputation()}"
+
+
+class AcademyPaymentSettings(models.Model):
+    """
+    Store payment settings for an academy.
+    """
+
+    class POSVendor(models.TextChoices):
+        STRIPE = "STRIPE", "Stripe"
+
+    academy = models.OneToOneField(
+        Academy, on_delete=models.CASCADE, related_name="payment_settings", help_text="Academy"
+    )
+    pos_vendor = models.CharField(
+        max_length=20,
+        choices=POSVendor.choices,
+        default=POSVendor.STRIPE,
+        help_text="Point of Sale vendor like Stripe, etc.",
+    )
+    pos_api_key = models.CharField(max_length=255, blank=True, help_text="API key for the POS vendor")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self) -> str:
+        return f"Payment settings for {self.academy.name}"

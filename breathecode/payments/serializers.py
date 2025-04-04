@@ -3,6 +3,7 @@ import logging
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
 
+from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
     AcademyService,
     Plan,
@@ -162,15 +163,55 @@ class GetPlanSmallSerializer(serpy.Serializer):
 
 
 class GetPlanSerializer(GetPlanSmallSerializer):
-    price_per_month = serpy.Field()
-    price_per_quarter = serpy.Field()
-    price_per_half = serpy.Field()
-    price_per_year = serpy.Field()
+    price_per_month = serpy.MethodField()
+    price_per_quarter = serpy.MethodField()
+    price_per_half = serpy.MethodField()
+    price_per_year = serpy.MethodField()
     currency = GetCurrencySmallSerializer()
     is_renewable = serpy.Field()
     has_waiting_list = serpy.Field()
     owner = GetAcademySmallSerializer(required=False, many=False)
     id = serpy.Field()
+
+    def get_price_per_month(self, obj):
+        if not hasattr(self, "context") or not self.context:
+            return obj.price_per_month
+
+        country_code = self.context.get("country_code")
+        if not country_code:
+            return obj.price_per_month
+
+        return apply_pricing_ratio(obj.price_per_month, country_code, obj)
+
+    def get_price_per_quarter(self, obj):
+        if not hasattr(self, "context") or not self.context:
+            return obj.price_per_quarter
+
+        country_code = self.context.get("country_code")
+        if not country_code:
+            return obj.price_per_quarter
+
+        return apply_pricing_ratio(obj.price_per_quarter, country_code, obj)
+
+    def get_price_per_half(self, obj):
+        if not hasattr(self, "context") or not self.context:
+            return obj.price_per_half
+
+        country_code = self.context.get("country_code")
+        if not country_code:
+            return obj.price_per_half
+
+        return apply_pricing_ratio(obj.price_per_half, country_code, obj)
+
+    def get_price_per_year(self, obj):
+        if not hasattr(self, "context") or not self.context:
+            return obj.price_per_year
+
+        country_code = self.context.get("country_code")
+        if not country_code:
+            return obj.price_per_year
+
+        return apply_pricing_ratio(obj.price_per_year, country_code, obj)
 
 
 class GetPlanOfferTranslationSerializer(serpy.Serializer):
@@ -253,14 +294,38 @@ class GetCouponSerializer(serpy.Serializer):
 
 class GetAcademyServiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()
-    academy = GetAcademySmallSerializer(many=False)
+    academy = GetAcademySmallSerializer()
     service = GetServiceSmallSerializer()
     currency = GetCurrencySmallSerializer()
-    price_per_unit = serpy.Field()
+    price_per_unit = serpy.MethodField()
     bundle_size = serpy.Field()
     max_items = serpy.Field()
     max_amount = serpy.Field()
     discount_ratio = serpy.Field()
+    available_mentorship_service_sets = serpy.MethodField()
+    available_event_type_sets = serpy.MethodField()
+
+    def get_price_per_unit(self, obj):
+        if not hasattr(self, "context") or not self.context:
+            return obj.price_per_unit
+
+        country_code = self.context.get("country_code")
+        if not country_code:
+            return obj.price_per_unit
+
+        return apply_pricing_ratio(obj.price_per_unit, country_code, academy_service=obj)
+
+    def get_available_mentorship_service_sets(self, obj):
+        items = obj.available_mentorship_service_sets.all()
+        from breathecode.payments.serializers import GetMentorshipServiceSetSmallSerializer
+
+        return GetMentorshipServiceSetSmallSerializer(items, many=True).data
+
+    def get_available_event_type_sets(self, obj):
+        items = obj.available_event_type_sets.all()
+        from breathecode.payments.serializers import GetEventTypeSetSmallSerializer
+
+        return GetEventTypeSetSmallSerializer(items, many=True).data
 
 
 class POSTAcademyServiceSerializer(serializers.ModelSerializer):

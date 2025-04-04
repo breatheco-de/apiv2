@@ -1,7 +1,9 @@
+import json
 import os
 import re
 from datetime import datetime
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal, Optional, Type, TypedDict
 
 from adrf.requests import AsyncRequest
@@ -286,6 +288,7 @@ class BagHandler:
         self.selected_cohort_set = request.data.get("cohort_set")
         self.selected_event_type_set = request.data.get("event_type_set")
         self.selected_mentorship_service_set = request.data.get("mentorship_service_set")
+        self.country_code = request.data.get("country_code")
 
         self.plans_not_found = set()
         self.service_items_not_found = set()
@@ -516,6 +519,10 @@ class BagHandler:
 
         self._ask_to_add_plan_and_charge_it_in_the_bag()
 
+        # Save the country code if provided
+        if self.country_code:
+            self.bag.country_code = self.country_code
+
         self.bag.save()
 
 
@@ -533,6 +540,9 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
     if not currency:
         currency, _ = Currency.objects.get_or_create(code="USD", name="United States dollar")
 
+    # Initialize pricing ratio explanation without redundant country code
+    pricing_ratio_explanation = {"plans": [], "service_items": []}
+
     for plan in bag.plans.all():
         if plan.currency != currency:
             bag.plans.remove(plan)
@@ -541,10 +551,26 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
         must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(plan, user, lang)
 
         if not bag.how_many_installments and (bag.chosen_period != "NO_SET" or must_it_be_charged):
-            price_per_month += plan.price_per_month or 0
-            price_per_quarter += plan.price_per_quarter or 0
-            price_per_half += plan.price_per_half or 0
-            price_per_year += plan.price_per_year or 0
+            # Get base prices
+            base_price_per_month = plan.price_per_month or 0
+            base_price_per_quarter = plan.price_per_quarter or 0
+            base_price_per_half = plan.price_per_half or 0
+            base_price_per_year = plan.price_per_year or 0
+
+            # Apply pricing ratio if country code is available
+            if bag.country_code:
+                ratio = get_pricing_ratio(bag.country_code, plan)
+                if ratio != 1.0:  # Only add to explanation if ratio is applied
+                    pricing_ratio_explanation["plans"].append({"plan": plan.slug, "ratio": ratio})
+                base_price_per_month *= ratio
+                base_price_per_quarter *= ratio
+                base_price_per_half *= ratio
+                base_price_per_year *= ratio
+
+            price_per_month += base_price_per_month
+            price_per_quarter += base_price_per_quarter
+            price_per_half += base_price_per_half
+            price_per_year += base_price_per_year
 
     plans = bag.plans.all()
     add_ons: dict[int, AcademyService] = {}
@@ -564,17 +590,32 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
                 bag.plans.filter().delete()
                 raise e
 
+            # Get discounted price first
+            base_price = add_on.get_discounted_price(service_item.how_many)
+
+            # Then apply pricing ratio if country code is available
+            if bag.country_code:
+                ratio = get_pricing_ratio(bag.country_code, academy_service=add_on)
+                if ratio != 1.0:  # Only add to explanation if ratio is applied
+                    pricing_ratio_explanation["service_items"].append({"service": add_on.service.slug, "ratio": ratio})
+                base_price *= ratio
+
             if price_per_month != 0:
-                price_per_month += add_on.get_discounted_price(service_item.how_many)
+                price_per_month += base_price
 
             if price_per_quarter != 0:
-                price_per_quarter += add_on.get_discounted_price(service_item.how_many)
+                price_per_quarter += base_price
 
             if price_per_half != 0:
-                price_per_half += add_on.get_discounted_price(service_item.how_many)
+                price_per_half += base_price
 
             if price_per_year != 0:
-                price_per_year += add_on.get_discounted_price(service_item.how_many)
+                price_per_year += base_price
+
+    # Save pricing ratio explanation if any ratios were applied
+    if pricing_ratio_explanation["plans"] or pricing_ratio_explanation["service_items"]:
+        bag.pricing_ratio_explanation = pricing_ratio_explanation
+        bag.save()
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -1339,3 +1380,78 @@ def retry_pending_bag(bag: Bag):
         tasks.build_free_subscription.delay(bag.id, invoice.id)
 
     return "scheduled"
+
+
+def get_pricing_ratio(
+    country_code: str | None, plan: Optional[Plan] = None, academy_service: Optional[AcademyService] = None
+) -> float:
+    """
+    Get pricing ratio for a country, prioritizing exceptions in plan or academy_service.
+    Returns 1.0 if no ratio is found.
+
+    Args:
+        country_code: Two letter country code (lowercase or uppercase)
+        plan: Optional Plan instance that may contain pricing ratio exceptions
+        academy_service: Optional AcademyService instance that may contain pricing ratio exceptions
+
+    Returns:
+        float: The pricing ratio for the given country (defaults to 1.0)
+    """
+    # Default ratio if not found
+    ratio = 1.0
+
+    # Try to load general ratios from json
+    general_ratios = {}
+    ratios_path = Path(__file__).parent.parent.parent / "settings" / "general_pricing_ratios.json"
+
+    if ratios_path.exists():
+        try:
+            with open(ratios_path, "r") as f:
+                general_ratios = json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading general pricing ratios: {str(e)}")
+
+    # Get country ratio from general settings
+    if country_code and country_code.lower() in general_ratios:
+        ratio = general_ratios[country_code.lower()]
+
+    # Check for exceptions in plan
+    if plan and hasattr(plan, "pricing_ratio_exceptions") and plan.pricing_ratio_exceptions:
+        if country_code and country_code.lower() in plan.pricing_ratio_exceptions:
+            ratio = plan.pricing_ratio_exceptions[country_code.lower()]
+
+    # Check for exceptions in academy_service
+    if (
+        academy_service
+        and hasattr(academy_service, "pricing_ratio_exceptions")
+        and academy_service.pricing_ratio_exceptions
+    ):
+        if country_code and country_code.lower() in academy_service.pricing_ratio_exceptions:
+            ratio = academy_service.pricing_ratio_exceptions[country_code.lower()]
+
+    return ratio
+
+
+def apply_pricing_ratio(
+    price: float | None,
+    country_code: str | None,
+    plan: Optional[Plan] = None,
+    academy_service: Optional[AcademyService] = None,
+) -> float | None:
+    """
+    Apply country-specific pricing ratio to a price.
+
+    Args:
+        price: The base price to apply the ratio to
+        country_code: Two letter country code (lowercase or uppercase)
+        plan: Optional Plan instance that may contain pricing ratio exceptions
+        academy_service: Optional AcademyService instance that may contain pricing ratio exceptions
+
+    Returns:
+        float | None: The price after applying the country-specific ratio, or None if input price is None
+    """
+    if not price:
+        return price
+
+    ratio = get_pricing_ratio(country_code, plan, academy_service)
+    return price * ratio

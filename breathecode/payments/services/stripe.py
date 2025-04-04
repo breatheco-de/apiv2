@@ -8,7 +8,14 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from breathecode.authenticate.models import UserSetting
-from breathecode.payments.models import Bag, Currency, FinancialReputation, Invoice, PaymentContact
+from breathecode.payments.models import (
+    AcademyPaymentSettings,
+    Bag,
+    Currency,
+    FinancialReputation,
+    Invoice,
+    PaymentContact,
+)
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -21,10 +28,21 @@ class Stripe:
 
     api_key: str
     language: str
+    price_id: str
 
-    def __init__(self, api_key=None) -> None:
-        self.api_key = api_key or os.getenv("STRIPE_API_KEY")
+    def __init__(self, api_key=None, academy=None) -> None:
+        self.api_key = api_key
         self.language = "en"
+
+        # If academy is provided, try to get academy-specific settings
+        if academy and not api_key:
+            academy_settings = AcademyPaymentSettings.objects.filter(academy=academy).only("pos_api_key").first()
+            if academy_settings:
+                self.api_key = academy_settings.pos_api_key
+
+        # Fallback to environment variable if no academy settings
+        if not self.api_key:
+            self.api_key = os.getenv("STRIPE_API_KEY")
 
     def set_language(self, lang: str) -> None:
         """Set the language for the error messages."""
