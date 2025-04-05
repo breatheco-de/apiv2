@@ -1126,7 +1126,6 @@ class AcademyPlanFinancingView(APIView):
         def update_financing(financing, data):
             for field, value in data.items():
                 if field in allowed_fields:
-                    print(f"Updating field {field} to {value}")
                     setattr(financing, field, value)
 
         if isinstance(request.data, list):
@@ -1794,46 +1793,10 @@ class CheckingView(APIView):
 
                         # FIXME: the service items should be bought without renewals
                         if not plan or plan.is_renewable:
-                            amount_per_month, amount_per_quarter, amount_per_half, amount_per_year = get_amount(
-                                bag, bag.academy.main_currency, lang
-                            )
-
-                            # Apply country-specific pricing ratios if provided
-                            if country_code:
-                                # Apply to all plans
-                                for plan_item in bag.plans.all():
-                                    ratio = actions.get_pricing_ratio(country_code, plan_item)
-                                    if ratio != 1.0:  # Only add to explanation if ratio is applied
-                                        pricing_ratio_explanation["plans"].append(
-                                            {"plan": plan_item.slug, "ratio": ratio}
-                                        )
-
-                                # Apply prices with ratios
-                                if amount_per_month:
-                                    for plan_item in bag.plans.all():
-                                        ratio = actions.get_pricing_ratio(country_code, plan_item)
-                                        amount_per_month *= ratio
-
-                                if amount_per_quarter:
-                                    for plan_item in bag.plans.all():
-                                        ratio = actions.get_pricing_ratio(country_code, plan_item)
-                                        amount_per_quarter *= ratio
-
-                                if amount_per_half:
-                                    for plan_item in bag.plans.all():
-                                        ratio = actions.get_pricing_ratio(country_code, plan_item)
-                                        amount_per_half *= ratio
-
-                                if amount_per_year:
-                                    for plan_item in bag.plans.all():
-                                        ratio = actions.get_pricing_ratio(country_code, plan_item)
-                                        amount_per_year *= ratio
-
-                            bag.amount_per_month = amount_per_month
-                            bag.amount_per_quarter = amount_per_quarter
-                            bag.amount_per_half = amount_per_half
-                            bag.amount_per_year = amount_per_year
                             bag.country_code = country_code
+                            bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
+                                get_amount(bag, bag.academy.main_currency, lang)
+                            )
 
                         else:
                             actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
@@ -2049,6 +2012,7 @@ class ConsumableCheckoutView(APIView):
                     currency=currency,
                     academy_id=academy,
                     is_recurrent=False,
+                    country_code=country_code,  # Store the country code for future reference
                 )
 
                 # Store pricing ratio explanation if any ratios were applied

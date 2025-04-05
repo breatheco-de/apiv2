@@ -63,6 +63,8 @@ def bag_item(data={}):
         "was_delivered": False,
         "token": None,
         "expires_at": None,
+        "country_code": None,
+        "pricing_ratio_explanation": {"plans": [], "service_items": []},
         **data,
     }
 

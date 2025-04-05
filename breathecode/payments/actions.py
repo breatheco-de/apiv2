@@ -1416,7 +1416,7 @@ def get_pricing_ratio(
         ratio = general_ratios[country_code.lower()]
 
     # Check for exceptions in plan
-    if plan and hasattr(plan, "pricing_ratio_exceptions") and plan.pricing_ratio_exceptions:
+    if plan and plan.pricing_ratio_exceptions:
         if country_code and country_code.lower() in plan.pricing_ratio_exceptions:
             ratio = plan.pricing_ratio_exceptions[country_code.lower()]
 
