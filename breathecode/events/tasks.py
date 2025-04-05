@@ -263,14 +263,12 @@ def generate_event_recap(event_id: int, **kwargs):
                 logger.info(f"API call successful for event {event_id}, response: {response.text}")
             else:
                 error_msg = f"Failed to generate recap: {response.status_code} - {response.text}"
-                logger.error(error_msg)
                 context.status = EventContext.Status.ERROR
                 context.status_text = error_msg[:255]
                 context.save()
                 raise RetryTask(error_msg)
     except Exception as e:
         error_msg = f"Error generating recap for event {event_id}: {str(e)}"
-        logger.error(error_msg)
         context.status = EventContext.Status.ERROR
         context.status_text = error_msg[:255]
         context.save()

@@ -31,15 +31,12 @@ def test_generate_event_recap_when_finished(generate_recap_mock, event_factory):
 
 
 @patch("breathecode.events.tasks.generate_event_recap.delay")
-def test_generate_event_recap_not_called_when_not_finished(generate_recap_mock, event_factory):
+@pytest.mark.parametrize("status", [ACTIVE, DRAFT, DELETED])
+def test_generate_event_recap_not_called_when_not_finished(generate_recap_mock, event_factory, status):
     """Check if generate_event_recap task is NOT called when event status is not FINISHED"""
-    statuses_to_test = [ACTIVE, DRAFT, DELETED]
+    event = event_factory()
+    event.status = status
 
-    for status in statuses_to_test:
-        event = event_factory()
-        event.status = status
+    generate_event_recap_on_finished(sender=Event, instance=event)
 
-        generate_event_recap_on_finished(sender=Event, instance=event)
-
-        generate_recap_mock.assert_not_called()
-        generate_recap_mock.reset_mock()
+    generate_recap_mock.assert_not_called()

@@ -190,6 +190,7 @@ class EventContext(models.Model):
     recap = models.TextField(
         max_length=850,
         blank=True,
+        default="",
         help_text="This field will be filled automatically using AI after the event finishes.",
     )
     status = models.CharField(max_length=9, choices=Status.choices, default=Status.PENDING)
