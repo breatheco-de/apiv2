@@ -905,12 +905,12 @@ def limit_coupon_choices():
     )
 
 
+def _default_pricing_ratio_explanation():
+    return {"plans": [], "service_items": []}
+
+
 class Bag(AbstractAmountByTime):
     """Represents a credit that can be used by a user to use a service."""
-
-    @staticmethod
-    def _default_pricing_ratio_explanation():
-        return {"plans": [], "service_items": []}
 
     class Status(models.TextChoices):
         RENEWAL = ("RENEWAL", "Renewal")
