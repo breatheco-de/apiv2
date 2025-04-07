@@ -214,8 +214,7 @@ def generate_event_recap(event_id: int, **kwargs):
 
     event = Event.objects.filter(id=event_id).first()
     if not event:
-        logger.error(f"Event {event_id} not found")
-        raise AbortTask(f"Event {event_id} not found")
+        raise AbortTask(f"Event {event_id} not found. Task cannot continue.")
 
     context, created = EventContext.objects.get_or_create(event=event)
 

@@ -262,7 +262,7 @@ class EventPublicBigSerializer(EventSmallSerializer):
     updated_at = serpy.Field()
 
     def get_recap(self, obj):
-        if hasattr(obj, "context") and obj.context:
+        if self.context.get("include_context") and hasattr(obj, "context") and obj.context:
             return obj.context.recap
         return None
 

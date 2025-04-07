@@ -183,7 +183,8 @@ class EventPublicView(APIView):
                     code=404,
                 )
 
-            serializer = EventPublicBigSerializer(event, many=False)
+            include_context_info = request.query_params.get("context") == "true"
+            serializer = EventPublicBigSerializer(event, many=False, context={"include_context": include_context_info})
             return Response(serializer.data)
 
 
