@@ -208,6 +208,18 @@ class CertificateTestSuite(CertificateTestCase):
                 "logo_url": None,
                 "name": model["specialty"].name,
                 "slug": model["specialty"].slug,
+                "syllabus": (
+                    {
+                        "id": model["specialty"].syllabus.id if model["specialty"].syllabus else None,
+                        "name": model["specialty"].syllabus.name if model["specialty"].syllabus else None,
+                        "slug": model["specialty"].syllabus.slug if model["specialty"].syllabus else None,
+                    }
+                    if model["specialty"].syllabus
+                    else None
+                ),
+                "syllabuses": [
+                    {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabuses.all()
+                ],
                 "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
             },
             "status": "PERSISTED",
