@@ -127,20 +127,20 @@ def syllabus_json_updated(sender, instance, **kwargs):
 @receiver(post_save, sender=Question)
 def model_a_saved(sender, instance, created, **kwargs):
     if not instance.assessment.is_archived:
-        async_generate_quiz_config(instance.assessment.id)
+        async_generate_quiz_config.delay(instance.assessment.id)
 
 
 @receiver(post_save, sender=Option)
 def model_b_saved(sender, instance, created, **kwargs):
     if not instance.question.assessment.is_archived:
-        async_generate_quiz_config(instance.question.assessment.id)
+        async_generate_quiz_config.delay(instance.question.assessment.id)
 
 
 @receiver(post_delete, sender=Question)
 def model_a_deleted(sender, instance, **kwargs):
     try:
         if instance.assessment and not instance.assessment.is_archived:
-            async_generate_quiz_config(instance.assessment.id)
+            async_generate_quiz_config.delay(instance.assessment.id)
     except Exception:
         pass
 
@@ -149,7 +149,7 @@ def model_a_deleted(sender, instance, **kwargs):
 def model_b_deleted(sender, instance, **kwargs):
     try:
         if instance.assessment and not instance.assessment.is_archived:
-            async_generate_quiz_config(instance.question.assessment.id)
+            async_generate_quiz_config.delay(instance.question.assessment.id)
     except Exception:
         pass
 

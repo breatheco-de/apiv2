@@ -296,6 +296,10 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
                 break
 
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+
         raise AbortTask(f"File {hash} cannot be processed due to: {str(e)}")
 
     for bill in context["provisioning_bills"].values():

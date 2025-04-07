@@ -4,11 +4,17 @@ Test /answer
 
 from logging import Logger
 from unittest.mock import MagicMock, PropertyMock, call, patch
-import pytest
 
+import pytest
+from django.utils import timezone
 from rest_framework.test import APIClient
+
+import staging.pytest as staging
+from breathecode.registry.actions import set_query_parameter
 from breathecode.registry.tasks import async_create_asset_thumbnail
+from breathecode.services.google_cloud import Storage
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
+from breathecode.utils.decorators import TaskPriority
 
 
 @pytest.fixture(autouse=True)
@@ -66,7 +72,7 @@ def patch_get(monkeypatch):
     def handler(expected, code, headers):
 
         reader = StreamReaderMock(expected)
-        monkeypatch.setattr("requests.request", MagicMock(return_value=ResponseMock(expected, code, headers)))
+        monkeypatch.setattr("requests.get", MagicMock(return_value=ResponseMock(expected, code, headers)))
 
     yield handler
 
@@ -87,7 +93,10 @@ def test__without_asset(bc: Breathecode, client: APIClient):
     "os.getenv",
     MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story", "SCREENSHOT_MACHINE_KEY": "000000"})),
 )
-def test__with_asset__bad_function_response(bc: Breathecode, client: APIClient, patch_get):
+def test__with_asset__bad_function_response(
+    bc: Breathecode,
+    patch_get,
+):
     asset_category = {"preview_generation_url": bc.fake.url()}
 
     model = bc.database.create_v2(asset=1, asset_category=asset_category, academy=1)
@@ -139,7 +148,10 @@ def test__with_asset__bad_function_response(bc: Breathecode, client: APIClient, 
         )
     ),
 )
-def test__with_asset__good_function_response(bc: Breathecode, client: APIClient, patch_get):
+def test__with_asset__good_function_response(
+    bc: Breathecode,
+    patch_get,
+):
 
     hash = "3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a"
     fake_url = bc.fake.url()
@@ -165,6 +177,7 @@ def test__with_asset__good_function_response(bc: Breathecode, client: APIClient,
         }
     ]
     assert Logger.warning.call_args_list == [
+        call("Screenshot content size is suspiciously small: 548 bytes"),
         call(f"Media was save with {hash} for academy {model.asset.academy}"),
     ]
     assert Logger.error.call_args_list == []
@@ -189,7 +202,10 @@ def test__with_asset__good_function_response(bc: Breathecode, client: APIClient,
     "os.getenv",
     MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story", "SCREENSHOT_MACHINE_KEY": "000000"})),
 )
-def test__with_asset__with_media__without_asset_category_with_url(bc: Breathecode, client: APIClient, patch_get):
+def test__with_asset__with_media__without_asset_category_with_url(
+    bc: Breathecode,
+    patch_get,
+):
     hash = "3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a"
     media = {"hash": hash}
     model = bc.database.create_v2(asset=1, media=media)
@@ -238,7 +254,10 @@ def test__with_asset__with_media__without_asset_category_with_url(bc: Breathecod
         )
     ),
 )
-def test__with_asset__with_media__with_asset_category_with_url(bc: Breathecode, client: APIClient, patch_get):
+def test__with_asset__with_media__with_asset_category_with_url(
+    bc: Breathecode,
+    patch_get,
+):
     hash = "3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a"
     media = {"hash": hash}
     asset_category = {"preview_generation_url": bc.fake.url()}
@@ -253,7 +272,9 @@ def test__with_asset__with_media__with_asset_category_with_url(bc: Breathecode, 
         bc.format.to_dict(model.media),
     ]
 
-    assert Logger.warning.call_args_list == []
+    assert Logger.warning.call_args_list == [
+        call("Screenshot content size is suspiciously small: 548 bytes"),
+    ]
     assert Logger.error.call_args_list == [
         call(f"Media with hash {hash} already exists, skipping", exc_info=True),
     ]
@@ -277,7 +298,10 @@ def test__with_asset__with_media__with_asset_category_with_url(bc: Breathecode, 
     create=True,
 )
 @patch("os.getenv", MagicMock(side_effect=apply_get_env({"GOOGLE_PROJECT_ID": "labor-day-story"})))
-def test__with_asset__with_media__media_for_another_academy(bc: Breathecode, client: APIClient, patch_get):
+def test__with_asset__with_media__media_for_another_academy(
+    bc: Breathecode,
+    patch_get,
+):
     hash = "3d78522863c7781e5800cd3c7dfe6450856db9eb9166f43ecfe82ccdbe95173a"
     asset = {"academy_id": 1}
     media = {"hash": hash, "academy_id": 2}
@@ -286,6 +310,20 @@ def test__with_asset__with_media__media_for_another_academy(bc: Breathecode, cli
 
     headers = {"Accept": "*/*", "content-type": "image/jpeg"}
     patch_get(fake_file_data, 200, headers)
+    # http.post(
+    #     "https://github.com/login/oauth/access_token",
+    #     data={
+    #         "client_id": "123456",
+    #         "client_secret": "123456",
+    #         "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/github/callback",
+    #         "code": "Konan",
+    #     },
+    #     headers={"Accept": "application/json"},
+    #     timeout=30,
+    # ).response(
+    #     {"access_token": github_token, "scope": "repo,user", "token_type": "bearer"},
+    #     status=200,
+    # )
 
     async_create_asset_thumbnail.delay(model.asset.slug)
 
@@ -298,7 +336,9 @@ def test__with_asset__with_media__media_for_another_academy(bc: Breathecode, cli
             "slug": f"{model.asset.academy.slug}-{model.asset.category.slug}-{model.asset.slug}",
         },
     ]
-    assert Logger.warning.call_args_list == []
+    assert Logger.warning.call_args_list == [
+        call("Screenshot content size is suspiciously small: 548 bytes"),
+    ]
     assert Logger.error.call_args_list == [
         call(f"Media was save with {hash} for academy {model.academy[0]}", exc_info=True),
     ]

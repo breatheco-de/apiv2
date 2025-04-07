@@ -119,4 +119,8 @@ def test_run_handler(db, bc: Breathecode):
         bc.format.to_dict(answer_db[17]),
     ]
 
-    assert sys.stdout.write.call_args_list == [call("Successfully deleted invalid answers\n")]
+    assert sys.stdout.write.call_args_list == [
+        call("Successfully removed invalid survey answers\n"),
+        call("Successfully removed 0 old survey answers\n"),
+        call("Successfully completed garbage collection\n"),
+    ]

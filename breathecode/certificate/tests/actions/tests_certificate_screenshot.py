@@ -22,9 +22,10 @@ query_string = urlencode(
     {
         "key": os.environ.get("SCREENSHOT_MACHINE_KEY"),
         "url": f"https://certificate.4geeks.com/preview/{token}",
-        "device": "desktop",
-        "cacheLimit": "0",
         "dimension": "1024x707",
+        "device": "desktop",
+        "delay": 1000,
+        "cacheLimit": "0",
     }
 )
 
@@ -129,7 +130,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         )
 
         assert requests.get.call_args_list == [
-            call(f"https://api.screenshotmachine.com?{query_string}", stream=True),
+            call(f"https://api.screenshotmachine.com?{query_string}", timeout=25, stream=True),
         ]
 
         assert signals.user_specialty_saved.send_robust.call_args_list == [
@@ -190,7 +191,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         )
 
         assert requests.get.call_args_list == [
-            call(f"https://api.screenshotmachine.com?{query_string}", stream=True),
+            call(f"https://api.screenshotmachine.com?{query_string}", timeout=25, stream=True),
         ]
 
         assert signals.user_specialty_saved.send_robust.call_args_list == [

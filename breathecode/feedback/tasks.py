@@ -19,7 +19,7 @@ from breathecode.utils import TaskPriority, getLogger
 from breathecode.utils.redis import Lock
 
 from . import actions
-from .models import Answer, Survey, SurveyTemplate, AcademyFeedbackSettings
+from .models import AcademyFeedbackSettings, Answer, Survey, SurveyTemplate
 from .utils import strings
 
 # Get an instance of a logger
@@ -423,6 +423,10 @@ def send_mentorship_session_survey(session_id, **_):
         raise AbortTask(message)
 
     token, _ = Token.get_or_create(session.mentee, token_type="temporal", hours_length=48)
+
+    if answer.token_id != token.id:
+        answer.token_id = token.id
+        answer.save()
 
     # lazyload api url in test environment
     api_url = API_URL if ENV != "test" else os.getenv("API_URL", "")

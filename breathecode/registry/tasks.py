@@ -223,7 +223,7 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
     response = None
     logger.info(f"Generating screenshot for {preview_url}")
     try:
-        response = generate_screenshot(url, "1200x630", delay=1000)
+        response = generate_screenshot(url, "1200x630", device="desktop", delay=25000)
 
     except Exception as e:
         raise AbortTask("Error calling service to generate thumbnail screenshot: " + str(e))
@@ -235,6 +235,11 @@ def async_create_asset_thumbnail(asset_slug: str, **_):
         )
 
     file = response.content
+
+    # Log content size to help diagnose blank image issues
+    content_size = len(file)
+    if content_size < 1000:
+        logger.warning(f"Screenshot content size is suspiciously small: {content_size} bytes")
 
     hash = hashlib.sha256(file).hexdigest()
     content_type = response.headers["content-type"]
@@ -357,7 +362,7 @@ def async_download_readme_images(asset_slug):
 
         # if its not being sed on any other asset, we delete it from cloud
         if no_longer_used[old_img].assets.count() == 0:
-            async_remove_img_from_cloud(no_longer_used[old_img].id)
+            async_remove_img_from_cloud.delay(no_longer_used[old_img].id)
 
     return True
 

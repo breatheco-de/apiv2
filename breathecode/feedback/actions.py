@@ -2,13 +2,13 @@ import json
 import logging
 
 from capyc.rest_framework.exceptions import ValidationException
-from django.db.models import Avg, QuerySet, Q
 from django.contrib.auth.models import User
+from django.db.models import Avg, Q, QuerySet
 from django.utils import timezone
 
+import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Token
-from breathecode.notify.actions import send_email_message, send_slack
 
 from . import tasks
 from .models import Answer, Review, ReviewPlatform, Survey
@@ -108,7 +108,6 @@ def send_question(user, cohort=None):
             slug="without-email-or-slack-user",
         )
 
-    ###2
     if not answer.cohort.syllabus_version:
         raise ValidationException("Cohort not have one SyllabusVersion", slug="cohort-without-syllabus-version")
 
@@ -117,6 +116,7 @@ def send_question(user, cohort=None):
 
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user, status="SENT").count()
 
+    # TODO: send custom questions using the survey template slug and test it
     answer = tasks.build_question(answer)
 
     if question_was_sent_previously:
@@ -127,10 +127,8 @@ def send_question(user, cohort=None):
         answer.lang = answer.cohort.language.lower()
         answer.save()
 
-    token, created = Token.get_or_create(user, token_type="temporal", hours_length=72)
-
-    token_id = Token.objects.filter(key=token).values_list("id", flat=True).first()
-    answer.token_id = token_id
+    token, _ = Token.get_or_create(user, token_type="temporal", hours_length=72)
+    answer.token_id = token.id
     answer.save()
 
     data = {
@@ -144,21 +142,23 @@ def send_question(user, cohort=None):
     }
 
     if user.email:
-        send_email_message("nps", user.email, data, academy=answer.cohort.academy)
+        notify_actions.send_email_message("nps", user.email, data, academy=answer.cohort.academy)
 
     if hasattr(user, "slackuser") and hasattr(answer.cohort.academy, "slackteam"):
-        send_slack("nps", user.slackuser, answer.cohort.academy.slackteam, data=data, academy=answer.cohort.academy)
+        notify_actions.send_slack(
+            "nps", user.slackuser, answer.cohort.academy.slackteam, data=data, academy=answer.cohort.academy
+        )
 
     # keep track of sent survays until they get answered
     if not question_was_sent_previously:
         logger.info(f"Survey was sent for user: {str(user.id)}")
         answer.status = "SENT"
         answer.save()
-        return True
 
     else:
         logger.info(f"Survey was resent for user: {str(user.id)}")
-        return True
+
+    return True
 
 
 def answer_survey(user, data):
