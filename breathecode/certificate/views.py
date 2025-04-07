@@ -30,19 +30,15 @@ logger = logging.getLogger(__name__)
 def get_academy_specialties(request, academy_id=None):
 
     # Filter by the old syllabus (OneToOneField) and the new syllabuses (ManyToManyField)
-    items = Specialty.objects.filter(
-        Q(syllabus__academy_owner=academy_id) | Q(syllabuses__academy_owner=academy_id)
-    ).distinct()
+    items = Specialty.objects.filter(syllabuses__academy_owner=academy_id).distinct()
 
     like = request.GET.get("like")
     if like:
-        items = items.filter(
-            Q(name__icontains=like) | Q(syllabus__name__icontains=like) | Q(syllabuses__name__icontains=like)
-        )
+        items = items.filter(Q(name__icontains=like) | Q(syllabuses__name__icontains=like))
 
     syllabus_slug = request.GET.get("syllabus_slug")
     if syllabus_slug:
-        items = items.filter(Q(syllabus__slug=syllabus_slug) | Q(syllabuses__slug=syllabus_slug)).distinct()
+        items = items.filter(syllabuses__slug=syllabus_slug).distinct()
 
     allowed_sort_fields = ["created_at", "-created_at", "name", "-name"]
     sort = request.GET.get("sort", "-created_at")
