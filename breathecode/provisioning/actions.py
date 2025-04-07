@@ -1,3 +1,4 @@
+import math
 import os
 import random
 import re
@@ -224,7 +225,15 @@ def is_valid_string(value):
 def handle_pending_github_user(
     organization: Optional[str], username: str, starts: Optional[datetime] = None
 ) -> list[Academy]:
-    orgs = AcademyAuthSettings.objects.filter(github_username__iexact=organization)
+    # Handle NaN values from pandas DataFrame
+    if organization is not None and (isinstance(organization, float) and math.isnan(organization)):
+        organization = None
+
+    orgs = (
+        AcademyAuthSettings.objects.filter(github_username__iexact=organization)
+        if organization
+        else AcademyAuthSettings.objects.none()
+    )
     orgs = [
         x
         for x in orgs
@@ -308,6 +317,12 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
 
     if isinstance(field["username"], float):
         field["username"] = ""
+
+    # Handle NaN values in organization field
+    if isinstance(field["organization"], float) and math.isnan(field["organization"]):
+        field["organization"] = None
+    elif not field["organization"]:  # Handle empty strings or None
+        field["organization"] = None
 
     github_academy_user_log = context["github_academy_user_logs"].get(field["username"], None)
     not_found = False
