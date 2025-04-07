@@ -670,14 +670,14 @@ pytest = ["numpy", "pillow", "pytz"]
 
 [[package]]
 name = "celery"
-version = "5.5.0"
+version = "5.5.1"
 description = "Distributed Task Queue."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "celery-5.5.0-py3-none-any.whl", hash = "sha256:f4170c6e5952281318448a899d9e9a15b9cbd007e002091766900dc8f71b9394"},
-    {file = "celery-5.5.0.tar.gz", hash = "sha256:10d49f9926d16237310109b0e6e1e2f7a2133b84e684bb36534d7663e66919bb"},
+    {file = "celery-5.5.1-py3-none-any.whl", hash = "sha256:9f4f9e57e36000c097c1b6f7a8ab29814b82771e5439836f83915823809729c8"},
+    {file = "celery-5.5.1.tar.gz", hash = "sha256:2af9109a10fe28155044f4c387ce0e5e7f1fc89f9584cfb4b0df94f99a5fedc7"},
 ]
 
 [package.dependencies]
@@ -3105,14 +3105,14 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "linked-services"
-version = "1.3.1"
+version = "1.3.2"
 description = ""
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "linked_services-1.3.1-py3-none-any.whl", hash = "sha256:20217bb021c25adf755bc4638526113745773d2d9b393a1716669a01b980f8d8"},
-    {file = "linked_services-1.3.1.tar.gz", hash = "sha256:cc901826cc11aadeef3b90735f453636f3b5bd78bf7953ae7fe960126619dc41"},
+    {file = "linked_services-1.3.2-py3-none-any.whl", hash = "sha256:16fecc20543ed20a78bce8a72547334e14d84924cdbbd033651812c51d2ab187"},
+    {file = "linked_services-1.3.2.tar.gz", hash = "sha256:35c288ad76d4f79775d1f17ef08f032884e85b3e1ff147a2357f77a40c4a9ad0"},
 ]
 
 [package.dependencies]
