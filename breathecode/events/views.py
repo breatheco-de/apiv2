@@ -183,7 +183,8 @@ class EventPublicView(APIView):
                     code=404,
                 )
 
-            serializer = EventPublicBigSerializer(event, many=False)
+            include_context_info = request.query_params.get("context") == "true"
+            serializer = EventPublicBigSerializer(event, many=False, context={"include_context": include_context_info})
             return Response(serializer.data)
 
 
@@ -293,7 +294,7 @@ class EventMeView(APIView):
                     return render_message(request, "Event live stream URL is not found", academy=single_event.academy)
                 return redirect(single_event.live_stream_url)
 
-            serializer = EventBigSerializer(single_event, many=False)
+            serializer = EventBigSerializer(single_event, many=False, context={})
             return Response(serializer.data)
 
         items = Event.objects.filter(event_type__in=items, status="ACTIVE")
@@ -314,7 +315,7 @@ class EventMeView(APIView):
         items = items.order_by("starting_at")
         items = items.filter(**lookup)
         items = handler.queryset(items)
-        serializer = EventBigSerializer(items, many=True)
+        serializer = EventBigSerializer(items, many=True, context={})
 
         return handler.response(serializer.data)
 
