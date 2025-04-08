@@ -27,12 +27,12 @@ def event_factory(database):
     return _event_factory
 
 
-@patch("logging.Logger.error")
-def test_event_not_found(logger_mock):
-    """Test case where Event does not exist"""
+@patch("task_manager.core.decorators.logger.error")
+def test_event_not_found(logger_error_mock):
+    """Test case where Event does not exist and decorator logs the error"""
     generate_event_recap(event_id=999)
 
-    logger_mock.assert_any_call("Event 999 not found")
+    logger_error_mock.assert_called_once_with("Event 999 not found. Task cannot continue.", exc_info=True)
 
 
 @patch("logging.Logger.info")
@@ -44,7 +44,7 @@ def test_event_already_has_recap(logger_mock, event_factory):
 
     logger_mock.assert_any_call(f"Event {event.id} already has a recap, skipping")
     context = EventContext.objects.get(event=event)
-    assert context.recap == "Existing recap"  # Recap should not change
+    assert context.recap == "Existing recap"
 
 
 @patch("breathecode.events.tasks.Service")

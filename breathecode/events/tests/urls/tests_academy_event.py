@@ -55,7 +55,7 @@ def post_serializer(data={}):
         "host_user": None,
         "is_public": True,
         "recording_url": None,
-        "recap": None,
+        "recap": event.context.recap if hasattr(event, "context") and event.context else None,
         **data,
     }
 
@@ -100,7 +100,7 @@ def event_table(data={}):
         "currency": "",
         "is_public": True,
         "recording_url": None,
-        "recap": None,
+        "recap": event.context.recap if hasattr(event, "context") and event.context else None,
         **data,
     }
 
