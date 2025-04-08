@@ -103,6 +103,7 @@ class PlanView(APIView):
 
         handler = self.extensions(request)
         lang = get_user_language(request)
+        country_code = request.GET.get("country_code")
 
         if plan_slug:
             item = Plan.objects.filter(slug=plan_slug).first()
@@ -112,7 +113,10 @@ class PlanView(APIView):
                 )
 
             serializer = GetPlanSerializer(
-                item, many=False, context={"academy_id": request.GET.get("academy")}, select=request.GET.get("select")
+                item,
+                many=False,
+                context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+                select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
 
@@ -138,7 +142,10 @@ class PlanView(APIView):
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(
-            items, many=True, context={"academy_id": request.GET.get("academy")}, select=request.GET.get("select")
+            items,
+            many=True,
+            context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+            select=request.GET.get("select"),
         )
 
         return handler.response(serializer.data)
@@ -467,6 +474,7 @@ class AcademyAcademyServiceView(APIView):
     def get(self, request, academy_id=None, service_slug=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
+        country_code = request.GET.get("country_code")
 
         if service_slug is not None:
             item = AcademyService.objects.filter(academy__id=academy_id, service__slug=service_slug).first()
@@ -481,7 +489,7 @@ class AcademyAcademyServiceView(APIView):
                     code=404,
                 )
 
-            serializer = GetAcademyServiceSmallSerializer(item)
+            serializer = GetAcademyServiceSmallSerializer(item, context={"country_code": country_code})
             return handler.response(serializer.data)
 
         items = AcademyService.objects.filter(academy__id=academy_id)
@@ -493,7 +501,7 @@ class AcademyAcademyServiceView(APIView):
             items = items.filter(available_event_type_sets__slug__exact=event_type_set)
 
         items = handler.queryset(items)
-        serializer = GetAcademyServiceSmallSerializer(items, many=True)
+        serializer = GetAcademyServiceSmallSerializer(items, many=True, context={"country_code": country_code})
 
         return handler.response(serializer.data)
 
@@ -1118,7 +1126,6 @@ class AcademyPlanFinancingView(APIView):
         def update_financing(financing, data):
             for field, value in data.items():
                 if field in allowed_fields:
-                    print(f"Updating field {field} to {value}")
                     setattr(financing, field, value)
 
         if isinstance(request.data, list):
@@ -1633,6 +1640,7 @@ class CheckingView(APIView):
     def put(self, request):
         bag_type = request.data.get("type", "BAG").upper()
         created = False
+        country_code = request.data.get("country_code")
 
         lang = get_user_language(request)
 
@@ -1780,14 +1788,22 @@ class CheckingView(APIView):
 
                         plan = bag.plans.filter(status="CHECKING").first()
 
+                        # Initialize pricing_ratio_explanation
+                        pricing_ratio_explanation = {"plans": [], "service_items": []}
+
                         # FIXME: the service items should be bought without renewals
                         if not plan or plan.is_renewable:
+                            bag.country_code = country_code
                             bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
                                 get_amount(bag, bag.academy.main_currency, lang)
                             )
 
                         else:
                             actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
+
+                        # Save pricing ratio explanation if any ratios were applied
+                        if pricing_ratio_explanation["plans"] or pricing_ratio_explanation["service_items"]:
+                            bag.pricing_ratio_explanation = pricing_ratio_explanation
 
                         amount = (
                             bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
@@ -1840,6 +1856,7 @@ class ConsumableCheckoutView(APIView):
         service = request.data.get("service")
         total_items = request.data.get("how_many")
         academy = request.data.get("academy")
+        country_code = request.data.get("country_code")
 
         if not service:
             raise ValidationException(
@@ -1958,6 +1975,18 @@ class ConsumableCheckoutView(APIView):
         academy_service.validate_transaction(total_items, lang)
         amount = academy_service.get_discounted_price(total_items)
 
+        # Initialize pricing ratio explanation without redundant country code
+        pricing_ratio_explanation = {"service_items": []}
+
+        # Apply country-specific pricing ratio if provided
+        if country_code:
+            ratio = actions.get_pricing_ratio(country_code, academy_service=academy_service)
+            if ratio != 1.0:
+                amount *= ratio
+                pricing_ratio_explanation["service_items"].append(
+                    {"service": academy_service.service.slug, "ratio": ratio}
+                )
+
         if amount <= 0.5:
             raise ValidationException(
                 translation(lang, en="The amount is too low", es="El monto es muy bajo", slug="the-amount-is-too-low"),
@@ -1969,7 +1998,7 @@ class ConsumableCheckoutView(APIView):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                s = Stripe()
+                s = Stripe(academy=Academy.objects.get(id=academy))
                 s.set_language(lang)
                 s.add_contact(request.user)
                 service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=total_items)
@@ -1983,7 +2012,12 @@ class ConsumableCheckoutView(APIView):
                     currency=currency,
                     academy_id=academy,
                     is_recurrent=False,
+                    country_code=country_code,  # Store the country code for future reference
                 )
+
+                # Store pricing ratio explanation if any ratios were applied
+                if pricing_ratio_explanation["service_items"]:
+                    bag.pricing_ratio_explanation = pricing_ratio_explanation
 
                 bag.save()
 
@@ -2015,7 +2049,7 @@ class ConsumableCheckoutView(APIView):
 
             except Exception as e:
                 if invoice:
-                    s = Stripe()
+                    s = Stripe(academy=Academy.objects.get(id=academy))
                     s.set_language(lang)
                     s.refund_payment(invoice)
 
@@ -2185,7 +2219,6 @@ class PayView(APIView):
                         original_price = option.monthly_price
                         coupons = bag.coupons.all()
                         amount = get_discounted_price(original_price, coupons)
-
                         bag.monthly_price = option.monthly_price
                     except Exception:
                         raise ValidationException(
@@ -2246,13 +2279,13 @@ class PayView(APIView):
 
                 elif amount == 0:
                     invoice = Invoice(
+                        user=request.user,
                         amount=0,
                         paid_at=utc_now,
-                        user=request.user,
                         bag=bag,
-                        academy=bag.academy,
                         status="FULFILLED",
-                        currency=bag.academy.main_currency,
+                        currency=bag.currency,
+                        academy=bag.academy,
                     )
 
                     invoice.save()

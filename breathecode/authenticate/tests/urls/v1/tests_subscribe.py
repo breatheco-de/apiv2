@@ -58,6 +58,7 @@ def plan_db_item(plan, data={}):
         "price_per_month": plan.price_per_month,
         "price_per_quarter": plan.price_per_quarter,
         "price_per_year": plan.price_per_year,
+        "pricing_ratio_exceptions": {},
         **data,
     }
 

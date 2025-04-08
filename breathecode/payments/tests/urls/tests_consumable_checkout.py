@@ -59,6 +59,8 @@ def format_bag_item(data={}):
         "type": "CHARGE",
         "user_id": 1,
         "was_delivered": True,
+        "country_code": None,
+        "pricing_ratio_explanation": {"plans": [], "service_items": []},
         **data,
     }
 

@@ -107,6 +107,7 @@ def put_serializer(
         "mentorship_service_set": event.mentorship_service_set,
         "cohort_set": event.cohort_set,
         "event_type_set": event.event_type_set,
+        "pricing_ratio_exceptions": {},
         "invites": [],
         **data,
     }

@@ -57,7 +57,6 @@ def must_compress(data):
 class CacheMeta(type):
 
     def __init__(cls: Cache, name, bases, clsdict):
-        global CACHE_DEPENDENCIES
 
         super().__init__(name, bases, clsdict)
 
