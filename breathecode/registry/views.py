@@ -16,6 +16,7 @@ from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.views.decorators.clickjacking import xframe_options_exempt
+from linked_services.django.service import Service
 from rest_framework import status
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
@@ -1870,3 +1871,28 @@ class AcademyKeywordClusterView(APIView, GenerateLookupsMixin):
             return Response(None, status=status.HTTP_204_NO_CONTENT)
         else:
             raise ValidationException("Cluster ids were not provided", 404, slug="missing_ids")
+
+
+class CodeCompilerView(APIView):
+    """
+    Proxy endpoint to communicate with rigobot for code compilation.
+    """
+
+    async def post(self, request):
+        """
+        POST request to compile code using rigobot.
+        The request will be proxied to one of two rigobot endpoints based on the request body:
+        - /v1/prompting/completion/code-compiler-with-context/ if inputs.secondary_files or inputs.main_file is present
+        - /v1/prompting/completion/code-compiler/ otherwise
+        """
+
+        # Get rigobot token using user's token
+        async with Service("rigobot", request.user.id, proxy=True) as s:
+            # Determine which endpoint to use based on request body
+            inputs = request.data.get("inputs", {})
+            if "secondary_files" in inputs or "main_file" in inputs:
+                url = "/v1/prompting/completion/code-compiler-with-context/"
+            else:
+                url = "/v1/prompting/completion/code-compiler/"
+
+            return await s.post(url, json=request.data)
