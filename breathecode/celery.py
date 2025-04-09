@@ -85,8 +85,8 @@ app.conf.update(
         "interval_max": 120,
     },
     # State persistence settings for Heroku
-    worker_state_db=REDIS_URL,  # Use Redis for state persistence
-    worker_state_db_key_prefix="celery-state",
+    # worker_state_db=REDIS_URL,  # Use Redis for state persistence
+    # worker_state_db_key_prefix="celery-state",
     # Additional Heroku-specific settings
     broker_pool_limit=None,  # Disable connection pooling - better for Heroku's environment
     broker_failover_strategy="round-robin",
