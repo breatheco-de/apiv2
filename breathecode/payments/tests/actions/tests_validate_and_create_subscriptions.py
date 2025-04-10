@@ -79,7 +79,7 @@ def serialize_bag(data={}):
 def serialize_invoice(data={}):
     return {
         "academy_id": 1,
-        "amount": 1.0,
+        "amount": 10.0,
         "bag_id": 1,
         "currency_id": 1,
         "externally_managed": True,
@@ -98,7 +98,7 @@ def serialize_invoice(data={}):
 
 @pytest.mark.parametrize("is_request", [True, False])
 def test_no_data(database: capy.Database, format: capy.Format, is_request: bool) -> None:
-    data = {}
+    data = {"how_many_installments": 1}
     academy = 1
     model = database.create(user=1, proof_of_payment=1)
 
@@ -126,7 +126,7 @@ def test_no_data(database: capy.Database, format: capy.Format, is_request: bool)
 @pytest.mark.parametrize("is_request", [True, False])
 def test_no_financing_option(database: capy.Database, format: capy.Format, is_request: bool) -> None:
     model = database.create(user=1, proof_of_payment=1, plan={"time_of_life": None, "time_of_life_unit": None})
-    data = {"plans": [model.plan.slug]}
+    data = {"plans": [model.plan.slug], "how_many_installments": 1}
     academy = 1
 
     if is_request:
@@ -158,8 +158,8 @@ def test_no_academy(database: capy.Database, format: capy.Format, is_request: bo
         plan={"time_of_life": None, "time_of_life_unit": None},
         financing_option={"how_many_months": 1},
     )
-    data = {"plans": [model.plan.slug]}
-    academy = 1
+    data = {"plans": [model.plan.slug], "how_many_installments": 1}
+    academy = 999
 
     if is_request:
         data = get_request(data, user=model.user)
@@ -193,7 +193,7 @@ def test_no_user(database: capy.Database, format: capy.Format, is_request: bool)
         city=1,
         country=1,
     )
-    data = {"plans": [model.plan.slug]}
+    data = {"plans": [model.plan.slug], "how_many_installments": 1, "payment_method": 1}
     academy = 1
 
     if is_request:
@@ -227,9 +227,8 @@ def test_no_payment_method(database: capy.Database, format: capy.Format, is_requ
         academy=1,
         city=1,
         country=1,
-        payment_method=1,
     )
-    data = {"plans": [model.plan.slug], "user": model.user.id}
+    data = {"plans": [model.plan.slug], "user": model.user.id, "how_many_installments": 1}
     academy = 1
 
     if is_request:
@@ -255,22 +254,36 @@ def test_no_payment_method(database: capy.Database, format: capy.Format, is_requ
 
 @pytest.mark.parametrize("is_request", [True, False])
 def test_plan_already_exists(database: capy.Database, format: capy.Format, is_request: bool, utc_now: datetime) -> None:
+    delta = timedelta(days=1)
+    # Explicitly create a non-renewable plan with required time fields
+    plan_kwargs = {
+        "is_renewable": False,
+        "trial_duration": 0,
+        "time_of_life": 1,  # Required for non-renewable
+        "time_of_life_unit": "MONTH",  # Required for non-renewable
+    }
     model = database.create(
         user=1,
         proof_of_payment=1,
-        plan={"time_of_life": None, "time_of_life_unit": None},
-        financing_option={"how_many_months": 1},
+        plan=plan_kwargs,  # Use explicit kwargs
+        plan_financing={
+            "valid_until": utc_now + delta,
+            "monthly_price": 10,
+            "plan_expires_at": utc_now + delta,
+            "next_payment_at": utc_now + delta,
+        },
+        financing_option={"how_many_months": 1, "monthly_price": 10},
         academy=1,
         city=1,
         country=1,
         payment_method=1,
-        plan_financing={
-            "valid_until": utc_now + timedelta(days=30),
-            "plan_expires_at": utc_now + timedelta(days=30),
-            "monthly_price": 100,
-        },
     )
-    data = {"plans": [model.plan.slug], "user": model.user.id, "payment_method": 1}
+    data = {
+        "plans": [model.plan.slug],
+        "user": model.user.id,
+        "payment_method": model.payment_method.id,
+        "how_many_installments": 1,
+    }
     academy = 1
 
     if is_request:
@@ -299,17 +312,34 @@ def test_plan_already_exists(database: capy.Database, format: capy.Format, is_re
 def test_schedule_plan_financing(
     database: capy.Database, format: capy.Format, is_request: bool, field: str, utc_now: datetime
 ) -> None:
+    delta = timedelta(days=1)
+    financing_option = {"how_many_months": 1, "monthly_price": 10}
+
+    # Create currency separately and get the instance
+    currency_instance = database.create(currency=1).currency
+
+    # Prepare dicts with currency for related models
+    financing_option_dict = {**financing_option, "currency": currency_instance}
+    plan_dict = {"currency": currency_instance, "trial_duration": 0}
+
     model = database.create(
         user=1,
         proof_of_payment=1,
-        plan={"time_of_life": None, "time_of_life_unit": None},
-        financing_option={"how_many_months": 1},
+        plan=plan_dict,  # Pass dict with currency
+        financing_option=financing_option_dict,  # Pass dict with currency
         academy=1,
         city=1,
         country=1,
         payment_method=1,
+        # Removed top-level currency assignment
     )
-    data = {"plans": [model.plan.slug], "user": getattr(model.user, field), "payment_method": 1}
+    data = {
+        "plans": [model.plan.slug],
+        "user": getattr(model.user, field),
+        "payment_method": model.payment_method.id,
+        "how_many_installments": financing_option["how_many_months"],
+    }
+
     academy = 1
 
     if is_request:
@@ -318,7 +348,7 @@ def test_schedule_plan_financing(
     result = validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
 
     assert database.list_of("payments.Bag") == [
-        serialize_bag(),
+        serialize_bag(data={"currency_id": 2}),
     ]
     assert database.list_of("payments.Invoice") == [
         serialize_invoice(
@@ -326,6 +356,7 @@ def test_schedule_plan_financing(
                 "id": 1,
                 "paid_at": utc_now,
                 "payment_method_id": 1,
+                "currency_id": 2,
             }
         ),
     ]

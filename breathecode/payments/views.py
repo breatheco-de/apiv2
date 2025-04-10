@@ -1072,7 +1072,7 @@ class AcademyPlanFinancingView(APIView):
         now = timezone.now()
 
         if financing_id:
-            item = PlanFinancing.objects.filter(valid_until__gte=now, id=financing_id).first()
+            item = PlanFinancing.objects.filter(plan_expires_at__gte=now, id=financing_id).first()
 
             if not item:
                 raise ValidationException(
@@ -1085,7 +1085,7 @@ class AcademyPlanFinancingView(APIView):
             serializer = GetPlanFinancingSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = PlanFinancing.objects.filter(valid_until__gte=now)
+        items = PlanFinancing.objects.filter(plan_expires_at__gte=now)
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))

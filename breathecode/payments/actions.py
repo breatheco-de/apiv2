@@ -1031,7 +1031,34 @@ def validate_and_create_subscriptions(
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
 
-    how_many_installments = 1
+    how_many_installments_input = data.get("how_many_installments")
+
+    if how_many_installments_input is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="'how_many_installments' must be provided (0 for subscription, >0 for financing).",
+                es="'how_many_installments' debe ser proporcionado (0 para suscripción, >0 para financiamiento).",
+                slug="missing-installments-value",
+            ),
+            code=400,
+        )
+
+    try:
+        how_many_installments = int(how_many_installments_input)
+        if how_many_installments < 0:
+            raise ValueError("Installments cannot be negative")
+
+    except (ValueError, TypeError):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid 'how_many_installments' value provided (must be a non-negative integer).",
+                es="Valor inválido proporcionado para 'how_many_installments' (debe ser un entero no negativo).",
+                slug="invalid-installments-value",
+            ),
+            code=400,
+        )
 
     cohort = data.get("cohorts", [])
     cohort_found = []
@@ -1093,16 +1120,33 @@ def validate_and_create_subscriptions(
     plan = plans[0]
     coupons = get_available_coupons(plan, data.get("coupons", []))
 
-    if (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None:
-        raise ValidationException(
-            translation(
-                lang,
-                en=f"Financing option not found for {how_many_installments} installments",
-                es=f"Opción de financiamiento no encontrada para {how_many_installments} cuotas",
-                slug="financing-option-not-found",
-            ),
-            code=404,
-        )
+    financing_option = None
+
+    if how_many_installments == 0:
+        if plan.price_per_year:
+            base_price_for_calculation = plan.price_per_year
+        elif plan.price_per_half:
+            base_price_for_calculation = plan.price_per_half
+        elif plan.price_per_quarter:
+            base_price_for_calculation = plan.price_per_quarter
+        elif plan.price_per_month:
+            base_price_for_calculation = plan.price_per_month
+        else:
+            base_price_for_calculation = 0.0
+
+    else:
+        financing_option = plan.financing_options.filter(how_many_months=how_many_installments).first()
+        if financing_option is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Financing option not found for {how_many_installments} installments for the selected plan.",
+                    es=f"Opción de financiamiento no encontrada para {how_many_installments} cuotas para el plan seleccionado.",
+                    slug="financing-option-not-found-for-plan",
+                ),
+                code=404,
+            )
+        base_price_for_calculation = financing_option.monthly_price
 
     conversion_info = data["conversion_info"] if "conversion_info" in data else None
     validate_conversion_info(conversion_info, lang)
@@ -1181,13 +1225,34 @@ def validate_and_create_subscriptions(
     bag.is_recurrent = True
 
     bag.how_many_installments = how_many_installments
-    amount = get_discounted_price(option.monthly_price, coupons)
-    bag.monthly_price = option.monthly_price
+    chosen_period = Bag.ChosenPeriod.NO_SET
+
+    is_paid_subscription = how_many_installments == 0 and (
+        plan.price_per_year or plan.price_per_half or plan.price_per_quarter or plan.price_per_month
+    )
+
+    if is_paid_subscription:
+        if plan.price_per_year:
+            chosen_period = Bag.ChosenPeriod.YEAR
+        elif plan.price_per_half:
+            chosen_period = Bag.ChosenPeriod.HALF
+        elif plan.price_per_quarter:
+            chosen_period = Bag.ChosenPeriod.QUARTER
+        elif plan.price_per_month:
+            chosen_period = Bag.ChosenPeriod.MONTH
+
+        bag.amount_per_month = plan.price_per_month
+        bag.amount_per_quarter = plan.price_per_quarter
+        bag.amount_per_half = plan.price_per_half
+        bag.amount_per_year = plan.price_per_year
+
+    bag.chosen_period = chosen_period
 
     bag.save()
     bag.plans.set(plans)
 
     utc_now = timezone.now()
+    amount = get_discounted_price(base_price_for_calculation, coupons)
 
     invoice = Invoice(
         amount=amount,
@@ -1203,7 +1268,10 @@ def validate_and_create_subscriptions(
     )
     invoice.save()
 
-    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort)
+    if how_many_installments == 0:
+        tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
+    else:
+        tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort_found)
 
     return invoice, coupons
 
