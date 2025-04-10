@@ -3454,3 +3454,85 @@ def test_get_a_plan_with_add_ons(
     assert activity_tasks.add_activity.delay.call_args_list == [
         call(1, "bag_created", related_type="payments.Bag", related_id=1),
     ]
+
+
+@pytest.mark.parametrize(
+    "country_code,ratio,price_per_month,price_per_quarter,price_per_half,price_per_year",
+    [
+        ("ve", 0.8, 80.0, 216.0, 384.0, 720.0),  # Venezuela with general ratio
+        ("ar", 0.7, 70.0, 189.0, 336.0, 630.0),  # Argentina with general ratio
+        ("us", 1.0, 100.0, 270.0, 480.0, 900.0),  # US with default ratio
+        (None, 1.0, 100.0, 270.0, 480.0, 900.0),  # No country code
+    ],
+)
+@patch("breathecode.payments.actions.get_pricing_ratio")
+def test_checking_with_country_pricing(
+    mock_get_country_pricing_ratio,
+    database: capy.Database,
+    client: capy.Client,
+    fake: capy.Fake,
+    format: capy.Format,
+    country_code,
+    ratio,
+    price_per_month,
+    price_per_quarter,
+    price_per_half,
+    price_per_year,
+):
+    """Test that checking endpoint applies country-specific pricing ratios"""
+
+    # Mock the country pricing ratio function to return the expected ratio
+    mock_get_country_pricing_ratio.return_value = ratio
+
+    # Setup test data
+    bag = {
+        "status": "CHECKING",
+        "type": "PREVIEW",
+        "chosen_period": "MONTH",
+    }
+
+    currency = {"code": "USD", "name": "United States dollar"}
+
+    plan = {
+        "price_per_month": price_per_month,
+        "price_per_quarter": price_per_quarter,
+        "price_per_half": price_per_half,
+        "price_per_year": price_per_year,
+        "is_renewable": False,
+    }
+
+    # Create test model
+    model = database.create(
+        user=1,
+        bag=bag,
+        academy={"available_as_saas": True},
+        plan=plan,
+        currency=currency,
+        city=1,
+        country=1,
+    )
+
+    client.force_authenticate(model.user)
+
+    # Send request
+    url = reverse_lazy("payments:checking")
+    data = {
+        "academy": 1,
+        "type": "PREVIEW",
+        "plans": [1],
+    }
+
+    if country_code:
+        data["country_code"] = country_code
+
+    response = client.put(url, data, format="json")
+
+    # Check response
+    assert response.status_code == status.HTTP_200_OK
+    json = response.json()
+
+    # For now, just check that we get the expected fields
+    assert json["amount_per_month"] == price_per_month * ratio
+    assert json["amount_per_quarter"] == price_per_quarter * ratio
+    assert json["amount_per_half"] == price_per_half * ratio
+    assert json["amount_per_year"] == price_per_year * ratio

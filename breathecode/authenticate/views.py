@@ -1174,7 +1174,7 @@ async def save_github_token(request):
         return default
 
     async def redirect_to_get_access_token():
-        nonlocal scopes, request, token, url
+        nonlocal token
 
         if token is None:
             token, _ = await Token.aget_or_create(user=user, token_type="login")

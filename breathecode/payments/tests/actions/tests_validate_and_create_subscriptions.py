@@ -67,6 +67,11 @@ def serialize_bag(data={}):
         "type": "BAG",
         "user_id": 1,
         "was_delivered": False,
+        "country_code": None,
+        "pricing_ratio_explanation": {
+            "plans": [],
+            "service_items": [],
+        },
         **data,
     }
 

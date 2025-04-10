@@ -147,6 +147,7 @@ def get_serializer(
         "venue": event.venue,
         "is_public": event.is_public,
         "recording_url": event.recording_url,
+        "recap": event.context.recap if hasattr(event, "context") and event.context else None,
         **data,
     }
 
