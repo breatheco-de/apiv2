@@ -582,6 +582,8 @@ def send_liveclass_survey(liveclass_id, **_):
                 if notify_actions.send_email_message("nps_survey", answer.user.email, data, academy=academy):
                     answer.sent_at = timezone.now()
                     answer.save()
+        survey.status = 'SENT'
+        survey.save()
 
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")

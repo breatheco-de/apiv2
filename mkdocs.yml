@@ -92,6 +92,8 @@ nav:
       - Mocks:
           - "testing/mocks/using-mocks.md"
           - "testing/mocks/mock-requests.md"
+  - Troubleshooting:
+      - "troubleshooting/check_task_status.md"
   - Workflows:
       - "workflows/file-uploading.md"
   - Infrastructure:
