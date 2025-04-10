@@ -1031,29 +1031,34 @@ def validate_and_create_subscriptions(
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
 
-    how_many_installments_str = data.get("how_many_installments")
-    if how_many_installments_str is None:
-        how_many_installments_str = request.GET.get("how_many_installments")  # Fallback to GET
+    how_many_installments_input = data.get("how_many_installments")
 
-    if how_many_installments_str is not None:
-        try:
-            how_many_installments = int(how_many_installments_str)
-            if how_many_installments < 0:
-                raise ValueError("Installments cannot be negative")
-        except (ValueError, TypeError):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Invalid 'how_many_installments' value provided.",
-                    es="Valor inválido proporcionado para 'how_many_installments'.",
-                    slug="invalid-installments-value",
-                ),
-                code=400,
-            )
-    else:
-        how_many_installments = 1
+    if how_many_installments_input is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="'how_many_installments' must be provided (0 for subscription, >0 for financing).",
+                es="'how_many_installments' debe ser proporcionado (0 para suscripción, >0 para financiamiento).",
+                slug="missing-installments-value",
+            ),
+            code=400,
+        )
 
-    logger.info(f"Using how_many_installments: {how_many_installments}")
+    try:
+        how_many_installments = int(how_many_installments_input)
+        if how_many_installments < 0:
+            raise ValueError("Installments cannot be negative")
+
+    except (ValueError, TypeError):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invalid 'how_many_installments' value provided (must be a non-negative integer).",
+                es="Valor inválido proporcionado para 'how_many_installments' (debe ser un entero no negativo).",
+                slug="invalid-installments-value",
+            ),
+            code=400,
+        )
 
     cohort = data.get("cohorts", [])
     cohort_found = []
@@ -1115,27 +1120,23 @@ def validate_and_create_subscriptions(
     plan = plans[0]
     coupons = get_available_coupons(plan, data.get("coupons", []))
 
-    option = None
-    monthly_price_for_calculation = 0.0
-
-    def plan_is_effectively_free(p: Plan):
-        return not (p.price_per_month or p.price_per_quarter or p.price_per_half or p.price_per_year)
+    financing_option = None
 
     if how_many_installments == 0:
-        if not plan_is_effectively_free(plan):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Zero installments are only allowed for plans with no defined price.",
-                    es="Cero cuotas solo se permiten para planes sin precio definido.",
-                    slug="zero-installments-for-paid-plans",
-                ),
-                code=400,
-            )
+        if plan.price_per_year:
+            base_price_for_calculation = plan.price_per_year
+        elif plan.price_per_half:
+            base_price_for_calculation = plan.price_per_half
+        elif plan.price_per_quarter:
+            base_price_for_calculation = plan.price_per_quarter
+        elif plan.price_per_month:
+            base_price_for_calculation = plan.price_per_month
+        else:
+            base_price_for_calculation = 0.0
 
     else:
-        option = plan.financing_options.filter(how_many_months=how_many_installments).first()
-        if option is None:
+        financing_option = plan.financing_options.filter(how_many_months=how_many_installments).first()
+        if financing_option is None:
             raise ValidationException(
                 translation(
                     lang,
@@ -1145,7 +1146,7 @@ def validate_and_create_subscriptions(
                 ),
                 code=404,
             )
-        monthly_price_for_calculation = option.monthly_price
+        base_price_for_calculation = financing_option.monthly_price
 
     conversion_info = data["conversion_info"] if "conversion_info" in data else None
     validate_conversion_info(conversion_info, lang)
@@ -1224,13 +1225,34 @@ def validate_and_create_subscriptions(
     bag.is_recurrent = True
 
     bag.how_many_installments = how_many_installments
-    amount = get_discounted_price(monthly_price_for_calculation, coupons)
-    bag.monthly_price = monthly_price_for_calculation
+    chosen_period = Bag.ChosenPeriod.NO_SET
+
+    is_paid_subscription = how_many_installments == 0 and (
+        plan.price_per_year or plan.price_per_half or plan.price_per_quarter or plan.price_per_month
+    )
+
+    if is_paid_subscription:
+        if plan.price_per_year:
+            chosen_period = Bag.ChosenPeriod.YEAR
+        elif plan.price_per_half:
+            chosen_period = Bag.ChosenPeriod.HALF
+        elif plan.price_per_quarter:
+            chosen_period = Bag.ChosenPeriod.QUARTER
+        elif plan.price_per_month:
+            chosen_period = Bag.ChosenPeriod.MONTH
+
+        bag.amount_per_month = plan.price_per_month
+        bag.amount_per_quarter = plan.price_per_quarter
+        bag.amount_per_half = plan.price_per_half
+        bag.amount_per_year = plan.price_per_year
+
+    bag.chosen_period = chosen_period
 
     bag.save()
     bag.plans.set(plans)
 
     utc_now = timezone.now()
+    amount = get_discounted_price(base_price_for_calculation, coupons)
 
     invoice = Invoice(
         amount=amount,
