@@ -1031,7 +1031,29 @@ def validate_and_create_subscriptions(
         settings = get_user_settings(staff_user.id)
         lang = settings.lang
 
-    how_many_installments = 1
+    how_many_installments_str = data.get("how_many_installments")
+    if how_many_installments_str is None:
+        how_many_installments_str = request.GET.get("how_many_installments")  # Fallback to GET
+
+    if how_many_installments_str is not None:
+        try:
+            how_many_installments = int(how_many_installments_str)
+            if how_many_installments < 0:
+                raise ValueError("Installments cannot be negative")
+        except (ValueError, TypeError):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid 'how_many_installments' value provided.",
+                    es="Valor inválido proporcionado para 'how_many_installments'.",
+                    slug="invalid-installments-value",
+                ),
+                code=400,
+            )
+    else:
+        how_many_installments = 1
+
+    logger.info(f"Using how_many_installments: {how_many_installments}")
 
     cohort = data.get("cohorts", [])
     cohort_found = []
@@ -1093,16 +1115,37 @@ def validate_and_create_subscriptions(
     plan = plans[0]
     coupons = get_available_coupons(plan, data.get("coupons", []))
 
-    if (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None:
-        raise ValidationException(
-            translation(
-                lang,
-                en=f"Financing option not found for {how_many_installments} installments",
-                es=f"Opción de financiamiento no encontrada para {how_many_installments} cuotas",
-                slug="financing-option-not-found",
-            ),
-            code=404,
-        )
+    option = None
+    monthly_price_for_calculation = 0.0
+
+    def plan_is_effectively_free(p: Plan):
+        return not (p.price_per_month or p.price_per_quarter or p.price_per_half or p.price_per_year)
+
+    if how_many_installments == 0:
+        if not plan_is_effectively_free(plan):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Zero installments are only allowed for plans with no defined price.",
+                    es="Cero cuotas solo se permiten para planes sin precio definido.",
+                    slug="zero-installments-for-paid-plans",
+                ),
+                code=400,
+            )
+
+    else:
+        option = plan.financing_options.filter(how_many_months=how_many_installments).first()
+        if option is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Financing option not found for {how_many_installments} installments for the selected plan.",
+                    es=f"Opción de financiamiento no encontrada para {how_many_installments} cuotas para el plan seleccionado.",
+                    slug="financing-option-not-found-for-plan",
+                ),
+                code=404,
+            )
+        monthly_price_for_calculation = option.monthly_price
 
     conversion_info = data["conversion_info"] if "conversion_info" in data else None
     validate_conversion_info(conversion_info, lang)
@@ -1181,8 +1224,8 @@ def validate_and_create_subscriptions(
     bag.is_recurrent = True
 
     bag.how_many_installments = how_many_installments
-    amount = get_discounted_price(option.monthly_price, coupons)
-    bag.monthly_price = option.monthly_price
+    amount = get_discounted_price(monthly_price_for_calculation, coupons)
+    bag.monthly_price = monthly_price_for_calculation
 
     bag.save()
     bag.plans.set(plans)
@@ -1203,7 +1246,10 @@ def validate_and_create_subscriptions(
     )
     invoice.save()
 
-    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort)
+    if how_many_installments == 0:
+        tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
+    else:
+        tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort_found)
 
     return invoice, coupons
 
