@@ -130,10 +130,22 @@ class GetConsumableSerializer(GetServiceItemSerializer):
 
 
 class GetFinancingOptionSerializer(serpy.Serializer):
-    # title = serpy.Field()
-    monthly_price = serpy.Field()
+    monthly_price = serpy.MethodField()
     how_many_months = serpy.Field()
     currency = GetCurrencySmallSerializer()
+
+    def get_monthly_price(self, obj):
+        if not hasattr(self, "context") or not self.context:
+            return obj.monthly_price
+
+        country_code = self.context.get("country_code")
+        if not country_code:
+            return obj.monthly_price
+
+        # Get the plan to apply its pricing ratios
+        plan = obj.plan
+        price, _ = apply_pricing_ratio(obj.monthly_price, country_code, plan)
+        return price
 
 
 class GetPlanSmallSerializer(serpy.Serializer):
@@ -159,7 +171,12 @@ class GetPlanSmallSerializer(serpy.Serializer):
         if obj.is_renewable:
             return []
 
-        return GetFinancingOptionSerializer(obj.financing_options.all(), many=True).data
+        # Pass country_code context to financing options serializer
+        context = {}
+        if hasattr(self, "context") and self.context:
+            context["country_code"] = self.context.get("country_code")
+
+        return GetFinancingOptionSerializer(obj.financing_options.all(), many=True, context=context).data
 
 
 class GetPlanSerializer(GetPlanSmallSerializer):
@@ -172,6 +189,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     has_waiting_list = serpy.Field()
     owner = GetAcademySmallSerializer(required=False, many=False)
     id = serpy.Field()
+    pricing_ratio_exceptions = serpy.Field()
 
     def get_price_per_month(self, obj):
         if not hasattr(self, "context") or not self.context:
@@ -181,7 +199,8 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         if not country_code:
             return obj.price_per_month
 
-        return apply_pricing_ratio(obj.price_per_month, country_code, obj)
+        price, _ = apply_pricing_ratio(obj.price_per_month, country_code, obj)
+        return price
 
     def get_price_per_quarter(self, obj):
         if not hasattr(self, "context") or not self.context:
@@ -191,7 +210,8 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         if not country_code:
             return obj.price_per_quarter
 
-        return apply_pricing_ratio(obj.price_per_quarter, country_code, obj)
+        price, _ = apply_pricing_ratio(obj.price_per_quarter, country_code, obj)
+        return price
 
     def get_price_per_half(self, obj):
         if not hasattr(self, "context") or not self.context:
@@ -201,7 +221,8 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         if not country_code:
             return obj.price_per_half
 
-        return apply_pricing_ratio(obj.price_per_half, country_code, obj)
+        price, _ = apply_pricing_ratio(obj.price_per_half, country_code, obj)
+        return price
 
     def get_price_per_year(self, obj):
         if not hasattr(self, "context") or not self.context:
@@ -211,7 +232,8 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         if not country_code:
             return obj.price_per_year
 
-        return apply_pricing_ratio(obj.price_per_year, country_code, obj)
+        price, _ = apply_pricing_ratio(obj.price_per_year, country_code, obj)
+        return price
 
 
 class GetPlanOfferTranslationSerializer(serpy.Serializer):
@@ -304,6 +326,7 @@ class GetAcademyServiceSmallSerializer(serpy.Serializer):
     discount_ratio = serpy.Field()
     available_mentorship_service_sets = serpy.MethodField()
     available_event_type_sets = serpy.MethodField()
+    pricing_ratio_exceptions = serpy.Field()
 
     def get_price_per_unit(self, obj):
         if not hasattr(self, "context") or not self.context:
@@ -313,7 +336,8 @@ class GetAcademyServiceSmallSerializer(serpy.Serializer):
         if not country_code:
             return obj.price_per_unit
 
-        return apply_pricing_ratio(obj.price_per_unit, country_code, academy_service=obj)
+        price, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
+        return price
 
     def get_available_mentorship_service_sets(self, obj):
         items = obj.available_mentorship_service_sets.all()

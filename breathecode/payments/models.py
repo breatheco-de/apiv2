@@ -906,6 +906,7 @@ def limit_coupon_choices():
 
 
 def _default_pricing_ratio_explanation():
+    """Default empty pricing ratio explanation structure."""
     return {"plans": [], "service_items": []}
 
 
@@ -1194,6 +1195,14 @@ class AbstractIOweYou(models.Model):
     plans = models.ManyToManyField(Plan, blank=True, help_text="Plans to be supplied")
     conversion_info = models.JSONField(
         default=None, blank=True, null=True, help_text="UTMs and other conversion information."
+    )
+
+    country_code = models.CharField(
+        max_length=2,
+        null=False,
+        blank=True,
+        default="",
+        help_text="Country code used for pricing ratio calculations",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
