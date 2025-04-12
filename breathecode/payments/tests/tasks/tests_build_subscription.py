@@ -37,6 +37,7 @@ def subscription_item(data={}):
         "user_id": 1,
         "valid_until": UTC_NOW,
         "externally_managed": False,
+        "country_code": "",
         **data,
     }
 
@@ -833,6 +834,7 @@ def test_build_subscription_with_different_chosen_periods(
             "status": "ACTIVE",
             "status_message": None,
             "user_id": 1,
+            "country_code": "",
         }
     ]
 

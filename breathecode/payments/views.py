@@ -25,6 +25,7 @@ from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
+    apply_pricing_ratio,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -1980,12 +1981,12 @@ class ConsumableCheckoutView(APIView):
 
         # Apply country-specific pricing ratio if provided
         if country_code:
-            ratio = actions.get_pricing_ratio(country_code, academy_service=academy_service)
-            if ratio != 1.0:
-                amount *= ratio
+            adjusted_price, ratio = apply_pricing_ratio(amount, country_code, academy_service)
+            if ratio:
                 pricing_ratio_explanation["service_items"].append(
-                    {"service": academy_service.service.slug, "ratio": ratio}
+                    {"service": academy_service.service.slug, "ratio": ratio, "country": country_code}
                 )
+                amount = adjusted_price
 
         if amount <= 0.5:
             raise ValidationException(
@@ -2217,9 +2218,14 @@ class PayView(APIView):
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
                         original_price = option.monthly_price
+
+                        # Apply pricing ratio first
+                        adjusted_price, _ = apply_pricing_ratio(original_price, bag.country_code, plan)
+
+                        # Then apply coupons
                         coupons = bag.coupons.all()
-                        amount = get_discounted_price(original_price, coupons)
-                        bag.monthly_price = option.monthly_price
+                        amount = get_discounted_price(adjusted_price, coupons)
+
                     except Exception:
                         raise ValidationException(
                             translation(

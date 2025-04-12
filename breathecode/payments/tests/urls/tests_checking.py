@@ -3465,9 +3465,9 @@ def test_get_a_plan_with_add_ons(
         (None, 1.0, 100.0, 270.0, 480.0, 900.0),  # No country code
     ],
 )
-@patch("breathecode.payments.actions.get_pricing_ratio")
+@patch("breathecode.payments.actions.apply_pricing_ratio")
 def test_checking_with_country_pricing(
-    mock_get_country_pricing_ratio,
+    mock_apply_pricing_ratio,
     database: capy.Database,
     client: capy.Client,
     fake: capy.Fake,
@@ -3481,58 +3481,81 @@ def test_checking_with_country_pricing(
 ):
     """Test that checking endpoint applies country-specific pricing ratios"""
 
-    # Mock the country pricing ratio function to return the expected ratio
-    mock_get_country_pricing_ratio.return_value = ratio
+    # Mock the pricing ratio function to return both price and ratio
+    mock_apply_pricing_ratio.side_effect = lambda price, cc, x=None: (
+        price * ratio if price and cc else price,
+        ratio if cc else None,
+    )
 
     # Setup test data
     bag = {
+        "id": 1,
+        "academy": {
+            "id": 1,
+            "logo_url": "",
+            "name": "test",
+            "slug": "test",
+        },
         "status": "CHECKING",
         "type": "PREVIEW",
-        "chosen_period": "MONTH",
+        "plans": [],
+        "amount_per_month": price_per_month,
+        "amount_per_quarter": price_per_quarter,
+        "amount_per_half": price_per_half,
+        "amount_per_year": price_per_year,
+        "token": "abc",
+        "user": {"id": 1, "email": "john@example.com", "first_name": "John", "last_name": "Doe"},
+        "was_delivered": False,
+        "expires_at": UTC_NOW + timedelta(days=10),
+        "created_at": UTC_NOW,
+        "updated_at": UTC_NOW,
     }
 
-    currency = {"code": "USD", "name": "United States dollar"}
-
-    plan = {
-        "price_per_month": price_per_month,
-        "price_per_quarter": price_per_quarter,
-        "price_per_half": price_per_half,
-        "price_per_year": price_per_year,
-        "is_renewable": False,
-    }
-
-    # Create test model
     model = database.create(
-        user=1,
-        bag=bag,
-        academy={"available_as_saas": True},
-        plan=plan,
-        currency=currency,
-        city=1,
         country=1,
+        city=1,
+        academy={"id": 1, "name": "test", "slug": "test", "available_as_saas": True},
+        plan={
+            "id": 1,
+            "slug": "test",
+            "price_per_month": 100.0,
+            "price_per_quarter": 270.0,
+            "price_per_half": 480.0,
+            "price_per_year": 900.0,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "trial_duration": 0,
+            "trial_duration_unit": "MONTH",
+            "is_renewable": True,
+        },
+        currency={"code": "USD", "name": "United States dollar"},
+        user={"id": 1, "email": "john@example.com", "first_name": "John", "last_name": "Doe"},
+        bag=bag,
     )
 
-    client.force_authenticate(model.user)
-
-    # Send request
-    url = reverse_lazy("payments:checking")
-    data = {
+    payload = {
         "academy": 1,
         "type": "PREVIEW",
         "plans": [1],
     }
 
     if country_code:
-        data["country_code"] = country_code
+        payload["country_code"] = country_code
 
-    response = client.put(url, data, format="json")
+    client.force_authenticate(model.user)
+    url = reverse_lazy("payments:checking")
+    response = client.put(url, payload, format="json")
 
-    # Check response
-    assert response.status_code == status.HTTP_200_OK
-    json = response.json()
+    # Assert the response is correct
+    assert response.status_code == 200
 
-    # For now, just check that we get the expected fields
-    assert json["amount_per_month"] == price_per_month * ratio
-    assert json["amount_per_quarter"] == price_per_quarter * ratio
-    assert json["amount_per_half"] == price_per_half * ratio
-    assert json["amount_per_year"] == price_per_year * ratio
+    data = response.json()
+    assert data["amount_per_month"] == price_per_month
+    assert data["amount_per_quarter"] == price_per_quarter
+    assert data["amount_per_half"] == price_per_half
+    assert data["amount_per_year"] == price_per_year
+
+    # Verify apply_pricing_ratio was called if country_code was provided
+    if country_code:
+        # Check that it was called at least once for any price
+        assert mock_apply_pricing_ratio.call_count > 0

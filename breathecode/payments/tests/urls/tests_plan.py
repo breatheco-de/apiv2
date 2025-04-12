@@ -62,6 +62,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
             "name": currency.name,
         },
         "financing_options": financing_options,
+        "pricing_ratio_exceptions": event.pricing_ratio_exceptions,
         "has_available_cohorts": len(cohorts) > 0,
         "has_waiting_list": event.has_waiting_list,
         "is_renewable": event.is_renewable,

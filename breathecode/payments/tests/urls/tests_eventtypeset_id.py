@@ -4,6 +4,7 @@ from django.urls import reverse_lazy
 from rest_framework import status
 
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
+
 from ..mixins import PaymentsTestCase
 
 
@@ -50,6 +51,7 @@ def academy_service_serialize(academy_service, academy, currency, service):
         "academy": academy_serializer(academy),
         "currency": currency_serializer(currency),
         "id": academy_service.id,
+        "pricing_ratio_exceptions": academy_service.pricing_ratio_exceptions,
         "price_per_unit": academy_service.price_per_unit,
         "max_items": academy_service.max_items,
         "bundle_size": academy_service.bundle_size,
