@@ -314,7 +314,7 @@ class GetCouponSerializer(serpy.Serializer):
     expires_at = serpy.Field()
 
 
-class GetAcademyServiceSmallSerializer(serpy.Serializer):
+class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = GetAcademySmallSerializer()
     service = GetServiceSmallSerializer()
@@ -324,8 +324,6 @@ class GetAcademyServiceSmallSerializer(serpy.Serializer):
     max_items = serpy.Field()
     max_amount = serpy.Field()
     discount_ratio = serpy.Field()
-    available_mentorship_service_sets = serpy.MethodField()
-    available_event_type_sets = serpy.MethodField()
     pricing_ratio_exceptions = serpy.Field()
 
     def get_price_per_unit(self, obj):
@@ -338,6 +336,11 @@ class GetAcademyServiceSmallSerializer(serpy.Serializer):
 
         price, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
         return price
+
+
+class GetAcademyServiceSmallSerializer(GetAcademyServiceSmallReverseSerializer):
+    available_mentorship_service_sets = serpy.MethodField()
+    available_event_type_sets = serpy.MethodField()
 
     def get_available_mentorship_service_sets(self, obj):
         items = obj.available_mentorship_service_sets.all()
@@ -405,7 +408,7 @@ class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
 
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_mentorship_service_sets=obj)
-        return GetAcademyServiceSmallSerializer(items, many=True).data
+        return GetAcademyServiceSmallReverseSerializer(items, many=True).data
 
 
 class GetCohortSetSerializer(serpy.Serializer):
@@ -445,7 +448,7 @@ class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
 
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_event_type_sets=obj)
-        return GetAcademyServiceSmallSerializer(items, many=True).data
+        return GetAcademyServiceSmallReverseSerializer(items, many=True).data
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):

@@ -37,6 +37,7 @@ def plan_financing_item(data={}):
         "selected_mentorship_service_set_id": None,
         "externally_managed": False,
         "how_many_installments": 0,
+        "country_code": "",
         **data,
     }
 
