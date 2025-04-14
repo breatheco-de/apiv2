@@ -17,6 +17,7 @@ from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination,
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
+from .actions import filter_answer_by_question
 from .caches import AnswerCache
 from .models import Answer, Review, ReviewPlatform, Survey, AcademyFeedbackSettings, SurveyTemplate
 from .serializers import (
@@ -141,6 +142,10 @@ class GetAnswerView(APIView):
         surveys = request.GET.get("survey", None)
         if surveys is not None and surveys != "":
             items = items.filter(survey__id__in=surveys.split(","))
+
+        question_filter = request.GET.get("question", None)
+        if question_filter is not None and question_filter != "":
+            items = filter_answer_by_question(items, question_filter)
 
         items = items.filter(**lookup)
 
@@ -387,6 +392,10 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         academy = Academy.objects.get(id=academy_id)
         items = Review.objects.filter(cohort__academy__id=academy.id)
         lookup = {}
+
+        never_ending_cohorts = request.GET.get("never_ending_cohorts", None)
+        if never_ending_cohorts is not None:
+            items = items.filter(cohort__never_ends=(never_ending_cohorts.lower() == "true"))
 
         start = request.GET.get("start", None)
         if start is not None:
