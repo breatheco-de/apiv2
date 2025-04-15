@@ -18,8 +18,10 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .caches import AnswerCache
-from .models import Answer, Review, ReviewPlatform, Survey, AcademyFeedbackSettings, SurveyTemplate
+from .models import AcademyFeedbackSettings, Answer, Review, ReviewPlatform, Survey, SurveyTemplate
 from .serializers import (
+    AcademyFeedbackSettingsPUTSerializer,
+    AcademyFeedbackSettingsSerializer,
     AnswerPUTSerializer,
     AnswerSerializer,
     BigAnswerSerializer,
@@ -30,8 +32,7 @@ from .serializers import (
     SurveyPUTSerializer,
     SurveySerializer,
     SurveySmallSerializer,
-    AcademyFeedbackSettingsSerializer,
-    AcademyFeedbackSettingsPUTSerializer,
+    SurveyTemplateSerializer,
 )
 from .tasks import generate_user_cohort_survey_answers
 
@@ -508,3 +509,11 @@ class AcademyFeedbackSettingsView(APIView):
             return Response(AcademyFeedbackSettingsSerializer(settings).data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademySurveyTemplateView(APIView):
+    @capable_of("read_survey_template")
+    def get(self, request, academy_id=None):
+        templates = SurveyTemplate.objects.filter(academy__id=academy_id)
+        serializer = SurveyTemplateSerializer(templates, many=True)
+        return Response(serializer.data)

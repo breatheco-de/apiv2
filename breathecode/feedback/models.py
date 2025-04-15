@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -230,7 +231,10 @@ def validate_question_structure(value):
     required_keys = ["title", "highest", "lowest", "survey_subject"]
 
     if not isinstance(value, dict):
-        raise ValidationError("Value must be a dictionary")
+        try:
+            value = json.loads(value)
+        except (TypeError, json.JSONDecodeError):
+            raise ValidationError("Value must be a dictionary or a valid JSON string")
 
     missing_keys = [key for key in required_keys if key not in value]
     if missing_keys:
