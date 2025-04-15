@@ -523,8 +523,11 @@ class AcademySurveyTemplateView(APIView):
         # Check if 'is_shared' is present and true in the querystring
         is_shared = request.GET.get("is_shared", "false").lower() == "true"
         if is_shared:
-            shared_templates = SurveyTemplate.objects.filter(is_shared=True).exclude(academy__id=academy_id)
-            templates = templates | shared_templates
+            templates = templates.filter(is_shared=True)
+
+        if "lang" in self.request.GET:
+            param = self.request.GET.get("lang")
+            templates = templates.filter(lang=param)
 
         serializer = SurveyTemplateSerializer(templates, many=True)
         return Response(serializer.data)
