@@ -205,7 +205,17 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ["user__first_name", "user__last_name", "user__email", "cohort__slug"]
     list_filter = [AnswerTypeFilter, "status", "score", "academy__slug", "cohort__slug", "question_by_slug"]
     actions = ["export_as_csv", add_academy_to_answer]
-    raw_id_fields = ["user", "cohort", "mentor", "event", "mentorship_session", "survey"]
+    raw_id_fields = [
+        "token",
+        "user",
+        "cohort",
+        "mentor",
+        "event",
+        "mentorship_session",
+        "survey",
+        "live_class",
+        "asset",
+    ]
 
     def answer_url(self, obj):
         url = "https://nps.4geeks.com/" + str(obj.id)
