@@ -90,7 +90,6 @@ class SurveyTemplateSerializer(serpy.Serializer):
     slug = serpy.Field()
     lang = serpy.Field()
     is_shared = serpy.Field()
-    original = serpy.Field()
     when_asking_event = serpy.Field()
     when_asking_mentor = serpy.Field()
     when_asking_cohort = serpy.Field()
@@ -101,6 +100,15 @@ class SurveyTemplateSerializer(serpy.Serializer):
     when_asking_mentor_communication = serpy.Field()
     when_asking_mentor_participation = serpy.Field()
     additional_questions = serpy.Field()
+    original = serpy.MethodField()
+
+    def get_original(self, obj):
+        if obj.original is None:
+            return None
+        return {
+            "id": obj.original.id,
+            "slug": obj.original.slug,
+        }
 
 
 class LiveClassSmallSerializer(serpy.Serializer):
