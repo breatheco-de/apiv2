@@ -161,7 +161,7 @@ def get_admin_url():
     return admin_url
 
 
-def generate_user_cohort_survey_answers(user, survey, status="OPENED"):
+def generate_user_cohort_survey_answers(user, survey, status="OPENED", template_slug=None):
 
     if not CohortUser.objects.filter(
         cohort=survey.cohort, role="STUDENT", user=user, educational_status__in=["ACTIVE", "GRADUATED"]
@@ -174,9 +174,8 @@ def generate_user_cohort_survey_answers(user, survey, status="OPENED"):
     if cohort_teacher.count() == 0:
         raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
 
-    # Get settings once for all answers
-    settings = AcademyFeedbackSettings.objects.filter(academy=survey.cohort.academy).first()
-    template_slug = settings.cohort_survey_template.slug if settings and settings.cohort_survey_template else None
+    if template_slug is None:
+        raise ValidationException("Template slug must be specified before building the question", 500)
 
     def new_answer(answer: Answer):
         answer = build_question(answer, template_slug)
@@ -235,7 +234,7 @@ def api_url():
 
 
 @task(bind=False, priority=TaskPriority.NOTIFICATION.value)
-def send_cohort_survey(user_id, survey_id, **_):
+def send_cohort_survey(user_id, survey_id, template_slug=None, **_):
     logger.info("Starting send_cohort_survey")
     survey = Survey.objects.filter(id=survey_id).first()
     if survey is None:
@@ -257,7 +256,7 @@ def send_cohort_survey(user_id, survey_id, **_):
         raise AbortTask("This student does not belong to this cohort")
 
     try:
-        generate_user_cohort_survey_answers(user, survey, status="SENT")
+        generate_user_cohort_survey_answers(user, survey, status="SENT", template_slug=template_slug)
 
     except Exception as e:
         raise AbortTask(str(e))
@@ -528,7 +527,7 @@ def send_liveclass_survey(liveclass_id, **_):
                 attended_user_ids = day_log.get("attendance_ids", [])
                 break
 
-        survey = Survey(cohort=cohort, lang=cohort.language.lower(), is_customized=True)
+        survey = Survey(cohort=cohort, lang=cohort.language.lower(), is_customized=True, template_slug=template_slug)
         survey.sent_at = timezone.now()
         survey.save()
         for user_id in attended_user_ids:
@@ -582,7 +581,7 @@ def send_liveclass_survey(liveclass_id, **_):
                 if notify_actions.send_email_message("nps_survey", answer.user.email, data, academy=academy):
                     answer.sent_at = timezone.now()
                     answer.save()
-        survey.status = 'SENT'
+        survey.status = "SENT"
         survey.save()
 
     except LockError:

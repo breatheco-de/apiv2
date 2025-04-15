@@ -11,7 +11,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Token
 
 from . import tasks
-from .models import Answer, Review, ReviewPlatform, Survey
+from .models import AcademyFeedbackSettings, Answer, Review, ReviewPlatform, Survey
 from .utils import strings
 
 logger = logging.getLogger(__name__)
@@ -47,9 +47,16 @@ def send_cohort_survey_group(survey=None, cohort=None):
 
         ucs = CohortUser.objects.filter(cohort=cohort, role="STUDENT").filter()
 
+        # Get settings once for all answerstemplate_slug
+        settings = AcademyFeedbackSettings.objects.filter(academy=cohort.academy).first()
+        template_slug = settings.cohort_survey_template.slug if settings and settings.cohort_survey_template else None
+
+        survey.template_slug = template_slug
+        survey.save()
+
         for uc in ucs:
             if uc.educational_status in ["ACTIVE", "GRADUATED"]:
-                tasks.send_cohort_survey.delay(uc.user.id, survey.id)
+                tasks.send_cohort_survey.delay(uc.user.id, survey.id, template_slug)
 
                 logger.debug(f"Survey scheduled to send for {uc.user.email}")
                 result["success"].append(f"Survey scheduled to send for {uc.user.email}")

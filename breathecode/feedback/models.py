@@ -58,6 +58,9 @@ class Survey(models.Model):
     title = models.CharField(
         max_length=200, blank=True, null=True, help_text="Automatically set from the questions inside"
     )
+    template_slug = models.CharField(
+        max_length=100, blank=True, null=True, help_text="Slug of the template that was used to create this survey"
+    )
 
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     is_customized = models.BooleanField(
