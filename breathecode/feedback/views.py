@@ -268,6 +268,10 @@ class AcademySurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             param = self.request.GET.get("lang")
             lookup["lang"] = param
 
+        if "template_slug" in self.request.GET:
+            param = self.request.GET.get("template_slug")
+            lookup["template_slug"] = param
+
         sort = self.request.GET.get("sort")
         if sort is None:
             sort = "-created_at"
