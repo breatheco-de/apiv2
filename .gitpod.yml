@@ -52,5 +52,4 @@ vscode:
     - tamasfe.even-better-toml
     - ms-python.flake8
     - donjayamanne.githistory
-    - supermaven.supermaven
     - ms-python.debugpy

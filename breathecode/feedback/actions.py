@@ -59,6 +59,11 @@ def send_cohort_survey_group(survey=None, cohort=None):
                     f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student"
                 )
         survey.sent_at = timezone.now()
+
+        first_answer = Answer.objects.filter(survey=survey).first()
+        if first_answer:
+            survey.title = first_answer.title or f"Survey {first_answer.id}"
+
         if len(result["error"]) == 0:
             survey.status = "SENT"
         elif len(result["success"]) > 0 and len(result["error"]) > 0:

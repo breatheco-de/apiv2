@@ -55,6 +55,9 @@ class Survey(models.Model):
     """
 
     lang = models.CharField(max_length=3, blank=True, default="en")
+    title = models.CharField(
+        max_length=200, blank=True, null=True, help_text="Automatically set from the questions inside"
+    )
 
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     is_customized = models.BooleanField(
