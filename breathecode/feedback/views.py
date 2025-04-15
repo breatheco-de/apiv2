@@ -519,5 +519,12 @@ class AcademySurveyTemplateView(APIView):
     @capable_of("read_survey_template")
     def get(self, request, academy_id=None):
         templates = SurveyTemplate.objects.filter(academy__id=academy_id)
+
+        # Check if 'is_shared' is present and true in the querystring
+        is_shared = request.GET.get("is_shared", "false").lower() == "true"
+        if is_shared:
+            shared_templates = SurveyTemplate.objects.filter(is_shared=True).exclude(academy__id=academy_id)
+            templates = templates | shared_templates
+
         serializer = SurveyTemplateSerializer(templates, many=True)
         return Response(serializer.data)
