@@ -549,7 +549,7 @@ def send_liveclass_survey(liveclass_id, **_):
                 answer.save()
 
                 # Additional questions
-                questions = ["live_class_mentor", "live_class_mentor_communication", "live_class_mentor_practice"]
+                questions = ["liveclass_mentor", "mentor_communication", "mentor_participation"]
                 for slug in questions:
                     a = Answer(
                         question_by_slug=slug,

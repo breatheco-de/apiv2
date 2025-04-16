@@ -331,10 +331,10 @@ class SurveyTemplate(models.Model):
         validators=[validate_question_structure],
         help_text="Questions to ask about a live class mentor",
         default=dict(
-            title=strings["en"]["live_class_mentor"]["title"],
-            highest=strings["en"]["live_class_mentor"]["highest"],
-            lowest=strings["en"]["live_class_mentor"]["lowest"],
-            survey_subject=strings["en"]["live_class_mentor"]["survey_subject"],
+            title=strings["en"]["liveclass_mentor"]["title"],
+            highest=strings["en"]["liveclass_mentor"]["highest"],
+            lowest=strings["en"]["liveclass_mentor"]["lowest"],
+            survey_subject=strings["en"]["liveclass_mentor"]["survey_subject"],
         ),
     )
     when_asking_mentor_communication = models.JSONField(
@@ -343,10 +343,10 @@ class SurveyTemplate(models.Model):
         validators=[validate_question_structure],
         help_text="Questions to ask about mentor communication during class",
         default=dict(
-            title=strings["en"]["live_class_mentor_communication"]["title"],
-            highest=strings["en"]["live_class_mentor_communication"]["highest"],
-            lowest=strings["en"]["live_class_mentor_communication"]["lowest"],
-            survey_subject=strings["en"]["live_class_mentor_communication"]["survey_subject"],
+            title=strings["en"]["mentor_communication"]["title"],
+            highest=strings["en"]["mentor_communication"]["highest"],
+            lowest=strings["en"]["mentor_communication"]["lowest"],
+            survey_subject=strings["en"]["mentor_communication"]["survey_subject"],
         ),
     )
     when_asking_mentor_participation = models.JSONField(
@@ -355,10 +355,10 @@ class SurveyTemplate(models.Model):
         validators=[validate_question_structure],
         help_text="Questions to ask about class how the mentor answers and encoursges participation",
         default=dict(
-            title=strings["en"]["live_class_mentor_practice"]["title"],
-            highest=strings["en"]["live_class_mentor_practice"]["highest"],
-            lowest=strings["en"]["live_class_mentor_practice"]["lowest"],
-            survey_subject=strings["en"]["live_class_mentor_practice"]["survey_subject"],
+            title=strings["en"]["mentor_participation"]["title"],
+            highest=strings["en"]["mentor_participation"]["highest"],
+            lowest=strings["en"]["mentor_participation"]["lowest"],
+            survey_subject=strings["en"]["mentor_participation"]["survey_subject"],
         ),
     )
     additional_questions = models.JSONField(
