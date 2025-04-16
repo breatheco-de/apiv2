@@ -272,6 +272,23 @@ class AcademySurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             param = self.request.GET.get("template_slug")
             lookup["template_slug"] = param
 
+        if "title" in self.request.GET:
+            title = self.request.GET.get("title")
+            items = items.filter(title__icontains=title)
+
+        if "total_score" in self.request.GET:
+            total_score = self.request.GET.get("total_score")
+            try:
+                score_value = int(total_score.rstrip("+-"))
+                if total_score.endswith("+"):
+                    items = items.filter(scores__total__lte=score_value)
+                elif total_score.endswith("-"):
+                    items = items.filter(scores__total__gte=score_value)
+                else:
+                    items = items.filter(scores__total__gte=score_value, scores__total__lt=score_value + 1)
+            except ValueError:
+                raise ValidationException("Invalid total_score format", code=400)
+
         sort = self.request.GET.get("sort")
         if sort is None:
             sort = "-created_at"

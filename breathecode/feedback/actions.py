@@ -50,9 +50,15 @@ def send_cohort_survey_group(survey=None, cohort=None):
         # Get settings once for all answerstemplate_slug
         settings = AcademyFeedbackSettings.objects.filter(academy=cohort.academy).first()
         template_slug = settings.cohort_survey_template.slug if settings and settings.cohort_survey_template else None
-
         survey.template_slug = template_slug
         survey.save()
+
+        if survey.template_slug is None or not survey.template_slug:
+            raise ValidationException(
+                "This Academy does not have a template assigned for cohort surveys",
+                400,
+                slug="no-cohort-survey",
+            )
 
         for uc in ucs:
             if uc.educational_status in ["ACTIVE", "GRADUATED"]:
