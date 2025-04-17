@@ -11,7 +11,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Token
 
 from . import tasks
-from .models import Answer, Review, ReviewPlatform, Survey
+from .models import AcademyFeedbackSettings, Answer, Review, ReviewPlatform, Survey
 from .utils import strings
 
 logger = logging.getLogger(__name__)
@@ -47,9 +47,22 @@ def send_cohort_survey_group(survey=None, cohort=None):
 
         ucs = CohortUser.objects.filter(cohort=cohort, role="STUDENT").filter()
 
+        # Get settings once for all answerstemplate_slug
+        settings = AcademyFeedbackSettings.objects.filter(academy=cohort.academy).first()
+        template_slug = settings.cohort_survey_template.slug if settings and settings.cohort_survey_template else None
+        survey.template_slug = template_slug
+        survey.save()
+
+        if survey.template_slug is None or not survey.template_slug:
+            raise ValidationException(
+                "This Academy does not have a template assigned for cohort surveys",
+                400,
+                slug="no-cohort-survey",
+            )
+
         for uc in ucs:
             if uc.educational_status in ["ACTIVE", "GRADUATED"]:
-                tasks.send_cohort_survey.delay(uc.user.id, survey.id)
+                tasks.send_cohort_survey.delay(uc.user.id, survey.id, template_slug)
 
                 logger.debug(f"Survey scheduled to send for {uc.user.email}")
                 result["success"].append(f"Survey scheduled to send for {uc.user.email}")
@@ -59,6 +72,11 @@ def send_cohort_survey_group(survey=None, cohort=None):
                     f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student"
                 )
         survey.sent_at = timezone.now()
+
+        first_answer = Answer.objects.filter(survey=survey).first()
+        if first_answer:
+            survey.title = first_answer.title or f"Survey {first_answer.id}"
+
         if len(result["error"]) == 0:
             survey.status = "SENT"
         elif len(result["success"]) > 0 and len(result["error"]) > 0:

@@ -18,8 +18,10 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .caches import AnswerCache
-from .models import Answer, Review, ReviewPlatform, Survey, AcademyFeedbackSettings, SurveyTemplate
+from .models import AcademyFeedbackSettings, Answer, Review, ReviewPlatform, Survey, SurveyTemplate
 from .serializers import (
+    AcademyFeedbackSettingsPUTSerializer,
+    AcademyFeedbackSettingsSerializer,
     AnswerPUTSerializer,
     AnswerSerializer,
     BigAnswerSerializer,
@@ -30,8 +32,7 @@ from .serializers import (
     SurveyPUTSerializer,
     SurveySerializer,
     SurveySmallSerializer,
-    AcademyFeedbackSettingsSerializer,
-    AcademyFeedbackSettingsPUTSerializer,
+    SurveyTemplateSerializer,
 )
 from .tasks import generate_user_cohort_survey_answers
 
@@ -266,6 +267,27 @@ class AcademySurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if "lang" in self.request.GET:
             param = self.request.GET.get("lang")
             lookup["lang"] = param
+
+        if "template_slug" in self.request.GET:
+            param = self.request.GET.get("template_slug")
+            lookup["template_slug"] = param
+
+        if "title" in self.request.GET:
+            title = self.request.GET.get("title")
+            items = items.filter(title__icontains=title)
+
+        if "total_score" in self.request.GET:
+            total_score = self.request.GET.get("total_score")
+            try:
+                score_value = int(total_score.rstrip("+-"))
+                if total_score.endswith("+"):
+                    items = items.filter(scores__total__lte=score_value)
+                elif total_score.endswith("-"):
+                    items = items.filter(scores__total__gte=score_value)
+                else:
+                    items = items.filter(scores__total__gte=score_value, scores__total__lt=score_value + 1)
+            except ValueError:
+                raise ValidationException("Invalid total_score format", code=400)
 
         sort = self.request.GET.get("sort")
         if sort is None:
@@ -508,3 +530,21 @@ class AcademyFeedbackSettingsView(APIView):
             return Response(AcademyFeedbackSettingsSerializer(settings).data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademySurveyTemplateView(APIView):
+    @capable_of("read_survey_template")
+    def get(self, request, academy_id=None):
+        templates = SurveyTemplate.objects.filter(academy__id=academy_id)
+
+        # Check if 'is_shared' is present and true in the querystring
+        is_shared = request.GET.get("is_shared", "false").lower() == "true"
+        if is_shared:
+            templates = templates.filter(is_shared=True)
+
+        if "lang" in self.request.GET:
+            param = self.request.GET.get("lang")
+            templates = templates.filter(lang=param)
+
+        serializer = SurveyTemplateSerializer(templates, many=True)
+        return Response(serializer.data)

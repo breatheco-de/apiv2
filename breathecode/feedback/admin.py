@@ -205,7 +205,17 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ["user__first_name", "user__last_name", "user__email", "cohort__slug"]
     list_filter = [AnswerTypeFilter, "status", "score", "academy__slug", "cohort__slug", "question_by_slug"]
     actions = ["export_as_csv", add_academy_to_answer]
-    raw_id_fields = ["user", "cohort", "mentor", "event", "mentorship_session", "survey"]
+    raw_id_fields = [
+        "token",
+        "user",
+        "cohort",
+        "mentor",
+        "event",
+        "mentorship_session",
+        "survey",
+        "live_class",
+        "asset",
+    ]
 
     def answer_url(self, obj):
         url = "https://nps.4geeks.com/" + str(obj.id)
@@ -329,50 +339,10 @@ class SurveyTemplateForm(forms.ModelForm):
             "additional_questions": PrettyJSONWidget(),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Format JSON fields for better readability in admin
-        for field_name, field in self.fields.items():
-            if isinstance(field.widget, PrettyJSONWidget):
-                if self.initial.get(field_name):
-                    # No need to convert to string here, PrettyJSONWidget will handle it
-                    pass
-
     def clean(self):
         cleaned_data = super().clean()
-        # No need to parse JSON fields here as PrettyJSONWidget.value_from_datadict already does it
+        # Ensure JSON fields are serialized as strings
         return cleaned_data
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        # Ensure all JSON fields are properly saved as Python objects, not strings
-        json_fields = [
-            "when_asking_event",
-            "when_asking_mentor",
-            "when_asking_cohort",
-            "when_asking_academy",
-            "when_asking_mentorshipsession",
-            "when_asking_platform",
-            "when_asking_liveclass_mentor",
-            "when_asking_mentor_communication",
-            "when_asking_mentor_participation",
-            "additional_questions",
-        ]
-
-        for field in json_fields:
-            value = getattr(instance, field, None)
-            if isinstance(value, str) and value:
-                try:
-                    setattr(instance, field, json.loads(value))
-                except json.JSONDecodeError:
-                    # Keep as is if not valid JSON
-                    pass
-
-        if commit:
-            instance.save()
-
-        return instance
 
 
 class OriginalTemplateFilter(admin.SimpleListFilter):
