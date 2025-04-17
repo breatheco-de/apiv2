@@ -861,9 +861,6 @@ class CourseTranslation(models.Model):
     )
     description = models.TextField(max_length=400)
     short_description = models.CharField(max_length=120, null=True, default=None, blank=True)
-    preview = models.URLField(
-        null=True, default=None, help_text="This preview will be used when shared in social media"
-    )
     video_url = models.URLField(
         default=None, null=True, blank=True, help_text="Video that introduces/promotes this course"
     )
