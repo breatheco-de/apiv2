@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from capyc.rest_framework.exceptions import ValidationException
+from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
 from PIL import Image
@@ -547,12 +548,12 @@ class AcademyFeedbackSettingsView(APIView):
 class AcademySurveyTemplateView(APIView):
     @capable_of("read_survey_template")
     def get(self, request, academy_id=None):
-        templates = SurveyTemplate.objects.filter(academy__id=academy_id)
+        templates = SurveyTemplate.objects.filter(Q(academy__id=academy_id) | Q(is_shared=True))
 
         # Check if 'is_shared' is present and true in the querystring
-        is_shared = request.GET.get("is_shared", "false").lower() == "true"
+        is_shared = request.GET.get("is_shared", "false").lower() == "false"
         if is_shared:
-            templates = templates.filter(is_shared=True)
+            templates = templates.filter(is_shared=False)
 
         if "lang" in self.request.GET:
             param = self.request.GET.get("lang")
