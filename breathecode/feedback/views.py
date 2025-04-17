@@ -278,16 +278,28 @@ class AcademySurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         if "total_score" in self.request.GET:
             total_score = self.request.GET.get("total_score")
+            lookup_map = {
+                "gte": "scores__total__gte",
+                "lte": "scores__total__lte",
+                "gt": "scores__total__gt",
+                "lt": "scores__total__lt",
+            }
+
             try:
-                score_value = int(total_score.rstrip("+-"))
-                if total_score.endswith("+"):
-                    items = items.filter(scores__total__lte=score_value)
-                elif total_score.endswith("-"):
-                    items = items.filter(scores__total__gte=score_value)
+                # Check for prefix (e.g., gte:8)
+                if ":" in total_score:
+                    prefix, value = total_score.split(":", 1)
+                    if prefix in lookup_map:
+                        score_value = int(value)
+                        items = items.filter(**{lookup_map[prefix]: score_value})
+                    else:
+                        raise ValidationException(f"Invalid total_score format {total_score}", slug="score-format")
                 else:
+                    # Exact match (e.g., 8)
+                    score_value = int(total_score)
                     items = items.filter(scores__total__gte=score_value, scores__total__lt=score_value + 1)
             except ValueError:
-                raise ValidationException("Invalid total_score format", code=400)
+                raise ValidationException(f"Invalid total_score format {total_score}", slug="score-format")
 
         sort = self.request.GET.get("sort")
         if sort is None:

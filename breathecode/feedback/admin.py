@@ -5,6 +5,7 @@ from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from breathecode.admissions.admin import CohortUserAdmin as AdmissionsCohortUserAdmin
@@ -285,9 +286,9 @@ def calculate_survey_scores(modeladmin, request, queryset):
 
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
-    list_display = ("id", "cohort", "status", "duration", "created_at", "sent_at", "survey_url")
+    list_display = ("id", "cohort", "status", "template_slug", "total", "created_at", "sent_at", "survey_url")
     search_fields = ["cohort__slug", "cohort__academy__slug", "cohort__name", "cohort__academy__name"]
-    list_filter = [SentFilter, "status", "cohort__academy__slug"]
+    list_filter = [SentFilter, "status", "template_slug", "cohort__academy__slug"]
     raw_id_fields = ["cohort"]
     actions = [send_big_cohort_bulk_survey, fill_sent_at_with_created_at, calculate_survey_scores] + change_field(
         ["PENDING", "SENT", "PARTIAL", "FATAL"], name="status"
@@ -296,6 +297,22 @@ class SurveyAdmin(admin.ModelAdmin):
     def survey_url(self, obj):
         url = "https://nps.4geeks.com/survey/" + str(obj.id)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>")
+
+    def total(self, obj):
+        if obj.scores is not None and "total" in obj.scores:
+            score = obj.scores["total"]
+            if score >= 8:
+                color = "green"
+            elif 7 <= score < 8:
+                color = "yellow"
+            else:
+                color = "red"
+            return mark_safe(
+                f'<span style="background-color: {color}; padding: 2px 4px; border-radius: 3px;">{score}</span>'
+            )
+        return mark_safe(
+            '<span style="background-color: black; color: white; padding: 2px 4px; border-radius: 3px;">N/A</span>'
+        )
 
 
 @admin.register(Review)
