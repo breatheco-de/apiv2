@@ -300,6 +300,7 @@ ROLES = [
             "read_lead_gen_app",
             "read_technology",
             "read_service",
+            "read_survey_template",
         ],
     },
     {

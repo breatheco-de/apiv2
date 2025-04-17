@@ -881,6 +881,12 @@ class CourseTranslation(models.Model):
         help_text="Landing URL used on call to actions where the course is shown. "
         "A URL is needed per each translation.",
     )
+    preview_url = models.URLField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Preview URL used for marketing purposes.",
+    )
     course_modules = models.JSONField(
         default=None,
         blank=True,
