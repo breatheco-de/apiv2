@@ -2012,11 +2012,6 @@ def render_invite(request, token, member_id=None):
         return Response(serializer.data)
 
     if request.method == "GET":
-
-        if invite and User.objects.filter(email=invite.email).exists():
-            redirect = os.getenv("API_URL") + "/v1/auth/member/invite"
-            return HttpResponseRedirect(redirect_to=redirect)
-
         form = InviteForm(
             {
                 "callback": [""],
