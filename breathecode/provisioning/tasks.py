@@ -2,6 +2,7 @@ import logging
 import math
 import os
 from datetime import datetime
+from decimal import Decimal
 from io import BytesIO
 from typing import Any
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_provisioning_credit_price():
-    return float(os.getenv("PROVISIONING_CREDIT_PRICE", 10))
+    return Decimal(os.getenv("PROVISIONING_CREDIT_PRICE", "10"))
 
 
 def get_stripe_price_id():
@@ -141,13 +142,13 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     last = datetime(int(last[0]), int(last[1]), int(last[2]))
 
     for bill in bills:
-        amount = 0
+        amount = Decimal("0")
         for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status__in=["PERSISTED", "WARNING"]):
-            consumption_amount = 0
-            consumption_quantity = 0
+            consumption_amount = Decimal("0")
+            consumption_quantity = Decimal("0")
             for item in activity.events.all():
                 consumption_amount += item.price.get_price(item.quantity)
-                consumption_quantity += item.quantity
+                consumption_quantity += Decimal(str(item.quantity))
 
             activity.amount = consumption_amount
             activity.quantity = consumption_quantity
@@ -160,15 +161,15 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
         if amount:
             credit_price = get_provisioning_credit_price()
             quantity = math.ceil(amount / credit_price)
-            new_price = quantity * credit_price
+            new_price = Decimal(str(quantity)) * credit_price
 
             s = Stripe()
             bill.stripe_id, bill.stripe_url = s.create_payment_link(get_stripe_price_id(), quantity)
-            bill.fee = new_price - amount
+            bill.fee = (new_price - amount).quantize(Decimal(".000000001"))
             bill.total_amount = new_price
 
         else:
-            bill.total_amount = amount
+            bill.total_amount = amount.quantize(Decimal(".000000001"))
 
         bill.started_at = first
         bill.ended_at = last

@@ -9,7 +9,7 @@ import random
 import re
 import string
 from datetime import datetime, timedelta
-from decimal import Decimal, localcontext
+from decimal import ROUND_HALF_UP, Context, Decimal, localcontext
 from random import choices
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
@@ -617,7 +617,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": n + 1,
                         "multiplier": 1,
-                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "price_per_unit": (Decimal(csv["applied_cost_per_quantity"][n]) * Decimal(1.3)).quantize(
+                            Decimal("0.0000001")
+                        ),
                         "unit_type": csv["unit_type"][n],
                     }
                 )
@@ -631,7 +633,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "id": n + 1,
                         "price_id": n + 1,
-                        "quantity": float(csv["quantity"][n]),
+                        "quantity": csv["quantity"][n],
                         "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
                         "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
                         "task_associated_slug": csv["repository_name"][n],
@@ -775,7 +777,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": n + 1,
                         "multiplier": 1,
-                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "price_per_unit": (Decimal(csv["applied_cost_per_quantity"][n]) * Decimal(1.3)).quantize(
+                            Decimal("0.0000001")
+                        ),
                         "unit_type": csv["unit_type"][n],
                     }
                 )
@@ -789,7 +793,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "id": n + 1,
                         "price_id": n + 1,
-                        "quantity": float(csv["quantity"][n]),
+                        "quantity": csv["quantity"][n],
                         "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
                         "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
                         "task_associated_slug": csv["repository_name"][n],
@@ -963,7 +967,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": n + 1,
                         "multiplier": 1,
-                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "price_per_unit": (Decimal(csv["applied_cost_per_quantity"][n]) * Decimal(1.3)).quantize(
+                            Decimal("0.0000001")
+                        ),
                         "unit_type": csv["unit_type"][n],
                     }
                 )
@@ -977,7 +983,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                     {
                         "id": n + 1,
                         "price_id": n + 1,
-                        "quantity": float(csv["quantity"][n]),
+                        "quantity": csv["quantity"][n],
                         "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
                         "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
                         "task_associated_slug": csv["repository_name"][n],
@@ -1144,7 +1150,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": n + 1,
                         "multiplier": 1,
-                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "price_per_unit": (Decimal(csv["applied_cost_per_quantity"][n]) * Decimal(1.3)).quantize(
+                            Decimal("0.0000001")
+                        ),
                         "unit_type": csv["unit_type"][n],
                     }
                 )
@@ -1159,7 +1167,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": n + 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["quantity"][n]),
+                        "quantity": csv["quantity"][n],
                         "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
                         "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
                         "task_associated_slug": csv["repository_name"][n],
@@ -1296,7 +1304,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": n + 1,
                         "multiplier": 1,
-                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "price_per_unit": (Decimal(csv["applied_cost_per_quantity"][n]) * Decimal(1.3)).quantize(
+                            Decimal("0.0000001")
+                        ),
                         "unit_type": csv["unit_type"][n],
                     }
                 )
@@ -1311,7 +1321,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": n + 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["quantity"][n]),
+                        "quantity": csv["quantity"][n],
                         "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
                         "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
                         "task_associated_slug": csv["repository_name"][n],
@@ -1457,7 +1467,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": n + 1,
                         "multiplier": 1,
-                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "price_per_unit": (Decimal(csv["applied_cost_per_quantity"][n]) * Decimal(1.3)).quantize(
+                            Decimal("0.0000001")
+                        ),
                         "unit_type": csv["unit_type"][n],
                     }
                 )
@@ -1472,7 +1484,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": n + 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["quantity"][n]),
+                        "quantity": csv["quantity"][n],
                         "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
                         "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
                         "task_associated_slug": csv["repository_name"][n],
@@ -1604,7 +1616,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": n + 1,
                         "multiplier": 1,
-                        "price_per_unit": csv["applied_cost_per_quantity"][n] * 1.3,
+                        "price_per_unit": (Decimal(csv["applied_cost_per_quantity"][n]) * Decimal(1.3)).quantize(
+                            Decimal("0.0000001")
+                        ),
                         "unit_type": csv["unit_type"][n],
                     }
                 )
@@ -1619,7 +1633,7 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": n + 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["quantity"][n]),
+                        "quantity": csv["quantity"][n],
                         "registered_at": self.bc.datetime.from_iso_string(csv["usage_at"][n]),
                         "repository_url": f"https://github.com/{csv['organization'][n]}/{csv['repository_name'][n]}",
                         "task_associated_slug": csv["repository_name"][n],
@@ -1721,7 +1735,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": 1,
                         "multiplier": 1.0,
-                        "price_per_unit": 0.036 * 1.3,
+                        "price_per_unit": Decimal(0.036 * 1.3).quantize(Decimal(".000000001"), rounding=ROUND_HALF_UP),
                         "unit_type": "Credits",
                     }
                 )
@@ -1734,7 +1748,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                     {
                         "id": n + 1,
                         "price_id": 1,
-                        "quantity": float(csv["credits"][n]),
+                        "quantity": csv["credits"][n],
                         "external_pk": str(csv["id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["startTime"][n]),
                         "repository_url": csv["contextURL"][n],
@@ -1864,7 +1878,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": 1,
                         "multiplier": 1.0,
-                        "price_per_unit": 0.036 * 1.3,
+                        "price_per_unit": Decimal(0.036 * 1.3).quantize(Decimal(".000000001"), rounding=ROUND_HALF_UP),
                         "unit_type": "Credits",
                     }
                 )
@@ -1878,7 +1892,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": 1,
                         "vendor_id": None,
-                        "quantity": float(csv["credits"][n]),
+                        "quantity": csv["credits"][n],
                         "external_pk": str(csv["id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["startTime"][n]),
                         "repository_url": csv["contextURL"][n],
@@ -2006,7 +2020,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": 1,
                         "multiplier": 1.0,
-                        "price_per_unit": 0.036 * 1.3,
+                        "price_per_unit": Decimal(0.036 * 1.3).quantize(Decimal(".000000001"), rounding=ROUND_HALF_UP),
                         "unit_type": "Credits",
                     }
                 )
@@ -2020,7 +2034,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["credits"][n]),
+                        "quantity": csv["credits"][n],
                         "external_pk": str(csv["id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["startTime"][n]),
                         "repository_url": csv["contextURL"][n],
@@ -2158,7 +2172,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": 1,
                         "multiplier": 1.0,
-                        "price_per_unit": 0.036 * 1.3,
+                        "price_per_unit": Decimal(0.036 * 1.3).quantize(Decimal(".000000001"), rounding=ROUND_HALF_UP),
                         "unit_type": "Credits",
                     }
                 )
@@ -2172,7 +2186,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["credits"][n]),
+                        "quantity": csv["credits"][n],
                         "external_pk": str(csv["id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["startTime"][n]),
                         "repository_url": csv["contextURL"][n],
@@ -2336,7 +2350,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": 1,
                         "multiplier": 1.0,
-                        "price_per_unit": 0.036 * 1.3,
+                        "price_per_unit": Decimal(0.036 * 1.3).quantize(Decimal(".000000001"), rounding=ROUND_HALF_UP),
                         "unit_type": "Credits",
                     }
                 )
@@ -2350,7 +2364,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["credits"][n]),
+                        "quantity": csv["credits"][n],
                         "external_pk": str(csv["id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["startTime"][n]),
                         "repository_url": csv["contextURL"][n],
@@ -2525,7 +2539,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": 1,
                         "multiplier": 1.0,
-                        "price_per_unit": 0.036 * 1.3,
+                        "price_per_unit": Decimal(0.036 * 1.3).quantize(Decimal(".000000001"), rounding=ROUND_HALF_UP),
                         "unit_type": "Credits",
                     }
                 )
@@ -2539,7 +2553,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["credits"][n]),
+                        "quantity": csv["credits"][n],
                         "external_pk": str(csv["id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["startTime"][n]),
                         "repository_url": csv["contextURL"][n],
@@ -2725,7 +2739,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "currency_id": 1,
                         "id": 1,
                         "multiplier": 1.0,
-                        "price_per_unit": 0.036 * 1.3,
+                        "price_per_unit": Decimal(0.036 * 1.3).quantize(Decimal(".000000001"), rounding=ROUND_HALF_UP),
                         "unit_type": "Credits",
                     }
                 )
@@ -2739,7 +2753,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                         "id": n + 1,
                         "price_id": 1,
                         "vendor_id": 1,
-                        "quantity": float(csv["credits"][n]),
+                        "quantity": csv["credits"][n],
                         "external_pk": str(csv["id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["startTime"][n]),
                         "repository_url": csv["contextURL"][n],
@@ -2840,8 +2854,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 1,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -2849,8 +2867,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 2,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -2868,7 +2890,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                             if csv["pricing_type"][n] == "OUTPUT"
                             else (2 if output_was_first else 1)
                         ),
-                        "quantity": float(csv["total_tokens"][n]),
+                        "quantity": csv["total_tokens"][n],
                         "external_pk": str(csv["consumption_item_id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["consumption_period_start"][n]),
                         "csv_row": n,
@@ -3002,8 +3024,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 1,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3011,8 +3037,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 2,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3030,7 +3060,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                             if csv["pricing_type"][n] == "OUTPUT"
                             else (2 if output_was_first else 1)
                         ),
-                        "quantity": float(csv["total_tokens"][n]),
+                        "quantity": csv["total_tokens"][n],
                         "external_pk": str(csv["consumption_item_id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["consumption_period_start"][n]),
                         "csv_row": n,
@@ -3157,8 +3187,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 1,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3166,8 +3200,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 2,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3185,7 +3223,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                             if csv["pricing_type"][n] == "OUTPUT"
                             else (2 if output_was_first else 1)
                         ),
-                        "quantity": float(csv["total_tokens"][n]),
+                        "quantity": csv["total_tokens"][n],
                         "external_pk": str(csv["consumption_item_id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["consumption_period_start"][n]),
                         "csv_row": n,
@@ -3323,8 +3361,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 1,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3332,8 +3374,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 2,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3351,7 +3397,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                             if csv["pricing_type"][n] == "OUTPUT"
                             else (2 if output_was_first else 1)
                         ),
-                        "quantity": float(csv["total_tokens"][n]),
+                        "quantity": csv["total_tokens"][n],
                         "external_pk": str(csv["consumption_item_id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["consumption_period_start"][n]),
                         "csv_row": n,
@@ -3500,8 +3546,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 1,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3509,8 +3559,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 2,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3528,7 +3582,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                             if csv["pricing_type"][n] == "OUTPUT"
                             else (2 if output_was_first else 1)
                         ),
-                        "quantity": float(csv["total_tokens"][n]),
+                        "quantity": csv["total_tokens"][n],
                         "external_pk": str(csv["consumption_item_id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["consumption_period_start"][n]),
                         "csv_row": n,
@@ -3688,8 +3742,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 1,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3697,8 +3755,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 2,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3716,7 +3778,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                             if csv["pricing_type"][n] == "OUTPUT"
                             else (2 if output_was_first else 1)
                         ),
-                        "quantity": float(csv["total_tokens"][n]),
+                        "quantity": csv["total_tokens"][n],
                         "external_pk": str(csv["consumption_item_id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["consumption_period_start"][n]),
                         "csv_row": n,
@@ -3919,8 +3981,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 1,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] == "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3928,8 +3994,12 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "currency_id": 1,
                         "id": 2,
-                        "multiplier": 1.3,
-                        "price_per_unit": 0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02,
+                        "multiplier": Decimal(1.3).quantize(Decimal(".00"), rounding=ROUND_HALF_UP),
+                        "price_per_unit": (
+                            Decimal(0.04 if csv["pricing_type"][0] != "OUTPUT" else 0.02).quantize(
+                                Decimal(".000000000"), rounding=ROUND_HALF_UP
+                            )
+                        ),
                         "unit_type": "Tokens",
                     }
                 ),
@@ -3947,7 +4017,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                             if csv["pricing_type"][n] == "OUTPUT"
                             else (2 if output_was_first else 1)
                         ),
-                        "quantity": float(csv["total_tokens"][n]),
+                        "quantity": csv["total_tokens"][n],
                         "external_pk": str(csv["consumption_item_id"][n]),
                         "registered_at": self.bc.datetime.from_iso_string(csv["consumption_period_start"][n]),
                         "csv_row": n,

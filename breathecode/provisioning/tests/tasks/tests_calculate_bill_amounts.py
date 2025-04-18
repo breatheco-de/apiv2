@@ -7,7 +7,8 @@ import math
 import os
 import random
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pandas as pd
@@ -477,7 +478,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         MagicMock(
             side_effect=apply_get_env(
                 {
-                    "PROVISIONING_CREDIT_PRICE": CREDIT_PRICE,
+                    "PROVISIONING_CREDIT_PRICE": str(CREDIT_PRICE),
                     "STRIPE_PRICE_ID": STRIPE_PRICE_ID,
                 }
             )
@@ -501,7 +502,10 @@ class MakeBillsTestSuite(ProvisioningTestCase):
     )
     def test_bill_exists_and_activities_with_random_amounts__bill_amount_is_override(self):
         slug = self.bc.fake.slug()
-        provisioning_bill = {"hash": slug, "total_amount": random.random() * 1000}
+        provisioning_bill = {
+            "hash": slug,
+            "total_amount": Decimal(random.random() * 1000).quantize(Decimal(".000000001")),
+        }
         csv = gitpod_csv(10)
 
         provisioning_prices = [
@@ -529,13 +533,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         amount = (
             sum(
                 [
-                    provisioning_prices[n]["price_per_unit"] * provisioning_consumption_events[n]["quantity"]
+                    Decimal(str(provisioning_prices[n]["price_per_unit"]))
+                    * Decimal(str(provisioning_consumption_events[n]["quantity"]))
                     for n in range(2)
                 ]
             )
             * 2
-        )
-        q = sum([provisioning_consumption_events[n]["quantity"] for n in range(2)])
+        ).quantize(Decimal("0.000000001"))
+        q = sum([Decimal(str(provisioning_consumption_events[n]["quantity"])) for n in range(2)])
         model = self.bc.database.create(
             provisioning_bill=provisioning_bill,
             provisioning_price=provisioning_prices,
@@ -556,7 +561,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 calculate_bill_amounts(slug)
 
                 quantity = math.ceil(amount / CREDIT_PRICE)
-                new_amount = quantity * CREDIT_PRICE
+                new_amount = (Decimal(str(quantity)) * Decimal(str(CREDIT_PRICE))).quantize(Decimal("0.000001"))
 
                 self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
@@ -566,13 +571,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             [
                 {
                     **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
-                    "amount": amount / 2,
-                    "quantity": q,
+                    "amount": (amount / Decimal(str(2))).quantize(Decimal(".000000001")),
+                    "quantity": q.quantize(Decimal(".000000001")),
                 },
                 {
                     **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
-                    "amount": amount / 2,
-                    "quantity": q,
+                    "amount": (amount / Decimal(str(2))).quantize(Decimal(".000000001")),
+                    "quantity": q.quantize(Decimal(".000000001")),
                 },
             ],
         )
@@ -611,7 +616,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         provisioning_bill = {
             "hash": slug,
-            "total_amount": random.random() * 1000,
+            "total_amount": Decimal(random.random() * 1000).quantize(Decimal(".000000001")),
             "status": random.choice(["DISPUTED", "IGNORED", "PAID"]),
         }
 
@@ -697,7 +702,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         MagicMock(
             side_effect=apply_get_env(
                 {
-                    "PROVISIONING_CREDIT_PRICE": CREDIT_PRICE,
+                    "PROVISIONING_CREDIT_PRICE": str(CREDIT_PRICE),
                     "STRIPE_PRICE_ID": STRIPE_PRICE_ID,
                 }
             )
@@ -723,7 +728,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         provisioning_bill = {
             "hash": slug,
-            "total_amount": random.random() * 1000,
+            "total_amount": Decimal(random.random() * 1000).quantize(Decimal(".000000001")),
             "status": random.choice(["DISPUTED", "IGNORED"]),
         }
         csv = gitpod_csv(10)
@@ -753,13 +758,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         amount = (
             sum(
                 [
-                    provisioning_prices[n]["price_per_unit"] * provisioning_consumption_events[n]["quantity"]
+                    Decimal(str(provisioning_prices[n]["price_per_unit"]))
+                    * Decimal(str(provisioning_consumption_events[n]["quantity"]))
                     for n in range(2)
                 ]
             )
             * 2
-        )
-        q = sum([provisioning_consumption_events[n]["quantity"] for n in range(2)])
+        ).quantize(Decimal("0.00000000000001"))
+        q = sum([Decimal(str(provisioning_consumption_events[n]["quantity"])) for n in range(2)])
         model = self.bc.database.create(
             provisioning_bill=provisioning_bill,
             provisioning_price=provisioning_prices,
@@ -781,7 +787,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 calculate_bill_amounts(slug, force=True)
 
             quantity = math.ceil(amount / CREDIT_PRICE)
-            new_amount = quantity * CREDIT_PRICE
+            new_amount = (Decimal(str(quantity)) * Decimal(str(CREDIT_PRICE))).quantize(Decimal("0.00000000000001"))
 
             self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
@@ -791,13 +797,13 @@ class MakeBillsTestSuite(ProvisioningTestCase):
             [
                 {
                     **self.bc.format.to_dict(model.provisioning_user_consumption[0]),
-                    "amount": amount / 2,
-                    "quantity": q,
+                    "amount": (amount / Decimal(str(2))).quantize(Decimal(".000000001")),
+                    "quantity": q.quantize(Decimal(".000000001")),
                 },
                 {
                     **self.bc.format.to_dict(model.provisioning_user_consumption[1]),
-                    "amount": amount / 2,
-                    "quantity": q,
+                    "amount": (amount / Decimal(str(2))).quantize(Decimal(".000000001")),
+                    "quantity": q.quantize(Decimal(".000000001")),
                 },
             ],
         )
@@ -808,8 +814,8 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 {
                     **self.bc.format.to_dict(model.provisioning_bill),
                     "status": "DUE",
-                    "total_amount": quantity * CREDIT_PRICE,
-                    "fee": fee,
+                    "total_amount": float(quantity * CREDIT_PRICE),
+                    "fee": float(fee),
                     "paid_at": None,
                     "stripe_id": stripe_id,
                     "stripe_url": stripe_url,
@@ -836,7 +842,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
         slug = self.bc.fake.slug()
         provisioning_bill = {
             "hash": slug,
-            "total_amount": random.random() * 1000,
+            "total_amount": Decimal(random.random() * 1000).quantize(Decimal(".000000001")),
             "status": "PAID",
         }
 
