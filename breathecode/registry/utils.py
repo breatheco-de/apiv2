@@ -1,6 +1,8 @@
+import asyncio
 import logging
 import re
 
+import aiohttp
 import requests
 from bs4 import BeautifulSoup
 
@@ -53,22 +55,73 @@ def get_urls_from_html(html_content):
     return urls
 
 
-def test_url(url, allow_relative=False, allow_hash=True):
+def _shared_test_url(url, allow_relative=False, allow_hash=True):
     if url is None or url == "":
         raise Exception("Empty url")
 
-    if not allow_hash and "#" == url[0:1]:
+    if not allow_hash and url.startswith("#"):
         raise Exception("Not allowed hash url: " + url)
 
-    if not allow_relative and ("../" == url[0:3] or "./" == url[0:2]):
+    # Fix: Check for relative but exclude protocol-relative
+    is_relative = url.startswith("../") or url.startswith("./") or (url.startswith("/") and not url.startswith("//"))
+    is_hash = url.startswith("#")  # Keep this check separate
+
+    if not allow_relative and is_relative:
         raise Exception("Not allowed relative url: " + url)
 
-    return True
+    # Return flags to indicate if it needs network check
+    return is_relative, is_hash
 
-    # FIXME: the code is under this line is unaccessible, want you remove it?
-    # response = requests.head(url, allow_redirects=False, timeout=2)
-    # if response.status_code not in [200, 302, 301, 307]:
-    #     raise Exception(f'Invalid URL with code {response.status_code}: ' + url)
+
+def test_url(url, allow_relative=False, allow_hash=True):
+    is_relative, is_hash = _shared_test_url(url, allow_relative, allow_hash)
+
+    # Handle URL validation for HTTP/HTTPS URLs
+    # Only attempt network request if it's not relative and not just a hash
+    if not is_relative and not is_hash:
+        if not re.match(r"^[a-zA-Z]+://", url) and not url.startswith("//"):
+            raise Exception(f"Invalid URL format (Missing Schema?): {url}")
+
+        try:
+            response = requests.head(url, allow_redirects=False, timeout=25)
+            if response.status_code not in [200, 302, 301, 307]:
+                raise Exception(f"Invalid URL with code {response.status_code}: {url}")
+
+        except requests.exceptions.Timeout:
+            raise Exception(f"Timeout connecting to URL: {url}")
+
+        except requests.exceptions.ConnectionError:
+            raise Exception(f"Connection error for URL: {url}")
+
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Error connecting to URL: {url} - {str(e)}")
+
+
+async def atest_url(url, allow_relative=False, allow_hash=True):
+    is_relative, is_hash = _shared_test_url(url, allow_relative, allow_hash)
+
+    # Handle URL validation for HTTP/HTTPS URLs
+    # Only attempt network request if it's not relative and not just a hash
+    if not is_relative and not is_hash:
+        if not re.match(r"^[a-zA-Z]+://", url) and not url.startswith("//"):
+            raise Exception(f"Invalid URL format (Missing Schema?): {url}")
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.head(
+                    url, allow_redirects=False, timeout=aiohttp.ClientTimeout(total=25)
+                ) as response:
+                    if response.status not in [200, 302, 301, 307]:
+                        raise Exception(f"Invalid URL with code {response.status}: {url}")
+
+        except asyncio.TimeoutError:
+            raise Exception(f"Timeout connecting to URL: {url}")
+
+        except aiohttp.ClientConnectorError:
+            raise Exception(f"Connection error for URL: {url}")
+
+        except aiohttp.ClientError as e:
+            raise Exception(f"Error connecting to URL: {url} - {str(e)}")
 
 
 class AssetException(Exception):
@@ -88,7 +141,9 @@ class AssetValidator:
     errors = []
 
     def __init__(self, _asset, log_errors=False):
-        self.asset = _asset
+        from breathecode.registry.models import Asset
+
+        self.asset: Asset = _asset
         self.log_errors = log_errors
         self.warns = self.base_warns + self.warns
         self.errors = self.base_errors + self.errors
@@ -158,7 +213,7 @@ class AssetValidator:
             )
 
     def translations(self):
-        if self.asset.all_translations.count() == 0:
+        if self.asset.all_translations.exists() == 0:
             raise Exception("No translations")
 
     def technologies(self):
@@ -166,11 +221,11 @@ class AssetValidator:
             self.error(AssetErrorLogType.MISSING_TECHNOLOGIES, "Asset should have at least 2 technology tags")
 
     def difficulty(self):
-        if self.asset.difficulty is None:
+        if not self.asset.difficulty:
             raise Exception("No difficulty")
 
     def description(self):
-        if self.asset.description is None or len(self.asset.description) < 100:
+        if not self.asset.description or len(self.asset.description) < 100:
             self.error(AssetErrorLogType.POOR_DESCRIPTION, "Description is too small or empty")
 
     def preview(self):
