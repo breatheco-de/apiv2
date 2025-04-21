@@ -101,7 +101,7 @@ def async_pull_project_dependencies(asset_slug):
                 raise Exception(
                     f"Asset {asset_slug} template {asset.template_url} not found in the database as another asset"
                 )
-            if target_asset.asset_type != "STARTER":
+            if target_asset.asset_type != "STARTER" and target_asset.id != asset.id:
                 target_asset.log_error(
                     "not-a-template",
                     f"Asset {asset_slug} references {target_asset.slug} as a template but its type != 'STARTER'",
