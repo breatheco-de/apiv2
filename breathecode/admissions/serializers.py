@@ -131,6 +131,7 @@ class UserPublicSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    created_at = serpy.Field()
     profile = PublicProfileSerializer(required=False)
 
 
