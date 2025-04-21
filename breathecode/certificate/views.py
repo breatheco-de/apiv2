@@ -1,6 +1,7 @@
 import logging
 
 from capyc.rest_framework.exceptions import ValidationException
+from capyc.core.i18n import translation
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import NotFound
@@ -10,6 +11,7 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.actions import get_user_language
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.api_view_extensions.extensions.lookup_extension import Q
@@ -73,6 +75,19 @@ def get_certificate(request, token):
     if item is None:
         raise NotFound("Certificate not found")
 
+    lang = get_user_language(request)
+    cohort_user = CohortUser.objects.filter(cohort__id=item.cohort.id, user__id=item.user.id, role="STUDENT").first()
+
+    if cohort_user.finantial_status == "LATE":
+        raise ValidationException(
+            translation(
+                lang,
+                en="This certificate has been revoked and its no longer valid.",
+                es="Este certificado ha sido revocado y ya no es valido",
+                slug="revoked-certificate",
+            ),
+            code=400,
+        )
     serializer = UserSpecialtySerializer(item)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
