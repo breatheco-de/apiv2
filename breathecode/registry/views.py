@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 import aiohttp
 import requests
@@ -24,7 +25,7 @@ from slugify import slugify
 
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
-from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.models import ProfileAcademy, User
 from breathecode.notify.actions import send_email_message
 from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
@@ -832,15 +833,13 @@ class AcademyAssetActionView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    @acapable_of("crud_asset")
-    async def put(self, request, asset_slug, action_slug, academy_id=None):
+    @staticmethod
+    async def update_asset_action(asset: Asset, user: User, data: dict[str, Any]):
+        """
+        This function updates the asset type based on the action slug
+        """
 
-        if asset_slug is None:
-            raise ValidationException("Missing asset_slug")
-
-        asset = await Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).afirst()
-        if asset is None:
-            raise ValidationException(f"This asset {asset_slug} does not exist for this academy {academy_id}", 404)
+        action_slug = data.get("action_slug")
 
         possible_actions = ["test", "pull", "push", "analyze_seo", "clean", "originality"]
         if action_slug not in possible_actions:
@@ -852,8 +851,8 @@ class AcademyAssetActionView(APIView):
                 await aclean_asset_readme(asset)
             elif action_slug == "pull":
                 override_meta = False
-                if request.data and "override_meta" in request.data:
-                    override_meta = request.data["override_meta"]
+                if data and "override_meta" in data:
+                    override_meta = data["override_meta"]
                 await apull_from_github(asset.slug, override_meta=override_meta)
             elif action_slug == "push":
                 if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ"]:
@@ -861,7 +860,7 @@ class AcademyAssetActionView(APIView):
                         f"Asset type {asset.asset_type} cannot be pushed to GitHub, please update the Github repository manually"
                     )
 
-                await apush_to_github(asset.slug, owner=request.user)
+                await apush_to_github(asset.slug, owner=user)
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
                 await report.astart()
@@ -880,21 +879,87 @@ class AcademyAssetActionView(APIView):
                 "; ".join([k.capitalize() + ": " + "".join(v) for k, v in e.message_dict.items()])
             )
 
-        asset = await Asset.objects.filter(slug=asset_slug, academy__id=academy_id).afirst()
+        # Using sync_to_async is still needed because Serpy serializers might perform synchronous operations.
+        # Prefetching reduces the chance of implicit sync DB calls within the serializer.
         serializer = AcademyAssetSerializer(asset)
-        return Response(await sync_to_async(serializer.data), status=status.HTTP_200_OK)
+        data = await sync_to_async(
+            lambda: serializer.data
+        )()  # Use a lambda to ensure serializer.data is called within sync_to_async
+        return data
+
+    @acapable_of("crud_asset")
+    async def put(self, request, asset_slug, action_slug, academy_id=None):
+
+        if asset_slug is None:
+            raise ValidationException("Missing asset_slug")
+
+        # Fetch asset asynchronously, prefetching related fields needed by the serializer
+        asset = (
+            await Asset.objects.select_related("category", "assessment", "author", "owner")
+            .prefetch_related(
+                # Prefetching previous_version might need adjustment if it causes deep recursion issues
+                "seo_keywords__cluster",
+                "previous_version",
+                "all_translations",
+                "technologies",
+                "assets_related",
+            )
+            .filter(slug__iexact=asset_slug, academy__id=academy_id)
+            .afirst()
+        )
+
+        if asset is None:
+            raise ValidationException(f"This asset {asset_slug} does not exist for this academy {academy_id}", 404)
+
+        data = await self.update_asset_action(asset, request.user, request.data)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @staticmethod
+    async def create_asset_action(action_slug: str, asset: Asset, user: User, data: dict[str, Any]):
+        """
+        This function creates a new asset
+        """
+
+        try:
+            if action_slug == "test":
+                await atest_asset(asset)
+            elif action_slug == "clean":
+                await aclean_asset_readme(asset)
+            elif action_slug == "pull":
+                override_meta = False
+                if data and "override_meta" in data:
+                    override_meta = data["override_meta"]
+                await apull_from_github(asset.slug, override_meta=override_meta)
+            elif action_slug == "push":
+                if asset.asset_type not in ["ARTICLE", "LESSON"]:
+                    raise ValidationException(
+                        "Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
+                    )
+
+                await apush_to_github(asset.slug, owner=user)
+            elif action_slug == "analyze_seo":
+                report = SEOAnalyzer(asset)
+                await report.astart()
+
+            return True
+
+        except Exception as e:
+            logger.exception(e)
+            return False
 
     @acapable_of("crud_asset")
     async def post(self, request, action_slug, academy_id=None):
         if action_slug not in ["test", "pull", "push", "analyze_seo"]:
             raise ValidationException(f"Invalid action {action_slug}")
 
-        if not request.data["assets"]:
+        # Check if 'assets' key exists
+        if "assets" not in request.data:
             raise ValidationException("Assets not found in the body of the request.")
 
         assets = request.data["assets"]
 
-        if len(assets) < 1:
+        # Check if the assets list is empty
+        if not assets:
             raise ValidationException("The list of Assets is empty.")
 
         invalid_assets = []
@@ -904,31 +969,9 @@ class AcademyAssetActionView(APIView):
             if asset is None:
                 invalid_assets.append(asset_slug)
                 continue
-            try:
-                if action_slug == "test":
-                    await atest_asset(asset)
-                elif action_slug == "clean":
-                    await aclean_asset_readme(asset)
-                elif action_slug == "pull":
-                    override_meta = False
-                    if request.data and "override_meta" in request.data:
-                        override_meta = request.data["override_meta"]
-                    await apull_from_github(asset.slug, override_meta=override_meta)
-                elif action_slug == "push":
-                    if asset.asset_type not in ["ARTICLE", "LESSON"]:
-                        raise ValidationException(
-                            "Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
-                        )
 
-                    await apush_to_github(asset.slug, owner=request.user)
-                elif action_slug == "analyze_seo":
-                    report = SEOAnalyzer(asset)
-                    await report.astart()
-
-            except Exception as e:
-                logger.exception(e)
+            if not await self.create_asset_action(action_slug, asset, request.user, request.data):
                 invalid_assets.append(asset_slug)
-                pass
 
         pulled_assets = list(set(assets).difference(set(invalid_assets)))
 
