@@ -82,8 +82,8 @@ def get_certificate(request, token):
         raise ValidationException(
             translation(
                 lang,
-                en="This certificate has been revoked and its no longer valid.",
-                es="Este certificado ha sido revocado y ya no es valido",
+                en="This certificate has been revoked and its no longer valid. Contact your Program Manager if you think this is an error.",
+                es="Este certificado ha sido revocado y ya no es válido. Contacta a tu Program Manager si crees que esto es un error.",
                 slug="revoked-certificate",
             ),
             code=400,
