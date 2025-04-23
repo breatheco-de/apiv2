@@ -156,6 +156,12 @@ def get_events(request):
             lookup.pop("ending_at__gte")
             lookup["starting_at__lte"] = timezone.now()
 
+    if "all_time" in request.GET and request.GET.get("all_time") == "true":
+        if "ending_at__gte" in lookup:
+            lookup.pop("ending_at__gte")
+        if "starting_at__lte" in lookup:
+            lookup.pop("starting_at__lte")
+
     items = items.filter(**lookup).order_by("starting_at")
 
     serializer = EventSmallSerializer(items, many=True)
