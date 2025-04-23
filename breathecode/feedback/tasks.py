@@ -175,6 +175,13 @@ def generate_user_cohort_survey_answers(user, survey, status="OPENED", template_
         raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
 
     if template_slug is None:
+        template_slug = survey.template_slug
+
+    if template_slug is None:
+        settings = AcademyFeedbackSettings.objects.filter(academy=survey.cohort.academy).first()
+        template_slug = settings.cohort_survey_template.slug if settings and settings.cohort_survey_template else None
+
+    if template_slug is None:
         raise ValidationException("Template slug must be specified before building the question", 500)
 
     def new_answer(answer: Answer):

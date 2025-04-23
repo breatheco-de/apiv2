@@ -76,7 +76,16 @@ def get_survey_questions(request, survey_id=None):
     if cohort_teacher.count() == 0:
         raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
 
-    answers = generate_user_cohort_survey_answers(request.user, survey, status="OPENED")
+    template_slug = survey.template_slug
+    if template_slug is None:
+        # If the survey does not have a template slug, we need to get the default template slug
+        # from the AcademyFeedbackSettings model
+        settings = AcademyFeedbackSettings.objects.filter(academy=survey.cohort.academy).first()
+        template_slug = settings.cohort_survey_template.slug if settings and settings.cohort_survey_template else None
+        survey.template_slug = template_slug
+        survey.save()
+
+    answers = generate_user_cohort_survey_answers(request.user, survey, status="OPENED", template_slug=template_slug)
     serializer = AnswerSerializer(answers, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
