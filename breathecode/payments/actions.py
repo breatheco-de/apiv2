@@ -532,11 +532,11 @@ def add_items_to_bag(request, bag: Bag, lang: str):
 
 def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, float, float, Currency]:
     def add_currency(currency: Optional[Currency] = None):
-        if not currency:
-            currencies[main_currency.slug.upper()] = main_currency
+        if not currency and main_currency:
+            currencies[main_currency.code.upper()] = main_currency
 
-        if currency and currency.id not in currencies:
-            currencies[currency.slug.upper()] = currency
+        if currency and currency.code.upper() not in currencies:
+            currencies[currency.code.upper()] = currency
 
     user = bag.user
     price_per_month = 0
