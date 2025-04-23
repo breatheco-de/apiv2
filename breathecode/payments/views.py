@@ -73,6 +73,7 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
@@ -127,6 +128,7 @@ class PlanView(APIView):
             strings={
                 "exact": [
                     "service_items__service__slug",
+                    "currency__code",
                 ],
             },
             overwrite={
@@ -191,6 +193,7 @@ class AcademyPlanView(APIView):
             strings={
                 "exact": [
                     "service_items__service__slug",
+                    "currency__code",
                 ],
             },
             overwrite={
@@ -476,16 +479,24 @@ class AcademyAcademyServiceView(APIView):
         handler = self.extensions(request)
         lang = get_user_language(request)
         country_code = request.GET.get("country_code")
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": [
+                    "currency__code",
+                ],
+            },
+        )
 
         if service_slug is not None:
-            item = AcademyService.objects.filter(academy__id=academy_id, service__slug=service_slug).first()
+            item = AcademyService.objects.filter(query, academy__id=academy_id, service__slug=service_slug).first()
             if item is None:
                 raise ValidationException(
                     translation(
                         lang,
-                        en="There is no Academy Service with that service slug",
-                        es="No existe ningún Academy Service con ese slug de Service",
-                        slug="academy-service-not-found",
+                        en="There is no Academy Service with that service slug for the specified currency",
+                        es="No existe ningún Academy Service con ese slug de Service para la moneda especificada",
+                        slug="academy-service-not-found-for-currency",
                     ),
                     code=404,
                 )
@@ -493,7 +504,7 @@ class AcademyAcademyServiceView(APIView):
             serializer = GetAcademyServiceSmallSerializer(item, context={"country_code": country_code})
             return handler.response(serializer.data)
 
-        items = AcademyService.objects.filter(academy__id=academy_id)
+        items = AcademyService.objects.filter(query, academy__id=academy_id)
 
         if mentorship_service_set := request.GET.get("mentorship_service_set"):
             items = items.filter(available_mentorship_service_sets__slug__exact=mentorship_service_set)
@@ -1800,6 +1811,7 @@ class CheckingView(APIView):
                             )
 
                         else:
+                            # FIXME
                             actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
 
                         # Save pricing ratio explanation if any ratios were applied
@@ -1981,7 +1993,8 @@ class ConsumableCheckoutView(APIView):
 
         # Apply country-specific pricing ratio if provided
         if country_code:
-            adjusted_price, ratio = apply_pricing_ratio(amount, country_code, academy_service)
+            adjusted_price, ratio, c = apply_pricing_ratio(amount, country_code, academy_service)
+            currency = c or currency
             if ratio:
                 pricing_ratio_explanation["service_items"].append(
                     {"service": academy_service.service.slug, "ratio": ratio, "country": country_code}
@@ -2220,7 +2233,11 @@ class PayView(APIView):
                         original_price = option.monthly_price
 
                         # Apply pricing ratio first
-                        adjusted_price, _ = apply_pricing_ratio(original_price, bag.country_code, plan)
+                        adjusted_price, _, c = apply_pricing_ratio(original_price, bag.country_code, plan)
+
+                        if c and c.slug != bag.currency.slug:
+                            bag.currency = c
+                            bag.save()
 
                         # Then apply coupons
                         coupons = bag.coupons.all()
@@ -2401,22 +2418,79 @@ class AcademyPlanSubscriptionView(APIView):
 
 
 class PaymentMethodView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
 
     def get(self, request):
+        handler = self.extensions(request)
         lang = get_user_language(request)
 
-        items = PaymentMethod.objects.all()
-        lookup = {}
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": [
+                    "currency__code",
+                    "country_code",
+                    "lang",  # Added lang filter
+                    "academy__id",  # Added academy_id filter
+                ],
+            },
+        )
 
-        if "academy_id" in self.request.GET:
-            academy_id = self.request.GET.get("academy_id")
-            lookup["academy__id__iexact"] = academy_id
-
-        if "lang" in self.request.GET:
-            lang = self.request.GET.get("lang")
-            lookup["lang__iexact"] = lang
-
-        items = items.filter(**lookup)
-
+        items = PaymentMethod.objects.filter(query)
+        items = handler.queryset(items)
         serializer = GetPaymentMethod(items, many=True)
-        return Response(serializer.data, status=200)
+
+        return handler.response(serializer.data)
+
+
+class AcademyPaymentMethodView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_paymentmethod")
+    def post(self, request, academy_id):
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        serializer = PaymentMethodSerializer(data={**request.data, "academy": academy.id})
+        if serializer.is_valid():
+            serializer.save(academy=academy)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_paymentmethod")
+    def put(self, request, academy_id, paymentmethod_id):
+        lang = get_user_language(request)
+        method = PaymentMethod.objects.filter(id=paymentmethod_id, academy__id=academy_id).first()
+        if not method:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment method not found for this academy",
+                    es="Método de pago no encontrado para esta academia",
+                    slug="payment-method-not-found",
+                ),
+                code=404,
+            )
+
+        serializer = PaymentMethodSerializer(method, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_paymentmethod")
+    def delete(self, request, academy_id, paymentmethod_id):
+        lang = get_user_language(request)
+        method = PaymentMethod.objects.filter(id=paymentmethod_id, academy__id=academy_id).first()
+        if not method:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment method not found for this academy",
+                    es="Método de pago no encontrado para esta academia",
+                    slug="payment-method-not-found",
+                ),
+                code=404,
+            )
+
+        method.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

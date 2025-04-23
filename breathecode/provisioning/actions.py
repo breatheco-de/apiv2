@@ -416,7 +416,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         context["provisioning_activity_kinds"][(field["product"], field["sku"])] = kind
 
     if not (currency := context["currencies"].get("USD", None)):
-        currency, _ = Currency.objects.get_or_create(code="USD", name="US Dollar", decimals=2)
+        currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "decimals": 2})
         context["currencies"]["USD"] = currency
 
     if not (
@@ -566,7 +566,7 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         context["provisioning_activity_kinds"][field["kind"]] = kind
 
     if not (currency := context["currencies"].get("USD", None)):
-        currency, _ = Currency.objects.get_or_create(code="USD", name="US Dollar", decimals=2)
+        currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "decimals": 2})
         context["currencies"]["USD"] = currency
 
     if not (price := context["provisioning_activity_prices"].get(currency.id, None)):
@@ -731,7 +731,7 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
         context["provisioning_activity_kinds"][(s_name, s_slug)] = kind
 
     if not (currency := context["currencies"].get("USD", None)):
-        currency, _ = Currency.objects.get_or_create(code="USD", name="US Dollar", decimals=2)
+        currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "decimals": 2})
         context["currencies"]["USD"] = currency
 
     if not (price := context["provisioning_activity_prices"].get((field["total_spent"], field["total_tokens"]), None)):

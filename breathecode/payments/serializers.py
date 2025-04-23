@@ -1,11 +1,16 @@
 import logging
 
+from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
     AcademyService,
+    Currency,
+    FinancingOption,
+    PaymentMethod,
     Plan,
     PlanOfferTranslation,
     Service,
@@ -132,7 +137,43 @@ class GetConsumableSerializer(GetServiceItemSerializer):
 class GetFinancingOptionSerializer(serpy.Serializer):
     monthly_price = serpy.MethodField()
     how_many_months = serpy.Field()
-    currency = GetCurrencySmallSerializer()
+
+    pricing_ratio_exceptions = serpy.Field()
+    currency = serpy.MethodField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = kwargs.get("context", {})
+        self.lang = kwargs.get("lang", "en")
+        self.cache = kwargs.get("cache", {})
+
+        slug = self.currency.slug.upper()
+        if self.currency and slug not in self.cache:
+            self.cache[slug] = self.currency
+
+    def get_currency(self, obj: FinancingOption):
+        country_code = self.context.get("country_code")
+        if country_code and country_code in obj.pricing_ratio_exceptions:
+            currency = obj.currency
+            x = obj.pricing_ratio_exceptions[country_code]
+
+            code = x.get("currency")
+            if code:
+                currency = self.cache.get(code.upper(), Currency.objects.filter(code__iexact=code).first())
+                if currency is None:
+                    raise ValidationException(
+                        translation(
+                            self.lang, en="Currency not found", es="Moneda no encontrada", slug="currency-not-found"
+                        ),
+                        code=404,
+                    )
+
+            if currency is None:
+                currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US dollar", "decimals": 2})
+
+            return GetCurrencySmallSerializer(currency, many=False).data
+
+        return GetCurrencySmallSerializer(obj.currency, many=False).data
 
     def get_monthly_price(self, obj):
         if not hasattr(self, "context") or not self.context:
@@ -142,9 +183,7 @@ class GetFinancingOptionSerializer(serpy.Serializer):
         if not country_code:
             return obj.monthly_price
 
-        # Get the plan to apply its pricing ratios
-        plan = obj.plan
-        price, _ = apply_pricing_ratio(obj.monthly_price, country_code, plan)
+        price, _, _ = apply_pricing_ratio(obj.monthly_price, country_code, obj, cache=self.cache)
         return price
 
 
@@ -190,8 +229,39 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     owner = GetAcademySmallSerializer(required=False, many=False)
     id = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
+    currency = serpy.MethodField()
 
-    def get_price_per_month(self, obj):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = kwargs.get("context", {})
+        self.lang = kwargs.get("lang", "en")
+        self.cache = kwargs.get("cache", {})
+
+    def get_currency(self, obj: Plan):
+        country_code = self.context.get("country_code")
+        if country_code and country_code in obj.pricing_ratio_exceptions:
+            currency = obj.currency or obj.owner.main_currency
+            x = obj.pricing_ratio_exceptions[country_code]
+
+            code = x.get("currency")
+            if code:
+                currency = Currency.objects.filter(code__iexact=code).first()
+                if currency is None:
+                    raise ValidationException(
+                        translation(
+                            self.lang, en="Currency not found", es="Moneda no encontrada", slug="currency-not-found"
+                        ),
+                        code=404,
+                    )
+
+            if currency is None:
+                currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US dollar", "decimals": 2})
+
+            return GetCurrencySmallSerializer(currency, many=False).data
+
+        return GetCurrencySmallSerializer(obj.currency or obj.owner.main_currency, many=False).data
+
+    def get_price_per_month(self, obj: Plan):
         if not hasattr(self, "context") or not self.context:
             return obj.price_per_month
 
@@ -199,10 +269,13 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         if not country_code:
             return obj.price_per_month
 
-        price, _ = apply_pricing_ratio(obj.price_per_month, country_code, obj)
+        price, _, _ = apply_pricing_ratio(
+            obj.price_per_month, country_code, obj, price_attr="price_per_month", cache=self.cache
+        )
+
         return price
 
-    def get_price_per_quarter(self, obj):
+    def get_price_per_quarter(self, obj: Plan):
         if not hasattr(self, "context") or not self.context:
             return obj.price_per_quarter
 
@@ -210,10 +283,13 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         if not country_code:
             return obj.price_per_quarter
 
-        price, _ = apply_pricing_ratio(obj.price_per_quarter, country_code, obj)
+        price, _, _ = apply_pricing_ratio(
+            obj.price_per_quarter, country_code, obj, price_attr="price_per_quarter", cache=self.cache
+        )
+
         return price
 
-    def get_price_per_half(self, obj):
+    def get_price_per_half(self, obj: Plan):
         if not hasattr(self, "context") or not self.context:
             return obj.price_per_half
 
@@ -221,10 +297,13 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         if not country_code:
             return obj.price_per_half
 
-        price, _ = apply_pricing_ratio(obj.price_per_half, country_code, obj)
+        price, _, _ = apply_pricing_ratio(
+            obj.price_per_half, country_code, obj, price_attr="price_per_half", cache=self.cache
+        )
+
         return price
 
-    def get_price_per_year(self, obj):
+    def get_price_per_year(self, obj: Plan):
         if not hasattr(self, "context") or not self.context:
             return obj.price_per_year
 
@@ -232,7 +311,10 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         if not country_code:
             return obj.price_per_year
 
-        price, _ = apply_pricing_ratio(obj.price_per_year, country_code, obj)
+        price, _, _ = apply_pricing_ratio(
+            obj.price_per_year, country_code, obj, price_attr="price_per_year", cache=self.cache
+        )
+
         return price
 
 
@@ -318,13 +400,43 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = GetAcademySmallSerializer()
     service = GetServiceSmallSerializer()
-    currency = GetCurrencySmallSerializer()
     price_per_unit = serpy.MethodField()
     bundle_size = serpy.Field()
     max_items = serpy.Field()
     max_amount = serpy.Field()
     discount_ratio = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
+    currency = serpy.MethodField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = kwargs.get("context", {})
+        self.lang = kwargs.get("lang", "en")
+        self.cache = kwargs.get("cache", {})
+
+    def get_currency(self, obj: Plan):
+        country_code = self.context.get("country_code")
+        if country_code and country_code in obj.pricing_ratio_exceptions:
+            currency = obj.currency
+            x = obj.pricing_ratio_exceptions[country_code]
+
+            code = x.get("currency")
+            if code:
+                currency = Currency.objects.filter(code__iexact=code).first()
+                if currency is None:
+                    raise ValidationException(
+                        translation(
+                            self.lang, en="Currency not found", es="Moneda no encontrada", slug="currency-not-found"
+                        ),
+                        code=404,
+                    )
+
+            if currency is None:
+                currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US dollar", "decimals": 2})
+
+            return GetCurrencySmallSerializer(currency, many=False).data
+
+        return GetCurrencySmallSerializer(obj.currency, many=False).data
 
     def get_price_per_unit(self, obj):
         if not hasattr(self, "context") or not self.context:
@@ -596,3 +708,29 @@ class GetPaymentMethod(serpy.Serializer):
     description = serpy.Field()
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
+    currency = GetCurrencySmallSerializer(required=False, many=False)
+    country_code = serpy.Field()
+
+
+class PaymentMethodSerializer(serializers.ModelSerializer):
+    currency = serializers.SlugRelatedField(
+        slug_field="code",
+        queryset=Currency.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    academy = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = PaymentMethod
+        fields = (
+            "id",
+            "title",
+            "description",
+            "third_party_link",
+            "lang",
+            "is_credit_card",
+            "currency",
+            "country_code",
+            "academy",
+        )
