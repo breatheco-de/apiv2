@@ -5,17 +5,16 @@ import random
 import urllib.parse
 
 import capyc.django.serializer as capy
+from asgiref.sync import async_to_sync
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import Permission, User
 from django.db import IntegrityError
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from task_manager.django.actions import schedule_task
-from asgiref.sync import async_to_sync
-from dateutil.relativedelta import relativedelta
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country

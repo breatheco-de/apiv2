@@ -1119,7 +1119,7 @@ class SEOReport(models.Model):
     def set_state(self, key, value):
         attrs = ["words"]
         if key in attrs:
-            self.__shared_state[key]: value
+            self.__shared_state[key] = value
         else:
             raise Exception(f"Trying to set invalid property {key} on SEO report shared state")
 
