@@ -65,6 +65,7 @@ def financing_option_serializer(financing_option, currency, data={}):
         },
         "how_many_months": financing_option.how_many_months,
         "monthly_price": financing_option.monthly_price,
+        "pricing_ratio_exceptions": financing_option.pricing_ratio_exceptions,
     }
 
 
@@ -262,6 +263,7 @@ class SignalTestSuite(PaymentsTestCase):
                         "expires_at": UTC_NOW + timedelta(minutes=60),
                         "token": token,
                         "is_recurrent": False,
+                        "currency_id": 1,
                     },
                 ],
             )

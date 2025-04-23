@@ -1452,6 +1452,17 @@ def retry_pending_bag(bag: Bag):
     return "scheduled"
 
 
+def get_cached_currency(code: str, cache: dict[str, Currency]) -> Currency | None:
+    """
+    Get a currency from the cache by code.
+    """
+    currency = cache.get(code.upper())
+    if currency is None:
+        currency = Currency.objects.filter(code__iexact=code).first()
+        cache[code.upper()] = currency
+    return currency
+
+
 def apply_pricing_ratio(
     price: float,
     country_code: Optional[str],
@@ -1498,8 +1509,8 @@ def apply_pricing_ratio(
 
         currency = exceptions.get("currency", None)
         if currency:
-            currency = currency.upper()
-            currency = cache.get(currency, Currency.objects.filter(code__iexact=currency).first())
+            currency = get_cached_currency(currency, cache)
+
             if currency is None:
                 raise ValidationException(
                     translation(
@@ -1507,8 +1518,6 @@ def apply_pricing_ratio(
                     ),
                     code=404,
                 )
-
-            cache[currency.code.upper()] = currency
 
         # Direct price override
         if exceptions.get(price_attr) is not None:

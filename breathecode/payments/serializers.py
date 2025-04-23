@@ -141,15 +141,26 @@ class GetFinancingOptionSerializer(serpy.Serializer):
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.context = kwargs.get("context", {})
-        self.lang = kwargs.get("lang", "en")
-        self.cache = kwargs.get("cache", {})
+    def __init__(self, instance=None, many=False, data=None, context=None, **kwargs):
+        # Pass instance to super() first
+        super().__init__(instance=instance, many=many, data=data, context=context, **kwargs)
 
-        slug = self.currency.slug.upper()
-        if self.currency and slug not in self.cache:
-            self.cache[slug] = self.currency
+        # Access instance data after super().__init__
+        # Note: If 'many=True', instance will be a list/queryset.
+        # This logic might need adjustment if used with many=True directly,
+        # but typically context/cache would be passed externally for 'many'.
+        obj_currency = None
+        if not many and instance:
+            obj_currency = getattr(instance, "currency", None)  # Get currency from the instance being serialized
+
+        self.context = context or {}
+        self.lang = self.context.get("lang", "en")  # Use context to get lang
+        self.cache = self.context.get("cache", {})  # Use context to get cache
+
+        if obj_currency:  # Check if we got a currency from the object
+            slug = obj_currency.code.upper()  # Use code attribute
+            if slug not in self.cache:
+                self.cache[slug] = obj_currency
 
     def get_currency(self, obj: FinancingOption):
         country_code = self.context.get("country_code")
