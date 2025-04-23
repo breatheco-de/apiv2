@@ -5,6 +5,7 @@ Test /answer
 import datetime
 import logging
 import random
+from datetime import timezone as dt_timezone
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -38,6 +39,8 @@ def plan_financing_item(data={}):
         "externally_managed": False,
         "how_many_installments": 0,
         "country_code": "",
+        "currency_id": 1,
+        "conversion_info": None,
         **data,
     }
 

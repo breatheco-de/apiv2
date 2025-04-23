@@ -1138,6 +1138,7 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info:
             selected_mentorship_service_set=mentorship_service_set,
             next_payment_at=until,
             conversion_info=parsed_conversion_info,
+            currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
             **extra,
         )
 

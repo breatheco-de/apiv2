@@ -5,6 +5,7 @@ Test /answer
 import logging
 import random
 from datetime import timedelta
+from datetime import timezone as dt_timezone
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -36,8 +37,11 @@ def subscription_item(data={}):
         "status_message": None,
         "user_id": 1,
         "valid_until": UTC_NOW,
+        "next_payment_at": UTC_NOW,
         "externally_managed": False,
         "country_code": "",
+        "currency_id": 1,
+        "conversion_info": None,
         **data,
     }
 
@@ -820,9 +824,9 @@ def test_build_subscription_with_different_chosen_periods(
         {
             "conversion_info": None,
             "academy_id": 1,
-            "paid_at": model.invoice.paid_at,
+            "paid_at": model.invoice.paid_at.replace(tzinfo=dt_timezone.utc),
             "valid_until": None,
-            "next_payment_at": utc_now + relativedelta(months=expected_months),
+            "next_payment_at": (utc_now + relativedelta(months=expected_months)).replace(tzinfo=dt_timezone.utc),
             "pay_every": expected_pay_every,
             "pay_every_unit": expected_pay_every_unit,
             "externally_managed": False,
@@ -835,6 +839,7 @@ def test_build_subscription_with_different_chosen_periods(
             "status_message": None,
             "user_id": 1,
             "country_code": "",
+            "currency_id": 1,
         }
     ]
 

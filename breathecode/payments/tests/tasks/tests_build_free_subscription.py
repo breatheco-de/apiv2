@@ -4,6 +4,7 @@ Test /answer
 
 import logging
 import random
+from datetime import timezone as dt_timezone
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -34,8 +35,11 @@ def subscription_item(data={}):
         "status_message": None,
         "user_id": 1,
         "valid_until": UTC_NOW,
+        "next_payment_at": UTC_NOW,
         "externally_managed": False,
         "country_code": "",
+        "currency_id": 1,
+        "conversion_info": None,
         **data,
     }
 
@@ -134,6 +138,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         invoice = {"status": "FULFILLED"}
 
         model = self.bc.database.create(bag=bag, invoice=invoice)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -171,6 +177,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 self.bc.format.to_dict(model.invoice),
             ],
         )
+
         self.assertEqual(self.bc.database.list_of("payments.Subscription"), [])
         self.assertEqual(tasks.build_service_stock_scheduler_from_subscription.delay.call_args_list, [])
         self.bc.check.calls(
@@ -206,6 +213,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         ]
 
         model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -245,16 +254,17 @@ class PaymentsTestSuite(PaymentsTestCase):
         for plan in model.plan:
             unit = plan.trial_duration
             unit_type = plan.trial_duration_unit
+
             db.append(
                 subscription_item(
                     {
-                        "conversion_info": None,
                         "id": plan.id,
                         "status": "FREE_TRIAL",
                         "paid_at": model.invoice.paid_at,
                         "next_payment_at": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
                         "valid_until": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    }
+                        "conversion_info": None,
+                    },
                 )
             )
 
@@ -299,6 +309,8 @@ class PaymentsTestSuite(PaymentsTestCase):
         ]
 
         model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -373,7 +385,9 @@ class PaymentsTestSuite(PaymentsTestCase):
         ]
         academy = {"available_as_saas": True}
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, cohort=1, cohort_set=1, academy=academy)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, cohort_set=1, currency=1)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -418,17 +432,22 @@ class PaymentsTestSuite(PaymentsTestCase):
         for plan in model.plan:
             unit = plan.trial_duration
             unit_type = plan.trial_duration_unit
+
+            next_payment_at = model.invoice.paid_at + calculate_relative_delta(unit, unit_type)
+            valid_until = model.invoice.paid_at + calculate_relative_delta(unit, unit_type)
+
             db.append(
                 subscription_item(
                     {
-                        "conversion_info": None,
                         "id": plan.id,
-                        "selected_cohort_set_id": 1,
                         "status": "FREE_TRIAL",
-                        "paid_at": model.invoice.paid_at,
-                        "next_payment_at": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                        "valid_until": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    }
+                        "paid_at": model.invoice.paid_at.replace(tzinfo=dt_timezone.utc),
+                        "next_payment_at": next_payment_at.replace(tzinfo=dt_timezone.utc),
+                        "valid_until": valid_until.replace(tzinfo=dt_timezone.utc),
+                        "conversion_info": None,
+                        "selected_cohort_set_id": model.cohort_set.id,
+                        "currency_id": 1,
+                    },
                 )
             )
 
@@ -472,7 +491,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             for _ in range(2)
         ]
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, event_type_set=1)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, event_type_set=1, currency=1)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -512,17 +533,23 @@ class PaymentsTestSuite(PaymentsTestCase):
         for plan in model.plan:
             unit = plan.trial_duration
             unit_type = plan.trial_duration_unit
+
             db.append(
                 subscription_item(
                     {
-                        "conversion_info": None,
                         "id": plan.id,
-                        "selected_event_type_set_id": 1,
                         "status": "FREE_TRIAL",
-                        "paid_at": model.invoice.paid_at,
-                        "next_payment_at": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                        "valid_until": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    }
+                        "paid_at": model.invoice.paid_at.replace(tzinfo=dt_timezone.utc),
+                        "next_payment_at": (model.invoice.paid_at + calculate_relative_delta(unit, unit_type)).replace(
+                            tzinfo=dt_timezone.utc
+                        ),
+                        "valid_until": (model.invoice.paid_at + calculate_relative_delta(unit, unit_type)).replace(
+                            tzinfo=dt_timezone.utc
+                        ),
+                        "conversion_info": None,
+                        "selected_event_type_set_id": model.event_type_set.id,
+                        "currency_id": model.currency.id,
+                    },
                 )
             )
 
@@ -566,7 +593,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             for _ in range(2)
         ]
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, mentorship_service_set=1)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, mentorship_service_set=1, currency=1)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -606,17 +635,23 @@ class PaymentsTestSuite(PaymentsTestCase):
         for plan in model.plan:
             unit = plan.trial_duration
             unit_type = plan.trial_duration_unit
+
             db.append(
                 subscription_item(
                     {
-                        "conversion_info": None,
                         "id": plan.id,
-                        "selected_mentorship_service_set_id": 1,
                         "status": "FREE_TRIAL",
-                        "paid_at": model.invoice.paid_at,
-                        "next_payment_at": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                        "valid_until": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                    }
+                        "paid_at": model.invoice.paid_at.replace(tzinfo=dt_timezone.utc),
+                        "next_payment_at": (model.invoice.paid_at + calculate_relative_delta(unit, unit_type)).replace(
+                            tzinfo=dt_timezone.utc
+                        ),
+                        "valid_until": (model.invoice.paid_at + calculate_relative_delta(unit, unit_type)).replace(
+                            tzinfo=dt_timezone.utc
+                        ),
+                        "conversion_info": None,
+                        "selected_mentorship_service_set_id": model.mentorship_service_set.id,
+                        "currency_id": model.currency.id,
+                    },
                 )
             )
 
@@ -662,7 +697,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             for _ in range(2)
         ]
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, currency=1)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -708,9 +745,14 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "conversion_info": None,
                         "id": plan.id,
                         "status": "ACTIVE",
-                        "paid_at": model.invoice.paid_at,
-                        "next_payment_at": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
-                        "valid_until": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                        "paid_at": model.invoice.paid_at.replace(tzinfo=dt_timezone.utc),
+                        "next_payment_at": (model.invoice.paid_at + calculate_relative_delta(unit, unit_type)).replace(
+                            tzinfo=dt_timezone.utc
+                        ),
+                        "valid_until": (model.invoice.paid_at + calculate_relative_delta(unit, unit_type)).replace(
+                            tzinfo=dt_timezone.utc
+                        ),
+                        "currency_id": model.currency.id,
                     }
                 )
             )
@@ -757,7 +799,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             for _ in range(2)
         ]
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, currency=1)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -803,9 +847,12 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "conversion_info": None,
                         "id": plan.id,
                         "status": "ACTIVE",
-                        "paid_at": model.invoice.paid_at,
-                        "next_payment_at": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                        "paid_at": model.invoice.paid_at.replace(tzinfo=dt_timezone.utc),
+                        "next_payment_at": (model.invoice.paid_at + calculate_relative_delta(unit, unit_type)).replace(
+                            tzinfo=dt_timezone.utc
+                        ),
                         "valid_until": None,
+                        "currency_id": model.currency.id,
                     }
                 )
             )
@@ -852,7 +899,9 @@ class PaymentsTestSuite(PaymentsTestCase):
             for _ in range(2)
         ]
 
-        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans)
+        model = self.bc.database.create(bag=bag, invoice=invoice, plan=plans, currency=1)
+        model.bag.currency = model.currency
+        model.bag.save()
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -898,9 +947,12 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "conversion_info": {"landing_url": "/"},
                         "id": plan.id,
                         "status": "ACTIVE",
-                        "paid_at": model.invoice.paid_at,
-                        "next_payment_at": model.invoice.paid_at + calculate_relative_delta(unit, unit_type),
+                        "paid_at": model.invoice.paid_at.replace(tzinfo=dt_timezone.utc),
                         "valid_until": None,
+                        "currency_id": model.currency.id,
+                        "next_payment_at": (model.invoice.paid_at + calculate_relative_delta(unit, unit_type)).replace(
+                            tzinfo=dt_timezone.utc
+                        ),
                     }
                 )
             )

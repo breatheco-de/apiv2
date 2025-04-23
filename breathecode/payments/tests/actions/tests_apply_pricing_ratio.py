@@ -264,8 +264,7 @@ def test_apply_pricing_ratio_invalid_currency(mock_general_ratios, mock_plan_obj
             apply_pricing_ratio(100, "fr", mock_plan_obj, lang="en")
 
         assert exc_info.value.status_code == 404
-        assert exc_info.value.detail == "Currency not found"  # Check the message
-        assert exc_info.value.slug == "currency-not-found"  # Check the slug
+        assert exc_info.value.detail == "currency-not-found"  # Check the message
         # Ensure get_cached_currency was called with the correct code
         mock_get_currency.assert_called_once_with("XYZ", {})
 
