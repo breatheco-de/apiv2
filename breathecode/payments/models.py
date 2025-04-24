@@ -443,7 +443,9 @@ class EventTypeSetTranslation(models.Model):
 
 class AcademyService(models.Model):
     _price: float | None = None
-
+    _max_amount: float | None = None
+    _currency: Currency | None = None
+    _pricing_ratio_explanation: dict | None = None
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
     service = models.OneToOneField(Service, on_delete=models.CASCADE, help_text="Service")
@@ -483,7 +485,9 @@ class AcademyService(models.Model):
     def __str__(self) -> str:
         return f"{self.academy.slug} -> {self.service.slug}"
 
-    def validate_transaction(self, total_items: float, lang: Optional[str] = "en") -> None:
+    def validate_transaction(
+        self, total_items: float, lang: Optional[str] = "en", country_code: Optional[str] = None
+    ) -> None:
         if total_items < self.bundle_size:
             raise ValidationException(
                 translation(
@@ -506,22 +510,38 @@ class AcademyService(models.Model):
                 code=400,
             )
 
-        amount = self._price if self._price is not None else self.get_discounted_price(total_items)
+        amount, currency, pricing_ratio_explanation = self.get_discounted_price(total_items, country_code)
+        max_amount = self.get_max_amount(country_code)
 
-        if amount > self.max_amount:
+        if amount > max_amount:
             raise ValidationException(
                 translation(
                     lang,
-                    en=f"The amount of items is too high (max {self.max_amount})",
-                    es=f"La cantidad de elementos es demasiado alta (máx {self.max_amount})",
+                    en=f"The amount of items is too high (max {max_amount})",
+                    es=f"La cantidad de elementos es demasiado alta (máx {max_amount})",
                     slug="the-amount-is-too-high",
                 ),
                 code=400,
             )
 
         self._price = amount
+        self._currency = currency
+        self._pricing_ratio_explanation = pricing_ratio_explanation
 
-    def get_discounted_price(self, num_items: float) -> float:
+    def get_max_amount(self, country_code: Optional[str] = None) -> float:
+        if self._max_amount is not None:
+            return self._max_amount
+
+        return self.pricing_ratio_exceptions.get(country_code, {}).get("max_amount", self.max_amount)
+
+    def get_discounted_price(
+        self, num_items: float, country_code: Optional[str] = None, lang: Optional[str] = "en"
+    ) -> tuple[float, Currency, dict]:
+        from breathecode.payments.actions import apply_pricing_ratio
+
+        if self._price is not None:
+            return self._price, self._currency, self._pricing_ratio_explanation
+
         total_discount_ratio = 0
         current_discount_ratio = self.discount_ratio
         discount_nerf = 0.1
@@ -537,10 +557,18 @@ class AcademyService(models.Model):
         if total_discount_ratio > max_discount:
             total_discount_ratio = max_discount
 
-        amount = self.price_per_unit * num_items
+        adjusted_price_per_unit, ratio, c = apply_pricing_ratio(self.price_per_unit, country_code, self, lang=lang)
+        currency = c or self.currency
+        pricing_ratio_explanation = {"service_items": []}
+        if ratio:
+            pricing_ratio_explanation["service_items"].append(
+                {"service": self.service.slug, "ratio": ratio, "country": country_code}
+            )
+
+        amount = adjusted_price_per_unit * num_items
         discount = amount * total_discount_ratio
 
-        return amount - discount
+        return amount - discount, currency, pricing_ratio_explanation
 
     def clean(self) -> None:
         if (
@@ -571,6 +599,9 @@ class AcademyService(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         self._price = None
+        self._max_amount = None
+        self._currency = None
+        self._pricing_ratio_explanation = None
         return super().save(*args, **kwargs)
 
 

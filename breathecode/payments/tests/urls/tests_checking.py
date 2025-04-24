@@ -3429,11 +3429,12 @@ def test_get_a_plan_with_add_ons(
     with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
         response = client.put(url, data, format="json")
 
+    price, _, _ = model.academy_service.get_discounted_price(how_many2)
     pricing = {
-        "amount_per_month": model.plan.price_per_month + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_quarter": model.plan.price_per_quarter + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_half": model.plan.price_per_half + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_year": model.plan.price_per_year + model.academy_service.get_discounted_price(how_many2),
+        "amount_per_month": model.plan.price_per_month + price,
+        "amount_per_quarter": model.plan.price_per_quarter + price,
+        "amount_per_half": model.plan.price_per_half + price,
+        "amount_per_year": model.plan.price_per_year + price,
     }
 
     json = response.json()
@@ -3522,8 +3523,6 @@ def test_checking_with_country_pricing(
 
     mock_apply_pricing_ratio.side_effect = side_effect
 
-    plan = {"price_per_month": 100, "price_per_quarter": 270, "price_per_half": 480, "price_per_year": 900}
-
     # Setup test data
     bag = {
         "id": 1,
@@ -3596,3 +3595,91 @@ def test_checking_with_country_pricing(
     if country_code:
         # Check that it was called at least once for any price
         assert mock_apply_pricing_ratio.call_count > 0
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+def test_checking_with_country_price_override(
+    database: capy.Database,
+    client: capy.Client,
+    fake: capy.Fake,
+    format: capy.Format,
+    set_datetime,
+):
+    """
+    Test that the checking endpoint correctly uses the price override from
+    pricing_ratio_exceptions for a specific country.
+    """
+    set_datetime(UTC_NOW)
+    country_code = "VE"
+    override_price_per_month = 50.0
+    override_price_per_quarter = 135.0
+    override_price_per_half = 240.0
+    override_price_per_year = 450.0
+
+    plan_kwargs = {
+        "price_per_month": 100.0,
+        "price_per_quarter": 270.0,
+        "price_per_half": 480.0,
+        "price_per_year": 900.0,
+        "is_renewable": True,
+        "time_of_life": 0,
+        "time_of_life_unit": None,
+        "trial_duration": 0,
+        "pricing_ratio_exceptions": {
+            country_code.lower(): {
+                "price_per_month": override_price_per_month,
+                "price_per_quarter": override_price_per_quarter,
+                "price_per_half": override_price_per_half,
+                "price_per_year": override_price_per_year,
+                "currency": "USD",  # Ensure currency is specified if overridden
+            }
+        },
+    }
+    model = database.create(
+        user=1,
+        academy=1,
+        currency={"code": "USD"},
+        plan=plan_kwargs,
+        skip_cohort=True,  # Avoid cohort complexities
+    )
+
+    client.force_authenticate(model.user)
+    url = reverse_lazy("payments:checking")
+    data = {
+        "academy": 1,
+        "type": "PREVIEW",
+        "plans": [1],
+        "country_code": country_code,
+    }
+
+    token = fake.slug()
+    with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+        response = client.put(url, data, format="json")
+
+    assert response.status_code == status.HTTP_200_OK
+    json_data = response.json()
+
+    # Verify the amounts in the response match the override prices
+    assert json_data["amount_per_month"] == override_price_per_month
+    assert json_data["amount_per_quarter"] == override_price_per_quarter
+    assert json_data["amount_per_half"] == override_price_per_half
+    assert json_data["amount_per_year"] == override_price_per_year
+    assert json_data["token"] == token
+    assert json_data["expires_at"] == (UTC_NOW + timedelta(minutes=60)).isoformat().replace("+00:00", "Z")
+
+    # Verify the bag in the database reflects the override
+    db_bag = database.get("payments.Bag", 1, dict=True)
+    assert db_bag["amount_per_month"] == override_price_per_month
+    assert db_bag["amount_per_quarter"] == override_price_per_quarter
+    assert db_bag["amount_per_half"] == override_price_per_half
+    assert db_bag["amount_per_year"] == override_price_per_year
+    assert db_bag["country_code"] == country_code
+    assert db_bag["currency_id"] == model.currency.id
+    assert db_bag["token"] == token
+    assert db_bag["expires_at"] == UTC_NOW + timedelta(minutes=60)
+    # Since a direct price override was used, the explanation should be empty
+    assert db_bag["pricing_ratio_explanation"] == {"plans": [], "service_items": []}
+
+    assert activity_tasks.add_activity.delay.call_args_list == [
+        call(1, "bag_created", related_type="payments.Bag", related_id=1),
+    ]
