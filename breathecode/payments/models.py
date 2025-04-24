@@ -286,6 +286,10 @@ class FinancingOption(models.Model):
     monthly_price = models.FloatField(default=1, help_text="Monthly price (e.g. 1, 2, 3, ...)")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
 
+    pricing_ratio_exceptions = models.JSONField(
+        default=dict, blank=True, help_text="Exceptions to the general pricing ratios per country"
+    )
+
     how_many_months = models.IntegerField(
         default=1, help_text="How many months and installments to collect (e.g. 1, 2, 3, ...)"
     )
@@ -906,6 +910,7 @@ def limit_coupon_choices():
 
 
 def _default_pricing_ratio_explanation():
+    """Default empty pricing ratio explanation structure."""
     return {"plans": [], "service_items": []}
 
 
@@ -980,6 +985,7 @@ class Bag(AbstractAmountByTime):
         blank=True,
         help_text="Country code used for pricing ratio calculations",
     )
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -1005,6 +1011,7 @@ class PaymentMethod(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
@@ -1196,6 +1203,14 @@ class AbstractIOweYou(models.Model):
         default=None, blank=True, null=True, help_text="UTMs and other conversion information."
     )
 
+    country_code = models.CharField(
+        max_length=2,
+        null=False,
+        blank=True,
+        default="",
+        help_text="Country code used for pricing ratio calculations",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1225,6 +1240,7 @@ class PlanFinancing(AbstractIOweYou):
     monthly_price = models.FloatField(
         default=0, help_text="Monthly price, we keep this to avoid we changes him/her amount"
     )
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
     how_many_installments = models.IntegerField(
         default=0, help_text="How many installments to collect and build the plan financing"
@@ -1274,6 +1290,7 @@ class Subscription(AbstractIOweYou):
 
     # last time the subscription was paid
     paid_at = models.DateTimeField(help_text="Last time the subscription was paid")
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
     is_refundable = models.BooleanField(default=True, help_text="Is it refundable?")
 

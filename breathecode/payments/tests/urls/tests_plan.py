@@ -41,6 +41,7 @@ def financing_option_serializer(financing_option, currency):
         },
         "how_many_months": financing_option.how_many_months,
         "monthly_price": financing_option.monthly_price,
+        "pricing_ratio_exceptions": financing_option.pricing_ratio_exceptions,
     }
 
 
@@ -62,6 +63,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
             "name": currency.name,
         },
         "financing_options": financing_options,
+        "pricing_ratio_exceptions": event.pricing_ratio_exceptions,
         "has_available_cohorts": len(cohorts) > 0,
         "has_waiting_list": event.has_waiting_list,
         "is_renewable": event.is_renewable,
@@ -140,7 +142,7 @@ class SignalTestSuite(PaymentsTestCase):
             {"service_item_id": n, "plan_id": 2} for n in range(1, 3)
         ]
         model = self.bc.database.create(
-            plan=(2, plan), service_item=2, plan_service_item=plan_service_items, financing_option=2
+            plan=(2, plan), service_item=2, plan_service_item=plan_service_items, financing_option=2, academy=1
         )
 
         url = reverse_lazy("payments:plan")
@@ -152,6 +154,7 @@ class SignalTestSuite(PaymentsTestCase):
                 model.plan[1],
                 model.currency,
                 model.service,
+                model.academy,
                 service_items=model.service_item,
                 financing_options=model.financing_option,
             ),
@@ -159,6 +162,7 @@ class SignalTestSuite(PaymentsTestCase):
                 model.plan[0],
                 model.currency,
                 model.service,
+                model.academy,
                 service_items=model.service_item,
                 financing_options=model.financing_option,
             ),
@@ -484,9 +488,7 @@ class SignalTestSuite(PaymentsTestCase):
         args, kwargs = self.bc.format.call(
             "en",
             strings={
-                "exact": [
-                    "service_items__service__slug",
-                ],
+                "exact": ["service_items__service__slug", "currency__code"],
             },
             overwrite={
                 "service_slug": "service_items__service__slug",
@@ -497,7 +499,7 @@ class SignalTestSuite(PaymentsTestCase):
         query = self.bc.format.lookup(*args, **kwargs)
         url = reverse_lazy("payments:plan") + "?" + self.bc.format.querystring(query)
 
-        self.assertEqual([x for x in query], ["service_slug", "is_onboarding"])
+        self.assertEqual([x for x in query], ["service_slug", "currency__code", "is_onboarding"])
 
         response = self.client.get(url)
 
