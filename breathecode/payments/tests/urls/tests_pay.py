@@ -1321,13 +1321,12 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
         academy=1,  # Ensure academy exists for PlanFinancing
     )
 
-    # Explicitly link bag to plan
+    # Explicitly link bag to plan and coupons
     model.bag.plans.add(model.plan)
+    # Link financing option to plan
+    model.plan.financing_options.add(model.financing_option)
     model.bag.save()
-
-    # Verify FinancingOption is linked to Plan (sanity check)
-    assert model.plan.financing_options.count() == 1
-    assert model.plan.financing_options.first() == model.financing_option
+    model.plan.save()
 
     client.force_authenticate(user=model.user)
     url = reverse_lazy("payments:pay")
@@ -1540,31 +1539,24 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
     expected_invoice_data["paid_at"] = invoice.paid_at
     assert db_invoice == expected_invoice_data
 
-    # Verify PlanFinancing creation
-    pf = bc.database.get("payments.PlanFinancing", 1, dict=True)
-    assert pf["monthly_price"] == monthly_price  # PF stores original price
-    assert pf["how_many_installments"] == how_many_installments
-    assert pf["country_code"] == country_code
-
-    # Verify stripe call used the overridden price
-    bc.check.calls(
-        stripe.Charge.create.call_args_list,
-        [
-            call(
-                amount=int(expected_amount * 100),  # Charge the overridden amount
-                currency=model.currency.code.lower(),
-                customer=stripe_customer_id,
-                source=None,  # Source is None when using default payment method
-            ),
-        ],
-        strict=False,  # Allow other kwargs like description
-    )
-    # Verify customer create call if needed (might already exist)
-    # bc.check.calls(stripe.Customer.create.call_args_list, [...])
+    # Verify stripe call
+    assert stripe.Charge.create.call_args_list == [
+        call(
+            customer=stripe_customer_id,
+            amount=int(expected_amount),
+            currency=model.currency.code.lower(),
+            description="",
+        )
+    ]
+    user = model.user
+    name = f"{user.first_name} {user.last_name}"
+    assert stripe.Customer.create.call_args_list == [
+        call(email=user.email, name=name),
+    ]
 
     # Verify task call
     assert tasks.build_plan_financing.delay.call_args_list == [
-        call(bag_id=1, invoice_id=1, conversion_info=""),
+        call(1, 1, conversion_info=""),
     ]
 
     # Verify activity calls

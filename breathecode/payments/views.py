@@ -2226,9 +2226,9 @@ class PayView(APIView):
                         original_price = option.monthly_price
 
                         # Apply pricing ratio first
-                        adjusted_price, _, c = apply_pricing_ratio(original_price, bag.country_code, plan)
+                        adjusted_price, _, c = apply_pricing_ratio(original_price, bag.country_code, option)
 
-                        if c and c.slug != bag.currency.slug:
+                        if c and c.code != bag.currency.code:
                             bag.currency = c
                             bag.save()
 
