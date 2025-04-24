@@ -1983,23 +1983,8 @@ class ConsumableCheckoutView(APIView):
                 code=404,
             )
 
-        currency = academy_service.currency
-
         academy_service.validate_transaction(total_items, lang)
-        amount = academy_service.get_discounted_price(total_items)
-
-        # Initialize pricing ratio explanation without redundant country code
-        pricing_ratio_explanation = {"service_items": []}
-
-        # Apply country-specific pricing ratio if provided
-        if country_code:
-            adjusted_price, ratio, c = apply_pricing_ratio(amount, country_code, academy_service)
-            currency = c or currency
-            if ratio:
-                pricing_ratio_explanation["service_items"].append(
-                    {"service": academy_service.service.slug, "ratio": ratio, "country": country_code}
-                )
-                amount = adjusted_price
+        amount, currency, pricing_ratio_explanation = academy_service.get_discounted_price(total_items, country_code)
 
         if amount <= 0.5:
             raise ValidationException(
@@ -2027,6 +2012,7 @@ class ConsumableCheckoutView(APIView):
                     academy_id=academy,
                     is_recurrent=False,
                     country_code=country_code,  # Store the country code for future reference
+                    pricing_ratio_explanation=pricing_ratio_explanation,
                 )
 
                 # Store pricing ratio explanation if any ratios were applied
@@ -2049,7 +2035,7 @@ class ConsumableCheckoutView(APIView):
                 else:
                     description = f"Can join to {int(total_items)} events"
 
-                invoice = s.pay(request.user, bag, amount, currency=bag.currency.code, description=description)
+                invoice = s.pay(request.user, bag, amount, currency=bag.currency.code.lower(), description=description)
 
                 consumable = Consumable(
                     service_item=service_item,
@@ -2060,6 +2046,13 @@ class ConsumableCheckoutView(APIView):
                 )
 
                 consumable.save()
+
+                tasks_activity.add_activity.delay(
+                    request.user.id,
+                    "checkout_completed",
+                    related_type="payments.Invoice",
+                    related_id=invoice.id,
+                )
 
             except Exception as e:
                 if invoice:

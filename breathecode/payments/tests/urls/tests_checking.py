@@ -3429,11 +3429,12 @@ def test_get_a_plan_with_add_ons(
     with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
         response = client.put(url, data, format="json")
 
+    price, _, _ = model.academy_service.get_discounted_price(how_many2)
     pricing = {
-        "amount_per_month": model.plan.price_per_month + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_quarter": model.plan.price_per_quarter + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_half": model.plan.price_per_half + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_year": model.plan.price_per_year + model.academy_service.get_discounted_price(how_many2),
+        "amount_per_month": model.plan.price_per_month + price,
+        "amount_per_quarter": model.plan.price_per_quarter + price,
+        "amount_per_half": model.plan.price_per_half + price,
+        "amount_per_year": model.plan.price_per_year + price,
     }
 
     json = response.json()
@@ -3521,8 +3522,6 @@ def test_checking_with_country_pricing(
         return price, None, None
 
     mock_apply_pricing_ratio.side_effect = side_effect
-
-    plan = {"price_per_month": 100, "price_per_quarter": 270, "price_per_half": 480, "price_per_year": 900}
 
     # Setup test data
     bag = {

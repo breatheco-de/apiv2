@@ -627,32 +627,11 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
                 raise e
 
             # Get discounted price first
-            base_price = add_on.get_discounted_price(service_item.how_many)
-
-            # Then apply pricing ratio if country code is available
-            if bag.country_code:
-                adjusted_price, ratio, c = apply_pricing_ratio(base_price, bag.country_code, add_on, lang=lang)
-
-                add_currency(c)
-                currency = c or currency
-
-                if not currencies and c or currencies and not c:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="Multiple currencies found, it means that the pricing ratio exceptions have a wrong configuration",
-                            es="Múltiples monedas encontradas, lo que significa que las excepciones de ratio de precios tienen una configuración incorrecta",
-                            slug="multiple-currencies-found",
-                        ),
-                    )
-
-                # Calculate ratio for explanation if not direct price
-                if adjusted_price != base_price and base_price > 0:
-                    pricing_ratio_explanation["service_items"].append(
-                        {"service": add_on.service.slug, "ratio": ratio, "country": bag.country_code}
-                    )
-
-                base_price = adjusted_price
+            base_price, c, local_pricing_ratio_explanation = add_on.get_discounted_price(
+                service_item.how_many, bag.country_code, lang
+            )
+            pricing_ratio_explanation["service_items"] += local_pricing_ratio_explanation["service_items"]
+            add_currency(c)
 
             if price_per_month != 0:
                 price_per_month += base_price
@@ -1519,7 +1498,7 @@ def apply_pricing_ratio(
                     code=404,
                 )
 
-        # Direct price override
+        # Direct price override - Check this FIRST
         if exceptions.get(price_attr) is not None:
             return exceptions[price_attr], None, currency
 
