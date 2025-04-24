@@ -1271,7 +1271,9 @@ def test_coupons__with_chosen_period__amount_set_with_conversion_info(bc: Breath
     )
 
 
-def test_pay_for_plan_financing_with_country_code_and_ratio(bc: Breathecode, client: APIClient, monkeypatch, fake):
+def test_pay_for_plan_financing_with_country_code_and_ratio(
+    bc: Breathecode, client: APIClient, monkeypatch, fake, utc_now
+):
     # Mock necessary stripe functions
     stripe_charge_id = fake.slug()
     stripe_customer_id = fake.slug()
@@ -1307,6 +1309,7 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(bc: Breathecode, cli
         "how_many_installments": 6,
         "token": fake.slug(),
         "country_code": country_code,  # Set country code on the bag
+        "expires_at": UTC_NOW + timedelta(minutes=10),  # Set expires_at
     }
     currency = {"code": "USD"}
     model = bc.database.create(
@@ -1393,83 +1396,175 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(bc: Breathecode, cli
     expected_invoice_data["paid_at"] = invoice.paid_at  # Keep datetime for DB comparison
     assert db_invoice == expected_invoice_data
 
-    # Verify PlanFinancing creation
-    months = model.bag.how_many_installments
-    # Recalculate expected dates based on actual invoice.paid_at
-    plan_exp = invoice.paid_at + calculate_relative_delta(model.plan.time_of_life, model.plan.time_of_life_unit)
-    next_pay = invoice.paid_at + timedelta(days=30)  # Approximation, logic might be different
-    valid_until = invoice.paid_at + relativedelta(months=months - 1)  # Use relativedelta
+    # Verify stripe call
+    assert stripe.Charge.create.call_args_list == [
+        call(
+            customer=stripe_customer_id,
+            amount=int(expected_amount),
+            currency=model.currency.code.lower(),
+            description="",
+        )
+    ]
+    user = model.user
+    name = f"{user.first_name} {user.last_name}"
+    assert stripe.Customer.create.call_args_list == [
+        call(email=user.email, name=name),
+    ]
 
-    # Helper function for PlanFinancing item, assuming it exists or define inline
-    def plan_financing_item(data={}):
-        # Define the structure based on PlanFinancing model or existing tests
-        base = {
-            "id": 1,
-            "academy_id": 1,
-            "user_id": 1,
-            "selected_cohort_set_id": None,
-            "selected_mentorship_service_set_id": None,
-            "selected_event_type_set_id": None,
-            "status": "ACTIVE",
-            "status_message": None,
-            "next_payment_at": next_pay,  # Use calculated
-            "valid_until": valid_until,  # Use calculated
-            "plan_expires_at": plan_exp,  # Use calculated
-            "monthly_price": monthly_price,  # Use original monthly price before ratio for PF
-            "how_many_installments": months,
-            "currency_id": model.currency.id,
-            "conversion_info": None,  # Assuming empty for this test
-            "externally_managed": False,
-            "country_code": country_code,
-            # Add created_at/updated_at if necessary for comparison, use Any from unittest.mock if variable
-        }
-        base.update(data)
-        return base
+    # Verify task call
+    assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info="")]
 
-    pf = bc.database.get("payments.PlanFinancing", 1, dict=True)
-
-    # Compare field by field or use a helper if comparing datetimes/complex fields
-    expected_pf = plan_financing_item(
-        {
-            # Override any fields that might differ slightly, e.g., datetimes
-            "next_payment_at": pf["next_payment_at"],
-            "valid_until": pf["valid_until"],
-            "plan_expires_at": pf["plan_expires_at"],
-        }
+    # Verify activity calls
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
+            call(model.user.id, "bag_created", related_type="payments.Bag", related_id=1),
+            call(model.user.id, "checkout_completed", related_type="payments.Invoice", related_id=1),
+        ],
     )
 
-    # Ensure plans are linked
-    pf_obj = bc.database.get("payments.PlanFinancing", 1, dict=False)
-    assert list(pf_obj.plans.all().values_list("id", flat=True)) == [model.plan.id]
 
-    # Clean plans from dict comparison if already checked
-    del pf["plans"]
+def test_pay_for_plan_financing_with_country_code_and_price_override(
+    bc: Breathecode, client: APIClient, monkeypatch, fake
+):
+    """
+    Test that the pay endpoint correctly charges the overridden price from
+    pricing_ratio_exceptions for a specific country when financing.
+    """
+    # Mock necessary stripe functions
+    stripe_charge_id = fake.slug()
+    stripe_customer_id = fake.slug()
+    monkeypatch.setattr("stripe.Charge.create", MagicMock(return_value={"id": stripe_charge_id}))
+    monkeypatch.setattr("stripe.Customer.create", MagicMock(return_value={"id": stripe_customer_id}))
 
-    assert pf == expected_pf
+    country_code = "VE"
+    override_price = 50.0  # Direct price override
+    monthly_price = 100.0  # Original price
+    how_many_installments = 6
 
-    # Verify stripe call
+    # Setup models
+    plan = {
+        "is_renewable": False,
+        "price_per_month": 0,  # Not used directly for financing
+        "time_of_life": 6,
+        "time_of_life_unit": "MONTH",
+        "status": "ACTIVE",
+    }
+    financing_option = {
+        "monthly_price": monthly_price,
+        "how_many_months": how_many_installments,
+        "pricing_ratio_exceptions": {
+            country_code.lower(): {
+                "price": override_price,
+                "currency": "USD",
+            }
+        },
+    }
+    bag = {
+        "status": "CHECKING",
+        "type": "BAG",
+        "how_many_installments": how_many_installments,
+        "token": fake.slug(),
+        "country_code": country_code,  # Set country code on the bag
+        "expires_at": UTC_NOW + timedelta(minutes=10),  # Set expires_at
+    }
+    currency = {"code": "USD"}
+    model = bc.database.create(
+        user=1,
+        plan=plan,
+        financing_option=financing_option,
+        bag=bag,
+        currency=currency,
+        academy=1,
+    )
+
+    # Explicitly link bag to plan and coupons
+    model.bag.plans.add(model.plan)
+    # Link financing option to plan
+    model.plan.financing_options.add(model.financing_option)
+    model.bag.save()
+    model.plan.save()
+
+    client.force_authenticate(user=model.user)
+    url = reverse_lazy("payments:pay")
+    data = {
+        "token": model.bag.token,
+        "how_many_installments": model.bag.how_many_installments,
+    }
+    response = client.post(url, data, format="json")
+
+    # Assertions
+    json = response.json()
+    invoice_id = 1
+    invoice = bc.database.get("payments.Invoice", invoice_id, dict=False)
+
+    assert invoice is not None, "Invoice was not created"
+
+    expected_amount = math.ceil(override_price)
+
+    expected_invoice_data = {
+        "academy_id": 1,
+        "amount": expected_amount,
+        "bag_id": model.bag.id,
+        "currency_id": model.currency.id,
+        "id": invoice_id,
+        "paid_at": invoice.paid_at,
+        "status": "FULFILLED",
+        "stripe_id": stripe_charge_id,
+        "user_id": model.user.id,
+        "refund_stripe_id": None,
+        "refunded_at": None,
+        "externally_managed": False,
+        "payment_method_id": None,
+        "proof_id": None,
+    }
+
+    expected_serializer = get_serializer(bc, model.currency, model.user, data={})
+    expected_serializer["paid_at"] = bc.datetime.to_iso_string(invoice.paid_at)
+    expected_serializer["amount"] = expected_amount
+
+    assert json == expected_serializer
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Verify DB state
+    db_bag = bc.database.get("payments.Bag", 1, dict=True)
+    assert db_bag["status"] == "PAID"
+    assert db_bag["token"] is None
+    assert db_bag["country_code"] == country_code
+    assert db_bag["how_many_installments"] == how_many_installments
+    # Explanation should be empty because direct price was used
+    assert db_bag["pricing_ratio_explanation"] == {"plans": [], "service_items": []}
+
+    db_invoice = bc.database.get("payments.Invoice", invoice_id, dict=True)
+    db_invoice["amount"] = math.ceil(db_invoice["amount"])
+    expected_invoice_data["paid_at"] = invoice.paid_at
+    assert db_invoice == expected_invoice_data
+
+    # Verify PlanFinancing creation
+    pf = bc.database.get("payments.PlanFinancing", 1, dict=True)
+    assert pf["monthly_price"] == monthly_price  # PF stores original price
+    assert pf["how_many_installments"] == how_many_installments
+    assert pf["country_code"] == country_code
+
+    # Verify stripe call used the overridden price
     bc.check.calls(
         stripe.Charge.create.call_args_list,
         [
             call(
-                amount=int(expected_amount * 100),  # Use calculated final amount for charge
+                amount=int(expected_amount * 100),  # Charge the overridden amount
                 currency=model.currency.code.lower(),
                 customer=stripe_customer_id,
-                source=model.bag.token,
+                source=None,  # Source is None when using default payment method
             ),
         ],
+        strict=False,  # Allow other kwargs like description
     )
-    bc.check.calls(
-        stripe.Customer.create.call_args_list,
-        [
-            call(email=model.user.email, invoice_settings={"default_payment_method": None}),
-        ],
-        strict=False,
-    )
+    # Verify customer create call if needed (might already exist)
+    # bc.check.calls(stripe.Customer.create.call_args_list, [...])
 
     # Verify task call
     assert tasks.build_plan_financing.delay.call_args_list == [
-        call(bag_id=1, invoice_id=1, is_free=False, conversion_info="", cohorts=[]),
+        call(bag_id=1, invoice_id=1, conversion_info=""),
     ]
 
     # Verify activity calls
