@@ -71,7 +71,15 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         command = Command()
         command.handle()
 
-        self.assertEqual(self.bc.database.list_of("events.LiveClass"), self.bc.format.to_dict(model.live_class))
+        model_live_classes = [
+            {**live_class, "ended_at": UTC_NOW + timedelta(minutes=30)}
+            for live_class in self.bc.format.to_dict(model.live_class)
+        ]
+
+        self.assertEqual(
+            self.bc.database.list_of("events.LiveClass"),
+            model_live_classes,
+        )
 
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW + DELTA))
     def test_with_two_live_classes_after_ending_at_more_30_minutes__started_at_set(self):
