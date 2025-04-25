@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from breathecode.events.models import Event, EventCheckin
 from breathecode.authenticate.models import UserInvite, User
 from django.db import transaction
+from django.contrib.auth.models import User
 
 EVENT_SLUGS = [
     "join-the-vibe-coding-community-now",
@@ -26,13 +27,29 @@ class Command(BaseCommand):
                 print(f'Event with slug "{slug}" not found.')
                 continue
 
-            invites = UserInvite.objects.filter(event_slug=slug, user__isnull=False)
+            invites = UserInvite.objects.filter(event_slug=slug)
             if not invites.exists():
                 print(f'No UserInvites found for event_slug "{slug}".')
                 continue
 
             for invite in invites:
                 user = invite.user
+                # Create user if status is WAITING_LIST, user is None, and event_slug matches
+                if invite.status == "WAITING_LIST" and user is None:
+                    # Use first_name and last_name if available, else empty string
+                    first_name = invite.first_name or ''
+                    last_name = invite.last_name or ''
+                    # Create user with unusable password
+                    user = User(
+                        username=invite.email,
+                        email=invite.email,
+                        first_name=first_name,
+                        last_name=last_name,
+                    )
+                    user.save()
+                    invite.user = user
+                    invite.save()
+                    print(f'Created user {user.id} for invite {invite.id} (WAITING_LIST).')
                 if not user:
                     print(f'UserInvite {invite.id} has no user attached.')
                     continue
