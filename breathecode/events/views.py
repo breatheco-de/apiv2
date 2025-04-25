@@ -41,7 +41,7 @@ from breathecode.utils.decorators import consume
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message
 
-from .actions import fix_datetime_weekday, get_my_event_types, update_timeslots_out_of_range
+from .actions import fix_datetime_weekday, update_timeslots_out_of_range  # get_my_event_types,
 from .models import (
     Event,
     EventbriteWebhook,
@@ -265,11 +265,13 @@ class EventMeView(APIView):
         if cache is not None:
             return cache
 
-        items = get_my_event_types(request.user)
+        # items = get_my_event_types(request.user)
         lang = get_user_language(request)
 
         if event_id is not None:
-            single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
+            # TODO: Add filter by event types again
+            # single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
+            single_event = Event.objects.filter(id=event_id).first()
 
             if not single_event:
                 raise ValidationException(
@@ -297,7 +299,8 @@ class EventMeView(APIView):
             serializer = EventBigSerializer(single_event, many=False, context={})
             return Response(serializer.data)
 
-        items = Event.objects.filter(event_type__in=items, status="ACTIVE")
+        # TODO: Add filter for my event types again
+        items = Event.objects.filter(status="ACTIVE")
         lookup = {}
 
         online_event = self.request.GET.get("online_event", "")
@@ -1020,9 +1023,10 @@ class EventMeCheckinView(APIView):
 
     def put(self, request, event_id):
         lang = get_user_language(request)
-        items = get_my_event_types(request.user)
+        # items = get_my_event_types(request.user)
 
-        event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        # event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        event = Event.objects.filter(id=event_id).first()
         if event is None:
             event = Event.objects.filter(id=event_id).first()
             if event is None or event.event_type is None:
@@ -1054,9 +1058,10 @@ class EventMeCheckinView(APIView):
 
     def post(self, request, event_id):
         lang = get_user_language(request)
-        items = get_my_event_types(request.user)
+        # items = get_my_event_types(request.user)
 
-        event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        # event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        event = Event.objects.filter(id=event_id).first()
         if event is None:
             event = Event.objects.filter(id=event_id).first()
             if event is None or event.event_type is None:
