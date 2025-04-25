@@ -1475,10 +1475,12 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                     translation(lang, en="Course not found", es="Curso no encontrado", slug="course-not-found")
                 )
 
-        if cohort := data.get("cohort"):
+        cohort = data.get("cohort")
+        if cohort:
             extra["cohort"] = cohort
 
-        if syllabus := data.get("syllabus"):
+        syllabus = data.get("syllabus")
+        if syllabus:
             extra["syllabus"] = syllabus
 
         have_pending_invites = UserInvite.objects.filter(
@@ -1570,11 +1572,15 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if country is not None and country.lower() in forbidden_countries:
-            data["status"] = "WAITING_LIST"
-            data["process_status"] = "PENDING"
+        event_slug = data.get("event_slug") or data.get("event")
+        cohort_present = bool(cohort)
+        event_present = bool(event_slug)
 
-        elif plan and plan.has_waiting_list == True:
+        if (
+            (country is not None and country.lower() in forbidden_countries)
+            and (not event_present and not cohort_present)
+        ):
+            # Only set WAITING_LIST if BOTH event_slug and cohort are empty
             data["status"] = "WAITING_LIST"
             data["process_status"] = "PENDING"
 
