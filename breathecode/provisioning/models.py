@@ -180,7 +180,7 @@ class ProvisioningPrice(models.Model):
         if isinstance(how_many, float):
             how_many = Decimal(how_many)
 
-        return self.price_per_unit * self.multiplier * how_many
+        return (self.price_per_unit * self.multiplier * how_many).quantize(Decimal("0.000000001"))
 
 
 class ProvisioningConsumptionEvent(models.Model):

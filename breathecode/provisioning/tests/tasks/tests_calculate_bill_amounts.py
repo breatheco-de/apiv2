@@ -234,7 +234,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 {
                     **self.bc.format.to_dict(model.provisioning_bill),
                     "status": "PAID",
-                    "total_amount": 0.0,
+                    "total_amount": Decimal("0.0"),
                     "paid_at": UTC_NOW,
                     "started_at": started,
                     "ended_at": UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=0),
@@ -343,7 +343,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 {
                     **self.bc.format.to_dict(model.provisioning_bill),
                     "status": "PAID",
-                    "total_amount": 0.0,
+                    "total_amount": Decimal("0.0"),
                     "paid_at": UTC_NOW,
                     "started_at": UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=9),
                     "ended_at": UTC_NOW.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=0),
@@ -510,14 +510,14 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
         provisioning_prices = [
             {
-                "price_per_unit": random.random() * 100,
+                "price_per_unit": Decimal(random.random() * 100).quantize(Decimal(".000000001")),
             }
             for _ in range(2)
         ]
 
         provisioning_consumption_events = [
             {
-                "quantity": random.random() * 10,
+                "quantity": Decimal(random.random() * 10).quantize(Decimal(".000000001")),
                 "price_id": n + 1,
             }
             for n in range(2)
@@ -565,7 +565,8 @@ class MakeBillsTestSuite(ProvisioningTestCase):
 
                 self.bc.check.calls(Stripe.create_payment_link.call_args_list, [call(STRIPE_PRICE_ID, quantity)])
 
-        fee = new_amount - amount
+                fee = new_amount - amount
+
         self.assertEqual(
             self.bc.database.list_of("provisioning.ProvisioningUserConsumption"),
             [
@@ -589,7 +590,7 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                     **self.bc.format.to_dict(model.provisioning_bill),
                     "status": "DUE",
                     "total_amount": new_amount,
-                    "fee": fee,
+                    "fee": fee.quantize(Decimal("0.000000001")),
                     "paid_at": None,
                     "stripe_id": stripe_id,
                     "stripe_url": stripe_url,
@@ -814,8 +815,8 @@ class MakeBillsTestSuite(ProvisioningTestCase):
                 {
                     **self.bc.format.to_dict(model.provisioning_bill),
                     "status": "DUE",
-                    "total_amount": float(quantity * CREDIT_PRICE),
-                    "fee": float(fee),
+                    "total_amount": new_amount,
+                    "fee": fee.quantize(Decimal("0.000000001")),
                     "paid_at": None,
                     "stripe_id": stripe_id,
                     "stripe_url": stripe_url,
