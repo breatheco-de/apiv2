@@ -9,7 +9,7 @@ import random
 import re
 import string
 from datetime import datetime, timedelta
-from decimal import ROUND_HALF_UP, Context, Decimal, localcontext
+from decimal import ROUND_HALF_UP, Decimal
 from random import choices
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
@@ -238,7 +238,7 @@ def provisioning_activity_price_data(data={}):
         "id": 1,
         "currency_id": 1,
         "multiplier": 1.0,
-        "price_per_unit": 0.0,
+        "price_per_unit": Decimal("0.0"),
         "unit_type": "",
         **data,
     }
@@ -249,7 +249,7 @@ def provisioning_activity_item_data(data={}):
         "external_pk": None,
         "id": 1,
         "price_id": 1,
-        "quantity": 0.0,
+        "quantity": Decimal("0.0"),
         "registered_at": ...,
         "repository_url": None,
         "task_associated_slug": None,
@@ -266,8 +266,8 @@ def provisioning_activity_data(data={}):
         "status": "PERSISTED",
         "status_text": "",
         "username": "soldier-job-woman",
-        "amount": 0.0,
-        "quantity": 0.0,
+        "amount": Decimal("0.0"),
+        "quantity": Decimal("0.0"),
         **data,
     }
 
@@ -280,8 +280,8 @@ def provisioning_bill_data(data={}):
         "paid_at": None,
         "status": "PENDING",
         "status_details": None,
-        "total_amount": 0.0,
-        "fee": 0.0,
+        "total_amount": Decimal("0.0"),
+        "fee": Decimal("0.0"),
         "stripe_id": None,
         "stripe_url": None,
         "vendor_id": None,
@@ -415,7 +415,8 @@ class RandomFileTestSuite(ProvisioningTestCase):
             logging.Logger.error.call_args_list,
             [
                 call(
-                    f"File {slug} has an unsupported origin or the provider had changed the file format", exc_info=True
+                    f"File {slug} has an unsupported origin or the provider had changed the file format. Detected columns: {['Unnamed: 0'] + list(csv.keys())}",
+                    exc_info=True,
                 ),
             ],
         )
@@ -749,8 +750,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "academy_id": n + 1,
                         "vendor_id": None,
                         "hash": slug,
-                        "total_amount": 0.0,
+                        "total_amount": Decimal("0.0"),
                         "status": "ERROR",
+                        "status_details": "Errors found in consumption records.",
                     }
                 )
                 for n in range(20)
@@ -939,8 +941,9 @@ class CodespacesTestSuite(ProvisioningTestCase):
                         "academy_id": n + 1,
                         "vendor_id": None,
                         "hash": slug,
-                        "total_amount": 0.0,
+                        "total_amount": Decimal("0.0"),
                         "status": "ERROR",
+                        "status_details": "Errors found in consumption records.",
                     }
                 )
                 for n in range(20)
@@ -1853,6 +1856,7 @@ class GitpodTestSuite(ProvisioningTestCase):
                     {
                         "hash": slug,
                         "status": "ERROR",
+                        "status_details": "Errors found in consumption records.",
                     }
                 ),
             ],
@@ -3000,6 +3004,7 @@ class RigobotTestSuite(ProvisioningTestCase):
                     {
                         "hash": slug,
                         "status": "ERROR",
+                        "status_details": "Errors found in consumption records.",
                     }
                 ),
             ],

@@ -368,11 +368,9 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
         upload.delay(hash, page=page + 1, task_manager_id=task_manager_id)
 
     elif not ProvisioningUserConsumption.objects.filter(hash=hash, status="ERROR").exists():
-        logger.info(f"Scheduling final bill amount calculation for hash {hash}")
         calculate_bill_amounts.delay(hash)
 
     elif ProvisioningUserConsumption.objects.filter(hash=hash, status="ERROR").exists():
-        logger.error(f"Marking bills for hash {hash} as ERROR due to consumption errors.")
         ProvisioningBill.objects.filter(hash=hash).update(
             status="ERROR", status_details="Errors found in consumption records."
         )
