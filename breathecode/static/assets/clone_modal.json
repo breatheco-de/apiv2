@@ -1,0 +1,133 @@
+{
+  "title": "Open locally on your computer",
+  "need-help": "Need help? Schedule a mentoring session",
+  "description": "This exercise can be downloaded and run locally on your computer by following these steps:",
+  "select-os": "1. Select your operating system",
+  "agent-vs-code": {
+    "label": "Open the project in VS Code",
+    "description": "Make sure you have the <a href=\"https://learnpack.co\" target=\"_blank\">LearnPack extension</a> installed, open the folder in VSCode and type <span class=\"highlight-command\">learnpack start</span> on your vscode terminal."
+  },
+  "agent-os": {
+    "label": "Open the project without VSCode",
+    "description": "Use your computer terminal to get inside your recently created folder and start learnpack: <pre><code>$ cd [repoName]\n$ learnpack start</code></pre>"
+  },
+  "os-list": [
+    {
+      "name": "macos",
+      "label": "MacOS",
+      "logo": "/static/images/apple.png",
+      "steps": [
+        {
+          "label": "Download a code editor or IDE on your computer",
+          "description": "We recommend installing VSCode, which integrates perfectly with most of our interactive tutorials. Follow the link below to download VSCode.",
+          "video": "",
+          "source": "https://code.visualstudio.com/download"
+        },
+        {
+          "label": "Create a folder to store your exercises",
+          "description": "If you already created a folder to store a previous exercise, we recommend you using it. Otherwise, create a new folder wherever you feel best (inside Documents for example) and open that new folder in your code editor (VSCode or other). From here open the terminal to follow the next steps.",
+          "video": "https://www.youtube.com/watch?v=eZAT6fwMVgY",
+          "source": ""
+        },
+        {
+          "label": "Install node.js on your computer",
+          "description": "We recommend installing NVM to manage your node.js versions locally much easier, follow this link for a full guide about how to install on MacOS.",
+          "video": "https://www.youtube.com/watch?v=BhLFxy6Jz8c",
+          "source": "https://4geeks.com/how-to/install-node-nvm-mac-osx"
+        },
+        {
+          "label": "Install LearnPack on your computer",
+          "description": "You must install LearnPack to run these exercises interactively on your computer, you should run this command on the terminal: <pre><code>npm install @learnpack/learnpack -g</code></pre>Click the link below to read more about LearnPack",
+          "video": "https://www.youtube.com/watch?v=noKAD-d_z3c",
+          "source": "https://4geeks.com/docs/learnpack/what-is-learnpack"
+        },
+        {
+          "label": "Clone the project into your computer",
+          "description": "On MacOS, you can clone the project into your computer by simply running this command in the terminal: <pre><code>git clone [repoUrl]</code></pre>You can check this link if you need a more detailed explanation.",
+          "video": "https://www.youtube.com/watch?v=EhxPBMQFCaI",
+          "source": "https://4geeks.com/how-to/github-clone-repository"
+        }
+      ]
+    },
+    {
+      "name": "linux",
+      "label": "Linux",
+      "logo": "/static/images/linux.png",
+      "steps": [
+        {
+          "label": "Download a code editor or IDE on your computer",
+          "description": "We recommend installing VSCode, which integrates perfectly with most of our interactive tutorials. Follow the link below to download VSCode.",
+          "video": "",
+          "source": "https://code.visualstudio.com/download"
+        },
+        {
+          "label": "Create a folder to store your exercises",
+          "description": "If you already created a folder to store a previous exercise, we recommend you using it. Otherwise, create a new folder wherever you feel best (inside Documents for example) and open that new folder in your code editor (VSCode or other). From here open the terminal to follow the next steps.",
+          "video": "https://www.youtube.com/watch?v=eZAT6fwMVgY",
+          "source": ""
+        },
+        {
+          "label": "Install node.js on your computer",
+          "description": "We recommend installing NVM to manage your node.js versions locally much easier, follow this link for a full guide about how to install on Linux.",
+          "video": "https://www.youtube.com/watch?v=z6Tta9ZbbGg",
+          "source": "https://4geeks.com/how-to/install-nvm-linux"
+        },
+        {
+          "label": "Install LearnPack on your computer",
+          "description": "You must install LearnPack to run these exercises interactively on your computer, you should run this command on the terminal: <pre><code>npm install @learnpack/learnpack -g</code></pre>Click the link below to read more about LearnPack",
+          "video": "https://www.youtube.com/watch?v=noKAD-d_z3c",
+          "source": "https://4geeks.com/docs/learnpack/what-is-learnpack"
+        },
+        {
+          "label": "Clone the project into your computer",
+          "description": "On Linux, you can clone the project into your computer by simply running this command in the terminal: <pre><code>git clone [repoUrl]</code></pre>You can check this link if you need a more detailed explanation.",
+          "video": "https://www.youtube.com/watch?v=EhxPBMQFCaI",
+          "source": "https://4geeks.com/how-to/github-clone-repository"
+        }
+      ]
+    },
+    {
+      "name": "windows",
+      "label": "Windows",
+      "logo": "/static/images/windows.png",
+      "steps": [
+        {
+          "label": "Download a code editor or IDE on your computer",
+          "description": "We recommend installing VSCode, which integrates perfectly with most of our interactive tutorials. Follow the link below to download VSCode.",
+          "video": "",
+          "source": "https://code.visualstudio.com/download"
+        },
+        {
+          "label": "Create a folder to store your exercises",
+          "description": "If you already created a folder to store a previous exercise, we recommend you using it. Otherwise, create a new folder wherever you feel best (inside Documents for example) and open that new folder in your code editor (VSCode or other). From here open the terminal to follow the next steps.",
+          "video": "https://www.youtube.com/watch?v=eZAT6fwMVgY",
+          "source": ""
+        },
+        {
+          "label": "Install node.js on your computer",
+          "description": "We recommend installing NVM to manage your node.js versions locally much easier, follow this link for a full guide about how to install on Windows.",
+          "video": "https://www.youtube.com/watch?v=tyb4WuO5Pdo",
+          "source": "https://4geeks.com/how-to/nvm-install-windows"
+        },
+        {
+          "label": "Install LearnPack on your computer",
+          "description": "You must install LearnPack to run these exercises interactively on your computer, you should run this command on the terminal: <pre><code>npm install @learnpack/learnpack -g</code></pre>Click the link below to read more about LearnPack",
+          "video": "https://www.youtube.com/watch?v=noKAD-d_z3c",
+          "source": "https://4geeks.com/docs/learnpack/what-is-learnpack"
+        },
+        {
+          "label": "Install GIT on your computer",
+          "description": "You must install GIT to clone a GitHub repository locally. You must follow the instructions given in the following link.",
+          "video": "https://www.youtube.com/watch?v=iYkLrXobBbA",
+          "source": "https://git-scm.com/downloads/win"
+        },
+        {
+          "label": "Clone the project into your computer",
+          "description": "You can clone the project into your computer by simply running this command in the terminal: <pre><code>git clone [repoUrl]</code></pre>You can check this link if you need a more detailed explanation.",
+          "video": "https://www.youtube.com/watch?v=EhxPBMQFCaI",
+          "source": "https://4geeks.com/how-to/github-clone-repository"
+        }
+      ]
+    }
+  ]
+}
