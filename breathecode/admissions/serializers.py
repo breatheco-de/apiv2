@@ -482,6 +482,11 @@ class CohortUserHookSerializer(serpy.Serializer):
     educational_status = serpy.Field()
     watching = serpy.Field()
     created_at = serpy.Field()
+    profile_academy = serpy.MethodField()
+
+    def get_profile_academy(self, obj):
+        profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
+        return GetProfileAcademySmallSerializer(profile).data if profile else None
 
 
 class CohortHookSerializer(serpy.Serializer):
