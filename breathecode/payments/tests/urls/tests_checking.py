@@ -3104,7 +3104,7 @@ def test_so_much_service_items(
     }
 
     how_many1 = random.randint(1, 5)
-    possible_choices = [x for x in range(1, 6) if x != how_many1]
+    possible_choices = [x for x in range(5, 7) if x != how_many1]
     how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     academy = {"available_as_saas": True}
@@ -3117,7 +3117,7 @@ def test_so_much_service_items(
         cohort_set=1,
         service_item=service_item,
         service=1,
-        academy_service={"bundle_size": 2, "max_items": 4},
+        academy_service={"bundle_size": 2, "max_items": 4, "max_amount": 4},
         plan=plan,
         plan_service_item=1,
         currency=currency,
@@ -3199,7 +3199,7 @@ def test_so_low_service_items(
     }
 
     how_many1 = random.randint(1, 5)
-    possible_choices = [x for x in range(1, 6) if x != how_many1]
+    possible_choices = [x for x in range(1, 3) if x != how_many1]
     how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     academy = {"available_as_saas": True}
@@ -3212,7 +3212,7 @@ def test_so_low_service_items(
         cohort_set=1,
         service_item=service_item,
         service=1,
-        academy_service={"bundle_size": 4, "max_items": 7},
+        academy_service={"bundle_size": 4, "max_items": 7, "max_amount": 7},
         plan=plan,
         plan_service_item=1,
         currency=currency,
@@ -3294,7 +3294,7 @@ def test_price_is_very_high(
     }
 
     how_many1 = random.randint(1, 5)
-    possible_choices = [x for x in range(1, 6) if x != how_many1]
+    possible_choices = [x for x in range(4, 7) if x != how_many1]
     how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     academy = {"available_as_saas": True}

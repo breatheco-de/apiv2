@@ -1053,6 +1053,13 @@ class PaymentMethod(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+    included_country_codes = models.CharField(
+        max_length=255,
+        null=False,
+        blank=True,
+        default="",
+        help_text="A list of country codes that represent countries that can use this payment method, comma separated",
+    )
 
 
 class ProofOfPayment(models.Model):
