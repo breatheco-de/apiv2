@@ -249,10 +249,10 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         self.cache = kwargs.get("cache", {})
 
     def get_currency(self, obj: Plan):
-        country_code = self.context.get("country_code")
+        country_code = (self.context.get("country_code") or "").lower()
         if country_code and country_code in obj.pricing_ratio_exceptions:
             currency = obj.currency or obj.owner.main_currency
-            x = obj.pricing_ratio_exceptions[country_code]
+            x = obj.pricing_ratio_exceptions.get(country_code, {})
 
             code = x.get("currency")
             if code:
@@ -720,7 +720,7 @@ class GetPaymentMethod(serpy.Serializer):
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
     currency = GetCurrencySmallSerializer(required=False, many=False)
-    country_code = serpy.Field()
+    included_country_codes = serpy.Field()
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
@@ -742,6 +742,6 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "lang",
             "is_credit_card",
             "currency",
-            "country_code",
             "academy",
+            "included_country_codes",
         )

@@ -183,7 +183,10 @@ class AcademyPlanView(APIView):
                 )
 
             serializer = GetPlanSerializer(
-                item, many=False, context={"academy_id": academy_id}, select=request.GET.get("select")
+                item,
+                many=False,
+                context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+                select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
 
@@ -215,7 +218,10 @@ class AcademyPlanView(APIView):
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(
-            items, many=True, context={"academy_id": academy_id}, select=request.GET.get("select")
+            items,
+            many=True,
+            context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+            select=request.GET.get("select"),
         )
 
         return handler.response(serializer.data)
@@ -2412,24 +2418,33 @@ class AcademyPlanSubscriptionView(APIView):
 
 class PaymentMethodView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
+    permission_classes = [AllowAny]
 
     def get(self, request):
         handler = self.extensions(request)
         lang = get_user_language(request)
+
+        # Define the custom filter function for country_code
+        def country_code_filter(value: str):
+            if not value:
+                return Q()
+            return Q(included_country_codes__exact="") | Q(included_country_codes__icontains=value)
 
         query = handler.lookup.build(
             lang,
             strings={
                 "exact": [
                     "currency__code",
-                    "country_code",
-                    "lang",  # Added lang filter
-                    "academy__id",  # Added academy_id filter
+                    "lang",
+                    "academy__id",
                 ],
             },
+            # Use the custom field handler
+            custom_fields={"country_code": country_code_filter},
         )
 
         items = PaymentMethod.objects.filter(query)
+
         items = handler.queryset(items)
         serializer = GetPaymentMethod(items, many=True)
 
