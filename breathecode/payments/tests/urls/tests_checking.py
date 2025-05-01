@@ -678,8 +678,8 @@ class SignalTestSuite(PaymentsTestCase):
         json = response.json()
         expected = {"detail": "service-item-not-valid", "status_code": 400}
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert json == expected
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
         self.assertEqual(
             self.bc.database.list_of("payments.Bag"),
@@ -3636,11 +3636,12 @@ def test_checking_with_country_price_override(
         },
     }
     model = database.create(
+        country=1,
+        city=1,
         user=1,
         academy=1,
         currency={"code": "USD"},
         plan=plan_kwargs,
-        skip_cohort=True,  # Avoid cohort complexities
     )
 
     client.force_authenticate(model.user)
@@ -3656,7 +3657,7 @@ def test_checking_with_country_price_override(
     with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
         response = client.put(url, data, format="json")
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_201_CREATED
     json_data = response.json()
 
     # Verify the amounts in the response match the override prices
@@ -3668,7 +3669,7 @@ def test_checking_with_country_price_override(
     assert json_data["expires_at"] == (UTC_NOW + timedelta(minutes=60)).isoformat().replace("+00:00", "Z")
 
     # Verify the bag in the database reflects the override
-    db_bag = database.get("payments.Bag", 1, dict=True)
+    db_bag = database.list_of("payments.Bag")[0]
     assert db_bag["amount_per_month"] == override_price_per_month
     assert db_bag["amount_per_quarter"] == override_price_per_quarter
     assert db_bag["amount_per_half"] == override_price_per_half
@@ -3678,7 +3679,15 @@ def test_checking_with_country_price_override(
     assert db_bag["token"] == token
     assert db_bag["expires_at"] == UTC_NOW + timedelta(minutes=60)
     # Since a direct price override was used, the explanation should be empty
-    assert db_bag["pricing_ratio_explanation"] == {"plans": [], "service_items": []}
+    assert db_bag["pricing_ratio_explanation"] == {
+        "plans": [
+            {
+                "plan": model.plan.slug,
+                "ratio": None,
+            },
+        ],
+        "service_items": [],
+    }
 
     assert activity_tasks.add_activity.delay.call_args_list == [
         call(1, "bag_created", related_type="payments.Bag", related_id=1),
