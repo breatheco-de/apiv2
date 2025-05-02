@@ -3,7 +3,7 @@ import os
 import random
 import re
 from datetime import datetime
-from decimal import Decimal, localcontext
+from decimal import ROUND_HALF_UP, Decimal, localcontext
 from typing import Optional, TypedDict
 
 from capyc.core.i18n import translation
@@ -232,7 +232,7 @@ def handle_pending_github_user(
     orgs = (
         AcademyAuthSettings.objects.filter(github_username__iexact=organization)
         if organization
-        else AcademyAuthSettings.objects.none()
+        else AcademyAuthSettings.objects.filter()
     )
     orgs = [
         x
@@ -302,18 +302,27 @@ def handle_pending_github_user(
     return [org.academy for org in orgs]
 
 
-def get_multiplier() -> float:
+def get_multiplier() -> Decimal:
     try:
         x = os.getenv("PROVISIONING_MULTIPLIER", "1.3").replace(",", ".")
-        x = float(x)
+        x = Decimal(x)
     except Exception:
-        x = 1.3
+        x = Decimal("1.3")
 
     return x
 
 
 def add_codespaces_activity(context: ActivityContext, field: dict, position: int) -> None:
-    field["Multiplier"] = 1
+    # Validate input values
+    quantity = Decimal(str(field["quantity"])).quantize(Decimal(".000000001"), rounding=ROUND_HALF_UP)
+    applied_cost = Decimal(str(field["applied_cost_per_quantity"])).quantize(
+        Decimal(".000000001"), rounding=ROUND_HALF_UP
+    )
+
+    field["Multiplier"] = Decimal("1.0")  # Use Decimal instead of integer
+
+    # change this
+    date = datetime.fromisoformat(field["usage_at"])
 
     if isinstance(field["username"], float):
         field["username"] = ""
@@ -352,7 +361,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         academies = [x.academy for x in github_academy_users]
 
     if not academies and not GithubAcademyUser.objects.filter(username=field["username"]).count():
-        academies = handle_pending_github_user(field["organization"], field["username"])
+        academies = handle_pending_github_user(field["organization"], field["username"], date)
 
     if not not_found and academies:
         academies = random.choices(academies, k=1)
@@ -399,9 +408,6 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             context["provisioning_bills"][academy.id] = provisioning_bill
             provisioning_bills[academy.id] = provisioning_bill
 
-    # change this
-    date = datetime.fromisoformat(field["usage_at"])
-
     if not_found:
         warnings.append(
             f'We could not find enough information about {field["username"]}, mark this user user as '
@@ -416,24 +422,27 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         context["provisioning_activity_kinds"][(field["product"], field["sku"])] = kind
 
     if not (currency := context["currencies"].get("USD", None)):
-        currency, _ = Currency.objects.get_or_create(code="USD", name="US Dollar", decimals=2)
+        currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "decimals": 2})
         context["currencies"]["USD"] = currency
 
     if not (
         price := context["provisioning_activity_prices"].get(
-            (field["unit_type"], field["applied_cost_per_quantity"], field["Multiplier"]), None
+            (field["unit_type"], applied_cost, field["Multiplier"]), None
         )
     ):
+        # Calculate price with proper decimal precision
+        price_per_unit = (applied_cost * context["provisioning_multiplier"]).quantize(
+            Decimal(".000000001"), rounding=ROUND_HALF_UP
+        )
+
         price, _ = ProvisioningPrice.objects.get_or_create(
             currency=currency,
             unit_type=field["unit_type"],
-            price_per_unit=field["applied_cost_per_quantity"] * context["provisioning_multiplier"],
-            multiplier=field["Multiplier"],
+            price_per_unit=price_per_unit,
+            multiplier=field["Multiplier"].quantize(Decimal(".01"), rounding=ROUND_HALF_UP),
         )
 
-        context["provisioning_activity_prices"][
-            (field["unit_type"], field["applied_cost_per_quantity"], field["Multiplier"])
-        ] = price
+        context["provisioning_activity_prices"][(field["unit_type"], applied_cost, field["Multiplier"])] = price
 
     pa, _ = ProvisioningUserConsumption.objects.get_or_create(
         username=field["username"], hash=context["hash"], kind=kind, defaults={"processed_at": timezone.now()}
@@ -443,7 +452,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         vendor=provisioning_vendor,
         price=price,
         registered_at=date,
-        quantity=field["quantity"],
+        quantity=quantity,
         repository_url=f"https://github.com/{field['organization']}/{field['repository_name']}",
         task_associated_slug=field["repository_name"],
         csv_row=position,
@@ -566,14 +575,14 @@ def add_gitpod_activity(context: ActivityContext, field: dict, position: int):
         context["provisioning_activity_kinds"][field["kind"]] = kind
 
     if not (currency := context["currencies"].get("USD", None)):
-        currency, _ = Currency.objects.get_or_create(code="USD", name="US Dollar", decimals=2)
+        currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "decimals": 2})
         context["currencies"]["USD"] = currency
 
     if not (price := context["provisioning_activity_prices"].get(currency.id, None)):
         price, _ = ProvisioningPrice.objects.get_or_create(
             currency=currency,
             unit_type="Credits",
-            price_per_unit=0.036 * context["provisioning_multiplier"],
+            price_per_unit=Decimal("0.036") * context["provisioning_multiplier"],
             multiplier=1,
         )
 
@@ -731,7 +740,7 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
         context["provisioning_activity_kinds"][(s_name, s_slug)] = kind
 
     if not (currency := context["currencies"].get("USD", None)):
-        currency, _ = Currency.objects.get_or_create(code="USD", name="US Dollar", decimals=2)
+        currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "decimals": 2})
         context["currencies"]["USD"] = currency
 
     if not (price := context["provisioning_activity_prices"].get((field["total_spent"], field["total_tokens"]), None)):

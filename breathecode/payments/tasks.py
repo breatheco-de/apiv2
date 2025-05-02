@@ -329,14 +329,14 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             message = translation(
                 settings.lang,
                 en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued. Please check our suggested plans for alternatives.",
-                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido discontinuada. Por favor, revisa nuestros planes sugeridos para alternativas.",
+                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido descontinuada. Por favor, revisa nuestros planes sugeridos para alternativas.",
             )
 
         else:
             message = translation(
                 settings.lang,
                 en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued.",
-                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido discontinuada.",
+                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido descontinuada.",
             )
 
         obj["MESSAGE"] = message
@@ -951,6 +951,7 @@ def build_subscription(
         conversion_info=parsed_conversion_info,
         pay_every_unit=pay_every_unit,
         pay_every=pay_every,
+        currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
     )
 
     subscription.plans.set(bag.plans.all())
@@ -1042,6 +1043,7 @@ def build_plan_financing(
         monthly_price=invoice.amount,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
+        currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
     )
 
     if cohorts:
@@ -1136,6 +1138,7 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info:
             selected_mentorship_service_set=mentorship_service_set,
             next_payment_at=until,
             conversion_info=parsed_conversion_info,
+            currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
             **extra,
         )
 

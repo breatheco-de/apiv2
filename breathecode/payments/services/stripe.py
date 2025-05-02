@@ -213,7 +213,7 @@ class Stripe:
         stripe.api_key = self.api_key
 
         if isinstance(currency, str):
-            currency = Currency.objects.filter(code=currency).first()
+            currency = Currency.objects.filter(code__iexact=currency).first()
             if not currency:
                 raise ValidationException(
                     translation(

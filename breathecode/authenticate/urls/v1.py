@@ -22,8 +22,8 @@ from linked_services.rest_framework.views import app_webhook, authorize_view
 from breathecode.authenticate.actions import get_user_language
 
 from ..views import (
-    AcademyAuthSettingsView,
     AcademyAuthSettingsLogView,
+    AcademyAuthSettingsView,
     AcademyGithubSyncView,
     AcademyInviteView,
     AcademyTokenView,
@@ -32,6 +32,7 @@ from ..views import (
     AppUserAgreementView,
     AppUserView,
     ConfirmEmailView,
+    EmailVerification,
     GithubMeView,
     GithubUserView,
     GitpodUserView,
@@ -52,7 +53,6 @@ from ..views import (
     UserMeView,
     UserSettingsView,
     WaitingListView,
-    EmailVerification,
     get_facebook_token,
     get_github_token,
     get_google_token,
