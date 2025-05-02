@@ -1831,7 +1831,7 @@ class CheckingView(APIView):
                         if not amount and plans.filter(financing_options__id__gte=1):
                             amount = 1
 
-                        if amount == 0 and PlanFinancing.objects.filter(plans__in=plans).count():
+                        if amount == 0 and Subscription.objects.filter(user=request.user, plans__in=plans).count():
                             raise ValidationException(
                                 translation(
                                     lang,
