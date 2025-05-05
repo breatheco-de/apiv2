@@ -20,7 +20,7 @@ from ..mixins import CertificateTestCase
 token = "12345a67890b12345c67890d"
 query_string = urlencode(
     {
-        "key": os.environ.get("SCREENSHOT_MACHINE_KEY"),
+        "key": os.environ.get("SCREENSHOT_MACHINE_KEY", "00000"),
         "url": f"https://certificate.4geeks.com/preview/{token}",
         "dimension": "1024x707",
         "device": "desktop",

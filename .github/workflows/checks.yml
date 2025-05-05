@@ -125,7 +125,7 @@ jobs:
 
       - name: Update dependencies
         run: |
-          poetry update
+          poetry update --no-cache
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
