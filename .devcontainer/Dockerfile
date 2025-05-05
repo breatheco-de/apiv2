@@ -12,7 +12,12 @@ RUN apt-get update \
 RUN curl -fsSL https://get.docker.com -o get-docker.sh \
     && sh ./get-docker.sh
 
-RUN pip install poetry pipx
+RUN pip install pipx
+RUN echo "Installing poetry"
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="/root/.local/bin:${PATH}"
+RUN poetry --version
+
 
 # WORKDIR /usr/src
 
@@ -21,5 +26,5 @@ RUN pip install poetry pipx
 COPY ./pyproject.toml ./pyproject.toml
 COPY ./poetry.lock ./poetry.lock
 
-RUN poetry install
+# RUN poetry install
 COPY . .
