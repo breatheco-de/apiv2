@@ -16,15 +16,15 @@ RUN pip install pipx
 RUN echo "Installing poetry"
 RUN curl -sSL https://install.python-poetry.org | python3 -
 ENV PATH="/root/.local/bin:${PATH}"
-RUN poetry --version
 
+COPY ./.python-version ./.python-version
+COPY ./pyproject.toml ./pyproject.toml
 
-# WORKDIR /usr/src
-
-
+RUN poetry python install $(cat ./.python-version)
+RUN poetry env use $(cat ./.python-version)
 
 COPY ./pyproject.toml ./pyproject.toml
 COPY ./poetry.lock ./poetry.lock
 
-# RUN poetry install
+RUN poetry install
 COPY . .
