@@ -1,24 +1,37 @@
 {
-    "build": {
-        "dockerfile": "./Dockerfile",
-        "context": ".."
-    },
-    "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-            "dockerDashComposeVersion": "v2",
-            "installDockerBuildx": true,
-            "moby": false
-        }
-    },
+    "name": "apiv2",
+    "remoteUser": "rigo",
+    "dockerComposeFile": [
+        "../docker-compose.yml",
+        "docker-compose.extend.yml"
+    ],
+    "workspaceFolder": "/home/rigo/apiv2",
+    "service": "4geeks",
+    "mounts": [
+        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    ],
     "customizations": {
         "vscode": {
             "settings": {
-                "python.defaultInterpreterPath": "/usr/local/bin/python"
+                "python.languageServer": "Pylance",
+                "python.analysis.typeCheckingMode": "off",
+                "editor.formatOnSave": true,
+                "[python]": {
+                    "editor.formatOnSaveMode": "file",
+                    "editor.formatOnSave": true,
+                    "editor.defaultFormatter": "ms-python.black-formatter",
+                    "editor.codeActionsOnSave": {
+                        "source.organizeImports": "explicit"
+                    }
+                },
+                "isort.args": [
+                    "--profile",
+                    "black"
+                ]
             },
             "extensions": [
                 "ms-python.python",
                 "ms-python.vscode-pylance",
-                "streetsidesoftware.code-spell-checker",
                 "mikestead.dotenv",
                 "ms-azuretools.vscode-docker",
                 "github.vscode-pull-request-github",
@@ -31,14 +44,14 @@
                 "tamasfe.even-better-toml",
                 "ms-python.flake8",
                 "donjayamanne.githistory",
-                "TabNine.tabnine-vscode",
                 "ms-python.debugpy"
             ]
         }
     },
     "forwardPorts": [
-        8000
+        8000,
+        3000
     ],
-    "postStartCommand": "bash -c .devcontainer/postStartCommand.sh",
-    "onCreateCommand": "bash -c .devcontainer/onCreateCommand.sh"
+    "postStartCommand": "/home/rigo/apiv2/.devcontainer/postStartCommand.sh",
+    "onCreateCommand": "/home/rigo/apiv2/.devcontainer/onCreateCommand.sh"
 }

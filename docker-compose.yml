@@ -1,19 +1,4 @@
 services:
-  # 4geeks:
-  #   image: geeksacademy/breathecode:development
-  #   env_file:
-  #     - ./.env
-  #   environment:
-  #     - REDIS_URL=redis://redis:6379
-  #     - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
-  #     - CELERY_DISABLE_SCHEDULER=
-  #     - ALLOW_UNSAFE_CYPRESS_APP=True
-  #   ports:
-  #     - "8000:8000"
-  #   depends_on:
-  #     - postgres
-  #     - redis
-
   redis:
     image: redis:alpine
     ports:
@@ -44,16 +29,16 @@ services:
   #     - "9050:9050"
   #     - "9060:9060"
 
-  lavin:
-    image: cloudamqp/lavinmq:latest     # Replace with the correct image name/tag
-    container_name: lavinmq
-    ports:
-      - "5672:5672"          # Example port mapping (adjust as necessary)
-      - "15672:15672"        # Example management UI port (if applicable)
-    volumes:
-      - lavinmq_data:/var/lib/lavinmq  # Adjust volume path based on your app's requirements
+  # lavin:
+  #   image: cloudamqp/lavinmq:latest     # Replace with the correct image name/tag
+  #   container_name: lavinmq
+  #   ports:
+  #     - "5672:5672"          # Example port mapping (adjust as necessary)
+  #     - "15672:15672"        # Example management UI port (if applicable)
+  #   volumes:
+  #     - lavinmq_data:/var/lib/lavinmq  # Adjust volume path based on your app's requirements
 
 
 volumes:
   postgres_data:
-  lavinmq_data:
+  # lavinmq_data:
