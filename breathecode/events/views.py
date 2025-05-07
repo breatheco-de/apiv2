@@ -1607,14 +1607,18 @@ class ICalEventView(APIView):
     def get(self, request):
         items = Event.objects.filter(status="ACTIVE")
 
-        ids = request.GET.get("academy", "")
+        event_ids = request.GET.get("event_ids", "")
+        academy_ids = request.GET.get("academy", "")
         slugs = request.GET.get("academy_slug", "")
 
-        ids = ids.split(",") if ids else []
+        academy_ids = academy_ids.split(",") if academy_ids else []
         slugs = slugs.split(",") if slugs else []
 
-        if ids:
-            items = Event.objects.filter(academy__id__in=ids, status="ACTIVE").order_by("id")
+        if event_ids:
+            items = Event.objects.filter(id__in=event_ids, status="ACTIVE").order_by("id")
+
+        elif academy_ids:
+            items = Event.objects.filter(academy__id__in=academy_ids, status="ACTIVE").order_by("id")
 
         elif slugs:
             items = Event.objects.filter(academy__slug__in=slugs, status="ACTIVE").order_by("id")
@@ -1622,14 +1626,14 @@ class ICalEventView(APIView):
         else:
             items = []
 
-        if not ids and not slugs:
+        if not academy_ids and not slugs and not event_ids:
             raise ValidationException(
-                "You need to specify at least one academy or academy_slug (comma separated) in the querystring"
+                "You need to specify at least one academy id, event id or academy_slug (comma separated) in the querystring"
             )
 
-        if Academy.objects.filter(id__in=ids).count() != len(ids) or Academy.objects.filter(
+        if not event_ids and (Academy.objects.filter(id__in=academy_ids).count() != len(academy_ids) or Academy.objects.filter(
             slug__in=slugs
-        ).count() != len(slugs):
+        ).count() != len(slugs)):
             raise ValidationException("Some academy not exist")
 
         upcoming = request.GET.get("upcoming")
@@ -1637,7 +1641,7 @@ class ICalEventView(APIView):
             now = timezone.now()
             items = items.filter(starting_at__gte=now)
 
-        academies_repr = ical_academies_repr(ids=ids, slugs=slugs)
+        academies_repr = ical_academies_repr(academy_ids=academy_ids, slugs=slugs)
         key = server_id()
 
         calendar = iCalendar()
@@ -1650,17 +1654,20 @@ class ICalEventView(APIView):
         url = os.getenv("API_URL")
         if url:
             url = re.sub(r"/$", "", url) + "/v1/events/ical/events"
-            if ids or slugs:
+            if academy_ids or slugs:
                 url = url + "?"
 
-                if ids:
-                    url = url + "academy=" + ",".join(ids)
+                if academy_ids:
+                    url = url + "academy=" + ",".join(academy_ids)
 
-                if ids and slugs:
+                if academy_ids and (slugs or event_ids):
                     url = url + "&"
 
                 if slugs:
                     url = url + "academy_slug=" + ",".join(slugs)
+
+                if event_ids:
+                    url = url + "event_ids=" + ",".join(event_ids)
 
             calendar.add("url", url)
 
