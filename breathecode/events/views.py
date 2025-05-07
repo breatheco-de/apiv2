@@ -1641,7 +1641,7 @@ class ICalEventView(APIView):
             now = timezone.now()
             items = items.filter(starting_at__gte=now)
 
-        academies_repr = ical_academies_repr(academy_ids=academy_ids, slugs=slugs)
+        academies_repr = ical_academies_repr(ids=academy_ids, slugs=slugs)
         key = server_id()
 
         calendar = iCalendar()
