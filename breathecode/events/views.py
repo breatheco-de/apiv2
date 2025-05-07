@@ -1612,6 +1612,7 @@ class ICalEventView(APIView):
         slugs = request.GET.get("academy_slug", "")
 
         academy_ids = academy_ids.split(",") if academy_ids else []
+        event_ids = event_ids.split(",") if event_ids else []
         slugs = slugs.split(",") if slugs else []
 
         if event_ids:
