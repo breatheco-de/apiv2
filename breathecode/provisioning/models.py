@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.db import models
@@ -104,8 +105,8 @@ BILL_STATUS = (
 
 class ProvisioningBill(models.Model):
     vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.SET_NULL, null=True, default=None, blank=True)
-    total_amount = models.FloatField(default=0)
-    fee = models.FloatField(default=0)
+    total_amount = models.DecimalField(max_digits=14, decimal_places=9, default=0, blank=True)
+    fee = models.DecimalField(max_digits=14, decimal_places=9, default=0)
     hash = models.CharField(max_length=64, blank=True, null=True, default=None, db_index=True)
     currency_code = models.CharField(max_length=3, default="USD")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, db_index=True)
@@ -165,16 +166,21 @@ class ProvisioningConsumptionKind(models.Model):
 class ProvisioningPrice(models.Model):
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
     unit_type = models.CharField(max_length=100)
-    price_per_unit = models.FloatField(help_text="Price paid to the provisioning vendor, E.g: Github")
-    multiplier = models.FloatField(
-        blank=True, null=False, default=1, help_text="To increase price in a certain percentage"
+    price_per_unit = models.DecimalField(
+        max_digits=13, decimal_places=9, help_text="Price paid to the provisioning vendor, E.g: Github"
+    )
+    multiplier = models.DecimalField(
+        max_digits=4, decimal_places=2, default=1, help_text="To increase price in a certain percentage"
     )
 
     def __str__(self):
         return self.currency.code + " - " + self.unit_type + " - " + str(self.price_per_unit)
 
-    def get_price(self, how_many):
-        return self.price_per_unit * self.multiplier * how_many
+    def get_price(self, how_many) -> Decimal:
+        if isinstance(how_many, float):
+            how_many = Decimal(how_many)
+
+        return (self.price_per_unit * self.multiplier * how_many).quantize(Decimal("0.000000001"))
 
 
 class ProvisioningConsumptionEvent(models.Model):
@@ -186,7 +192,7 @@ class ProvisioningConsumptionEvent(models.Model):
     csv_row = models.IntegerField()
     vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.CASCADE, null=True, blank=True, default=None)
 
-    quantity = models.FloatField()
+    quantity = models.DecimalField(max_digits=15, decimal_places=9, help_text="Quantity of the product consumed")
     price = models.ForeignKey(ProvisioningPrice, on_delete=models.CASCADE)
 
     repository_url = models.URLField(null=True, blank=False)
@@ -198,23 +204,25 @@ class ProvisioningConsumptionEvent(models.Model):
     )
 
     def __str__(self):
-        return f"{self.quantity} - {self.task_associated_slug}"
+        return f"{self.quantity} - {self.task_associated_slug or 'No Task'}"
 
 
 class ProvisioningUserConsumption(models.Model):
     username = models.CharField(
         max_length=80, help_text="Native username in the provisioning platform, E.g: github username"
     )
-    hash = models.CharField(max_length=64, blank=True, null=True, default=None)
+    hash = models.CharField(max_length=64, blank=True, null=True, default=None, db_index=True)
     kind = models.ForeignKey(ProvisioningConsumptionKind, on_delete=models.CASCADE)
 
     bills = models.ManyToManyField(ProvisioningBill, blank=True)
     events = models.ManyToManyField(ProvisioningConsumptionEvent, blank=True, editable=False)
-    amount = models.FloatField(default=0)
-    quantity = models.FloatField(default=0)
+    amount = models.DecimalField(max_digits=15, decimal_places=9, default=0, help_text="Amount of the product consumed")
+    quantity = models.DecimalField(
+        max_digits=15, decimal_places=9, default=0, help_text="Quantity of the product consumed"
+    )
 
     status = models.CharField(max_length=20, choices=ACTIVITY_STATUS, default=PENDING)
-    status_text = models.CharField(max_length=255)
+    status_text = models.CharField(max_length=255, blank=True)
     processed_at = models.DateTimeField(null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

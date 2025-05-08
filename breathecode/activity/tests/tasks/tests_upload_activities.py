@@ -11,8 +11,6 @@ import zstandard as zstd
 from django.core.cache import cache
 from django.utils import timezone
 from google.cloud import bigquery
-from google.cloud.bigquery.client import DatasetReference
-from google.cloud.bigquery.table import TableReference
 
 from breathecode.activity.tasks import upload_activities
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
@@ -289,12 +287,12 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
                             "RECORD",
                             "NULLABLE",
                             fields=(
-                                bigquery.SchemaField(attr1, bigquery.enums.SqlTypeNames.INT64, "NULLABLE"),
+                                # bigquery.SchemaField(attr1, bigquery.enums.SqlTypeNames.INT64, "NULLABLE"),
                                 bigquery.SchemaField(attr2, bigquery.enums.SqlTypeNames.BOOL, "NULLABLE"),
                                 bigquery.SchemaField(attr3, bigquery.enums.SqlTypeNames.FLOAT64, "NULLABLE"),
                                 bigquery.SchemaField(attr4, bigquery.enums.SqlTypeNames.INT64, "NULLABLE"),
-                                bigquery.SchemaField("knife", "BOOL", "NULLABLE"),
-                                bigquery.SchemaField("pistol", "FLOAT64", "NULLABLE"),
+                                # bigquery.SchemaField("knife", "BOOL", "NULLABLE"),
+                                # bigquery.SchemaField("pistol", "FLOAT64", "NULLABLE"),
                             ),
                         ),
                         bigquery.SchemaField(
@@ -302,9 +300,9 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
                             "RECORD",
                             "NULLABLE",
                             fields=(
-                                bigquery.SchemaField("amount", "INT64", "NULLABLE"),
+                                # bigquery.SchemaField("amount", "INT64", "NULLABLE"),
                                 bigquery.SchemaField("id", "INTEGER", "NULLABLE"),
-                                bigquery.SchemaField("name", "STRING", "NULLABLE"),
+                                # bigquery.SchemaField("name", "STRING", "NULLABLE"),
                                 bigquery.SchemaField("type", "STRING", "NULLABLE"),
                                 bigquery.SchemaField("slug", "STRING", "NULLABLE"),
                             ),

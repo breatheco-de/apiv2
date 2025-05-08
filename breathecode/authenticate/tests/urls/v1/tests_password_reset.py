@@ -3,282 +3,258 @@ Test cases for /user
 """
 
 import os
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call
 
+import pytest  # Import pytest
+from django.http import HttpResponse, HttpResponseRedirect  # Import for checking redirects
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
 from breathecode.authenticate.models import Token
 
-from ...mixins.new_auth_test_case import AuthTestCase
+
+@pytest.fixture(autouse=True)
+def setup(db):
+    pass
 
 
-class AuthenticateTestSuite(AuthTestCase):
-    """Authentication test suite"""
+# Fixture for the notify mock
+@pytest.fixture
+def mock_notify_email_message(monkeypatch):
+    mock = MagicMock()
+    monkeypatch.setattr("breathecode.notify.actions.send_email_message", mock)
+    return mock
 
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__without_data(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models()
-        data = {}
-        response = self.client.post(url, data)
-        content = response.content.decode("utf-8")
 
-        self.assertNotEqual(content.find("<title>"), -1)
-        self.assertNotEqual(content.find("Email is required"), -1)
-        self.assertNotEqual(
-            content.find(
-                '<ul class="errorlist"><li>This field is required.</li></ul>\n'
-                '<input type="password" name="password1"'
-            ),
-            -1,
+# Fixture for the messages mock
+@pytest.fixture
+def mock_django_messages(monkeypatch):
+    mock = MagicMock()
+    monkeypatch.setattr("breathecode.authenticate.views.messages", mock)
+    return mock
+
+
+# Fixture for the render mock
+@pytest.fixture
+def mock_django_render(monkeypatch):
+    mock = MagicMock(return_value=HttpResponse(""))
+    monkeypatch.setattr("django.shortcuts.render", mock)
+    return mock
+
+
+# Test functions start here, outside of any class
+
+
+def test_password_reset__post__without_email(
+    client, mock_django_render, mock_django_messages, mock_notify_email_message
+):
+    """Test POST /password/reset without providing an email. Expects a 200 OK with form.html rendered and an error message."""
+    url = reverse_lazy("authenticate:password_reset")
+    data = {}  # No email provided
+    response = client.post(url, data)
+
+    mock_django_render.assert_called_once()
+    call_args, call_kwargs = mock_django_render.call_args
+    context = call_kwargs.get("context") or (call_args[2] if len(call_args) > 2 else None)
+
+    assert call_args[1] == "form.html"
+    assert context["form"].errors
+    mock_django_messages.error.assert_called_once_with(call_args[0], "Email is required")  # Check request and message
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_notify_email_message.assert_not_called()
+
+
+def test_password_reset__post__with_invalid_email_format(
+    client, mock_django_render, mock_django_messages, mock_notify_email_message
+):
+    """Test POST /password/reset with an invalid email format. Expects a 200 OK with form.html rendered and an error message."""
+    url = reverse_lazy("authenticate:password_reset")
+    data = {"email": "invalid-email"}
+    response = client.post(url, data)
+
+    mock_django_render.assert_called_once()
+    call_args, call_kwargs = mock_django_render.call_args
+    context = call_kwargs.get("context") or (call_args[2] if len(call_args) > 2 else None)
+
+    assert call_args[1] == "form.html"
+    assert context["form"].errors
+    mock_django_messages.error.assert_called_once_with(call_args[0], "Invalid email format.")
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_notify_email_message.assert_not_called()
+
+
+def test_password_reset__post__with_email__user_not_found(
+    client, mock_django_render, mock_notify_email_message, database
+):
+    """Test POST /password/reset with a valid email for a non-existent user. Expects 200 OK with message.html rendered, but no email sent."""
+    url = reverse_lazy("authenticate:password_reset")
+    data = {"email": "konan@naturo.io"}
+    response = client.post(url, data)
+
+    mock_django_render.assert_called_once()
+    call_args, call_kwargs = mock_django_render.call_args
+    context = call_kwargs.get("context") or (call_args[2] if len(call_args) > 2 else None)
+
+    assert call_args[1] == "message.html"
+    assert context["MESSAGE"] == "Check your email for a password reset!"
+
+    assert response.status_code == status.HTTP_200_OK
+    assert database.list_of("auth.User") == []
+    mock_notify_email_message.assert_not_called()
+
+
+def test_password_reset__post__with_email__with_user(client, mock_django_render, mock_notify_email_message, database):
+    """Test POST /password/reset with a valid email for an existing user. Expects 200 OK with message.html rendered and reset email sent."""
+    url = reverse_lazy("authenticate:password_reset")
+    model = database.create(user=1)
+    data = {"email": model.user.email}
+    response = client.post(url, data)
+    token, created = Token.get_or_create(model.user, token_type="temporal")
+
+    mock_django_render.assert_called_once()
+    call_args, call_kwargs = mock_django_render.call_args
+    context = call_kwargs.get("context") or (call_args[2] if len(call_args) > 2 else None)
+
+    assert call_args[1] == "message.html"
+    assert context["MESSAGE"] == "Check your email for a password reset!"
+
+    assert response.status_code == status.HTTP_200_OK
+    db_users = database.list_of("auth.User")
+    assert len(db_users) == 1
+    assert db_users[0]["id"] == model.user.id
+    assert db_users[0]["email"] == model.user.email
+
+    assert mock_notify_email_message.call_args_list == [
+        call(
+            "pick_password",
+            model.user.email,
+            {
+                "SUBJECT": "You asked to reset your password at 4Geeks",
+                "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
+            },
+            academy=None,
         )
-        self.assertNotEqual(
-            content.find(
-                '<ul class="errorlist"><li>This field is required.</li></ul>\n'
-                '<input type="password" name="password2"'
-            ),
-            -1,
+    ]
+
+
+def test_password_reset__post__with_email_in_uppercase__with_user(
+    client, mock_django_render, mock_notify_email_message, database
+):
+    """Test POST /password/reset with an existing user's email in uppercase. Expects 200 OK, message.html, and email sent."""
+    url = reverse_lazy("authenticate:password_reset")
+    model = database.create(user=1)
+    data = {"email": model.user.email.upper()}
+    response = client.post(url, data)
+    token, created = Token.get_or_create(model.user, token_type="temporal")
+
+    mock_django_render.assert_called_once()
+    call_args, call_kwargs = mock_django_render.call_args
+    context = call_kwargs.get("context") or (call_args[2] if len(call_args) > 2 else None)
+
+    assert call_args[1] == "message.html"
+    assert context["MESSAGE"] == "Check your email for a password reset!"
+
+    assert response.status_code == status.HTTP_200_OK
+    db_users = database.list_of("auth.User")
+    assert len(db_users) == 1
+    assert db_users[0]["id"] == model.user.id
+    assert db_users[0]["email"] == model.user.email
+
+    assert mock_notify_email_message.call_args_list == [
+        call(
+            "pick_password",
+            model.user.email,
+            {
+                "SUBJECT": "You asked to reset your password at 4Geeks",
+                "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
+            },
+            academy=None,
         )
+    ]
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_dict(), [])
-        self.assertEqual(mock.call_args_list, [])
 
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__with_bad_passwords(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models()
-        data = {
-            "password1": "pass1",
-            "password2": "pass2",
-        }
-        response = self.client.post(url, data)
-        content = response.content.decode("utf-8")
+# Redirect tests
 
-        self.assertNotEqual(content.find("<title>"), -1)
-        self.assertNotEqual(
-            content.find(
-                '<ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>\n'
-                '<input type="password" name="password1"'
-            ),
-            -1,
+
+def test_password_reset__post__with_callback__with_email__user_not_found(client, mock_notify_email_message, database):
+    """Test POST /password/reset with callback and email for non-existent user. Expects 302 Redirect, no email sent."""
+    url = reverse_lazy("authenticate:password_reset")
+    data = {
+        "email": "konan@naturo.io",
+        "callback": "https://naturo.io/",
+    }
+    response = client.post(url, data)
+
+    assert isinstance(response, HttpResponseRedirect)
+    assert response.url == "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!"
+    assert response.status_code == status.HTTP_302_FOUND
+    assert database.list_of("auth.User") == []
+    mock_notify_email_message.assert_not_called()
+
+
+def test_password_reset__post__with_callback__with_email__with_user(client, mock_notify_email_message, database):
+    """Test POST /password/reset with callback and email for existing user. Expects 302 Redirect and email sent."""
+    url = reverse_lazy("authenticate:password_reset")
+    model = database.create(user=1)
+    data = {
+        "email": model.user.email,
+        "callback": "https://naturo.io/",
+    }
+    response = client.post(url, data)
+    token, created = Token.get_or_create(model.user, token_type="temporal")
+
+    assert isinstance(response, HttpResponseRedirect)
+    assert response.url == "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!"
+    assert response.status_code == status.HTTP_302_FOUND
+    db_users = database.list_of("auth.User")
+    assert len(db_users) == 1
+    assert db_users[0]["id"] == model.user.id
+    assert db_users[0]["email"] == model.user.email
+
+    assert mock_notify_email_message.call_args_list == [
+        call(
+            "pick_password",
+            model.user.email,
+            {
+                "SUBJECT": "You asked to reset your password at 4Geeks",
+                "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
+            },
+            academy=None,
         )
-        self.assertNotEqual(
-            content.find(
-                '<ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>\n'
-                '<input type="password" name="password2"'
-            ),
-            -1,
+    ]
+
+
+def test_password_reset__post__with_callback__with_email_in_uppercase__with_user(
+    client, mock_notify_email_message, database
+):
+    """Test POST /password/reset with callback and uppercase email for existing user. Expects 302 Redirect and email sent."""
+    url = reverse_lazy("authenticate:password_reset")
+    model = database.create(user=1)
+    data = {
+        "email": model.user.email.upper(),
+        "callback": "https://naturo.io/",
+    }
+    response = client.post(url, data)
+    token, created = Token.get_or_create(model.user, token_type="temporal")
+
+    assert isinstance(response, HttpResponseRedirect)
+    assert response.url == "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!"
+    assert response.status_code == status.HTTP_302_FOUND
+    db_users = database.list_of("auth.User")
+    assert len(db_users) == 1
+    assert db_users[0]["id"] == model.user.id
+    assert db_users[0]["email"] == model.user.email
+
+    assert mock_notify_email_message.call_args_list == [
+        call(
+            "pick_password",
+            model.user.email,
+            {
+                "SUBJECT": "You asked to reset your password at 4Geeks",
+                "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
+            },
+            academy=None,
         )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_dict(), [])
-        self.assertEqual(mock.call_args_list, [])
-
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__passwords_dont_match(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models()
-        data = {
-            "password1": "pass12341",
-            "password2": "pass12342",
-        }
-        response = self.client.post(url, data)
-        content = response.content.decode("utf-8")
-
-        self.assertNotEqual(content.find("<title>"), -1)
-        self.assertNotEqual(content.find("Email is required"), -1)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_dict(), [])
-        self.assertEqual(mock.call_args_list, [])
-
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__passwords_dont_match___(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models()
-        data = {
-            "password1": "pass1234",
-            "password2": "pass1234",
-        }
-        response = self.client.post(url, data)
-        content = response.content.decode("utf-8")
-
-        self.assertNotEqual(content.find("<title>"), -1)
-        self.assertNotEqual(content.find("Email is required"), -1)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_dict(), [])
-        self.assertEqual(mock.call_args_list, [])
-
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__with_email(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models()
-        data = {
-            "email": "konan@naturo.io",
-        }
-        response = self.client.post(url, data)
-        content = response.content.decode("utf-8")
-
-        self.assertNotEqual(content.find("Check your email for a password reset!"), -1)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_dict(), [])
-        self.assertEqual(mock.call_args_list, [])
-
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__with_email__with_user(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models(user=True)
-        data = {"email": model["user"].email}
-        response = self.client.post(url, data)
-        content = response.content.decode("utf-8")
-        token, created = Token.get_or_create(model["user"], token_type="temporal")
-
-        self.assertNotEqual(content.find("Check your email for a password reset!"), -1)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, "user")}])
-
-        self.assertEqual(
-            mock.call_args_list,
-            [
-                call(
-                    "pick_password",
-                    model["user"].email,
-                    {
-                        "SUBJECT": "You asked to reset your password at 4Geeks",
-                        "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
-                    },
-                    academy=None,
-                )
-            ],
-        )
-
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__with_email_in_uppercase__with_user(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models(user=True)
-        data = {
-            "email": model["user"].email.upper(),
-        }
-        response = self.client.post(url, data)
-        content = response.content.decode("utf-8")
-        token, created = Token.get_or_create(model["user"], token_type="temporal")
-
-        self.assertNotEqual(content.find("Check your email for a password reset!"), -1)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, "user")}])
-
-        self.assertEqual(
-            mock.call_args_list,
-            [
-                call(
-                    "pick_password",
-                    model["user"].email,
-                    {
-                        "SUBJECT": "You asked to reset your password at 4Geeks",
-                        "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
-                    },
-                    academy=None,
-                )
-            ],
-        )
-
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__with_callback__with_email(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models()
-        data = {
-            "email": "konan@naturo.io",
-            "callback": "https://naturo.io/",
-        }
-        response = self.client.post(url, data)
-
-        self.assertEqual(response.url, "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!")
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(self.all_user_dict(), [])
-        self.assertEqual(mock.call_args_list, [])
-
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__with_callback__with_email__with_user(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models(user=True)
-        data = {
-            "email": model["user"].email,
-            "callback": "https://naturo.io/",
-        }
-        response = self.client.post(url, data)
-        token, created = Token.get_or_create(model["user"], token_type="temporal")
-
-        self.assertEqual(response.url, "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!")
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, "user")}])
-
-        self.assertEqual(
-            mock.call_args_list,
-            [
-                call(
-                    "pick_password",
-                    model["user"].email,
-                    {
-                        "SUBJECT": "You asked to reset your password at 4Geeks",
-                        "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
-                    },
-                    academy=None,
-                )
-            ],
-        )
-
-    @patch("breathecode.notify.actions.send_email_message")
-    def test_password_reset__post__with_callback__with_email_in_uppercase__with_user(self, mock):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy("authenticate:password_reset")
-        model = self.generate_models(user=True)
-        data = {
-            "email": model["user"].email.upper(),
-            "callback": "https://naturo.io/",
-        }
-        response = self.client.post(url, data)
-        token, created = Token.get_or_create(model["user"], token_type="temporal")
-
-        self.assertEqual(response.url, "https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!")
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, "user")}])
-
-        self.assertEqual(
-            mock.call_args_list,
-            [
-                call(
-                    "pick_password",
-                    model["user"].email,
-                    {
-                        "SUBJECT": "You asked to reset your password at 4Geeks",
-                        "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{token}",
-                    },
-                    academy=None,
-                )
-            ],
-        )
+    ]

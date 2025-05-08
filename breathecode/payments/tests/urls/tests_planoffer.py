@@ -65,6 +65,7 @@ def plan_serializer(self, plan, service, currency, groups=[], permissions=[], se
         "slug": plan.slug,
         "status": plan.status,
         "id": plan.id,
+        "pricing_ratio_exceptions": plan.pricing_ratio_exceptions,
         "time_of_life": plan.time_of_life,
         "time_of_life_unit": plan.time_of_life_unit,
         "trial_duration": plan.trial_duration,

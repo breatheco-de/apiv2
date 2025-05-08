@@ -3,6 +3,7 @@ Test cases for /academy/:id/member/:id
 """
 
 import os
+from decimal import Decimal
 
 from django.template import loader
 from django.urls.base import reverse_lazy
@@ -45,14 +46,20 @@ def provisioning_user_consumption_serializer(
 ):
 
     quantity = 0
-    price = 0
+    price = Decimal(0.00)
     prices = []
 
     for event in provisioning_consumption_events:
         quantity += event.quantity
         p = event.quantity * provisioning_price.price_per_unit * provisioning_price.multiplier
         price += p
-        prices.append({"price": p, "price_per_unit": provisioning_price.price_per_unit, "quantity": event.quantity})
+        prices.append(
+            {
+                "price": Decimal(p),
+                "price_per_unit": Decimal(provisioning_price.price_per_unit),
+                "quantity": event.quantity,
+            }
+        )
 
     resume = ""
 
@@ -62,7 +69,7 @@ def provisioning_user_consumption_serializer(
     return {
         "username": provisioning_user_consumption.username,
         "status": provisioning_user_consumption.status,
-        "amount": float(provisioning_user_consumption.amount),
+        "amount": f"{provisioning_user_consumption.amount:.2f}",
         "status_text": provisioning_user_consumption.status_text,
         "kind": provisioning_consumption_kind_serializer(provisioning_consumption_kind),
         "price_description": (quantity, price, resume),

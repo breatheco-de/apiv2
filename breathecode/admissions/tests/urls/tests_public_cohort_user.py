@@ -19,6 +19,7 @@ def get_serializer(cohort_user, user):
         "role": cohort_user.role,
         "user": {
             "id": user.id,
+            "date_joined": user.date_joined.isoformat().replace("+00:00", "Z"),
             "first_name": user.first_name,
             "last_name": user.last_name,
         },
