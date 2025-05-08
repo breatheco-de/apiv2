@@ -1258,7 +1258,7 @@ async def save_github_token(request):
                         github_user["email"] = emails[0]["email"]
 
     if github_user["email"] is None:
-        raise ValidationError(f"Impossible to retrieve user email {json.dumps(github_user)} abd token {github_token}")
+        raise ValidationError("Impossible to retrieve user email")
 
     user = None  # assuming by default that its a new user
     # is a valid token??? if not valid it will become None
