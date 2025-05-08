@@ -1131,7 +1131,7 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
-    scopes = request.query_params.get("scope", "user")
+    scopes = request.query_params.get("scope", "user:email")
     if token is not None:
         _tkn = Token.get_valid(token)
         if _tkn is None:
@@ -1145,12 +1145,11 @@ def get_github_token(request, token=None):
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
     }
 
-    if scopes != "none" and scopes is not None:
-        try:
-            scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
-            params["scope"] = scopes
-        except Exception:
-            pass
+    try:
+        scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
+        params["scope"] = scopes
+    except Exception:
+        pass
 
     redirect = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
 
