@@ -1132,17 +1132,13 @@ def get_github_token(request, token=None):
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
     scopes = request.query_params.get("scope", "user:email")
-    logger.debug("Token 1:", token)
     if token is not None:
-        logger.debug("Token 2:", token)
         _tkn = Token.get_valid(token)
-        logger.debug("Token 3:", _tkn)
         if _tkn is None:
             raise ValidationException("Invalid or missing token", slug="invalid-token")
         else:
             url = url + f"&user={token}"
             scopes = get_github_scopes(_tkn.user, scopes)
-            logger.debug("Scopes:", scopes)
 
     params = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
@@ -1151,11 +1147,9 @@ def get_github_token(request, token=None):
 
     try:
         print("scopes:", scopes)
-        logger.debug("scopes:", scopes)
         scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
         params["scope"] = scopes
     except Exception:
-        params["scope"] = "user:email"
         pass
 
     redirect = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
