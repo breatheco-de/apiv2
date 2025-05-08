@@ -1305,10 +1305,23 @@ async def save_github_token(request):
         if invite:
             academy = invite.academy
 
+        companyName = "4Geeks"
+        if "4geeks" not in url:
+            parsed_url = urlparse(url)
+            domain = (
+                parsed_url.netloc.split(".")[1]
+                if parsed_url.netloc.startswith("www.")
+                else parsed_url.netloc.split(".")[0]
+            )
+            if "learnpack" in domain:
+                companyName = "LearnPack"
+            else:
+                companyName = domain.capitalize()
+
         return render_message(
             request,
             "We could not find in our records the email associated to this github account, "
-            'perhaps you want to signup to the platform first? <a href="' + url + '">Back to 4Geeks.com</a>',
+            'perhaps you want to sign up to first? <a href="' + url + '">Back to ' + companyName + "</a>",
             academy=academy,
         )
 
