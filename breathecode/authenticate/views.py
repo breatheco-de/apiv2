@@ -1358,7 +1358,7 @@ async def save_github_token(request):
 
         return await redirect_to_get_access_token()
 
-    required_scopes = await aget_github_scopes(user, "user")
+    required_scopes = await aget_github_scopes(user, "user:email")
 
     if required_scopes != github_credentials.scopes or required_scopes != scopes:
         github_credentials.scopes = required_scopes
