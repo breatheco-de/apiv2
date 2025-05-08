@@ -1131,7 +1131,7 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
-    scopes = request.query_params.get("scope", "user")
+    scopes = request.query_params.get("scope", "user:email")
     if token is not None:
         _tkn = Token.get_valid(token)
         if _tkn is None:
