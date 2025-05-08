@@ -824,7 +824,7 @@ class Course(models.Model):
 
     icon_url = models.URLField(help_text="Image icon to show on website")
     banner_image = models.URLField(help_text="Banner image to show on website", null=True, blank=True, default=None)
-    technologies = models.CharField(max_length=150, blank=False)
+    technologies = models.CharField(max_length=240, blank=False)
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
 
     invites = models.ManyToManyField(UserInvite, blank=True, help_text="Plan's invites", related_name="courses")
@@ -879,6 +879,12 @@ class CourseTranslation(models.Model):
         blank=True,
         help_text="Landing URL used on call to actions where the course is shown. "
         "A URL is needed per each translation.",
+    )
+    preview_url = models.URLField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Preview URL used for marketing purposes.",
     )
     course_modules = models.JSONField(
         default=None,

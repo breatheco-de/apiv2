@@ -1140,19 +1140,17 @@ def get_github_token(request, token=None):
             url = url + f"&user={token}"
             scopes = get_github_scopes(_tkn.user, scopes)
 
-    try:
-        scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
-    except Exception:
-        pass
-
     params = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
-        "scope": scopes,
     }
 
-    logger.debug("Redirecting to github")
-    logger.debug(params)
+    try:
+        scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
+        params["scope"] = scopes
+    except Exception:
+        params["scope"] = "user:email"
+        pass
 
     redirect = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
 
@@ -1306,10 +1304,23 @@ async def save_github_token(request):
         if invite:
             academy = invite.academy
 
+        companyName = "4Geeks"
+        if "4geeks" not in url:
+            parsed_url = urlparse(url)
+            domain = (
+                parsed_url.netloc.split(".")[1]
+                if parsed_url.netloc.startswith("www.")
+                else parsed_url.netloc.split(".")[0]
+            )
+            if "learnpack" in domain:
+                companyName = "LearnPack"
+            else:
+                companyName = domain.capitalize()
+
         return render_message(
             request,
             "We could not find in our records the email associated to this github account, "
-            'perhaps you want to signup to the platform first? <a href="' + url + '">Back to 4Geeks.com</a>',
+            'perhaps you want to sign up to first? <a href="' + url + '">Back to ' + companyName + "</a>",
             academy=academy,
         )
 
@@ -2020,11 +2031,6 @@ def render_invite(request, token, member_id=None):
         return Response(serializer.data)
 
     if request.method == "GET":
-
-        if invite and User.objects.filter(email=invite.email).exists():
-            redirect = os.getenv("API_URL") + "/v1/auth/member/invite"
-            return HttpResponseRedirect(redirect_to=redirect)
-
         form = InviteForm(
             {
                 "callback": [""],

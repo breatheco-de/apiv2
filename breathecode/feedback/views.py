@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from capyc.rest_framework.exceptions import ValidationException
+from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
 from PIL import Image
@@ -18,8 +19,10 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .caches import AnswerCache
-from .models import Answer, Review, ReviewPlatform, Survey, AcademyFeedbackSettings, SurveyTemplate
+from .models import AcademyFeedbackSettings, Answer, Review, ReviewPlatform, Survey, SurveyTemplate
 from .serializers import (
+    AcademyFeedbackSettingsPUTSerializer,
+    AcademyFeedbackSettingsSerializer,
     AnswerPUTSerializer,
     AnswerSerializer,
     BigAnswerSerializer,
@@ -30,8 +33,7 @@ from .serializers import (
     SurveyPUTSerializer,
     SurveySerializer,
     SurveySmallSerializer,
-    AcademyFeedbackSettingsSerializer,
-    AcademyFeedbackSettingsPUTSerializer,
+    SurveyTemplateSerializer,
 )
 from .tasks import generate_user_cohort_survey_answers
 
@@ -74,7 +76,16 @@ def get_survey_questions(request, survey_id=None):
     if cohort_teacher.count() == 0:
         raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
 
-    answers = generate_user_cohort_survey_answers(request.user, survey, status="OPENED")
+    template_slug = survey.template_slug
+    if template_slug is None:
+        # If the survey does not have a template slug, we need to get the default template slug
+        # from the AcademyFeedbackSettings model
+        settings = AcademyFeedbackSettings.objects.filter(academy=survey.cohort.academy).first()
+        template_slug = settings.cohort_survey_template.slug if settings and settings.cohort_survey_template else None
+        survey.template_slug = template_slug
+        survey.save()
+
+    answers = generate_user_cohort_survey_answers(request.user, survey, status="OPENED", template_slug=template_slug)
     serializer = AnswerSerializer(answers, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -266,6 +277,39 @@ class AcademySurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if "lang" in self.request.GET:
             param = self.request.GET.get("lang")
             lookup["lang"] = param
+
+        if "template_slug" in self.request.GET:
+            param = self.request.GET.get("template_slug")
+            lookup["template_slug"] = param
+
+        if "title" in self.request.GET:
+            title = self.request.GET.get("title")
+            items = items.filter(title__icontains=title)
+
+        if "total_score" in self.request.GET:
+            total_score = self.request.GET.get("total_score")
+            lookup_map = {
+                "gte": "scores__total__gte",
+                "lte": "scores__total__lte",
+                "gt": "scores__total__gt",
+                "lt": "scores__total__lt",
+            }
+
+            try:
+                # Check for prefix (e.g., gte:8)
+                if ":" in total_score:
+                    prefix, value = total_score.split(":", 1)
+                    if prefix in lookup_map:
+                        score_value = int(value)
+                        items = items.filter(**{lookup_map[prefix]: score_value})
+                    else:
+                        raise ValidationException(f"Invalid total_score format {total_score}", slug="score-format")
+                else:
+                    # Exact match (e.g., 8)
+                    score_value = int(total_score)
+                    items = items.filter(scores__total__gte=score_value, scores__total__lt=score_value + 1)
+            except ValueError:
+                raise ValidationException(f"Invalid total_score format {total_score}", slug="score-format")
 
         sort = self.request.GET.get("sort")
         if sort is None:
@@ -508,3 +552,21 @@ class AcademyFeedbackSettingsView(APIView):
             return Response(AcademyFeedbackSettingsSerializer(settings).data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademySurveyTemplateView(APIView):
+    @capable_of("read_survey_template")
+    def get(self, request, academy_id=None):
+        templates = SurveyTemplate.objects.filter(Q(academy__id=academy_id) | Q(is_shared=True))
+
+        # Check if 'is_shared' is present and true in the querystring
+        is_shared = request.GET.get("is_shared", "false").lower() == "false"
+        if is_shared:
+            templates = templates.filter(is_shared=False)
+
+        if "lang" in self.request.GET:
+            param = self.request.GET.get("lang")
+            templates = templates.filter(lang=param)
+
+        serializer = SurveyTemplateSerializer(templates, many=True)
+        return Response(serializer.data)
