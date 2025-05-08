@@ -512,6 +512,10 @@ class Asset(models.Model):
     last_seo_scan_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
+    telemetry_stats = models.JSONField(
+        null=True, blank=True, default=None, help_text="Daily stats about the telemetry of the asset"
+    )
+
     # clean status refers to the cleaning of the readme file
 
     last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
