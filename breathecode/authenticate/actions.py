@@ -48,7 +48,7 @@ def get_app_url():
 
 def get_github_scopes(user, default_scopes=""):
     # Start with mandatory "user" scope and add any additional default scopes
-    scopes = {"user", "repo"}  # Always include "user"
+    scopes = {"user:email", "repo"}  # Always include "user"
     if default_scopes:  # If default_scopes is not empty
         scopes.update(default_scopes.split())
 
