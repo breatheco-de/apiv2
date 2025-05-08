@@ -1211,6 +1211,7 @@ async def save_github_token(request):
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
         "client_secret": os.getenv("GITHUB_SECRET", ""),
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", ""),
+        "scopes": "user:email",
         "code": code,
     }
     headers = {"Accept": "application/json"}
