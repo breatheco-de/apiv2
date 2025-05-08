@@ -1140,19 +1140,17 @@ def get_github_token(request, token=None):
             url = url + f"&user={token}"
             scopes = get_github_scopes(_tkn.user, scopes)
 
-    try:
-        scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
-    except Exception:
-        pass
-
     params = {
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
-        "scope": scopes,
     }
 
-    logger.debug("Redirecting to github")
-    logger.debug(params)
+    if scopes != "none" and scopes is not None:
+        try:
+            scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
+            params["scope"] = scopes
+        except Exception:
+            pass
 
     redirect = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
 
