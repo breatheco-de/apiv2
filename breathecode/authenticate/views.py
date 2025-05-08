@@ -1149,6 +1149,7 @@ def get_github_token(request, token=None):
         scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
         params["scope"] = scopes
     except Exception:
+        params["scope"] = "user:email"
         pass
 
     redirect = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
@@ -1211,7 +1212,6 @@ async def save_github_token(request):
         "client_id": os.getenv("GITHUB_CLIENT_ID", ""),
         "client_secret": os.getenv("GITHUB_SECRET", ""),
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", ""),
-        "scopes": "user:email",
         "code": code,
     }
     headers = {"Accept": "application/json"}
