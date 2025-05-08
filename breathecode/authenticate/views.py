@@ -1148,6 +1148,7 @@ def get_github_token(request, token=None):
     try:
         print("scopes:", scopes)
         scopes = base64.b64decode(scopes.encode("utf-8")).decode("utf-8")
+        print("scopes 2:", scopes)
         params["scope"] = scopes
     except Exception:
         pass
