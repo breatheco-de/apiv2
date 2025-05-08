@@ -133,9 +133,7 @@ def resolve_gcloud_credentials():
 
     path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     if not path:
-        # In development/non-test environments without the variable,
-        # simply return False without logging an error. settings.py will handle the fallback.
-        # logger.error("GOOGLE_APPLICATION_CREDENTIALS is not set")
+        logger.error("GOOGLE_APPLICATION_CREDENTIALS is not set")
         return False
 
     path = Path(os.path.join(os.getcwd(), path))

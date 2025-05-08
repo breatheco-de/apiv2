@@ -6,6 +6,7 @@ import re
 import string
 import urllib.parse
 from random import randint
+from typing import Any
 
 import aiohttp
 from adrf.requests import AsyncRequest
@@ -943,3 +944,54 @@ async def sync_with_rigobot(token_key):
 
 class WebhookException(Exception):
     pass
+
+
+def get_academy_from_body(body: dict[str, Any], lang: str = "en", raise_exception: bool = False) -> Academy:
+    """
+    Retrieves an Academy instance from a request body dictionary.
+
+    This function attempts to find an Academy using either an ID (integer) or slug (string)
+    provided in the 'academy' field of the input dictionary.
+
+    Args:
+        body: Dictionary containing request data with an 'academy' key
+        lang: Language code for error messages (default: 'en')
+        raise_exception: If True, raises ValidationException when academy is not found or invalid
+                        If False, returns None when academy is not found or invalid
+
+    Returns:
+        Academy: The found Academy instance
+
+    Raises:
+        ValidationException: If raise_exception is True and 'academy' is missing or invalid
+    """
+    academy_slug = body.get("academy")
+
+    if academy_slug is None:
+        if raise_exception:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing academy parameter",
+                    es="Falta el parámetro academy",
+                    slug="missing-academy-parameter",
+                ),
+                code=400,
+            )
+
+        return None
+
+    academy = None
+
+    if isinstance(academy_slug, int):
+        academy = Academy.objects.get(id=academy_slug)
+    elif isinstance(academy_slug, str):
+        academy = Academy.objects.get(slug=academy_slug)
+
+    if raise_exception and academy is None:
+        raise ValidationException(
+            translation(lang, en="Invalid academy", es="Academia inválida", slug="invalid-academy"),
+            code=400,
+        )
+
+    return academy

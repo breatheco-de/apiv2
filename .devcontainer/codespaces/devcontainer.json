@@ -1,8 +1,8 @@
 {
-    "name": "apiv2",
+    "name": "Codespaces",
     "remoteUser": "rigo",
     "dockerComposeFile": [
-        "../docker-compose.yml",
+        "../../docker-compose.yml",
         "docker-compose.extend.yml"
     ],
     "workspaceFolder": "/home/rigo/apiv2",
