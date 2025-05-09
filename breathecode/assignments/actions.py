@@ -160,3 +160,43 @@ def calculate_telemetry_indicator(telemetry):
         telemetry.total_time = timedelta(seconds=scores["global"]["metrics"]["total_time_on_platform"])
         telemetry.completion_rate = scores["global"]["metrics"]["completion_rate"]
         telemetry.save()
+
+
+def process_asset_telemetries(telemetries):
+    """Process a list of assignment telemetries and return aggregated stats."""
+
+    if not telemetries:
+        return None
+
+    total_sessions = len(telemetries)
+    frustration_sum = 0
+    engagement_sum = 0
+    completion_sum = 0
+    valid_frustration = 0
+    valid_engagement = 0
+    valid_completion = 0
+
+    for telemetry in telemetries:
+        if telemetry.frustration_score is not None:
+            frustration_sum += telemetry.frustration_score
+            valid_frustration += 1
+
+        if telemetry.engagement_score is not None:
+            engagement_sum += telemetry.engagement_score
+            valid_engagement += 1
+
+        if telemetry.completion_rate is not None:
+            completion_sum += telemetry.completion_rate
+            valid_completion += 1
+
+    # Calculate averages only if we have valid values
+    frustration_avg = (frustration_sum / valid_frustration) if valid_frustration > 0 else 0
+    engagement_avg = (engagement_sum / valid_engagement) if valid_engagement > 0 else 0
+    completion_avg = (completion_sum / valid_completion) if valid_completion > 0 else 0
+
+    return {
+        "frustration_avg": round(frustration_avg, 2),
+        "engagement_avg": round(engagement_avg, 2),
+        "completion_avg": round(completion_avg, 2),
+        "total_sessions": total_sessions,
+    }
