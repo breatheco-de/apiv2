@@ -1,15 +1,30 @@
 {
-    "name": "Local development",
-    "remoteUser": "rigo",
-    "dockerComposeFile": [
-        "../../docker-compose.yml",
-        "docker-compose.extend.yml"
-    ],
-    "workspaceFolder": "/home/rigo/apiv2",
-    "service": "4geeks",
-    "mounts": [
-        "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-    ],
+    "name": "Ubuntu",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "features": {
+        "ghcr.io/devcontainers-extra/features/poetry:2": {},
+        "ghcr.io/devcontainers/features/aws-cli:1": {},
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+        "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {},
+        "ghcr.io/devcontainers/features/rust:1": {},
+        "ghcr.io/shyim/devcontainers-features/bun:0": {},
+        "ghcr.io/devcontainers/features/python:1": {},
+        "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+            "packages": [
+                "curl",
+                "git",
+                "vim",
+                "sudo",
+                "build-essential",
+                "libpq-dev",
+                "python3-dev",
+                "clang",
+                "netcat"
+            ],
+            "update": true
+        },
+        "ghcr.io/devcontainers-extra/features/heroku-cli:1": {}
+    },
     "customizations": {
         "vscode": {
             "settings": {
@@ -52,6 +67,8 @@
         8000,
         3000
     ],
-    "postStartCommand": "/home/rigo/apiv2/.devcontainer/postStartCommand.sh",
-    "onCreateCommand": "/home/rigo/apiv2/.devcontainer/onCreateCommand.sh"
+    "onCreateCommand": "$PWD/.devcontainer/finishContainerSetup.sh",
+    "updateContentCommand": "$PWD/.devcontainer/onCodeUpdated.sh",
+    "postCreateCommand": "$PWD/.devcontainer/postCodeUpdated.sh",
+    "postStartCommand": "$PWD/.devcontainer/startup.sh"
 }

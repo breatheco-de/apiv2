@@ -52,6 +52,8 @@
         8000,
         3000
     ],
-    "postStartCommand": "/home/rigo/apiv2/.devcontainer/postStartCommand.sh",
-    "onCreateCommand": "/home/rigo/apiv2/.devcontainer/onCreateCommand.sh"
+    "onCreateCommand": "$PWD/.devcontainer/finishContainerSetup.sh",
+    "updateContentCommand": "$PWD/.devcontainer/onCodeUpdated.sh",
+    "postCreateCommand": "$PWD/.devcontainer/postCodeUpdated.sh",
+    "postStartCommand": "$PWD/.devcontainer/startup.sh"
 }
