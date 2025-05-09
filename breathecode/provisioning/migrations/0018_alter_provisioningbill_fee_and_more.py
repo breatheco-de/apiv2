@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="provisioningconsumptionevent",
             name="quantity",
-            field=models.DecimalField(decimal_places=9, help_text="Quantity of the product consumed", max_digits=15),
+            field=models.DecimalField(decimal_places=9, help_text="Quantity of the product consumed", max_digits=18),
         ),
         migrations.AlterField(
             model_name="provisioningprice",
@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
             model_name="provisioninguserconsumption",
             name="amount",
             field=models.DecimalField(
-                decimal_places=9, default=0, help_text="Amount of the product consumed", max_digits=15
+                decimal_places=9, default=0, help_text="Amount of the product consumed", max_digits=18
             ),
         ),
         migrations.AlterField(
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
             model_name="provisioninguserconsumption",
             name="quantity",
             field=models.DecimalField(
-                decimal_places=9, default=0, help_text="Quantity of the product consumed", max_digits=15
+                decimal_places=9, default=0, help_text="Quantity of the product consumed", max_digits=18
             ),
         ),
         migrations.AlterField(
