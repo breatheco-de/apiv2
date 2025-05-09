@@ -192,7 +192,7 @@ class ProvisioningConsumptionEvent(models.Model):
     csv_row = models.IntegerField()
     vendor = models.ForeignKey(ProvisioningVendor, on_delete=models.CASCADE, null=True, blank=True, default=None)
 
-    quantity = models.DecimalField(max_digits=15, decimal_places=9, help_text="Quantity of the product consumed")
+    quantity = models.DecimalField(max_digits=18, decimal_places=9, help_text="Quantity of the product consumed")
     price = models.ForeignKey(ProvisioningPrice, on_delete=models.CASCADE)
 
     repository_url = models.URLField(null=True, blank=False)
@@ -216,9 +216,9 @@ class ProvisioningUserConsumption(models.Model):
 
     bills = models.ManyToManyField(ProvisioningBill, blank=True)
     events = models.ManyToManyField(ProvisioningConsumptionEvent, blank=True, editable=False)
-    amount = models.DecimalField(max_digits=15, decimal_places=9, default=0, help_text="Amount of the product consumed")
+    amount = models.DecimalField(max_digits=18, decimal_places=9, default=0, help_text="Amount of the product consumed")
     quantity = models.DecimalField(
-        max_digits=15, decimal_places=9, default=0, help_text="Quantity of the product consumed"
+        max_digits=18, decimal_places=9, default=0, help_text="Quantity of the product consumed"
     )
 
     status = models.CharField(max_length=20, choices=ACTIVITY_STATUS, default=PENDING)
