@@ -477,6 +477,9 @@ class AssetExpandableSerializer(AssetMidSerializer):
                 elem["template_url"] = obj.template_url if hasattr(obj, "template_url") else None
                 elem["dependencies"] = obj.dependencies if hasattr(obj, "dependencies") else None
 
+                if "telemetry_stats" in self.expand:
+                    elem["telemetry_stats"] = obj.telemetry_stats if hasattr(obj, "telemetry_stats") else None
+
                 if "readme" in self.expand:
                     url = obj.readme_url
                     if url is None and obj.asset_type == "LESSON":
@@ -960,6 +963,119 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                 data["author"] = session_user
             elif self.instance.author.id != session_user.id:
                 raise ValidationException("You can only update card assigned to yourself", status.HTTP_400_BAD_REQUEST)
+
+        if "status" in data and data["status"] == "PUBLISHED":
+            if self.instance.test_status not in ["OK", "WARNING"]:
+                raise ValidationException(
+                    "This asset has to pass tests successfully before publishing", status.HTTP_400_BAD_REQUEST
+                )
+
+        if (
+            "visibility" in data
+            and data["visibility"] in ["PUBLIC", "UNLISTED"]
+            and self.instance.test_status not in ["OK", "WARNING"]
+        ):
+            raise ValidationException("This asset has to pass tests successfully before publishing", code=400)
+
+        if "slug" in data:
+            data["slug"] = slugify(data["slug"]).lower()
+
+        lang = self.instance.lang
+        if "lang" in data:
+            lang = data["lang"]
+
+        category = self.instance.category
+        if "category" in data:
+            category = data["category"]
+
+        if "superseded_by" in data and data["superseded_by"]:
+            if data["superseded_by"].id == self.instance.id:
+                raise ValidationException("One asset cannot supersed itself", code=400)
+
+            try:
+                _prev = data["superseded_by"].previous_version
+                if _prev and (not self.instance.superseded_by or _prev.id != self.instance.superseded_by.id):
+                    raise ValidationException(
+                        f'Asset {data["superseded_by"].id} is already superseding {_prev.asset_type}: {_prev.slug}',
+                        code=400,
+                    )
+            except Exception:
+                pass
+
+            try:
+                previous_version = self.instance.previous_version
+                if previous_version and data["superseded_by"].id == previous_version.id:
+                    raise ValidationException("One asset cannot have its previous version also superseding", code=400)
+            except Exception:
+                pass
+
+        if category is None:
+            raise ValidationException("Asset category cannot be null", status.HTTP_400_BAD_REQUEST)
+
+        if lang != category.lang:
+            translated_category = category.all_translations.filter(lang=lang).first()
+            if translated_category is None:
+                raise ValidationException(
+                    "Asset category is in a different language than the asset itself and we could not find a category translation that matches the same language",
+                    status.HTTP_400_BAD_REQUEST,
+                )
+            data["category"] = translated_category
+
+        validated_data = super().validate(data)
+        return validated_data
+
+    def update(self, instance, validated_data):
+
+        data = {}
+
+        if "status" in validated_data:
+            if validated_data["status"] == "PUBLISHED" and instance.status != "PUBLISHED":
+                now = timezone.now()
+                data["published_at"] = now
+            elif validated_data["status"] != "PUBLISHED":
+                data["published_at"] = None
+
+        if "readme_url" in validated_data:
+
+            def get_repo_url(url):
+                parsed_url = urlparse(url)
+                # Extract the scheme, netloc, and the first two parts of the path (organization/repository)
+                repo_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                path_parts = parsed_url.path.strip("/").split("/")
+                if len(path_parts) >= 2:
+                    repo_url += f"/{path_parts[0]}/{path_parts[1]}"
+                return repo_url
+
+            repo = get_repo_url(validated_data["readme_url"])
+            data["url"] = repo
+
+        # Check if preview img is being deleted
+        if "preview" in validated_data:
+            if validated_data["preview"] == None and instance.preview != None:
+                hash = instance.preview.split("/")[-1]
+                if hash is not None:
+                    from .tasks import async_remove_asset_preview_from_cloud
+
+                    async_remove_asset_preview_from_cloud.delay(hash)
+
+        return super().update(instance, {**validated_data, **data})
+
+
+class AssetPUTMeSerializer(serializers.ModelSerializer):
+    url = serializers.CharField(required=False)
+    technologies = serializers.ListField(required=False)
+    slug = serializers.CharField(required=False)
+    status = serializers.CharField(required=False)
+    visibility = serializers.CharField(required=False)
+    asset_type = serializers.CharField(required=False)
+    feature = serializers.BooleanField(required=False)
+
+    class Meta:
+        model = Asset
+        exclude = ("academy",)
+        list_serializer_class = AssetListSerializer
+
+    def validate(self, data):
 
         if "status" in data and data["status"] == "PUBLISHED":
             if self.instance.test_status not in ["OK", "WARNING"]:

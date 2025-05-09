@@ -8,9 +8,10 @@ from django.utils import timezone
 from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.actions import get_user_language
-from breathecode.events.actions import get_my_event_types
 from breathecode.events.models import Event, LiveClass
 from breathecode.utils.decorators import ServiceContext
+
+# from breathecode.events.actions import get_my_event_types
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +21,11 @@ def event_by_url_param(context: ServiceContext, args: tuple, kwargs: dict) -> tu
 
     request = context["request"]
     lang = get_user_language(request)
-    items = get_my_event_types(request.user)
+    # items = get_my_event_types(request.user)
 
     pk = Q(id=kwargs.get("event_id")) | Q(slug=kwargs.get("event_slug"), slug__isnull=False)
-    belongs_to_this_event = Q(event_type__in=items) | Q(host_user=request.user)
-    event = Event.objects.filter(pk, belongs_to_this_event).first()
+    # belongs_to_this_event = Q(event_type__in=items) | Q(host_user=request.user)
+    event = Event.objects.filter(pk).first()
 
     if not event:
         raise ValidationException(

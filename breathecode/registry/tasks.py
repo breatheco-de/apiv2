@@ -3,7 +3,7 @@ import logging
 import os
 import pathlib
 import re
-from typing import Optional
+from typing import Any, Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -17,6 +17,8 @@ from task_manager.django.decorators import task
 
 from breathecode.admissions.models import SyllabusVersion
 from breathecode.assessment.models import Assessment
+from breathecode.assignments.actions import process_asset_telemetries
+from breathecode.assignments.models import AssignmentTelemetry
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.media.models import Media, MediaResolution
 from breathecode.media.views import media_gallery_bucket
@@ -701,3 +703,46 @@ def async_build_asset_context(asset_id):
         context += f" of this {asset.asset_type} is the following: {asset.html}."
 
     AssetContext.objects.update_or_create(asset=asset, defaults={"ai_context": context, "status": "DONE"})
+
+
+@shared_task(priority=TaskPriority.CONTENT.value)
+def sync_asset_telemetry_stats(asset_id: int, **_: Any):
+    """Process telemetries for a single asset and update its telemetry_stats."""
+    logger.info(f"Starting sync_asset_telemetry_stats for asset {asset_id}")
+
+    # Get the asset
+    asset = Asset.objects.filter(id=asset_id).first()
+    if asset is None:
+        raise AbortTask(f"Asset with id {asset_id} not found")
+
+    # Get all telemetries for this asset
+    telemetries = AssignmentTelemetry.objects.filter(asset_slug=asset.slug)
+
+    if not telemetries.exists():
+        logger.info(f"No telemetries found for asset {asset.slug}")
+        return
+
+    # Process telemetries
+    stats = process_asset_telemetries(telemetries)
+    if not stats:
+        logger.info(f"No valid stats could be processed for asset {asset.slug}")
+        return
+
+    # Update or initialize telemetry_stats
+    utc_now = timezone.now()
+    today_utc = utc_now.strftime("%Y-%m-%d")
+
+    telemetry_stats = asset.telemetry_stats or {}
+    telemetry_stats["last_sync_at"] = utc_now.isoformat()
+
+    if "days" not in telemetry_stats:
+        telemetry_stats["days"] = {}
+
+    telemetry_stats["days"][today_utc] = stats
+
+    # Save the updated stats
+    asset.telemetry_stats = telemetry_stats
+    asset.save()
+
+    logger.info(f"Finished sync_asset_telemetry_stats for asset {asset.slug}")
+    return stats

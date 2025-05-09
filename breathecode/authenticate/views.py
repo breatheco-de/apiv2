@@ -1131,7 +1131,7 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
-    scopes = request.query_params.get("scope", "user")
+    scopes = request.query_params.get("scope", "user:email")
     if token is not None:
         _tkn = Token.get_valid(token)
         if _tkn is None:
@@ -1150,9 +1150,6 @@ def get_github_token(request, token=None):
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
         "scope": scopes,
     }
-
-    logger.debug("Redirecting to github")
-    logger.debug(params)
 
     redirect = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
 
@@ -1306,10 +1303,23 @@ async def save_github_token(request):
         if invite:
             academy = invite.academy
 
+        companyName = "4Geeks"
+        if "4geeks" not in url:
+            parsed_url = urlparse(url)
+            domain = (
+                parsed_url.netloc.split(".")[1]
+                if parsed_url.netloc.startswith("www.")
+                else parsed_url.netloc.split(".")[0]
+            )
+            if "learnpack" in domain:
+                companyName = "LearnPack"
+            else:
+                companyName = domain.capitalize()
+
         return render_message(
             request,
             "We could not find in our records the email associated to this github account, "
-            'perhaps you want to signup to the platform first? <a href="' + url + '">Back to 4Geeks.com</a>',
+            'perhaps you want to sign up to first? <a href="' + url + '">Back to ' + companyName + "</a>",
             academy=academy,
         )
 
@@ -1346,7 +1356,7 @@ async def save_github_token(request):
 
         return await redirect_to_get_access_token()
 
-    required_scopes = await aget_github_scopes(user, "user")
+    required_scopes = await aget_github_scopes(user, "user:email")
 
     if required_scopes != github_credentials.scopes or required_scopes != scopes:
         github_credentials.scopes = required_scopes
@@ -2020,11 +2030,6 @@ def render_invite(request, token, member_id=None):
         return Response(serializer.data)
 
     if request.method == "GET":
-
-        if invite and User.objects.filter(email=invite.email).exists():
-            redirect = os.getenv("API_URL") + "/v1/auth/member/invite"
-            return HttpResponseRedirect(redirect_to=redirect)
-
         form = InviteForm(
             {
                 "callback": [""],

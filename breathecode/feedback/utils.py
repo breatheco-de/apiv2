@@ -42,19 +42,19 @@ strings = {
             "lowest": "mala",
             "survey_subject": "¿Cómo fue la clase de hoy?",
         },
-        "live_class_mentor": {
+        "liveclass_mentor": {
             "title": "¿Valora el desempeño de tu profe el día de hoy?",
             "highest": "muy bien",
             "lowest": "mal",
             "survey_subject": "Una pregunta sobre tu profe durante la clase",
         },
-        "live_class_mentor_communication": {
+        "mentor_communication": {
             "title": "¿Qué tan claro fue @l profe al explicar los conceptos?",
             "highest": "muy bueno",
             "lowest": "malo",
             "survey_subject": "Una pregunta sobre tu profe durante la clase",
         },
-        "live_class_mentor_practice": {
+        "mentor_participation": {
             "title": "¿@l profe fomentó la participación y resolvió tus dudas de manera efectiva?",
             "highest": "muy bien",
             "lowest": "mal",
@@ -107,19 +107,19 @@ strings = {
             "highest": "very good",
             "lowest": "not good",
         },
-        "live_class_mentor": {
+        "liveclass_mentor": {
             "title": "How would you rate your teacher's performance today?",
             "highest": "very good",
             "lowest": "not good",
             "survey_subject": "One question about the live class mentor",
         },
-        "live_class_mentor_communication": {
+        "mentor_communication": {
             "title": "How clear was the teacher in explaining the concepts?",
             "highest": "very clear",
             "lowest": "not clear",
             "survey_subject": "One question about the live class mentor communication",
         },
-        "live_class_mentor_practice": {
+        "mentor_participation": {
             "title": "Did the teacher encourage participation and effectively resolve your doubts?",
             "highest": "very good",
             "lowest": "not good",

@@ -48,7 +48,7 @@ def get_app_url():
 
 def get_github_scopes(user, default_scopes=""):
     # Start with mandatory "user" scope and add any additional default scopes
-    scopes = {"user", "repo"}  # Always include "user"
+    scopes = {"user:email"}  # Always include "user"
     if default_scopes:  # If default_scopes is not empty
         scopes.update(default_scopes.split())
 
@@ -325,12 +325,19 @@ def update_gitpod_users(html):
     return {"active": all_active_users, "inactive": all_inactive_users}
 
 
-def get_user_settings(user_id: int) -> UserSetting:
+def get_user_settings(user_id: int) -> UserSetting | None:
+    """
+    Get the user settings for a given user id, if the user id is not provided or is not found, it will return None
+    """
+
     from breathecode.admissions.models import CohortUser
     from breathecode.assessment.models import Assessment, Question, UserAssessment
     from breathecode.events.models import Event
     from breathecode.feedback.models import Answer
     from breathecode.marketing.models import FormEntry
+
+    if not user_id:
+        return None
 
     try:
         settings, created = UserSetting.objects.get_or_create(user_id=user_id)
@@ -832,6 +839,9 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if user is None:
         user = User(email=invite.email, first_name=first_name, last_name=last_name, username=invite.email)
         user.save()
+
+    # Only set/update the password if it's provided
+    if password1:
         user.set_password(password1)
         user.save()
 
@@ -903,7 +913,6 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.save()
 
             bag.plans.add(plan)
-            bag.selected_cohorts.add(invite.cohort)
 
             invoice = Invoice(
                 amount=0,

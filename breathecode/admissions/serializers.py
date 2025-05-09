@@ -482,6 +482,7 @@ class CohortUserHookSerializer(serpy.Serializer):
     educational_status = serpy.Field()
     watching = serpy.Field()
     created_at = serpy.Field()
+    updated_at = serpy.Field()
     profile_academy = serpy.MethodField()
 
     def get_profile_academy(self, obj):
@@ -523,6 +524,7 @@ class GetCohortUserSerializer(serpy.Serializer):
     educational_status = serpy.Field()
     watching = serpy.Field()
     created_at = serpy.Field()
+    updated_at = serpy.Field()
     profile_academy = serpy.MethodField()
 
     def get_profile_academy(self, obj):
