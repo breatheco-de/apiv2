@@ -720,11 +720,18 @@ class AssetView(APIView, GenerateLookupsMixin):
         if "slug" in self.request.GET:
             asset_type = self.request.GET.get("asset_type", None)
             param = self.request.GET.get("slug")
-            asset = Asset.get_by_slug(param, request, asset_type=asset_type)
-            if asset is not None:
-                lookup["slug"] = asset.slug
+            slugs = [s.strip() for s in param.split(",")]
+
+            # For single slug, try to get exact asset to maintain backward compatibility
+            if len(slugs) == 1:
+                asset = Asset.get_by_slug(slugs[0], request, asset_type=asset_type)
+                if asset is not None:
+                    lookup["slug"] = asset.slug
+                else:
+                    lookup["slug"] = slugs[0]
             else:
-                lookup["slug"] = param
+                # For multiple slugs, filter by all provided slugs
+                lookup["slug__in"] = slugs
 
         if "language" in self.request.GET:
             param = self.request.GET.get("language")
