@@ -259,8 +259,8 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
     invoice = subscription.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by("-id").first()
 
     if invoice:
-        s = Stripe()
-        s.set_language_from_settings(settings)
+        s = Stripe(academy=subscription.academy)
+        s.set_language(settings.lang)
         s.refund_payment(invoice)
 
 
@@ -436,8 +436,8 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
                 try:
-                    s = Stripe()
-                    s.set_language_from_settings(settings)
+                    s = Stripe(academy=subscription.academy)
+                    s.set_language(settings.lang)
                     invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
 
                 except Exception:
@@ -533,8 +533,8 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
     invoice = plan_financing.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by("-id").first()
 
     if invoice:
-        s = Stripe()
-        s.set_language_from_settings(settings)
+        s = Stripe(academy=plan_financing.academy)
+        s.set_language(settings.lang)
         s.refund_payment(invoice)
 
 
@@ -670,8 +670,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
 
                     try:
-                        s = Stripe()
-                        s.set_language_from_settings(settings)
+                        s = Stripe(academy=plan_financing.academy)
+                        s.set_language(settings.lang)
 
                         invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
 

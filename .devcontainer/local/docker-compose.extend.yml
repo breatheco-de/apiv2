@@ -1,0 +1,38 @@
+services:
+  4geeks:
+    build:
+      context: . # Or specify ./devcontainer if Dockerfile is there
+      dockerfile: .devcontainer/Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
+      - CELERY_DISABLE_SCHEDULER=
+      - ALLOW_UNSAFE_CYPRESS_APP=True
+      - PWD=/home/rigo/apiv2
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      # Mount your workspace code into the container
+      - .:/home/rigo/apiv2:cached # Adjust source path if needed
+      # Mount the Docker socket
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Mount fish shell configuration to persist changes
+      - rigo_local:/home/rigo/.local:cached
+      - rigo_config:/home/rigo/.config:cached
+
+    command: sleep infinity
+
+    # [Optional] Required for ptrace-based debuggers like C++, Go, and Rust
+    cap_add:
+      - SYS_PTRACE
+    # security_opt:
+    #   - seccomp:unconfined
+
+volumes:
+  rigo_local:
+  rigo_config:
