@@ -1,6 +1,7 @@
 {
     "name": "Ubuntu",
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "vscode",
     "features": {
         "ghcr.io/devcontainers-extra/features/poetry:2": {},
         "ghcr.io/devcontainers/features/aws-cli:1": {},
@@ -9,6 +10,7 @@
         "ghcr.io/devcontainers/features/rust:1": {},
         "ghcr.io/shyim/devcontainers-features/bun:0": {},
         "ghcr.io/devcontainers/features/python:1": {},
+        "ghcr.io/itsmechlark/features/rabbitmq-server:1": {},
         "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
             "packages": [
                 "curl",
@@ -66,6 +68,58 @@
     "forwardPorts": [
         8000,
         3000
+    ],
+    "mounts": [
+        {
+            "type": "volume",
+            "source": "vscode_fish_share",
+            "target": "/home/vscode/.local/share/fish"
+        },
+        {
+            "type": "volume",
+            "source": "vscode_fish_config",
+            "target": "/home/vscode/.config/fish"
+        },
+        {
+            "type": "volume",
+            "source": "vscode_fish_cache",
+            "target": "/home/vscode/.cache/fish"
+        },
+        {
+            "type": "volume",
+            "source": "vscode_poetry_cache",
+            "target": "/home/vscode/.cache/pypoetry"
+        },
+        {
+            "type": "volume",
+            "source": "vscode_poetry_share",
+            "target": "/home/vscode/.local/share/pypoetry"
+        },
+        {
+            "type": "volume",
+            "source": "omf_config",
+            "target": "/home/vscode/.config/omf"
+        },
+        {
+            "type": "volume",
+            "source": "pipx_cache",
+            "target": "/home/vscode/.cache/pipx"
+        },
+        {
+            "type": "volume",
+            "source": "pip_cache",
+            "target": "/home/vscode/.cache/pip"
+        },
+        {
+            "type": "volume",
+            "source": "virtualenv_share",
+            "target": "/home/vscode/.local/share/virtualenv"
+        },
+        {
+            "type": "volume",
+            "source": "pre_commit_cache",
+            "target": "/home/vscode/.cache/pre-commit"
+        }
     ],
     "onCreateCommand": "$PWD/.devcontainer/finishContainerSetup.sh",
     "updateContentCommand": "$PWD/.devcontainer/onCodeUpdated.sh",

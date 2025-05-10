@@ -8,7 +8,8 @@ TARGET_PYTHON_VERSION=$(cat ./.python-version)
 if ! poetry python list -m | grep -qF -- "$TARGET_PYTHON_VERSION"; then
     # If grep returns a non-zero status (version not found), then install it.
     poetry python install "$TARGET_PYTHON_VERSION"
-    poetry env use "$TARGET_PYTHON_VERSION"
 fi
+
+poetry env use "$TARGET_PYTHON_VERSION"
 
 python -m scripts.install

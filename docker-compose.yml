@@ -15,30 +15,20 @@ services:
     ports:
       - "5432:5432"
 
-  # adminer:
-  #   image: adminer
-  #   ports:
-  #     - 8080:8080
-  #   depends_on:
-  #     - postgres
 
-  # bigquery:
-  #   image: ghcr.io/goccy/bigquery-emulator:latest
-  #   command: --project=test --dataset=4geeks
-  #   ports:
-  #     - "9050:9050"
-  #     - "9060:9060"
 
-  # lavin:
-  #   image: cloudamqp/lavinmq:latest     # Replace with the correct image name/tag
-  #   container_name: lavinmq
-  #   ports:
-  #     - "5672:5672"          # Example port mapping (adjust as necessary)
-  #     - "15672:15672"        # Example management UI port (if applicable)
-  #   volumes:
-  #     - lavinmq_data:/var/lib/lavinmq  # Adjust volume path based on your app's requirements
+  rabbitmq:
+    image: rabbitmq:4
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=pass
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
 
 volumes:
   postgres_data:
-  # lavinmq_data:
+  rabbitmq_data:
