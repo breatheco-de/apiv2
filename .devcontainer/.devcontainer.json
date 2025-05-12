@@ -44,7 +44,8 @@
                 "isort.args": [
                     "--profile",
                     "black"
-                ]
+                ],
+                "files.eol": "\n"
             },
             "extensions": [
                 "ms-python.python",
