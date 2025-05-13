@@ -23,7 +23,7 @@ python -m scripts.install
 Load the public files in Django, which it requires to open the Django Admin.
 
 ```bash
-pipenv run python manage.py collectstatic --noinput
+poetry run python manage.py collectstatic --noinput
 ```
 
 ### Run migrations
@@ -35,7 +35,7 @@ Read [this](https://en.wikipedia.org/wiki/Schema_migration).
 #### Run the migrations
 
 ```bash
-pipenv run python manage.py migrate
+poetry run python manage.py migrate
 ```
 
 ### Populate the database
@@ -43,7 +43,7 @@ pipenv run python manage.py migrate
 You should populate your database with initial data using:
 
 ```bash
-pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
+poetry run python manage.py loaddata breathecode/*/fixtures/dev_*.json
 ```
 
 ### Create a super user
@@ -51,7 +51,7 @@ pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
 To get in Django Admin you need to create an account, this account will be saved in Postgres.
 
 ```bash
-pipenv run python manage.py createsuperuser
+poetry run python manage.py createsuperuser
 ```
 
 ### Run server
@@ -59,7 +59,7 @@ pipenv run python manage.py createsuperuser
 To open the server run:
 
 ```bash
-pipenv run start
+poetry run start
 ```
 
 If something goes wrong execute this to get a diagnosis.

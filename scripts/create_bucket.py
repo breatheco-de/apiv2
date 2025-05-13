@@ -1,4 +1,6 @@
-import sys, os
+import os
+import sys
+
 from google.cloud import storage
 
 
@@ -17,7 +19,7 @@ def resolve_credentials():
 
 def help_command():
     print("Usage:")
-    print("   `pipenv run create_bucket BUCKET_NAME` where BUCKET_NAME is the name of new bucket")
+    print("   `poetry run create_bucket BUCKET_NAME` where BUCKET_NAME is the name of new bucket")
     print("")
     print("commands:")
     print("   --help see this help message.")
