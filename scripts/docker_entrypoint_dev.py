@@ -22,16 +22,16 @@ if __name__ == "__main__":
     print("Collect statics")
     execute("sudo chown shell -R staticfiles")
     execute("sudo chmod 777 -R staticfiles")
-    execute("pipenv run python manage.py collectstatic --noinput")
+    execute("poetry run python manage.py collectstatic --noinput")
 
     print("")
     print("Migrate")
-    execute("pipenv run python manage.py migrate")
+    execute("poetry run python manage.py migrate")
 
     print("")
     print("Load fixtures")
-    execute("pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json")
+    execute("poetry run python manage.py loaddata breathecode/*/fixtures/dev_*.json")
 
     print("")
     print("Run server")
-    execute("pipenv run python manage.py runserver 0.0.0.0:8000")
+    execute("poetry run python manage.py runserver 0.0.0.0:8000")

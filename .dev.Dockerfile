@@ -31,8 +31,7 @@ RUN curl -L https://get.oh-my.fish > install && \
     fish install --noninteractive --yes && \
     rm install
 
-COPY Pipfile Pipfile
-COPY Pipfile.lock Pipfile.lock
+COPY pyproject.toml poetry.lock ./
 COPY scripts scripts
 COPY .git/ .git/
 RUN touch .env

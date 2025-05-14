@@ -28,105 +28,84 @@ For Cursor IDE users, check the [docs.md](./docs.md) file which contains documen
 
 The documentation is divided into several sections:
 
-- [Run 4Geeks in Codespaces (no installation)](#run-4geeks-in-codespaces-no-instalation)
-- [Install Docker](#install-docker)
-- [Run 4Geeks API as docker service](#run-4geeks-api-as-docker-service)
-- [Run 4Geeks in your local machine](#run-4geeks-api-in-your-local-machine)
-  - [Installation](#installation)
-  - [Run 4Geeks API](#run-4geeks-api)
-- [Run tests](#run-tests)
+- [Development Environments](#development-environments)
+  - [GitHub Codespaces (Recommended, No Local Setup)](#github-codespaces-recommended-no-local-setup)
+  - [Local Dev Container (Requires Docker)](#local-dev-container-requires-docker)
 
-## Run 4Geeks in Codespaces (no installation)
+## Development Environments
 
-Click `Code` -> `Codespaces` -> `Create namespace on {BRANCH_NAME}`.
+Choose one of the following methods to set up your development environment. Codespaces or a Local Dev Container are recommended for consistency.
+
+### GitHub Codespaces (Recommended for beginners and low-resource machines)
+
+This is the easiest way to get started, especially if you have a less powerful machine or want to avoid local setup complexities. GitHub Codespaces provides a fully configured cloud-based development environment, accessible directly through your browser or via VS Code/Cursor.
+
+1.  Navigate to the main page of the repository on GitHub.
+2.  Click the `Code` button.
+3.  Go to the `Codespaces` tab.
+4.  Click `Create codespace on main` (or your desired branch).
+
+GitHub will set up the environment based on the `.devcontainer` configuration in the repository. Once ready, you'll have VS Code/Cursor running in your browser (or connected locally) with all dependencies and tools installed.
+
+**Important Note:** Due to potential timing issues with Codespaces setup (`postStartCommand`), the background services (like the database) might not start automatically. After your Codespace has loaded, open a terminal and run `docker compose up -d redis postgres` (or simply `docker compose up -d` to ensure all services defined in the compose file are running) to ensure the necessary services are available before running the API.
 
 ![Codespaces](docs/images/codespaces.png)
 
-## Install Docker
+#### Changing Codespace Machine Type
 
-Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+If you find that the default Codespace machine type is too slow or you need more resources (CPU, RAM, Storage), you can change it:
 
-## Running 4geeks
+*   **When creating a new Codespace:** Before clicking "Create codespace", click on the three dots (...) next to the button or the "Advanced options" link (the UI may vary slightly). This will allow you to select a more powerful machine type.
+*   **For an existing Codespace:** You can change the machine type for an existing Codespace. Go to your list of Codespaces on GitHub (github.com/codespaces). Click the three dots (...) next to the Codespace you want to change, select "Change machine type", and choose a new one. The Codespace will then need to be reopened or rebuilt to apply the changes.
 
-### `Run 4Geeks API as docker service`
+Using a more powerful machine type may incur higher costs if you are outside of the free tier for GitHub Codespaces.
 
-```bash
-# open 4Geeks API as a service and export the port 8000
-docker-compose up -d
+### Local Dev Container (Requires Docker)
 
-# create super user
-sudo docker compose run 4geeks python manage.py createsuperuser
+If you prefer to work locally, have a reasonably powerful machine, and want the same consistent environment as Codespaces, you can use VS Code/Cursor Dev Containers.
 
-# See the output of Django
-docker-compose logs -f 4geeks
+**Prerequisites:**
 
-# open localhost:8000 to view the api
-# open localhost:8000/admin to view the admin
-```
+1.  **Docker Desktop:** Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) for your operating system.
+2.  **VS Code or Cursor:** Install [Visual Studio Code](https://code.visualstudio.com/) or [Cursor](https://cursor.sh/).
+3.  **Install the Dev Containers Extension:** You **must** install the official [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) from the marketplace in VS Code/Cursor.
 
-### `Run 4Geeks in your local machine`
+**Windows Users (Important):**
 
-#### Installation
+*   You **MUST** use **WSL 2 (Windows Subsystem for Linux)**. Dev Containers rely on a Linux environment.
+*   **Install WSL:** Follow the official [Microsoft guide to install WSL](https://learn.microsoft.com/en-us/windows/wsl/install). We recommend installing the **Ubuntu** distribution when prompted.
+*   **Configure Docker Desktop:** Ensure Docker Desktop is configured to use the WSL 2 backend. Go to Docker Desktop settings -> Resources -> WSL Integration and enable it for your chosen distribution (e.g., Ubuntu).
+*   **Clone Project in WSL:** Clone this repository *inside* your WSL environment (e.g., in `/home/<your-username>/dev/apiv2` within Ubuntu), **not** on your Windows C: drive. You can access the WSL terminal by typing `wsl` or `ubuntu` in your Windows Terminal or Command Prompt.
 
-```bash
-# Check which dependencies you need install in your operating system
-python -m scripts.doctor
+**Steps to Launch:**
 
-# Setting up the redis and postgres database, you also can install manually in your local machine this databases
-docker-compose up -d redis postgres
+1.  Clone this repository to your local machine (inside WSL if on Windows).
+2.  Open the cloned repository folder in VS Code or Cursor (`code .` or `cursor .` from the terminal inside the project directory).
+3.  Your editor should automatically detect the `.devcontainer` configuration and prompt you to "Reopen in Container". Click it.
+4.  If it doesn't prompt, open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and run `Dev Containers: Reopen in Container`.
 
-# Install and setting up your development environment (this command replace your .env file)
-python -m scripts.install
-```
+VS Code or Cursor will build the Docker image (if not already built) and start the container. Your VS Code or Cursor window will then be connected to the containerized environment, complete with all dependencies.
 
-#### Run 4Geeks API
+## Available Commands (via `poetry run`)
 
-You must up Redis and Postgres before open 4Geeks.
+The following custom commands are defined in `pyproject.toml` under `[tool.poetry.scripts]` and can be run using `poetry run <command>`:
 
-```bash
-# Collect statics
-pipenv run python manage.py collectstatic --noinput
-
-# Run migrations
-pipenv run python manage.py migrate
-
-# Load fixtures (populate the database)
-pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
-
-# Create super user
-pipenv run python manage.py createsuperuser
-
-# Run server
-pipenv run start
-
-# open localhost:8000 to view the api
-# open localhost:8000/admin to view the admin
-```
-
-### `Testing in your local machine`
-
-#### Installation
-
-```bash
-# Check which dependencies you need install in your operating system
-python -m scripts.doctor
-
-# Install and setting up your development environment (this command replace your .env file)
-python -m scripts.install
-```
-
-#### Run tests
-
-```bash
-# Testing
-pipenv run test ./breathecode/activity  # path
-
-# Testing in parallel
-pipenv run ptest ./breathecode/activity  # path
-
-# Coverage
-pipenv run cov breathecode.activity  # python module path
-
-# Coverage in parallel
-pipenv run pcov breathecode.activity  # python module path
-```
+*   `dev`: (Legacy or specific development task - check `scripts/cmd.py` for details)
+*   `start`: Starts the Django development server.
+*   `createsuperuser`: Runs Django's `createsuperuser` management command.
+*   `test`: Runs `pytest` for the specified path/module.
+*   `test:ci`: Runs tests with coverage specifically for CI environments (likely includes parallel execution).
+*   `test:coverage` / `test:c`: Runs tests with coverage reporting for the specified module.
+*   `test:parallel` / `test:p`: Runs tests in parallel using `pytest-xdist` for the specified path/module.
+*   `startapp`: Runs Django's `startapp` management command to create a new app structure.
+*   `migrate`: Runs Django's `migrate` management command to apply database migrations.
+*   `makemigrations`: Runs Django's `makemigrations` management command to create new migration files based on model changes.
+*   `format`: Formats the code using tools like `black` and `isort`.
+*   `celery`: Starts a Celery worker.
+*   `docs`: Serves the documentation locally using `mkdocs serve`.
+*   `docs:build`: Builds the static documentation site using `mkdocs build`.
+*   `docs:deploy`: Deploys the documentation (likely to GitHub Pages) using `mkdocs gh-deploy`.
+*   `lint`: Runs linters (like `flake8`) over the codebase.
+*   `update-sql-keywords`: Updates a JSON file containing SQL keywords (utility script).
+*   `precommit:install`: Installs pre-commit hooks.
+*   `docker:build`: Builds the Docker image for the application.

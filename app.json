@@ -20,7 +20,7 @@
       },
       "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
       "scripts": {
-        "test": "pipenv run ptest_ci",
+        "test": "poetry run test:p",
         "postdeploy": "python manage.py migrate"
       }
     },
@@ -31,7 +31,7 @@
       },
       "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
       "scripts": {
-        "test": "pipenv run ptest_ci",
+        "test": "poetry run test:p",
         "postdeploy": "python manage.py migrate"
       }
     }

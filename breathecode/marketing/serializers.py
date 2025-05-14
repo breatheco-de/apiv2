@@ -465,7 +465,7 @@ class GetCourseSerializer(GetCourseSmallSerializer):
 
     def get_plan_slug(self, obj):
         country_code = (self.context.get("country_code") or "").lower()
-        if country_code and country_code in obj.plan_by_country_code:
+        if country_code and obj.plan_by_country_code is not None and country_code in obj.plan_by_country_code:
             plan_slug = obj.plan_by_country_code.get(country_code, "")
             if plan_slug is not None:
                 return plan_slug
