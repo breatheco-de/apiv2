@@ -705,7 +705,7 @@ def async_build_asset_context(asset_id):
     AssetContext.objects.update_or_create(asset=asset, defaults={"ai_context": context, "status": "DONE"})
 
 
-@shared_task(priority=TaskPriority.CONTENT.value)
+@task(priority=TaskPriority.CONTENT.value)
 def sync_asset_telemetry_stats(asset_id: int, **_: Any):
     """Process telemetries for a single asset and update its telemetry_stats."""
     logger.info(f"Starting sync_asset_telemetry_stats for asset {asset_id}")
