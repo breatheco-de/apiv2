@@ -1321,11 +1321,6 @@ class ConsumeView(APIView):
 
         return Response(serializer.data)
 
-        # items = handler.queryset(items)
-        # serializer = GetConsumptionSessionSerializer(items, many=True)
-
-        # return handler.response(serializer.data)
-
     def put(self, request, service_slug, hash=None):
         lang = get_user_language(request)
 
