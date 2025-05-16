@@ -759,5 +759,4 @@ class GetConsumptionSessionSerializer(serpy.Serializer):
     path = serpy.Field()
     related_id = serpy.Field()
     related_slug = serpy.Field()
-    # consumable = GetConsumableSerializer(required=False)
     user = GetUserSmallSerializer(required=False)
