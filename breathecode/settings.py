@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TypedDict
 
-# import dj_database_url
+import dj_database_url
 import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
@@ -500,20 +500,10 @@ SITE_ID = 1
 
 # Change 'default' database configuration with $DATABASE_URL.
 # https://github.com/jacobian/dj-database-url#url-schema
-# DATABASES = {
-#     "default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=False),
-# }
-
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "apiv2_squash_test_v3",  # El nombre de tu BD local
-        "USER": "vscode",  # Tu usuario de PostgreSQL local
-        "PASSWORD": "admin",  # La contraseña que estableciste
-        "HOST": "localhost",  # O '127.0.0.1'
-        "PORT": "5433",  # El puerto que usa tu PostgreSQL local
-    }
+    "default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=False),
 }
+
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 # SQL Explorer
