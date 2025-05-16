@@ -406,6 +406,63 @@ class AuthenticateTestSuite(AuthTestCase):
             self.bc.database.delete("auth.User")
             self.bc.database.delete("authenticate.UserInvite")
 
+    @patch("django.template.context_processors.get_token", MagicMock(return_value="predicabletoken"))
+    @patch("django.contrib.auth.models.User.set_password", set_password)
+    def test__post__with_token__right_password__with_landing_url(self):
+        email = self.bc.fake.email()
+        user = {"password": "", "email": email}
+        user_invite = {"token": "abc", "email": email, "conversion_info": {"landing_url": "https://learnpack.co"}}
+
+        cases = [({"user": user, "user_invite": user_invite}, "abc")]
+        for kwargs, token in cases:
+            password_characters = (
+                random.choices(string.ascii_lowercase, k=3)
+                + random.choices(string.ascii_uppercase, k=3)
+                + random.choices(string.punctuation, k=2)
+            )
+
+            random.shuffle(password_characters)
+
+            password = "".join(password_characters)
+
+            model = self.bc.database.create(**kwargs)
+
+            url = reverse_lazy("authenticate:password_token", kwargs={"token": token})
+            data = {"password1": password, "password2": password}
+            response = self.client.post(url, data)
+
+            content = self.bc.format.from_bytes(response.content)
+            expected = render(
+                "You password has been successfully set.",
+                button="Continue to sign in",
+                button_target="_self",
+                link="https://learnpack.co" + "/login",
+            )
+
+            # dump error in external files
+            if content != expected:
+                with open("content.html", "w") as f:
+                    f.write(content)
+
+                with open("expected.html", "w") as f:
+                    f.write(expected)
+
+            assert content == expected
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                self.bc.database.list_of("auth.User"),
+                [
+                    {
+                        **self.bc.format.to_dict(model.user),
+                        "password": password,
+                    },
+                ],
+            )
+
+            # teardown
+            self.bc.database.delete("auth.User")
+            self.bc.database.delete("authenticate.UserInvite")
+
     """
     🔽🔽🔽 POST with token, right password, passing callback
     """
