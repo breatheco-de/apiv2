@@ -477,6 +477,9 @@ class AssetExpandableSerializer(AssetMidSerializer):
                 elem["template_url"] = obj.template_url if hasattr(obj, "template_url") else None
                 elem["dependencies"] = obj.dependencies if hasattr(obj, "dependencies") else None
 
+                if "telemetry_stats" in self.expand:
+                    elem["telemetry_stats"] = obj.telemetry_stats if hasattr(obj, "telemetry_stats") else None
+
                 if "readme" in self.expand:
                     url = obj.readme_url
                     if url is None and obj.asset_type == "LESSON":

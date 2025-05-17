@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 from pathlib import Path
 
 api_path = os.getcwd()
@@ -35,6 +36,13 @@ vscode_setting_json["isort.args"] = [
     "--profile",
     "black",
 ]
+
+python_path = subprocess.run(
+    ["poetry", "run", "which", "python"], capture_output=True, text=True, check=True
+).stdout.strip()
+
+vscode_setting_json["python.defaultInterpreterPath"] = python_path
+vscode_setting_json["aws.telemetry"] = False
 
 
 bad_keys = [key for key in vscode_setting_json if key.startswith("//")]

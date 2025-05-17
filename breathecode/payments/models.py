@@ -1919,11 +1919,43 @@ class ServiceStockScheduler(models.Model):
 
 
 class PaymentContact(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="payment_contact", help_text="Customer")
-    stripe_id = models.CharField(max_length=20, help_text="Stripe id")  # actually return 18 characters
+    """
+    Represents a link between a User and their Stripe Customer ID, potentially
+    scoped to a specific Academy.
+
+    This model stores the Stripe Customer ID (`stripe_id`) associated with a
+    user. If an `academy` is specified, it implies that the Stripe customer
+    record is managed under that academy's Stripe account. If `academy` is
+    null, it typically means the customer is managed under a default or
+    central Stripe account.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="payment_contacts",
+        help_text="The Django User associated with this Stripe contact.",
+    )
+    stripe_id = models.CharField(
+        max_length=255,  # Stripe IDs can be up to 255 chars, e.g., cus_xxxxxxxxxxxxxx
+        help_text="The Stripe Customer ID (e.g., cus_xxxxxxxxxxxxxx). This links the user to their record in Stripe.",
+    )
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            "The Academy associated with this Stripe contact. If null, the contact is typically "
+            "managed under a default/central Stripe account. This determines which Stripe account "
+            "the customer belongs to."
+        ),
+    )
 
     def __str__(self) -> str:
-        return f"{self.user.email} ({self.stripe_id})"
+        academy_name = self.academy.name if self.academy else "Default Stripe Account"
+        return f"User: {self.user.email}, Stripe ID: {self.stripe_id}, Academy: {academy_name}"
 
 
 GOOD = "GOOD"

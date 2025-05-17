@@ -807,6 +807,8 @@ class Course(models.Model):
     is_listed = models.BooleanField(default=True, help_text="controls inclusion in browser listings and sitemaps")
 
     plan_slug = models.SlugField(max_length=150, null=True, blank=True, default=None)
+    plan_by_country_code = models.JSONField(null=True, blank=True)
+
     status = models.CharField(max_length=15, choices=COURSE_STATUS, default=ACTIVE)
     color = models.CharField(
         max_length=50,

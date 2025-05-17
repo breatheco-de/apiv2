@@ -2,14 +2,13 @@
 FROM python
 
 ENV PYTHONUNBUFFERED=1
-RUN pip install pipenv
+RUN pip install poetry
 
 WORKDIR /usr/src
 
-COPY Pipfile Pipfile
-COPY Pipfile.lock Pipfile.lock
+COPY pyproject.toml poetry.lock ./
 
-RUN pipenv install --system --deploy --ignore-pipfile
+RUN poetry install --no-root --no-dev
 COPY . .
 
 EXPOSE 8000

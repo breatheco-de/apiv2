@@ -14,10 +14,10 @@ import breathecode.notify.actions as actions
 from breathecode.admissions.models import CohortUser
 from breathecode.assignments.actions import (
     NOTIFICATION_STRINGS,
-    validate_task_for_notifications,
     calculate_telemetry_indicator,
+    validate_task_for_notifications,
 )
-from breathecode.assignments.models import LearnPackWebhook, AssignmentTelemetry
+from breathecode.assignments.models import AssignmentTelemetry, LearnPackWebhook
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.notify import actions as notify_actions
 from breathecode.services.learnpack import LearnPack

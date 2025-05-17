@@ -44,6 +44,7 @@ from .tasks import (
     async_test_asset,
     async_update_frontend_asset_cache,
     async_upload_image_to_bucket,
+    sync_asset_telemetry_stats,
 )
 
 logger = logging.getLogger(__name__)
@@ -268,6 +269,17 @@ def reset_4geeks_com_cache(modeladmin, request, queryset):
             messages.error(request, a.slug + ": " + str(e))
 
 
+def sync_telemetry_stats(modeladmin, request, queryset):
+    """Sync telemetry stats for selected assets."""
+    assets = queryset.all()
+    for asset in assets:
+        try:
+            sync_asset_telemetry_stats.delay(asset.id)
+            messages.success(request, f"Queued telemetry sync for asset {asset.slug}")
+        except Exception as e:
+            messages.error(request, f"Error queueing telemetry sync for asset {asset.slug}: {str(e)}")
+
+
 class AssessmentFilter(admin.SimpleListFilter):
 
     title = "Associated Assessment"
@@ -437,6 +449,7 @@ class AssetAdmin(admin.ModelAdmin):
             async_generate_thumbnail,
             download_and_replace_images,
             reset_4geeks_com_cache,
+            sync_telemetry_stats,
         ]
         + change_field(["DRAFT", "NOT_STARTED", "PUBLISHED", "OPTIMIZED"], name="status")
         + change_field(["us", "es"], name="lang")

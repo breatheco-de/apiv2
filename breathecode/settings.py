@@ -29,7 +29,7 @@ settings.set_settings(app_name="breathecode")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgres://user:pass@localhost:5432/breathecode")
 ENVIRONMENT = os.environ.get("ENV")
 
 # Quick-start development settings - unsuitable for production
@@ -503,6 +503,7 @@ SITE_ID = 1
 DATABASES = {
     "default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=False),
 }
+
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 # SQL Explorer

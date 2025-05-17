@@ -444,13 +444,17 @@ class GetCourseSmallSerializer(serpy.Serializer):
 
 
 class GetCourseSerializer(GetCourseSmallSerializer):
-    plan_slug = serpy.Field()
     syllabus = serpy.MethodField()
     academy = GetAcademySmallSerializer()
     cohort = serpy.MethodField()
     status = serpy.Field()
     is_listed = serpy.Field()
     visibility = serpy.Field()
+    plan_slug = serpy.MethodField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = kwargs.get("context", {})
 
     def get_syllabus(self, obj):
         return GetSyllabusSmallSerializer(obj.syllabus.all(), many=True).data
@@ -458,6 +462,15 @@ class GetCourseSerializer(GetCourseSmallSerializer):
     def get_cohort(self, obj):
         if obj.cohort:
             return GetCohortSmallSerializer(obj.cohort, many=False).data
+
+    def get_plan_slug(self, obj):
+        country_code = (self.context.get("country_code") or "").lower()
+        if country_code and obj.plan_by_country_code is not None and country_code in obj.plan_by_country_code:
+            plan_slug = obj.plan_by_country_code.get(country_code, "")
+            if plan_slug is not None:
+                return plan_slug
+
+        return obj.plan_slug
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):

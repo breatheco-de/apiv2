@@ -134,11 +134,11 @@ class SignalTestSuite(PaymentsTestCase):
     @patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
     @patch("stripe.Customer.modify", MagicMock(return_value={"id": 1}))
     def test__no_body(self):
-        model = self.bc.database.create(user=1)
+        model = self.bc.database.create(user=1, academy=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:card")
-        response = self.client.post(url)
+        response = self.client.post(url, {"academy": 1}, format="json")
         self.client.force_authenticate(model.user)
 
         json = response.json()
@@ -171,11 +171,17 @@ class SignalTestSuite(PaymentsTestCase):
     @patch("stripe.Customer.create", MagicMock(return_value=AttrDict(id=1)))
     @patch("stripe.Customer.modify", MagicMock(return_value=AttrDict(id=1)))
     def test__passing_card(self):
-        model = self.bc.database.create(user=1)
+        model = self.bc.database.create(user=1, academy=1)
         self.client.force_authenticate(model.user)
 
         url = reverse_lazy("payments:card")
-        data = {"card_number": "4242424242424242", "exp_month": "12", "exp_year": "2030", "cvc": "123"}
+        data = {
+            "card_number": "4242424242424242",
+            "exp_month": "12",
+            "exp_year": "2030",
+            "cvc": "123",
+            "academy": 1,
+        }
         response = self.client.post(url, data, format="json")
         self.client.force_authenticate(model.user)
 
@@ -193,6 +199,7 @@ class SignalTestSuite(PaymentsTestCase):
         )
 
         data["number"] = data.pop("card_number")
+        del data["academy"]
         self.bc.check.calls(stripe.Token.create.call_args_list, [call(card=data)])
         self.bc.check.calls(
             stripe.Customer.create.call_args_list,

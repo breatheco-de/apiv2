@@ -1,7 +1,7 @@
-import yaml
-import os
 import logging
+import os
 
+import yaml
 from yaml.loader import FullLoader
 
 logger = logging.getLogger(__name__)
@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 CONFIGURATION_FILE = os.path.join(os.getcwd(), ".breathecode.yml")
 NEW_ENVS = []
 
-if os.environ.get("PIPENV_ACTIVE") == "1":
-    logger.error("This command can't be execute with pipenv, run instead `python -m scripts.update_environments`")
-    exit(1)
+# if os.environ.get("PIPENV_ACTIVE") == "1":
+#     logger.error("This command can't be execute with pipenv, run instead `python -m scripts.update_environments`")
+#     exit(1)
 
 with open(CONFIGURATION_FILE, "r") as file:
     data = yaml.load(file, Loader=FullLoader) or {}

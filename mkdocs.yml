@@ -6,146 +6,147 @@ repo_url: https://github.com/breatheco-de/apiv2
 edit_uri: ""
 
 theme:
-  name: "material"
-  palette:
-    - scheme: "default"
-      media: "(prefers-color-scheme: light)"
-      toggle:
-        icon: "material/lightbulb"
-        name: "Switch to dark mode"
-    - scheme: "slate"
-      media: "(prefers-color-scheme: dark)"
-      primary: "blue"
-      toggle:
-        icon: "material/lightbulb-outline"
-        name: "Switch to light mode"
+    name: "material"
+    palette:
+        - scheme: "default"
+          media: "(prefers-color-scheme: light)"
+          toggle:
+              icon: "material/lightbulb"
+              name: "Switch to dark mode"
+        - scheme: "slate"
+          media: "(prefers-color-scheme: dark)"
+          primary: "blue"
+          toggle:
+              icon: "material/lightbulb-outline"
+              name: "Switch to light mode"
 #     features:
 #         - navigation.sections
 
 # this define the order of menu
 nav:
-  - "index.md"
-  - "4geeks-libraries.md"
-  - Getting started:
-      # which version of python install
-      - Set up:
-          - Works locally:
-              - "getting-started/setup/works-locally/introduction.md"
-              - "getting-started/setup/works-locally/devcontainer.md"
-              - "getting-started/setup/works-locally/on-host-os.md"
-          - Works on the cloud:
-              - "getting-started/setup/works-on-the-cloud/introduction.md"
-              - "getting-started/setup/works-on-the-cloud/gitpod.md"
-              - "getting-started/setup/works-on-the-cloud/codespaces.md"
-  - Essential:
-      - Django:
-          - "essential/django/introduction.md"
-          - "essential/django/urls.md"
-          - "essential/django/views.md"
-          - "essential/django/models.md"
-          - "essential/django/admin.md"
-          - "essential/django/commands.md"
-          - "essential/django/signals.md"
-          - "essential/django/templates.md"
-      - Django Rest Framework:
-          - "essential/django-rest-framework/introduction.md"
-          - "essential/django-rest-framework/views.md"
-          - "essential/django-rest-framework/serializers.md"
-          - "essential/django-rest-framework/validators.md"
-      - "essential/serpy.md"
-      - Celery:
-          - "essential/celery/introduction.md"
-          - "essential/celery/tasks.md"
-          - "essential/celery/calling.md"
-      - 4geeks:
-          - "essential/4geeks/actions.md"
-          - Services:
-              - essential/4geeks/services/introduction.md
-              - First-party:
-                  - essential/4geeks/services/first-party/using-services.md
-                  - essential/4geeks/services/first-party/writing-services.md
-                  - essential/4geeks/services/first-party/token.md
-  - Advanced:
-      - "advanced/supervisor.md"
-      - Celery:
-          - "advanced/celery/application.md"
-          - "advanced/celery/canvas.md"
-          - "advanced/celery/periodic-tasks.md"
-          - "advanced/celery/routing.md"
-          - "advanced/celery/settings.md"
+    - "index.md"
+    - "4geeks-libraries.md"
+    - Getting started:
+          # which version of python install
+          - Set up:
+                - Works locally:
+                      - "getting-started/setup/works-locally/introduction.md"
+                      - "getting-started/setup/works-locally/devcontainer.md"
+                      - "getting-started/setup/works-locally/on-host-os.md"
+                - Works on the cloud:
+                      - "getting-started/setup/works-on-the-cloud/introduction.md"
+                      - "getting-started/setup/works-on-the-cloud/gitpod.md"
+                      - "getting-started/setup/works-on-the-cloud/codespaces.md"
+          - "getting-started/available-commands.md"
+    - Essential:
+          - Django:
+                - "essential/django/introduction.md"
+                - "essential/django/urls.md"
+                - "essential/django/views.md"
+                - "essential/django/models.md"
+                - "essential/django/admin.md"
+                - "essential/django/commands.md"
+                - "essential/django/signals.md"
+                - "essential/django/templates.md"
+          - Django Rest Framework:
+                - "essential/django-rest-framework/introduction.md"
+                - "essential/django-rest-framework/views.md"
+                - "essential/django-rest-framework/serializers.md"
+                - "essential/django-rest-framework/validators.md"
+          - "essential/serpy.md"
+          - Celery:
+                - "essential/celery/introduction.md"
+                - "essential/celery/tasks.md"
+                - "essential/celery/calling.md"
+          - 4geeks:
+                - "essential/4geeks/actions.md"
+                - Services:
+                      - essential/4geeks/services/introduction.md
+                      - First-party:
+                            - essential/4geeks/services/first-party/using-services.md
+                            - essential/4geeks/services/first-party/writing-services.md
+                            - essential/4geeks/services/first-party/token.md
+    - Advanced:
+          - "advanced/supervisor.md"
+          - Celery:
+                - "advanced/celery/application.md"
+                - "advanced/celery/canvas.md"
+                - "advanced/celery/periodic-tasks.md"
+                - "advanced/celery/routing.md"
+                - "advanced/celery/settings.md"
 
-  - Program Manager:
-      - "program-manager/blocking-users.md"
-  - Testing:
-      - "testing/running-tests.md"
-      - "testing/parametrize.md"
-      - Mixins:
-          - "bc": "testing/mixins/bc.md"
-          - "bc.fake": "testing/mixins/bc-fake.md"
-          - "bc.request": "testing/mixins/bc-request.md"
-          - "bc.database": "testing/mixins/bc-database.md"
-          - "bc.datetime": "testing/mixins/bc-datetime.md"
-          - "bc.format": "testing/mixins/bc-format.md"
-          - "bc.check": "testing/mixins/bc-check.md"
-          - "bc.cache": "testing/mixins/bc-cache.md"
-          - "bc.random": "testing/mixins/bc-random.md"
-      - Mocks:
-          - "testing/mocks/using-mocks.md"
-          - "testing/mocks/mock-requests.md"
-  - Troubleshooting:
-      - "troubleshooting/check_task_status.md"
-  - Workflows:
-      - "workflows/file-uploading.md"
-  - Infrastructure:
-      - "infrastructure/journal.md"
-      - "infrastructure/web.md"
-      - "infrastructure/infra-env.md"
-      - Studies:
-          - "infrastructure/studies/http-clients.md"
-          - "infrastructure/studies/django-workers.md"
-  - Not placed yet:
-      - "infrastructure/environment-variables.md"
-      - "installation/fixtures.md"
-      - Deployments:
-          - "deployment/environment-variables.md"
-          - "deployment/configuring-the-github-secrets.md"
-      - Apps:
-          - Monitoring:
-              - "apps/monitoring/introduction.md"
-              - "apps/monitoring/scripts.md"
-          - "apps/activities.md"
-          - "apps/admissions.md"
-      - Security:
-          - "security/introduction.md"
-          - "security/authentication-class.md"
-          - "security/capabilities.md"
-          - "security/schema-link.md"
-      - Services:
-          - Google Cloud:
-              - "services/google_cloud/google-cloud-functions.md"
-              - "services/google_cloud/storage.md"
-          - Slack:
-              - "services/slack integration/icons.md"
-      - Signals:
-          - "signals/quickstart.md"
+    - Program Manager:
+          - "program-manager/blocking-users.md"
+    - Testing:
+          - "testing/running-tests.md"
+          - "testing/parametrize.md"
+          - Mixins:
+                - "bc": "testing/mixins/bc.md"
+                - "bc.fake": "testing/mixins/bc-fake.md"
+                - "bc.request": "testing/mixins/bc-request.md"
+                - "bc.database": "testing/mixins/bc-database.md"
+                - "bc.datetime": "testing/mixins/bc-datetime.md"
+                - "bc.format": "testing/mixins/bc-format.md"
+                - "bc.check": "testing/mixins/bc-check.md"
+                - "bc.cache": "testing/mixins/bc-cache.md"
+                - "bc.random": "testing/mixins/bc-random.md"
+          - Mocks:
+                - "testing/mocks/using-mocks.md"
+                - "testing/mocks/mock-requests.md"
+    - Troubleshooting:
+          - "troubleshooting/check_task_status.md"
+    - Workflows:
+          - "workflows/file-uploading.md"
+    - Infrastructure:
+          - "infrastructure/journal.md"
+          - "infrastructure/web.md"
+          - "infrastructure/infra-env.md"
+          - Studies:
+                - "infrastructure/studies/http-clients.md"
+                - "infrastructure/studies/django-workers.md"
+    - Not placed yet:
+          - "infrastructure/environment-variables.md"
+          - "installation/fixtures.md"
+          - Deployments:
+                - "deployment/environment-variables.md"
+                - "deployment/configuring-the-github-secrets.md"
+          - Apps:
+                - Monitoring:
+                      - "apps/monitoring/introduction.md"
+                      - "apps/monitoring/scripts.md"
+                - "apps/activities.md"
+                - "apps/admissions.md"
+          - Security:
+                - "security/introduction.md"
+                - "security/authentication-class.md"
+                - "security/capabilities.md"
+                - "security/schema-link.md"
+          - Services:
+                - Google Cloud:
+                      - "services/google_cloud/google-cloud-functions.md"
+                      - "services/google_cloud/storage.md"
+                - Slack:
+                      - "services/slack integration/icons.md"
+          - Signals:
+                - "signals/quickstart.md"
 
 plugins:
-  - search
-  - mkdocstrings:
-      handlers:
-        python:
-          setup_commands:
-            - import os
-            - import django
-            - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
-            - django.setup()
+    - search
+    - mkdocstrings:
+          handlers:
+              python:
+                  setup_commands:
+                      - import os
+                      - import django
+                      - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
+                      - django.setup()
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
+    - pymdownx.highlight:
+          anchor_linenums: true
+    - pymdownx.inlinehilite
+    - pymdownx.snippets
+    - pymdownx.superfences
 
 extra_css:
-  - css/custom.css
+    - css/custom.css
