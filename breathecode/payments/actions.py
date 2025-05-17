@@ -50,6 +50,16 @@ logger = getLogger(__name__)
 
 
 def calculate_relative_delta(unit: float, unit_type: str):
+    """
+    Calculates a relativedelta object based on a unit and unit type.
+
+    Args:
+        unit: The amount of the unit (e.g., 1, 2, 3).
+        unit_type: The type of the unit (DAY, WEEK, MONTH, YEAR).
+
+    Returns:
+        A relativedelta object representing the calculated time difference.
+    """
     delta_args = {}
     if unit_type == "DAY":
         delta_args["days"] = unit
@@ -67,10 +77,27 @@ def calculate_relative_delta(unit: float, unit_type: str):
 
 
 class PlanFinder:
+    """
+    A utility class to find suitable plans based on various criteria like
+    cohort, syllabus, academy, and onboarding status. It helps in querying
+    plans that match specific contexts within a learning platform.
+    """
+
     cohort: Optional[Cohort] = None
     syllabus: Optional[Syllabus] = None
 
     def __init__(self, request: Request, lang: Optional[str] = None, query: Optional[Q] = None) -> None:
+        """
+        Initializes the PlanFinder with the current request and optional language
+        and query parameters.
+
+        Args:
+            request: The Django Rest Framework request object.
+            lang: Optional language code (e.g., 'en', 'es'). If not provided,
+                  it attempts to determine it from HTTP_ACCEPT_LANGUAGE or
+                  user settings. Defaults to 'en'.
+            query: Optional Django Q object to further filter plans.
+        """
         self.request = request
         self.query = query
 
@@ -104,6 +131,21 @@ class PlanFinder:
     def _get_instance(
         self, model: Type[Cohort | Syllabus], pk: str, academy: Optional[str] = None
     ) -> Optional[Cohort | Syllabus]:
+        """
+        Retrieves a Cohort or Syllabus instance by its primary key (ID or slug)
+        and optionally filters by academy.
+
+        Args:
+            model: The Django model class (Cohort or Syllabus).
+            pk: The primary key (integer ID or string slug) of the instance.
+            academy: Optional academy slug or ID to filter by.
+
+        Returns:
+            The Cohort or Syllabus instance if found, otherwise None.
+
+        Raises:
+            ValidationException: If the instance is not found.
+        """
         args = []
         kwargs = {}
 
@@ -132,6 +174,20 @@ class PlanFinder:
         return resource
 
     def _cohort_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
+        """
+        Finds plans specifically related to the instance's cohort.
+
+        Filters plans based on the cohort's syllabus version, stage (INACTIVE, PREWORK),
+        and optionally by onboarding status.
+
+        Args:
+            on_boarding: Optional boolean to filter by onboarding status.
+            auto: If True and on_boarding is not set, determines onboarding status
+                  based on whether any CohortUser exists for the cohort's syllabus.
+
+        Returns:
+            A QuerySet of Plan objects.
+        """
         additional_args = {}
 
         if on_boarding is not None:
@@ -156,6 +212,20 @@ class PlanFinder:
         return plans
 
     def _syllabus_handler(self, on_boarding: Optional[bool] = None, auto: bool = False):
+        """
+        Finds plans specifically related to the instance's syllabus.
+
+        Filters plans based on the syllabus, cohort stage (INACTIVE, PREWORK) linked
+        through the cohort set, and optionally by onboarding status.
+
+        Args:
+            on_boarding: Optional boolean to filter by onboarding status.
+            auto: If True and on_boarding is not set, determines onboarding status
+                  based on whether any CohortUser exists for the syllabus.
+
+        Returns:
+            A QuerySet of Plan objects.
+        """
         additional_args = {}
 
         if on_boarding is not None:
@@ -177,6 +247,23 @@ class PlanFinder:
         return plans
 
     def get_plans_belongs(self, on_boarding: Optional[bool] = None, auto: bool = False):
+        """
+        Gets plans that belong to the current context (syllabus or cohort).
+
+        Delegates to either `_syllabus_handler` or `_cohort_handler` based on
+        whether a syllabus or cohort is set for the PlanFinder instance.
+
+        Args:
+            on_boarding: Optional boolean to filter by onboarding status.
+            auto: If True and on_boarding is not set, determines onboarding status
+                  automatically.
+
+        Returns:
+            A QuerySet of Plan objects.
+
+        Raises:
+            NotImplementedError: If neither a syllabus nor a cohort is set.
+        """
         if self.syllabus:
             return self._syllabus_handler(on_boarding, auto)
 
@@ -186,6 +273,15 @@ class PlanFinder:
         raise NotImplementedError("Resource handler not implemented")
 
     def get_plans_belongs_from_request(self):
+        """
+        Gets plans based on parameters from the current HTTP request.
+
+        Extracts 'is_onboarding' from request data/GET parameters and calls
+        `get_plans_belongs` with appropriate arguments.
+
+        Returns:
+            A QuerySet of Plan objects.
+        """
         is_onboarding = self.request.data.get("is_onboarding") or self.request.GET.get("is_onboarding")
 
         additional_args = {}
@@ -201,7 +297,26 @@ class PlanFinder:
 
 def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
     """
-    Ask to add plan to bag, and return if it must be charged or not.
+    Determines if a plan should be added to a user's bag and if it requires charging.
+
+    This function checks several conditions:
+    - If a free trial for a financing plan has already been bought.
+    - If a plan without a price has already been bought (after a free trial).
+    - If a financing plan has already been financed by the user.
+    - If a renewable plan with a price is already active for the user.
+    - If a plan with a free trial is being bought for the first time (no charge).
+
+    Args:
+        plan: The Plan object to consider.
+        user: The User object.
+        lang: The language code for translations.
+
+    Returns:
+        bool: True if the plan should be charged, False otherwise.
+
+    Raises:
+        ValidationException: If the plan cannot be added or bought again based on
+                             the user's history or plan type.
     """
     utc_now = timezone.now()
     plan_have_free_trial = plan.trial_duration and plan.trial_duration_unit
@@ -277,8 +392,26 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
 
 
 class BagHandler:
+    """
+    Handles the process of adding plans and service items to a user's shopping bag.
+
+    This class validates the items being added, checks for their existence,
+    ensures that only one plan is selected if multiple are provided (unless
+    it's a checking context), and adds them to the Bag model instance.
+    It also handles the selection of cohort sets, event type sets, and
+    mentorship service sets if provided.
+    """
 
     def __init__(self, request: Request, bag: Bag, lang: str) -> None:
+        """
+        Initializes the BagHandler.
+
+        Args:
+            request: The Django Rest Framework request object containing data like
+                     service_items, plans, cohort_set, etc.
+            bag: The Bag instance to which items will be added.
+            lang: The language code for translations.
+        """
         self.request = request
         self.lang = lang
         self.bag = bag
@@ -295,6 +428,16 @@ class BagHandler:
         self.cohort_sets_not_found = set()
 
     def _lookups(self, value, offset=""):
+        """
+        Helper method to create lookups for filtering based on IDs or slugs.
+
+        Args:
+            value: The value to look up (either ID or slug).
+            offset: Optional prefix for key names.
+
+        Returns:
+            A tuple containing the constructed Q object and kwargs for filtering.
+        """
         args = ()
         kwargs = {}
         slug_key = f"{offset}slug__in"
@@ -321,6 +464,16 @@ class BagHandler:
         return args, kwargs
 
     def _more_than_one_generator(self, en, es):
+        """
+        Generates a ValidationException message for when more than one item of a type is selected.
+
+        Args:
+            en: The English singular name of the item (e.g., "plan").
+            es: The Spanish singular name of the item (e.g., "plan").
+
+        Returns:
+            A translated ValidationException message.
+        """
         return translation(
             self.lang,
             en=f"You can only select one {en}",
@@ -527,11 +680,53 @@ class BagHandler:
 
 
 def add_items_to_bag(request, bag: Bag, lang: str):
+    """
+    Adds items (plans, service items) from a request to a given bag.
+
+    This function instantiates a `BagHandler` and calls its `execute` method
+    to perform the addition and validation logic.
+
+    Args:
+        request: The Django Rest Framework request object.
+        bag: The Bag instance to which items will be added.
+        lang: The language code for translations.
+    """
     return BagHandler(request, bag, lang).execute()
 
 
 def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, float, float, Currency]:
+    """
+    Calculates the price of items in a bag for different periods (month, quarter, half, year).
+
+    It considers:
+    - Whether a plan should be charged based on user history.
+    - Pricing ratios based on the bag's country code.
+    - Prices of service items (add-ons) associated with the plans in the bag.
+    - Ensures all items use a consistent currency, raising an exception if not.
+
+    The function updates the bag's `pricing_ratio_explanation` and `currency`
+    if pricing ratios are applied or if the currency changes.
+
+    Args:
+        bag: The Bag instance containing plans and service items.
+        currency: The target Currency to calculate prices in.
+        lang: The language code for translations.
+
+    Returns:
+        A tuple containing:
+            - price_per_month (float)
+            - price_per_quarter (float)
+            - price_per_half (float)
+            - price_per_year (float)
+            - The final Currency object used for pricing.
+
+    Raises:
+        ValidationException: If multiple currencies are found after applying
+                             pricing ratios, indicating a configuration error.
+    """
+
     def add_currency(currency: Optional[Currency] = None):
+        """Adds a currency to the `currencies` dictionary if not already present."""
         if not currency and main_currency:
             currencies[main_currency.code.upper()] = main_currency
 
@@ -671,6 +866,22 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
 
 
 def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> float:
+    """
+    Retrieves the pre-calculated amount for a bag based on a chosen payment period.
+
+    Args:
+        bag: The Bag instance.
+        chosen_period: The chosen payment period ('MONTH', 'QUARTER', 'HALF', 'YEAR').
+        lang: The language code for translations.
+
+    Returns:
+        The amount for the specified period.
+
+    Raises:
+        ValidationException: If the chosen period is disabled or has no amount
+                             defined for the bag, but other periods do (indicating
+                             it's not a free trial scenario).
+    """
     amount = 0
 
     if chosen_period == "MONTH" and bag.amount_per_month:
@@ -703,6 +914,28 @@ def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> floa
 def get_bag_from_subscription(
     subscription: Subscription, settings: Optional[UserSetting] = None, lang: Optional[str] = None
 ) -> Bag:
+    """
+    Creates a new Bag instance based on an existing Subscription for renewal purposes.
+
+    The new bag is configured with:
+    - Status: 'RENEWAL'
+    - Type: 'CHARGE'
+    - Academy, currency, user, and plans from the subscription.
+    - `is_recurrent` set to True.
+    - `chosen_period` from the last invoice of the subscription.
+    - Amounts per period calculated based on the current plans and currency.
+
+    Args:
+        subscription: The Subscription to base the new bag on.
+        settings: Optional UserSetting for language determination.
+        lang: Optional language code.
+
+    Returns:
+        The newly created Bag instance.
+
+    Raises:
+        Exception: If the subscription has no invoices.
+    """
     bag = Bag()
 
     if not lang and not settings:
@@ -748,6 +981,25 @@ def get_bag_from_subscription(
 
 
 def get_bag_from_plan_financing(plan_financing: PlanFinancing, settings: Optional[UserSetting] = None) -> Bag:
+    """
+    Creates a new Bag instance based on an existing PlanFinancing for renewal/installment purposes.
+
+    The new bag is configured with:
+    - Status: 'RENEWAL'
+    - Type: 'CHARGE'
+    - Academy, currency, user, and plans from the plan financing.
+    - `is_recurrent` set to True.
+
+    Args:
+        plan_financing: The PlanFinancing to base the new bag on.
+        settings: Optional UserSetting for language determination.
+
+    Returns:
+        The newly created Bag instance.
+
+    Raises:
+        Exception: If the plan financing has no invoices.
+    """
     bag = Bag()
 
     if not settings:
@@ -785,6 +1037,28 @@ def filter_consumables(
     key: str,
     custom_query_key: Optional[str] = None,
 ):
+    """
+    Filters a QuerySet of Consumable items based on related resource IDs or slugs
+    provided in a WSGIRequest.
+
+    This function allows filtering consumables by IDs or slugs of related entities
+    (e.g., cohorts, event types, mentorship services) specified in GET parameters.
+
+    Args:
+        request: The WSGIRequest containing GET parameters.
+        items: The base QuerySet of Consumable items to filter.
+        queryset: The QuerySet to which filtered results will be added (using OR logic).
+        key: The base key for GET parameters (e.g., "cohort_set").
+             It expects parameters like `key=<ids>` and `key_slug=<slugs>`.
+        custom_query_key: Optional custom key to use for Django ORM lookups
+                           if different from `key`.
+
+    Returns:
+        The updated QuerySet with filtered consumables.
+
+    Raises:
+        ValidationException: If ID parameters are not integers.
+    """
 
     if ids := request.GET.get(key):
         try:
@@ -810,6 +1084,23 @@ def filter_consumables(
 
 
 def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consumable]):
+    """
+    Filters and aggregates "VOID" type Consumable items to calculate their balance.
+
+    "VOID" consumables are typically generic services not tied to specific resources
+    like cohorts or events. This function groups them by service and sums their
+    `how_many` values to provide a balance.
+
+    Args:
+        request: The WSGIRequest, used to filter by 'service' or 'service_slug'
+                 GET parameters if provided.
+        items: The base QuerySet of Consumable items.
+
+    Returns:
+        A list of dictionaries, where each dictionary represents a "VOID" service
+        and contains its ID, slug, aggregated balance, and a list of individual
+        consumable items.
+    """
     consumables = items.filter(service_item__service__type="VOID")
 
     if ids := request.GET.get("service"):
@@ -864,6 +1155,23 @@ def get_balance_by_resource(
     queryset: QuerySet[Consumable],
     key: str,
 ):
+    """
+    Calculates the balance of consumables grouped by a related resource.
+
+    Args:
+        queryset: A QuerySet of Consumable items already filtered for a specific
+                  user and potentially other criteria.
+        key: The attribute name on the Consumable model that links to the
+             resource by which to group (e.g., 'cohort_set', 'event_type_set').
+
+    Returns:
+        A list of dictionaries. Each dictionary represents a unique resource
+        (e.g., a specific CohortSet) and includes:
+        - 'id': ID of the resource.
+        - 'slug': Slug of the resource.
+        - 'balance': A dictionary of units to balance amount (or -1 for unlimited).
+        - 'items': A list of individual consumable items contributing to this balance.
+    """
     result = []
 
     ids = {getattr(x, key).id for x in queryset}
@@ -907,6 +1215,15 @@ def get_balance_by_resource(
 
 @lru_cache(maxsize=1)
 def max_coupons_allowed():
+    """
+    Retrieves the maximum number of coupons allowed to be applied,
+    based on the 'MAX_COUPONS_ALLOWED' environment variable.
+
+    Uses LRU cache for performance.
+
+    Returns:
+        int: The maximum number of coupons allowed (defaults to 1 if env var is not set or invalid).
+    """
     try:
         return int(os.getenv("MAX_COUPONS_ALLOWED", "1"))
 
@@ -915,6 +1232,24 @@ def max_coupons_allowed():
 
 
 def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> list[Coupon]:
+    """
+    Retrieves available coupons for a given plan, considering auto-applied
+    special offers and manually provided coupon slugs.
+
+    It filters coupons based on:
+    - Association with the plan (or no specific plan association).
+    - Active date range (offered_at, expires_at).
+    - `how_many_offers` (not 0, or -1 for unlimited).
+    - Auto-application status.
+    - The maximum number of coupons allowed.
+
+    Args:
+        plan: The Plan for which to find available coupons.
+        coupons: An optional list of coupon slugs provided by the user.
+
+    Returns:
+        A list of available Coupon objects.
+    """
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
         sub_kwargs = {"invoices__bag__coupons": coupon}
@@ -978,6 +1313,22 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> li
 
 
 def get_discounted_price(price: float, coupons: list[Coupon]) -> float:
+    """
+    Calculates the final price after applying a list of coupons.
+
+    Coupons are applied in two stages:
+    1. Percentage-off coupons are applied first.
+    2. Fixed-discount coupons are applied to the result of the percentage discounts.
+
+    The final price cannot be negative (it will be capped at 0).
+
+    Args:
+        price: The original price.
+        coupons: A list of Coupon objects to apply.
+
+    Returns:
+        The discounted price.
+    """
     percent_off_coupons = [x for x in coupons if x.discount_type == Coupon.Discount.PERCENT_OFF]
     fixed_discount_coupons = [
         x for x in coupons if x.discount_type not in [Coupon.Discount.NO_DISCOUNT, Coupon.Discount.PERCENT_OFF]
@@ -1001,6 +1352,29 @@ def validate_and_create_proof_of_payment(
     academy_id: int,
     lang: Optional[str] = None,
 ):
+    """
+    Validates proof of payment details and creates a ProofOfPayment record.
+
+    This function handles the creation of a `ProofOfPayment` object. If a `file_id`
+    is provided, it marks the associated `File` as 'TRANSFERRING' and schedules a
+    task (`set_proof_of_payment_confirmation_url`) to move the file to permanent
+    storage and update the `ProofOfPayment` record. If only a `reference` is
+    provided, the `ProofOfPayment` is marked as 'DONE' immediately.
+
+    Args:
+        request: The request object (can be various Django/DRF request types or a dict)
+                 containing 'provided_payment_details', 'reference', and 'file'.
+        staff_user: The staff User creating the proof of payment.
+        academy_id: The ID of the Academy associated with this payment.
+        lang: Optional language code for translations.
+
+    Returns:
+        The created ProofOfPayment object.
+
+    Raises:
+        ValidationException: If neither 'file' nor 'reference' is provided, or if
+                             an invalid 'file_id' is given.
+    """
     from .tasks import set_proof_of_payment_confirmation_url
 
     if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
@@ -1071,6 +1445,40 @@ def validate_and_create_subscriptions(
     academy_id: int,
     lang: Optional[str] = None,
 ):
+    """
+    Validates subscription details and creates PlanFinancing and related Invoice.
+
+    This function is designed for staff users to manually create a financing plan
+    for a user. It performs several validations:
+    - Checks for cohort existence if provided.
+    - Ensures exactly one plan is specified.
+    - Validates coupon format and limits.
+    - Verifies the financing option for the plan and number of installments.
+    - Validates conversion information.
+    - Checks for academy and user existence.
+    - Ensures a valid payment method is provided.
+    - Prevents creating a new financing if a valid one already exists for the user and plan.
+
+    If validations pass, it creates:
+    - A `Bag` object with status 'PAID'.
+    - An `Invoice` object linked to the bag and proof of payment.
+    - Schedules the `build_plan_financing` task to create the `PlanFinancing` record.
+
+    Args:
+        request: The request object (various types or dict) containing details like
+                 'cohorts', 'plans', 'coupons', 'conversion_info', 'user', 'payment_method'.
+        staff_user: The staff User creating the subscription.
+        proof_of_payment: The ProofOfPayment object associated with this transaction.
+        academy_id: The ID of the Academy.
+        lang: Optional language code for translations.
+
+    Returns:
+        A tuple containing the created Invoice object and the list of applied Coupon objects.
+
+    Raises:
+        ValidationException: For various validation failures (e.g., cohort not found,
+                             too many plans, invalid coupons, user already has subscription).
+    """
     if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
         data = request.data
 
@@ -1258,10 +1666,19 @@ def validate_and_create_subscriptions(
 
 
 class UnitBalance(TypedDict):
+    """
+    Represents the balance of a consumable unit.
+    Example: {"unit": 10} or {"unit": -1} for unlimited.
+    """
+
     unit: int
 
 
 class ConsumableItem(TypedDict):
+    """
+    Represents an individual consumable item contributing to a balance.
+    """
+
     id: int
     how_many: int
     unit_type: str
@@ -1269,6 +1686,11 @@ class ConsumableItem(TypedDict):
 
 
 class ResourceBalance(TypedDict):
+    """
+    Represents the balance of consumables for a specific resource
+    (e.g., a CohortSet, EventTypeSet, MentorshipServiceSet, or a VOID service).
+    """
+
     id: int
     slug: str
     balance: UnitBalance
@@ -1276,6 +1698,11 @@ class ResourceBalance(TypedDict):
 
 
 class ConsumableBalance(TypedDict):
+    """
+    A dictionary-like structure holding the balance of various types of consumables
+    for a user (mentorships, cohort access, event access, void services).
+    """
+
     mentorship_service_sets: ResourceBalance
     cohort_sets: list[ResourceBalance]
     event_type_sets: list[ResourceBalance]
@@ -1283,6 +1710,22 @@ class ConsumableBalance(TypedDict):
 
 
 def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
+    """
+    Augments a user's consumable balance with "virtual" consumables.
+
+    Virtual consumables are typically granted to users who meet certain criteria
+    (e.g., non-SaaS students up-to-date in any cohort) and are not stored
+    directly as `Consumable` model instances but are dynamically added to the
+    balance during retrieval.
+
+    This function checks if the user qualifies for virtual consumables. If so,
+    it iterates through predefined virtual consumable definitions and updates
+    the provided `balance` dictionary with these virtual items.
+
+    Args:
+        balance: The ConsumableBalance dictionary to augment.
+        user: The User for whom to set the virtual balance.
+    """
     from breathecode.admissions.actions import is_no_saas_student_up_to_date_in_any_cohort
     from breathecode.payments.data import get_virtual_consumables
 
@@ -1340,6 +1783,7 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
         unit_type: str,
         valid_until: Optional[datetime] = None,
     ):
+        """Appends or updates a virtual consumable to the balance dictionary."""
 
         index = balance_mapping[key].get(id)
 
@@ -1405,8 +1849,22 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
 
 def retry_pending_bag(bag: Bag):
     """
-    This function retries the delivery of bags that are paid but not delivered.
-    It is intended to be called periodically by a scheduler.
+    Retries the delivery process for a Bag that is 'PAID' but not yet 'delivered'.
+
+    This function is typically called by a supervisor or issue handler when a bag
+    seems stuck in the delivery process. It checks the bag's status and, if
+    appropriate, re-triggers the relevant task to build the PlanFinancing,
+    Subscription, or FreeSubscription.
+
+    Args:
+        bag: The Bag instance to retry.
+
+    Returns:
+        str: A status string indicating the outcome:
+             - "not-paid": If the bag is not in 'PAID' status.
+             - "done": If the bag was already delivered.
+             - "no-invoice": If no fulfilled invoice is found for the bag.
+             - "scheduled": If a delivery task was successfully re-queued.
     """
 
     if bag.status != Bag.Status.PAID:
@@ -1433,7 +1891,12 @@ def retry_pending_bag(bag: Bag):
 
 def get_cached_currency(code: str, cache: dict[str, Currency]) -> Currency | None:
     """
-    Get a currency from the cache by code.
+    Get a currency from the cache by code. If not found, retrieve from DB and cache it.
+    Args:
+        code: The currency code (e.g., "USD").
+        cache: A dictionary used as a cache for Currency objects.
+    Returns:
+        The Currency object if found, otherwise None.
     """
     currency = cache.get(code.upper())
     if currency is None:
@@ -1453,25 +1916,37 @@ def apply_pricing_ratio(
     """
     Apply pricing ratio to a price based on country code and object-specific overrides.
 
+    This function calculates a final price by applying pricing ratios in a specific order:
+    1.  **Object-Specific Direct Price Override:** If the `obj` (Plan, AcademyService,
+        or FinancingOption) has a direct price defined for the given `country_code`
+        and `price_attr`, that price is used. The `currency` for this override is also returned.
+    2.  **Object-Specific Ratio Override:** If the `obj` has a specific 'ratio' defined
+        for the `country_code`, that ratio is applied to the original `price`.
+        The `currency` for this override is also returned.
+    3.  **General Country Ratio:** If no object-specific overrides are found, a general
+        pricing ratio (from `GENERAL_PRICING_RATIOS` setting) for the `country_code`
+        is applied to the original `price`.
+    4.  **No Ratio:** If none of the above conditions are met, the original `price` is
+        returned.
+
     Args:
-        price (float): The original price to apply ratio to
-        country_code (Optional[str]): Two-letter country code to look up ratio for
-        obj (Optional[Union[Plan, AcademyService]]): Plan or AcademyService object that may have pricing overrides
-        price_attr (str): Attribute name to use for price override
-        lang (Optional[str]): Language to use for translations
-        cache (Optional[dict[str, Currency]]): Cache of currencies
+        price: The original price to which ratios might be applied.
+        country_code: The two-letter ISO country code (e.g., "us", "gb").
+        obj: Optional. The Plan, AcademyService, or FinancingOption instance that might
+             have specific pricing exceptions.
+        price_attr: The attribute name on `obj.pricing_ratio_exceptions[country_code]`
+                    that holds a direct price override (e.g., "price_per_month", "price").
+        lang: Optional. Language code for translations if exceptions occur.
+        cache: Optional. A dictionary to cache Currency objects for performance.
 
     Returns:
-        Tuple[float, Optional[float], Optional[Currency]]: A tuple containing:
-            - The final price after applying any ratio
-            - The ratio that was applied (None if using object's direct price override)
-            - The currency that was used for the price if it was overridden
+        A tuple containing:
+            - The final price after applying any ratio or override.
+            - The ratio that was applied (None if a direct price override was used or no ratio was applied).
+            - The Currency object if a currency override was specified, otherwise None.
 
-    The function applies pricing ratios in the following order:
-    1. If the object has a direct price override for the country, use that price and return None as ratio
-    2. If the object has a ratio override for the country, apply that ratio
-    3. If there is a general ratio defined for the country, apply that ratio
-    4. Otherwise return the original price with None as ratio
+    Raises:
+        ValidationException: If a currency specified in `pricing_ratio_exceptions` is not found.
     """
 
     if not price or not country_code:
