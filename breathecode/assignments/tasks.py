@@ -331,3 +331,85 @@ def async_calculate_telemetry_indicator(self, telemetry_id, **_: Any):
     telemetry = AssignmentTelemetry.objects.filter(id=telemetry_id).first()
     if telemetry:
         calculate_telemetry_indicator(telemetry)
+
+
+@task(bind=True, priority=TaskPriority.ACADEMY.value)
+def async_validate_flags(self, assignment_id: int, asset_id: int, **_: Any):
+    """
+    Validate CTF flags for an assignment submission.
+
+    Args:
+        assignment_id: The ID of the assignment submission
+        asset_id: The ID of the asset being validated
+    """
+    logger.info(f"Starting async_validate_flags for assignment {assignment_id} and asset {asset_id}")
+
+    from breathecode.registry.models import Asset, ValidationFlags
+    from breathecode.registry.utils import FlagManager
+
+    # Get the assignment and asset
+    assignment = Task.objects.filter(id=assignment_id).first()
+    if not assignment:
+        raise AbortTask(f"Assignment {assignment_id} not found")
+
+    asset = Asset.objects.filter(id=asset_id).first()
+    if not asset:
+        raise AbortTask(f"Asset {asset_id} not found")
+
+    # Get all validation flags for this asset
+    flags = ValidationFlags.objects.filter(asset=asset)
+    if not flags.exists():
+        logger.info(f"No validation flags found for asset {asset_id}")
+        return True
+
+    # Initialize flag manager
+    flag_manager = FlagManager()
+
+    # Get the submitted flags from the assignment
+    submitted_flags = assignment.delivery_data.get("flags", []) if assignment.delivery_data else []
+    if not submitted_flags:
+        raise AbortTask("No flags submitted in the assignment")
+
+    # Initialize flag results
+    flag_results = {"valid_flags": [], "pending_flags": [], "invalid_flags": [], "missing_flags": []}
+
+    # Validate each flag
+    for flag in flags:
+        submitted_flag = next((f for f in submitted_flags if f.get("flag_id") == str(flag.id)), None)
+
+        if not submitted_flag:
+            if flag.is_required:
+                flag_results["missing_flags"].append(
+                    {"id": flag.id, "title": flag.title, "points": flag.points, "error": "Flag not submitted"}
+                )
+            else:
+                flag_results["pending_flags"].append({"id": flag.id, "title": flag.title, "points": flag.points})
+            continue
+
+        try:
+            is_valid = flag_manager.validate_flag(submitted_flag=submitted_flag.get("value"), machine_seed=str(flag.id))
+
+            if is_valid:
+                flag_results["valid_flags"].append({"id": flag.id, "title": flag.title, "points": flag.points})
+            else:
+                flag_results["invalid_flags"].append(
+                    {"id": flag.id, "title": flag.title, "points": flag.points, "error": "Invalid flag value"}
+                )
+
+        except Exception as e:
+            logger.error(f"Error validating flag {flag.id}: {str(e)}")
+            flag_results["invalid_flags"].append(
+                {"id": flag.id, "title": flag.title, "points": flag.points, "error": str(e)}
+            )
+
+    # Update assignment with flag results
+    assignment.flags = flag_results
+
+    # If all required flags are validated, mark the assignment as done
+    if not flag_results["missing_flags"] and not flag_results["invalid_flags"]:
+        assignment.task_status = "DONE"
+
+    assignment.save()
+
+    logger.info(f"Flag validation completed for assignment {assignment_id}")
+    return True
