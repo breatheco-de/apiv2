@@ -1910,6 +1910,18 @@ def pick_password(request, token):
                     if "heading" not in obj:
                         obj["heading"] = invite.academy.name
 
+                # Determine app_url from invite's conversion_info if available
+                app_url = os.getenv("APP_URL", "https://4geeks.com")
+                if invite and invite.conversion_info and isinstance(invite.conversion_info, dict):
+                    landing_url = invite.conversion_info.get("landing_url")
+                    if landing_url:
+                        try:
+                            parsed_url = urlparse(landing_url)
+                            app_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                        except Exception:
+                            # If any error parsing URL, fallback to default app_url
+                            pass
+
                 return shortcuts.render(
                     request,
                     "message.html",
@@ -1917,7 +1929,7 @@ def pick_password(request, token):
                         "MESSAGE": "You password has been successfully set.",
                         "BUTTON": "Continue to sign in",
                         "BUTTON_TARGET": "_self",
-                        "LINK": os.getenv("APP_URL", "https://4geeks.com") + "/login",
+                        "LINK": app_url + "/login",
                         **obj,
                     },
                 )
