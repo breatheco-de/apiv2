@@ -692,22 +692,31 @@ class Migration(migrations.Migration):
             name="PaymentContact",
             fields=[
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
-                ("stripe_id", models.CharField(help_text="Stripe id", max_length=20)),
+                (
+                    "stripe_id",
+                    models.CharField(
+                        help_text="The Stripe Customer ID (e.g., cus_xxxxxxxxxxxxxx). This links the user to their record in Stripe.",
+                        max_length=255,
+                    ),
+                ),
                 (
                     "user",
-                    models.OneToOneField(
-                        help_text="Customer",
+                    models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="payment_contact",
+                        related_name="payment_contacts",
                         to=settings.AUTH_USER_MODEL,
+                        help_text="The Django User associated with this Stripe contact.",
                     ),
                 ),
                 (
                     "academy",
                     models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        help_text="The Academy associated with this Stripe contact. If null, the contact is typically managed under a default/central Stripe account. This determines which Stripe account the customer belongs to.",
+                        null=True,
                         on_delete=django.db.models.deletion.CASCADE,
                         to="admissions.academy",
-                        help_text="The Academy associated with this Stripe contact. If null, the contact is typically managed under a default/central Stripe account. This determines which Stripe account the customer belongs to.",
                     ),
                 ),
             ],
