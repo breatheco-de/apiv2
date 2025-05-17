@@ -837,6 +837,50 @@ class EventTypeSetTranslation(models.Model):
 
 
 class AcademyService(models.Model):
+    """
+    Defines how a specific `Service` is offered and priced by an `Academy`.
+
+    This model acts as a bridge between a generic `Service` (e.g., "Mentorship Session")
+    and its concrete offering by a particular `Academy`. It specifies the pricing
+    per unit, any bundling rules (bundle_size), maximum purchase limits (max_items, max_amount),
+    discount ratios for bulk purchases, and any country-specific pricing exceptions
+    (`pricing_ratio_exceptions`).
+
+    It can also link to specific sets of resources that are part of this academy-specific
+    service offering, such as available `MentorshipServiceSet`s, `EventTypeSet`s,
+    or `CohortSet`s. This allows, for example, an academy to offer "Mentorship Pack A"
+    which uses the generic "Mentorship Session" service but is tied to a specific
+    set of mentors or topics defined in a `MentorshipServiceSet`.
+
+    Attributes:
+        academy (ForeignKey): The `Academy` offering this specific service configuration.
+        currency (ForeignKey): The `Currency` in which `price_per_unit` and `max_amount`
+                               are denominated.
+        service (OneToOneField): The generic `Service` being configured by this `AcademyService`.
+                                 The OneToOneField implies that an `Academy` can have only
+                                 one `AcademyService` configuration per generic `Service`.
+        price_per_unit (FloatField): The base price for a single unit of the service at this academy.
+        bundle_size (FloatField): The minimum number of units a user must purchase at once.
+                                  This can be used to offer discounts for larger bundles.
+                                  For example, if `bundle_size` is 5, users buy in multiples of 5.
+        max_items (FloatField): The maximum number of individual service items (not bundles)
+                                that can be purchased in a single transaction or hold at a time
+                                (depending on consumption logic).
+        max_amount (FloatField): The maximum total monetary value that can be purchased in a
+                                 single transaction or represent as a balance for this service.
+        discount_ratio (FloatField): A ratio (e.g., 0.9 for a 10% discount) applied when
+                                     calculating the final price, often used in conjunction
+                                     with `bundle_size` for volume discounts.
+        pricing_ratio_exceptions (JSONField): A dictionary to define country-specific pricing.
+                                              Overrides general pricing rules for specific countries.
+                                              Example: `{"us": {"price_per_unit": 10, "currency": "USD"}, "gb": {"ratio": 0.8}}`
+        available_mentorship_service_sets (ManyToManyField): Specific `MentorshipServiceSet`s
+                                                              associated with this academy's
+                                                              offering of the service.
+        available_event_type_sets (ManyToManyField): Specific `EventTypeSet`s associated.
+        available_cohort_sets (ManyToManyField): Specific `CohortSet`s associated.
+    """
+
     _price: float | None = None
     _max_amount: float | None = None
     _currency: Currency | None = None
@@ -879,36 +923,31 @@ class AcademyService(models.Model):
 
     def __str__(self) -> str:
         """
-        Returns a string representation of the AcademyService.
-
-        Returns:
-            str: Formatted as "AcademySlug -> ServiceSlug".
+        Returns a string representation of the AcademyService, typically showing
+        the academy name and the service title/slug.
         """
-        return f"{self.academy.slug} -> {self.service.slug}"
+        return f"{self.academy.name} - {self.service.title or self.service.slug}"
 
     def validate_transaction(
         self, total_items: float, lang: Optional[str] = "en", country_code: Optional[str] = None
     ) -> None:
         """
-        Validates a potential transaction (purchase) of this service.
-
-        Checks:
-        - If `total_items` meets the `bundle_size` requirement.
-        - If `total_items` exceeds `max_items`.
-        - If the calculated discounted price exceeds `max_amount` (considering country code).
-
-        If validation passes, it caches the calculated `amount`, `currency`, and
-        `pricing_ratio_explanation` in `self._price`, `self._currency`, and
-        `self._pricing_ratio_explanation` respectively for potential later use.
+        Validates if a requested number of items can be purchased based on bundle size,
+        maximum item limits, and maximum total amount.
 
         Args:
-            total_items: The number of units being purchased.
+            total_items: The total number of individual service items the user wants to purchase.
             lang: Language code for error messages.
-            country_code: Optional ISO country code for country-specific pricing.
+            country_code: Optional country code for applying pricing ratios to `max_amount`.
 
         Raises:
-            ValidationException: If any validation check fails.
+            ValidationException:
+                - If `total_items` is not a multiple of `bundle_size`.
+                - If `total_items` exceeds `max_items`.
+                - If the calculated total price for `total_items` exceeds `max_amount`.
         """
+
+        # can't buy less than bundle_size
         if total_items < self.bundle_size:
             raise ValidationException(
                 translation(
@@ -951,17 +990,20 @@ class AcademyService(models.Model):
 
     def get_max_amount(self, country_code: Optional[str] = None) -> float:
         """
-        Gets the maximum allowable purchase amount for this service, considering country-specific overrides.
+        Calculates the maximum purchase amount allowed for this service, considering
+        country-specific pricing ratios if applicable.
 
-        If `self._max_amount` is cached, it's returned. Otherwise, it checks
-        `pricing_ratio_exceptions` for a `max_amount` specific to the `country_code`.
-        If no override is found, the default `self.max_amount` is used.
+        It uses the `apply_pricing_ratio` utility to adjust `self.max_amount` based
+        on the `country_code` and any `pricing_ratio_exceptions` defined on this
+        `AcademyService` instance.
 
         Args:
-            country_code: Optional ISO country code.
+            country_code: Optional. The two-letter ISO country code for which to
+                          calculate the maximum amount. If None, or if no specific
+                          ratio applies, the base `self.max_amount` is used.
 
         Returns:
-            float: The maximum purchase amount.
+            The maximum purchase amount, potentially adjusted for the given country.
         """
         if self._max_amount is not None:
             return self._max_amount
@@ -972,29 +1014,31 @@ class AcademyService(models.Model):
         self, num_items: float, country_code: Optional[str] = None, lang: Optional[str] = "en"
     ) -> tuple[float, Currency, dict]:
         """
-        Calculates the discounted price for a given number of items, considering bundling and country-specific ratios.
+        Calculates the price for a given number of items, applying bundle discounts
+        and country-specific pricing ratios.
 
-        The discount logic involves:
-        1. Applying a tiered discount based on how many full `bundle_size` are being purchased.
-           The `discount_ratio` is applied iteratively, with a `discount_nerf` reducing its
-           effectiveness for subsequent bundles, up to a `max_discount`.
-        2. Applying country-specific `pricing_ratio_exceptions` to the `price_per_unit` before
-           calculating the total and applying the bundle discount.
-
-        If `self._price`, `self._currency`, and `self._pricing_ratio_explanation` are cached
-        (likely from a previous `validate_transaction` call for the same parameters),
-        those cached values are returned.
+        The logic is:
+        1. Determine the number of bundles based on `num_items` and `self.bundle_size`.
+        2. Calculate the price per bundle by multiplying `self.price_per_unit` by `self.bundle_size`.
+        3. Apply `self.discount_ratio` to the price per bundle.
+        4. Apply country-specific pricing ratios (from `self.pricing_ratio_exceptions` or
+           general settings) to the discounted price per bundle using `apply_pricing_ratio`.
+        5. Multiply the final price per bundle by the number of bundles to get the total price.
 
         Args:
-            num_items: The number of service items being purchased.
-            country_code: Optional ISO country code for country-specific pricing.
-            lang: Language code for potential error messages from `apply_pricing_ratio`.
+            num_items: The total number of individual service items being priced.
+            country_code: Optional. The two-letter ISO country code for regional pricing.
+            lang: Optional. Language code for translations in `apply_pricing_ratio`.
 
         Returns:
-            tuple[float, Currency, dict]:
-                - The final discounted price.
-                - The `Currency` used for the calculation.
-                - A dictionary explaining any applied pricing ratios.
+            A tuple containing:
+                - The final total price for `num_items`.
+                - The `Currency` object used for the final price.
+                - A dictionary explaining any pricing ratios applied (`pricing_ratio_explanation`).
+
+        Raises:
+            ValidationException: If `num_items` is not a multiple of `bundle_size` (though
+                                 this should ideally be caught by `validate_transaction`).
         """
         from breathecode.payments.actions import apply_pricing_ratio
 
@@ -1031,15 +1075,17 @@ class AcademyService(models.Model):
 
     def clean(self) -> None:
         """
-        Performs model-level validation.
+        Performs model validation before saving.
 
-        Checks:
-        - Ensures that only one type of available set (mentorship, event, or cohort) is linked.
-        - If the service type requires integer quantities (MENTORSHIP_SERVICE_SET, EVENT_TYPE_SET),
-          ensures `bundle_size` and `max_items` are integers.
+        Ensures that:
+        - `price_per_unit` is not negative.
+        - `bundle_size`, `max_items`, `max_amount` are positive.
+        - `discount_ratio` is between 0 and 1 (inclusive).
+        - If `pricing_ratio_exceptions` are defined, they are a dictionary.
+        - If a currency is specified in `pricing_ratio_exceptions`, it exists.
 
         Raises:
-            forms.ValidationError: If validation fails.
+            ValidationError: If any validation rule is violated.
         """
         if (
             self.id
@@ -1068,11 +1114,7 @@ class AcademyService(models.Model):
 
     def save(self, *args, **kwargs) -> None:
         """
-        Saves the AcademyService instance.
-
-        Performs full cleaning before saving and resets any cached price/amount information
-        (`_price`, `_max_amount`, `_currency`, `_pricing_ratio_explanation`) to ensure
-        stale data isn't used.
+        Overrides the default save method to ensure `clean()` is called.
         """
         self.full_clean()
         self._price = None
@@ -2317,30 +2359,39 @@ class SubscriptionServiceItem(models.Model):
 
 class Consumable(AbstractServiceItem):
     """
-    Represents a consumable service item that users can have a stock of (e.g., mentorship sessions,
-    build minutes, AI credits).
+    Represents a specific instance of a service item granted to a user, forming their "stock"
+    of that service. For example, if a user buys 5 mentorship sessions, they would have
+    one or more `Consumable` instances totaling 5 units.
 
-    Consumables are associated with a `Service` and an `Academy`. They can have a type
-    (e.g., DURATION, UNIT_BASED) and can optionally be linked to specific resources like
-    `CohortSet`s, `MentorshipServiceSet`s, or `EventTypeSet`s. This allows tracking
-    consumption against particular offerings.
+    `Consumable`s are linked to a `ServiceItem` (which defines the type of service and
+    its properties like renewability) and a `User`. They specify `how_many` units the user
+    possesses for this instance and until when (`valid_until`) they can be used.
 
-    Inherits from `AbstractServiceItem` for `unit_type` and `how_many` (which here likely
-    represents the default or initial quantity when granted, though actual stock is in
-    `ServiceStockScheduler`).
+    They can also be tied to specific resources like a `CohortSet`, `EventTypeSet`, or
+    `MentorshipServiceSet` if the service grant is restricted to those. For example,
+    "5 mentorship sessions for Cohort X".
+
+    Inherits from `AbstractServiceItem` for `unit_type`, `how_many` (representing the
+    quantity in this specific grant), and `sort_priority`.
+
+    Static methods like `list()` and `get()` provide convenient ways to query a user's
+    consumables based on various criteria.
 
     Attributes:
-        service (ForeignKey): The generic `Service` this consumable is for.
-        academy (ForeignKey): The `Academy` offering or managing this consumable. Can be null
-                              if it's a globally defined consumable.
-        cohort_set (ForeignKey): Optional `CohortSet` this consumable is specifically for.
-        event_type_set (ForeignKey): Optional `EventTypeSet` this consumable is for.
-        mentorship_service_set (ForeignKey): Optional `MentorshipServiceSet` this consumable is for.
-        group_name (CharField): An optional name to group different consumables. Useful for UIs
-                                or for aggregating usage across similar types of consumables
-                                (e.g., "Mentoring Hours" vs "Advanced Mentoring Hours").
-        max_amount_to_purchase (IntegerField): Maximum quantity a user can purchase at once
-                                               if this consumable is directly buyable.
+        service_item (ForeignKey): The `ServiceItem` template from which this consumable
+                                   instance was created or is based. This link provides
+                                   details about the nature of the service.
+        user (ForeignKey): The `User` who owns this stock of consumables.
+        cohort_set (ForeignKey): Optional. If this consumable grant is specific to a
+                                 `CohortSet`, this field links to it.
+        event_type_set (ForeignKey): Optional. If specific to an `EventTypeSet`.
+        mentorship_service_set (ForeignKey): Optional. If specific to a `MentorshipServiceSet`.
+        valid_until (DateTimeField): The date and time when this specific grant of
+                                     consumables expires. Can be null for non-expiring
+                                     consumables or those whose expiry is managed differently.
+                                     Indexed for performance.
+        created_at (DateTimeField): Timestamp of creation.
+        updated_at (DateTimeField): Timestamp of last update.
     """
 
     service_item = models.ForeignKey(
@@ -2554,6 +2605,47 @@ class Consumable(AbstractServiceItem):
 
 
 class ConsumptionSession(models.Model):
+    """
+    Tracks an instance of a user consuming a service, acting as a reservation or a record
+    of use. For example, when a user books a mentorship session, a `ConsumptionSession`
+    is created.
+
+    It links a `Consumable` (the user's stock) to a specific consumption event.
+    Key attributes include the `status` (PENDING, DONE, CANCELLED), the estimated time
+    of arrival (`eta`) for the consumption, the `duration`, and `how_many` units
+    are being consumed in this session.
+
+    The `request` and `path` fields can store details about the HTTP request that initiated
+    the consumption, allowing for session recovery or auditing. `related_id` and
+    `related_slug` can link to other relevant models (e.g., the ID of a `MentorshipSession`
+    or an `Event`).
+
+    Static methods `build_session` and `get_session` provide helpers for creating
+    and retrieving sessions based on request data. The `will_consume` method
+    is used to mark the session as 'DONE' and trigger the actual deduction of
+    consumable units.
+
+    Attributes:
+        operation_code (SlugField): A code to identify the type of operation that
+                                    triggered this consumption (e.g., "mentorship-booking",
+                                    "event-check-in"). Defaults to "default".
+        consumable (ForeignKey): The `Consumable` instance from which units are being consumed.
+        user (ForeignKey): The `User` consuming the service.
+        eta (DateTimeField): Estimated Time of Arrival/start for the consumption event.
+        duration (DurationField): The duration of this consumption session.
+        how_many (FloatField): The number of units of the `Consumable` being used in this session.
+        status (CharField): The current status of the session (PENDING, DONE, CANCELLED).
+        was_discounted (BooleanField): True if the `Consumable` units for this session have
+                                       been successfully deducted.
+        request (JSONField): Stores the request parameters (e.g., GET/POST data) that
+                             initiated this session, useful for recovery or context.
+        path (CharField): The request path (URL) that initiated this session.
+        related_id (IntegerField): Optional ID of a related model (e.g., `MentorshipSession.id`).
+        related_slug (CharField): Optional slug of a related model.
+        created_at (DateTimeField): Timestamp of creation.
+        updated_at (DateTimeField): Timestamp of last update.
+    """
+
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         DONE = "DONE", "Done"
@@ -2766,7 +2858,33 @@ class PlanServiceItem(models.Model):
 
 
 class PlanServiceItemHandler(models.Model):
-    """M2M between plan and ServiceItem."""
+    """
+    Acts as an intermediary linking a `PlanServiceItem` to a specific active financial
+    agreement, which can be either a `Subscription` or a `PlanFinancing`.
+
+    When a user acquires a plan (either through a subscription or a financing arrangement),
+    this model creates instances that signify: "this user, via this specific subscription
+    (or plan financing), has access to this particular service item as defined in the plan."
+
+    This linkage is crucial for the `ServiceStockScheduler`. The scheduler needs to
+    know which `Subscription` or `PlanFinancing` is the source of the service item grant
+    to correctly manage its renewal cycle and validity period, tying it directly to
+    that financial agreement.
+
+    A `PlanServiceItemHandler` instance must be associated with *either* a `Subscription`
+    *or* a `PlanFinancing`, but never both, to maintain a clear line of service provision.
+
+    Attributes:
+        handler (ForeignKey): The `PlanServiceItem` that defines the service item itself
+                              and its inclusion in a `Plan`. This specifies *what* service
+                              item is being granted.
+        subscription (ForeignKey): Optional. The `Subscription` through which the user
+                                   is receiving this plan service item. This field is null
+                                   if the service item is granted via a `PlanFinancing`.
+        plan_financing (ForeignKey): Optional. The `PlanFinancing` through which the user
+                                     is receiving this plan service item. This field is null
+                                     if the service item is granted via a `Subscription`.
+    """
 
     handler = models.ForeignKey(PlanServiceItem, on_delete=models.CASCADE, help_text="Plan service item")
 
@@ -2796,7 +2914,19 @@ class PlanServiceItemHandler(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
-        return str(self.subscription or self.plan_financing or "Unset")
+        """
+        Returns a string representation of the PlanServiceItemHandler.
+
+        The representation aims to clearly identify the link, showing whether it's
+        tied to a Subscription or PlanFinancing, and referencing the handler ID.
+        Example: "PlanServiceItemHandler 1 (Subscription: 5)" or
+                 "PlanServiceItemHandler 1 (PlanFinancing: 3)".
+        """
+        if self.subscription:
+            return f"PlanServiceItemHandler {self.id} (Subscription: {self.subscription.id})"
+        if self.plan_financing:
+            return f"PlanServiceItemHandler {self.id} (PlanFinancing: {self.plan_financing.id})"
+        return f"PlanServiceItemHandler {self.id} (Unlinked)"
 
 
 class ServiceStockScheduler(models.Model):
@@ -2935,9 +3065,28 @@ REPUTATION_STATUS = [
 
 class FinancialReputation(models.Model):
     """
-    Store the reputation of a user.
+    Stores and evaluates the financial reputation of a user based on internal
+    assessments (e.g., payment history within 4Geeks) and external data
+    (e.g., from Stripe).
 
-    If the user has a bad reputation, the user will not be able to buy services.
+    A user's financial reputation can influence their ability to access certain
+    services or payment methods. For instance, a 'FRAUD' or 'BAD' reputation
+    might lead to restrictions. The `get_reputation` method provides a consolidated
+    view of the user's standing by taking the more severe status if internal and
+    external reputations differ.
+
+    Attributes:
+        user (OneToOneField): The `User` whose financial reputation is being tracked.
+                              The OneToOneField ensures each user has at most one
+                              FinancialReputation record.
+        in_4geeks (CharField): The user's reputation status as determined by internal
+                               4Geeks systems. Values are from `REPUTATION_STATUS`
+                               (GOOD, BAD, FRAUD, UNKNOWN).
+        in_stripe (CharField): The user's reputation status as indicated by Stripe,
+                               potentially based on dispute history or risk assessments.
+                               Values are from `REPUTATION_STATUS`.
+        created_at (DateTimeField): Timestamp indicating when the reputation record was created.
+        updated_at (DateTimeField): Timestamp of the last update to the reputation record.
     """
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="reputation", help_text="Customer")
@@ -2949,7 +3098,16 @@ class FinancialReputation(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def get_reputation(self):
-        """Get the worst reputation available made by an user."""
+        """
+        Determines the overall financial reputation of the user by comparing
+        internal (`in_4geeks`) and Stripe-based (`in_stripe`) assessments.
+
+        It returns the more severe status if they differ. The hierarchy of severity is:
+        FRAUD (most severe) > BAD > GOOD > UNKNOWN (least severe or default).
+
+        Returns:
+            str: The user's consolidated financial reputation status (GOOD, BAD, FRAUD, or UNKNOWN).
+        """
 
         if self.in_4geeks == FRAUD or self.in_stripe == FRAUD:
             return FRAUD
@@ -2963,12 +3121,37 @@ class FinancialReputation(models.Model):
         return UNKNOWN
 
     def __str__(self) -> str:
+        """
+        Returns a string representation of the FinancialReputation, displaying
+        the user's email and their determined overall reputation status.
+        Example: "user@example.com -> GOOD".
+        """
         return f"{self.user.email} -> {self.get_reputation()}"
 
 
 class AcademyPaymentSettings(models.Model):
     """
-    Store payment settings for an academy.
+    Configures and stores payment-related settings specifically for an `Academy`.
+
+    This model enables each academy to define its preferred Point of Sale (POS)
+    vendor (e.g., Stripe) and to store the necessary API keys or other credentials
+    required to integrate with that vendor. This allows the system to process
+    payments or manage payment-related operations correctly on behalf of the academy,
+    using its designated payment gateway.
+
+    Attributes:
+        academy (OneToOneField): The `Academy` to which these payment settings apply.
+                                 The OneToOneField ensures each academy has its own
+                                 distinct set of payment settings.
+        pos_vendor (CharField): The chosen Point of Sale vendor for the academy.
+                                Currently, this is typically 'STRIPE', as defined in
+                                `AcademyPaymentSettings.POSVendor`.
+        pos_api_key (CharField): The API key associated with the selected `pos_vendor`
+                                 for this academy. This key is essential for authenticating
+                                 API requests to the payment gateway and should be stored
+                                 securely.
+        created_at (DateTimeField): Timestamp indicating when these settings were first created.
+        updated_at (DateTimeField): Timestamp of the last modification to these settings.
     """
 
     class POSVendor(models.TextChoices):
@@ -2989,4 +3172,9 @@ class AcademyPaymentSettings(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self) -> str:
-        return f"Payment settings for {self.academy.name}"
+        """
+        Returns a string representation of the AcademyPaymentSettings,
+        typically showing the academy name and the configured POS vendor.
+        Example: "My Academy - STRIPE".
+        """
+        return f"{self.academy.name} - {self.pos_vendor}"
