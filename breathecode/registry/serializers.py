@@ -326,6 +326,7 @@ class AcademyAssetSerializer(AssetSerializer):
 
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
+    config = UserSerializer(required=False)
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -733,7 +734,7 @@ class PostAcademyAssetSerializer(serializers.ModelSerializer):
             readme_raw = validated_data["readme_raw"]
 
         try:
-            return super(PostAssetSerializer, self).create(
+            return super(PostAcademyAssetSerializer, self).create(
                 {**validated_data, "academy": academy, "readme_raw": readme_raw}
             )
         except Exception as e:
