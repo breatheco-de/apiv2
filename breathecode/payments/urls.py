@@ -22,6 +22,7 @@ from .views import (
     CouponView,
     EventTypeSetView,
     MeConsumableView,
+    MeCouponView,
     MeInvoiceView,
     MentorshipServiceSetView,
     MeSubscriptionCancelView,
@@ -81,6 +82,7 @@ urlpatterns = [
     path("academy/invoice", AcademyInvoiceView.as_view()),
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view()),
     path("coupon", CouponView.as_view(), name="coupon"),
+    path("me/coupon", MeCouponView.as_view(), name="me_coupon"),
     path(
         "me/service/blocked",
         ServiceBlocked.as_view(),

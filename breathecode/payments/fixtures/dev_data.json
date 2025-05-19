@@ -1,0 +1,507 @@
+[
+  {
+    "model": "payments.currency",
+    "pk": 1,
+    "fields": {
+      "code": "USD",
+      "name": "US Dollar",
+      "decimals": 2
+    }
+  },
+  {
+    "model": "payments.currency",
+    "pk": 2,
+    "fields": {
+      "code": "EUR",
+      "name": "Euro",
+      "decimals": 2
+    }
+  },
+  {
+    "model": "payments.service",
+    "pk": 1,
+    "fields": {
+      "slug": "coding-introduction",
+      "title": "Coding Introduction",
+      "owner": 1,
+      "private": false,
+      "trial_duration": 7,
+      "trial_duration_unit": "DAY",
+      "icon_url": "https://example.com/icon.png",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z",
+      "type": "COHORT_SET",
+      "consumer": "NO_SET",
+      "session_duration": null
+    }
+  },
+  {
+    "model": "payments.service",
+    "pk": 2,
+    "fields": {
+      "slug": "mentorship-basic",
+      "title": "Mentorship Basic",
+      "owner": 1,
+      "private": false,
+      "trial_duration": 7,
+      "trial_duration_unit": "DAY",
+      "icon_url": "https://example.com/icon2.png",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z",
+      "type": "MENTORSHIP_SERVICE_SET",
+      "consumer": "JOIN_MENTORSHIP",
+      "session_duration": "01:00:00"
+    }
+  },
+  {
+    "model": "payments.servicetranslation",
+    "pk": 1,
+    "fields": {
+      "service": 1,
+      "lang": "en-US",
+      "title": "Coding Introduction",
+      "description": "Learn the basics of coding"
+    }
+  },
+  {
+    "model": "payments.servicetranslation",
+    "pk": 2,
+    "fields": {
+      "service": 1,
+      "lang": "es-ES",
+      "title": "Introducción a la Programación",
+      "description": "Aprende los fundamentos de la programación"
+    }
+  },
+  {
+    "model": "payments.serviceitem",
+    "pk": 1,
+    "fields": {
+      "unit_type": "UNIT",
+      "how_many": 10,
+      "sort_priority": 1,
+      "service": 1,
+      "is_renewable": true,
+      "renew_at": 1,
+      "renew_at_unit": "MONTH"
+    }
+  },
+  {
+    "model": "payments.serviceitem",
+    "pk": 2,
+    "fields": {
+      "unit_type": "UNIT",
+      "how_many": 5,
+      "sort_priority": 2,
+      "service": 2,
+      "is_renewable": true,
+      "renew_at": 1,
+      "renew_at_unit": "MONTH"
+    }
+  },
+  {
+    "model": "payments.serviceitemfeature",
+    "pk": 1,
+    "fields": {
+      "service_item": 1,
+      "lang": "en-US",
+      "title": "Code Reviews",
+      "description": "Get your code reviewed by expert developers",
+      "one_line_desc": "Expert code reviews"
+    }
+  },
+  {
+    "model": "payments.financingoption",
+    "pk": 1,
+    "fields": {
+      "monthly_price": 99.99,
+      "currency": 1,
+      "pricing_ratio_exceptions": {},
+      "how_many_months": 12
+    }
+  },
+  {
+    "model": "payments.cohortset",
+    "pk": 1,
+    "fields": {
+      "slug": "full-stack-bootcamp",
+      "academy": 1
+    }
+  },
+  {
+    "model": "payments.cohortsettranslation",
+    "pk": 1,
+    "fields": {
+      "cohort_set": 1,
+      "lang": "en-US",
+      "title": "Full-Stack Web Development",
+      "description": "Become a full-stack web developer with this comprehensive bootcamp",
+      "short_description": "Learn full-stack web development"
+    }
+  },
+  {
+    "model": "payments.cohortsetcohort",
+    "pk": 1,
+    "fields": {
+      "cohort_set": 1,
+      "cohort": 1
+    }
+  },
+  {
+    "model": "payments.mentorshipserviceset",
+    "pk": 1,
+    "fields": {
+      "slug": "career-support",
+      "academy": 1
+    }
+  },
+  {
+    "model": "payments.mentorshipservicesettranslation",
+    "pk": 1,
+    "fields": {
+      "mentorship_service_set": 1,
+      "lang": "en-US",
+      "title": "Career Support",
+      "description": "Get support for your coding career from experienced mentors",
+      "short_description": "Professional career guidance"
+    }
+  },
+  {
+    "model": "payments.eventtypeset",
+    "pk": 1,
+    "fields": {
+      "slug": "workshops",
+      "academy": 1
+    }
+  },
+  {
+    "model": "payments.eventtypesettranslation",
+    "pk": 1,
+    "fields": {
+      "event_type_set": 1,
+      "lang": "en-US",
+      "title": "Coding Workshops",
+      "description": "Hands-on workshops to improve your coding skills",
+      "short_description": "Interactive coding workshops"
+    }
+  },
+  {
+    "model": "payments.academyservice",
+    "pk": 1,
+    "fields": {
+      "academy": 1,
+      "currency": 1,
+      "service": 1,
+      "price_per_unit": 19.99,
+      "bundle_size": 1,
+      "max_items": 20,
+      "max_amount": 399.80,
+      "discount_ratio": 0.9,
+      "pricing_ratio_exceptions": {}
+    }
+  },
+  {
+    "model": "payments.plan",
+    "pk": 1,
+    "fields": {
+      "price_per_month": 199.99,
+      "price_per_quarter": 549.99,
+      "price_per_half": 999.99,
+      "price_per_year": 1899.99,
+      "currency": 1,
+      "slug": "premium-bootcamp",
+      "is_renewable": true,
+      "status": "ACTIVE",
+      "time_of_life": null,
+      "time_of_life_unit": null,
+      "trial_duration": 7,
+      "trial_duration_unit": "DAY",
+      "owner": 1,
+      "is_onboarding": false,
+      "has_waiting_list": false,
+      "pricing_ratio_exceptions": {},
+      "cohort_set": 1,
+      "mentorship_service_set": null,
+      "event_type_set": null
+    }
+  },
+  {
+    "model": "payments.plantranslation",
+    "pk": 1,
+    "fields": {
+      "plan": 1,
+      "lang": "en-US",
+      "title": "Premium Bootcamp",
+      "description": "Our premium coding bootcamp with all features included"
+    }
+  },
+  {
+    "model": "payments.planoffer",
+    "pk": 1,
+    "fields": {
+      "original_plan": 1,
+      "suggested_plan": 1,
+      "show_modal": true,
+      "expires_at": "2023-12-31T23:59:59Z"
+    }
+  },
+  {
+    "model": "payments.planoffertranslation",
+    "pk": 1,
+    "fields": {
+      "offer": 1,
+      "lang": "en-US",
+      "title": "Special Discount",
+      "description": "Get a special discount on our premium bootcamp",
+      "short_description": "Limited time offer"
+    }
+  },
+  {
+    "model": "payments.seller",
+    "pk": 1,
+    "fields": {
+      "name": "John Doe",
+      "user": 1,
+      "type": "INDIVIDUAL",
+      "is_active": true
+    }
+  },
+  {
+    "model": "payments.coupon",
+    "pk": 1,
+    "fields": {
+      "slug": "welcome10",
+      "discount_type": "PERCENT_OFF",
+      "discount_value": 0.1,
+      "referral_type": "NO_REFERRAL",
+      "referral_value": 0,
+      "auto": false,
+      "how_many_offers": 100,
+      "seller": 1,
+      "offered_at": "2023-01-01T00:00:00Z",
+      "expires_at": "2023-12-31T23:59:59Z",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "payments.bag",
+    "pk": 1,
+    "fields": {
+      "amount_per_month": 199.99,
+      "amount_per_quarter": 549.99,
+      "amount_per_half": 999.99,
+      "amount_per_year": 1899.99,
+      "currency": 1,
+      "status": "PAID",
+      "type": "BAG",
+      "chosen_period": "MONTH",
+      "how_many_installments": 1,
+      "academy": 1,
+      "user": 1,
+      "is_recurrent": true,
+      "was_delivered": true,
+      "pricing_ratio_explanation": {"plans": [], "service_items": []},
+      "token": null,
+      "expires_at": null,
+      "country_code": "US",
+      "created_at": "2023-01-15T00:00:00Z",
+      "updated_at": "2023-01-15T00:00:00Z"
+    }
+  },
+  {
+    "model": "payments.paymentmethod",
+    "pk": 1,
+    "fields": {
+      "academy": 1,
+      "title": "Credit Card",
+      "currency": 1,
+      "is_credit_card": true,
+      "description": "Pay using your credit card",
+      "third_party_link": null,
+      "lang": "en-US",
+      "included_country_codes": "US,CA"
+    }
+  },
+  {
+    "model": "payments.proofofpayment",
+    "pk": 1,
+    "fields": {
+      "provided_payment_details": "Payment made via bank transfer",
+      "confirmation_image_url": null,
+      "reference": "REF123456",
+      "status": "DONE",
+      "created_by": 1,
+      "created_at": "2023-01-20T10:00:00Z",
+      "updated_at": "2023-01-20T10:00:00Z"
+    }
+  },
+  {
+    "model": "payments.invoice",
+    "pk": 1,
+    "fields": {
+      "amount": 199.99,
+      "currency": 1,
+      "paid_at": "2023-01-15T10:30:00Z",
+      "refunded_at": null,
+      "status": "FULFILLED",
+      "bag": 1,
+      "externally_managed": false,
+      "proof": null,
+      "payment_method": null,
+      "stripe_id": "ch_1234567890abcdef",
+      "refund_stripe_id": null,
+      "user": 1,
+      "academy": 1,
+      "created_at": "2023-01-15T10:30:00Z",
+      "updated_at": "2023-01-15T10:30:00Z"
+    }
+  },
+  {
+    "model": "payments.planfinancing",
+    "pk": 1,
+    "fields": {
+      "status": "ACTIVE",
+      "status_message": null,
+      "user": 1,
+      "academy": 1,
+      "externally_managed": false,
+      "selected_cohort_set": 1,
+      "selected_mentorship_service_set": null,
+      "selected_event_type_set": null,
+      "conversion_info": null,
+      "country_code": "US",
+      "created_at": "2023-01-16T00:00:00Z",
+      "updated_at": "2023-01-16T00:00:00Z",
+      "next_payment_at": "2023-02-15T00:00:00Z",
+      "valid_until": "2024-01-15T00:00:00Z",
+      "plan_expires_at": "2024-01-15T00:00:00Z",
+      "monthly_price": 199.99,
+      "currency": 1,
+      "how_many_installments": 12
+    }
+  },
+  {
+    "model": "payments.subscription",
+    "pk": 1,
+    "fields": {
+      "status": "ACTIVE",
+      "status_message": null,
+      "user": 1,
+      "academy": 1,
+      "externally_managed": false,
+      "selected_cohort_set": 1,
+      "selected_mentorship_service_set": null,
+      "selected_event_type_set": null,
+      "conversion_info": null,
+      "country_code": "US",
+      "created_at": "2023-01-16T00:00:00Z",
+      "updated_at": "2023-01-16T00:00:00Z",
+      "paid_at": "2023-01-15T10:30:00Z",
+      "currency": 1,
+      "is_refundable": true,
+      "next_payment_at": "2023-02-15T00:00:00Z",
+      "valid_until": null,
+      "pay_every": 1,
+      "pay_every_unit": "MONTH"
+    }
+  },
+  {
+    "model": "payments.subscriptionserviceitem",
+    "pk": 1,
+    "fields": {
+      "subscription": 1,
+      "service_item": 1
+    }
+  },
+  {
+    "model": "payments.consumable",
+    "pk": 1,
+    "fields": {
+      "unit_type": "UNIT",
+      "how_many": 10,
+      "sort_priority": 1,
+      "service_item": 1,
+      "user": 1,
+      "cohort_set": 1,
+      "event_type_set": null,
+      "mentorship_service_set": null,
+      "valid_until": "2024-01-15T00:00:00Z"
+    }
+  },
+  {
+    "model": "payments.consumptionsession",
+    "pk": 1,
+    "fields": {
+      "operation_code": "default",
+      "consumable": 1,
+      "user": 1,
+      "eta": "2023-02-01T12:00:00Z",
+      "duration": "01:00:00",
+      "how_many": 1,
+      "status": "PENDING",
+      "was_discounted": false,
+      "request": {},
+      "path": "admissions.Cohort",
+      "related_id": 1,
+      "related_slug": "full-stack-bootcamp"
+    }
+  },
+  {
+    "model": "payments.planserviceitem",
+    "pk": 1,
+    "fields": {
+      "plan": 1,
+      "service_item": 1
+    }
+  },
+  {
+    "model": "payments.planserviceitemhandler",
+    "pk": 1,
+    "fields": {
+      "handler": 1,
+      "subscription": 1,
+      "plan_financing": null
+    }
+  },
+  {
+    "model": "payments.servicestockscheduler",
+    "pk": 1,
+    "fields": {
+      "subscription_handler": 1,
+      "plan_handler": null,
+      "valid_until": "2023-02-15T00:00:00Z"
+    }
+  },
+  {
+    "model": "payments.paymentcontact",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "stripe_id": "cus_1234567890abcdef",
+      "academy": 1
+    }
+  },
+  {
+    "model": "payments.financialreputation",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "in_4geeks": "GOOD",
+      "in_stripe": "GOOD",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "payments.academypaymentsettings",
+    "pk": 1,
+    "fields": {
+      "academy": 1,
+      "pos_vendor": "STRIPE",
+      "pos_api_key": "sk_test_1234567890abcdefghijklmnopqrstuvwxyz",
+      "created_at": "2023-01-01T00:00:00Z",
+      "updated_at": "2023-01-01T00:00:00Z"
+    }
+  }
+] 

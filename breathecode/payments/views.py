@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 
 from adrf.views import APIView
@@ -52,6 +53,7 @@ from breathecode.payments.models import (
     Plan,
     PlanFinancing,
     PlanOffer,
+    Seller,
     Service,
     ServiceItem,
     Subscription,
@@ -69,10 +71,10 @@ from breathecode.payments.serializers import (
     GetPaymentMethod,
     GetPlanFinancingSerializer,
     GetPlanOfferSerializer,
-    GetPlanSerializer,
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    GetUserCouponSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
@@ -2504,3 +2506,76 @@ class AcademyPaymentMethodView(APIView):
 
         method.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MeCouponView(APIView):
+    """
+    View to retrieve or generate coupons for the authenticated user.
+    """
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        user = request.user
+        lang = get_user_language(request)
+
+        # Check if user has coupons as a seller
+        seller = Seller.objects.filter(user=user).first()
+
+        # If no seller exists, create one
+        if not seller:
+            seller = Seller(
+                name=f"{user.first_name} {user.last_name}".strip() or user.email,
+                user=user,
+                type=Seller.Partner.INDIVIDUAL,
+                is_active=True,
+            )
+            try:
+                seller.save()
+            except Exception as e:
+                # Handle validation errors (e.g., name already registered)
+                raise ValidationException(
+                    translation(lang, en=str(e), es=str(e), slug="seller-creation-error"), code=400
+                )
+
+        # Look for existing coupons for this seller
+        coupons = Coupon.objects.filter(seller=seller, expires_at__gte=timezone.now()).order_by("-created_at")
+
+        if not coupons.exists():
+            # No active coupons found, create one
+            with transaction.atomic():
+                # Get the 4geeks-plus-subscription plan
+                plan = Plan.objects.filter(slug="4geeks-plus-subscription").first()
+                if not plan:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Required plan '4geeks-plus-subscription' not found",
+                            es="Plan requerido '4geeks-plus-subscription' no encontrado",
+                            slug="plan-not-found",
+                        ),
+                        code=404,
+                    )
+
+                # Create a new coupon
+                coupon = Coupon(
+                    slug=f"ref-{user.id}-{uuid.uuid4().hex[:8]}",
+                    discount_type=Coupon.Discount.PERCENT_OFF,
+                    discount_value=0.1,  # 10% discount
+                    referral_type=Coupon.Referral.REFERRAL,
+                    referral_value=10,
+                    auto=False,
+                    how_many_offers=-1,  # No limit
+                    seller=seller,
+                    offered_at=timezone.now(),
+                    expires_at=timezone.now() + timedelta(days=365),  # Valid for 1 year
+                )
+
+                coupon.save()
+                coupon.plans.add(plan)
+                coupons = [coupon]
+
+        serializer = GetUserCouponSerializer(coupons, many=True)
+        handler = self.extensions(request)
+
+        return handler.response(serializer.data)
