@@ -745,3 +745,18 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "academy",
             "included_country_codes",
         )
+
+
+class GetConsumptionSessionSerializer(serpy.Serializer):
+    id = serpy.Field()
+    operation_code = serpy.Field()
+    eta = serpy.Field()
+    duration = serpy.Field()
+    how_many = serpy.Field()
+    status = serpy.Field()
+    was_discounted = serpy.Field()
+    request = serpy.Field()
+    path = serpy.Field()
+    related_id = serpy.Field()
+    related_slug = serpy.Field()
+    user = GetUserSmallSerializer(required=False)
