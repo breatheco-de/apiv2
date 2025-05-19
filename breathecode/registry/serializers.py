@@ -652,6 +652,66 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
             validated_data["category"] = category_translation
 
+        alias = AssetAlias.objects.filter(slug=validated_data["slug"]).first()
+        if alias is not None:
+            raise ValidationException("Asset alias already exists with this slug")
+
+        if "readme" in validated_data:
+            raise ValidationException("Property readme is read only, please update property readme_raw instead")
+
+        return validated_data
+
+    def create(self, validated_data):
+
+        readme_raw = None
+        if "readme_raw" in validated_data:
+            readme_raw = validated_data["readme_raw"]
+
+        try:
+            return super(PostAssetSerializer, self).create({**validated_data, "readme_raw": readme_raw})
+        except Exception as e:
+
+            raise ValidationException(e.message_dict, 400)
+
+
+class PostAcademyAssetSerializer(serializers.ModelSerializer):
+    technologies = serializers.ListField(required=False)
+
+    class Meta:
+        model = Asset
+        exclude = ("academy",)
+
+    def validate(self, data):
+
+        validated_data = super().validate(data)
+
+        if "lang" not in validated_data or validated_data["lang"] is None:
+            raise ValidationException("Asset is missing a language", slug="no-language")
+
+        validated_data["lang"] = validated_data["lang"].lower()
+
+        if "category" not in data or data["category"] is None:
+            if "all_translations" not in validated_data or len(validated_data["all_translations"]) == 0:
+                raise ValidationException(
+                    "No category was specified and we could not retrieve it from any translation", slug="no-category"
+                )
+
+            asset_translation = Asset.objects.filter(slug=validated_data["all_translations"][0]).first()
+            if asset_translation is None or asset_translation.category is None:
+                raise ValidationException(
+                    "No category was specified and we could not retrieve it from any translation", slug="no-category"
+                )
+
+            category_translation = asset_translation.category.all_translations.filter(
+                lang=validated_data["lang"]
+            ).first()
+            if category_translation is None:
+                raise ValidationException(
+                    f"No category was specified and translation's categories don't have language: {validated_data['lang']}"
+                )
+
+            validated_data["category"] = category_translation
+
         academy_id = self.context["academy"]
         validated_data["academy"] = Academy.objects.filter(id=academy_id).first()
 
