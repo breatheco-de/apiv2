@@ -18,6 +18,7 @@ from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from slugify import slugify
+from rest_framework.permissions import IsAuthenticated
 
 import breathecode.activity.tasks as tasks_activity
 import breathecode.assignments.tasks as tasks
@@ -49,6 +50,9 @@ from .serializers import (
     UserAttachmentSerializer,
     RepositoryDeletionOrderSerializer,
 )
+
+# Import FlagManager
+from .utils.flags import FlagManager
 
 logger = logging.getLogger(__name__)
 
@@ -1271,3 +1275,167 @@ class MeCommitFileView(APIView):
 
         with Service("rigobot", request.user.id, proxy=True) as s:
             return s.get(url, params=params, stream=True)
+
+
+class FlagView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    # POST method for flag generation
+    def post(self, request):  # academy_id removed
+        asset_seed = request.data.get("asset_seed")
+        flag_id = request.data.get("flag_id", None)
+        expires_in = request.data.get("expires_in", None)
+        lang = get_user_language(request)
+
+        if not asset_seed:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Asset seed is required",
+                    es="La semilla del activo es obligatoria",
+                    slug="missing-asset-seed",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="missing-asset-seed",
+            )
+
+        try:
+            if expires_in is not None:
+                expires_in = int(expires_in)
+        except ValueError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="expires_in must be an integer",
+                    es="expires_in debe ser un número entero",
+                    slug="invalid-expires-in",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="invalid-expires-in",
+            )
+
+        try:
+            flag_manager = FlagManager()
+            new_flag = flag_manager.generate_flag(asset_seed, flag_id=flag_id, expires_in=expires_in)
+            return Response({"flag": new_flag}, status=status.HTTP_201_CREATED)
+        except ValueError as e:
+            eng_message = str(e)
+            es_message = eng_message
+            if "PRIVATE_FLAG_SEED environment variable is not set" in eng_message:
+                es_message = "La variable de entorno PRIVATE_FLAG_SEED no está configurada"
+            elif "Asset seed cannot be empty" in eng_message:
+                es_message = "La semilla del activo no puede estar vacía"
+            raise ValidationException(
+                translation(lang, en=eng_message, es=es_message, slug="flag-generation-error"),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="flag-generation-error",
+            )
+        except Exception as e:
+            logger.error(f"Error generating flag: {str(e)}")
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="An unexpected error occurred while generating the flag",
+                    es="Ocurrió un error inesperado al generar el flag",
+                    slug="unexpected-flag-generation-error",
+                ),
+                code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                slug="unexpected-flag-generation-error",
+            )
+
+    # GET method for flag validation
+    @capable_of("validate_assignment_flag")
+    def get(self, request, academy_id):
+        submitted_flag = request.query_params.get("flag")
+        asset_id = request.query_params.get("asset_id")
+        lang = get_user_language(request)
+
+        if not submitted_flag:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Submitted flag is required",
+                    es="El flag enviado es obligatorio",
+                    slug="missing-submitted-flag",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="missing-submitted-flag",
+            )
+
+        if not asset_id:
+            raise ValidationException(
+                translation(
+                    lang, en="Asset id is required", es="El ID del asset es requerido", slug="missing-asset-id"
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="missing-asset-id",
+            )
+
+        # Check if an Asset with the given flag_seed exists
+        asset = Asset.objects.filter(id=asset_id).first()
+        if not asset:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"No asset found for the provided id: {asset_id}",
+                    es=f"No se encontró ningún asset para el id proporcionado: {asset_id}",
+                    slug="asset-not-found-for-id",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+                slug="asset-not-found-for-id",
+            )
+
+        # User had changed revoked_flags_str to be an empty list,
+        # so parsing from query_params.get("revoked_flags", "[]") is removed for now.
+        # If revoked_flags need to be passed via query param, the parsing logic should be reinstated.
+        revoked_flags = []  # Based on user's last change: revoked_flags_str = []
+
+        # If revoked_flags were to be passed as a JSON string in query params:
+        # revoked_flags_input_str = request.query_params.get("revoked_flags", "[]")
+        # try:
+        #     parsed_revoked_flags = json.loads(revoked_flags_input_str)
+        #     if not isinstance(parsed_revoked_flags, list):
+        #         raise ValidationException(
+        #             translation(lang, en="revoked_flags must be a valid JSON list", es="revoked_flags debe ser una lista JSON válida", slug="invalid-revoked-flags-type"),
+        #             code=status.HTTP_400_BAD_REQUEST,
+        #             slug="invalid-revoked-flags-type"
+        #         )
+        #     for item in parsed_revoked_flags:
+        #         if not isinstance(item, dict) or "flag" not in item or "flag_id" not in item:
+        #             raise ValidationException(
+        #                 translation(lang, en="Each item in revoked_flags must be a dictionary with 'flag' and 'flag_id' keys", es="Cada elemento en revoked_flags debe ser un diccionario con las claves 'flag' y 'flag_id'", slug="invalid-revoked-flag-item"),
+        #                 code=status.HTTP_400_BAD_REQUEST,
+        #                 slug="invalid-revoked-flag-item"
+        #             )
+        #         revoked_flags.append(item)
+        # except json.JSONDecodeError:
+        #     raise ValidationException(
+        #         translation(lang, en="Invalid JSON format for revoked_flags", es="Formato JSON inválido para revoked_flags", slug="invalid-json-revoked-flags"),
+        #         code=status.HTTP_400_BAD_REQUEST,
+        #         slug="invalid-json-revoked-flags"
+        #     )
+
+        try:
+            flag_manager = FlagManager()
+            is_valid = flag_manager.validate_flag(submitted_flag, asset.flag_seed, revoked_flags=revoked_flags)
+            return Response({"is_valid": is_valid}, status=status.HTTP_200_OK)
+        except ValueError as e:
+            eng_message = str(e)
+            es_message = eng_message  # Placeholder
+            raise ValidationException(
+                translation(lang, en=eng_message, es=es_message, slug="flag-validation-error"),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="flag-validation-error",
+            )
+        except Exception as e:
+            logger.error(f"Error validating flag: {str(e)}")
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="An unexpected error occurred while validating the flag",
+                    es="Ocurrió un error inesperado al validar el flag",
+                    slug="unexpected-flag-validation-error",
+                ),
+                code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                slug="unexpected-flag-validation-error",
+            )

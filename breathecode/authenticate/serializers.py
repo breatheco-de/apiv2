@@ -1429,7 +1429,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         from breathecode.payments.models import Plan
 
         country = data["country"] if "country" in data else None
-        forbidden_countries = ["spain", "españa"]
 
         lang = self.context.get("lang", "en")
         if "email" not in data:
@@ -1573,18 +1572,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             )
 
         event_slug = data.get("event_slug") or data.get("event")
-        cohort_present = bool(cohort)
-        event_present = bool(event_slug)
 
-        if (
-            (country is not None and country.lower() in forbidden_countries)
-            and (not event_present and not cohort_present)
-        ):
-            # Only set WAITING_LIST if BOTH event_slug and cohort are empty
-            data["status"] = "WAITING_LIST"
-            data["process_status"] = "PENDING"
-
-        elif plan and plan.has_waiting_list == False:
+        if plan and plan.has_waiting_list == False:
             data["status"] = "ACCEPTED"
             data["process_status"] = "DONE"
 

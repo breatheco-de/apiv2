@@ -29,6 +29,7 @@ from breathecode.authenticate.models import ProfileAcademy, User
 from breathecode.notify.actions import send_email_message
 from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
+from breathecode.utils.decorators import has_permission
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.decorators.capable_of import acapable_of
@@ -85,6 +86,7 @@ from .serializers import (
     OriginalityScanSerializer,
     PostAssetCommentSerializer,
     PostAssetSerializer,
+    PostAcademyAssetSerializer,
     POSTCategorySerializer,
     PostKeywordClusterSerializer,
     PostKeywordSerializer,
@@ -799,6 +801,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         return handler.response(serializer.data)
 
+    @has_permission("learnpack_create_package")
     def put(self, request, asset_slug=None):
 
         logged_in_user = request.user
@@ -875,17 +878,12 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @capable_of("crud_asset")
+    @has_permission("learnpack_create_package")
     def post(self, request):
 
         data = {
             **request.data,
         }
-
-        if "academy" not in data:
-            raise ValidationException(
-                "You need to specify to which academy the asset will belong to", slug="without-academy"
-            )
 
         if "seo_keywords" in data and len(data["seo_keywords"]) > 0:
             if isinstance(data["seo_keywords"][0], str):
@@ -914,7 +912,7 @@ class AssetView(APIView, GenerateLookupsMixin):
 
             data["technologies"] = technology_ids
 
-        serializer = PostAssetSerializer(data=data, context={"request": request, "academy": data["academy"]})
+        serializer = PostAssetSerializer(data=data, context={"request": request})
         if serializer.is_valid():
             instance = serializer.save()
             if instance.github_url:
@@ -1478,7 +1476,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
             data["technologies"] = technology_ids
 
-        serializer = PostAssetSerializer(data=data, context={"request": request, "academy": academy_id})
+        serializer = PostAcademyAssetSerializer(data=data, context={"request": request, "academy": academy_id})
         if serializer.is_valid():
             instance = serializer.save()
             async_pull_from_github.delay(instance.slug)

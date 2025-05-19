@@ -201,7 +201,7 @@ class CapabilityAdmin(admin.ModelAdmin):
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
     list_display = ("user", "stats", "email", "academy", "role", "created_at", "slack", "facebook")
-    search_fields = ["user__first_name", "user__last_name", "user__email"]
+    search_fields = ["user__first_name", "user__last_name", "user__email", "email"]
     list_filter = ["academy__slug", "status", "role__slug"]
     actions = change_field(["ACTIVE", "INVITED"], name="status")
     raw_id_fields = ["user"]
