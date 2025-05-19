@@ -3,6 +3,7 @@ import hashlib
 import logging
 import pathlib
 import re
+import uuid
 from urllib.parse import urlparse
 
 import frontmatter
@@ -553,6 +554,14 @@ class Asset(models.Model):
         help_text="Related assets used to get prepared before going through this asset.",
     )
 
+    flag_seed = models.CharField(
+        max_length=16,
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Auto-generated seed for CTF and other delivery flags, this is used by the assignment app to validate the flags automatically",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -652,6 +661,9 @@ class Asset(models.Model):
         title_modified = False
         readme_modified = False
         status_modified = False
+
+        if self.asset_type == "PROJECT" and not self.flag_seed:
+            self.flag_seed = uuid.uuid4().hex[:16]
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
@@ -1210,48 +1222,6 @@ class OriginalityScan(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-
-class ValidationFlags(models.Model):
-    """
-    Model for storing CTF (Capture The Flag) style validation flags for Asset deliveries.
-    Each flag represents a challenge that students need to complete to validate their progress.
-    """
-
-    asset = models.ForeignKey(
-        Asset, on_delete=models.CASCADE, related_name="validation_flags", help_text="The asset this flag belongs to"
-    )
-
-    title = models.CharField(max_length=200, help_text="A descriptive title for this flag/challenge")
-
-    description = models.TextField(
-        help_text="Detailed markdowndescription of what the student needs to do to capture this flag"
-    )
-
-    flag = models.CharField(max_length=255, help_text="The actual flag value that students need to submit")
-
-    points = models.IntegerField(default=100, help_text="Points awarded for capturing this flag")
-
-    difficulty = models.CharField(
-        max_length=20, choices=DIFFICULTY, default=EASY, help_text="Difficulty level of this flag challenge"
-    )
-
-    is_required = models.BooleanField(
-        default=True, help_text="If True, this flag must be captured to complete the asset"
-    )
-
-    order = models.IntegerField(default=0, help_text="Order in which this flag should be displayed")
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    class Meta:
-        ordering = ["order", "created_at"]
-        verbose_name = "Validation Flag"
-        verbose_name_plural = "Validation Flags"
-
-    def __str__(self):
-        return f"{self.asset.slug} - {self.title}"
 
 
 VARIABLE_TYPE = (

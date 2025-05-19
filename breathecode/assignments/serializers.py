@@ -208,6 +208,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
     associated_slug = serializers.CharField(read_only=True)
     task_type = serializers.CharField(read_only=True)
     task_status = serializers.CharField(required=False)
+    flags = serializers.JSONField(required=False)
 
     class Meta:
         model = Task
@@ -218,7 +219,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
         if self.instance.user.id != self.context["request"].user.id:
             if "task_status" in data and data["task_status"] != self.instance.task_status:
                 raise ValidationException(
-                    f"Only the task {self.instance.id} owner can modify its status",
+                    "Only the task owner can modify its status",
                     slug="put-task-status-of-other-user",
                 )
             if "live_url" in data and data["live_url"] != self.instance.live_url:
@@ -300,6 +301,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                 related_id=instance.id,
             )
 
+        # The student is delivering the task?
         if "task_status" in validated_data and validated_data["task_status"] != instance.task_status:
             tasks_activity.add_activity.delay(
                 self.context["request"].user.id,
@@ -307,6 +309,11 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                 related_type="assignments.Task",
                 related_id=instance.id,
             )
+
+            if validated_data["task_status"] == "DONE" and "flags" in validated_data:
+                from breathecode.assignments.tasks import async_validate_flags
+
+                async_validate_flags.delay(instance.id, instance.associated_slug, validated_data["flags"])
 
         return super().update(instance, validated_data)
 

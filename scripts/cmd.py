@@ -34,6 +34,12 @@ def start():
     args = get_arguments()
     if "--bind" not in args:
         args = f"--bind 0.0.0.0:8000 {args}"
+
+    # Add --reload flag for Gunicorn
+    # Ensure --reload is not duplicated if already in args by chance, though unlikely for this script
+    if "--reload" not in args:
+        args = f"--reload {args}"
+
     sys.exit(os.system(f"gunicorn breathecode.asgi --worker-class uvicorn.workers.UvicornWorker {args}"))
 
 
