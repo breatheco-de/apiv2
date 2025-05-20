@@ -1689,7 +1689,7 @@ class CheckingView(APIView):
         client = None
         if IS_DJANGO_REDIS:
             client = get_redis_connection("default")
-        print("HEllo 0")
+        print("HEllo 0", client, f"lock:bag:user-{request.user.email}")
         try:
             # the lock must wrap the transaction
             with Lock(client, f"lock:bag:user-{request.user.email}", timeout=30, blocking_timeout=30):
