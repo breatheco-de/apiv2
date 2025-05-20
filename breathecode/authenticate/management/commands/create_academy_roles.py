@@ -220,6 +220,7 @@ ROLES = [
             "read_keywordcluster",
             "crud_academyservice",
             "crud_event",
+            "crud_flag",
             "crud_mentorship_session",
             "read_calendly_organization",
             "crud_subscription",
@@ -389,6 +390,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "read_content_variables",
                 "crud_content_variables",
                 "crud_assessment",
+                "crud_flag",
             ],
         }
     )
