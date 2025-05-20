@@ -1691,197 +1691,187 @@ class CheckingView(APIView):
         #     client = get_redis_connection("default")
         print("HEllo 0", client, f"lock:bag:user-{request.user.email}")
         try:
-            # the lock must wrap the transaction
-            with Lock(client, f"lock:bag:user-{request.user.email}", timeout=30, blocking_timeout=30):
-                print("HEllo 1")
-                with transaction.atomic():
-                    sid = transaction.savepoint()
-                    try:
-                        print("HEllo 2")
-                        if bag_type == "BAG" and not (
-                            bag := Bag.objects.filter(user=request.user, status="CHECKING", type=bag_type).first()
-                        ):
-                            raise ValidationException(
-                                translation(lang, en="Bag not found", es="Bolsa no encontrada", slug="not-found"),
-                                code=404,
-                            )
-                        if bag_type == "PREVIEW":
-                            print("HEllo 3")
-                            academy = request.data.get("academy")
-                            kwargs = {}
+            print("HEllo 2")
+            if bag_type == "BAG" and not (
+                bag := Bag.objects.filter(user=request.user, status="CHECKING", type=bag_type).first()
+            ):
+                raise ValidationException(
+                    translation(lang, en="Bag not found", es="Bolsa no encontrada", slug="not-found"),
+                    code=404,
+                )
+            if bag_type == "PREVIEW":
+                print("HEllo 3")
+                academy = request.data.get("academy")
+                kwargs = {}
 
-                            if academy and (isinstance(academy, int) or academy.isnumeric()):
-                                kwargs["id"] = int(academy)
-                            else:
-                                kwargs["slug"] = academy
-                            print("HEllo 4")
-                            academy = Academy.objects.filter(main_currency__isnull=False, **kwargs).first()
+                if academy and (isinstance(academy, int) or academy.isnumeric()):
+                    kwargs["id"] = int(academy)
+                else:
+                    kwargs["slug"] = academy
+                print("HEllo 4")
+                academy = Academy.objects.filter(main_currency__isnull=False, **kwargs).first()
 
-                            if not academy:
-                                cohort = request.data.get("cohort")
-                                print("HEllo 5")
-                                kwargs = {}
+                if not academy:
+                    cohort = request.data.get("cohort")
+                    print("HEllo 5")
+                    kwargs = {}
 
-                                if cohort and (isinstance(cohort, int) or cohort.isnumeric()):
-                                    kwargs["id"] = int(cohort)
-                                else:
-                                    kwargs["slug"] = cohort
+                    if cohort and (isinstance(cohort, int) or cohort.isnumeric()):
+                        kwargs["id"] = int(cohort)
+                    else:
+                        kwargs["slug"] = cohort
 
-                                cohort = Cohort.objects.filter(academy__main_currency__isnull=False, **kwargs).first()
-                                if cohort:
-                                    academy = cohort.academy
-                                    request.data["cohort"] = cohort.id
+                    cohort = Cohort.objects.filter(academy__main_currency__isnull=False, **kwargs).first()
+                    if cohort:
+                        academy = cohort.academy
+                        request.data["cohort"] = cohort.id
 
-                            if not academy and (plans := request.data.get("plans")) and len(plans) == 1:
-                                kwargs = {}
-                                pk = plans[0]
-                                if isinstance(pk, int):
-                                    kwargs["id"] = int(pk)
+                if not academy and (plans := request.data.get("plans")) and len(plans) == 1:
+                    kwargs = {}
+                    pk = plans[0]
+                    if isinstance(pk, int):
+                        kwargs["id"] = int(pk)
 
-                                else:
-                                    kwargs["slug"] = pk
+                    else:
+                        kwargs["slug"] = pk
 
-                                plan = Plan.objects.filter(owner__main_currency__isnull=False, **kwargs).first()
+                    plan = Plan.objects.filter(owner__main_currency__isnull=False, **kwargs).first()
 
-                                if plan:
-                                    academy = plan.owner
+                    if plan:
+                        academy = plan.owner
 
-                            if not academy:
-                                raise ValidationException(
-                                    translation(
-                                        lang,
-                                        en="Academy not found or not configured properly",
-                                        es="Academia no encontrada o no configurada correctamente",
-                                        slug="not-found",
-                                    ),
-                                    code=404,
-                                )
+                if not academy:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Academy not found or not configured properly",
+                            es="Academia no encontrada o no configurada correctamente",
+                            slug="not-found",
+                        ),
+                        code=404,
+                    )
 
-                            if "coupons" in request.data and not isinstance(request.data["coupons"], list):
-                                raise ValidationException(
-                                    translation(
-                                        lang,
-                                        en="Coupons must be a list of strings",
-                                        es="Cupones debe ser una lista de cadenas",
-                                        slug="invalid-coupons",
-                                    ),
-                                    code=400,
-                                )
+                if "coupons" in request.data and not isinstance(request.data["coupons"], list):
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Coupons must be a list of strings",
+                            es="Cupones debe ser una lista de cadenas",
+                            slug="invalid-coupons",
+                        ),
+                        code=400,
+                    )
 
-                            if "coupons" in request.data and len(request.data["coupons"]) > (
-                                max := max_coupons_allowed()
-                            ):
-                                raise ValidationException(
-                                    translation(
-                                        lang,
-                                        en=f"Too many coupons (max {max})",
-                                        es=f"Demasiados cupones (max {max})",
-                                        slug="too-many-coupons",
-                                    ),
-                                    code=400,
-                                )
+                if "coupons" in request.data and len(request.data["coupons"]) > (
+                    max := max_coupons_allowed()
+                ):
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Too many coupons (max {max})",
+                            es=f"Demasiados cupones (max {max})",
+                            slug="too-many-coupons",
+                        ),
+                        code=400,
+                    )
 
-                            bag, created = Bag.objects.get_or_create(
-                                user=request.user,
-                                status="CHECKING",
-                                type=bag_type,
-                                academy=academy,
-                                currency=academy.main_currency,
-                            )
-                            print("HEllo 6")
+                bag, created = Bag.objects.get_or_create(
+                    user=request.user,
+                    status="CHECKING",
+                    type=bag_type,
+                    academy=academy,
+                    currency=academy.main_currency,
+                )
+                print("HEllo 6")
 
-                            add_items_to_bag(request, bag, lang)
-                            print("HEllo 7")
-                            plan = bag.plans.first()
-                            is_free_trial = plan.trial_duration > 0 if plan else False
+                add_items_to_bag(request, bag, lang)
+                print("HEllo 7")
+                plan = bag.plans.first()
+                is_free_trial = plan.trial_duration > 0 if plan else False
 
-                            # free trial took
-                            if (
-                                is_free_trial
-                                and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists()
-                            ):
-                                is_free_trial = False
+                # free trial took
+                if (
+                    is_free_trial
+                    and Subscription.objects.filter(user=request.user, plans__in=bag.plans.all()).exists()
+                ):
+                    is_free_trial = False
 
-                            is_free_plan = (
-                                plan.price_per_month == 0
-                                and plan.price_per_quarter == 0
-                                and plan.price_per_half == 0
-                                and plan.price_per_year == 0
-                                if plan
-                                else False
-                            )
-                            recurrent = request.data.get("recurrent")
+                is_free_plan = (
+                    plan.price_per_month == 0
+                    and plan.price_per_quarter == 0
+                    and plan.price_per_half == 0
+                    and plan.price_per_year == 0
+                    if plan
+                    else False
+                )
+                recurrent = request.data.get("recurrent")
 
-                            if is_free_trial:
-                                bag.is_recurrent = False
-                            elif is_free_plan or plan:
-                                bag.is_recurrent = True
-                            else:
-                                bag.is_recurrent = recurrent or False
-                            print("HEllo 8")
-                            bag.save()
-                            print("HEllo 9")
-                            if plan and bag.coupons.count() == 0:
-                                coupons = get_available_coupons(plan, request.data.get("coupons", []))
-                                bag.coupons.set(coupons)
-                            # actions.check_dependencies_in_bag(bag, lang)
+                if is_free_trial:
+                    bag.is_recurrent = False
+                elif is_free_plan or plan:
+                    bag.is_recurrent = True
+                else:
+                    bag.is_recurrent = recurrent or False
+                print("HEllo 8")
+                bag.save()
+                print("HEllo 9")
+                if plan and bag.coupons.count() == 0:
+                    coupons = get_available_coupons(plan, request.data.get("coupons", []))
+                    bag.coupons.set(coupons)
+                # actions.check_dependencies_in_bag(bag, lang)
 
-                        utc_now = timezone.now()
+            utc_now = timezone.now()
 
-                        bag.token = Token.generate_key()
-                        bag.expires_at = utc_now + timedelta(minutes=60)
+            bag.token = Token.generate_key()
+            bag.expires_at = utc_now + timedelta(minutes=60)
 
-                        plan = bag.plans.filter(status="CHECKING").first()
+            plan = bag.plans.filter(status="CHECKING").first()
 
-                        # Initialize pricing_ratio_explanation
-                        pricing_ratio_explanation = {"plans": [], "service_items": []}
+            # Initialize pricing_ratio_explanation
+            pricing_ratio_explanation = {"plans": [], "service_items": []}
 
-                        # FIXME: the service items should be bought without renewals
-                        if not plan or plan.is_renewable:
-                            bag.country_code = country_code
-                            bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
-                                get_amount(bag, bag.academy.main_currency, lang)
-                            )
+            # FIXME: the service items should be bought without renewals
+            if not plan or plan.is_renewable:
+                bag.country_code = country_code
+                bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
+                    get_amount(bag, bag.academy.main_currency, lang)
+                )
 
-                        else:
-                            # FIXME
-                            actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
+            else:
+                # FIXME
+                actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
 
-                        # Save pricing ratio explanation if any ratios were applied
-                        if pricing_ratio_explanation["plans"] or pricing_ratio_explanation["service_items"]:
-                            bag.pricing_ratio_explanation = pricing_ratio_explanation
+            # Save pricing ratio explanation if any ratios were applied
+            if pricing_ratio_explanation["plans"] or pricing_ratio_explanation["service_items"]:
+                bag.pricing_ratio_explanation = pricing_ratio_explanation
 
-                        amount = (
-                            bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
-                        )
-                        plans = bag.plans.all()
-                        if not amount and plans.filter(financing_options__id__gte=1):
-                            amount = 1
+            amount = (
+                bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
+            )
+            plans = bag.plans.all()
+            if not amount and plans.filter(financing_options__id__gte=1):
+                amount = 1
 
-                        if amount == 0 and Subscription.objects.filter(user=request.user, plans__in=plans).count():
-                            raise ValidationException(
-                                translation(
-                                    lang,
-                                    en="Your free trial was already took",
-                                    es="Tu prueba gratuita ya fue tomada",
-                                    slug="your-free-trial-was-already-took",
-                                ),
-                                code=400,
-                            )
-                        print("HEllo 10")
-                        bag.save()
-                        transaction.savepoint_commit(sid)
-                        print("HEllo 11")
-                        serializer = GetBagSerializer(bag, many=False)
-                        return Response(
-                            serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
-                        )
+            if amount == 0 and Subscription.objects.filter(user=request.user, plans__in=plans).count():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Your free trial was already took",
+                        es="Tu prueba gratuita ya fue tomada",
+                        slug="your-free-trial-was-already-took",
+                    ),
+                    code=400,
+                )
+            print("HEllo 10")
+            bag.save()
+            transaction.savepoint_commit(sid)
+            print("HEllo 11")
+            serializer = GetBagSerializer(bag, many=False)
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            )
 
-                    except Exception as e:
-                        transaction.savepoint_rollback(sid)
-                        raise e
-
-        except LockError:
+        except:
             raise ValidationException(
                 translation(
                     lang,
