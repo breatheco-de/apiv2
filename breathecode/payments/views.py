@@ -1689,13 +1689,15 @@ class CheckingView(APIView):
         client = None
         if IS_DJANGO_REDIS:
             client = get_redis_connection("default")
-
+        print("HEllo 0")
         try:
             # the lock must wrap the transaction
             with Lock(client, f"lock:bag:user-{request.user.email}", timeout=30, blocking_timeout=30):
+                print("HEllo 1")
                 with transaction.atomic():
                     sid = transaction.savepoint()
                     try:
+                        print("HEllo 2")
                         if bag_type == "BAG" and not (
                             bag := Bag.objects.filter(user=request.user, status="CHECKING", type=bag_type).first()
                         ):
@@ -1704,7 +1706,7 @@ class CheckingView(APIView):
                                 code=404,
                             )
                         if bag_type == "PREVIEW":
-
+                            print("HEllo 3")
                             academy = request.data.get("academy")
                             kwargs = {}
 
@@ -1712,12 +1714,12 @@ class CheckingView(APIView):
                                 kwargs["id"] = int(academy)
                             else:
                                 kwargs["slug"] = academy
-
+                            print("HEllo 4")
                             academy = Academy.objects.filter(main_currency__isnull=False, **kwargs).first()
 
                             if not academy:
                                 cohort = request.data.get("cohort")
-
+                                print("HEllo 5")
                                 kwargs = {}
 
                                 if cohort and (isinstance(cohort, int) or cohort.isnumeric()):
@@ -1786,9 +1788,10 @@ class CheckingView(APIView):
                                 academy=academy,
                                 currency=academy.main_currency,
                             )
+                            print("HEllo 6")
 
                             add_items_to_bag(request, bag, lang)
-
+                            print("HEllo 7")
                             plan = bag.plans.first()
                             is_free_trial = plan.trial_duration > 0 if plan else False
 
@@ -1815,9 +1818,9 @@ class CheckingView(APIView):
                                 bag.is_recurrent = True
                             else:
                                 bag.is_recurrent = recurrent or False
-
+                            print("HEllo 8")
                             bag.save()
-
+                            print("HEllo 9")
                             if plan and bag.coupons.count() == 0:
                                 coupons = get_available_coupons(plan, request.data.get("coupons", []))
                                 bag.coupons.set(coupons)
@@ -1865,10 +1868,10 @@ class CheckingView(APIView):
                                 ),
                                 code=400,
                             )
-
+                        print("HEllo 10")
                         bag.save()
                         transaction.savepoint_commit(sid)
-
+                        print("HEllo 11")
                         serializer = GetBagSerializer(bag, many=False)
                         return Response(
                             serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
