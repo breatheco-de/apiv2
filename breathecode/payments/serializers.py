@@ -407,16 +407,6 @@ class GetCouponSerializer(serpy.Serializer):
     expires_at = serpy.Field()
 
 
-class GetUserCouponSerializer(GetCouponSerializer):
-    id = serpy.Field()
-    seller = GetSellerSerializer(required=False, many=False)
-    plans = serpy.MethodField()
-
-    def get_plans(self, obj):
-        plans = obj.plans.all()
-        return GetPlanSmallSerializer(plans, many=True).data
-
-
 class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = GetAcademySmallSerializer()
