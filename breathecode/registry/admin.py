@@ -412,6 +412,7 @@ class AssetAdmin(admin.ModelAdmin):
     search_fields = ["title", "slug", "author__email", "url"]
     filter_horizontal = ("technologies", "all_translations", "seo_keywords", "assets_related")
     list_display = ("main", "current_status", "alias", "techs", "url_path")
+    readonly_fields = ["flag_seed"]
     list_filter = [
         "asset_type",
         "status",

@@ -503,6 +503,7 @@ SITE_ID = 1
 DATABASES = {
     "default": dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=False),
 }
+
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 # SQL Explorer

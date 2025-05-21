@@ -60,6 +60,7 @@ from breathecode.payments.models import (
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
+    GetConsumptionSessionSerializer,
     GetCouponSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
@@ -1371,6 +1372,27 @@ class ServiceBlocked(APIView):
 
 
 class ConsumeView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request, service_slug):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if not (service := Service.objects.filter(slug=service_slug).first()):
+            raise ValidationException(
+                translation(lang, en="Service not found", es="Servicio no encontrado", slug="service-not-found"),
+                code=404,
+            )
+
+        items = ConsumptionSession.objects.filter(consumable__service_item__service=service, user=request.user)
+
+        if status := request.GET.get("status"):
+            items = items.filter(status__in=status.split(","))
+
+        items = handler.queryset(items)
+        serializer = GetConsumptionSessionSerializer(items, many=True)
+
+        return Response(serializer.data)
 
     def put(self, request, service_slug, hash=None):
         lang = get_user_language(request)

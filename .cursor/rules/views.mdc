@@ -1,0 +1,32 @@
+---
+description:
+globs: breathecode/*/views.py
+alwaysApply: false
+---
+# About the APIViews
+
+There are two ways to approaches to make endpoints private:
+
+## Capable Of
+
+If the endpoint has "/academy/" it will probably be called by an academy staff member and you can use [capable_of.py](mdc:breathecode/utils/decorators/capable_of.py) decorator to make sure it has a particular role like this:
+
+```py
+    @capable_of("task_delivery_details")
+    def get(self, request, task_id, academy_id):
+```
+
+The capable_of decorator will always make sure the academy_id is retrieved from the request header and passed to the view methods.
+
+The list of possible capabilities is hardcoded at [create_academy_roles.py](mdc:breathecode/authenticate/management/commands/create_academy_roles.py)
+
+## Has Permission
+
+Or if the endpoint is not for an academy, you can use the [has_permission.py](mdc:breathecode/utils/decorators/has_permission.py) decorator like this:
+
+```py
+    @has_permission('superadmin')
+    def get(self, request, asset_slug=None):
+```
+
+These permissions are django permissions assigned to groups or users and they are hardcoded in [set_permissions.py](mdc:breathecode/authenticate/management/commands/set_permissions.py)

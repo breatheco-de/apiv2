@@ -3,6 +3,7 @@ import hashlib
 import logging
 import pathlib
 import re
+import uuid
 from urllib.parse import urlparse
 
 import frontmatter
@@ -553,6 +554,14 @@ class Asset(models.Model):
         help_text="Related assets used to get prepared before going through this asset.",
     )
 
+    flag_seed = models.CharField(
+        max_length=16,
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Auto-generated seed for CTF and other delivery flags, this is used by the assignment app to validate the flags automatically",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -652,6 +661,9 @@ class Asset(models.Model):
         title_modified = False
         readme_modified = False
         status_modified = False
+
+        if self.asset_type == "PROJECT" and not self.flag_seed:
+            self.flag_seed = uuid.uuid4().hex[:16]
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
