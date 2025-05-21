@@ -1445,12 +1445,18 @@ class FlagAssetView(APIView):
 
     # POST method for flag generation
     @capable_of("crud_flag")
-    def post(self, request, asset_id):  # academy_id removed
+    def post(self, request, asset_id, academy_id):  # academy_id removed
 
         expires_in = request.data.get("expires_in", None)
         lang = get_user_language(request)
 
-        asset = Asset.objects.filter(id=asset_id).first()
+        # Try to get asset by ID first, then by slug if not found
+        try:
+            asset_id_int = int(asset_id)
+            asset = Asset.objects.filter(id=asset_id_int).first()
+        except ValueError:
+            # If asset_id is not an integer, try to find by slug
+            asset = Asset.objects.filter(slug=asset_id).first()
         if not asset:
             raise ValidationException(
                 translation(
