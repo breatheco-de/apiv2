@@ -371,6 +371,7 @@ class AssetMidSerializer(AssetSerializer):
 class AssetBigSerializer(AssetMidSerializer):
 
     description = serpy.Field()
+    id = serpy.Field()
     status_text = serpy.Field()
     author = UserSerializer(required=False)
     owner = UserSerializer(required=False)
@@ -669,8 +670,12 @@ class PostAssetSerializer(serializers.ModelSerializer):
         if "readme_raw" in validated_data:
             readme_raw = validated_data["readme_raw"]
 
+        session_user = self.context.get("request").user
+
         try:
-            return super(PostAssetSerializer, self).create({**validated_data, "readme_raw": readme_raw})
+            return super(PostAssetSerializer, self).create(
+                {**validated_data, "readme_raw": readme_raw, "owner": session_user}
+            )
         except Exception as e:
 
             raise ValidationException(e.message_dict, 400)

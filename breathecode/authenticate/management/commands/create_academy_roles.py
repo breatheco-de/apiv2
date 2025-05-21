@@ -181,6 +181,10 @@ CAPABILITIES = [
         "slug": "validate_assignment_flag",
         "description": "Ideal for CTFs and other assignments that require flag validation",
     },
+    {
+        "slug": "crud_flag",
+        "description": "Create flags for the assets and assignments",
+    },
 ]
 
 ROLES = [
