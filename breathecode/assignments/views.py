@@ -1445,7 +1445,7 @@ class FlagAssetView(APIView):
 
     # POST method for flag generation
     @capable_of("crud_flag")
-    def post(self, request, asset_id):  # academy_id removed
+    def post(self, request, asset_id, academy_id):  # academy_id removed
 
         expires_in = request.data.get("expires_in", None)
         lang = get_user_language(request)
