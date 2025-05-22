@@ -375,7 +375,6 @@ class Stripe:
         # https://stripe.com/docs/api/charges/create
         # Stripe expects amount in cents (or smallest unit)
         amount = math.ceil(amount * decimals_factor)
-        print("Hello stripe 5")
 
         def callback():
             return stripe.Charge.create(
@@ -385,14 +384,10 @@ class Stripe:
                 description=description,
             )
 
-        print("Hello stripe 6")
         charge = self._i18n_validations(callback)
-        print("Hello stripe 7", charge)
 
         utc_now = timezone.now()
-        print("Hello stripe 8", user, amount, charge, charge["id"])
         invoice = Invoice(user=user, amount=amount, stripe_id=charge["id"], paid_at=utc_now, status="FULFILLED")
-        print("Hello stripe 9", invoice)
         invoice.currency = currency
         invoice.bag = bag
         invoice.academy = bag.academy
