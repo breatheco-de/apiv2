@@ -130,6 +130,7 @@ class ConsumableAdmin(admin.ModelAdmin):
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = ("id", "amount", "currency", "paid_at", "status", "stripe_id", "user", "academy")
     list_filter = ["status", "academy"]
+    search_fields = ["id", "status", "user__email"]
     raw_id_fields = ["user", "currency", "bag", "academy"]
 
 
