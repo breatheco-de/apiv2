@@ -350,7 +350,7 @@ class Stripe:
             PaymentException: If there's an issue with the Stripe charge (e.g., card declined).
         """
         stripe.api_key = self.api_key
-
+        print("Hello stripe 1")
         if isinstance(currency, str):
             currency_obj = Currency.objects.filter(code__iexact=currency).first()
             if not currency_obj:
@@ -365,7 +365,9 @@ class Stripe:
                 )
             currency = currency_obj  # Assign the Currency object back
 
+        print("Hello stripe 2")
         customer = self.add_contact(user)
+        print("Hello stripe 3")
 
         # https://stripe.com/docs/currencies
         # Calculate amount in smallest currency unit (e.g., cents)
@@ -373,9 +375,11 @@ class Stripe:
         for _ in range(currency.decimals):
             decimals_factor *= 10
 
+        print("Hello stripe 4")
         # https://stripe.com/docs/api/charges/create
         # Stripe expects amount in cents (or smallest unit)
         amount = math.ceil(amount * decimals_factor)
+        print("Hello stripe 5")
 
         def callback():
             return stripe.Charge.create(
@@ -392,8 +396,10 @@ class Stripe:
         invoice.currency = currency
         invoice.bag = bag
         invoice.academy = bag.academy
+        print("Hello stripe 6")
 
         invoice.save()
+        print("Hello stripe 7")
 
         return invoice
 
