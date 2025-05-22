@@ -670,13 +670,9 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
 
                     try:
-                        print("Hello 1")
                         s = Stripe(academy=plan_financing.academy)
-                        print("Hello 2")
                         s.set_language(settings.lang)
-                        print("Hello 3")
                         invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
-                        print("Hello 4")
 
                     except Exception:
                         message = translation(
