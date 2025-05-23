@@ -366,6 +366,7 @@ class Stripe:
             currency = currency_obj  # Assign the Currency object back
 
         customer = self.add_contact(user)
+        original_amount = amount
 
         # https://stripe.com/docs/currencies
         # Calculate amount in smallest currency unit (e.g., cents)
@@ -388,7 +389,9 @@ class Stripe:
         charge = self._i18n_validations(callback)
 
         utc_now = timezone.now()
-        invoice = Invoice(user=user, amount=amount, stripe_id=charge["id"], paid_at=utc_now, status="FULFILLED")
+        invoice = Invoice(
+            user=user, amount=original_amount, stripe_id=charge["id"], paid_at=utc_now, status="FULFILLED"
+        )
         invoice.currency = currency
         invoice.bag = bag
         invoice.academy = bag.academy
