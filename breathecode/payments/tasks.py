@@ -613,16 +613,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             settings = get_user_settings(plan_financing.user.id)
 
+            # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
             amount = plan_financing.monthly_price
-
-            # Apply coupon discounts if they exist on the plan_financing
-            coupons = plan_financing.coupons.all()
-            if coupons:
-                original_amount = amount
-                amount = actions.get_discounted_price(amount, coupons)
-                logger.info(
-                    f"Applied coupon discount: original={original_amount}, discounted={amount} for plan_financing {plan_financing_id}"
-                )
 
             invoices = plan_financing.invoices.order_by("created_at")
             first_invoice = invoices.first()
