@@ -41,7 +41,6 @@ from breathecode.payments.models import (
     ServiceTranslation,
     Subscription,
     SubscriptionServiceItem,
-    Academy,
 )
 
 # Register your models here.
@@ -313,47 +312,11 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
             return obj.plan_handler.plan_financing
 
 
-@admin.action(description="Remove repeated contacts (keep oldest, assign academy 47)")
-def remove_repeated_contacts(modeladmin, request, queryset):
-    from collections import defaultdict
-
-    try:
-        contact_academy = Academy.objects.get(id=47)
-    except Academy.DoesNotExist:
-        modeladmin.message_user(request, "Academy with id 47 does not exist.", level="error")
-        return
-
-    contacts_by_email = defaultdict(list)
-    for contact in queryset:
-        contacts_by_email[contact.user.email].append(contact)
-
-    deleted = []
-
-    for email, contacts in contacts_by_email.items():
-        if len(contacts) > 1:
-            contacts.sort(key=lambda c: getattr(c, "created_at", c.id))
-            oldest = contacts[0]
-            if oldest.academy_id != 47:
-                oldest.academy = contact_academy
-                oldest.save()
-            for contact in contacts[1:]:
-                deleted.append(f"{email} (ID: {contact.id})")
-                contact.delete()
-
-    if deleted:
-        msg = "Deleted repeated contacts:\n" + "\n".join(deleted)
-    else:
-        msg = "No repeated contacts found to delete."
-
-    modeladmin.message_user(request, msg)
-
-
 @admin.register(PaymentContact)
 class PaymentContactAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "stripe_id")
     search_fields = ["user__email", "user__first_name", "user__last_name"]
     raw_id_fields = ["user"]
-    actions = [remove_repeated_contacts]
 
 
 @admin.register(FinancialReputation)
