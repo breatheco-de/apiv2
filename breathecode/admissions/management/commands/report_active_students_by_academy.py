@@ -2,8 +2,9 @@ import json
 import os
 
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 
-from breathecode.admissions.models import ACTIVE, STUDENT, CohortUser
+from breathecode.admissions.models import ACTIVE, NOT_COMPLETING, STUDENT, CohortUser
 from breathecode.authenticate.models import ProfileAcademy
 
 
@@ -12,11 +13,12 @@ class Command(BaseCommand):
     Generate a report of active students grouped by academy, including their ProfileAcademy information.
 
     This command finds all CohortUser records with:
-    - educational_status=ACTIVE
+    - educational_status=ACTIVE or NOT_COMPLETING
     - role=STUDENT
 
     Then matches them with ProfileAcademy records having the same user or email,
     and groups the results by academy, counting each student only once per academy.
+    Only includes students whose ProfileAcademy role is "student".
     """
 
     help = "Generate a report of active students grouped by academy, including their ProfileAcademy information"
@@ -36,9 +38,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Get CohortUsers that are active students
-        query = CohortUser.objects.filter(educational_status=ACTIVE, role=STUDENT).select_related(
-            "user", "cohort", "cohort__academy"
-        )
+        query = CohortUser.objects.filter(
+            Q(educational_status=ACTIVE) | Q(educational_status=NOT_COMPLETING), role=STUDENT
+        ).select_related("user", "cohort", "cohort__academy")
 
         # Apply academy filter if provided
         academy_id = options.get("academy")
@@ -52,6 +54,9 @@ class Command(BaseCommand):
 
         # Track which users have been processed for each academy
         processed_users_by_academy = {}
+
+        # Track users to be removed from each academy due to non-student role
+        users_to_remove_by_academy = {}
 
         # Process each cohort user
         for cohort_user in active_student_cohort_users:
@@ -71,6 +76,25 @@ class Command(BaseCommand):
                     "students": [],
                 }
                 processed_users_by_academy[academy.id] = set()
+                users_to_remove_by_academy[academy.id] = set()
+
+            # Get the ProfileAcademy for this user at this academy
+            profile_academy = ProfileAcademy.objects.filter(academy=academy, user=user).select_related("role").first()
+
+            # If not found by user, try by email
+            if profile_academy is None and user.email:
+                profile_academy = (
+                    ProfileAcademy.objects.filter(academy=academy, email=user.email).select_related("role").first()
+                )
+
+            # Skip if no profile academy found
+            if profile_academy is None:
+                continue
+
+            # If profile academy role is not student, mark for removal and skip
+            if profile_academy.role.slug != "student":
+                users_to_remove_by_academy[academy.id].add(user.id)
+                continue
 
             # Check if this user is already processed for this academy
             if user.id in processed_users_by_academy[academy.id]:
@@ -88,17 +112,8 @@ class Command(BaseCommand):
                         break
                 continue
 
-            # Get the ProfileAcademy for this user at this academy
-            profile_academy = ProfileAcademy.objects.filter(academy=academy, user=user).select_related("role").first()
-
-            # If not found by user, try by email
-            if profile_academy is None and user.email:
-                profile_academy = (
-                    ProfileAcademy.objects.filter(academy=academy, email=user.email).select_related("role").first()
-                )
-
-            # Skip if no profile academy found
-            if profile_academy is None:
+            # Make sure user is not marked for removal
+            if user.id in users_to_remove_by_academy[academy.id]:
                 continue
 
             # This is a new user for this academy
@@ -109,7 +124,7 @@ class Command(BaseCommand):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "profile_academy_id": profile_academy.id,
-                "profile_academy_role": profile_academy.role.slug if profile_academy.role else None,
+                "profile_academy_role": profile_academy.role.slug,
                 "cohorts": [
                     {
                         "cohort_id": cohort_user.cohort.id,
@@ -124,6 +139,22 @@ class Command(BaseCommand):
             academy_reports[academy.id]["students"].append(student_info)
             academy_reports[academy.id]["total_students"] += 1
             processed_users_by_academy[academy.id].add(user.id)
+
+        # Process the removals for each academy
+        for academy_id, user_ids in users_to_remove_by_academy.items():
+            if not user_ids:
+                continue
+
+            # Find students to remove
+            filtered_students = []
+            for student in academy_reports[academy_id]["students"]:
+                if student["user_id"] not in user_ids:
+                    filtered_students.append(student)
+
+            # Update the count and students list
+            removed_count = len(academy_reports[academy_id]["students"]) - len(filtered_students)
+            academy_reports[academy_id]["students"] = filtered_students
+            academy_reports[academy_id]["total_students"] -= removed_count
 
         # Convert to list for the final output format
         final_report = list(academy_reports.values())
