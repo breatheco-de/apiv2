@@ -738,6 +738,11 @@ def get_bag_from_subscription(
     for plan in subscription.plans.all():
         bag.plans.add(plan)
 
+    # Add coupons from the subscription to the bag
+    subscription_coupons = subscription.coupons.all()
+    if subscription_coupons.exists():
+        bag.coupons.set(subscription_coupons)
+
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
         bag, subscription.currency or last_invoice.currency, lang
     )
