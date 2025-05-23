@@ -435,6 +435,15 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
                 amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
+                # Apply coupon discounts if they exist on the subscription
+                coupons = subscription.coupons.all()
+                if coupons:
+                    original_amount = amount
+                    amount = actions.get_discounted_price(amount, coupons)
+                    logger.info(
+                        f"Applied coupon discount: original={original_amount}, discounted={amount} for subscription {subscription_id}"
+                    )
+
                 try:
                     s = Stripe(academy=subscription.academy)
                     s.set_language(settings.lang)
@@ -604,6 +613,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             settings = get_user_settings(plan_financing.user.id)
 
+            # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
             amount = plan_financing.monthly_price
 
             invoices = plan_financing.invoices.order_by("created_at")
@@ -955,6 +965,12 @@ def build_subscription(
 
     subscription.plans.set(bag.plans.all())
 
+    # Add coupons from the bag to the subscription
+    bag_coupons = bag.coupons.all()
+    if bag_coupons.exists():
+        subscription.coupons.set(bag_coupons)
+        logger.info(f"Added {bag_coupons.count()} coupons to subscription {subscription.id}")
+
     subscription.save()
     subscription.invoices.add(invoice)
 
@@ -1050,6 +1066,12 @@ def build_plan_financing(
 
     financing.plans.set(plans)
 
+    # Add coupons from the bag to the plan financing
+    bag_coupons = bag.coupons.all()
+    if bag_coupons.exists():
+        financing.coupons.set(bag_coupons)
+        logger.info(f"Added {bag_coupons.count()} coupons to plan financing {financing.id}")
+
     financing.save()
     financing.invoices.add(invoice)
 
@@ -1142,6 +1164,12 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info:
         )
 
         subscription.plans.add(plan)
+
+        # Add coupons from the bag to the subscription
+        bag_coupons = bag.coupons.all()
+        if bag_coupons.exists():
+            subscription.coupons.set(bag_coupons)
+            logger.info(f"Added {bag_coupons.count()} coupons to free subscription {subscription.id}")
 
         subscription.save()
         subscription.invoices.add(invoice)

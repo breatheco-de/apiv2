@@ -52,6 +52,7 @@ from breathecode.payments.models import (
     Plan,
     PlanFinancing,
     PlanOffer,
+    Seller,
     Service,
     ServiceItem,
     Subscription,
@@ -1185,6 +1186,78 @@ class MeInvoiceView(APIView):
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+
+class UserCouponView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        user = request.user
+        lang = get_user_language(request)
+
+        # Check if the user already has coupons as a seller
+        seller = Seller.objects.filter(user=user).first()
+
+        if not seller:
+            # Create a new seller for this user
+            seller = Seller(
+                name=f"{user.first_name} {user.last_name}".strip() or f"User {user.id}",
+                user=user,
+                type=Seller.Partner.INDIVIDUAL,
+                is_active=True,
+            )
+            seller.save()
+
+        # Get existing coupons for this seller
+        coupons = Coupon.objects.filter(seller=seller)
+
+        # If no coupons exist, create one
+        if not coupons.exists():
+            # Look for the plan by slug - this could be made configurable
+            plan_slug = request.GET.get("plan_slug", "4geeks-plus-subscription")
+            plan = Plan.objects.filter(slug=plan_slug).first()
+
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Required plan '{plan_slug}' not found",
+                        es=f"Plan requerido '{plan_slug}' no encontrado",
+                        slug="plan-not-found",
+                    ),
+                    code=404,
+                )
+
+            # Create a unique slug for the coupon
+            base_slug = f"referral-{user.id}"
+            slug = base_slug
+            counter = 1
+
+            # Ensure slug uniqueness
+            while Coupon.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            coupon = Coupon(
+                slug=slug,
+                discount_type=Coupon.Discount.PERCENT_OFF,
+                discount_value=0.1,  # 10% discount
+                referral_type=Coupon.Referral.PERCENTAGE,
+                referral_value=0.1,  # 10% commission
+                auto=False,
+                how_many_offers=-1,  # No limit
+                seller=seller,
+            )
+            coupon.save()
+
+            # Add the plan to the coupon
+            coupon.plans.add(plan)
+
+            # Reload the coupons
+            coupons = Coupon.objects.filter(seller=seller)
+
+        serializer = GetCouponSerializer(coupons, many=True)
+        return Response(serializer.data)
 
 
 class AcademyInvoiceView(APIView):
@@ -2458,9 +2531,9 @@ class PaymentMethodView(APIView):
             lang,
             strings={
                 "exact": [
-                    "currency__code",
+                    "currency_code",
                     "lang",
-                    "academy__id",
+                    "academy_id",
                 ],
             },
             # Use the custom field handler
