@@ -2531,9 +2531,9 @@ class PaymentMethodView(APIView):
             lang,
             strings={
                 "exact": [
-                    "currency__code",
+                    "currency_code",
                     "lang",
-                    "academy__id",
+                    "academy_id",
                 ],
             },
             # Use the custom field handler
