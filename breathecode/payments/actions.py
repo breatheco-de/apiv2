@@ -738,8 +738,11 @@ def get_bag_from_subscription(
     for plan in subscription.plans.all():
         bag.plans.add(plan)
 
-    # Add coupons from the subscription to the bag
-    subscription_coupons = subscription.coupons.all()
+    # Add only valid (non-expired) coupons from the subscription to the bag
+    utc_now = timezone.now()
+
+    subscription_coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+
     if subscription_coupons.exists():
         bag.coupons.set(subscription_coupons)
 
