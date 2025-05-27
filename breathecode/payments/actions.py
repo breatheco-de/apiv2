@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Literal, Optional, Tuple, Type, TypedDict, Union
 
@@ -739,9 +739,12 @@ def get_bag_from_subscription(
         bag.plans.add(plan)
 
     # Add only valid (non-expired) coupons from the subscription to the bag
+    # Also exclude coupons where the user is the seller
     utc_now = timezone.now()
 
-    subscription_coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+    subscription_coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now)).exclude(
+        seller__user=subscription.user
+    )
 
     if subscription_coupons.exists():
         bag.coupons.set(subscription_coupons)
@@ -922,7 +925,7 @@ def max_coupons_allowed():
         return 1
 
 
-def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> list[Coupon]:
+def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user: Optional[User] = None) -> list[Coupon]:
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
         sub_kwargs = {"invoices__bag__coupons": coupon}
@@ -939,6 +942,11 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> li
         return total_spent_coupons
 
     def manage_coupon(coupon: Coupon) -> None:
+        # Prevent sellers from using their own coupons
+        if user and coupon.seller and coupon.seller.user == user:
+            founded_coupon_slugs.append(coupon.slug)
+            return
+
         if coupon.slug not in founded_coupon_slugs:
             if coupon.how_many_offers == -1:
                 founded_coupons.append(coupon)
@@ -963,11 +971,12 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> li
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
         Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
     )
-    cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at")
+    cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller")
 
     special_offers = (
         Coupon.objects.filter(*cou_args, auto=True)
         .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
+        .select_related("seller__user")
         .only(*cou_fields)
     )
 
@@ -975,7 +984,10 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None) -> li
         manage_coupon(coupon)
 
     valid_coupons = (
-        Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False).exclude(how_many_offers=0).only(*cou_fields)
+        Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
+        .exclude(how_many_offers=0)
+        .select_related("seller__user")
+        .only(*cou_fields)
     )
 
     max = max_coupons_allowed()
@@ -1149,7 +1161,6 @@ def validate_and_create_subscriptions(
         )
 
     plan = plans[0]
-    coupons = get_available_coupons(plan, data.get("coupons", []))
 
     if (option := plan.financing_options.filter(how_many_months=how_many_installments).first()) is None:
         raise ValidationException(
@@ -1230,6 +1241,9 @@ def validate_and_create_subscriptions(
             code=409,
         )
 
+    # Get available coupons for this user (excluding their own coupons if they are a seller)
+    coupons = get_available_coupons(plan, data.get("coupons", []), user=user)
+
     bag = Bag()
     bag.type = Bag.Type.BAG
     bag.user = user
@@ -1239,7 +1253,8 @@ def validate_and_create_subscriptions(
     bag.is_recurrent = True
 
     bag.how_many_installments = how_many_installments
-    amount = get_discounted_price(option.monthly_price, coupons)
+    original_price = option.monthly_price
+    amount = get_discounted_price(original_price, coupons)
 
     bag.save()
     bag.plans.set(plans)
@@ -1259,6 +1274,10 @@ def validate_and_create_subscriptions(
         payment_method=payment_method,
     )
     invoice.save()
+
+    # Create reward coupons for sellers if coupons were used
+    if coupons and original_price > 0:
+        create_seller_reward_coupons(coupons, original_price, user)
 
     tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort)
 
@@ -1520,3 +1539,77 @@ def apply_pricing_ratio(
         return price * ratio, ratio, None
 
     return price, None, None
+
+
+def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, buyer_user: User) -> None:
+    """
+    Create reward coupons for sellers when their coupons are used in payments.
+
+    Args:
+        coupons: List of coupons used in the payment
+        original_price: The original price before discounts
+        buyer_user: The user who made the purchase
+    """
+    utc_now = timezone.now()
+
+    for coupon in coupons:
+        if not coupon.seller or not coupon.seller.user:
+            continue
+
+        seller_user = coupon.seller.user
+
+        # Don't create reward for the buyer themselves (already prevented by validation)
+        if seller_user == buyer_user:
+            continue
+
+        # Check if seller has an active subscription or plan financing
+        active_subscription = Subscription.objects.filter(
+            user=seller_user, status__in=["ACTIVE", "FREE_TRIAL"], valid_until__gte=utc_now
+        ).first()
+
+        if not active_subscription:
+            continue
+
+        # Calculate reward amount based on coupon discount
+        reward_amount = 0
+        if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
+            reward_amount = original_price * coupon.discount_value
+        elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
+            reward_amount = min(coupon.discount_value, original_price)
+        elif coupon.discount_type == Coupon.Discount.HAGGLING:
+            # For haggling, we'll use a percentage of the original price
+            reward_amount = original_price * 0.05  # 5% default for haggling
+
+        if reward_amount <= 0:
+            continue
+
+        # Create a unique slug for the reward coupon
+        base_slug = f"reward-{seller_user.id}-{coupon.slug}"
+        reward_slug = base_slug
+        counter = 1
+
+        while Coupon.objects.filter(slug=reward_slug).exists():
+            reward_slug = f"{base_slug}-{counter}"
+            counter += 1
+
+        # Create the reward coupon
+        reward_coupon = Coupon(
+            slug=reward_slug,
+            discount_type=Coupon.Discount.FIXED_PRICE,
+            discount_value=reward_amount,
+            referral_type=Coupon.Referral.NO_REFERRAL,
+            referral_value=0,
+            auto=False,
+            how_many_offers=1,  # Single use
+            seller=coupon.seller,
+            offered_at=utc_now,
+            expires_at=utc_now + timedelta(days=90),  # 90 days to use the reward
+        )
+        reward_coupon.save()
+
+        # Add the reward coupon to the seller's active subscription or plan financing
+        if active_subscription:
+            active_subscription.coupons.add(reward_coupon)
+            logger.info(
+                f"Created reward coupon {reward_coupon.slug} for seller {seller_user.id} subscription {active_subscription.id}"
+            )
