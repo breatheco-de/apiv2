@@ -12,7 +12,7 @@ GENERAL_PRICING_RATIOS: Dict[str, PricingRatio] = {
     "us": {"pricing_ratio": 1.0, "currency": "USD"},
     "co": {"pricing_ratio": 0.9, "currency": "USD"},
     "cl": {"pricing_ratio": 0.95, "currency": "USD"},
-    "ar": {"pricing_ratio": 0.7, "currency": "USD"},
+    "ar": {"pricing_ratio": 0.8, "currency": "USD"},
     "pe": {"pricing_ratio": 0.85, "currency": "USD"},
     "ec": {"pricing_ratio": 0.8, "currency": "USD"},
     "do": {"pricing_ratio": 0.9, "currency": "USD"},
