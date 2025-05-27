@@ -82,7 +82,7 @@ def test_url(url, allow_relative=False, allow_hash=True):
             raise Exception(f"Invalid URL format (Missing Schema?): {url}")
 
         try:
-            response = requests.head(url, allow_redirects=False, timeout=25)
+            response = requests.head(url, allow_redirects=True, timeout=25)
             if response.status_code not in [200, 302, 301, 307]:
                 raise Exception(f"Invalid URL with code {response.status_code}: {url}")
 
