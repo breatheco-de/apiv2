@@ -3,13 +3,16 @@ import logging
 from celery import shared_task
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+from linked_services.django.service import Service
+from task_manager.core.exceptions import AbortTask, RetryTask
+from task_manager.django.decorators import task
 
 from breathecode.admissions.models import CohortTimeSlot
 from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import TaskPriority
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-from .models import EventbriteWebhook, LiveClass, Organization
+from .models import Event, EventbriteWebhook, EventContext, LiveClass, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -199,3 +202,73 @@ def fix_live_class_dates(timeslot_id: int):
 
         starting_at += delta
         ending_at += delta
+
+
+@task(priority=TaskPriority.ACADEMY.value)
+def generate_event_recap(event_id: int, **kwargs):
+    """
+    Generate a recap of the event using rigobot AI.
+    This task will be triggered when an event changes to FINISHED status.
+    """
+    import re
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        raise AbortTask(f"Event {event_id} not found. Task cannot continue.")
+
+    context, created = EventContext.objects.get_or_create(event=event)
+
+    if context.recap:
+        logger.info(f"Event {event_id} already has a recap, skipping")
+        return
+
+    try:
+        with Service("rigobot", event_id) as s:
+            event_data = {
+                "event_title": event.title,
+                "event_description": event.description,
+                "event_type": event.tags[0] if event.tags and len(event.tags) > 0 else "",
+            }
+
+            response = s.post(
+                "/v1/prompting/completion/linked/event-recap/", json={"inputs": event_data, "execute_async": False}
+            )
+
+            if response.status_code >= 200 and response.status_code < 400:
+                result = response.json()
+                answer = result.get("answer", "")
+
+                match = re.search(r"<event-description>(.*?)</event-description>", answer, re.DOTALL)
+                recap_text = match.group(1).strip() if match else ""
+
+                if recap_text:
+                    try:
+                        context.recap = recap_text
+                        context.status = EventContext.Status.SUCCESS
+                        context.save()
+                    except Exception as e:
+                        logger.error(f"Error saving event context {context.id} after getting recap: {e}", exc_info=True)
+                        context.status = EventContext.Status.ERROR
+                        context.status_text = str(e)[:255]
+                        context.save()
+                        raise RetryTask(f"Error saving event context: {str(e)}")
+                else:
+                    logger.warning(f"Recap for event {event_id} could not be extracted from answer: {answer[:100]}...")
+                    context.status = EventContext.Status.ERROR
+                    context.status_text = "Recap text could not be extracted from answer"
+                    context.save()
+                    raise RetryTask("Recap text could not be extracted from answer")
+
+                logger.info(f"API call successful for event {event_id}, response: {response.text}")
+            else:
+                error_msg = f"Failed to generate recap: {response.status_code} - {response.text}"
+                context.status = EventContext.Status.ERROR
+                context.status_text = error_msg[:255]
+                context.save()
+                raise RetryTask(error_msg)
+    except Exception as e:
+        error_msg = f"Error generating recap for event {event_id}: {str(e)}"
+        context.status = EventContext.Status.ERROR
+        context.status_text = error_msg[:255]
+        context.save()
+        raise RetryTask(error_msg)

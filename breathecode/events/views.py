@@ -41,7 +41,7 @@ from breathecode.utils.decorators import consume
 from breathecode.utils.multi_status_response import MultiStatusResponse
 from breathecode.utils.views import private_view, render_message
 
-from .actions import fix_datetime_weekday, get_my_event_types, update_timeslots_out_of_range
+from .actions import fix_datetime_weekday, update_timeslots_out_of_range  # get_my_event_types,
 from .models import (
     Event,
     EventbriteWebhook,
@@ -156,6 +156,12 @@ def get_events(request):
             lookup.pop("ending_at__gte")
             lookup["starting_at__lte"] = timezone.now()
 
+    if "all_time" in request.GET and request.GET.get("all_time") == "true":
+        if "ending_at__gte" in lookup:
+            lookup.pop("ending_at__gte")
+        if "starting_at__lte" in lookup:
+            lookup.pop("starting_at__lte")
+
     items = items.filter(**lookup).order_by("starting_at")
 
     serializer = EventSmallSerializer(items, many=True)
@@ -183,7 +189,8 @@ class EventPublicView(APIView):
                     code=404,
                 )
 
-            serializer = EventPublicBigSerializer(event, many=False)
+            include_context_info = request.query_params.get("context") == "true"
+            serializer = EventPublicBigSerializer(event, many=False, context={"include_context": include_context_info})
             return Response(serializer.data)
 
 
@@ -264,11 +271,13 @@ class EventMeView(APIView):
         if cache is not None:
             return cache
 
-        items = get_my_event_types(request.user)
+        # items = get_my_event_types(request.user)
         lang = get_user_language(request)
 
         if event_id is not None:
-            single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
+            # TODO: Add filter by event types again
+            # single_event = Event.objects.filter(id=event_id, event_type__in=items).first()
+            single_event = Event.objects.filter(id=event_id).first()
 
             if not single_event:
                 raise ValidationException(
@@ -293,10 +302,11 @@ class EventMeView(APIView):
                     return render_message(request, "Event live stream URL is not found", academy=single_event.academy)
                 return redirect(single_event.live_stream_url)
 
-            serializer = EventBigSerializer(single_event, many=False)
+            serializer = EventBigSerializer(single_event, many=False, context={})
             return Response(serializer.data)
 
-        items = Event.objects.filter(event_type__in=items, status="ACTIVE")
+        # TODO: Add filter for my event types again
+        items = Event.objects.filter(status="ACTIVE")
         lookup = {}
 
         online_event = self.request.GET.get("online_event", "")
@@ -314,7 +324,7 @@ class EventMeView(APIView):
         items = items.order_by("starting_at")
         items = items.filter(**lookup)
         items = handler.queryset(items)
-        serializer = EventBigSerializer(items, many=True)
+        serializer = EventBigSerializer(items, many=True, context={})
 
         return handler.response(serializer.data)
 
@@ -1019,9 +1029,10 @@ class EventMeCheckinView(APIView):
 
     def put(self, request, event_id):
         lang = get_user_language(request)
-        items = get_my_event_types(request.user)
+        # items = get_my_event_types(request.user)
 
-        event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        # event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        event = Event.objects.filter(id=event_id).first()
         if event is None:
             event = Event.objects.filter(id=event_id).first()
             if event is None or event.event_type is None:
@@ -1053,9 +1064,10 @@ class EventMeCheckinView(APIView):
 
     def post(self, request, event_id):
         lang = get_user_language(request)
-        items = get_my_event_types(request.user)
+        # items = get_my_event_types(request.user)
 
-        event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        # event = Event.objects.filter(event_type__in=items, id=event_id).first()
+        event = Event.objects.filter(id=event_id).first()
         if event is None:
             event = Event.objects.filter(id=event_id).first()
             if event is None or event.event_type is None:
@@ -1595,14 +1607,19 @@ class ICalEventView(APIView):
     def get(self, request):
         items = Event.objects.filter(status="ACTIVE")
 
-        ids = request.GET.get("academy", "")
+        event_ids = request.GET.get("event_ids", "")
+        academy_ids = request.GET.get("academy", "")
         slugs = request.GET.get("academy_slug", "")
 
-        ids = ids.split(",") if ids else []
+        academy_ids = academy_ids.split(",") if academy_ids else []
+        event_ids = event_ids.split(",") if event_ids else []
         slugs = slugs.split(",") if slugs else []
 
-        if ids:
-            items = Event.objects.filter(academy__id__in=ids, status="ACTIVE").order_by("id")
+        if event_ids:
+            items = Event.objects.filter(id__in=event_ids, status="ACTIVE").order_by("id")
+
+        elif academy_ids:
+            items = Event.objects.filter(academy__id__in=academy_ids, status="ACTIVE").order_by("id")
 
         elif slugs:
             items = Event.objects.filter(academy__slug__in=slugs, status="ACTIVE").order_by("id")
@@ -1610,14 +1627,14 @@ class ICalEventView(APIView):
         else:
             items = []
 
-        if not ids and not slugs:
+        if not academy_ids and not slugs and not event_ids:
             raise ValidationException(
-                "You need to specify at least one academy or academy_slug (comma separated) in the querystring"
+                "You need to specify at least one academy id, event id or academy_slug (comma separated) in the querystring"
             )
 
-        if Academy.objects.filter(id__in=ids).count() != len(ids) or Academy.objects.filter(
+        if not event_ids and (Academy.objects.filter(id__in=academy_ids).count() != len(academy_ids) or Academy.objects.filter(
             slug__in=slugs
-        ).count() != len(slugs):
+        ).count() != len(slugs)):
             raise ValidationException("Some academy not exist")
 
         upcoming = request.GET.get("upcoming")
@@ -1625,7 +1642,7 @@ class ICalEventView(APIView):
             now = timezone.now()
             items = items.filter(starting_at__gte=now)
 
-        academies_repr = ical_academies_repr(ids=ids, slugs=slugs)
+        academies_repr = ical_academies_repr(ids=academy_ids, slugs=slugs)
         key = server_id()
 
         calendar = iCalendar()
@@ -1638,17 +1655,20 @@ class ICalEventView(APIView):
         url = os.getenv("API_URL")
         if url:
             url = re.sub(r"/$", "", url) + "/v1/events/ical/events"
-            if ids or slugs:
+            if academy_ids or slugs:
                 url = url + "?"
 
-                if ids:
-                    url = url + "academy=" + ",".join(ids)
+                if academy_ids:
+                    url = url + "academy=" + ",".join(academy_ids)
 
-                if ids and slugs:
+                if academy_ids and (slugs or event_ids):
                     url = url + "&"
 
                 if slugs:
                     url = url + "academy_slug=" + ",".join(slugs)
+
+                if event_ids:
+                    url = url + "event_ids=" + ",".join(event_ids)
 
             calendar.add("url", url)
 

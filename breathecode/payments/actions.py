@@ -2,7 +2,7 @@ import os
 import re
 from datetime import datetime
 from functools import lru_cache
-from typing import Literal, Optional, Type, TypedDict
+from typing import Literal, Optional, Tuple, Type, TypedDict, Union
 
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
@@ -23,6 +23,7 @@ from breathecode.media.models import File
 from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.validate_conversion_info import validate_conversion_info
+from settings import GENERAL_PRICING_RATIOS
 
 from .models import (
     SERVICE_UNITS,
@@ -33,6 +34,7 @@ from .models import (
     Coupon,
     Currency,
     EventTypeSet,
+    FinancingOption,
     Invoice,
     MentorshipServiceSet,
     PaymentMethod,
@@ -286,6 +288,7 @@ class BagHandler:
         self.selected_cohort_set = request.data.get("cohort_set")
         self.selected_event_type_set = request.data.get("event_type_set")
         self.selected_mentorship_service_set = request.data.get("mentorship_service_set")
+        self.country_code = request.data.get("country_code")
 
         self.plans_not_found = set()
         self.service_items_not_found = set()
@@ -516,6 +519,10 @@ class BagHandler:
 
         self._ask_to_add_plan_and_charge_it_in_the_bag()
 
+        # Save the country code if provided
+        if self.country_code:
+            self.bag.country_code = self.country_code
+
         self.bag.save()
 
 
@@ -523,28 +530,83 @@ def add_items_to_bag(request, bag: Bag, lang: str):
     return BagHandler(request, bag, lang).execute()
 
 
-def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, float, float]:
+def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, float, float, Currency]:
+    def add_currency(currency: Optional[Currency] = None):
+        if not currency and main_currency:
+            currencies[main_currency.code.upper()] = main_currency
+
+        if currency and currency.code.upper() not in currencies:
+            currencies[currency.code.upper()] = currency
+
     user = bag.user
     price_per_month = 0
     price_per_quarter = 0
     price_per_half = 0
     price_per_year = 0
 
+    currencies = {}
+
     if not currency:
-        currency, _ = Currency.objects.get_or_create(code="USD", name="United States dollar")
+        currency, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "US dollar", "decimals": 2})
+
+    main_currency = currency
+
+    # Initialize pricing ratio explanation with proper format
+    pricing_ratio_explanation = {"plans": [], "service_items": []}
 
     for plan in bag.plans.all():
-        if plan.currency != currency:
-            bag.plans.remove(plan)
-            continue
-
         must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(plan, user, lang)
 
         if not bag.how_many_installments and (bag.chosen_period != "NO_SET" or must_it_be_charged):
-            price_per_month += plan.price_per_month or 0
-            price_per_quarter += plan.price_per_quarter or 0
-            price_per_half += plan.price_per_half or 0
-            price_per_year += plan.price_per_year or 0
+            # Get base prices
+            base_price_per_month = plan.price_per_month or 0
+            base_price_per_quarter = plan.price_per_quarter or 0
+            base_price_per_half = plan.price_per_half or 0
+            base_price_per_year = plan.price_per_year or 0
+
+            # Apply pricing ratio if country code is available
+            if bag.country_code:
+                # Apply pricing ratio to each price type
+                adjusted_price_per_month, ratio_per_month, c = apply_pricing_ratio(
+                    base_price_per_month, bag.country_code, plan, lang=lang, price_attr="price_per_month"
+                )
+                adjusted_price_per_quarter, ratio_per_quarter, _ = apply_pricing_ratio(
+                    base_price_per_quarter, bag.country_code, plan, lang=lang, price_attr="price_per_quarter"
+                )
+                adjusted_price_per_half, ratio_per_half, _ = apply_pricing_ratio(
+                    base_price_per_half, bag.country_code, plan, lang=lang, price_attr="price_per_half"
+                )
+                adjusted_price_per_year, ratio_per_year, _ = apply_pricing_ratio(
+                    base_price_per_year, bag.country_code, plan, lang=lang, price_attr="price_per_year"
+                )
+
+                add_currency(c)
+                currency = c or currency
+
+                # Calculate ratio for explanation if not direct price
+                if adjusted_price_per_month != base_price_per_month and base_price_per_month > 0:
+                    pricing_ratio_explanation["plans"].append({"plan": plan.slug, "ratio": ratio_per_month})
+
+                elif adjusted_price_per_quarter != base_price_per_quarter and base_price_per_quarter > 0:
+                    pricing_ratio_explanation["plans"].append({"plan": plan.slug, "ratio": ratio_per_quarter})
+
+                elif adjusted_price_per_half != base_price_per_half and base_price_per_half > 0:
+                    pricing_ratio_explanation["plans"].append({"plan": plan.slug, "ratio": ratio_per_half})
+
+                elif adjusted_price_per_year != base_price_per_year and base_price_per_year > 0:
+                    pricing_ratio_explanation["plans"].append({"plan": plan.slug, "ratio": ratio_per_year})
+
+                # Use adjusted prices
+                price_per_month += adjusted_price_per_month
+                price_per_quarter += adjusted_price_per_quarter
+                price_per_half += adjusted_price_per_half
+                price_per_year += adjusted_price_per_year
+            else:
+                # No country code, use base prices
+                price_per_month += base_price_per_month
+                price_per_quarter += base_price_per_quarter
+                price_per_half += base_price_per_half
+                price_per_year += base_price_per_year
 
     plans = bag.plans.all()
     add_ons: dict[int, AcademyService] = {}
@@ -564,17 +626,46 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
                 bag.plans.filter().delete()
                 raise e
 
+            # Get discounted price first
+            base_price, c, local_pricing_ratio_explanation = add_on.get_discounted_price(
+                service_item.how_many, bag.country_code, lang
+            )
+            pricing_ratio_explanation["service_items"] += local_pricing_ratio_explanation["service_items"]
+            add_currency(c)
+
             if price_per_month != 0:
-                price_per_month += add_on.get_discounted_price(service_item.how_many)
+                price_per_month += base_price
 
             if price_per_quarter != 0:
-                price_per_quarter += add_on.get_discounted_price(service_item.how_many)
+                price_per_quarter += base_price
 
             if price_per_half != 0:
-                price_per_half += add_on.get_discounted_price(service_item.how_many)
+                price_per_half += base_price
 
             if price_per_year != 0:
-                price_per_year += add_on.get_discounted_price(service_item.how_many)
+                price_per_year += base_price
+
+    if len(currencies.keys()) > 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Multiple currencies found, it means that the pricing ratio exceptions have a wrong configuration",
+                es="Múltiples monedas encontradas, lo que significa que las excepciones de ratio de precios tienen una configuración incorrecta",
+                slug="multiple-currencies-found",
+            ),
+            code=500,
+        )
+
+    # Save pricing ratio explanation if any ratios were applied
+    if (
+        pricing_ratio_explanation["plans"]
+        or pricing_ratio_explanation["service_items"]
+        or not bag.currency
+        or bag.currency.id != currency.id
+    ):
+        bag.pricing_ratio_explanation = pricing_ratio_explanation
+        bag.currency = currency
+        bag.save()
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -634,7 +725,7 @@ def get_bag_from_subscription(
     bag.status = "RENEWAL"
     bag.type = "CHARGE"
     bag.academy = subscription.academy
-    bag.currency = last_invoice.currency
+    bag.currency = subscription.currency or last_invoice.currency
     bag.user = subscription.user
     bag.is_recurrent = True
     bag.chosen_period = last_invoice.bag.chosen_period
@@ -647,8 +738,16 @@ def get_bag_from_subscription(
     for plan in subscription.plans.all():
         bag.plans.add(plan)
 
+    # Add only valid (non-expired) coupons from the subscription to the bag
+    utc_now = timezone.now()
+
+    subscription_coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+
+    if subscription_coupons.exists():
+        bag.coupons.set(subscription_coupons)
+
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-        bag, last_invoice.currency, lang
+        bag, subscription.currency or last_invoice.currency, lang
     )
 
     bag.save()
@@ -676,7 +775,7 @@ def get_bag_from_plan_financing(plan_financing: PlanFinancing, settings: Optiona
     bag.status = "RENEWAL"
     bag.type = "CHARGE"
     bag.academy = plan_financing.academy
-    bag.currency = last_invoice.currency
+    bag.currency = plan_financing.currency or last_invoice.currency
     bag.user = plan_financing.user
     bag.is_recurrent = True
     bag.save()
@@ -1141,7 +1240,6 @@ def validate_and_create_subscriptions(
 
     bag.how_many_installments = how_many_installments
     amount = get_discounted_price(option.monthly_price, coupons)
-    bag.monthly_price = option.monthly_price
 
     bag.save()
     bag.plans.set(plans)
@@ -1339,3 +1437,86 @@ def retry_pending_bag(bag: Bag):
         tasks.build_free_subscription.delay(bag.id, invoice.id)
 
     return "scheduled"
+
+
+def get_cached_currency(code: str, cache: dict[str, Currency]) -> Currency | None:
+    """
+    Get a currency from the cache by code.
+    """
+    currency = cache.get(code.upper())
+    if currency is None:
+        currency = Currency.objects.filter(code__iexact=code).first()
+        cache[code.upper()] = currency
+    return currency
+
+
+def apply_pricing_ratio(
+    price: float,
+    country_code: Optional[str],
+    obj: Optional[Union[Plan, AcademyService, FinancingOption]] = None,
+    price_attr: str = "price",
+    lang: Optional[str] = None,
+    cache: Optional[dict[str, Currency]] = None,
+) -> Tuple[float, Optional[float], Optional[Currency]]:
+    """
+    Apply pricing ratio to a price based on country code and object-specific overrides.
+
+    Args:
+        price (float): The original price to apply ratio to
+        country_code (Optional[str]): Two-letter country code to look up ratio for
+        obj (Optional[Union[Plan, AcademyService]]): Plan or AcademyService object that may have pricing overrides
+        price_attr (str): Attribute name to use for price override
+        lang (Optional[str]): Language to use for translations
+        cache (Optional[dict[str, Currency]]): Cache of currencies
+
+    Returns:
+        Tuple[float, Optional[float], Optional[Currency]]: A tuple containing:
+            - The final price after applying any ratio
+            - The ratio that was applied (None if using object's direct price override)
+            - The currency that was used for the price if it was overridden
+
+    The function applies pricing ratios in the following order:
+    1. If the object has a direct price override for the country, use that price and return None as ratio
+    2. If the object has a ratio override for the country, apply that ratio
+    3. If there is a general ratio defined for the country, apply that ratio
+    4. Otherwise return the original price with None as ratio
+    """
+
+    if not price or not country_code:
+        return price, None, None
+
+    if cache is None:
+        cache = {}
+
+    country_code = country_code.lower()
+
+    # Check for object-specific overrides first
+    if obj and hasattr(obj, "pricing_ratio_exceptions") and obj.pricing_ratio_exceptions:
+        exceptions = obj.pricing_ratio_exceptions.get(country_code, {})
+
+        currency = exceptions.get("currency", None)
+        if currency:
+            currency = get_cached_currency(currency, cache)
+
+            if currency is None:
+                raise ValidationException(
+                    translation(
+                        lang or "en", en="Currency not found", es="Moneda no encontrada", slug="currency-not-found"
+                    ),
+                    code=404,
+                )
+
+        # Direct price override - Check this FIRST
+        if exceptions.get(price_attr) is not None:
+            return exceptions[price_attr], None, currency
+
+        # Ratio override
+        if exceptions.get("ratio") is not None:
+            return price * exceptions["ratio"], exceptions["ratio"], currency
+
+    # Fall back to general ratios
+    if country_code in GENERAL_PRICING_RATIOS:
+        ratio = GENERAL_PRICING_RATIOS[country_code]["pricing_ratio"]
+        return price * ratio, ratio, None
+
+    return price, None, None

@@ -25,7 +25,7 @@ def parse_arguments():
 def help_command():
     print("Usage:")
     print(
-        "   `pipenv run cov breathecode.events` where events is the name of module and accept "
+        "   `poetry run cov breathecode.events` where events is the name of module and accept "
         "add submodules using the dot(.) character as delimiter."
     )
     print("")

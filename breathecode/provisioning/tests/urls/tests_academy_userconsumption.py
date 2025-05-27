@@ -8,6 +8,7 @@ import json
 import os
 import random
 import tempfile
+from decimal import Decimal
 from unittest.mock import MagicMock, Mock, PropertyMock, call, patch
 
 import pandas as pd
@@ -19,6 +20,9 @@ from breathecode.marketing.views import MIME_ALLOW
 from breathecode.provisioning import tasks
 from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from breathecode.utils.api_view_extensions.extensions import lookup_extension
+from breathecode.utils.api_view_extensions.extensions.language_extension import LanguageExtension
+from breathecode.utils.api_view_extensions.extensions.lookup_extension import LookupExtension
+from breathecode.utils.api_view_extensions.extensions.sort_extension import SortExtension
 
 from ..mixins import ProvisioningTestCase
 
@@ -47,16 +51,23 @@ HEADER = ",".join(
 )
 
 
+def format_decimal(x):
+    if not x:
+        return "0E-9"
+
+    return str(Decimal(x))
+
+
 def format_csv(provisioning_activity, provisioning_user_kind):
     return ",".join(
         [
-            format_field(float(provisioning_activity.amount)),
+            format_field(format_decimal(provisioning_activity.amount)),
             format_field(provisioning_activity.id),
             format_field(provisioning_user_kind.id),
             format_field(provisioning_user_kind.product_name),
             format_field(provisioning_user_kind.sku),
             format_field(provisioning_activity.processed_at),
-            format_field(float(provisioning_activity.quantity)),
+            format_field(format_decimal(provisioning_activity.quantity)),
             format_field(provisioning_activity.status),
             format_field(provisioning_activity.username),
         ]

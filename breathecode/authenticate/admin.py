@@ -201,7 +201,7 @@ class CapabilityAdmin(admin.ModelAdmin):
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
     list_display = ("user", "stats", "email", "academy", "role", "created_at", "slack", "facebook")
-    search_fields = ["user__first_name", "user__last_name", "user__email"]
+    search_fields = ["user__first_name", "user__last_name", "user__email", "email"]
     list_filter = ["academy__slug", "status", "role__slug"]
     actions = change_field(["ACTIVE", "INVITED"], name="status")
     raw_id_fields = ["user"]
@@ -494,7 +494,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
     )
     search_fields = ["academy__slug", "academy__name", "github__username", "academy__id"]
     actions = (clean_errors, activate_github_sync, deactivate_github_sync, sync_github_members)
-    raw_id_fields = ["github_owner", "google_cloud_owner"]
+    raw_id_fields = ["github_owner", "google_cloud_owner", "github_whitelist_exemption_users"]
 
     def get_queryset(self, request):
         self.admin_request = request

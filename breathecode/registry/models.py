@@ -3,6 +3,7 @@ import hashlib
 import logging
 import pathlib
 import re
+import uuid
 from urllib.parse import urlparse
 
 import frontmatter
@@ -512,6 +513,10 @@ class Asset(models.Model):
     last_seo_scan_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
     seo_json_status = models.JSONField(null=True, blank=True, default=None)
 
+    telemetry_stats = models.JSONField(
+        null=True, blank=True, default=None, help_text="Daily stats about the telemetry of the asset"
+    )
+
     # clean status refers to the cleaning of the readme file
 
     last_cleaning_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
@@ -547,6 +552,14 @@ class Asset(models.Model):
         blank=True,
         symmetrical=False,
         help_text="Related assets used to get prepared before going through this asset.",
+    )
+
+    flag_seed = models.CharField(
+        max_length=16,
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Auto-generated seed for CTF and other delivery flags, this is used by the assignment app to validate the flags automatically",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -648,6 +661,9 @@ class Asset(models.Model):
         title_modified = False
         readme_modified = False
         status_modified = False
+
+        if self.asset_type == "PROJECT" and not self.flag_seed:
+            self.flag_seed = uuid.uuid4().hex[:16]
 
         if self.__old_readme_raw != self.readme_raw:
             readme_modified = True
@@ -1119,7 +1135,7 @@ class SEOReport(models.Model):
     def set_state(self, key, value):
         attrs = ["words"]
         if key in attrs:
-            self.__shared_state[key]: value
+            self.__shared_state[key] = value
         else:
             raise Exception(f"Trying to set invalid property {key} on SEO report shared state")
 

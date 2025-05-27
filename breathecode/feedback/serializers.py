@@ -8,7 +8,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
 
 from .actions import send_cohort_survey_group
-from .models import Answer, Review, Survey, AcademyFeedbackSettings
+from .models import AcademyFeedbackSettings, Answer, Review, Survey
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -90,7 +90,6 @@ class SurveyTemplateSerializer(serpy.Serializer):
     slug = serpy.Field()
     lang = serpy.Field()
     is_shared = serpy.Field()
-    original = serpy.Field()
     when_asking_event = serpy.Field()
     when_asking_mentor = serpy.Field()
     when_asking_cohort = serpy.Field()
@@ -101,6 +100,15 @@ class SurveyTemplateSerializer(serpy.Serializer):
     when_asking_mentor_communication = serpy.Field()
     when_asking_mentor_participation = serpy.Field()
     additional_questions = serpy.Field()
+    original = serpy.MethodField()
+
+    def get_original(self, obj):
+        if obj.original is None:
+            return None
+        return {
+            "id": obj.original.id,
+            "slug": obj.original.slug,
+        }
 
 
 class LiveClassSmallSerializer(serpy.Serializer):
@@ -141,6 +149,8 @@ class AnswerSerializer(serpy.Serializer):
 class SurveySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     lang = serpy.Field()
+    title = serpy.Field(required=False)
+    template_slug = serpy.Field(required=False)
     cohort = GetCohortSerializer()
     scores = serpy.Field()
     response_rate = serpy.Field()

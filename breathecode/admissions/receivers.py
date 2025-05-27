@@ -9,7 +9,7 @@ from django.dispatch import receiver
 from breathecode.admissions import tasks
 from breathecode.assignments.models import Task
 from breathecode.assignments.signals import revision_status_updated
-from breathecode.certificate.actions import how_many_pending_tasks
+from breathecode.certificate.actions import how_many_pending_tasks, get_assets_from_syllabus
 
 from ..activity import tasks as activity_tasks
 from .models import Cohort, CohortUser
@@ -131,6 +131,12 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
     cohort = Cohort.objects.filter(id=instance.cohort.id).first()
 
     if not cohort.available_as_saas:
+        return
+
+    mandatory_projects = get_assets_from_syllabus(cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True)
+
+    # Only graduate students if the syllabus has mandatory projects
+    if len(mandatory_projects) == 0:
         return
 
     pending_tasks = how_many_pending_tasks(

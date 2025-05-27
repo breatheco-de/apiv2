@@ -1216,6 +1216,7 @@ class CourseView(APIView):
 
     def get(self, request, course_slug=None):
         handler = self.extensions(request)
+        country_code = request.GET.get("country_code")
 
         cache = handler.cache.get()
         if cache is not None:
@@ -1240,7 +1241,7 @@ class CourseView(APIView):
                     code=404,
                 )
 
-            serializer = GetCourseSerializer(item, context={"lang": lang}, many=False)
+            serializer = GetCourseSerializer(item, context={"lang": lang, "country_code": country_code}, many=False)
             return handler.response(serializer.data)
 
         items = Course.objects.filter().exclude(status="DELETED").exclude(visibility="PRIVATE")
@@ -1279,5 +1280,5 @@ class CourseView(APIView):
         items = items.annotate(lang=Value(lang, output_field=CharField()))
         items = items.order_by("created_at")
         items = handler.queryset(items)
-        serializer = GetCourseSerializer(items, context={"lang": lang}, many=True)
+        serializer = GetCourseSerializer(items, context={"lang": lang, "country_code": country_code}, many=True)
         return handler.response(serializer.data)

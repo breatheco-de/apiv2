@@ -63,6 +63,8 @@ def bag_item(data={}):
         "was_delivered": False,
         "token": None,
         "expires_at": None,
+        "country_code": None,
+        "pricing_ratio_explanation": {"plans": [], "service_items": []},
         **data,
     }
 
@@ -323,7 +325,23 @@ class PaymentsTestSuite(PaymentsTestCase):
                 call(1, "bag_created", related_type="payments.Bag", related_id=2),
             ],
         )
-        delta = timedelta(days=((((UTC_NOW + relativedelta(months=unit)) - relativedelta(days=25)) - UTC_NOW).days))
+
+        # Calculate the expected next_payment_at based on task logic
+        initial_next_payment_at = model.subscription.next_payment_at
+        payment_delta = calculate_relative_delta(unit, unit_type)
+
+        expected_next_payment_at = initial_next_payment_at
+        while UTC_NOW >= expected_next_payment_at:
+            expected_next_payment_at += payment_delta
+
+        # Ensure next_payment_at does not exceed valid_until if it exists
+        if model.subscription.valid_until and expected_next_payment_at > model.subscription.valid_until:
+            expected_next_payment_at = model.subscription.valid_until
+
+        # Calculate the duration for the *next* scheduled task
+        expected_duration = timedelta(days=(expected_next_payment_at - UTC_NOW).days)
+
+        # Assert the scheduled task using the correctly calculated duration and eta
         assert self.bc.database.list_of("task_manager.ScheduledTask") == [
             {
                 "task_name": "charge_subscription",
@@ -332,8 +350,8 @@ class PaymentsTestSuite(PaymentsTestCase):
                     "args": [1],
                     "kwargs": {},
                 },
-                "duration": delta,
-                "eta": next_payment_at,
+                "duration": expected_duration,
+                "eta": expected_next_payment_at,
                 "status": "PENDING",
                 "id": 1,
             },

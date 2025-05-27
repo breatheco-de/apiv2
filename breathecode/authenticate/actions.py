@@ -6,6 +6,7 @@ import re
 import string
 import urllib.parse
 from random import randint
+from typing import Any
 
 import aiohttp
 from adrf.requests import AsyncRequest
@@ -47,7 +48,7 @@ def get_app_url():
 
 def get_github_scopes(user, default_scopes=""):
     # Start with mandatory "user" scope and add any additional default scopes
-    scopes = {"user", "repo"}  # Always include "user"
+    scopes = {"user:email"}  # Always include "user"
     if default_scopes:  # If default_scopes is not empty
         scopes.update(default_scopes.split())
 
@@ -324,12 +325,19 @@ def update_gitpod_users(html):
     return {"active": all_active_users, "inactive": all_inactive_users}
 
 
-def get_user_settings(user_id: int) -> UserSetting:
+def get_user_settings(user_id: int) -> UserSetting | None:
+    """
+    Get the user settings for a given user id, if the user id is not provided or is not found, it will return None
+    """
+
     from breathecode.admissions.models import CohortUser
     from breathecode.assessment.models import Assessment, Question, UserAssessment
     from breathecode.events.models import Event
     from breathecode.feedback.models import Answer
     from breathecode.marketing.models import FormEntry
+
+    if not user_id:
+        return None
 
     try:
         settings, created = UserSetting.objects.get_or_create(user_id=user_id)
@@ -474,6 +482,16 @@ def remove_from_organization(cohort_id, user_id, force=False):
     user = cohort_user.user
     github_user = GithubAcademyUser.objects.filter(user=user, academy=academy).first()
     try:
+        # Check if user is whitelisted
+        settings = AcademyAuthSettings.objects.filter(academy=academy).first()
+        if settings and settings.github_whitelist_exemption_users.filter(id=user.id).exists() and not force:
+            raise ValidationException(
+                translation(
+                    en=f"Cannot remove user={user.id} from organization because they are whitelisted",
+                    es=f"No se pudo remover usuario id={user.id} de la organization porque está en la lista blanca",
+                ),
+                slug="user-whitelisted",
+            )
 
         active_cohorts_in_academy = CohortUser.objects.filter(
             user=user, cohort__academy=academy, cohort__never_ends=False, educational_status="ACTIVE"
@@ -821,6 +839,9 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if user is None:
         user = User(email=invite.email, first_name=first_name, last_name=last_name, username=invite.email)
         user.save()
+
+    # Only set/update the password if it's provided
+    if password1:
         user.set_password(password1)
         user.save()
 
@@ -892,7 +913,6 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.save()
 
             bag.plans.add(plan)
-            bag.selected_cohorts.add(invite.cohort)
 
             invoice = Invoice(
                 amount=0,
@@ -933,3 +953,54 @@ async def sync_with_rigobot(token_key):
 
 class WebhookException(Exception):
     pass
+
+
+def get_academy_from_body(body: dict[str, Any], lang: str = "en", raise_exception: bool = False) -> Academy:
+    """
+    Retrieves an Academy instance from a request body dictionary.
+
+    This function attempts to find an Academy using either an ID (integer) or slug (string)
+    provided in the 'academy' field of the input dictionary.
+
+    Args:
+        body: Dictionary containing request data with an 'academy' key
+        lang: Language code for error messages (default: 'en')
+        raise_exception: If True, raises ValidationException when academy is not found or invalid
+                        If False, returns None when academy is not found or invalid
+
+    Returns:
+        Academy: The found Academy instance
+
+    Raises:
+        ValidationException: If raise_exception is True and 'academy' is missing or invalid
+    """
+    academy_slug = body.get("academy")
+
+    if academy_slug is None:
+        if raise_exception:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing academy parameter",
+                    es="Falta el parámetro academy",
+                    slug="missing-academy-parameter",
+                ),
+                code=400,
+            )
+
+        return None
+
+    academy = None
+
+    if isinstance(academy_slug, int):
+        academy = Academy.objects.get(id=academy_slug)
+    elif isinstance(academy_slug, str):
+        academy = Academy.objects.get(slug=academy_slug)
+
+    if raise_exception and academy is None:
+        raise ValidationException(
+            translation(lang, en="Invalid academy", es="Academia inválida", slug="invalid-academy"),
+            code=400,
+        )
+
+    return academy

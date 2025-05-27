@@ -323,17 +323,16 @@ class BigQuery(metaclass=BigQueryMeta):
     def setup():
         """Create the database schema."""
 
-        global engine
+        ...
 
     @staticmethod
     def teardown():
         """Destroy the database schema."""
 
-        global engine
+        ...
 
     @classmethod
     def _setup_engine(cls):
-        global engine
         global client
 
         credentials.resolve_credentials()
@@ -353,8 +352,6 @@ class BigQuery(metaclass=BigQueryMeta):
     @classmethod
     def client(cls) -> tuple[bigquery.Client, str, str]:
         """Get a BigQuery client instance and project id."""
-
-        global client
 
         if not client:
             cls._setup_engine()

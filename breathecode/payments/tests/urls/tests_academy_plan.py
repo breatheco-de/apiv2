@@ -42,6 +42,7 @@ def financing_option_serializer(financing_option, currency):
         },
         "how_many_months": financing_option.how_many_months,
         "monthly_price": financing_option.monthly_price,
+        "pricing_ratio_exceptions": financing_option.pricing_ratio_exceptions,
     }
 
 
@@ -64,6 +65,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         },
         "financing_options": financing_options,
         "has_available_cohorts": len(cohorts) > 0,
+        "pricing_ratio_exceptions": event.pricing_ratio_exceptions,
         "has_waiting_list": event.has_waiting_list,
         "is_renewable": event.is_renewable,
         "owner": academy,
@@ -106,6 +108,7 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
         "cohort_set": None,
         "event_type_set": None,
         "invites": [],
+        "pricing_ratio_exceptions": {},
         **data,
     }
 
@@ -131,6 +134,7 @@ def row(currency, academy=None, data={}):
         "mentorship_service_set_id": None,
         "cohort_set_id": None,
         "event_type_set_id": None,
+        "pricing_ratio_exceptions": {},
         **data,
     }
 
@@ -676,9 +680,7 @@ class SignalTestSuite(PaymentsTestCase):
         args, kwargs = self.bc.format.call(
             "en",
             strings={
-                "exact": [
-                    "service_items__service__slug",
-                ],
+                "exact": ["service_items__service__slug", "currency__code"],
             },
             overwrite={
                 "service_slug": "service_items__service__slug",
@@ -689,7 +691,7 @@ class SignalTestSuite(PaymentsTestCase):
         query = self.bc.format.lookup(*args, **kwargs)
         url = reverse_lazy("payments:academy_plan") + "?" + self.bc.format.querystring(query)
 
-        self.assertEqual([x for x in query], ["service_slug", "is_onboarding"])
+        self.assertEqual([x for x in query], ["service_slug", "currency__code", "is_onboarding"])
 
         response = self.client.get(url)
 

@@ -20,11 +20,12 @@ from rest_framework.response import Response
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.actions import get_academy_from_body, get_user_language
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
+    apply_pricing_ratio,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -51,6 +52,7 @@ from breathecode.payments.models import (
     Plan,
     PlanFinancing,
     PlanOffer,
+    Seller,
     Service,
     ServiceItem,
     Subscription,
@@ -58,6 +60,7 @@ from breathecode.payments.models import (
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
+    GetConsumptionSessionSerializer,
     GetCouponSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
@@ -72,6 +75,7 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
@@ -103,6 +107,7 @@ class PlanView(APIView):
 
         handler = self.extensions(request)
         lang = get_user_language(request)
+        country_code = request.GET.get("country_code")
 
         if plan_slug:
             item = Plan.objects.filter(slug=plan_slug).first()
@@ -112,7 +117,10 @@ class PlanView(APIView):
                 )
 
             serializer = GetPlanSerializer(
-                item, many=False, context={"academy_id": request.GET.get("academy")}, select=request.GET.get("select")
+                item,
+                many=False,
+                context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+                select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
 
@@ -122,6 +130,7 @@ class PlanView(APIView):
             strings={
                 "exact": [
                     "service_items__service__slug",
+                    "currency__code",
                 ],
             },
             overwrite={
@@ -138,7 +147,10 @@ class PlanView(APIView):
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(
-            items, many=True, context={"academy_id": request.GET.get("academy")}, select=request.GET.get("select")
+            items,
+            many=True,
+            context={"academy_id": request.GET.get("academy"), "country_code": country_code},
+            select=request.GET.get("select"),
         )
 
         return handler.response(serializer.data)
@@ -173,7 +185,10 @@ class AcademyPlanView(APIView):
                 )
 
             serializer = GetPlanSerializer(
-                item, many=False, context={"academy_id": academy_id}, select=request.GET.get("select")
+                item,
+                many=False,
+                context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+                select=request.GET.get("select"),
             )
             return handler.response(serializer.data)
 
@@ -183,6 +198,7 @@ class AcademyPlanView(APIView):
             strings={
                 "exact": [
                     "service_items__service__slug",
+                    "currency__code",
                 ],
             },
             overwrite={
@@ -204,7 +220,10 @@ class AcademyPlanView(APIView):
 
         items = handler.queryset(items)
         serializer = GetPlanSerializer(
-            items, many=True, context={"academy_id": academy_id}, select=request.GET.get("select")
+            items,
+            many=True,
+            context={"academy_id": academy_id, "country_code": request.GET.get("country_code")},
+            select=request.GET.get("select"),
         )
 
         return handler.response(serializer.data)
@@ -467,24 +486,33 @@ class AcademyAcademyServiceView(APIView):
     def get(self, request, academy_id=None, service_slug=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
+        country_code = request.GET.get("country_code")
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": [
+                    "currency__code",
+                ],
+            },
+        )
 
         if service_slug is not None:
-            item = AcademyService.objects.filter(academy__id=academy_id, service__slug=service_slug).first()
+            item = AcademyService.objects.filter(query, academy__id=academy_id, service__slug=service_slug).first()
             if item is None:
                 raise ValidationException(
                     translation(
                         lang,
-                        en="There is no Academy Service with that service slug",
-                        es="No existe ningún Academy Service con ese slug de Service",
-                        slug="academy-service-not-found",
+                        en="There is no Academy Service with that service slug for the specified currency",
+                        es="No existe ningún Academy Service con ese slug de Service para la moneda especificada",
+                        slug="academy-service-not-found-for-currency",
                     ),
                     code=404,
                 )
 
-            serializer = GetAcademyServiceSmallSerializer(item)
+            serializer = GetAcademyServiceSmallSerializer(item, context={"country_code": country_code})
             return handler.response(serializer.data)
 
-        items = AcademyService.objects.filter(academy__id=academy_id)
+        items = AcademyService.objects.filter(query, academy__id=academy_id)
 
         if mentorship_service_set := request.GET.get("mentorship_service_set"):
             items = items.filter(available_mentorship_service_sets__slug__exact=mentorship_service_set)
@@ -493,7 +521,7 @@ class AcademyAcademyServiceView(APIView):
             items = items.filter(available_event_type_sets__slug__exact=event_type_set)
 
         items = handler.queryset(items)
-        serializer = GetAcademyServiceSmallSerializer(items, many=True)
+        serializer = GetAcademyServiceSmallSerializer(items, many=True, context={"country_code": country_code})
 
         return handler.response(serializer.data)
 
@@ -1118,7 +1146,6 @@ class AcademyPlanFinancingView(APIView):
         def update_financing(financing, data):
             for field, value in data.items():
                 if field in allowed_fields:
-                    print(f"Updating field {field} to {value}")
                     setattr(financing, field, value)
 
         if isinstance(request.data, list):
@@ -1161,6 +1188,78 @@ class MeInvoiceView(APIView):
         return handler.response(serializer.data)
 
 
+class UserCouponView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        user = request.user
+        lang = get_user_language(request)
+
+        # Check if the user already has coupons as a seller
+        seller = Seller.objects.filter(user=user).first()
+
+        if not seller:
+            # Create a new seller for this user
+            seller = Seller(
+                name=f"{user.first_name} {user.last_name}".strip() or f"User {user.id}",
+                user=user,
+                type=Seller.Partner.INDIVIDUAL,
+                is_active=True,
+            )
+            seller.save()
+
+        # Get existing coupons for this seller
+        coupons = Coupon.objects.filter(seller=seller)
+
+        # If no coupons exist, create one
+        if not coupons.exists():
+            # Look for the plan by slug - this could be made configurable
+            plan_slug = request.GET.get("plan_slug", "4geeks-plus-subscription")
+            plan = Plan.objects.filter(slug=plan_slug).first()
+
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Required plan '{plan_slug}' not found",
+                        es=f"Plan requerido '{plan_slug}' no encontrado",
+                        slug="plan-not-found",
+                    ),
+                    code=404,
+                )
+
+            # Create a unique slug for the coupon
+            base_slug = f"referral-{user.id}"
+            slug = base_slug
+            counter = 1
+
+            # Ensure slug uniqueness
+            while Coupon.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            coupon = Coupon(
+                slug=slug,
+                discount_type=Coupon.Discount.PERCENT_OFF,
+                discount_value=0.1,  # 10% discount
+                referral_type=Coupon.Referral.PERCENTAGE,
+                referral_value=0.1,  # 10% commission
+                auto=False,
+                how_many_offers=-1,  # No limit
+                seller=seller,
+            )
+            coupon.save()
+
+            # Add the plan to the coupon
+            coupon.plans.add(plan)
+
+            # Reload the coupons
+            coupons = Coupon.objects.filter(seller=seller)
+
+        serializer = GetCouponSerializer(coupons, many=True)
+        return Response(serializer.data)
+
+
 class AcademyInvoiceView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
@@ -1201,8 +1300,9 @@ class CardView(APIView):
 
     def post(self, request):
         lang = get_user_language(request)
+        academy = get_academy_from_body(request.data, lang=lang, raise_exception=True)
 
-        s = Stripe()
+        s = Stripe(academy=academy)
         s.set_language(lang)
         s.add_contact(request.user)
 
@@ -1272,6 +1372,27 @@ class ServiceBlocked(APIView):
 
 
 class ConsumeView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request, service_slug):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if not (service := Service.objects.filter(slug=service_slug).first()):
+            raise ValidationException(
+                translation(lang, en="Service not found", es="Servicio no encontrado", slug="service-not-found"),
+                code=404,
+            )
+
+        items = ConsumptionSession.objects.filter(consumable__service_item__service=service, user=request.user)
+
+        if status := request.GET.get("status"):
+            items = items.filter(status__in=status.split(","))
+
+        items = handler.queryset(items)
+        serializer = GetConsumptionSessionSerializer(items, many=True)
+
+        return Response(serializer.data)
 
     def put(self, request, service_slug, hash=None):
         lang = get_user_language(request)
@@ -1537,8 +1658,9 @@ class BagView(APIView):
 
     def put(self, request):
         lang = get_user_language(request)
+        academy = get_academy_from_body(request.data, lang=lang, raise_exception=True)
 
-        s = Stripe()
+        s = Stripe(academy=academy)
         s.set_language(lang)
         s.add_contact(request.user)
 
@@ -1633,6 +1755,7 @@ class CheckingView(APIView):
     def put(self, request):
         bag_type = request.data.get("type", "BAG").upper()
         created = False
+        country_code = request.data.get("country_code")
 
         lang = get_user_language(request)
 
@@ -1780,14 +1903,23 @@ class CheckingView(APIView):
 
                         plan = bag.plans.filter(status="CHECKING").first()
 
+                        # Initialize pricing_ratio_explanation
+                        pricing_ratio_explanation = {"plans": [], "service_items": []}
+
                         # FIXME: the service items should be bought without renewals
                         if not plan or plan.is_renewable:
+                            bag.country_code = country_code
                             bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
                                 get_amount(bag, bag.academy.main_currency, lang)
                             )
 
                         else:
+                            # FIXME
                             actions.ask_to_add_plan_and_charge_it_in_the_bag(bag, request.user, lang)
+
+                        # Save pricing ratio explanation if any ratios were applied
+                        if pricing_ratio_explanation["plans"] or pricing_ratio_explanation["service_items"]:
+                            bag.pricing_ratio_explanation = pricing_ratio_explanation
 
                         amount = (
                             bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year
@@ -1796,7 +1928,7 @@ class CheckingView(APIView):
                         if not amount and plans.filter(financing_options__id__gte=1):
                             amount = 1
 
-                        if amount == 0 and PlanFinancing.objects.filter(plans__in=plans).count():
+                        if amount == 0 and Subscription.objects.filter(user=request.user, plans__in=plans).count():
                             raise ValidationException(
                                 translation(
                                     lang,
@@ -1840,6 +1972,7 @@ class ConsumableCheckoutView(APIView):
         service = request.data.get("service")
         total_items = request.data.get("how_many")
         academy = request.data.get("academy")
+        country_code = request.data.get("country_code")
 
         if not service:
             raise ValidationException(
@@ -1953,10 +2086,8 @@ class ConsumableCheckoutView(APIView):
                 code=404,
             )
 
-        currency = academy_service.currency
-
         academy_service.validate_transaction(total_items, lang)
-        amount = academy_service.get_discounted_price(total_items)
+        amount, currency, pricing_ratio_explanation = academy_service.get_discounted_price(total_items, country_code)
 
         if amount <= 0.5:
             raise ValidationException(
@@ -1964,12 +2095,13 @@ class ConsumableCheckoutView(APIView):
                 code=400,
             )
 
-        s = None
+        academy = get_academy_from_body(request.data, lang=lang, raise_exception=True)
+        s = Stripe(academy=academy)
+
         invoice = None
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                s = Stripe()
                 s.set_language(lang)
                 s.add_contact(request.user)
                 service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=total_items)
@@ -1981,9 +2113,15 @@ class ConsumableCheckoutView(APIView):
                     was_delivered=True,
                     user=request.user,
                     currency=currency,
-                    academy_id=academy,
+                    academy=academy,
                     is_recurrent=False,
+                    country_code=country_code,  # Store the country code for future reference
+                    pricing_ratio_explanation=pricing_ratio_explanation,
                 )
+
+                # Store pricing ratio explanation if any ratios were applied
+                if pricing_ratio_explanation["service_items"]:
+                    bag.pricing_ratio_explanation = pricing_ratio_explanation
 
                 bag.save()
 
@@ -2001,7 +2139,7 @@ class ConsumableCheckoutView(APIView):
                 else:
                     description = f"Can join to {int(total_items)} events"
 
-                invoice = s.pay(request.user, bag, amount, currency=bag.currency.code, description=description)
+                invoice = s.pay(request.user, bag, amount, currency=bag.currency.code.lower(), description=description)
 
                 consumable = Consumable(
                     service_item=service_item,
@@ -2013,9 +2151,15 @@ class ConsumableCheckoutView(APIView):
 
                 consumable.save()
 
+                tasks_activity.add_activity.delay(
+                    request.user.id,
+                    "checkout_completed",
+                    related_type="payments.Invoice",
+                    related_id=invoice.id,
+                )
+
             except Exception as e:
                 if invoice:
-                    s = Stripe()
                     s.set_language(lang)
                     s.refund_payment(invoice)
 
@@ -2183,10 +2327,18 @@ class PayView(APIView):
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
                         original_price = option.monthly_price
-                        coupons = bag.coupons.all()
-                        amount = get_discounted_price(original_price, coupons)
 
-                        bag.monthly_price = option.monthly_price
+                        # Apply pricing ratio first
+                        adjusted_price, _, c = apply_pricing_ratio(original_price, bag.country_code, option)
+
+                        if c and c.code != bag.currency.code:
+                            bag.currency = c
+                            bag.save()
+
+                        # Then apply coupons
+                        coupons = bag.coupons.all()
+                        amount = get_discounted_price(adjusted_price, coupons)
+
                     except Exception:
                         raise ValidationException(
                             translation(
@@ -2240,19 +2392,19 @@ class PayView(APIView):
                     )
 
                 if amount >= 0.50:
-                    s = Stripe()
+                    s = Stripe(academy=bag.academy)
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
 
                 elif amount == 0:
                     invoice = Invoice(
+                        user=request.user,
                         amount=0,
                         paid_at=utc_now,
-                        user=request.user,
                         bag=bag,
-                        academy=bag.academy,
                         status="FULFILLED",
-                        currency=bag.academy.main_currency,
+                        currency=bag.currency,
+                        academy=bag.academy,
                     )
 
                     invoice.save()
@@ -2362,22 +2514,88 @@ class AcademyPlanSubscriptionView(APIView):
 
 
 class PaymentMethodView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+    permission_classes = [AllowAny]
 
     def get(self, request):
+        handler = self.extensions(request)
         lang = get_user_language(request)
 
-        items = PaymentMethod.objects.all()
-        lookup = {}
+        # Define the custom filter function for country_code
+        def country_code_filter(value: str):
+            if not value:
+                return Q()
+            return Q(included_country_codes__exact="") | Q(included_country_codes__icontains=value)
 
-        if "academy_id" in self.request.GET:
-            academy_id = self.request.GET.get("academy_id")
-            lookup["academy__id__iexact"] = academy_id
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": [
+                    "currency_code",
+                    "lang",
+                    "academy_id",
+                ],
+            },
+            # Use the custom field handler
+            custom_fields={"country_code": country_code_filter},
+        )
 
-        if "lang" in self.request.GET:
-            lang = self.request.GET.get("lang")
-            lookup["lang__iexact"] = lang
+        items = PaymentMethod.objects.filter(query)
 
-        items = items.filter(**lookup)
-
+        items = handler.queryset(items)
         serializer = GetPaymentMethod(items, many=True)
-        return Response(serializer.data, status=200)
+
+        return handler.response(serializer.data)
+
+
+class AcademyPaymentMethodView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_paymentmethod")
+    def post(self, request, academy_id):
+        academy = Academy.objects.filter(id=academy_id).first()
+
+        serializer = PaymentMethodSerializer(data={**request.data, "academy": academy.id})
+        if serializer.is_valid():
+            serializer.save(academy=academy)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_paymentmethod")
+    def put(self, request, academy_id, paymentmethod_id):
+        lang = get_user_language(request)
+        method = PaymentMethod.objects.filter(id=paymentmethod_id, academy__id=academy_id).first()
+        if not method:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment method not found for this academy",
+                    es="Método de pago no encontrado para esta academia",
+                    slug="payment-method-not-found",
+                ),
+                code=404,
+            )
+
+        serializer = PaymentMethodSerializer(method, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_paymentmethod")
+    def delete(self, request, academy_id, paymentmethod_id):
+        lang = get_user_language(request)
+        method = PaymentMethod.objects.filter(id=paymentmethod_id, academy__id=academy_id).first()
+        if not method:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment method not found for this academy",
+                    es="Método de pago no encontrado para esta academia",
+                    slug="payment-method-not-found",
+                ),
+                code=404,
+            )
+
+        method.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

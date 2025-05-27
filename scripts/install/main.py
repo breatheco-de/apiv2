@@ -18,7 +18,7 @@ def preinstall_hook():
 
 def install():
     print("")
-    print("--- Running pipenv install ---")
+    print("--- Running poetry install ---")
     print("")
 
     os.system("poetry install")

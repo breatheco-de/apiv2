@@ -15,7 +15,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from breathecode.authenticate.models import Token
-from breathecode.authenticate.tasks import async_validate_email_invite
+from breathecode.authenticate.tasks import async_validate_email_invite, verify_user_invite_email
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 now = timezone.now()
@@ -58,6 +58,7 @@ def plan_db_item(plan, data={}):
         "price_per_month": plan.price_per_month,
         "price_per_quarter": plan.price_per_quarter,
         "price_per_year": plan.price_per_year,
+        "pricing_ratio_exceptions": {},
         **data,
     }
 
@@ -278,6 +279,7 @@ def test_task__post__without_user_invite(bc: Breathecode, client: APIClient, val
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
 
 # """
@@ -332,6 +334,7 @@ def test_task__post__without_user_invite_with_asset_slug(bc: Breathecode, client
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
 
 # """
@@ -386,6 +389,7 @@ def test_task__post__without_user_invite_with_event_slug(bc: Breathecode, client
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
 
 # """
@@ -419,6 +423,7 @@ def test_task__post__with_user_invite__already_exists__status_waiting_list(bc: B
 
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
+    assert verify_user_invite_email.delay.call_args_list == []
 
 
 @patch("django.utils.timezone.now", MagicMock(return_value=now))
@@ -450,6 +455,7 @@ def test_task__post__with_user_invite__already_exists__status_pending__academy_n
 
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
+    assert verify_user_invite_email.delay.call_args_list == []
 
 
 @patch("django.utils.timezone.now", MagicMock(return_value=now))
@@ -481,6 +487,7 @@ def test_task__post__with_user_invite__already_exists__status_pending__academy_n
 
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
+    assert verify_user_invite_email.delay.call_args_list == []
 
 
 @patch("django.utils.timezone.now", MagicMock(return_value=now))
@@ -507,6 +514,7 @@ def test_task__post__with_user_invite__already_exists__status_pending(bc: Breath
 
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
+    assert verify_user_invite_email.delay.call_args_list == []
 
 
 @patch("django.utils.timezone.now", MagicMock(return_value=now))
@@ -540,6 +548,7 @@ def test_task__post__with_user_invite__already_exists__status_accepted(bc: Breat
 
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
+    assert verify_user_invite_email.delay.call_args_list == []
 
 
 # """
@@ -577,6 +586,7 @@ def test_task__post__with_user_invite__user_exists(bc: Breathecode, client: APIC
     assert bc.database.list_of("authenticate.UserInvite") == []
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
+    assert verify_user_invite_email.delay.call_args_list == []
 
 
 # """
@@ -657,23 +667,7 @@ def test_task__post__with_user_invite(bc: Breathecode, client: APIClient, valida
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1), call(2)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    2,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(2)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -747,7 +741,7 @@ def test_task__post__does_not_get_in_waiting_list_using_a_plan(bc: Breathecode, 
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == [plan_db_item(model.plan, data={})]
     bc.check.queryset_with_pks(model.plan.invites.all(), [2])
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -820,23 +814,7 @@ def test_task__post__get_in_waiting_list_using_a_plan(bc: Breathecode, client: A
 
     token = hashlib.sha512("pokemon@potato.io".encode("UTF-8") + b).hexdigest()
     assert async_validate_email_invite.delay.call_args_list == [call(1), call(2)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    2,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(2)]
 
     User = bc.database.get_model("auth.User")
     user = User.objects.get(email=data["email"])
@@ -872,7 +850,7 @@ def test__post__syllabus_does_not_exists(bc: Breathecode, client: APIClient):
     assert bc.database.list_of("authenticate.UserInvite") == []
 
     assert bc.database.list_of("auth.User") == []
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -902,7 +880,7 @@ def test__post__course_does_not_exists(bc: Breathecode, client: APIClient):
     assert bc.database.list_of("authenticate.UserInvite") == []
 
     assert bc.database.list_of("auth.User") == []
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -980,23 +958,7 @@ def test__post__course_without_syllabus(bc: Breathecode, client: APIClient, vali
 
     token = hashlib.sha512("pokemon@potato.io".encode("UTF-8") + b).hexdigest()
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     User = bc.database.get_model("auth.User")
     user = User.objects.get(email=data["email"])
@@ -1080,23 +1042,7 @@ def test__post__course_and_syllabus(bc: Breathecode, client: APIClient, validati
     bc.check.queryset_with_pks(model.course.invites.all(), [1])
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     User = bc.database.get_model("auth.User")
     user = User.objects.get(email=data["email"])
@@ -1150,7 +1096,7 @@ def test__post__course_and_syllabus__syllabus_not_associated_to_course(bc: Breat
     bc.check.queryset_with_pks(model.course.invites.all(), [])
     assert bc.database.list_of("payments.Plan") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -1222,7 +1168,7 @@ def test__post__course_and_syllabus__waiting_list(bc: Breathecode, client: APICl
     bc.check.queryset_with_pks(model.course.invites.all(), [1])
     assert bc.database.list_of("payments.Plan") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -1297,7 +1243,7 @@ def test__post__with_other_invite__course_and_syllabus__waiting_list(bc: Breathe
     bc.check.queryset_with_pks(model.course.invites.all(), [2])
     assert bc.database.list_of("payments.Plan") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -1369,7 +1315,7 @@ def test__post__with_other_invite__plan__waiting_list(bc: Breathecode, client: A
     bc.check.queryset_with_pks(model.plan.invites.all(), [2])
     assert bc.database.list_of("marketing.Course") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -1456,23 +1402,7 @@ def test__post__with_other_invite__cohort__waiting_list(bc: Breathecode, client:
         }
     ]
     assert async_validate_email_invite.delay.call_args_list == [call(1), call(2)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    2,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(2)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -1561,23 +1491,7 @@ def test__post__with_other_invite__syllabus__waiting_list(bc: Breathecode, clien
         }
     ]
     assert async_validate_email_invite.delay.call_args_list == [call(1), call(2)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    2,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(2)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -1607,7 +1521,7 @@ def test_task__put__without_email(bc: Breathecode, client: APIClient):
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -1691,23 +1605,7 @@ def test_task__put__with_user_invite__cohort_as_none(bc: Breathecode, client: AP
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -1761,7 +1659,7 @@ def test_task__put__with_user_invite__cohort_not_found(bc: Breathecode, client: 
     assert bc.database.list_of("payments.Plan") == []
     assert bc.database.list_of("auth.User") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -1850,23 +1748,7 @@ def test_task__put__with_user_invite__cohort_found(bc: Breathecode, client: APIC
         }
     ]
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -1961,23 +1843,7 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -2055,8 +1921,8 @@ def test_task__put__with_user_invite__cohort_found__academy_available_as_saas__u
     assert bc.database.list_of("payments.Plan") == []
     assert bc.database.list_of("auth.User") == [bc.format.to_dict(model.user)]
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
+    assert verify_user_invite_email.delay.call_args_list == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
     assert Token.get_or_create.call_args_list == [
         call(user=model.user, token_type="login"),
     ]
@@ -2108,7 +1974,7 @@ def test_task__put__with_user_invite__syllabus_not_found(bc: Breathecode, client
     assert bc.database.list_of("payments.Plan") == []
     assert bc.database.list_of("auth.User") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -2199,23 +2065,7 @@ def test_task__put__with_user_invite__syllabus_found(bc: Breathecode, client: AP
         }
     ]
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -2311,23 +2161,7 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
     assert bc.database.list_of("marketing.Course") == []
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -2408,8 +2242,8 @@ def test_task__put__with_user_invite__syllabus_found__academy_available_as_saas_
     assert bc.database.list_of("payments.Plan") == []
     assert bc.database.list_of("auth.User") == [bc.format.to_dict(model.user)]
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
+    assert verify_user_invite_email.delay.call_args_list == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
     assert Token.get_or_create.call_args_list == [
         call(user=model.user, token_type="login"),
     ]
@@ -2473,7 +2307,7 @@ def test_task__put__plan_does_not_exist(bc: Breathecode, client: APIClient):
 
     assert user_db == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -2543,7 +2377,7 @@ def test_task__put__plan_has_waiting_list(bc: Breathecode, client: APIClient):
     assert bc.database.list_of("payments.Plan") == [plan_db_item(model.plan, data={})]
     bc.check.queryset_with_pks(model.plan.invites.all(), [1])
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -2653,23 +2487,7 @@ def test_task__put__plan_has_not_waiting_list(bc: Breathecode, client: APIClient
         }
     ]
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     user = bc.database.get("auth.User", 1, dict=False)
     assert Token.get_or_create.call_args_list == [
@@ -2715,7 +2533,7 @@ def test__put__course_does_not_exists(bc: Breathecode, client: APIClient):
     ]
 
     assert bc.database.list_of("auth.User") == []
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -2801,23 +2619,7 @@ def test__put__course_without_syllabus(bc: Breathecode, client: APIClient, valid
     bc.check.queryset_with_pks(model.course.invites.all(), [1])
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     User = bc.database.get_model("auth.User")
     user = User.objects.get(email=data["email"])
@@ -2913,22 +2715,7 @@ def test__put__course_and_syllabus(bc: Breathecode, client: APIClient, validatio
     bc.check.queryset_with_pks(model.course.invites.all(), [1])
     assert bc.database.list_of("payments.Plan") == []
     assert async_validate_email_invite.delay.call_args_list == [call(1)]
-    assert bc.database.list_of("task_manager.ScheduledTask") == [
-        {
-            "arguments": {
-                "args": [
-                    1,
-                ],
-                "kwargs": {},
-            },
-            "duration": timedelta(days=1),
-            "eta": now + timedelta(days=1),
-            "id": 1,
-            "status": "PENDING",
-            "task_module": "breathecode.authenticate.tasks",
-            "task_name": "verify_user_invite_email",
-        },
-    ]
+    assert verify_user_invite_email.delay.call_args_list == [call(1)]
 
     User = bc.database.get_model("auth.User")
     user = User.objects.get(email=data["email"])
@@ -2992,7 +2779,7 @@ def test__put__course_and_syllabus__syllabus_not_associated_to_course(bc: Breath
     bc.check.queryset_with_pks(model.course.invites.all(), [])
     assert bc.database.list_of("payments.Plan") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
     assert Token.get_or_create.call_args_list == []
 
 
@@ -3073,6 +2860,6 @@ def test__put__course_and_syllabus__waiting_list(bc: Breathecode, client: APICli
     bc.check.queryset_with_pks(model.course.invites.all(), [1])
     assert bc.database.list_of("payments.Plan") == []
 
-    assert bc.database.list_of("task_manager.ScheduledTask") == []
+    assert verify_user_invite_email.delay.call_args_list == []
 
     assert Token.get_or_create.call_args_list == []

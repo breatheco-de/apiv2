@@ -27,7 +27,7 @@ class AcademyCohortTestSuite(ProvisioningTestCase):
         self.bc.check.calls(
             Logger.error.call_args_list,
             [
-                call("Bill 1 not found or requirements not met", exc_info=True),
+                call("Bill 1 not found or requirements not met for archiving.", exc_info=True),
             ],
         )
 
@@ -73,7 +73,7 @@ class AcademyCohortTestSuite(ProvisioningTestCase):
         self.bc.check.calls(
             Logger.error.call_args_list,
             [
-                call("Bill 1 not found or requirements not met", exc_info=True),
+                call("Bill 1 not found or requirements not met for archiving.", exc_info=True),
             ],
         )
 

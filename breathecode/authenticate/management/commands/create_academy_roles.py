@@ -49,6 +49,7 @@ CAPABILITIES = [
     {"slug": "read_eventcheckin", "description": "List and read all the event_checkins"},
     {"slug": "read_survey", "description": "List all the nps answers"},
     {"slug": "crud_survey", "description": "Create, update or delete surveys"},
+    {"slug": "read_survey_template", "description": "Read all the templates available for surveys"},
     {"slug": "read_nps_answers", "description": "List all the nps answers"},
     {"slug": "read_lead", "description": "List all the leads"},
     {"slug": "read_won_lead", "description": "List all the won leads"},
@@ -176,6 +177,10 @@ CAPABILITIES = [
         "slug": "upload_assignment_telemetry",
         "description": "Allow upload the user's telemetry in a LearnPack assignment",
     },
+    {
+        "slug": "validate_assignment_flag",
+        "description": "Ideal for CTFs and other assignments that require flag validation",
+    },
 ]
 
 ROLES = [
@@ -203,6 +208,7 @@ ROLES = [
             "read_review",
             "read_shortlink",
             "read_nps_answers",
+            "read_survey_template",
             "read_won_lead",
             "read_asset",
             "read_category",
@@ -217,6 +223,7 @@ ROLES = [
             "crud_mentorship_session",
             "read_calendly_organization",
             "crud_subscription",
+            "validate_assignment_flag",
         ],
     },
     {
@@ -246,6 +253,7 @@ ROLES = [
             "read_all_cohort",
             "read_media",
             "read_my_academy",
+            "read_survey_template",
             "read_invite",
             "read_survey",
             "read_tag",
@@ -297,6 +305,7 @@ ROLES = [
             "read_lead_gen_app",
             "read_technology",
             "read_service",
+            "read_survey_template",
         ],
     },
     {
@@ -317,6 +326,7 @@ ROLES = [
             "read_service",
             "read_academyservice",
             "upload_assignment_telemetry",
+            "validate_assignment_flag",
         ],
     },
 ]
@@ -415,6 +425,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "read_certificate",
                 "crud_certificate",
                 "crud_shortlink",
+                "crud_cohort",
                 "read_mentorship_mentor",
                 "crud_mentorship_mentor",
                 "read_mentorship_service",

@@ -5,6 +5,7 @@ from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from breathecode.admissions.admin import CohortUserAdmin as AdmissionsCohortUserAdmin
@@ -205,7 +206,17 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ["user__first_name", "user__last_name", "user__email", "cohort__slug"]
     list_filter = [AnswerTypeFilter, "status", "score", "academy__slug", "cohort__slug", "question_by_slug"]
     actions = ["export_as_csv", add_academy_to_answer]
-    raw_id_fields = ["user", "cohort", "mentor", "event", "mentorship_session", "survey"]
+    raw_id_fields = [
+        "token",
+        "user",
+        "cohort",
+        "mentor",
+        "event",
+        "mentorship_session",
+        "survey",
+        "live_class",
+        "asset",
+    ]
 
     def answer_url(self, obj):
         url = "https://nps.4geeks.com/" + str(obj.id)
@@ -275,9 +286,9 @@ def calculate_survey_scores(modeladmin, request, queryset):
 
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
-    list_display = ("id", "cohort", "status", "duration", "created_at", "sent_at", "survey_url")
+    list_display = ("id", "cohort", "status", "template_slug", "total", "created_at", "sent_at", "survey_url")
     search_fields = ["cohort__slug", "cohort__academy__slug", "cohort__name", "cohort__academy__name"]
-    list_filter = [SentFilter, "status", "cohort__academy__slug"]
+    list_filter = [SentFilter, "status", "template_slug", "cohort__academy__slug"]
     raw_id_fields = ["cohort"]
     actions = [send_big_cohort_bulk_survey, fill_sent_at_with_created_at, calculate_survey_scores] + change_field(
         ["PENDING", "SENT", "PARTIAL", "FATAL"], name="status"
@@ -286,6 +297,22 @@ class SurveyAdmin(admin.ModelAdmin):
     def survey_url(self, obj):
         url = "https://nps.4geeks.com/survey/" + str(obj.id)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>")
+
+    def total(self, obj):
+        if obj.scores is not None and "total" in obj.scores:
+            score = obj.scores["total"]
+            if score >= 8:
+                color = "green"
+            elif 7 <= score < 8:
+                color = "yellow"
+            else:
+                color = "red"
+            return mark_safe(
+                f'<span style="background-color: {color}; padding: 2px 4px; border-radius: 3px;">{score}</span>'
+            )
+        return mark_safe(
+            '<span style="background-color: black; color: white; padding: 2px 4px; border-radius: 3px;">N/A</span>'
+        )
 
 
 @admin.register(Review)
@@ -329,50 +356,10 @@ class SurveyTemplateForm(forms.ModelForm):
             "additional_questions": PrettyJSONWidget(),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Format JSON fields for better readability in admin
-        for field_name, field in self.fields.items():
-            if isinstance(field.widget, PrettyJSONWidget):
-                if self.initial.get(field_name):
-                    # No need to convert to string here, PrettyJSONWidget will handle it
-                    pass
-
     def clean(self):
         cleaned_data = super().clean()
-        # No need to parse JSON fields here as PrettyJSONWidget.value_from_datadict already does it
+        # Ensure JSON fields are serialized as strings
         return cleaned_data
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        # Ensure all JSON fields are properly saved as Python objects, not strings
-        json_fields = [
-            "when_asking_event",
-            "when_asking_mentor",
-            "when_asking_cohort",
-            "when_asking_academy",
-            "when_asking_mentorshipsession",
-            "when_asking_platform",
-            "when_asking_liveclass_mentor",
-            "when_asking_mentor_communication",
-            "when_asking_mentor_participation",
-            "additional_questions",
-        ]
-
-        for field in json_fields:
-            value = getattr(instance, field, None)
-            if isinstance(value, str) and value:
-                try:
-                    setattr(instance, field, json.loads(value))
-                except json.JSONDecodeError:
-                    # Keep as is if not valid JSON
-                    pass
-
-        if commit:
-            instance.save()
-
-        return instance
 
 
 class OriginalTemplateFilter(admin.SimpleListFilter):

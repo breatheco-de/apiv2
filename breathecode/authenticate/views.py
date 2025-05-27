@@ -19,13 +19,14 @@ from capyc.core.i18n import translation
 from capyc.core.managers import feature
 from capyc.rest_framework.exceptions import ValidationException
 from circuitbreaker import CircuitBreakerError
+from django import shortcuts
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
 from django.utils import timezone
 from linked_services.django.models import AppUserAgreement
 from linked_services.django.service import Service
@@ -540,8 +541,10 @@ class EmailVerification(APIView):
 
     def get(self, request, email=None):
         lang = get_user_language(request)
+        if email is not None:
+            email = email.lower()
 
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         if user is None:
             raise ValidationException(
                 translation(
@@ -1128,7 +1131,7 @@ def get_github_token(request, token=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
-    scopes = request.query_params.get("scope", "user")
+    scopes = request.query_params.get("scope", "user:email")
     if token is not None:
         _tkn = Token.get_valid(token)
         if _tkn is None:
@@ -1147,9 +1150,6 @@ def get_github_token(request, token=None):
         "redirect_uri": os.getenv("GITHUB_REDIRECT_URL", "") + f"?url={url}",
         "scope": scopes,
     }
-
-    logger.debug("Redirecting to github")
-    logger.debug(params)
 
     redirect = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
 
@@ -1172,7 +1172,7 @@ async def save_github_token(request):
         return default
 
     async def redirect_to_get_access_token():
-        nonlocal scopes, request, token, url
+        nonlocal token
 
         if token is None:
             token, _ = await Token.aget_or_create(user=user, token_type="login")
@@ -1303,10 +1303,23 @@ async def save_github_token(request):
         if invite:
             academy = invite.academy
 
+        companyName = "4Geeks"
+        if "4geeks" not in url:
+            parsed_url = urlparse(url)
+            domain = (
+                parsed_url.netloc.split(".")[1]
+                if parsed_url.netloc.startswith("www.")
+                else parsed_url.netloc.split(".")[0]
+            )
+            if "learnpack" in domain:
+                companyName = "LearnPack"
+            else:
+                companyName = domain.capitalize()
+
         return render_message(
             request,
             "We could not find in our records the email associated to this github account, "
-            'perhaps you want to signup to the platform first? <a href="' + url + '">Back to 4Geeks.com</a>',
+            'perhaps you want to sign up to first? <a href="' + url + '">Back to ' + companyName + "</a>",
             academy=academy,
         )
 
@@ -1343,7 +1356,7 @@ async def save_github_token(request):
 
         return await redirect_to_get_access_token()
 
-    required_scopes = await aget_github_scopes(user, "user")
+    required_scopes = await aget_github_scopes(user, "user:email")
 
     if required_scopes != github_credentials.scopes or required_scopes != scopes:
         github_credentials.scopes = required_scopes
@@ -1719,7 +1732,7 @@ def change_password(request, token):
             messages.error(request, "Please correct the error below.")
     else:
         form = PasswordChangeCustomForm(request.user)
-    return render(request, "form.html", {"form": form})
+    return shortcuts.render(request, "form.html", {"form": form})
 
 
 class TokenTemporalView(APIView):
@@ -1743,11 +1756,11 @@ def sync_gitpod_users_view(request):
 
         if "html" not in _dict or _dict["html"] == "":
             messages.error(request, "HTML string is required")
-            return render(request, "form.html", {"form": form})
+            return shortcuts.render(request, "form.html", {"form": form})
 
         try:
             all_usernames = update_gitpod_users(_dict["html"])
-            return render(
+            return shortcuts.render(
                 request,
                 "message.html",
                 {
@@ -1759,21 +1772,28 @@ def sync_gitpod_users_view(request):
 
     else:
         form = SyncGithubUsersForm()
-    return render(request, "form.html", {"form": form})
+    return shortcuts.render(request, "form.html", {"form": form})
 
 
 def reset_password_view(request):
 
     if request.method == "POST":
         _dict = request.POST.copy()
-        form = PickPasswordForm(_dict)
+        # Use ResetPasswordForm for POST to only handle email submission
+        form = ResetPasswordForm(_dict)
 
         if "email" not in _dict or _dict["email"] == "":
             messages.error(request, "Email is required")
-            return render(request, "form.html", {"form": form})
+            # Pass the correct form instance to the template
+            return shortcuts.render(request, "form.html", {"form": form})
+
+        # If ResetPasswordForm has validation (e.g., email format)
+        if not form.is_valid():
+            messages.error(request, "Invalid email format.")
+            return shortcuts.render(request, "form.html", {"form": form})
 
         users = User.objects.filter(email__iexact=_dict["email"])
-        if users.count() > 0:
+        if users.exists():
             reset_password(users)
         else:
             logger.debug("No users with " + _dict["email"] + " email to reset password")
@@ -1781,12 +1801,12 @@ def reset_password_view(request):
         if "callback" in _dict and _dict["callback"] != "":
             return HttpResponseRedirect(redirect_to=_dict["callback"] + "?msg=Check your email for a password reset!")
         else:
-            return render(request, "message.html", {"MESSAGE": "Check your email for a password reset!"})
-    else:
+            return shortcuts.render(request, "message.html", {"MESSAGE": "Check your email for a password reset!"})
+    else:  # GET request
         _dict = request.GET.copy()
         _dict["callback"] = request.GET.get("callback", "")
         form = ResetPasswordForm(_dict)
-        return render(request, "form.html", {"form": form})
+        return shortcuts.render(request, "form.html", {"form": form})
 
 
 def pick_password(request, token):
@@ -1831,7 +1851,7 @@ def pick_password(request, token):
                     obj["heading"] = invite.academy.name
 
             messages.error(request, "Passwords don't match")
-            return render(request, "form.html", {"form": form, **obj})
+            return shortcuts.render(request, "form.html", {"form": form, **obj})
 
         if not password1:
             obj = {}
@@ -1845,7 +1865,7 @@ def pick_password(request, token):
                     obj["heading"] = invite.academy.name
 
             messages.error(request, "Password can't be empty")
-            return render(request, "form.html", {"form": form, **obj})
+            return shortcuts.render(request, "form.html", {"form": form, **obj})
 
         if (
             len(password1) < 8
@@ -1864,7 +1884,7 @@ def pick_password(request, token):
                     obj["heading"] = invite.academy.name
 
             messages.error(request, "Password must contain 8 characters with lowercase, uppercase and " "symbols")
-            return render(request, "form.html", {"form": form, **obj})
+            return shortcuts.render(request, "form.html", {"form": form, **obj})
 
         else:
             user.set_password(password1)
@@ -1890,19 +1910,31 @@ def pick_password(request, token):
                     if "heading" not in obj:
                         obj["heading"] = invite.academy.name
 
-                return render(
+                # Determine app_url from invite's conversion_info if available
+                app_url = os.getenv("APP_URL", "https://4geeks.com")
+                if invite and invite.conversion_info and isinstance(invite.conversion_info, dict):
+                    landing_url = invite.conversion_info.get("landing_url")
+                    if landing_url:
+                        try:
+                            parsed_url = urlparse(landing_url)
+                            app_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                        except Exception:
+                            # If any error parsing URL, fallback to default app_url
+                            pass
+
+                return shortcuts.render(
                     request,
                     "message.html",
                     {
                         "MESSAGE": "You password has been successfully set.",
                         "BUTTON": "Continue to sign in",
                         "BUTTON_TARGET": "_self",
-                        "LINK": os.getenv("APP_URL", "https://4geeks.com") + "/login",
+                        "LINK": app_url + "/login",
                         **obj,
                     },
                 )
 
-    return render(request, "form.html", {"form": form})
+    return shortcuts.render(request, "form.html", {"form": form})
 
 
 class PasswordResetView(APIView):
@@ -1959,7 +1991,7 @@ def render_user_invite(request, token):
 
     querystr = urllib.parse.urlencode({"callback": get_app_url(), "token": token.key})
     url = os.getenv("API_URL") + "/v1/auth/member/invite?" + querystr
-    return render(
+    return shortcuts.render(
         request,
         "user_invite.html",
         {
@@ -2010,11 +2042,6 @@ def render_invite(request, token, member_id=None):
         return Response(serializer.data)
 
     if request.method == "GET":
-
-        if invite and User.objects.filter(email=invite.email).exists():
-            redirect = os.getenv("API_URL") + "/v1/auth/member/invite"
-            return HttpResponseRedirect(redirect_to=redirect)
-
         form = InviteForm(
             {
                 "callback": [""],
@@ -2035,7 +2062,7 @@ def render_invite(request, token, member_id=None):
             if "heading" not in obj:
                 obj["heading"] = invite.academy.name
 
-        return render(
+        return shortcuts.render(
             request,
             "form_invite.html",
             {
@@ -2074,7 +2101,7 @@ def render_invite(request, token, member_id=None):
                 if "heading" not in obj:
                     obj["heading"] = invite.academy.name
 
-            return render(
+            return shortcuts.render(
                 request,
                 "form_invite.html",
                 {
@@ -2103,7 +2130,7 @@ def render_invite(request, token, member_id=None):
                 if "heading" not in obj:
                     obj["heading"] = invite.academy.name
 
-            return render(
+            return shortcuts.render(
                 request,
                 "message.html",
                 {
@@ -2132,7 +2159,7 @@ def render_academy_invite(request, token):
 
     querystr = urllib.parse.urlencode({"callback": get_app_url(), "token": token.key})
     url = os.getenv("API_URL") + "/v1/auth/academy/html/invite?" + querystr
-    return render(
+    return shortcuts.render(
         request,
         "academy_invite.html",
         {
@@ -2199,13 +2226,13 @@ def login_html_view(request):
 
         except Exception as e:
             messages.error(request, e.message if hasattr(e, "message") else e)
-            return render(request, "login.html", {"form": form})
+            return shortcuts.render(request, "login.html", {"form": form})
     else:
         url = request.GET.get("url", None)
         if url is None or url == "":
             messages.error(request, "You must specify a 'url' (querystring) to redirect to after successful login")
 
-    return render(request, "login.html", {"form": form, "redirect_url": request.GET.get("url", None)})
+    return shortcuts.render(request, "login.html", {"form": form, "redirect_url": request.GET.get("url", None)})
 
 
 @api_view(["GET"])

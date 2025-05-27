@@ -1,19 +1,4 @@
 services:
-  # 4geeks:
-  #   image: geeksacademy/breathecode:development
-  #   env_file:
-  #     - ./.env
-  #   environment:
-  #     - REDIS_URL=redis://redis:6379
-  #     - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
-  #     - CELERY_DISABLE_SCHEDULER=
-  #     - ALLOW_UNSAFE_CYPRESS_APP=True
-  #   ports:
-  #     - "8000:8000"
-  #   depends_on:
-  #     - postgres
-  #     - redis
-
   redis:
     image: redis:alpine
     ports:
@@ -30,30 +15,20 @@ services:
     ports:
       - "5432:5432"
 
-  # adminer:
-  #   image: adminer
-  #   ports:
-  #     - 8080:8080
-  #   depends_on:
-  #     - postgres
 
-  # bigquery:
-  #   image: ghcr.io/goccy/bigquery-emulator:latest
-  #   command: --project=test --dataset=4geeks
-  #   ports:
-  #     - "9050:9050"
-  #     - "9060:9060"
 
-  lavin:
-    image: cloudamqp/lavinmq:latest     # Replace with the correct image name/tag
-    container_name: lavinmq
+  rabbitmq:
+    image: rabbitmq:4
     ports:
-      - "5672:5672"          # Example port mapping (adjust as necessary)
-      - "15672:15672"        # Example management UI port (if applicable)
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=pass
     volumes:
-      - lavinmq_data:/var/lib/lavinmq  # Adjust volume path based on your app's requirements
+      - rabbitmq_data:/var/lib/rabbitmq
 
 
 volumes:
   postgres_data:
-  lavinmq_data:
+  rabbitmq_data:

@@ -1,11 +1,12 @@
 #!/bin/env python
 
 import os
-import sys
 import shutil
+import sys
 import webbrowser
 from pathlib import Path
-from .utils.environment import test_environment, reset_environment
+
+from .utils.environment import reset_environment, test_environment
 
 
 def python_module_to_dir(module: str) -> str:
@@ -16,7 +17,7 @@ def python_module_to_dir(module: str) -> str:
 def help_command():
     print("Usage:")
     print(
-        "   `pipenv run cov breathecode.events` where events is the name of module and accept "
+        "   `poetry run cov breathecode.events` where events is the name of module and accept "
         "add submodules using the dot(.) character as delimiter."
     )
     print("")

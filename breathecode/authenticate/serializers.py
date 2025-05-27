@@ -5,17 +5,16 @@ import random
 import urllib.parse
 
 import capyc.django.serializer as capy
+from asgiref.sync import async_to_sync
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import Permission, User
 from django.db import IntegrityError
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from task_manager.django.actions import schedule_task
-from asgiref.sync import async_to_sync
-from dateutil.relativedelta import relativedelta
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
@@ -1430,7 +1429,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         from breathecode.payments.models import Plan
 
         country = data["country"] if "country" in data else None
-        forbidden_countries = ["spain", "españa"]
 
         lang = self.context.get("lang", "en")
         if "email" not in data:
@@ -1476,10 +1474,12 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                     translation(lang, en="Course not found", es="Curso no encontrado", slug="course-not-found")
                 )
 
-        if cohort := data.get("cohort"):
+        cohort = data.get("cohort")
+        if cohort:
             extra["cohort"] = cohort
 
-        if syllabus := data.get("syllabus"):
+        syllabus = data.get("syllabus")
+        if syllabus:
             extra["syllabus"] = syllabus
 
         have_pending_invites = UserInvite.objects.filter(
@@ -1571,15 +1571,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if country is not None and country.lower() in forbidden_countries:
-            data["status"] = "WAITING_LIST"
-            data["process_status"] = "PENDING"
+        event_slug = data.get("event_slug") or data.get("event")
 
-        elif plan and plan.has_waiting_list == True:
-            data["status"] = "WAITING_LIST"
-            data["process_status"] = "PENDING"
-
-        elif plan and plan.has_waiting_list == False:
+        if plan and plan.has_waiting_list == False:
             data["status"] = "ACCEPTED"
             data["process_status"] = "DONE"
 
@@ -1722,10 +1716,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             settings.save()
 
             args = (obj.id,)
-
-            manager = schedule_task(verify_user_invite_email, "1d")
-            if not manager.exists(*args):
-                manager.call(*args)
+            verify_user_invite_email.delay(*args)
 
         self.instance.user = self.user
         self.instance.save()

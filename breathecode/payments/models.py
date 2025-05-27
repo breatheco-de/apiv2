@@ -286,6 +286,10 @@ class FinancingOption(models.Model):
     monthly_price = models.FloatField(default=1, help_text="Monthly price (e.g. 1, 2, 3, ...)")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
 
+    pricing_ratio_exceptions = models.JSONField(
+        default=dict, blank=True, help_text="Exceptions to the general pricing ratios per country"
+    )
+
     how_many_months = models.IntegerField(
         default=1, help_text="How many months and installments to collect (e.g. 1, 2, 3, ...)"
     )
@@ -439,7 +443,9 @@ class EventTypeSetTranslation(models.Model):
 
 class AcademyService(models.Model):
     _price: float | None = None
-
+    _max_amount: float | None = None
+    _currency: Currency | None = None
+    _pricing_ratio_explanation: dict | None = None
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
     service = models.OneToOneField(Service, on_delete=models.CASCADE, help_text="Service")
@@ -458,6 +464,10 @@ class AcademyService(models.Model):
     max_amount = models.FloatField(default=1, help_text="Limit total amount, it doesn't matter the bundle size")
     discount_ratio = models.FloatField(default=1, help_text="Will be used when calculated by the final price")
 
+    pricing_ratio_exceptions = models.JSONField(
+        default=dict, blank=True, help_text="Exceptions to the general pricing ratios per country"
+    )
+
     available_mentorship_service_sets = models.ManyToManyField(
         MentorshipServiceSet,
         blank=True,
@@ -475,7 +485,9 @@ class AcademyService(models.Model):
     def __str__(self) -> str:
         return f"{self.academy.slug} -> {self.service.slug}"
 
-    def validate_transaction(self, total_items: float, lang: Optional[str] = "en") -> None:
+    def validate_transaction(
+        self, total_items: float, lang: Optional[str] = "en", country_code: Optional[str] = None
+    ) -> None:
         if total_items < self.bundle_size:
             raise ValidationException(
                 translation(
@@ -498,22 +510,38 @@ class AcademyService(models.Model):
                 code=400,
             )
 
-        amount = self._price if self._price is not None else self.get_discounted_price(total_items)
+        amount, currency, pricing_ratio_explanation = self.get_discounted_price(total_items, country_code)
+        max_amount = self.get_max_amount(country_code)
 
-        if amount > self.max_amount:
+        if amount > max_amount:
             raise ValidationException(
                 translation(
                     lang,
-                    en=f"The amount of items is too high (max {self.max_amount})",
-                    es=f"La cantidad de elementos es demasiado alta (máx {self.max_amount})",
+                    en=f"The amount of items is too high (max {max_amount})",
+                    es=f"La cantidad de elementos es demasiado alta (máx {max_amount})",
                     slug="the-amount-is-too-high",
                 ),
                 code=400,
             )
 
         self._price = amount
+        self._currency = currency
+        self._pricing_ratio_explanation = pricing_ratio_explanation
 
-    def get_discounted_price(self, num_items: float) -> float:
+    def get_max_amount(self, country_code: Optional[str] = None) -> float:
+        if self._max_amount is not None:
+            return self._max_amount
+
+        return self.pricing_ratio_exceptions.get(country_code, {}).get("max_amount", self.max_amount)
+
+    def get_discounted_price(
+        self, num_items: float, country_code: Optional[str] = None, lang: Optional[str] = "en"
+    ) -> tuple[float, Currency, dict]:
+        from breathecode.payments.actions import apply_pricing_ratio
+
+        if self._price is not None:
+            return self._price, self._currency, self._pricing_ratio_explanation
+
         total_discount_ratio = 0
         current_discount_ratio = self.discount_ratio
         discount_nerf = 0.1
@@ -529,10 +557,18 @@ class AcademyService(models.Model):
         if total_discount_ratio > max_discount:
             total_discount_ratio = max_discount
 
-        amount = self.price_per_unit * num_items
+        adjusted_price_per_unit, ratio, c = apply_pricing_ratio(self.price_per_unit, country_code, self, lang=lang)
+        currency = c or self.currency
+        pricing_ratio_explanation = {"service_items": []}
+        if ratio:
+            pricing_ratio_explanation["service_items"].append(
+                {"service": self.service.slug, "ratio": ratio, "country": country_code}
+            )
+
+        amount = adjusted_price_per_unit * num_items
         discount = amount * total_discount_ratio
 
-        return amount - discount
+        return amount - discount, currency, pricing_ratio_explanation
 
     def clean(self) -> None:
         if (
@@ -563,6 +599,9 @@ class AcademyService(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         self._price = None
+        self._max_amount = None
+        self._currency = None
+        self._pricing_ratio_explanation = None
         return super().save(*args, **kwargs)
 
 
@@ -620,6 +659,10 @@ class Plan(AbstractPriceByTime):
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     is_onboarding = models.BooleanField(default=False, help_text="Is onboarding plan?", db_index=True)
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
+
+    pricing_ratio_exceptions = models.JSONField(
+        default=dict, blank=True, help_text="Exceptions to the general pricing ratios per country"
+    )
 
     cohort_set = models.ForeignKey(
         CohortSet,
@@ -897,6 +940,11 @@ def limit_coupon_choices():
     )
 
 
+def _default_pricing_ratio_explanation():
+    """Default empty pricing ratio explanation structure."""
+    return {"plans": [], "service_items": []}
+
+
 class Bag(AbstractAmountByTime):
     """Represents a credit that can be used by a user to use a service."""
 
@@ -945,6 +993,12 @@ class Bag(AbstractAmountByTime):
     is_recurrent = models.BooleanField(default=False, help_text="will it be a recurrent payment?")
     was_delivered = models.BooleanField(default=False, help_text="Was it delivered to the user?")
 
+    pricing_ratio_explanation = models.JSONField(
+        default=_default_pricing_ratio_explanation,
+        blank=True,
+        help_text="Explanation of which exceptions were applied to calculate price",
+    )
+
     token = models.CharField(
         max_length=40, db_index=True, default=None, null=True, blank=True, help_text="Token of the bag"
     )
@@ -954,6 +1008,15 @@ class Bag(AbstractAmountByTime):
         null=True,
         help_text="Expiration date of the bag, used for preview bag together with the token",
     )
+
+    country_code = models.CharField(
+        max_length=2,
+        default=None,
+        null=True,
+        blank=True,
+        help_text="Country code used for pricing ratio calculations",
+    )
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -979,6 +1042,7 @@ class PaymentMethod(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
@@ -988,6 +1052,13 @@ class PaymentMethod(models.Model):
         max_length=5,
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
+    )
+    included_country_codes = models.CharField(
+        max_length=255,
+        null=False,
+        blank=True,
+        default="",
+        help_text="A list of country codes that represent countries that can use this payment method, comma separated",
     )
 
 
@@ -1131,6 +1202,10 @@ class AbstractIOweYou(models.Model):
 
     invoices = models.ManyToManyField(Invoice, blank=True, help_text="Invoices")
 
+    coupons = models.ManyToManyField(
+        Coupon, blank=True, help_text="Coupons applied during the sale", limit_choices_to=limit_coupon_choices
+    )
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
 
@@ -1170,6 +1245,14 @@ class AbstractIOweYou(models.Model):
         default=None, blank=True, null=True, help_text="UTMs and other conversion information."
     )
 
+    country_code = models.CharField(
+        max_length=2,
+        null=False,
+        blank=True,
+        default="",
+        help_text="Country code used for pricing ratio calculations",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1199,6 +1282,7 @@ class PlanFinancing(AbstractIOweYou):
     monthly_price = models.FloatField(
         default=0, help_text="Monthly price, we keep this to avoid we changes him/her amount"
     )
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
     how_many_installments = models.IntegerField(
         default=0, help_text="How many installments to collect and build the plan financing"
@@ -1248,6 +1332,7 @@ class Subscription(AbstractIOweYou):
 
     # last time the subscription was paid
     paid_at = models.DateTimeField(help_text="Last time the subscription was paid")
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
     is_refundable = models.BooleanField(default=True, help_text="Is it refundable?")
 
@@ -1838,11 +1923,43 @@ class ServiceStockScheduler(models.Model):
 
 
 class PaymentContact(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="payment_contact", help_text="Customer")
-    stripe_id = models.CharField(max_length=20, help_text="Stripe id")  # actually return 18 characters
+    """
+    Represents a link between a User and their Stripe Customer ID, potentially
+    scoped to a specific Academy.
+
+    This model stores the Stripe Customer ID (`stripe_id`) associated with a
+    user. If an `academy` is specified, it implies that the Stripe customer
+    record is managed under that academy's Stripe account. If `academy` is
+    null, it typically means the customer is managed under a default or
+    central Stripe account.
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="payment_contacts",
+        help_text="The Django User associated with this Stripe contact.",
+    )
+    stripe_id = models.CharField(
+        max_length=255,  # Stripe IDs can be up to 255 chars, e.g., cus_xxxxxxxxxxxxxx
+        help_text="The Stripe Customer ID (e.g., cus_xxxxxxxxxxxxxx). This links the user to their record in Stripe.",
+    )
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            "The Academy associated with this Stripe contact. If null, the contact is typically "
+            "managed under a default/central Stripe account. This determines which Stripe account "
+            "the customer belongs to."
+        ),
+    )
 
     def __str__(self) -> str:
-        return f"{self.user.email} ({self.stripe_id})"
+        academy_name = self.academy.name if self.academy else "Default Stripe Account"
+        return f"User: {self.user.email}, Stripe ID: {self.stripe_id}, Academy: {academy_name}"
 
 
 GOOD = "GOOD"
@@ -1888,3 +2005,29 @@ class FinancialReputation(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.email} -> {self.get_reputation()}"
+
+
+class AcademyPaymentSettings(models.Model):
+    """
+    Store payment settings for an academy.
+    """
+
+    class POSVendor(models.TextChoices):
+        STRIPE = "STRIPE", "Stripe"
+
+    academy = models.OneToOneField(
+        Academy, on_delete=models.CASCADE, related_name="payment_settings", help_text="Academy"
+    )
+    pos_vendor = models.CharField(
+        max_length=20,
+        choices=POSVendor.choices,
+        default=POSVendor.STRIPE,
+        help_text="Point of Sale vendor like Stripe, etc.",
+    )
+    pos_api_key = models.CharField(max_length=255, blank=True, help_text="API key for the POS vendor")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self) -> str:
+        return f"Payment settings for {self.academy.name}"

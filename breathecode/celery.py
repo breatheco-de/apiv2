@@ -63,7 +63,48 @@ app.conf.update(
     worker_disable_rate_limits=True,
     broker_connection_retry_on_startup=True,
     worker_cancel_long_running_tasks_on_connection_loss=True,
-    broker_heartbeat=30,
+    # Heartbeat configuration
+    broker_heartbeat=30,  # Send broker heartbeat every 30 seconds
+    # broker_heartbeat_checkrate=2.0,  # Check for heartbeat twice as often as heartbeat interval
+    # Task execution settings
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    task_acks_on_failure_or_timeout=False,
+    # Broker connection settings
+    broker_connection_retry=True,
+    broker_connection_max_retries=100,
+    broker_connection_timeout=30,
+    # Worker settings
+    worker_lost_wait=60,
+    # Task retry settings
+    task_publish_retry=True,
+    task_publish_retry_policy={
+        "max_retries": 10,
+        "interval_start": 60,
+        "interval_step": 10,
+        "interval_max": 120,
+    },
+    # State persistence settings for Heroku
+    # worker_state_db=REDIS_URL,  # Use Redis for state persistence
+    # worker_state_db_key_prefix="celery-state",
+    # Additional Heroku-specific settings
+    broker_pool_limit=None,  # Disable connection pooling - better for Heroku's environment
+    broker_failover_strategy="round-robin",
+    task_send_sent_event=True,  # Enable sent events for better monitoring
+    worker_send_task_events=True,  # Enable task events for better monitoring
+    # Beat scheduler configuration
+    beat_max_loop_interval=60,  # Maximum time in seconds between scheduler checks
+    beat_schedule_filename=None,  # Don't use local file, we'll use Redis
+    # Beat schedule - define your periodic tasks here
+    # beat_schedule={
+    #     # Example task that runs every minute
+    #     "heartbeat-check": {
+    #         "task": "breathecode.monitoring.tasks.heartbeat_check",
+    #         "schedule": 60.0,  # Every minute
+    #         "options": {"expires": 50.0},  # Expires if not executed within 50 seconds
+    #     },
+    #     # Add more periodic tasks as needed
+    # },
 )
 
 

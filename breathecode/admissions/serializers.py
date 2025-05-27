@@ -131,6 +131,7 @@ class UserPublicSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    date_joined = serpy.Field()
     profile = PublicProfileSerializer(required=False)
 
 
@@ -481,6 +482,12 @@ class CohortUserHookSerializer(serpy.Serializer):
     educational_status = serpy.Field()
     watching = serpy.Field()
     created_at = serpy.Field()
+    updated_at = serpy.Field()
+    profile_academy = serpy.MethodField()
+
+    def get_profile_academy(self, obj):
+        profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
+        return GetProfileAcademySmallSerializer(profile).data if profile else None
 
 
 class CohortHookSerializer(serpy.Serializer):
@@ -517,6 +524,7 @@ class GetCohortUserSerializer(serpy.Serializer):
     educational_status = serpy.Field()
     watching = serpy.Field()
     created_at = serpy.Field()
+    updated_at = serpy.Field()
     profile_academy = serpy.MethodField()
 
     def get_profile_academy(self, obj):

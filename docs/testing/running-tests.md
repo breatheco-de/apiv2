@@ -3,7 +3,7 @@
 ## Run a test file
 
 ```bash
-pipenv run test breathecode/payments/tests/urls/tests_me_service_slug_consumptionsession_hash.py
+poetry run test breathecode/payments/tests/urls/tests_me_service_slug_consumptionsession_hash.py
 ```
 
 ### Pytest options
@@ -16,23 +16,23 @@ pipenv run test breathecode/payments/tests/urls/tests_me_service_slug_consumptio
 ## Run tests in parallel
 
 ```bash
-pipenv run ptest
+poetry run test:parallel
 ```
 
 ## Run tests in parallel in a module
 
 ```bash
-pipenv run ptest ./breathecode/
+poetry run test:parallel ./breathecode/
 ```
 
 ## Run coverage in parallel
 
 ```bash
-pipenv run pcov
+poetry run test:coverage
 ```
 
 ## Run coverage in parallel in a module
 
 ```bash
-pipenv run pcov breathecode.admissions
+poetry run test:coverage breathecode.admissions
 ```

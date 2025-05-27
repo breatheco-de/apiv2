@@ -22,11 +22,25 @@ def get_arguments(offset: int = 0):
 
 
 def dev():
-    sys.exit(os.system(f"python manage.py runserver {get_arguments()}"))
+    args = get_arguments()
+    if ":" not in args and not any(
+        arg.startswith("0.0.0.0") or arg.startswith("127.0.0.1") or arg.startswith("localhost") for arg in args.split()
+    ):
+        args = f"0.0.0.0:8000 {args}"
+    sys.exit(os.system(f"python manage.py runserver {args}"))
 
 
 def start():
-    sys.exit(os.system(f"gunicorn breathecode.asgi --worker-class uvicorn.workers.UvicornWorker {get_arguments()}"))
+    args = get_arguments()
+    if "--bind" not in args:
+        args = f"--bind 0.0.0.0:8000 {args}"
+
+    # Add --reload flag for Gunicorn
+    # Ensure --reload is not duplicated if already in args by chance, though unlikely for this script
+    if "--reload" not in args:
+        args = f"--reload {args}"
+
+    sys.exit(os.system(f"gunicorn breathecode.asgi --worker-class uvicorn.workers.UvicornWorker {args}"))
 
 
 def migrate():

@@ -7,6 +7,7 @@ from typing import Any, Optional
 from capyc.core.i18n import translation
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
+from django.db.models import Q
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -259,8 +260,8 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
     invoice = subscription.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by("-id").first()
 
     if invoice:
-        s = Stripe()
-        s.set_language_from_settings(settings)
+        s = Stripe(academy=subscription.academy)
+        s.set_language(settings.lang)
         s.refund_payment(invoice)
 
 
@@ -329,14 +330,14 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             message = translation(
                 settings.lang,
                 en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued. Please check our suggested plans for alternatives.",
-                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido discontinuada. Por favor, revisa nuestros planes sugeridos para alternativas.",
+                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido descontinuada. Por favor, revisa nuestros planes sugeridos para alternativas.",
             )
 
         else:
             message = translation(
                 settings.lang,
                 en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued.",
-                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido discontinuada.",
+                es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido descontinuada.",
             )
 
         obj["MESSAGE"] = message
@@ -435,9 +436,19 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
                 amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
+                # Apply coupon discounts if they exist on the subscription (only non-expired)
+                utc_now = timezone.now()
+                coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+                if coupons:
+                    original_amount = amount
+                    amount = actions.get_discounted_price(amount, coupons)
+                    logger.info(
+                        f"Applied coupon discount: original={original_amount}, discounted={amount} for subscription {subscription_id}"
+                    )
+
                 try:
-                    s = Stripe()
-                    s.set_language_from_settings(settings)
+                    s = Stripe(academy=subscription.academy)
+                    s.set_language(settings.lang)
                     invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
 
                 except Exception:
@@ -533,8 +544,8 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
     invoice = plan_financing.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by("-id").first()
 
     if invoice:
-        s = Stripe()
-        s.set_language_from_settings(settings)
+        s = Stripe(academy=plan_financing.academy)
+        s.set_language(settings.lang)
         s.refund_payment(invoice)
 
 
@@ -604,6 +615,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             settings = get_user_settings(plan_financing.user.id)
 
+            # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
             amount = plan_financing.monthly_price
 
             invoices = plan_financing.invoices.order_by("created_at")
@@ -670,8 +682,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
 
                     try:
-                        s = Stripe()
-                        s.set_language_from_settings(settings)
+                        s = Stripe(academy=plan_financing.academy)
+                        s.set_language(settings.lang)
 
                         invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
 
@@ -951,9 +963,16 @@ def build_subscription(
         conversion_info=parsed_conversion_info,
         pay_every_unit=pay_every_unit,
         pay_every=pay_every,
+        currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
     )
 
     subscription.plans.set(bag.plans.all())
+
+    # Add coupons from the bag to the subscription
+    bag_coupons = bag.coupons.all()
+    if bag_coupons.exists():
+        subscription.coupons.set(bag_coupons)
+        logger.info(f"Added {bag_coupons.count()} coupons to subscription {subscription.id}")
 
     subscription.save()
     subscription.invoices.add(invoice)
@@ -1042,12 +1061,19 @@ def build_plan_financing(
         monthly_price=invoice.amount,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
+        currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
     )
 
     if cohorts:
         financing.joined_cohorts.set(cohorts)
 
     financing.plans.set(plans)
+
+    # Add coupons from the bag to the plan financing
+    bag_coupons = bag.coupons.all()
+    if bag_coupons.exists():
+        financing.coupons.set(bag_coupons)
+        logger.info(f"Added {bag_coupons.count()} coupons to plan financing {financing.id}")
 
     financing.save()
     financing.invoices.add(invoice)
@@ -1136,10 +1162,17 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info:
             selected_mentorship_service_set=mentorship_service_set,
             next_payment_at=until,
             conversion_info=parsed_conversion_info,
+            currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
             **extra,
         )
 
         subscription.plans.add(plan)
+
+        # Add coupons from the bag to the subscription
+        bag_coupons = bag.coupons.all()
+        if bag_coupons.exists():
+            subscription.coupons.set(bag_coupons)
+            logger.info(f"Added {bag_coupons.count()} coupons to free subscription {subscription.id}")
 
         subscription.save()
         subscription.invoices.add(invoice)

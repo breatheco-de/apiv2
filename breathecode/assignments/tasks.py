@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from typing import Any
+from django.db.models import Q
 
 from capyc.core.i18n import translation
 from django.contrib.auth.models import User
@@ -14,10 +15,10 @@ import breathecode.notify.actions as actions
 from breathecode.admissions.models import CohortUser
 from breathecode.assignments.actions import (
     NOTIFICATION_STRINGS,
-    validate_task_for_notifications,
     calculate_telemetry_indicator,
+    validate_task_for_notifications,
 )
-from breathecode.assignments.models import LearnPackWebhook, AssignmentTelemetry
+from breathecode.assignments.models import AssignmentTelemetry, LearnPackWebhook
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.notify import actions as notify_actions
 from breathecode.services.learnpack import LearnPack
@@ -331,3 +332,110 @@ def async_calculate_telemetry_indicator(self, telemetry_id, **_: Any):
     telemetry = AssignmentTelemetry.objects.filter(id=telemetry_id).first()
     if telemetry:
         calculate_telemetry_indicator(telemetry)
+
+
+@task(bind=True, priority=TaskPriority.ACADEMY.value)
+def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: str, **_: Any):
+    """
+    Validate CTF flags for an assignment submission.
+
+    Args:
+        assignment_id: The ID of the assignment submission
+        asset_slug: The slug of the asset being validated
+        flags: The flags to validate
+    """
+    logger.info(f"Starting async_validate_flags for assignment {assignment_id} and asset {associated_slug}")
+
+    from breathecode.registry.models import Asset
+    from .utils.flags import FlagManager
+
+    # Get the assignment and asset
+    assignment = Task.objects.filter(id=assignment_id).first()
+    if not assignment:
+        raise AbortTask(f"Assignment {assignment_id} not found")
+
+    asset = Asset.objects.filter(Q(slug=associated_slug) | Q(assetalias__slug=associated_slug)).first()
+    if not asset:
+        raise AbortTask(f"Asset {associated_slug} not found")
+
+    # Create a flag manager instance
+    flag_manager = FlagManager()
+
+    # Parse the comma-separated flags
+    flag_list = flags.split(",") if isinstance(flags, str) else flags
+    flag_list = [flag.strip() for flag in flag_list if flag.strip()]
+
+    if "flags" not in asset.config["delivery"]["formats"]:
+        raise AbortTask(f"Delivery of asset {associated_slug} is not expected to have flags, check the asset config")
+    elif "quantity" not in asset.config["delivery"]:
+        raise AbortTask(
+            f"Missing quantity in the asset.config.delivery of {associated_slug}. How many flags are we expecting?"
+        )
+
+    if not flag_list:
+        raise AbortTask(f"No flags provided for validation: {flags}")
+
+    # Get the asset seed from the asset's flag_seed field
+    if not asset.flag_seed:
+        raise AbortTask(f"Asset {associated_slug} does not have a flag_seed")
+
+    # Check for any revoked flags (if applicable)
+    revoked_flags = []  # This could be populated from a database if needed
+
+    # Validate each flag
+    validation_results = []
+    for flag in flag_list:
+        try:
+            is_valid = flag_manager.validate_flag(
+                submitted_flag=flag, asset_seed=asset.flag_seed, revoked_flags=revoked_flags
+            )
+            validation_results.append(
+                {"flag": flag, "is_valid": is_valid, "error": None if is_valid else "Invalid flag"}
+            )
+        except Exception as e:
+            validation_results.append({"flag": flag, "is_valid": False, "error": str(e)})
+            logger.error(f"Error validating flag '{flag}': {str(e)}")
+
+    # Update the task with the validation results
+    valid_flags = [result["flag"] for result in validation_results if result["is_valid"]]
+    invalid_flags = [result["flag"] for result in validation_results if not result["is_valid"]]
+
+    # Store the validated flags in the delivered_flags field
+    if valid_flags:
+        if assignment.delivered_flags is None:
+            assignment.delivered_flags = {"approved": [], "rejected": []}
+
+        # Add only new valid flags that aren't already in the list
+        for flag in valid_flags:
+            if flag not in assignment.delivered_flags:
+                assignment.delivered_flags["approved"].append(flag)
+
+        for flag in invalid_flags:
+            if flag not in assignment.delivered_flags:
+                assignment.delivered_flags["rejected"].append(flag)
+
+    # Update the task description with validation results
+    validation_summary = f"Flag validation results: {len(valid_flags)} valid, {len(invalid_flags)} invalid."
+    if "Flag validation results:" not in assignment.description:
+        assignment.description += f"\n\n{validation_summary}"
+    else:
+        # Replace existing validation results
+        lines = assignment.description.split("\n")
+        updated_lines = []
+        for line in lines:
+            if "Flag validation results:" in line:
+                updated_lines.append(validation_summary)
+            else:
+                updated_lines.append(line)
+        assignment.description = "\n".join(updated_lines)
+
+    assignment.delivered_flags = valid_flags + invalid_flags
+    if assignment.delivered_flags == asset.config["delivery"]["quantity"]:
+        assignment.revision_status = "APPROVED"
+    else:
+        assignment.revision_status = "REJECTED"
+        assignment.description = f'We are expecting {asset.config["delivery"]["quantity"]} valid flags, and you delivered the following: \n\n{validation_summary}'
+    assignment.save()
+
+    logger.info(f"Flag validation completed for assignment {assignment_id}: {assignment.revision_status}")
+    return assignment.revision_status

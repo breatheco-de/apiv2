@@ -1,4 +1,5 @@
 import json
+
 from django.contrib.admin import widgets
 from django.forms import Media
 from django.utils.safestring import mark_safe
@@ -31,23 +32,32 @@ class PrettyJSONWidget(widgets.AdminTextareaWidget):
         """Format the value for display in the widget"""
         if value is None:
             return ""
+        if isinstance(value, (dict, list)):  # Handle Python objects
+            return json.dumps(value, indent=4, sort_keys=True)
         if isinstance(value, str):
             try:
-                # Try to parse string as JSON and re-format it
-                value = json.loads(value)
+                # Remove backslashes from escaped JSON strings
+                if value.startswith('"{\\"') or value.startswith("'\\{\\\""):
+                    value = json.loads(value.replace('\\"', '"').strip('"'))
+                else:
+                    value = json.loads(value)
+                return json.dumps(value, indent=4, sort_keys=True)
             except json.JSONDecodeError:
                 return value
-        return json.dumps(value, indent=4, sort_keys=True)
+        return value
 
     def value_from_datadict(self, data, files, name):
         """Parse the JSON string value from form data"""
         value = super().value_from_datadict(data, files, name)
         if value:
-            try:
-                # Parse the JSON string to ensure it's valid and convert to Python object
-                return json.loads(value)
-            except json.JSONDecodeError:
-                # Return the raw string if it's not valid JSON
+            if isinstance(value, str):
+                try:
+                    # Parse the JSON string to ensure it's valid and return the Python object
+                    return json.loads(value)
+                except json.JSONDecodeError:
+                    return value
+            elif isinstance(value, (dict, list)):
+                # Return the Python object directly
                 return value
         return value
 

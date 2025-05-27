@@ -80,6 +80,11 @@ PERMISSIONS = [
         "description": "Upload media to the platform",
         "codename": "upload_media",
     },
+    {
+        "name": "Create packages in learnpack",
+        "description": "You are allowed to create new learnpack packages",
+        "codename": "learnpack_create_package",
+    },
 ]
 
 GROUPS = [

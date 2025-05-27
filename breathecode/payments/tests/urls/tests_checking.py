@@ -65,6 +65,7 @@ def financing_option_serializer(financing_option, currency, data={}):
         },
         "how_many_months": financing_option.how_many_months,
         "monthly_price": financing_option.monthly_price,
+        "pricing_ratio_exceptions": financing_option.pricing_ratio_exceptions,
     }
 
 
@@ -262,6 +263,7 @@ class SignalTestSuite(PaymentsTestCase):
                         "expires_at": UTC_NOW + timedelta(minutes=60),
                         "token": token,
                         "is_recurrent": False,
+                        "currency_id": 1,
                     },
                 ],
             )
@@ -638,7 +640,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         academy = {"available_as_saas": True}
 
@@ -675,8 +678,8 @@ class SignalTestSuite(PaymentsTestCase):
         json = response.json()
         expected = {"detail": "service-item-not-valid", "status_code": 400}
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        assert json == expected
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
         self.assertEqual(
             self.bc.database.list_of("payments.Bag"),
@@ -741,7 +744,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         academy = {"available_as_saas": True}
 
@@ -872,7 +876,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         academy = {"available_as_saas": True}
 
@@ -995,7 +1000,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         academy = {"available_as_saas": True}
 
@@ -1112,7 +1118,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         academy = {"available_as_saas": True}
 
@@ -1238,7 +1245,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
         academy = {"available_as_saas": True}
@@ -1371,7 +1379,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
         academy = {"available_as_saas": True}
@@ -1477,7 +1486,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
         academy = {"available_as_saas": True}
@@ -1610,7 +1620,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         plan_financing = {
             "valid_until": UTC_NOW - timedelta(seconds=1),
@@ -1718,7 +1729,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {
             "valid_until": None,
@@ -1828,7 +1840,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {
             "valid_until": UTC_NOW + timedelta(seconds=1),
@@ -1933,7 +1946,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
 
@@ -2061,7 +2075,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
 
@@ -2190,7 +2205,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
 
@@ -2316,7 +2332,8 @@ class SignalTestSuite(PaymentsTestCase):
         }
 
         how_many1 = random.randint(1, 5)
-        how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+        possible_choices = [x for x in range(1, 6) if x != how_many1]
+        how_many2 = random.choice(possible_choices)
         service_item = {"how_many": how_many1}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
         academy = {"available_as_saas": True}
@@ -2444,7 +2461,8 @@ def test_exceding_coupon_limit(bc: Breathecode, client: APIClient):
     }
 
     how_many1 = random.randint(1, 5)
-    how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    possible_choices = [x for x in range(1, 6) if x != how_many1]
+    how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
     academy = {"available_as_saas": True}
@@ -2570,7 +2588,8 @@ def test_providing_coupons(bc: Breathecode, client: APIClient, how_many_offers, 
     }
 
     how_many1 = random.randint(1, 5)
-    how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    possible_choices = [x for x in range(1, 6) if x != how_many1]
+    how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
     academy = {"available_as_saas": True}
@@ -2746,7 +2765,8 @@ def test_getting_coupons(
     }
 
     how_many1 = random.randint(1, 5)
-    how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    possible_choices = [x for x in range(1, 6) if x != how_many1]
+    how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     subscription = {
         "user_id": 2,
@@ -2930,7 +2950,8 @@ def test_exausted_coupons(
     }
 
     how_many1 = random.randint(1, 5)
-    how_many2 = random.choice([x for x in range(1, 6) if x != how_many1])
+    possible_choices = [x for x in range(1, 6) if x != how_many1]
+    how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     subscription = {
         "user_id": 2,
@@ -3083,7 +3104,8 @@ def test_so_much_service_items(
     }
 
     how_many1 = random.randint(1, 5)
-    how_many2 = random.choice([x for x in range(5, 10) if x != how_many1])
+    possible_choices = [x for x in range(5, 7) if x != how_many1]
+    how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     academy = {"available_as_saas": True}
 
@@ -3095,7 +3117,7 @@ def test_so_much_service_items(
         cohort_set=1,
         service_item=service_item,
         service=1,
-        academy_service={"bundle_size": 2, "max_items": 4},
+        academy_service={"bundle_size": 2, "max_items": 4, "max_amount": 4},
         plan=plan,
         plan_service_item=1,
         currency=currency,
@@ -3177,7 +3199,8 @@ def test_so_low_service_items(
     }
 
     how_many1 = random.randint(1, 5)
-    how_many2 = random.choice([x for x in range(1, 3) if x != how_many1])
+    possible_choices = [x for x in range(1, 3) if x != how_many1]
+    how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     academy = {"available_as_saas": True}
 
@@ -3189,7 +3212,7 @@ def test_so_low_service_items(
         cohort_set=1,
         service_item=service_item,
         service=1,
-        academy_service={"bundle_size": 4, "max_items": 7},
+        academy_service={"bundle_size": 4, "max_items": 7, "max_amount": 7},
         plan=plan,
         plan_service_item=1,
         currency=currency,
@@ -3271,7 +3294,8 @@ def test_price_is_very_high(
     }
 
     how_many1 = random.randint(1, 5)
-    how_many2 = random.choice([x for x in range(5, 6) if x != how_many1])
+    possible_choices = [x for x in range(4, 7) if x != how_many1]
+    how_many2 = random.choice(possible_choices)
     service_item = {"how_many": how_many1}
     academy = {"available_as_saas": True}
 
@@ -3405,11 +3429,12 @@ def test_get_a_plan_with_add_ons(
     with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
         response = client.put(url, data, format="json")
 
+    price, _, _ = model.academy_service.get_discounted_price(how_many2)
     pricing = {
-        "amount_per_month": model.plan.price_per_month + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_quarter": model.plan.price_per_quarter + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_half": model.plan.price_per_half + model.academy_service.get_discounted_price(how_many2),
-        "amount_per_year": model.plan.price_per_year + model.academy_service.get_discounted_price(how_many2),
+        "amount_per_month": model.plan.price_per_month + price,
+        "amount_per_quarter": model.plan.price_per_quarter + price,
+        "amount_per_half": model.plan.price_per_half + price,
+        "amount_per_year": model.plan.price_per_year + price,
     }
 
     json = response.json()
@@ -3451,6 +3476,219 @@ def test_get_a_plan_with_add_ons(
 
     queryset_with_pks(model.bag.service_items.all(), [1])
     queryset_with_pks(model.bag.plans.all(), [1])
+    assert activity_tasks.add_activity.delay.call_args_list == [
+        call(1, "bag_created", related_type="payments.Bag", related_id=1),
+    ]
+
+
+@pytest.mark.parametrize(
+    "country_code,ratio,price_per_month,price_per_quarter,price_per_half,price_per_year",
+    [
+        ("ve", 0.8, 80.0, 216.0, 384.0, 720.0),  # Venezuela with general ratio
+        ("ar", 0.7, 70.0, 189.0, 336.0, 630.0),  # Argentina with general ratio
+        ("us", 1.0, 100.0, 270.0, 480.0, 900.0),  # US with default ratio
+        (None, 1.0, 100.0, 270.0, 480.0, 900.0),  # No country code
+    ],
+)
+@patch("breathecode.payments.actions.apply_pricing_ratio")
+def test_checking_with_country_pricing(
+    mock_apply_pricing_ratio,
+    database: capy.Database,
+    client: capy.Client,
+    fake: capy.Fake,
+    format: capy.Format,
+    country_code,
+    ratio,
+    price_per_month,
+    price_per_quarter,
+    price_per_half,
+    price_per_year,
+):
+    """
+    Test that the checking endpoint correctly calculates prices based on country code
+    by mocking apply_pricing_ratio.
+    """
+
+    # Define the side effect for the mock
+    def side_effect(price, country_code, obj, lang=None, price_attr="price", cache=None):
+        # Simulate the logic based on the parameters passed to this test
+        if country_code == "ve":
+            return price * 0.8, 0.8, None
+        if country_code == "ar":
+            return price * 0.7, 0.7, None
+        if country_code == "us":
+            return price * 1.0, 1.0, None
+        # Fallback for other or no country code
+        return price, None, None
+
+    mock_apply_pricing_ratio.side_effect = side_effect
+
+    # Setup test data
+    bag = {
+        "id": 1,
+        "academy": {
+            "id": 1,
+            "logo_url": "",
+            "name": "test",
+            "slug": "test",
+        },
+        "status": "CHECKING",
+        "type": "PREVIEW",
+        "plans": [],
+        "amount_per_month": price_per_month,
+        "amount_per_quarter": price_per_quarter,
+        "amount_per_half": price_per_half,
+        "amount_per_year": price_per_year,
+        "token": "abc",
+        "user": {"id": 1, "email": "john@example.com", "first_name": "John", "last_name": "Doe"},
+        "was_delivered": False,
+        "expires_at": UTC_NOW + timedelta(days=10),
+        "created_at": UTC_NOW,
+        "updated_at": UTC_NOW,
+    }
+
+    model = database.create(
+        country=1,
+        city=1,
+        academy={"id": 1, "name": "test", "slug": "test", "available_as_saas": True},
+        plan={
+            "id": 1,
+            "slug": "test",
+            "price_per_month": 100.0,
+            "price_per_quarter": 270.0,
+            "price_per_half": 480.0,
+            "price_per_year": 900.0,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "trial_duration": 0,
+            "trial_duration_unit": "MONTH",
+            "is_renewable": True,
+        },
+        currency={"code": "USD", "name": "United States dollar"},
+        user={"id": 1, "email": "john@example.com", "first_name": "John", "last_name": "Doe"},
+        bag=bag,
+    )
+
+    payload = {
+        "academy": 1,
+        "type": "PREVIEW",
+        "plans": [1],
+    }
+
+    if country_code:
+        payload["country_code"] = country_code
+
+    client.force_authenticate(model.user)
+    url = reverse_lazy("payments:checking")
+    response = client.put(url, payload, format="json")
+
+    # Assert the response is correct
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["amount_per_month"] == price_per_month
+    assert data["amount_per_quarter"] == price_per_quarter
+    assert data["amount_per_half"] == price_per_half
+    assert data["amount_per_year"] == price_per_year
+
+    # Verify apply_pricing_ratio was called if country_code was provided
+    if country_code:
+        # Check that it was called at least once for any price
+        assert mock_apply_pricing_ratio.call_count > 0
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+def test_checking_with_country_price_override(
+    database: capy.Database,
+    client: capy.Client,
+    fake: capy.Fake,
+    format: capy.Format,
+    set_datetime,
+):
+    """
+    Test that the checking endpoint correctly uses the price override from
+    pricing_ratio_exceptions for a specific country.
+    """
+    set_datetime(UTC_NOW)
+    country_code = "VE"
+    override_price_per_month = 50.0
+    override_price_per_quarter = 135.0
+    override_price_per_half = 240.0
+    override_price_per_year = 450.0
+
+    plan_kwargs = {
+        "price_per_month": 100.0,
+        "price_per_quarter": 270.0,
+        "price_per_half": 480.0,
+        "price_per_year": 900.0,
+        "is_renewable": True,
+        "time_of_life": 0,
+        "time_of_life_unit": None,
+        "trial_duration": 0,
+        "pricing_ratio_exceptions": {
+            country_code.lower(): {
+                "price_per_month": override_price_per_month,
+                "price_per_quarter": override_price_per_quarter,
+                "price_per_half": override_price_per_half,
+                "price_per_year": override_price_per_year,
+                "currency": "USD",  # Ensure currency is specified if overridden
+            }
+        },
+    }
+    model = database.create(
+        country=1,
+        city=1,
+        user=1,
+        academy=1,
+        currency={"code": "USD"},
+        plan=plan_kwargs,
+    )
+
+    client.force_authenticate(model.user)
+    url = reverse_lazy("payments:checking")
+    data = {
+        "academy": 1,
+        "type": "PREVIEW",
+        "plans": [1],
+        "country_code": country_code,
+    }
+
+    token = fake.slug()
+    with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+        response = client.put(url, data, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    json_data = response.json()
+
+    # Verify the amounts in the response match the override prices
+    assert json_data["amount_per_month"] == override_price_per_month
+    assert json_data["amount_per_quarter"] == override_price_per_quarter
+    assert json_data["amount_per_half"] == override_price_per_half
+    assert json_data["amount_per_year"] == override_price_per_year
+    assert json_data["token"] == token
+    assert json_data["expires_at"] == (UTC_NOW + timedelta(minutes=60)).isoformat().replace("+00:00", "Z")
+
+    # Verify the bag in the database reflects the override
+    db_bag = database.list_of("payments.Bag")[0]
+    assert db_bag["amount_per_month"] == override_price_per_month
+    assert db_bag["amount_per_quarter"] == override_price_per_quarter
+    assert db_bag["amount_per_half"] == override_price_per_half
+    assert db_bag["amount_per_year"] == override_price_per_year
+    assert db_bag["country_code"] == country_code
+    assert db_bag["currency_id"] == model.currency.id
+    assert db_bag["token"] == token
+    assert db_bag["expires_at"] == UTC_NOW + timedelta(minutes=60)
+    # Since a direct price override was used, the explanation should be empty
+    assert db_bag["pricing_ratio_explanation"] == {
+        "plans": [
+            {
+                "plan": model.plan.slug,
+                "ratio": None,
+            },
+        ],
+        "service_items": [],
+    }
+
     assert activity_tasks.add_activity.delay.call_args_list == [
         call(1, "bag_created", related_type="payments.Bag", related_id=1),
     ]
