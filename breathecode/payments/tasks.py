@@ -52,7 +52,17 @@ IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def renew_consumables(self, scheduler_id: int, **_: Any):
-    """Renew consumables."""
+    """
+    Renews consumables for a specific ServiceStockScheduler.
+
+    This task checks if the parent subscription or plan financing is active and paid.
+    If the scheduler is due for renewal (its `valid_until` date is near or past the current time),
+    it calculates the next validity period, updates the scheduler, and creates a new Consumable.
+
+    Args:
+        scheduler_id: The ID of the ServiceStockScheduler to renew.
+        **_: Accepts other keyword arguments but does not use them.
+    """
 
     def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service):
         lookups = {}
@@ -128,8 +138,13 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
             "the consumables"
         )
 
-    if scheduler.valid_until and scheduler.valid_until - timedelta(days=1) < utc_now:
-        logger.info(f"The scheduler {scheduler.id} don't needs to be renewed")
+    # If scheduler.valid_until is in the future (meaning current consumables are still active and not expiring today),
+    # then it doesn't need to be renewed yet.
+    # We add a small buffer (e.g., 1 hour) to prevent issues with exact timestamp comparisons if the task runs slightly too early.
+    if scheduler.valid_until and scheduler.valid_until > utc_now + timedelta(hours=2):
+        logger.info(
+            f"The scheduler {scheduler.id} (valid until {scheduler.valid_until}) does not need to be renewed yet (utc_now is {utc_now})."
+        )
         return
 
     service_item = None
@@ -201,7 +216,17 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def renew_subscription_consumables(self, subscription_id: int, **_: Any):
-    """Renew consumables belongs to a subscription."""
+    """
+    Renews all consumables belonging to a specific subscription.
+
+    This task iterates through all ServiceStockSchedulers associated with the given
+    subscription (both directly and through plan handlers) and calls the
+    `renew_consumables` task for each scheduler.
+
+    Args:
+        subscription_id: The ID of the Subscription whose consumables need renewal.
+        **_: Accepts other keyword arguments but does not use them.
+    """
 
     logger.info(f"Starting renew_subscription_consumables for id {subscription_id}")
 
@@ -224,7 +249,17 @@ def renew_subscription_consumables(self, subscription_id: int, **_: Any):
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
-    """Renew consumables belongs to a plan financing."""
+    """
+    Renews all consumables belonging to a specific plan financing arrangement.
+
+    This task iterates through all ServiceStockSchedulers associated with the given
+    PlanFinancing (through plan handlers) and calls the `renew_consumables` task
+    for each scheduler.
+
+    Args:
+        plan_financing_id: The ID of the PlanFinancing whose consumables need renewal.
+        **_: Accepts other keyword arguments but does not use them.
+    """
 
     logger.info(f"Starting renew_plan_financing_consumables for id {plan_financing_id}")
 
@@ -269,7 +304,20 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
     bind=True, transaction=True, fallback=fallback_charge_subscription, priority=TaskPriority.WEB_SERVICE_PAYMENT.value
 )
 def charge_subscription(self, subscription_id: int, **_: Any):
-    """Renews a subscription."""
+    """
+    Processes the payment for a subscription renewal.
+
+    This task handles the logic for charging a subscription. It checks if the subscription
+    is active, not deprecated, and due for payment. For externally managed subscriptions,
+    it relies on an existing invoice. For others, it creates a bag, attempts payment via Stripe,
+    and updates the subscription status, next payment date, and invoices. It also sends
+    email notifications and schedules the next `renew_subscription_consumables` and
+    `charge_subscription` tasks. It uses a lock to prevent concurrent processing.
+
+    Args:
+        subscription_id: The ID of the Subscription to charge.
+        **_: Accepts other keyword arguments but does not use them.
+    """
 
     logger.info(f"Starting charge_subscription for subscription {subscription_id}")
 
@@ -556,7 +604,21 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
     priority=TaskPriority.WEB_SERVICE_PAYMENT.value,
 )
 def charge_plan_financing(self, plan_financing_id: int, **_: Any):
-    """Renew a plan financing."""
+    """
+    Processes the payment for a plan financing installment.
+
+    This task handles charging the next installment for a PlanFinancing. It checks if the
+    plan financing is active, not over, and due for payment. For externally managed plans,
+    it relies on an existing invoice. For others, it creates a bag, attempts payment via Stripe,
+    and updates the plan financing status, next payment date, and invoices. It sends email
+    notifications and schedules the next `renew_plan_financing_consumables` and
+    `charge_plan_financing` tasks if further installments are due.
+    Uses a lock to prevent concurrent processing.
+
+    Args:
+        plan_financing_id: The ID of the PlanFinancing to charge.
+        **_: Accepts other keyword arguments but does not use them.
+    """
 
     logger.info(f"Starting charge_plan_financing for id {plan_financing_id}")
 
@@ -772,7 +834,21 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 def build_service_stock_scheduler_from_subscription(
     self, subscription_id: int, user_id: Optional[int] = None, update_mode: Optional[bool] = False, **_: Any
 ):
-    """Build service stock scheduler for a subscription."""
+    """
+    Builds ServiceStockScheduler instances for a given subscription.
+
+    This task iterates through all service items associated with the subscription's plans
+    and those directly linked to the subscription. For each, it creates a
+    ServiceStockScheduler if one doesn't already exist.
+    If not in update_mode, it then calls `renew_subscription_consumables` to generate
+    the initial set of consumables.
+
+    Args:
+        subscription_id: The ID of the Subscription for which to build schedulers.
+        user_id: Optional. If provided, filters the subscription by user ID.
+        update_mode: Optional. If True, avoids calling `renew_subscription_consumables`.
+        **_: Accepts other keyword arguments but does not use them.
+    """
 
     logger.info(f"Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}")
 
@@ -842,7 +918,19 @@ def build_service_stock_scheduler_from_subscription(
 def build_service_stock_scheduler_from_plan_financing(
     self, plan_financing_id: int, user_id: Optional[int] = None, **_: Any
 ):
-    """Build service stock scheduler for a plan financing."""
+    """
+    Builds ServiceStockScheduler instances for a given plan financing.
+
+    This task iterates through all service items associated with the plans in the
+    PlanFinancing. For each, it creates a ServiceStockScheduler if one doesn't
+    already exist. It then calls `renew_plan_financing_consumables` to generate
+    the initial set of consumables.
+
+    Args:
+        plan_financing_id: The ID of the PlanFinancing for which to build schedulers.
+        user_id: Optional. If provided, filters the plan financing by user ID.
+        **_: Accepts other keyword arguments but does not use them.
+    """
 
     logger.info(f"Starting build_service_stock_scheduler_from_plan_financing for subscription {plan_financing_id}")
 
@@ -903,6 +991,22 @@ def build_subscription(
     conversion_info: Optional[str] = "",
     **_: Any,
 ):
+    """
+    Creates a Subscription based on a paid Bag and Invoice.
+
+    This task generates a new Subscription record, linking it to the user, academy,
+    plans, and selected resources from the Bag. It sets the payment details,
+    status, and validity. After creating the subscription, it marks the Bag as
+    delivered and triggers tasks to build service stock schedulers (`build_service_stock_scheduler_from_subscription`)
+    and schedule the next charge (`charge_subscription`).
+
+    Args:
+        bag_id: The ID of the paid Bag.
+        invoice_id: The ID of the fulfilled Invoice.
+        start_date: Optional. The specific start date for the subscription. Defaults to invoice paid_at.
+        conversion_info: Optional. String representation of conversion details.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     logger.info(f"Starting build_subscription for bag {bag_id}")
 
     if not (bag := Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()):
@@ -1000,6 +1104,23 @@ def build_plan_financing(
     cohorts: Optional[list[str]] = None,
     **_: Any,
 ):
+    """
+    Creates a PlanFinancing object based on a paid Bag and Invoice.
+
+    This task sets up a financing plan for the user, including installment details,
+    validity periods, and links to plans and resources. It marks the Bag as
+    delivered and triggers tasks to build service stock schedulers
+    (`build_service_stock_scheduler_from_plan_financing`) and schedule the next
+    installment charge (`charge_plan_financing`).
+
+    Args:
+        bag_id: The ID of the paid Bag.
+        invoice_id: The ID of the fulfilled Invoice.
+        is_free: Optional. Boolean indicating if the plan financing is free. Defaults to False.
+        conversion_info: Optional. String representation of conversion details.
+        cohorts: Optional. List of cohort slugs to join.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     logger.info(f"Starting build_plan_financing for bag {bag_id}")
 
     if cohorts is None:
@@ -1094,6 +1215,20 @@ def build_plan_financing(
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info: Optional[str] = "", **_: Any):
+    """
+    Creates one or more free Subscriptions based on a paid Bag (with zero amount) and Invoice.
+
+    This task handles the creation of subscriptions for free plans or free trials.
+    It iterates through plans in the Bag, determines if it's a trial or a perpetually
+    free plan, and sets the subscription status and validity accordingly.
+    It then calls `build_service_stock_scheduler_from_subscription` for each created subscription.
+
+    Args:
+        bag_id: The ID of the paid Bag (invoice amount must be 0).
+        invoice_id: The ID of the fulfilled Invoice.
+        conversion_info: Optional. String representation of conversion details.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     logger.info(f"Starting build_free_subscription for bag {bag_id}")
 
     if not (bag := Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()):
@@ -1187,6 +1322,18 @@ def build_free_subscription(self, bag_id: int, invoice_id: int, conversion_info:
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def end_the_consumption_session(self, consumption_session_id: int, how_many: float = 1.0, **_: Any):
+    """
+    Finalizes a ConsumptionSession by marking it as 'DONE' and triggering the consume_service signal.
+
+    This task is typically called when a service (e.g., mentorship session) associated
+    with a consumption session is completed. It updates the session status and ensures
+    the corresponding consumable units are deducted.
+
+    Args:
+        consumption_session_id: The ID of the ConsumptionSession to end.
+        how_many: The number of units to mark as consumed. Defaults to 1.0.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     logger.info(f"Starting end_the_consumption_session for ConsumptionSession {consumption_session_id}")
 
     session = ConsumptionSession.objects.filter(id=consumption_session_id).first()
@@ -1208,6 +1355,18 @@ def end_the_consumption_session(self, consumption_session_id: int, how_many: flo
 # you need fix the logic about the consumable valid until, maybe this must be removed
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_consumables_from_bag(bag_id: int, **_: Any):
+    """
+    (Currently Unused - Requires Review) Creates Consumable objects directly from a Bag.
+
+    This task is intended to create consumables based on service items in a Bag,
+    linking them to selected resources like MentorshipServiceSet or EventTypeSet.
+    However, it's marked as unused and needs review, particularly regarding the
+    logic for `consumable.valid_until`.
+
+    Args:
+        bag_id: The ID of the paid Bag.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     logger.info(f"Starting build_consumables_from_bag for bag {bag_id}")
 
     if not (bag := Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()):
@@ -1250,6 +1409,18 @@ def build_consumables_from_bag(bag_id: int, **_: Any):
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def refund_mentoring_session(session_id: int, **_: Any):
+    """
+    Refunds a mentoring session by cancelling its ConsumptionSession and reimbursing units.
+
+    This task is called when a MentorshipSession has a status of 'FAILED' or 'IGNORED'.
+    It finds the associated ConsumptionSession. If the session was already 'DONE' (units deducted),
+    it triggers the `reimburse_service_units` signal to return the consumed units.
+    The ConsumptionSession status is then set to 'CANCELLED'.
+
+    Args:
+        session_id: The ID of the MentorshipSession to refund.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     from breathecode.mentorship.models import MentorshipSession
 
     logger.info(f"Starting refund_mentoring_session for mentoring session {session_id}")
@@ -1291,6 +1462,17 @@ def refund_mentoring_session(session_id: int, **_: Any):
 
 @task(bind=False, priority=TaskPriority.ACADEMY.value)
 def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_: Any):
+    """
+    Assigns a CohortSet to an existing Subscription.
+
+    This task links a specified CohortSet to a subscription, provided the subscription
+    is active, not expired, and doesn't already have a CohortSet assigned.
+
+    Args:
+        subscription_id: The ID of the Subscription to update.
+        cohort_set_id: The ID of the CohortSet to assign.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     logger.info(
         f"Starting add_cohort_set_to_subscription for subscription {subscription_id} cohort_set {cohort_set_id}"
     )
@@ -1318,6 +1500,19 @@ def add_cohort_set_to_subscription(subscription_id: int, cohort_set_id: int, **_
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def update_subscription_service_stock_schedulers(plan_id: int, subscription_id: int, **_: Any):
+    """
+    Creates missing ServiceStockSchedulers for a specific plan within a subscription.
+
+    This task is typically called when a Plan is updated or its service items change.
+    It iterates through the service items of the given plan and ensures that a
+    ServiceStockScheduler exists for each one within the context of the subscription.
+    It does not trigger immediate consumable renewal.
+
+    Args:
+        plan_id: The ID of the Plan whose service items need schedulers.
+        subscription_id: The ID of the Subscription to update.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     plan = Plan.objects.filter(id=plan_id).only("id").prefetch_related("service_items").first()
     subscription = Subscription.objects.filter(plans__id=subscription_id).only("id", "next_payment_at").first()
 
@@ -1350,6 +1545,21 @@ def update_subscription_service_stock_schedulers(plan_id: int, subscription_id: 
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def update_plan_financing_service_stock_schedulers(plan_id: int, subscription_id: int, **_: Any):
+    """
+    Creates missing ServiceStockSchedulers for a specific plan within a plan financing.
+
+    Similar to `update_subscription_service_stock_schedulers`, but for PlanFinancing.
+    It ensures ServiceStockSchedulers exist for all service items of a plan
+    associated with a PlanFinancing.
+
+    Note: The `subscription_id` parameter here actually refers to the PlanFinancing ID
+    in the context of `PlanFinancing.objects.filter(plans__id=subscription_id)`.
+
+    Args:
+        plan_id: The ID of the Plan whose service items need schedulers.
+        subscription_id: The ID of the PlanFinancing (used in filter) to update.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     plan = Plan.objects.filter(id=plan_id).only("id").prefetch_related("service_items").first()
     plan_financing = PlanFinancing.objects.filter(plans__id=subscription_id).only("id", "next_payment_at").first()
 
@@ -1382,6 +1592,18 @@ def update_plan_financing_service_stock_schedulers(plan_id: int, subscription_id
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def update_service_stock_schedulers(plan_id: int, **_: Any):
+    """
+    Updates ServiceStockSchedulers for all subscriptions and plan financings associated with a plan.
+
+    This task acts as a dispatcher. When a plan changes, this task is called,
+    and it then queues `update_subscription_service_stock_schedulers` for each
+    linked subscription and `update_plan_financing_service_stock_schedulers` for
+    each linked plan financing.
+
+    Args:
+        plan_id: The ID of the Plan that was updated.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     for subscription in Subscription.objects.filter(plans__id=plan_id).only("id"):
         update_subscription_service_stock_schedulers.delay(plan_id, subscription.id)
 
@@ -1391,6 +1613,19 @@ def update_service_stock_schedulers(plan_id: int, **_: Any):
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def set_proof_of_payment_confirmation_url(file_id: int, proof_of_payment_id: int, **_: Any):
+    """
+    Transfers a proof of payment file to its final storage and updates the ProofOfPayment record.
+
+    This task is called after a proof of payment file is uploaded. It moves the file
+    from a temporary/transferring state to its designated bucket (defined by
+    PROOF_OF_PAYMENT_BUCKET env var) and updates the `confirmation_image_url`
+    and status of the ProofOfPayment object.
+
+    Args:
+        file_id: The ID of the File object in 'TRANSFERRING' status.
+        proof_of_payment_id: The ID of the ProofOfPayment record to update.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     from breathecode.media.settings import transfer
 
     file = File.objects.filter(id=file_id, status=File.Status.TRANSFERRING).first()
@@ -1410,6 +1645,17 @@ def set_proof_of_payment_confirmation_url(file_id: int, proof_of_payment_id: int
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def process_google_webhook(hook_id: int, **_: Any):
+    """
+    Processes a Google Webhook notification.
+
+    This task retrieves a GoogleWebhook record and uses the Google service integration
+    to process it, typically for handling notifications related to Google services
+    (e.g., Google Calendar push notifications).
+
+    Args:
+        hook_id: The ID of the GoogleWebhook record to process.
+        **_: Accepts other keyword arguments but does not use them.
+    """
     from breathecode.authenticate.models import CredentialsGoogle, GoogleWebhook
 
     logger.info(f"Starting process_google_webhook for id {hook_id}")
@@ -1436,9 +1682,18 @@ def process_google_webhook(hook_id: int, **_: Any):
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def retry_pending_bag_delivery(self, bag_id: int, **_: Any):
     """
-    Task to retry the delivery of a bag that was paid but not delivered.
-    This task will attempt to create a subscription or plan financing based on the bag's configuration.
-    It will retry twice with a delay between attempts.
+    Retries the delivery process for a Bag that was paid but not delivered.
+
+    This task attempts to create a Subscription or PlanFinancing based on the Bag's
+    configuration if it's found in a 'PAID' status but 'was_delivered' is False.
+    It finds the latest fulfilled invoice for the bag and then calls the appropriate
+    task (`build_plan_financing`, `build_free_subscription`, or `build_subscription`).
+    It also schedules a follow-up execution of itself after 30 minutes to retry
+    if the delivery is still pending.
+
+    Args:
+        bag_id: The ID of the Bag to retry delivery for.
+        **_: Accepts other keyword arguments but does not use them.
     """
     logger.info(f"Starting retry_pending_bag_delivery for bag {bag_id}")
 
@@ -1480,8 +1735,17 @@ def retry_pending_bag_delivery(self, bag_id: int, **_: Any):
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def check_and_retry_pending_bags(**_: Any):
     """
-    Task to check for bags that are paid but not delivered and retry their delivery.
-    This task is meant to be scheduled periodically.
+    Periodically checks for Bags that are paid but not delivered and retries their delivery.
+
+    This task queries for Bags that have been in a 'PAID' status with 'was_delivered'
+    as False for more than an hour. For each such bag found, it queues the
+    `retry_pending_bag_delivery` task. This is intended to be a scheduled maintenance task.
+
+    Args:
+        **_: Accepts keyword arguments but does not use them.
+
+    Returns:
+        int: The count of pending bags for which a retry was scheduled.
     """
     logger.info("Starting check_and_retry_pending_bags")
 

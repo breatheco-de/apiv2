@@ -7,7 +7,6 @@
         "ghcr.io/devcontainers/features/aws-cli:1": {},
         "ghcr.io/devcontainers/features/docker-in-docker:2": {},
         "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {},
-        "ghcr.io/devcontainers/features/rust:1": {},
         "ghcr.io/shyim/devcontainers-features/bun:0": {},
         "ghcr.io/devcontainers/features/python:1": {},
         "ghcr.io/itsmechlark/features/rabbitmq-server:1": {},
