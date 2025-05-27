@@ -84,14 +84,54 @@ def test_no_auth(bc: Breathecode, client: APIClient):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-# When: auth and no additional context
+# When: auth and no consumables
+# Then: response 402
+def test_code_compiler_with_no_consumables(bc: Breathecode, client: APIClient, patch_post, get_jwt):
+    url = reverse_lazy("registry:code_compiler")
+    model = bc.database.create(
+        user=1,
+        app={"slug": "rigobot"},
+        service={"slug": "ai-compilation"},
+        service_item=1,
+    )
+
+    client.force_authenticate(model.user)
+
+    headers = {"Content-Type": "application/json"}
+
+    data = {
+        "execute_async": False,
+        "include_organization_brief": False,
+        "include_purpose_objective": True,
+        "inputs": {"code": "print('Hello, world!')", "language_and_version": "python"},
+    }
+
+    patch_post({}, 200, headers)
+    response = client.post(url, data, format="json")
+    result = response.json()
+
+    expected = {
+        "detail": "with-consumer-not-enough-consumables",
+        "status_code": 402,
+    }
+
+    assert result == expected
+    assert aiohttp.ClientSession.post.call_args_list == []
+    assert response.status_code == status.HTTP_402_PAYMENT_REQUIRED
+
+
+# When: auth and consumables
 # Then: response 200
 def test_code_compiler(bc: Breathecode, client: APIClient, patch_post, get_jwt):
     url = reverse_lazy("registry:code_compiler")
     model = bc.database.create(
         user=1,
         app={"slug": "rigobot"},
+        service={"slug": "ai-compilation"},
+        service_item=1,
+        consumable={"how_many": 1},
     )
+
     client.force_authenticate(model.user)
 
     expected = {
@@ -115,6 +155,7 @@ def test_code_compiler(bc: Breathecode, client: APIClient, patch_post, get_jwt):
     patch_post(expected, 200, headers)
     response = client.post(url, data, format="json")
 
+    assert response.getvalue().decode("utf-8") == json.dumps(expected)
     assert aiohttp.ClientSession.post.call_args_list == [
         call(
             f"{model.app.app_url}/v1/prompting/completion/code-compiler/",
@@ -123,8 +164,6 @@ def test_code_compiler(bc: Breathecode, client: APIClient, patch_post, get_jwt):
             headers={"Authorization": f"Link App=breathecode,Token={get_jwt}"},
         )
     ]
-
-    assert response.getvalue().decode("utf-8") == json.dumps(expected)
     assert response.status_code == status.HTTP_200_OK
 
 
@@ -135,6 +174,9 @@ def test_code_compiler_with_context(bc: Breathecode, client: APIClient, patch_po
     model = bc.database.create(
         user=1,
         app={"slug": "rigobot"},
+        service={"slug": "ai-compilation"},
+        service_item=1,
+        consumable={"how_many": 1},
     )
     client.force_authenticate(model.user)
 

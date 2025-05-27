@@ -30,9 +30,9 @@ from breathecode.authenticate.models import ProfileAcademy, User
 from breathecode.notify.actions import send_email_message
 from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
-from breathecode.utils.decorators import has_permission
 from breathecode.utils import GenerateLookupsMixin, capable_of, consume
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.decorators.capable_of import acapable_of
 from breathecode.utils.views import render_message
 
@@ -85,9 +85,9 @@ from .serializers import (
     KeywordClusterMidSerializer,
     KeywordSmallSerializer,
     OriginalityScanSerializer,
+    PostAcademyAssetSerializer,
     PostAssetCommentSerializer,
     PostAssetSerializer,
-    PostAcademyAssetSerializer,
     POSTCategorySerializer,
     PostKeywordClusterSerializer,
     PostKeywordSerializer,
@@ -2077,6 +2077,7 @@ class CodeCompilerView(APIView):
     Proxy endpoint to communicate with rigobot for code compilation.
     """
 
+    @consume("ai-compilation")
     async def post(self, request):
         """
         POST request to compile code using rigobot.
