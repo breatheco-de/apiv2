@@ -2968,8 +2968,8 @@ class ServiceStockScheduler(models.Model):
         Subscription, on_delete=models.CASCADE, help_text="Subscription", null=True, blank=True
     )
     consumables = models.ManyToManyField(Consumable, blank=True, help_text="Consumables")
-    valid_from = models.DateTimeField(help_text="Valid from")
-    valid_until = models.DateTimeField(help_text="Valid until", db_index=True)
+    valid_from = models.DateTimeField(help_text="Valid from", null=True, blank=True)
+    valid_until = models.DateTimeField(help_text="Valid until", db_index=True, null=True, blank=True)
     renewed_at = models.DateTimeField(help_text="Last renewed at", null=True, blank=True)
     last_renew_method = models.CharField(
         max_length=10, choices=LastRenewMethod.choices, default=LastRenewMethod.TASK, help_text="Last renew method"
