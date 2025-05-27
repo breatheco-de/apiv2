@@ -2088,6 +2088,10 @@ class AbstractIOweYou(models.Model):
 
     invoices = models.ManyToManyField(Invoice, blank=True, help_text="Invoices")
 
+    coupons = models.ManyToManyField(
+        Coupon, blank=True, help_text="Coupons applied during the sale", limit_choices_to=limit_coupon_choices
+    )
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
 
