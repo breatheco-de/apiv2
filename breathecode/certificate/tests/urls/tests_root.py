@@ -18,6 +18,156 @@ from breathecode.tests.mocks import (
 from ..mixins import CertificateTestCase
 
 
+def format_datetime(datetime):
+    if datetime is None:
+        return None
+
+    return datetime.isoformat().replace("+00:00", "Z")
+
+
+def format_academy(academy):
+    return {
+        "id": academy.id,
+        "logo_url": academy.logo_url,
+        "name": academy.name,
+        "slug": academy.slug,
+        "website_url": academy.website_url,
+    }
+
+
+def format_layout_design(layout_design):
+    return {
+        "name": layout_design.name,
+        "background_url": layout_design.background_url,
+        "slug": layout_design.slug,
+        "foot_note": layout_design.foot_note,
+    }
+
+
+def format_syllabus_schedule(syllabus_schedule, syllabus):
+    return {
+        "id": syllabus_schedule.id,
+        "name": syllabus_schedule.name,
+        "syllabus": syllabus.id,
+    }
+
+
+def format_syllabus_version(syllabus_version, syllabus):
+    return {
+        "version": syllabus_version.version,
+        "name": syllabus.name,
+        "slug": syllabus.slug,
+        "syllabus": syllabus.id,
+        "duration_in_days": syllabus.duration_in_days,
+        "duration_in_hours": syllabus.duration_in_hours,
+        "week_hours": syllabus.week_hours,
+    }
+
+
+def format_cohort(cohort, syllabus_schedule, syllabus_version, syllabus):
+    if syllabus_schedule:
+        syllabus_schedule = format_syllabus_schedule(syllabus_schedule, syllabus)
+
+    if syllabus_version:
+        syllabus_version = format_syllabus_version(syllabus_version, syllabus)
+
+    return {
+        "id": cohort.id,
+        "kickoff_date": format_datetime(cohort.kickoff_date),
+        "ending_date": format_datetime(cohort.ending_date),
+        "name": cohort.name,
+        "slug": cohort.slug,
+        "schedule": syllabus_schedule,
+        "syllabus_version": syllabus_version,
+    }
+
+
+# def format_user_specialty(user_specialty, layout_design, specialty):
+#     return {
+#         "id": user_specialty.id,
+#         "created_at": format_datetime(user_specialty.created_at),
+#         "expires_at": format_datetime(user_specialty.expires_at),
+#         "issued_at": format_datetime(user_specialty.issued_at),
+#     }
+
+
+def format_specialty(specialty):
+    return {
+        "created_at": format_datetime(specialty.created_at),
+        "description": specialty.description,
+        "id": specialty.id,
+        "logo_url": specialty.logo_url,
+        "name": specialty.name,
+        "slug": specialty.slug,
+        "syllabus": format_syllabus(specialty.syllabus),
+        "syllabuses": [format_syllabus(s) for s in specialty.syllabuses.all()],
+        "updated_at": format_datetime(specialty.updated_at),
+    }
+
+
+def format_syllabus(syllabus):
+    return {
+        "id": syllabus.id,
+        "name": syllabus.name,
+        "slug": syllabus.slug,
+    }
+
+
+def format_user(user):
+    return {
+        "id": user.id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+    }
+
+
+def get_serializer(
+    academy=None,
+    layout_design=None,
+    cohort=None,
+    syllabus_schedule=None,
+    syllabus_version=None,
+    specialty=None,
+    user_specialty=None,
+    syllabus=None,
+    user=None,
+    data={},
+):
+    if academy:
+        academy = format_academy(academy)
+
+    if layout_design:
+        layout_design = format_layout_design(layout_design)
+
+    if cohort:
+        cohort = format_cohort(cohort, syllabus_schedule, syllabus_version, syllabus)
+
+    if specialty:
+        specialty = format_specialty(specialty)
+
+    if user:
+        user = format_user(user)
+
+    return {
+        "academy": academy,
+        "cohort": cohort,
+        "created_at": format_datetime(user_specialty.created_at),
+        "expires_at": format_datetime(user_specialty.expires_at),
+        "issued_at": format_datetime(user_specialty.issued_at),
+        # "updated_at": format_datetime(user_specialty.updated_at),
+        "id": user_specialty.id,
+        "layout": layout_design,
+        "preview_url": user_specialty.preview_url,
+        "signed_by_role": "Director",
+        # "signed_by": user_specialty.signed_by,
+        "specialty": specialty,
+        "status": "PENDING",
+        "status_text": None,
+        "user": user,
+        **data,
+    }
+
+
 class CertificateTestSuite(CertificateTestCase):
     """Test /certificate"""
 
@@ -216,86 +366,17 @@ class CertificateTestSuite(CertificateTestCase):
         del json[0]["signed_by"]
 
         expected = [
-            {
-                "academy": {
-                    "id": 1,
-                    "logo_url": model["academy"].logo_url,
-                    "name": model["academy"].name,
-                    "slug": model["academy"].slug,
-                    "website_url": None,
-                },
-                "cohort": {
-                    "id": 1,
-                    "kickoff_date": self.datetime_to_iso(model.cohort.kickoff_date),
-                    "ending_date": None,
-                    "name": model["cohort"].name,
-                    "slug": model["cohort"].slug,
-                    "schedule": {
-                        "id": model["syllabus_schedule"].id,
-                        "name": model["syllabus_schedule"].name,
-                        "syllabus": model["syllabus_schedule"].syllabus.id,
-                    },
-                    "syllabus_version": {
-                        "version": model["syllabus_version"].version,
-                        "name": model["syllabus_version"].syllabus.name,
-                        "slug": model["syllabus_version"].syllabus.slug,
-                        "syllabus": model["syllabus_version"].syllabus.id,
-                        "duration_in_days": model["syllabus_version"].syllabus.duration_in_days,
-                        "duration_in_hours": model["syllabus_version"].syllabus.duration_in_hours,
-                        "week_hours": model["syllabus_version"].syllabus.week_hours,
-                    },
-                },
-                "created_at": self.datetime_to_iso(model["user_specialty"].created_at),
-                "expires_at": model["user_specialty"].expires_at,
-                "issued_at": model.user_specialty.issued_at,
-                "id": 1,
-                "layout": {
-                    "name": model["layout_design"].name,
-                    "slug": model["layout_design"].slug,
-                    "background_url": model["layout_design"].background_url,
-                    "foot_note": model["layout_design"].foot_note,
-                },
-                "preview_url": model["user_specialty"].preview_url,
-                "signed_by_role": "Director",
-                "specialty": {
-                    "created_at": self.datetime_to_iso(model["specialty"].created_at),
-                    "description": model.specialty.description,
-                    "id": 1,
-                    "logo_url": None,
-                    "name": model["specialty"].name,
-                    "slug": model["specialty"].slug,
-                    "syllabus": (
-                        {
-                            "id": model["specialty"].syllabus.id if model["specialty"].syllabus else None,
-                            "name": model["specialty"].syllabus.name if model["specialty"].syllabus else None,
-                            "slug": model["specialty"].syllabus.slug if model["specialty"].syllabus else None,
-                        }
-                        if model["specialty"].syllabus
-                        else None
-                    ),
-                    "syllabuses": [
-                        {"id": s.id, "name": s.name, "slug": s.slug} for s in model["specialty"].syllabuses.all()
-                    ],
-                    "updated_at": self.datetime_to_iso(model["specialty"].updated_at),
-                },
-                "status": "PENDING",
-                "status_text": None,
-                "user": {"first_name": model["user"].first_name, "id": 1, "last_name": model["user"].last_name},
-                "profile_academy": {
-                    "first_name": model["profile_academy"].first_name,
-                    "id": model["profile_academy"].id,
-                    "last_name": model["profile_academy"].last_name,
-                    "status": model["profile_academy"].status,
-                    "phone": model["profile_academy"].phone,
-                    "created_at": self.datetime_to_iso(model["profile_academy"].created_at),
-                    "email": model["profile_academy"].email,
-                    "academy": {
-                        "id": 1,
-                        "name": model["academy"].name,
-                        "slug": model["academy"].slug,
-                    },
-                },
-            }
+            get_serializer(
+                user_specialty=model.user_specialty,
+                user=model.user,
+                academy=model.academy,
+                cohort=model.cohort,
+                syllabus=model.syllabus,
+                syllabus_schedule=model.syllabus_schedule,
+                syllabus_version=model.syllabus_version,
+                specialty=model.specialty,
+                layout_design=model.layout_design,
+            ),
         ]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -429,140 +510,28 @@ class CertificateTestSuite(CertificateTestCase):
         del json[1]["signed_by"]
 
         expected = [
-            {
-                "academy": {
-                    "id": 1,
-                    "logo_url": models[0].academy.logo_url,
-                    "name": models[0].academy.name,
-                    "slug": models[0].academy.slug,
-                    "website_url": None,
-                },
-                "cohort": {
-                    "id": 1,
-                    "kickoff_date": self.datetime_to_iso(models[1].cohort.kickoff_date),
-                    "ending_date": None,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                    "schedule": {
-                        "id": models[0]["syllabus_schedule"].id,
-                        "name": models[0]["syllabus_schedule"].name,
-                        "syllabus": models[0]["syllabus_schedule"].syllabus.id,
-                    },
-                    "syllabus_version": {
-                        "version": models[0]["syllabus_version"].version,
-                        "name": models[0]["syllabus_version"].syllabus.name,
-                        "slug": models[0]["syllabus_version"].syllabus.slug,
-                        "syllabus": models[0]["syllabus_version"].syllabus.id,
-                        "duration_in_days": models[0]["syllabus_version"].syllabus.duration_in_days,
-                        "duration_in_hours": models[0]["syllabus_version"].syllabus.duration_in_hours,
-                        "week_hours": models[0]["syllabus_version"].syllabus.week_hours,
-                    },
-                },
-                "created_at": self.datetime_to_iso(models[0].user_specialty.created_at),
-                "expires_at": models[0].user_specialty.expires_at,
-                "issued_at": models[0].user_specialty.issued_at,
-                "id": 1,
-                "layout": {
-                    "name": models[0].layout_design.name,
-                    "background_url": models[0].layout_design.background_url,
-                    "slug": models[0].layout_design.slug,
-                    "foot_note": models[0].layout_design.foot_note,
-                },
-                "preview_url": models[0].user_specialty.preview_url,
-                "signed_by_role": "Director",
-                "specialty": {
-                    "created_at": self.datetime_to_iso(models[0].specialty.created_at),
-                    "description": models[0].specialty.description,
-                    "id": 1,
-                    "logo_url": None,
-                    "name": models[0].specialty.name,
-                    "slug": models[0].specialty.slug,
-                    "syllabus": (
-                        {
-                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
-                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
-                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
-                        }
-                        if models[0].specialty.syllabus
-                        else None
-                    ),
-                    "syllabuses": [
-                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
-                    ],
-                    "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
-                },
-                "status": "PENDING",
-                "status_text": None,
-                "user": {"first_name": models[0].user.first_name, "id": 2, "last_name": models[0].user.last_name},
-                "profile_academy": None,
-            },
-            {
-                "academy": {
-                    "id": 1,
-                    "logo_url": models[1].academy.logo_url,
-                    "name": models[1].academy.name,
-                    "slug": models[1].academy.slug,
-                    "website_url": None,
-                },
-                "cohort": {
-                    "id": 1,
-                    "kickoff_date": self.datetime_to_iso(models[1].cohort.kickoff_date),
-                    "ending_date": None,
-                    "name": models[1].cohort.name,
-                    "slug": models[1].cohort.slug,
-                    "schedule": {
-                        "id": models[0]["syllabus_schedule"].id,
-                        "name": models[0]["syllabus_schedule"].name,
-                        "syllabus": models[0]["syllabus_schedule"].syllabus.id,
-                    },
-                    "syllabus_version": {
-                        "version": models[0]["syllabus_version"].version,
-                        "name": models[0]["syllabus_version"].syllabus.name,
-                        "slug": models[0]["syllabus_version"].syllabus.slug,
-                        "syllabus": models[0]["syllabus_version"].syllabus.id,
-                        "duration_in_days": models[0]["syllabus_version"].syllabus.duration_in_days,
-                        "duration_in_hours": models[0]["syllabus_version"].syllabus.duration_in_hours,
-                        "week_hours": models[0]["syllabus_version"].syllabus.week_hours,
-                    },
-                },
-                "created_at": self.datetime_to_iso(models[1].user_specialty.created_at),
-                "expires_at": models[1].user_specialty.expires_at,
-                "issued_at": models[1].user_specialty.issued_at,
-                "id": 2,
-                "layout": {
-                    "name": models[1].layout_design.name,
-                    "slug": models[1].layout_design.slug,
-                    "background_url": models[1].layout_design.background_url,
-                    "foot_note": models[1].layout_design.foot_note,
-                },
-                "preview_url": models[1].user_specialty.preview_url,
-                "signed_by_role": "Director",
-                "specialty": {
-                    "created_at": self.datetime_to_iso(models[1].specialty.created_at),
-                    "description": models[1].specialty.description,
-                    "id": 1,
-                    "logo_url": None,
-                    "name": models[1].specialty.name,
-                    "slug": models[1].specialty.slug,
-                    "syllabus": (
-                        {
-                            "id": models[1].specialty.syllabus.id if models[1].specialty.syllabus else None,
-                            "name": models[1].specialty.syllabus.name if models[1].specialty.syllabus else None,
-                            "slug": models[1].specialty.syllabus.slug if models[1].specialty.syllabus else None,
-                        }
-                        if models[1].specialty.syllabus
-                        else None
-                    ),
-                    "syllabuses": [
-                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[1].specialty.syllabuses.all()
-                    ],
-                    "updated_at": self.datetime_to_iso(models[1].specialty.updated_at),
-                },
-                "status": "PENDING",
-                "status_text": None,
-                "user": {"first_name": models[1].user.first_name, "id": 3, "last_name": models[1].user.last_name},
-                "profile_academy": None,
-            },
+            get_serializer(
+                user_specialty=models[0].user_specialty,
+                user=models[0].user,
+                academy=models[0].academy,
+                cohort=models[0].cohort,
+                syllabus=models[0].syllabus,
+                syllabus_schedule=models[0].syllabus_schedule,
+                syllabus_version=models[0].syllabus_version,
+                specialty=models[0].specialty,
+                layout_design=models[0].layout_design,
+            ),
+            get_serializer(
+                user_specialty=models[1].user_specialty,
+                user=models[1].user,
+                academy=models[1].academy,
+                cohort=models[1].cohort,
+                syllabus=models[1].syllabus,
+                syllabus_schedule=models[1].syllabus_schedule,
+                syllabus_version=models[1].syllabus_version,
+                specialty=models[1].specialty,
+                layout_design=models[1].layout_design,
+            ),
         ]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -698,62 +667,19 @@ class CertificateTestSuite(CertificateTestCase):
         json = response.json()
 
         expected = [
-            {
-                "academy": {
-                    "id": 1,
-                    "logo_url": models[0].academy.logo_url,
-                    "name": models[0].academy.name,
-                    "slug": models[0].academy.slug,
-                    "website_url": None,
+            get_serializer(
+                user_specialty=models[0].user_specialty,
+                user=models[0].user,
+                academy=models[0].academy,
+                cohort=models[0].cohort,
+                syllabus=models[0].syllabus,
+                syllabus_schedule=models[0].syllabus_schedule,
+                specialty=models[0].specialty,
+                data={
+                    "signed_by": models[0].user_specialty.signed_by,
+                    "updated_at": format_datetime(models[0].user_specialty.updated_at),
                 },
-                "cohort": {
-                    "id": 1,
-                    "kickoff_date": self.datetime_to_iso(models[0].cohort.kickoff_date),
-                    "ending_date": None,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                    "schedule": {
-                        "id": models[0]["syllabus_schedule"].id,
-                        "name": models[0]["syllabus_schedule"].name,
-                        "syllabus": models[0]["syllabus_schedule"].syllabus.id,
-                    },
-                    "syllabus_version": None,
-                },
-                "created_at": self.datetime_to_iso(models[0].user_specialty.created_at),
-                "expires_at": models[0].user_specialty.expires_at,
-                "issued_at": models[0].user_specialty.issued_at,
-                "id": 1,
-                "layout": None,
-                "preview_url": models[0].user_specialty.preview_url,
-                "signed_by": models[0].user_specialty.signed_by,
-                "signed_by_role": "Director",
-                "specialty": {
-                    "created_at": self.datetime_to_iso(models[0].specialty.created_at),
-                    "description": models[0].specialty.description,
-                    "id": 1,
-                    "logo_url": None,
-                    "name": models[0].specialty.name,
-                    "slug": models[0].specialty.slug,
-                    "syllabus": (
-                        {
-                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
-                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
-                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
-                        }
-                        if models[0].specialty.syllabus
-                        else None
-                    ),
-                    "syllabuses": [
-                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
-                    ],
-                    "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
-                },
-                "status": "PENDING",
-                "status_text": None,
-                "updated_at": self.datetime_to_iso(models[0].user_specialty.updated_at),
-                "user": {"first_name": models[0].user.first_name, "id": 2, "last_name": models[0].user.last_name},
-                "profile_academy": None,
-            }
+            ),
         ]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -829,62 +755,19 @@ class CertificateTestSuite(CertificateTestCase):
         json = response.json()
 
         expected = [
-            {
-                "academy": {
-                    "id": 1,
-                    "logo_url": models[0].academy.logo_url,
-                    "name": models[0].academy.name,
-                    "slug": models[0].academy.slug,
-                    "website_url": None,
+            get_serializer(
+                user_specialty=models[0].user_specialty,
+                user=models[0].user,
+                academy=models[0].academy,
+                cohort=models[0].cohort,
+                syllabus=models[0].syllabus,
+                syllabus_schedule=models[0].syllabus_schedule,
+                specialty=models[0].specialty,
+                data={
+                    "signed_by": models[0].user_specialty.signed_by,
+                    "updated_at": format_datetime(models[0].user_specialty.updated_at),
                 },
-                "cohort": {
-                    "id": 1,
-                    "kickoff_date": self.datetime_to_iso(models[0].cohort.kickoff_date),
-                    "ending_date": None,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                    "schedule": {
-                        "id": models[0]["syllabus_schedule"].id,
-                        "name": models[0]["syllabus_schedule"].name,
-                        "syllabus": models[0]["syllabus_schedule"].syllabus.id,
-                    },
-                    "syllabus_version": None,
-                },
-                "created_at": self.datetime_to_iso(models[0].user_specialty.created_at),
-                "expires_at": models[0].user_specialty.expires_at,
-                "issued_at": models[0].user_specialty.issued_at,
-                "id": 1,
-                "layout": None,
-                "preview_url": models[0].user_specialty.preview_url,
-                "signed_by": models[0].user_specialty.signed_by,
-                "signed_by_role": "Director",
-                "specialty": {
-                    "created_at": self.datetime_to_iso(models[0].specialty.created_at),
-                    "description": models[0].specialty.description,
-                    "id": 1,
-                    "logo_url": None,
-                    "name": models[0].specialty.name,
-                    "slug": models[0].specialty.slug,
-                    "syllabus": (
-                        {
-                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
-                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
-                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
-                        }
-                        if models[0].specialty.syllabus
-                        else None
-                    ),
-                    "syllabuses": [
-                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
-                    ],
-                    "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
-                },
-                "status": "PENDING",
-                "status_text": None,
-                "updated_at": self.datetime_to_iso(models[0].user_specialty.updated_at),
-                "user": {"first_name": models[0].user.first_name, "id": 2, "last_name": models[0].user.last_name},
-                "profile_academy": None,
-            }
+            ),
         ]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -956,62 +839,19 @@ class CertificateTestSuite(CertificateTestCase):
         json = response.json()
 
         expected = [
-            {
-                "academy": {
-                    "id": 1,
-                    "logo_url": models[0].academy.logo_url,
-                    "name": models[0].academy.name,
-                    "slug": models[0].academy.slug,
-                    "website_url": None,
+            get_serializer(
+                user_specialty=models[0].user_specialty,
+                user=models[0].user,
+                academy=models[0].academy,
+                cohort=models[0].cohort,
+                syllabus=models[0].syllabus,
+                syllabus_schedule=models[0].syllabus_schedule,
+                specialty=models[0].specialty,
+                data={
+                    "signed_by": models[0].user_specialty.signed_by,
+                    "updated_at": format_datetime(models[0].user_specialty.updated_at),
                 },
-                "cohort": {
-                    "id": 1,
-                    "kickoff_date": self.datetime_to_iso(models[0].cohort.kickoff_date),
-                    "ending_date": None,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                    "schedule": {
-                        "id": models[0]["syllabus_schedule"].id,
-                        "name": models[0]["syllabus_schedule"].name,
-                        "syllabus": models[0]["syllabus_schedule"].syllabus.id,
-                    },
-                    "syllabus_version": None,
-                },
-                "created_at": self.datetime_to_iso(models[0].user_specialty.created_at),
-                "expires_at": models[0].user_specialty.expires_at,
-                "id": 1,
-                "layout": None,
-                "preview_url": models[0].user_specialty.preview_url,
-                "signed_by": models[0].user_specialty.signed_by,
-                "issued_at": models[0].user_specialty.issued_at,
-                "signed_by_role": "Director",
-                "specialty": {
-                    "created_at": self.datetime_to_iso(models[0].specialty.created_at),
-                    "description": models[0].specialty.description,
-                    "id": 1,
-                    "logo_url": None,
-                    "name": models[0].specialty.name,
-                    "slug": models[0].specialty.slug,
-                    "syllabus": (
-                        {
-                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
-                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
-                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
-                        }
-                        if models[0].specialty.syllabus
-                        else None
-                    ),
-                    "syllabuses": [
-                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
-                    ],
-                    "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
-                },
-                "status": "PENDING",
-                "status_text": None,
-                "updated_at": self.datetime_to_iso(models[0].user_specialty.updated_at),
-                "user": {"first_name": models[0].user.first_name, "id": 2, "last_name": models[0].user.last_name},
-                "profile_academy": None,
-            }
+            ),
         ]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1084,66 +924,19 @@ class CertificateTestSuite(CertificateTestCase):
         json = response.json()
 
         expected = [
-            {
-                "academy": {
-                    "id": 1,
-                    "logo_url": models[0].academy.logo_url,
-                    "name": models[0].academy.name,
-                    "slug": models[0].academy.slug,
-                    "website_url": None,
+            get_serializer(
+                user_specialty=models[0].user_specialty,
+                user=models[0].user,
+                academy=models[0].academy,
+                cohort=models[0].cohort,
+                syllabus=models[0].syllabus,
+                syllabus_schedule=models[0].syllabus_schedule,
+                specialty=models[0].specialty,
+                data={
+                    "signed_by": models[0].user_specialty.signed_by,
+                    "updated_at": format_datetime(models[0].user_specialty.updated_at),
                 },
-                "cohort": {
-                    "id": 1,
-                    "kickoff_date": self.datetime_to_iso(models[0].cohort.kickoff_date),
-                    "ending_date": None,
-                    "name": models[0].cohort.name,
-                    "slug": models[0].cohort.slug,
-                    "schedule": {
-                        "id": models[0]["syllabus_schedule"].id,
-                        "name": models[0]["syllabus_schedule"].name,
-                        "syllabus": models[0]["syllabus_schedule"].syllabus.id,
-                    },
-                    "syllabus_version": None,
-                },
-                "created_at": self.datetime_to_iso(models[0].user_specialty.created_at),
-                "expires_at": models[0].user_specialty.expires_at,
-                "issued_at": models[0].user_specialty.issued_at,
-                "id": 1,
-                "layout": None,
-                "preview_url": models[0].user_specialty.preview_url,
-                "signed_by": models[0].user_specialty.signed_by,
-                "signed_by_role": "Director",
-                "specialty": {
-                    "created_at": self.datetime_to_iso(models[0].specialty.created_at),
-                    "description": models[0].specialty.description,
-                    "id": 1,
-                    "logo_url": None,
-                    "name": models[0].specialty.name,
-                    "slug": models[0].specialty.slug,
-                    "syllabus": (
-                        {
-                            "id": models[0].specialty.syllabus.id if models[0].specialty.syllabus else None,
-                            "name": models[0].specialty.syllabus.name if models[0].specialty.syllabus else None,
-                            "slug": models[0].specialty.syllabus.slug if models[0].specialty.syllabus else None,
-                        }
-                        if models[0].specialty.syllabus
-                        else None
-                    ),
-                    "syllabuses": [
-                        {"id": s.id, "name": s.name, "slug": s.slug} for s in models[0].specialty.syllabuses.all()
-                    ],
-                    "updated_at": self.datetime_to_iso(models[0].specialty.updated_at),
-                },
-                "status": "PENDING",
-                "status_text": None,
-                "updated_at": self.datetime_to_iso(models[0].user_specialty.updated_at),
-                "user": {
-                    "first_name": models[0].user.first_name,
-                    "id": 2,
-                    "last_name": models[0].user.last_name,
-                },
-                "profile_academy": None,
-            }
+            ),
         ]
 
         self.assertEqual(json, expected)

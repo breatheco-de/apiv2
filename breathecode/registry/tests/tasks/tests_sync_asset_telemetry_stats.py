@@ -26,6 +26,7 @@ def test__without_asset(bc: Breathecode, client: APIClient):
     sync_asset_telemetry_stats.delay(1)
 
     assert bc.database.list_of("registry.Asset") == []
+    assert logging.Logger.warning.call_args_list == []
     assert logging.Logger.error.call_args_list == [call("Asset with id 1 not found", exc_info=True)]
 
 
