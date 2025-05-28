@@ -13,18 +13,6 @@ MIN_CANCELLED_SESSIONS = 10
 
 @supervisor(delta=timedelta(days=1))
 def supervise_all_consumption_sessions():
-    """
-    Supervises all consumption sessions to identify potential issues.
-
-    This supervisor checks for:
-    1. A high rate of pending consumption sessions compared to done sessions.
-    2. Users with a high rate of cancelled 'unsafe-consume-service-set' void
-       service consumption sessions, which might indicate a bug or a user
-       trying to exploit the system.
-
-    Yields:
-        str: A message describing the potential issue found.
-    """
     utc_now = timezone.now()
 
     done_sessions = ConsumptionSession.objects.filter(
@@ -85,17 +73,7 @@ def supervise_all_consumption_sessions():
 def supervise_pending_bags_to_be_delivered():
     """
     Supervisor to check for bags that are paid but not delivered.
-
-    This supervisor identifies bags that have been marked as 'PAID' but where
-    the `was_delivered` flag is still `False`. It specifically looks for bags
-    updated between 5 and 30 minutes ago to focus on recent transactions
-    that might have encountered issues during the delivery (subscription/plan
-    financing creation) process.
-
-    Yields:
-        tuple[str, str, dict[str, int]]: A tuple containing an error message,
-            the issue code 'pending-bag-delivery', and parameters for the
-            issue handler (the bag_id).
+    This helps identify issues in the subscription/plan financing creation process.
     """
     utc_now = timezone.now()
 
@@ -124,19 +102,8 @@ def supervise_pending_bags_to_be_delivered():
 def pending_bag_delivery(bag_id: int):
     """
     Issue handler for pending bag delivery.
-
-    This function is called when a bag is detected as paid but not delivered by
-    the `supervise_pending_bags_to_be_delivered` supervisor. It attempts to
-    retry the delivery process by calling the `retry_pending_bag` action.
-
-    Args:
-        bag_id: The ID of the Bag that needs its delivery retried.
-
-    Returns:
-        bool | None:
-            - True if the bag was already delivered or the retry was successful.
-            - None if the retry was scheduled for a later time.
-            - False if the retry was unfixable.
+    This function is called when a bag is detected as paid but not delivered.
+    It will attempt to retry the delivery process.
     """
     # Check if the bag still needs to be processed
     bag = Bag.objects.filter(id=bag_id, status="PAID", was_delivered=False).first()

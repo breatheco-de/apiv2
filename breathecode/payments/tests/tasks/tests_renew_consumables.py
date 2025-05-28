@@ -4,7 +4,6 @@ Test /answer
 
 import logging
 import random
-from datetime import timedelta
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -555,17 +554,15 @@ def test_do_not_needs_renew(
         extra["subscription_service_item"] = 1
 
     service_stock_scheduler = {
-        "valid_until": UTC_NOW + timedelta(hours=2) + timedelta(seconds=1),
+        "valid_until": UTC_NOW - relativedelta(seconds=1),
     }
     plan = {"is_renewable": False}
-    cohort_set = {"id": 1}
-    academy = {"available_as_saas": True}
 
     model = bc.database.create(
         service_stock_scheduler=service_stock_scheduler,
         plan=plan,
-        cohort_set=cohort_set,
-        academy=academy,
+        mentorship_service=2,
+        mentorship_service_set=1,
         **extra,
     )
 
@@ -576,10 +573,7 @@ def test_do_not_needs_renew(
 
     assert logging.Logger.info.call_args_list == [
         call("Starting renew_consumables for service stock scheduler 1"),
-        call(
-            f"The scheduler {model.service_stock_scheduler.id} (valid until {model.service_stock_scheduler.valid_until}) "
-            f"does not need to be renewed yet (utc_now is {UTC_NOW})."
-        ),
+        call("The scheduler 1 don't needs to be renewed"),
     ]
     assert logging.Logger.error.call_args_list == []
 

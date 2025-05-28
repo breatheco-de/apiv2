@@ -111,8 +111,6 @@ class SurveyTestSuite(FeedbackTestCase):
                 "created_at": self.bc.datetime.to_iso_string(model["survey"].created_at),
                 "sent_at": None,
                 "public_url": "https://nps.4geeks.com/survey/1",
-                "template_slug": None,
-                "title": None,
             }
         ]
 
@@ -151,8 +149,6 @@ class SurveyTestSuite(FeedbackTestCase):
                 "created_at": self.bc.datetime.to_iso_string(model["survey"].created_at),
                 "sent_at": None,
                 "public_url": "https://nps.4geeks.com/survey/1",
-                "template_slug": None,
-                "title": None,
             }
         ]
         self.assertEqual(json, expected)
@@ -212,8 +208,6 @@ class SurveyTestSuite(FeedbackTestCase):
                 "created_at": self.bc.datetime.to_iso_string(model["survey"].created_at),
                 "sent_at": None,
                 "public_url": "https://nps.4geeks.com/survey/1",
-                "template_slug": None,
-                "title": None,
             }
         ]
 
@@ -274,8 +268,6 @@ class SurveyTestSuite(FeedbackTestCase):
                 "created_at": self.bc.datetime.to_iso_string(model["survey"].created_at),
                 "sent_at": None,
                 "public_url": "https://nps.4geeks.com/survey/1",
-                "template_slug": None,
-                "title": None,
             }
         ]
 
@@ -339,8 +331,6 @@ class SurveyTestSuite(FeedbackTestCase):
                 "created_at": self.bc.datetime.to_iso_string(model["survey"].created_at),
                 "sent_at": None,
                 "public_url": "https://nps.4geeks.com/survey/1",
-                "template_slug": None,
-                "title": None,
             }
         ]
 
@@ -511,8 +501,6 @@ class SurveyTestSuite(FeedbackTestCase):
             "sent_at": None,
             "cohort": model["cohort_user"][0].cohort.id,
             "is_customized": False,
-            "template_slug": None,
-            "title": None,
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -551,8 +539,6 @@ class SurveyTestSuite(FeedbackTestCase):
             "sent_at": None,
             "cohort": model["cohort_user"][0].cohort.id,
             "is_customized": False,
-            "template_slug": None,
-            "title": None,
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -594,8 +580,6 @@ class SurveyTestSuite(FeedbackTestCase):
             "sent_at": None,
             "cohort": model["cohort_user"][0].cohort.id,
             "is_customized": False,
-            "template_slug": None,
-            "title": None,
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
