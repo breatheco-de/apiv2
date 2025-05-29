@@ -681,6 +681,7 @@ class AssetView(APIView, GenerateLookupsMixin):
                     "sync_status",
                 ],
                 "in": [
+                    "id",
                     "difficulty",
                     "status",
                     "asset_type",
