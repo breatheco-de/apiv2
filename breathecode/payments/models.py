@@ -1447,6 +1447,23 @@ class Consumable(AbstractServiceItem):
         null=True,
         help_text="Event type set which the consumable belongs to",
     )
+
+    subscription = models.ForeignKey(
+        Subscription,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="Subscription which the consumable belongs to",
+    )
+
+    plan_financing = models.ForeignKey(
+        PlanFinancing,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="Plan financing which the consumable belongs to",
+    )
+
     mentorship_service_set = models.ForeignKey(
         MentorshipServiceSet,
         on_delete=models.CASCADE,

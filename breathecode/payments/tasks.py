@@ -131,6 +131,19 @@ def _calculate_consumable_valid_until(service_item, utc_now: datetime, resource_
     return renew_units.get(service_item.renew_at_unit, lambda: resource_valid_until)()
 
 
+def build_consumable_filters(user, service_item, resource_filters, is_subscription, resource_id):
+    filters = {
+        "service_item": service_item,
+        "user": user,
+        **resource_filters,
+    }
+    if is_subscription:
+        filters["subscription"] = Subscription.objects.get(id=resource_id)
+    else:
+        filters["plan_financing"] = PlanFinancing.objects.get(id=resource_id)
+    return filters
+
+
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def renew_consumables(self, scheduler_id: int, **kwargs: Any) -> None:
     """Renew consumables for a user based on a ServiceStockScheduler."""
@@ -164,10 +177,9 @@ def renew_consumables(self, scheduler_id: int, **kwargs: Any) -> None:
 
     # Handle non-expiring items
     if service_item.how_many == -1:
+        filters = build_consumable_filters(user, service_item, resource_filters, is_subscription, resource_id)
         Consumable.objects.update_or_create(
-            service_item=service_item,
-            user=user,
-            **resource_filters,
+            **filters,
             defaults={
                 "how_many": -1,
                 "valid_until": parent_absolute_valid_until or resource_valid_until,
@@ -184,11 +196,9 @@ def renew_consumables(self, scheduler_id: int, **kwargs: Any) -> None:
         consumable_valid_until = parent_absolute_valid_until
 
     # Create/update consumable
+    filters = build_consumable_filters(user, service_item, resource_filters, is_subscription, resource_id)
     Consumable.objects.update_or_create(
-        service_item=service_item,
-        user=user,
-        unit_type=service_item.unit_type,
-        **resource_filters,
+        **filters,
         defaults={
             "how_many": service_item.how_many,
             "valid_until": consumable_valid_until,
