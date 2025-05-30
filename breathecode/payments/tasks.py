@@ -684,7 +684,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     try:
                         s = Stripe(academy=plan_financing.academy)
                         s.set_language(settings.lang)
-
                         invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
 
                     except Exception:

@@ -19,6 +19,7 @@ from ..views import (
     AssetThumbnailView,
     AssetView,
     CodeCompilerView,
+    AssetMeView,
     TechnologyView,
     forward_asset_url,
     get_alias_redirects,
@@ -34,6 +35,8 @@ from ..views import (
 app_name = "registry"
 urlpatterns = [
     path("asset", AssetView.as_view(), name="asset"),
+    path("asset/me", AssetMeView.as_view(), name="asset_me"),
+    path("asset/me/<str:asset_slug>", AssetMeView.as_view(), name="asset_me_slug"),
     path("asset/test", handle_test_asset),
     path("asset/thumbnail/<str:asset_slug>", AssetThumbnailView.as_view(), name="asset_thumbnail_slug"),
     path("asset/preview/<str:asset_slug>", render_preview_html),

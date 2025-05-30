@@ -22,6 +22,7 @@ from .views import (
     SyncTasksView,
     RepositoryDeletionsMeView,
     FlagView,
+    FlagAssetView,
 )
 
 app_name = "assignments"
@@ -79,4 +80,5 @@ urlpatterns = [
     path("completion_job/<int:task_id>", CompletionJobView.as_view(), name="completion_job"),
     path("me/deletion_order", RepositoryDeletionsMeView.as_view(), name="me_deletion_order"),
     path("academy/flag", FlagView.as_view(), name="flag"),
+    path("academy/asset/<str:asset_id>/flag", FlagAssetView.as_view(), name="flag_asset"),
 ]

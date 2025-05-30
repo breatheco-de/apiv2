@@ -181,6 +181,10 @@ CAPABILITIES = [
         "slug": "validate_assignment_flag",
         "description": "Ideal for CTFs and other assignments that require flag validation",
     },
+    {
+        "slug": "crud_flag",
+        "description": "Create flags for the assets and assignments",
+    },
 ]
 
 ROLES = [
@@ -220,6 +224,7 @@ ROLES = [
             "read_keywordcluster",
             "crud_academyservice",
             "crud_event",
+            "crud_flag",
             "crud_mentorship_session",
             "read_calendly_organization",
             "crud_subscription",
@@ -389,6 +394,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "read_content_variables",
                 "crud_content_variables",
                 "crud_assessment",
+                "crud_flag",
             ],
         }
     )

@@ -1439,3 +1439,76 @@ class FlagView(APIView):
                 code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 slug="unexpected-flag-validation-error",
             )
+
+
+class FlagAssetView(APIView):
+
+    # POST method for flag generation
+    @capable_of("crud_flag")
+    def post(self, request, asset_id, academy_id):  # academy_id removed
+
+        expires_in = request.data.get("expires_in", None)
+        lang = get_user_language(request)
+
+        # Try to get asset by ID first, then by slug if not found
+        try:
+            asset_id_int = int(asset_id)
+            asset = Asset.objects.filter(id=asset_id_int).first()
+        except ValueError:
+            # If asset_id is not an integer, try to find by slug
+            asset = Asset.objects.filter(slug=asset_id).first()
+        if not asset:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Asset not found",
+                    es="El asset no fue encontrado",
+                    slug="asset-not-found",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="asset-not-found",
+            )
+
+        try:
+            if expires_in is not None:
+                expires_in = int(expires_in)
+        except ValueError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="expires_in must be an integer",
+                    es="expires_in debe ser un número entero",
+                    slug="invalid-expires-in",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="invalid-expires-in",
+            )
+
+        try:
+            flag_manager = FlagManager()
+            new_flag = flag_manager.generate_flag(asset.flag_seed, expires_in=expires_in)
+            return Response({"flag": new_flag}, status=status.HTTP_201_CREATED)
+        except ValueError as e:
+            eng_message = str(e)
+            es_message = eng_message
+            if "PRIVATE_FLAG_SEED environment variable is not set" in eng_message:
+                es_message = "La variable de entorno PRIVATE_FLAG_SEED no está configurada"
+            elif "Asset seed cannot be empty" in eng_message:
+                es_message = "La semilla del activo no puede estar vacía"
+            raise ValidationException(
+                translation(lang, en=eng_message, es=es_message, slug="flag-generation-error"),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="flag-generation-error",
+            )
+        except Exception as e:
+            logger.error(f"Error generating flag: {str(e)}")
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="An unexpected error occurred while generating the flag",
+                    es="Ocurrió un error inesperado al generar el flag",
+                    slug="unexpected-flag-generation-error",
+                ),
+                code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                slug="unexpected-flag-generation-error",
+            )

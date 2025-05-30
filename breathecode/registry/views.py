@@ -803,6 +803,164 @@ class AssetView(APIView, GenerateLookupsMixin):
 
         return handler.response(serializer.data)
 
+
+# Create your views here.
+class AssetMeView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=AssetCache, sort="-published_at", paginate=True)
+
+    def get(self, request, asset_slug=None):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        lang = get_user_language(request)
+
+        if asset_slug is not None:
+            asset = Asset.get_by_slug(asset_slug, request)
+            if asset is None:
+                raise ValidationException(f"Asset {asset_slug} not found", status.HTTP_404_NOT_FOUND)
+
+            serializer = AssetBigAndTechnologyPublishedSerializer(asset)
+            return handler.response(serializer.data)
+
+        items = Asset.objects.filter(owner=request.user)
+        lookup = {}
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "iexact": [
+                    "test_status",
+                    "sync_status",
+                ],
+                "in": [
+                    "difficulty",
+                    "status",
+                    "asset_type",
+                    "category__slug",
+                    "technologies__slug",
+                    "seo_keywords__slug",
+                ],
+            },
+            ids=["author", "owner"],
+            bools={
+                "exact": ["with_video", "interactive", "graded"],
+            },
+            overwrite={
+                "category": "category__slug",
+                "technologies": "technologies__slug",
+                "seo_keywords": "seo_keywords__slug",
+            },
+        )
+
+        like = request.GET.get("like", None)
+        if like is not None:
+            if is_url(like):
+                items = items.filter(Q(readme_url__icontains=like) | Q(url__icontains=like))
+            else:
+                items = items.filter(
+                    Q(slug__icontains=slugify(like))
+                    | Q(title__icontains=like)
+                    | Q(assetalias__slug__icontains=slugify(like))
+                )
+
+        if "learnpack_deploy_url" in self.request.GET:
+            param = self.request.GET.get("learnpack_deploy_url")
+            if param.lower() == "true":
+                items = items.exclude(learnpack_deploy_url__isnull=True).exclude(learnpack_deploy_url="")
+            elif param.lower() == "false":
+                items = items.filter(Q(learnpack_deploy_url__isnull=True) | Q(learnpack_deploy_url=""))
+            elif is_url(param):
+                items = items.filter(learnpack_deploy_url=param)
+
+        if "slug" in self.request.GET:
+            asset_type = self.request.GET.get("asset_type", None)
+            param = self.request.GET.get("slug")
+            slugs = [s.strip() for s in param.split(",")]
+
+            # For single slug, try to get exact asset to maintain backward compatibility
+            if len(slugs) == 1:
+                asset = Asset.get_by_slug(slugs[0], request, asset_type=asset_type)
+                if asset is not None:
+                    lookup["slug"] = asset.slug
+                else:
+                    lookup["slug"] = slugs[0]
+            else:
+                # For multiple slugs, filter by all provided slugs
+                lookup["slug__in"] = slugs
+
+        if "language" in self.request.GET:
+            param = self.request.GET.get("language")
+            if param == "en":
+                param = "us"
+            lookup["lang"] = param
+
+        if "status" not in self.request.GET:
+            lookup["status__in"] = ["PUBLISHED"]
+
+        try:
+            if "academy" in self.request.GET and self.request.GET.get("academy") not in ["null", ""]:
+                param = self.request.GET.get("academy")
+                lookup["academy__in"] = [int(p) for p in param.split(",")]
+        except Exception:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The academy filter value should be an integer",
+                    es="El valor del filtro de academy debería ser un entero",
+                    slug="academy-id-must-be-integer",
+                ),
+                code=400,
+            )
+
+        if "video" in self.request.GET:
+            param = self.request.GET.get("video")
+            if param == "true":
+                lookup["with_video"] = True
+
+        lookup["external"] = False
+        if "external" in self.request.GET:
+            param = self.request.GET.get("external")
+            if param == "true":
+                lookup["external"] = True
+            elif param == "both":
+                lookup.pop("external", None)
+
+        need_translation = self.request.GET.get("need_translation", False)
+        if need_translation == "true":
+            items = items.annotate(num_translations=Count("all_translations")).filter(num_translations__lte=1)
+
+        if "exclude_category" in self.request.GET:
+            param = self.request.GET.get("exclude_category")
+            items = items.exclude(category__slug__in=[p for p in param.split(",") if p])
+
+        if "authors_username" in self.request.GET:
+            au = self.request.GET.get("authors_username", "").split(",")
+            query = Q()
+            for username in au:
+                query |= Q(authors_username__icontains=username)
+            items = items.exclude(~query)
+
+        items = items.filter(query, **lookup, visibility="PUBLIC").distinct()
+        items = handler.queryset(items)
+
+        expand = self.request.GET.get("expand")
+
+        if "big" in self.request.GET:
+            serializer = AssetMidSerializer(items, many=True)
+        elif expand is not None:
+            serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
+        else:
+            serializer = AssetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
     @has_permission("learnpack_create_package")
     def put(self, request, asset_slug=None):
 
@@ -917,7 +1075,7 @@ class AssetView(APIView, GenerateLookupsMixin):
         serializer = PostAssetSerializer(data=data, context={"request": request})
         if serializer.is_valid():
             instance = serializer.save()
-            if instance.github_url:
+            if instance.readme_url and "github.com" in instance.readme_url:
                 async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

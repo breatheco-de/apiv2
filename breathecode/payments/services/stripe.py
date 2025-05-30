@@ -350,7 +350,6 @@ class Stripe:
             PaymentException: If there's an issue with the Stripe charge (e.g., card declined).
         """
         stripe.api_key = self.api_key
-
         if isinstance(currency, str):
             currency_obj = Currency.objects.filter(code__iexact=currency).first()
             if not currency_obj:
