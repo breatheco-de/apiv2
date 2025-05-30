@@ -2,6 +2,7 @@ import ast
 import logging
 import os
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import Any, Optional
 
 from capyc.core.i18n import translation
@@ -50,153 +51,170 @@ logger = logging.getLogger(__name__)
 IS_DJANGO_REDIS = hasattr(cache, "fake") is False
 
 
+class RenewUnit(Enum):
+    WEEK = "WEEK"
+    MONTH = "MONTH"
+    YEAR = "YEAR"
+    DAY = "DAY"
+
+
+def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service) -> dict:
+    """Generate search criteria based on service type."""
+
+    lookups = {}
+    key = service.type.lower()
+    value = getattr(i_owe_you, f"selected_{key}", None)
+    if value:
+        lookups[key] = value
+    return lookups
+
+
+def _get_parent_resource_info(scheduler, utc_now: datetime) -> dict:
+    """Extract information from the parent resource (subscription or financing)."""
+
+    if scheduler.plan_handler and scheduler.plan_handler.subscription:
+        resource = scheduler.plan_handler.subscription
+        is_subscription = True
+        handler = scheduler.plan_handler.handler
+
+    elif scheduler.plan_handler and scheduler.plan_handler.plan_financing:
+        resource = scheduler.plan_handler.plan_financing
+        is_subscription = False
+        handler = scheduler.plan_handler.handler
+
+    elif scheduler.subscription_handler and scheduler.subscription_handler.subscription:
+        resource = scheduler.subscription_handler.subscription
+        is_subscription = True
+        handler = scheduler.subscription_handler.handler
+
+    elif scheduler.subscription_handler and scheduler.subscription_handler.plan_financing:
+        resource = scheduler.subscription_handler.plan_financing
+        is_subscription = False
+        handler = scheduler.subscription_handler.handler
+
+    else:
+        raise AbortTask(f"Scheduler {scheduler.id} without a valid parent handler")
+
+    # Check subscription expiration using either valid_until or next_payment_at
+    if is_subscription:
+        if resource.valid_until and resource.valid_until < utc_now:
+            raise AbortTask(f"The subscription {resource.id} is over")
+        elif not resource.valid_until and resource.next_payment_at < utc_now:
+            raise AbortTask(f"The subscription {resource.id} is over")
+
+    if resource.next_payment_at < utc_now:
+        raise AbortTask(f"The {resource.__class__.__name__} {resource.id} needs to be paid")
+
+    return {
+        "user": resource.user,
+        "service_item": handler.service_item,
+        "resource_valid_until": (
+            resource.valid_until
+            if is_subscription and resource.valid_until
+            else resource.next_payment_at if is_subscription else resource.plan_expires_at
+        ),
+        "resource_filters": get_resource_lookup(resource, handler.service_item.service),
+        "is_subscription": is_subscription,
+        "resource_id": resource.id,
+    }
+
+
+def _calculate_consumable_valid_until(service_item, utc_now: datetime, resource_valid_until: datetime) -> datetime:
+    """Calculate the consumable expiration date."""
+
+    renew_units = {
+        RenewUnit.WEEK.value: lambda: utc_now + timedelta(weeks=service_item.renew_at),
+        RenewUnit.MONTH.value: lambda: utc_now + relativedelta(months=service_item.renew_at),
+        RenewUnit.YEAR.value: lambda: utc_now + relativedelta(years=service_item.renew_at),
+        RenewUnit.DAY.value: lambda: utc_now + timedelta(days=service_item.renew_at),
+    }
+    return renew_units.get(service_item.renew_at_unit, lambda: resource_valid_until)()
+
+
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def renew_consumables(self, scheduler_id: int, **_: Any):
-    """Renew consumables."""
-
-    def get_resource_lookup(i_owe_you: AbstractIOweYou, service: Service):
-        lookups = {}
-
-        key = service.type.lower()
-        value = getattr(i_owe_you, f"selected_{key}", None)
-        if value:
-            lookups[key] = value
-
-        return lookups
+def renew_consumables(self, scheduler_id: int, **kwargs: Any) -> None:
+    """Renew consumables for a user based on a ServiceStockScheduler."""
 
     logger.info(f"Starting renew_consumables for service stock scheduler {scheduler_id}")
 
-    if not (scheduler := ServiceStockScheduler.objects.filter(id=scheduler_id).first()):
+    scheduler = ServiceStockScheduler.objects.filter(id=scheduler_id).first()
+    if not scheduler:
         raise RetryTask(f"ServiceStockScheduler with id {scheduler_id} not found")
 
     utc_now = timezone.now()
+    resource_info = _get_parent_resource_info(scheduler, utc_now)
+    user = resource_info["user"]
+    service_item = resource_info["service_item"]
+    resource_valid_until = resource_info["resource_valid_until"]
+    resource_filters = resource_info["resource_filters"]
+    is_subscription = resource_info["is_subscription"]
+    resource_id = resource_info["resource_id"]
 
-    # is over
-    if (
-        scheduler.plan_handler
-        and scheduler.plan_handler.subscription
-        and scheduler.plan_handler.subscription.valid_until
-        and scheduler.plan_handler.subscription.valid_until < utc_now
-    ):
-        raise AbortTask(f"The subscription {scheduler.plan_handler.subscription.id} is over")
-
-    # it needs to be paid
-    if (
-        scheduler.plan_handler
-        and scheduler.plan_handler.subscription
-        and scheduler.plan_handler.subscription.next_payment_at < utc_now
-    ):
+    if not user or not service_item or not resource_valid_until:
         raise AbortTask(
-            f"The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the " "consumables"
+            f"Invalid configuration for scheduler {scheduler_id}: missing user, service item, or valid until"
         )
 
-    # is over
-    if (
-        scheduler.plan_handler
-        and scheduler.plan_handler.plan_financing
-        and scheduler.plan_handler.plan_financing.plan_expires_at < utc_now
-    ):
-        raise AbortTask(f"The plan financing {scheduler.plan_handler.plan_financing.id} is over")
+    # Get absolute expiration date from parent resource
+    parent_absolute_valid_until = None
+    if is_subscription and resource_id:
+        parent_absolute_valid_until = Subscription.objects.filter(id=resource_id).first().next_payment_at
+    elif resource_id:
+        parent_absolute_valid_until = PlanFinancing.objects.filter(id=resource_id).first().plan_expires_at
 
-    # it needs to be paid
-    if (
-        scheduler.plan_handler
-        and scheduler.plan_handler.plan_financing
-        and scheduler.plan_handler.plan_financing.next_payment_at < utc_now
-    ):
-        raise AbortTask(
-            f"The plan financing {scheduler.plan_handler.plan_financing.id} needs to be paid to renew "
-            "the consumables"
+    # Handle non-expiring items
+    if service_item.how_many == -1:
+        Consumable.objects.update_or_create(
+            service_item=service_item,
+            user=user,
+            **resource_filters,
+            defaults={
+                "how_many": -1,
+                "valid_until": parent_absolute_valid_until or resource_valid_until,
+            },
         )
-
-    # is over
-    if (
-        scheduler.subscription_handler
-        and scheduler.subscription_handler.subscription
-        and scheduler.subscription_handler.subscription.valid_until < utc_now
-    ):
-        raise AbortTask(f"The subscription {scheduler.subscription_handler.subscription.id} is over")
-
-    # it needs to be paid
-    if (
-        scheduler.subscription_handler
-        and scheduler.subscription_handler.subscription
-        and scheduler.subscription_handler.subscription.next_payment_at < utc_now
-    ):
-        raise AbortTask(
-            f"The subscription {scheduler.subscription_handler.subscription.id} needs to be paid to renew "
-            "the consumables"
-        )
-
-    if scheduler.valid_until and scheduler.valid_until - timedelta(days=1) < utc_now:
-        logger.info(f"The scheduler {scheduler.id} don't needs to be renewed")
+        if scheduler.valid_until is not None:
+            scheduler.valid_until = None
+            scheduler.save()
         return
 
-    service_item = None
-    resource_valid_until = None
-    selected_lookup = {}
+    # Calculate consumable expiration date
+    consumable_valid_until = _calculate_consumable_valid_until(service_item, utc_now, resource_valid_until)
+    if parent_absolute_valid_until and consumable_valid_until > parent_absolute_valid_until:
+        consumable_valid_until = parent_absolute_valid_until
 
-    if scheduler.plan_handler and scheduler.plan_handler.subscription:
-        user = scheduler.plan_handler.subscription.user
-        service_item = scheduler.plan_handler.handler.service_item
-        resource_valid_until = scheduler.plan_handler.subscription.valid_until
-
-        selected_lookup = get_resource_lookup(scheduler.plan_handler.subscription, service_item.service)
-
-    elif scheduler.plan_handler and scheduler.plan_handler.plan_financing:
-        user = scheduler.plan_handler.plan_financing.user
-        service_item = scheduler.plan_handler.handler.service_item
-        resource_valid_until = scheduler.plan_handler.plan_financing.plan_expires_at
-
-        selected_lookup = get_resource_lookup(scheduler.plan_handler.plan_financing, service_item.service)
-
-    elif scheduler.subscription_handler and scheduler.subscription_handler.subscription:
-        user = scheduler.subscription_handler.subscription.user
-        service_item = scheduler.subscription_handler.service_item
-        resource_valid_until = scheduler.subscription_handler.subscription.valid_until
-
-        selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription, service_item.service)
-
-    unit = service_item.renew_at
-    unit_type = service_item.renew_at_unit
-
-    delta = actions.calculate_relative_delta(unit, unit_type)
-    scheduler.valid_until = scheduler.valid_until or utc_now
-    scheduler.valid_until = scheduler.valid_until + delta
-
-    if resource_valid_until and scheduler.valid_until and scheduler.valid_until > resource_valid_until:
-        scheduler.valid_until = resource_valid_until
-
-    scheduler.save()
-
-    if not selected_lookup and service_item.service.type != "VOID":
-        logger.error(f"The Plan not have a resource linked to it for the ServiceStockScheduler {scheduler.id}")
-        return
-
-    consumable = Consumable(
+    # Create/update consumable
+    Consumable.objects.update_or_create(
         service_item=service_item,
         user=user,
         unit_type=service_item.unit_type,
-        how_many=service_item.how_many,
-        valid_until=scheduler.valid_until,
-        **selected_lookup,
+        **resource_filters,
+        defaults={
+            "how_many": service_item.how_many,
+            "valid_until": consumable_valid_until,
+        },
     )
 
-    consumable.save()
+    # Update scheduler
+    scheduler.valid_until = consumable_valid_until
+    scheduler.save()
+    logger.info(
+        f"Renewed consumable for service item {service_item.id} and user {user.id}. Valid until: {consumable_valid_until}"
+    )
 
-    scheduler.consumables.add(consumable)
-
-    if selected_lookup:
-
-        key = list(selected_lookup.keys())[0]
-        id = selected_lookup[key].id
-        name = key.replace("selected_", "").replace("_", " ")
-        logger.info(f"The consumable {consumable.id} for {name} {id} was built")
-
+    # Schedule next renewal
+    if (
+        service_item.renew_at
+        and service_item.renew_at_unit
+        and (not parent_absolute_valid_until or consumable_valid_until < parent_absolute_valid_until)
+    ):
+        logger.info(f"Scheduling next renew_consumables for scheduler {scheduler_id} at {consumable_valid_until}")
+        renew_consumables.apply_async(args=[scheduler_id], eta=consumable_valid_until)
     else:
-        logger.info(f"The consumable {consumable.id} was built")
-
-    logger.info(f"The scheduler {scheduler.id} was renewed")
+        logger.info(
+            f"Not scheduling next renew_consumables for scheduler {scheduler_id}. "
+            f"Reason: No renew_at/unit or consumable_valid_until ({consumable_valid_until}) >= parent_absolute_valid_until ({parent_absolute_valid_until})."
+        )
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
@@ -209,7 +227,10 @@ def renew_subscription_consumables(self, subscription_id: int, **_: Any):
         raise RetryTask(f"Subscription with id {subscription_id} not found")
 
     utc_now = timezone.now()
+    # Check subscription expiration using either valid_until or next_payment_at
     if subscription.valid_until and subscription.valid_until < utc_now:
+        raise AbortTask(f"The subscription {subscription.id} is over")
+    elif not subscription.valid_until and subscription.next_payment_at < utc_now:
         raise AbortTask(f"The subscription {subscription.id} is over")
 
     if subscription.next_payment_at < utc_now:
@@ -432,7 +453,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     if not manager.exists(subscription.id):
                         manager.call(subscription.id)
 
-                    raise AbortTask(f"Error getting bag from subscription {subscription_id}: {e}")
+                    raise AbortTask(f"Error getting bag from subscription {subscription_id}")
 
                 amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
