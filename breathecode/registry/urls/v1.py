@@ -18,6 +18,7 @@ from ..views import (
     AssetSupersedesView,
     AssetThumbnailView,
     AssetView,
+    CodeCompilerView,
     AssetMeView,
     TechnologyView,
     forward_asset_url,
@@ -80,4 +81,5 @@ urlpatterns = [
     path("academy/technology/<str:tech_slug>", AcademyTechnologyView.as_view()),
     path("translation", get_translations),
     path("alias/redirect", get_alias_redirects),
+    path("code-compiler", CodeCompilerView.as_view(), name="code_compiler"),
 ]

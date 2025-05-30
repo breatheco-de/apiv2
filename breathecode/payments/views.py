@@ -1585,7 +1585,7 @@ class CouponBaseView(APIView):
         else:
             coupon_codes = []
 
-        return get_available_coupons(plan, coupons=coupon_codes)
+        return get_available_coupons(plan, coupons=coupon_codes, user=self.request.user)
 
 
 class CouponView(CouponBaseView):
@@ -1735,7 +1735,7 @@ class BagView(APIView):
         bag.save()
 
         if plan and bag.coupons.count() == 0:
-            coupons = get_available_coupons(plan, request.data.get("coupons", []))
+            coupons = get_available_coupons(plan, request.data.get("coupons", []), user=request.user)
             bag.coupons.set(coupons)
 
         # actions.check_dependencies_in_bag(bag, lang)
@@ -1892,7 +1892,9 @@ class CheckingView(APIView):
                             bag.save()
 
                             if plan and bag.coupons.count() == 0:
-                                coupons = get_available_coupons(plan, request.data.get("coupons", []))
+                                coupons = get_available_coupons(
+                                    plan, request.data.get("coupons", []), user=request.user
+                                )
                                 bag.coupons.set(coupons)
                             # actions.check_dependencies_in_bag(bag, lang)
 
@@ -2437,6 +2439,10 @@ class PayView(APIView):
                 bag.token = None
                 bag.expires_at = None
                 bag.save()
+
+                # Create reward coupons for sellers if coupons were used
+                if coupons.exists() and original_price > 0:
+                    actions.create_seller_reward_coupons(list(coupons), original_price, request.user)
 
                 transaction.savepoint_commit(sid)
 
