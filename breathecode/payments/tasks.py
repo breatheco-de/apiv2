@@ -218,8 +218,15 @@ def renew_consumables(self, scheduler_id: int, **kwargs: Any) -> None:
         and service_item.renew_at_unit
         and (not parent_absolute_valid_until or consumable_valid_until < parent_absolute_valid_until)
     ):
-        logger.info(f"Scheduling next renew_consumables for scheduler {scheduler_id} at {consumable_valid_until}")
-        renew_consumables.apply_async(args=[scheduler_id], eta=consumable_valid_until)
+        days_until_renewal = (consumable_valid_until - utc_now).days
+        if days_until_renewal < 1:
+            days_until_renewal = 1
+        logger.info(
+            f"Scheduling next renew_consumables for scheduler {scheduler_id} in {days_until_renewal}d (target: {consumable_valid_until})"
+        )
+        manager = schedule_task(renew_consumables, f"{days_until_renewal}d")
+        if not manager.exists(scheduler_id):
+            manager.call(scheduler_id)
     else:
         logger.info(
             f"Not scheduling next renew_consumables for scheduler {scheduler_id}. "
