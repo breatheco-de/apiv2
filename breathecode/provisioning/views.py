@@ -318,7 +318,7 @@ class UploadView(APIView):
             # codespaces
             fields = [
                 "username",
-                "usage_at",
+                "formatted_date",
                 "product",
                 "sku",
                 "quantity",
@@ -334,8 +334,8 @@ class UploadView(APIView):
             df2.reset_index()
 
             try:
-                first = df2["usage_at"][0].split("-")
-                last = df["usage_at"][0].split("-")
+                first = df2["formatted_date"][0].split("-")
+                last = df["formatted_date"][0].split("-")
 
                 first[2] = first[2].split("T")[0]
                 last[2] = last[2].split("T")[0]
