@@ -379,7 +379,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         # dictionary of lists
         obj = {
             "username": usernames,
-            "usage_at": dates,
+            "formatted_date": dates,
             "product": products,
             "sku": skus,
             "quantity": quantities,
@@ -487,7 +487,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         # dictionary of lists
         obj = {
             "username": usernames,
-            "usage_at": dates,
+            "formatted_date": dates,
             "product": products,
             "sku": skus,
             "quantity": quantities,
