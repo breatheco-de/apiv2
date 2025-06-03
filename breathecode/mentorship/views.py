@@ -476,7 +476,11 @@ class ForwardMeetUrl:
         return sessions
 
     def ask_for_credentials(self, session: MentorshipSession):
-        # make oauth consent for the user if no outh credentials were found
+        # For Google Meet sessions, we need basic Google credentials for both mentors
+        # and mentees to enable accurate attendance tracking via webhooks.
+        #
+        # The webhooks identify users by their google_id, so we need users to
+        # authenticate with Google to get their google_id stored.
         if session.service.video_provider == "GOOGLE_MEET":
             credentials = CredentialsGoogle.objects.filter(user=self.token.user).first()
 
@@ -484,7 +488,17 @@ class ForwardMeetUrl:
                 current_path = self.request.get_full_path()
                 token, _ = Token.get_or_create(user=self.request.user, token_type="temporal")
                 encoded_path = urllib.parse.urlencode({"url": current_path})
-                url = reverse_lazy("auth:google_token", kwargs={"token": token.key}) + "?" + encoded_path
+
+                # Use minimal scopes for basic profile and email access only
+                # This allows attendance tracking without requesting unnecessary permissions
+                scopes = "userinfo.profile,userinfo.email"
+
+                url = (
+                    reverse_lazy("auth:google_token", kwargs={"token": token.key})
+                    + "?"
+                    + encoded_path
+                    + f"&scopes={scopes}"
+                )
                 return HttpResponseRedirect(url)
 
     def get_session(self, sessions: QuerySet[MentorshipSession], mentee: User):
@@ -572,6 +586,7 @@ class ForwardMeetUrl:
                     academy=mentor.academy,
                 )
 
+        # Check if user needs Google credentials for attendance tracking
         if response := self.ask_for_credentials(session):
             return response
 
