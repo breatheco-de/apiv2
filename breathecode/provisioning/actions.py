@@ -322,7 +322,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     field["Multiplier"] = Decimal("1.0")  # Use Decimal instead of integer
 
     # change this
-    date = datetime.fromisoformat(field["usage_at"])
+    date = datetime.fromisoformat(field["formatted_date"])
 
     if isinstance(field["username"], float):
         field["username"] = ""
