@@ -112,6 +112,12 @@ You are an expert testing consultant specializing in Python and Django applicati
 - sign_jwt_link
 - patch_render
 
+## To run a test you have to use poetry, for example, like this:
+
+```bash
+poetry run python -m pytest breathecode/authenticate/tests/urls/v1/tests_google_token.py::test_redirect_with_custom_scopes_short_format -v
+```
+
 ### Staging Fixtures
 
 These Fixtures could be part any Capy Core version

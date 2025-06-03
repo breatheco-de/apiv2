@@ -36,6 +36,7 @@ from .models import (
     OriginalityScan,
     SEOReport,
     SyllabusVersionProxy,
+    AssetFlag,
 )
 from .tasks import (
     async_download_readme_images,
@@ -954,3 +955,143 @@ class AssetContextAdmin(admin.ModelAdmin):
             return ai_context
 
         return ai_context[:20] + "..."
+
+
+def revoke_flags(modeladmin, request, queryset):
+    """Revoke selected flags."""
+    flags = queryset.filter(status="ACTIVE")
+    for flag in flags:
+        flag.revoke(revoked_by=request.user)
+    messages.success(request, f"Successfully revoked {flags.count()} flags")
+
+
+def activate_flags(modeladmin, request, queryset):
+    """Activate selected flags (only non-expired ones)."""
+    from django.utils import timezone
+
+    flags = queryset.filter(status="REVOKED")
+    activated_count = 0
+
+    for flag in flags:
+        if flag.expires_at is None or flag.expires_at > timezone.now():
+            flag.status = "ACTIVE"
+            flag.revoked_at = None
+            flag.revoked_by = None
+            flag.save()
+            activated_count += 1
+
+    messages.success(request, f"Successfully activated {activated_count} flags")
+
+
+class FlagStatusFilter(admin.SimpleListFilter):
+    title = "Flag Status"
+    parameter_name = "flag_status"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("active", "Active"),
+            ("revoked", "Revoked"),
+            ("expired", "Expired"),
+        )
+
+    def queryset(self, request, queryset):
+        from django.utils import timezone
+
+        if self.value() == "active":
+            return queryset.filter(status="ACTIVE", expires_at__gt=timezone.now())
+
+        if self.value() == "revoked":
+            return queryset.filter(status="REVOKED")
+
+        if self.value() == "expired":
+            return queryset.filter(expires_at__lte=timezone.now())
+
+
+class HasUserFilter(admin.SimpleListFilter):
+    title = "Has User"
+    parameter_name = "has_user"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Has User"),
+            ("no", "No User"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(user__isnull=False)
+
+        if self.value() == "no":
+            return queryset.filter(user__isnull=True)
+
+
+@admin.register(AssetFlag)
+class AssetFlagAdmin(admin.ModelAdmin):
+    list_display = ["flag_id", "asset_info", "user_info", "academy_info", "current_status", "expires_at", "created_at"]
+    search_fields = [
+        "flag_id",
+        "flag_value",
+        "asset__slug",
+        "asset__title",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+    ]
+    list_filter = [FlagStatusFilter, HasUserFilter, "asset__academy", "asset__asset_type", "created_at"]
+    raw_id_fields = ["asset", "user", "academy", "generated_by", "revoked_by"]
+    readonly_fields = ["created_at", "updated_at"]
+    actions = [revoke_flags, activate_flags]
+
+    fieldsets = (
+        ("Flag Information", {"fields": ("flag_id", "flag_value", "asset")}),
+        ("Assignment", {"fields": ("user", "academy")}),
+        ("Status", {"fields": ("status", "expires_at", "revoked_at", "revoked_by", "generated_by")}),
+        ("Metadata", {"fields": ("metadata",), "classes": ("collapse",)}),
+        ("Timestamps", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
+
+    def asset_info(self, obj):
+        return format_html(
+            '<a href="/admin/registry/asset/{}/change/" style="display: inline-block; background: #2d302d; padding: 2px; border-radius: 3px; margin: 2px;">{}</a>',
+            obj.asset.id,
+            obj.asset.slug,
+        )
+
+    asset_info.short_description = "Asset"
+
+    def user_info(self, obj):
+        if obj.user:
+            return format_html('<a href="/admin/auth/user/{}/change/">{}</a>', obj.user.id, obj.user.email)
+        return "No user"
+
+    user_info.short_description = "User"
+
+    def academy_info(self, obj):
+        if obj.academy:
+            return format_html(
+                '<a href="/admin/admissions/academy/{}/change/">{}</a>', obj.academy.id, obj.academy.slug
+            )
+        return "No academy"
+
+    academy_info.short_description = "Academy"
+
+    def current_status(self, obj):
+        colors = {
+            "ACTIVE": "bg-success",
+            "REVOKED": "bg-error",
+            "EXPIRED": "bg-warning",
+        }
+
+        # Check if expired
+        from django.utils import timezone
+
+        status = obj.status
+        if obj.expires_at and obj.expires_at <= timezone.now():
+            status = "EXPIRED"
+
+        return format_html('<span class="badge {}">{}</span>', colors.get(status, "bg-warning"), status)
+
+    current_status.short_description = "Status"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("asset", "user", "academy", "generated_by", "revoked_by")

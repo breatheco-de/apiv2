@@ -2258,29 +2258,42 @@ def get_google_token(request, token=None):
     academy_settings = request.GET.get("academysettings", "none")
     state = f"token={token.key if token is not None else ""}&url={url}"
 
-    scopes = [
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "https://www.googleapis.com/auth/userinfo.email",
-    ]
+    # Check if custom scopes are provided via querystring
+    custom_scopes = request.query_params.get("scopes", None)
 
-    if token is not None:
-        scopes = scopes + [
-            "https://www.googleapis.com/auth/meetings.space.created",
-            "https://www.googleapis.com/auth/drive.meet.readonly",
+    if custom_scopes is not None:
+        # Parse comma-separated scopes and add the Google auth prefix if not already present
+        scope_list = [scope_item.strip() for scope_item in custom_scopes.split(",")]
+        scopes = []
+        for scope_item in scope_list:
+            if scope_item.startswith("https://"):
+                scopes.append(scope_item)
+            else:
+                scopes.append(f"https://www.googleapis.com/auth/{scope_item}")
+    else:
+        # Keep legacy behavior when no custom scopes are specified
+        scopes = [
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email",
         ]
 
-    if academy_settings in ["overwrite", "set"]:
-        if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
-            raise ValidationException(
-                "Setting academy google credentials is not available",
-                slug="set-google-credentials-not-available",
-            )
+        if token is not None:
+            scopes = scopes + [
+                "https://www.googleapis.com/auth/meetings.space.created",
+                "https://www.googleapis.com/auth/drive.meet.readonly",
+            ]
 
-        state += f"&academysettings={academy_settings}"
-        scopes.append("https://www.googleapis.com/auth/pubsub")
+        if academy_settings in ["overwrite", "set"]:
+            if feature.is_enabled("authenticate.set_google_credentials", default=False) is False:
+                raise ValidationException(
+                    "Setting academy google credentials is not available",
+                    slug="set-google-credentials-not-available",
+                )
 
-    else:
-        state += "&academysettings=none"
+            scopes.append("https://www.googleapis.com/auth/pubsub")
+
+    # Add academy_settings to state (avoiding duplication)
+    state += f"&academysettings={academy_settings}"
 
     params = {
         "response_type": "code",

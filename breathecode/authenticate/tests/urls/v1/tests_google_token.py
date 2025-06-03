@@ -139,3 +139,141 @@ def test_redirect_with_academy_settings(
     }
 
     assert response.url == f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        {"token_type": "temporal"},
+    ],
+)
+def test_redirect_with_custom_scopes_short_format(database: capy.Database, client: capy.Client, token: Any):
+    """Test custom scopes using short format (without full URL prefix)"""
+    model = database.create(token=token)
+    callback_url = "https://4geeks.com/"
+    custom_scopes = "userinfo.profile,userinfo.email,calendar.readonly"
+
+    url = (
+        reverse_lazy("authenticate:google_token", kwargs={"token": model.token.key})
+        + f"?url={callback_url}&scopes={custom_scopes}"
+    )
+    response = client.get(url, format="json")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    params = {
+        "response_type": "code",
+        "client_id": "123456.apps.googleusercontent.com",
+        "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
+        "access_type": "offline",
+        "scope": " ".join(
+            [
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/calendar.readonly",
+            ]
+        ),
+        "state": f"token={model.token.key}&url={callback_url}&academysettings=none",
+    }
+
+    assert response.url == f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        {"token_type": "temporal"},
+    ],
+)
+def test_redirect_with_custom_scopes_full_url_format(database: capy.Database, client: capy.Client, token: Any):
+    """Test custom scopes using full URL format"""
+    model = database.create(token=token)
+    callback_url = "https://4geeks.com/"
+    custom_scopes = "https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/drive.readonly"
+
+    url = (
+        reverse_lazy("authenticate:google_token", kwargs={"token": model.token.key})
+        + f"?url={callback_url}&scopes={custom_scopes}"
+    )
+    response = client.get(url, format="json")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    params = {
+        "response_type": "code",
+        "client_id": "123456.apps.googleusercontent.com",
+        "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
+        "access_type": "offline",
+        "scope": " ".join(
+            [
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/drive.readonly",
+            ]
+        ),
+        "state": f"token={model.token.key}&url={callback_url}&academysettings=none",
+    }
+
+    assert response.url == f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        {"token_type": "temporal"},
+    ],
+)
+def test_redirect_with_custom_scopes_mixed_format(database: capy.Database, client: capy.Client, token: Any):
+    """Test custom scopes using mixed format (some with full URL, some without)"""
+    model = database.create(token=token)
+    callback_url = "https://4geeks.com/"
+    custom_scopes = "userinfo.profile,https://www.googleapis.com/auth/drive.readonly,calendar.events"
+
+    url = (
+        reverse_lazy("authenticate:google_token", kwargs={"token": model.token.key})
+        + f"?url={callback_url}&scopes={custom_scopes}"
+    )
+    response = client.get(url, format="json")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    params = {
+        "response_type": "code",
+        "client_id": "123456.apps.googleusercontent.com",
+        "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
+        "access_type": "offline",
+        "scope": " ".join(
+            [
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/drive.readonly",
+                "https://www.googleapis.com/auth/calendar.events",
+            ]
+        ),
+        "state": f"token={model.token.key}&url={callback_url}&academysettings=none",
+    }
+
+    assert response.url == f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+
+def test_redirect_with_custom_scopes_without_token(database: capy.Database, client: capy.Client):
+    """Test custom scopes without token (should still work)"""
+    callback_url = "https://4geeks.com/"
+    custom_scopes = "userinfo.profile,userinfo.email"
+
+    url = (
+        reverse_lazy("authenticate:google_token", kwargs={"token": ""}) + f"?url={callback_url}&scopes={custom_scopes}"
+    )
+    response = client.get(url, format="json")
+
+    assert response.status_code == status.HTTP_302_FOUND
+    params = {
+        "response_type": "code",
+        "client_id": "123456.apps.googleusercontent.com",
+        "redirect_uri": "https://breathecode.herokuapp.com/v1/auth/google/callback",
+        "access_type": "offline",
+        "scope": " ".join(
+            [
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/userinfo.email",
+            ]
+        ),
+        "state": f"token=&url={callback_url}&academysettings=none",
+    }
+
+    assert response.url == f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
