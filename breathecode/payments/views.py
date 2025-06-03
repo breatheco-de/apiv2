@@ -1260,6 +1260,30 @@ class UserCouponView(APIView):
         return Response(serializer.data)
 
 
+class MeUserCouponsView(APIView):
+    """Get coupons available to the current user (including user-restricted coupons)."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        """Get all coupons that the current user can use."""
+        handler = self.extensions(request)
+        user = request.user
+        utc_now = timezone.now()
+
+        # Get coupons restricted to this user
+        user_restricted_coupons = Coupon.objects.filter(
+            Q(offered_at=None) | Q(offered_at__lte=utc_now),
+            Q(expires_at=None) | Q(expires_at__gte=utc_now),
+            allowed_user=user,
+        ).exclude(how_many_offers=0)
+
+        coupons = handler.queryset(user_restricted_coupons)
+        serializer = GetCouponSerializer(coupons, many=True)
+
+        return handler.response(serializer.data)
+
+
 class AcademyInvoiceView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
@@ -1288,11 +1312,6 @@ class AcademyInvoiceView(APIView):
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
-
-    # @capable_of("crud_invoice")
-    # def post(self, request, academy_id=None):
-    #     add_invoice_externally_managed(request, request.user, academy_id)
-    #     return Response({"status": "ok"})
 
 
 class CardView(APIView):

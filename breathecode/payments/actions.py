@@ -947,6 +947,11 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
             founded_coupon_slugs.append(coupon.slug)
             return
 
+        # Check if coupon is restricted to a specific user
+        if coupon.allowed_user and (not user or coupon.allowed_user != user):
+            founded_coupon_slugs.append(coupon.slug)
+            return
+
         if coupon.slug not in founded_coupon_slugs:
             if coupon.how_many_offers == -1:
                 founded_coupons.append(coupon)
@@ -971,12 +976,12 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
         Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
     )
-    cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller")
+    cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
 
     special_offers = (
         Coupon.objects.filter(*cou_args, auto=True)
         .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
-        .select_related("seller__user")
+        .select_related("seller__user", "allowed_user")
         .only(*cou_fields)
     )
 
@@ -986,7 +991,7 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
     valid_coupons = (
         Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
         .exclude(how_many_offers=0)
-        .select_related("seller__user")
+        .select_related("seller__user", "allowed_user")
         .only(*cou_fields)
     )
 
@@ -1545,6 +1550,8 @@ def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, b
     """
     Create reward coupons for sellers when their coupons are used in payments.
 
+    Creates user-restricted coupons that sellers can use on any plan.
+
     Args:
         coupons: List of coupons used in the payment
         original_price: The original price before discounts
@@ -1562,23 +1569,15 @@ def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, b
         if seller_user == buyer_user:
             continue
 
-        # Check if seller has an active subscription or plan financing
-        active_subscription = Subscription.objects.filter(
-            user=seller_user, status__in=["ACTIVE", "FREE_TRIAL"], valid_until__gte=utc_now
-        ).first()
-
-        if not active_subscription:
-            continue
-
-        # Calculate reward amount based on coupon discount
+        # Calculate reward amount based on coupon's referral settings
         reward_amount = 0
-        if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
-            reward_amount = original_price * coupon.discount_value
-        elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
-            reward_amount = min(coupon.discount_value, original_price)
-        elif coupon.discount_type == Coupon.Discount.HAGGLING:
-            # For haggling, we'll use a percentage of the original price
-            reward_amount = original_price * 0.05  # 5% default for haggling
+        if coupon.referral_type == Coupon.Referral.PERCENTAGE:
+            reward_amount = original_price * coupon.referral_value
+        elif coupon.referral_type == Coupon.Referral.FIXED_PRICE:
+            reward_amount = coupon.referral_value
+        else:
+            # No referral reward configured
+            continue
 
         if reward_amount <= 0:
             continue
@@ -1592,7 +1591,8 @@ def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, b
             reward_slug = f"{base_slug}-{counter}"
             counter += 1
 
-        # Create the reward coupon
+        # Create the reward coupon restricted to the seller
+        # No plans restriction - can be used with any plan
         reward_coupon = Coupon(
             slug=reward_slug,
             discount_type=Coupon.Discount.FIXED_PRICE,
@@ -1602,14 +1602,13 @@ def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, b
             auto=False,
             how_many_offers=1,  # Single use
             seller=coupon.seller,
+            allowed_user=seller_user,  # Restrict to seller only
             offered_at=utc_now,
             expires_at=utc_now + timedelta(days=90),  # 90 days to use the reward
         )
         reward_coupon.save()
 
-        # Add the reward coupon to the seller's active subscription or plan financing
-        if active_subscription:
-            active_subscription.coupons.add(reward_coupon)
-            logger.info(
-                f"Created reward coupon {reward_coupon.slug} for seller {seller_user.id} subscription {active_subscription.id}"
-            )
+        logger.info(
+            f"Created user-restricted reward coupon {reward_coupon.slug} of {reward_amount} "
+            f"for seller {seller_user.id} from coupon {coupon.slug}"
+        )
