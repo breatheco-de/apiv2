@@ -12,14 +12,14 @@ from breathecode.events.signals import event_status_updated, liveclass_ended
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_saved
 
-from .models import Answer, AcademyFeedbackSettings
+from .models import AcademyFeedbackSettings, Answer
 from .signals import survey_answered
 from .tasks import (
     process_answer_received,
     process_student_graduation,
     send_event_survey,
-    send_mentorship_session_survey,
     send_liveclass_survey,
+    send_mentorship_session_survey,
 )
 
 logger = logging.getLogger(__name__)
