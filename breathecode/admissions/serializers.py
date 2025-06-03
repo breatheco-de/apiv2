@@ -10,7 +10,7 @@ from breathecode.admissions.actions import ImportCohortTimeSlots
 from breathecode.assignments.models import Task
 from breathecode.assignments.serializers import TaskGETSmallSerializer
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, CredentialsGoogle
 from breathecode.authenticate.serializers import GetPermissionSmallSerializer, SettingsSerializer
 from breathecode.utils import localize_query, serializers, serpy
 
@@ -177,6 +177,15 @@ class GithubSmallSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
     name = serpy.Field()
     username = serpy.Field()
+
+
+class GoogleSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    # Use a Field subclass like IntField if you need more validation.
+    google_id = serpy.Field()
+    expires_at = serpy.Field()
+    created_at = serpy.Field()
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -623,6 +632,7 @@ class UserMeSerializer(serpy.Serializer):
     last_name = serpy.Field()
     date_joined = serpy.Field()
     github = serpy.MethodField()
+    google = serpy.MethodField()
     profile = ProfileSerializer(required=False)
     cohorts = serpy.MethodField()
     roles = serpy.MethodField()
@@ -634,6 +644,12 @@ class UserMeSerializer(serpy.Serializer):
         if github is None:
             return None
         return GithubSmallSerializer(github).data
+
+    def get_google(self, obj):
+        google = CredentialsGoogle.objects.filter(user=obj.id).first()
+        if google is None:
+            return None
+        return GoogleSmallSerializer(google).data
 
     def get_roles(self, obj):
         roles = ProfileAcademy.objects.filter(user=obj.id)

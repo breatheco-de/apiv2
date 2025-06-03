@@ -21,7 +21,7 @@ from breathecode.assessment.models import Assessment
 from .signals import asset_readme_modified, asset_saved, asset_slug_modified, asset_status_updated, asset_title_modified
 from .utils import AssetErrorLogType
 
-__all__ = ["AssetTechnology", "Asset", "AssetAlias"]
+__all__ = ["AssetTechnology", "Asset", "AssetAlias", "AssetFlag"]
 logger = logging.getLogger(__name__)
 
 PUBLIC = "PUBLIC"
@@ -1275,3 +1275,122 @@ class ContentVariable(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+FLAG_STATUS = (
+    ("ACTIVE", "Active"),
+    ("REVOKED", "Revoked"),
+    ("EXPIRED", "Expired"),
+)
+
+
+class AssetFlag(models.Model):
+    """
+    Model to store CTF flags associated with assets.
+    Each asset can have multiple flags for different users or academies.
+    """
+
+    asset = models.ForeignKey(
+        Asset, on_delete=models.CASCADE, related_name="flags", help_text="The asset this flag belongs to"
+    )
+
+    flag_value = models.CharField(max_length=500, help_text="The flag string (e.g., FLAG{header.payload.signature})")
+
+    flag_id = models.CharField(
+        max_length=100,
+        help_text="Unique identifier for the flag, extracted from JWT payload or generated for legacy flags",
+        db_index=True,
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="The user this flag is generated for (optional)",
+    )
+
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="The academy this flag is generated for (optional)",
+    )
+
+    status = models.CharField(
+        max_length=20, choices=FLAG_STATUS, default="ACTIVE", help_text="Status of the flag", db_index=True
+    )
+
+    expires_at = models.DateTimeField(
+        null=True, blank=True, default=None, help_text="When the flag expires (null means no expiration)", db_index=True
+    )
+
+    revoked_at = models.DateTimeField(
+        null=True, blank=True, default=None, help_text="When the flag was revoked (null means not revoked)"
+    )
+
+    revoked_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="revoked_flags",
+        help_text="User who revoked this flag",
+    )
+
+    generated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="generated_flags",
+        help_text="User who generated this flag",
+    )
+
+    metadata = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Additional metadata about the flag (e.g., generation parameters, usage context)",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        unique_together = [["asset", "flag_id"]]
+        indexes = [
+            models.Index(fields=["asset", "status"]),
+            models.Index(fields=["user", "asset"]),
+            models.Index(fields=["academy", "asset"]),
+            models.Index(fields=["expires_at"]),
+        ]
+
+    def __str__(self):
+        return f"Flag {self.flag_id} for asset {self.asset.slug}"
+
+    def is_valid(self):
+        """Check if the flag is currently valid (not revoked and not expired)."""
+        from django.utils import timezone
+
+        if self.status == "REVOKED":
+            return False
+
+        if self.expires_at and self.expires_at < timezone.now():
+            return False
+
+        return True
+
+    def revoke(self, revoked_by=None):
+        """Revoke this flag."""
+        from django.utils import timezone
+
+        self.status = "REVOKED"
+        self.revoked_at = timezone.now()
+        self.revoked_by = revoked_by
+        self.save()

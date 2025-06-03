@@ -1280,25 +1280,50 @@ class MeCommitFileView(APIView):
 class FlagView(APIView):
     permission_classes = [IsAuthenticated]
 
-    # POST method for flag generation
-    def post(self, request):  # academy_id removed
-        asset_seed = request.data.get("asset_seed")
-        flag_id = request.data.get("flag_id", None)
+    # POST method for flag generation and storage in database
+    @capable_of("crud_flag")
+    def post(self, request, academy_id):
+        asset_id = request.data.get("asset_id")
+        user_id = request.data.get("user_id", None)
+        academy_id_from_data = request.data.get("academy_id", academy_id)
         expires_in = request.data.get("expires_in", None)
+        flag_id = request.data.get("flag_id", None)
+        metadata = request.data.get("metadata", None)
         lang = get_user_language(request)
 
-        if not asset_seed:
+        if not asset_id:
             raise ValidationException(
                 translation(
                     lang,
-                    en="Asset seed is required",
-                    es="La semilla del activo es obligatoria",
-                    slug="missing-asset-seed",
+                    en="Asset ID is required",
+                    es="El ID del asset es obligatorio",
+                    slug="missing-asset-id",
                 ),
                 code=status.HTTP_400_BAD_REQUEST,
-                slug="missing-asset-seed",
+                slug="missing-asset-id",
             )
 
+        # Get the asset
+        try:
+            asset_id_int = int(asset_id)
+            asset = Asset.objects.filter(id=asset_id_int).first()
+        except ValueError:
+            # If asset_id is not an integer, try to find by slug
+            asset = Asset.objects.filter(slug=asset_id).first()
+
+        if not asset:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Asset not found",
+                    es="Asset no encontrado",
+                    slug="asset-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+                slug="asset-not-found",
+            )
+
+        # Validate expires_in
         try:
             if expires_in is not None:
                 expires_in = int(expires_in)
@@ -1314,10 +1339,87 @@ class FlagView(APIView):
                 slug="invalid-expires-in",
             )
 
+        # Validate user if provided
+        user = None
+        if user_id:
+            from django.contrib.auth.models import User
+
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="User not found",
+                        es="Usuario no encontrado",
+                        slug="user-not-found",
+                    ),
+                    code=status.HTTP_404_NOT_FOUND,
+                    slug="user-not-found",
+                )
+
+        # Validate academy if provided and different from path parameter
+        academy = None
+        if academy_id_from_data and academy_id_from_data != academy_id:
+            from breathecode.admissions.models import Academy
+
+            academy = Academy.objects.filter(id=academy_id_from_data).first()
+            if not academy:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Academy not found",
+                        es="Academia no encontrada",
+                        slug="academy-not-found",
+                    ),
+                    code=status.HTTP_404_NOT_FOUND,
+                    slug="academy-not-found",
+                )
+        elif academy_id:
+            from breathecode.admissions.models import Academy
+
+            academy = Academy.objects.filter(id=academy_id).first()
+
         try:
+            # Generate the flag using FlagManager
             flag_manager = FlagManager()
-            new_flag = flag_manager.generate_flag(asset_seed, flag_id=flag_id, expires_in=expires_in)
-            return Response({"flag": new_flag}, status=status.HTTP_201_CREATED)
+            new_flag = flag_manager.generate_flag(asset.flag_seed, flag_id=flag_id, expires_in=expires_in)
+
+            # Extract the flag_id from the generated flag
+            generated_flag_id = flag_manager.extract_flag_id(new_flag)
+
+            # Calculate expiration datetime
+            expires_at = None
+            if expires_in:
+                from django.utils import timezone
+
+                expires_at = timezone.now() + timezone.timedelta(seconds=expires_in)
+
+            # Store the flag in the database
+            from breathecode.registry.models import AssetFlag
+
+            asset_flag = AssetFlag.objects.create(
+                asset=asset,
+                flag_value=new_flag,
+                flag_id=generated_flag_id,
+                user=user,
+                academy=academy,
+                expires_at=expires_at,
+                generated_by=request.user,
+                metadata=metadata,
+                status="ACTIVE",
+            )
+
+            return Response(
+                {
+                    "flag": new_flag,
+                    "flag_id": generated_flag_id,
+                    "asset_flag_id": asset_flag.id,
+                    "expires_at": expires_at,
+                    "storage_method": "database",
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
         except ValueError as e:
             eng_message = str(e)
             es_message = eng_message
@@ -1331,7 +1433,7 @@ class FlagView(APIView):
                 slug="flag-generation-error",
             )
         except Exception as e:
-            logger.error(f"Error generating flag: {str(e)}")
+            logger.error(f"Error generating and storing flag: {str(e)}")
             raise ValidationException(
                 translation(
                     lang,
@@ -1343,7 +1445,136 @@ class FlagView(APIView):
                 slug="unexpected-flag-generation-error",
             )
 
-    # GET method for flag validation
+
+class AssetFlagView(APIView):
+    """
+    RESTful view for managing individual asset flags stored in the database.
+    Supports GET, PUT operations for flag status management.
+    """
+
+    @capable_of("crud_flag")
+    def put(self, request, academy_id, asset_id, flag_id):
+        """Update the status of a specific asset flag."""
+        lang = get_user_language(request)
+        new_status = request.data.get("status")
+
+        if not new_status:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Status is required",
+                    es="El estado es obligatorio",
+                    slug="missing-status",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="missing-status",
+            )
+
+        # Validate status
+        valid_statuses = ["ACTIVE", "REVOKED", "EXPIRED"]
+        if new_status not in valid_statuses:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid status. Must be one of: {', '.join(valid_statuses)}",
+                    es=f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}",
+                    slug="invalid-status",
+                ),
+                code=status.HTTP_400_BAD_REQUEST,
+                slug="invalid-status",
+            )
+
+        # Get the asset
+        try:
+            asset_id_int = int(asset_id)
+            asset = Asset.objects.filter(id=asset_id_int).first()
+        except ValueError:
+            asset = Asset.objects.filter(slug=asset_id).first()
+
+        if not asset:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Asset not found",
+                    es="Asset no encontrado",
+                    slug="asset-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+                slug="asset-not-found",
+            )
+
+        # Find the flag in the database
+        from breathecode.registry.models import AssetFlag
+
+        asset_flag = AssetFlag.objects.filter(asset=asset, flag_id=flag_id).first()
+
+        if not asset_flag:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Flag not found",
+                    es="Flag no encontrado",
+                    slug="flag-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+                slug="flag-not-found",
+            )
+
+        # Check academy permissions
+        if asset_flag.academy and asset_flag.academy.id != academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Permission denied for this flag",
+                    es="Permiso denegado para este flag",
+                    slug="flag-permission-denied",
+                ),
+                code=status.HTTP_403_FORBIDDEN,
+                slug="flag-permission-denied",
+            )
+
+        # Update the status
+        old_status = asset_flag.status
+
+        if new_status == "REVOKED":
+            if asset_flag.status == "REVOKED":
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Flag is already revoked",
+                        es="El flag ya está revocado",
+                        slug="flag-already-revoked",
+                    ),
+                    code=status.HTTP_400_BAD_REQUEST,
+                    slug="flag-already-revoked",
+                )
+            asset_flag.revoke(revoked_by=request.user)
+        else:
+            # Direct status update for other statuses
+            asset_flag.status = new_status
+            if new_status == "ACTIVE":
+                # Clear revocation data if reactivating
+                asset_flag.revoked_at = None
+                asset_flag.revoked_by = None
+            asset_flag.save()
+
+        return Response(
+            {
+                "message": translation(
+                    lang,
+                    en=f"Flag status updated from {old_status} to {new_status}",
+                    es=f"Estado del flag actualizado de {old_status} a {new_status}",
+                    slug="flag-status-updated",
+                ),
+                "flag_id": flag_id,
+                "old_status": old_status,
+                "new_status": asset_flag.status,
+                "is_valid": asset_flag.is_valid(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    # GET method for flag validation (supports both legacy and database-stored flags)
     @capable_of("validate_assignment_flag")
     def get(self, request, academy_id):
         submitted_flag = request.query_params.get("flag")
@@ -1372,7 +1603,13 @@ class FlagView(APIView):
             )
 
         # Check if an Asset with the given flag_seed exists
-        asset = Asset.objects.filter(id=asset_id).first()
+        try:
+            asset_id_int = int(asset_id)
+            asset = Asset.objects.filter(id=asset_id_int).first()
+        except ValueError:
+            # If asset_id is not an integer, try to find by slug
+            asset = Asset.objects.filter(slug=asset_id).first()
+
         if not asset:
             raise ValidationException(
                 translation(
@@ -1385,40 +1622,21 @@ class FlagView(APIView):
                 slug="asset-not-found-for-id",
             )
 
-        # User had changed revoked_flags_str to be an empty list,
-        # so parsing from query_params.get("revoked_flags", "[]") is removed for now.
-        # If revoked_flags need to be passed via query param, the parsing logic should be reinstated.
-        revoked_flags = []  # Based on user's last change: revoked_flags_str = []
-
-        # If revoked_flags were to be passed as a JSON string in query params:
-        # revoked_flags_input_str = request.query_params.get("revoked_flags", "[]")
-        # try:
-        #     parsed_revoked_flags = json.loads(revoked_flags_input_str)
-        #     if not isinstance(parsed_revoked_flags, list):
-        #         raise ValidationException(
-        #             translation(lang, en="revoked_flags must be a valid JSON list", es="revoked_flags debe ser una lista JSON válida", slug="invalid-revoked-flags-type"),
-        #             code=status.HTTP_400_BAD_REQUEST,
-        #             slug="invalid-revoked-flags-type"
-        #         )
-        #     for item in parsed_revoked_flags:
-        #         if not isinstance(item, dict) or "flag" not in item or "flag_id" not in item:
-        #             raise ValidationException(
-        #                 translation(lang, en="Each item in revoked_flags must be a dictionary with 'flag' and 'flag_id' keys", es="Cada elemento en revoked_flags debe ser un diccionario con las claves 'flag' y 'flag_id'", slug="invalid-revoked-flag-item"),
-        #                 code=status.HTTP_400_BAD_REQUEST,
-        #                 slug="invalid-revoked-flag-item"
-        #             )
-        #         revoked_flags.append(item)
-        # except json.JSONDecodeError:
-        #     raise ValidationException(
-        #         translation(lang, en="Invalid JSON format for revoked_flags", es="Formato JSON inválido para revoked_flags", slug="invalid-json-revoked-flags"),
-        #         code=status.HTTP_400_BAD_REQUEST,
-        #         slug="invalid-json-revoked-flags"
-        #     )
-
         try:
-            flag_manager = FlagManager()
-            is_valid = flag_manager.validate_flag(submitted_flag, asset.flag_seed, revoked_flags=revoked_flags)
-            return Response({"is_valid": is_valid}, status=status.HTTP_200_OK)
+            # First, try to validate using database-stored flags
+            is_valid_from_db = self._validate_flag_from_database(submitted_flag, asset, academy_id)
+
+            if is_valid_from_db:
+                return Response({"is_valid": True, "validation_method": "database"}, status=status.HTTP_200_OK)
+
+            # If not found in database, fall back to legacy validation
+            is_valid_legacy = self._validate_flag_legacy(submitted_flag, asset)
+
+            return Response(
+                {"is_valid": is_valid_legacy, "validation_method": "legacy" if is_valid_legacy else "none"},
+                status=status.HTTP_200_OK,
+            )
+
         except ValueError as e:
             eng_message = str(e)
             es_message = eng_message  # Placeholder
@@ -1440,12 +1658,62 @@ class FlagView(APIView):
                 slug="unexpected-flag-validation-error",
             )
 
+    def _validate_flag_from_database(self, submitted_flag, asset, academy_id):
+        """
+        Validate flag using the database-stored AssetFlag model.
+        Returns True if valid, False if not found or invalid.
+        """
+        from breathecode.registry.models import AssetFlag
+
+        # Extract flag_id from the submitted flag
+        flag_manager = FlagManager()
+        flag_id = flag_manager.extract_flag_id(submitted_flag)
+
+        if not flag_id:
+            return False
+
+        # Look for the flag in the database
+        asset_flag = AssetFlag.objects.filter(asset=asset, flag_id=flag_id, flag_value=submitted_flag).first()
+
+        if not asset_flag:
+            return False
+
+        # Check if the flag is valid (not revoked and not expired)
+        if not asset_flag.is_valid():
+            return False
+
+        # Additional academy-specific validation if needed
+        if asset_flag.academy and asset_flag.academy.id != academy_id:
+            return False
+
+        return True
+
+    def _validate_flag_legacy(self, submitted_flag, asset):
+        """
+        Validate flag using the legacy FlagManager approach.
+        Returns True if valid, False if invalid.
+        """
+        # Get revoked flags from database to pass to legacy validator
+        from breathecode.registry.models import AssetFlag
+
+        revoked_flags_from_db = AssetFlag.objects.filter(asset=asset, status="REVOKED").values_list(
+            "flag_value", "flag_id"
+        )
+
+        revoked_flags = [{"flag": flag_value, "flag_id": flag_id} for flag_value, flag_id in revoked_flags_from_db]
+
+        try:
+            flag_manager = FlagManager()
+            return flag_manager.validate_flag(submitted_flag, asset.flag_seed, revoked_flags=revoked_flags)
+        except Exception:
+            return False
+
 
 class FlagAssetView(APIView):
 
-    # POST method for flag generation
+    # POST method for flag generation (legacy approach - does not store in database)
     @capable_of("crud_flag")
-    def post(self, request, asset_id, academy_id):  # academy_id removed
+    def post(self, request, asset_id, academy_id):
 
         expires_in = request.data.get("expires_in", None)
         lang = get_user_language(request)
@@ -1487,7 +1755,7 @@ class FlagAssetView(APIView):
         try:
             flag_manager = FlagManager()
             new_flag = flag_manager.generate_flag(asset.flag_seed, expires_in=expires_in)
-            return Response({"flag": new_flag}, status=status.HTTP_201_CREATED)
+            return Response({"flag": new_flag, "storage_method": "legacy"}, status=status.HTTP_201_CREATED)
         except ValueError as e:
             eng_message = str(e)
             es_message = eng_message
