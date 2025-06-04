@@ -1,6 +1,5 @@
 import math
 import os
-import random
 import re
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal, localcontext
@@ -324,8 +323,14 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     # change this
     date = datetime.fromisoformat(field["formatted_date"])
 
-    if isinstance(field["username"], float):
-        field["username"] = ""
+    # Handle invalid usernames - charge to all academies instead of skipping
+    invalid_username = False
+    if isinstance(field["username"], float) or not field["username"] or field["username"].strip() == "":
+        logger.warning(
+            f"Row {position} has invalid username '{field.get('username', 'N/A')}' - will charge to all academies"
+        )
+        field["username"] = f"unknown-user-row-{position}"  # Create unique placeholder
+        invalid_username = True
 
     # Handle NaN values in organization field
     if isinstance(field["organization"], float) and math.isnan(field["organization"]):
@@ -333,38 +338,49 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     elif not field["organization"]:  # Handle empty strings or None
         field["organization"] = None
 
-    github_academy_user_log = context["github_academy_user_logs"].get(field["username"], None)
     not_found = False
     academies = []
 
-    if github_academy_user_log is None:
-        # make a function that calculate the user activity in the academies by percentage
-        github_academy_user_log = GithubAcademyUserLog.objects.filter(
-            Q(valid_until__isnull=True) | Q(valid_until__gte=context["limit"] - relativedelta(months=1, weeks=1)),
-            created_at__lte=context["limit"],
-            academy_user__username=field["username"],
-            storage_status="SYNCHED",
-            storage_action="ADD",
-        ).order_by("-created_at")
+    if invalid_username:
+        # For invalid usernames, charge to all academies
+        academies = list(Academy.objects.all())
+        not_found = True  # Mark as not found to trigger warning
+        logger.info(f"Charging row {position} with invalid username to {len(academies)} academies")
+    else:
+        # Normal username processing
+        github_academy_user_log = context["github_academy_user_logs"].get(field["username"], None)
 
-        context["github_academy_user_logs"][field["username"]] = github_academy_user_log
+        if github_academy_user_log is None:
+            # make a function that calculate the user activity in the academies by percentage
+            github_academy_user_log = GithubAcademyUserLog.objects.filter(
+                Q(valid_until__isnull=True) | Q(valid_until__gte=context["limit"] - relativedelta(months=1, weeks=1)),
+                created_at__lte=context["limit"],
+                academy_user__username=field["username"],
+                storage_status="SYNCHED",
+                storage_action="ADD",
+            ).order_by("-created_at")
 
-    if github_academy_user_log:
-        academies = [x.academy_user.academy for x in github_academy_user_log]
+            context["github_academy_user_logs"][field["username"]] = github_academy_user_log
 
-    if not academies:
-        not_found = True
-        github_academy_users = GithubAcademyUser.objects.filter(
-            username=field["username"], storage_status="PAYMENT_CONFLICT", storage_action="IGNORE"
-        )
+        if github_academy_user_log:
+            academies = [x.academy_user.academy for x in github_academy_user_log]
 
-        academies = [x.academy for x in github_academy_users]
+        if not academies:
+            not_found = True
+            github_academy_users = GithubAcademyUser.objects.filter(
+                username=field["username"], storage_status="PAYMENT_CONFLICT", storage_action="IGNORE"
+            )
 
-    if not academies and not GithubAcademyUser.objects.filter(username=field["username"]).count():
-        academies = handle_pending_github_user(field["organization"], field["username"], date)
+            academies = [x.academy for x in github_academy_users]
 
-    if not not_found and academies:
-        academies = random.choices(academies, k=1)
+        if not academies and not GithubAcademyUser.objects.filter(username=field["username"]).count():
+            academies = handle_pending_github_user(field["organization"], field["username"], date)
+
+        # If valid username but no academies found, charge to all academies
+        if not academies:
+            logger.warning(f"Valid username '{field['username']}' but no academies found - charging to all academies")
+            academies = list(Academy.objects.all())
+            not_found = True  # Mark as not found to trigger warning
 
     errors = []
     warnings = []
@@ -409,10 +425,12 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             provisioning_bills[academy.id] = provisioning_bill
 
     if not_found:
-        warnings.append(
-            f'We could not find enough information about {field["username"]}, mark this user user as '
-            "deleted if you don't recognize it"
-        )
+        if invalid_username:
+            warnings.append(f"Row had invalid username - consumption charged to all {len(academies)} academies")
+        else:
+            warnings.append(
+                f'User "{field["username"]}" not found in any academy - consumption charged to all {len(academies)} academies'
+            )
 
     if not (kind := context["provisioning_activity_kinds"].get((field["product"], field["sku"]), None)):
         kind, _ = ProvisioningConsumptionKind.objects.get_or_create(
@@ -448,13 +466,18 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         username=field["username"], hash=context["hash"], kind=kind, defaults={"processed_at": timezone.now()}
     )
 
+    # Construct repository URL safely, avoiding "None" in URLs
+    repository_url = None
+    if field["organization"] and field.get("repository_name"):
+        repository_url = f"https://github.com/{field['organization']}/{field['repository_name']}"
+
     item, _ = ProvisioningConsumptionEvent.objects.get_or_create(
         vendor=provisioning_vendor,
         price=price,
         registered_at=date,
         quantity=quantity,
-        repository_url=f"https://github.com/{field['organization']}/{field['repository_name']}",
-        task_associated_slug=field["repository_name"],
+        repository_url=repository_url,
+        task_associated_slug=field.get("repository_name"),
         csv_row=position,
     )
 
@@ -680,9 +703,6 @@ def add_rigobot_activity(context: ActivityContext, field: dict, position: int) -
 
     if not academies:
         academies = handle_pending_github_user(None, field["github_username"], date)
-
-    if not_found is False and academies:
-        academies = random.choices(academies, k=1)
 
     logs = {}
     provisioning_bills = {}
