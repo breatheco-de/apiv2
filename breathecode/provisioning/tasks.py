@@ -156,9 +156,7 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     for bill in annotated_bills:
         amount = bill.aggregated_amount.quantize(Decimal("0.000000001"))
 
-        for activity in ProvisioningUserConsumption.objects.filter(
-            bills=bill, status__in=["PERSISTED", "WARNING", "ERROR"]
-        ):
+        for activity in ProvisioningUserConsumption.objects.filter(bills=bill, status__in=["PERSISTED", "WARNING"]):
             activity_agg = activity.events.aggregate(
                 total_amount=Coalesce(
                     Sum(
