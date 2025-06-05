@@ -1360,6 +1360,71 @@ class CardView(APIView):
         return Response({"status": "ok"})
 
 
+class V2CardView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def post(self, request):
+        lang = get_user_language(request)
+
+        token = request.data.get("token")
+        card_number = request.data.get("card_number")
+        exp_month = request.data.get("exp_month")
+        exp_year = request.data.get("exp_year")
+        cvc = request.data.get("cvc")
+
+        if not ((card_number and exp_month and exp_year and cvc) or token):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing card information",
+                    es="Falta la información de la tarjeta",
+                    slug="missing-card-information",
+                ),
+                code=404,
+            )
+
+        # Try to get academy from request, but dont raise exception if not found
+        academy = get_academy_from_body(request.data, lang=lang, raise_exception=False)
+
+        # Initialize stripe with academy if provided
+        s = Stripe(academy=academy)
+        s.set_language(lang)
+
+        # Execute add_contact if academy is provided
+        if academy:
+            s.add_contact(request.user)
+
+        try:
+            # Create token if not provided
+            if not token:
+                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+
+            # Update payment method for all contacts
+            success, errors, details = s.update_all_payment_methods(
+                user=request.user, token=token, card_number=card_number, exp_month=exp_month, exp_year=exp_year, cvc=cvc
+            )
+
+            if not success:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Failed to update payment method",
+                        es="Error al actualizar el método de pago",
+                        slug="payment-method-update-failed",
+                    ),
+                    code=400,
+                )
+
+        except ValidationException as e:
+            raise e
+        except PaymentException as e:
+            raise e
+        except Exception as e:
+            raise ValidationException(str(e), code=400)
+
+        return Response({"status": "ok", "details": details})
+
+
 class ServiceBlocked(APIView):
 
     def get(self, request):
