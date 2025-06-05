@@ -128,10 +128,6 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
             "the consumables"
         )
 
-    if scheduler.valid_until and scheduler.valid_until - timedelta(days=1) < utc_now:
-        logger.info(f"The scheduler {scheduler.id} don't needs to be renewed")
-        return
-
     service_item = None
     resource_valid_until = None
     selected_lookup = {}
