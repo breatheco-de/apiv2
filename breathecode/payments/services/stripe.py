@@ -467,3 +467,69 @@ class Stripe:
 
         payment_link_object = self._i18n_validations(callback)
         return payment_link_object["id"], payment_link_object["url"]
+
+    def update_all_payment_methods(
+        self,
+        user: User,
+        token: str = None,
+        card_number: str = None,
+        exp_month: int = None,
+        exp_year: int = None,
+        cvc: str = None,
+    ) -> tuple[bool, list[str], dict]:
+        """
+        Update payment method for all payment contacts of a user.
+
+        Args:
+            user: The user whose payment contacts will be updated
+            token: [Optional] token from Stripe.js. If not provided, will be created from card details
+            card_number: [Optional] card number if token is not provided
+            exp_month: [Optional] expiration month if token is not provided
+            exp_year: [Optional] expiration year if token is not provided
+            cvc: [Optional] CVC if token is not provided
+
+        Returns:
+            tuple: (success: bool, errors: list[str], details: dict)
+            - success: True if at least one contact was updated successfully
+            - errors: List of error messages for failed updates
+            - details: Dictionary with information about the updated payment methods
+        """
+        contacts = PaymentContact.objects.filter(user=user)
+        if not contacts.exists():
+            return False, ["No payment contacts found for this user"], {}
+
+        any_success = False
+        errors = []
+        details = {}
+
+        for contact in contacts:
+            try:
+                # Get the academy's Stripe API key
+                academy = contact.academy
+                s = Stripe(academy=academy)
+                s.set_language(self.language)
+
+                # Create new token for this contact
+                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+
+                # Update payment method
+                customer = s.add_payment_method(user, token)
+
+                # Get card details from customer's default source
+                stripe.api_key = s.api_key
+                source = stripe.Customer.retrieve_source(customer.id, customer.default_source)
+
+                details[academy.name] = {
+                    "card_last4": source.last4,
+                    "card_brand": source.brand,
+                    "card_exp_month": source.exp_month,
+                    "card_exp_year": source.exp_year,
+                }
+
+                any_success = True
+
+            except Exception as e:
+                errors.append(str(e))
+                continue
+
+        return any_success, errors, details
