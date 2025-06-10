@@ -1365,6 +1365,10 @@ class V2CardView(APIView):
 
     def post(self, request):
         lang = get_user_language(request)
+        academy = get_academy_from_body(request.data, lang=lang, raise_exception=False)
+
+        s = Stripe(academy=academy)
+        s.set_language(lang)
 
         token = request.data.get("token")
         card_number = request.data.get("card_number")
@@ -1383,23 +1387,13 @@ class V2CardView(APIView):
                 code=404,
             )
 
-        # Try to get academy from request, but dont raise exception if not found
-        academy = get_academy_from_body(request.data, lang=lang, raise_exception=False)
-
-        # Initialize stripe with academy if provided
-        s = Stripe(academy=academy)
-        s.set_language(lang)
-
-        # Execute add_contact if academy is provided
         if academy:
             s.add_contact(request.user)
 
         try:
-            # Create token if not provided
             if not token:
                 token = s.create_card_token(card_number, exp_month, exp_year, cvc)
 
-            # Update payment method for all contacts
             success, errors, details = s.update_all_payment_methods(
                 user=request.user, token=token, card_number=card_number, exp_month=exp_month, exp_year=exp_year, cvc=cvc
             )
