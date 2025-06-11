@@ -86,7 +86,7 @@ def codespaces_csv(lines=1, data={}):
     return {
         "repository_name": repository_slugs,
         "username": usernames,
-        "usage_at": dates,
+        "formatted_date": dates,
         "product": products,
         "sku": skus,
         "quantity": quantities,
