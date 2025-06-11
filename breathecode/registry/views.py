@@ -1359,8 +1359,30 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
 
     extensions = APIViewExtensions(cache=AssetCache, sort="-published_at", paginate=True)
 
+    def _get_asset_by_slug_or_id(self, asset_slug_or_id, academy_id, request=None):
+        """
+        Helper method to retrieve an asset by either slug or ID.
+
+        Args:
+            asset_slug_or_id: The asset identifier (slug or ID)
+            academy_id: The academy ID to filter by
+            request: The request object (for compatibility with get_by_slug)
+
+        Returns:
+            Asset instance or None if not found
+        """
+        if asset_slug_or_id.isdigit():
+            # It's an ID
+            return Asset.objects.filter(id=int(asset_slug_or_id), academy__id=academy_id).first()
+        else:
+            # It's a slug - use the existing get_by_slug method with academy filter
+            asset = Asset.get_by_slug(asset_slug_or_id, request)
+            if asset is None or (asset.academy is not None and asset.academy.id != int(academy_id)):
+                return None
+            return asset
+
     @capable_of("read_asset")
-    def get(self, request, asset_slug=None, academy_id=None):
+    def get(self, request, asset_slug_or_id=None, academy_id=None):
         handler = self.extensions(request)
 
         cache = handler.cache.get()
@@ -1371,10 +1393,12 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         if member is None:
             raise ValidationException("You don't belong to this academy", status.HTTP_400_BAD_REQUEST)
 
-        if asset_slug is not None:
-            asset = Asset.get_by_slug(asset_slug, request)
-            if asset is None or (asset.academy is not None and asset.academy.id != int(academy_id)):
-                raise ValidationException(f"Asset {asset_slug} not found for this academy", status.HTTP_404_NOT_FOUND)
+        if asset_slug_or_id is not None:
+            asset = self._get_asset_by_slug_or_id(asset_slug_or_id, academy_id, request)
+            if asset is None:
+                raise ValidationException(
+                    f"Asset {asset_slug_or_id} not found for this academy", status.HTTP_404_NOT_FOUND
+                )
 
             serializer = AcademyAssetSerializer(asset)
             return handler.response(serializer.data)
@@ -1525,7 +1549,7 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
     @capable_of("crud_asset")
-    def put(self, request, asset_slug=None, academy_id=None):
+    def put(self, request, asset_slug_or_id=None, academy_id=None):
 
         data_list = request.data
         if not isinstance(request.data, list):
@@ -1533,12 +1557,15 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             # make it a list
             data_list = [request.data]
 
-            if asset_slug is None:
-                raise ValidationException("Missing asset_slug")
+            if asset_slug_or_id is None:
+                raise ValidationException("Missing asset_slug_or_id")
 
-            asset = Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).first()
+            # Use helper method to find asset by slug or ID
+            asset = self._get_asset_by_slug_or_id(asset_slug_or_id, academy_id, request)
             if asset is None:
-                raise ValidationException(f"This asset {asset_slug} does not exist for this academy {academy_id}", 404)
+                raise ValidationException(
+                    f"This asset {asset_slug_or_id} does not exist for this academy {academy_id}", 404
+                )
 
             data_list[0]["id"] = asset.id
 
