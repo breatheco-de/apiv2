@@ -38,7 +38,7 @@ else:
     BROKER_USE_SSL = False
 
 app = Celery("celery_breathecode", **kwargs)
-if os.getenv("ENV") == "test":
+if os.getenv("ENV") == "test" or os.getenv("ENV") == "development":
     app.conf.update(task_always_eager=True)
 
 if os.getenv("ENV") == "test" or os.getenv("ENV") == "development" or not CLOUDAMQP_URL:
@@ -132,7 +132,7 @@ def get_workers_amount():
     return dynos * workers
 
 
-if os.getenv("ENV") != "test" and (WORKER := os.getenv("CELERY_POOL", "prefork")) not in ["prefork"]:
+if os.getenv("ENV") != "test" and os.getenv("ENV") != "development" and (WORKER := os.getenv("CELERY_POOL", "prefork")) not in ["prefork"]:
     raise ValueError(f'CELERY_POOL must be "prefork" but got {WORKER} that is not supported yet.')
 
 
