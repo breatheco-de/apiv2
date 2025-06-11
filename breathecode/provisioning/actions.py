@@ -304,10 +304,10 @@ def handle_pending_github_user(
 
 def get_multiplier() -> Decimal:
     try:
-        x = os.getenv("PROVISIONING_MULTIPLIER", "1.3").replace(",", ".")
+        x = os.getenv("PROVISIONING_MULTIPLIER", "1.1").replace(",", ".")
         x = Decimal(x)
     except Exception:
-        x = Decimal("1.3")
+        x = Decimal("1.1")
 
     return x
 
@@ -319,7 +319,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         Decimal(".000000001"), rounding=ROUND_HALF_UP
     )
 
-    field["Multiplier"] = Decimal("1.0")  # Use Decimal instead of integer
+    field["Multiplier"] = Decimal("1.1")  # Use Decimal instead of integer
 
     # Handle both datetime formats: "2025-02-01T00:00:00.0000000Z" and "2025-03-01"
     if "T" in field["formatted_date"]:
