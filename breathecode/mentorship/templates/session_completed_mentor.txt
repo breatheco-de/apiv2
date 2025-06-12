@@ -1,0 +1,20 @@
+{% extends "base.txt" %}
+{% block content %}
+{{ SUBJECT }}
+
+Dear {{ MENTOR_NAME }},
+
+Thank you for completing your {{ SERVICE_NAME }} session with {{ MENTEE_NAME }}. Your dedication to mentoring students is greatly appreciated!
+
+To help us improve our mentorship program and ensure proper documentation, please take a few moments to complete the session feedback form. This will help us track the session details and gather valuable insights about the mentoring experience.
+
+Click here to {{ BUTTON }}: {{ LINK }}
+
+Session Details:
+- Session ID: {{ SESSION_ID }}
+- Service: {{ SERVICE_NAME }}
+- Mentee: {{ MENTEE_NAME }}
+
+If you have any questions or need assistance, please don't hesitate to contact our support team.
+
+{% endblock %} 

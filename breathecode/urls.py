@@ -35,6 +35,7 @@ versions = {
         path("registry/", include("breathecode.registry.urls.v2", namespace="registry")),
         path("media/", include("breathecode.media.urls.v2", namespace="media")),
         path("auth/", include("breathecode.authenticate.urls.v2", namespace="auth")),
+        path("payments/", include("breathecode.payments.urls.v2", namespace="payments")),
     ],
 }
 
@@ -55,7 +56,7 @@ apps = [
     ("v1/mentorship/", "breathecode.mentorship.urls", "mentorship"),
     ("v1/monitoring/", "breathecode.monitoring.urls", "monitoring"),
     ("v1/provisioning/", "breathecode.provisioning.urls", "provisioning"),
-    ("v1/payments/", "breathecode.payments.urls", "payments"),
+    ("v1/payments/", "breathecode.payments.urls.v1", "payments"),
     ("s/", "breathecode.marketing.urls_shortner", "marketing_shortner"),
     ("mentor/", "breathecode.mentorship.urls_shortner", "mentorship_shortner"),
     ("asset/", "breathecode.registry.urls_shortner", "registry_shortner"),

@@ -878,6 +878,17 @@ class Coupon(models.Model):
         limit_choices_to={"is_active": True},
         help_text="Seller",
     )
+
+    # Add field to restrict coupon usage to specific users
+    allowed_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        help_text="If set, only this user can use this coupon",
+        related_name="restricted_coupons",
+    )
+
     plans = models.ManyToManyField(
         Plan,
         blank=True,

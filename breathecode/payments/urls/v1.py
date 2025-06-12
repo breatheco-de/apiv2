@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import (
+from ..views import (
     AcademyAcademyServiceView,
     AcademyCohortSetCohortView,
     AcademyInvoiceView,
@@ -24,9 +24,11 @@ from .views import (
     MeConsumableView,
     MeInvoiceView,
     MentorshipServiceSetView,
+    MePlanFinancingChargeView,
     MeSubscriptionCancelView,
     MeSubscriptionChargeView,
     MeSubscriptionView,
+    MeUserCouponsView,
     PaymentMethodView,
     PayView,
     PlanOfferView,
@@ -73,6 +75,11 @@ urlpatterns = [
         MeSubscriptionCancelView.as_view(),
         name="me_subscription_id_cancel",
     ),
+    path(
+        "me/planfinancing/<int:plan_financing_id>/charge",
+        MePlanFinancingChargeView.as_view(),
+        name="me_planfinancing_id_charge",
+    ),
     path("academy/planfinancing/<int:financing_id>", AcademyPlanFinancingView.as_view()),
     path("academy/planfinancing", AcademyPlanFinancingView.as_view()),
     path("academy/subscription", AcademySubscriptionView.as_view()),
@@ -82,7 +89,9 @@ urlpatterns = [
     path("academy/invoice", AcademyInvoiceView.as_view()),
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view()),
     path("coupon", CouponView.as_view(), name="coupon"),
+    path("methods", PaymentMethodView.as_view(), name="methods"),
     path("me/coupon", UserCouponView.as_view(), name="me_coupon"),
+    path("me/user/coupons", MeUserCouponsView.as_view(), name="me_user_coupons"),
     path(
         "me/service/blocked",
         ServiceBlocked.as_view(),
@@ -133,5 +142,4 @@ urlpatterns = [
         AcademyPlanSubscriptionView.as_view(),
         name="academy_plan_slug_subscription",
     ),
-    path("methods", PaymentMethodView.as_view(), name="methods"),
 ]
