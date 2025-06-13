@@ -1329,11 +1329,26 @@ class PlanFinancing(AbstractIOweYou):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         on_create = self.pk is None
+        old_instance = None if on_create else PlanFinancing.objects.get(pk=self.pk)
 
         super().save(*args, **kwargs)
 
+        revoke_statuses = [
+            self.Status.CANCELLED,
+            self.Status.DEPRECATED,
+            self.Status.PAYMENT_ISSUE,
+            self.Status.ERROR,
+            self.Status.EXPIRED,
+        ]
+
         if on_create:
             signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
+            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+        elif old_instance and old_instance.status != self.status:
+            if self.status == self.Status.ACTIVE:
+                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+            elif self.status in revoke_statuses:
+                signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
 
 class Subscription(AbstractIOweYou):
@@ -1394,11 +1409,26 @@ class Subscription(AbstractIOweYou):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         on_create = self.pk is None
+        old_instance = None if on_create else Subscription.objects.get(pk=self.pk)
 
         super().save(*args, **kwargs)
 
+        revoke_statuses = [
+            self.Status.CANCELLED,
+            self.Status.DEPRECATED,
+            self.Status.PAYMENT_ISSUE,
+            self.Status.ERROR,
+            self.Status.EXPIRED,
+        ]
+
         if on_create:
             signals.subscription_created.send_robust(instance=self, sender=self.__class__)
+            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+        elif old_instance and old_instance.status != self.status:
+            if self.status == self.Status.ACTIVE:
+                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+            elif self.status in revoke_statuses:
+                signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
 
 class SubscriptionServiceItem(models.Model):
