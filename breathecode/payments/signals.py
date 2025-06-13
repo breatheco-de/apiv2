@@ -21,3 +21,5 @@ update_plan_m2m_service_items = emisor.signal("update_plan_m2m_service_items")
 # Plan adquired
 planfinancing_created = emisor.signal("planfinancing_created")
 subscription_created = emisor.signal("subscription_created")
+grant_plan_permissions = emisor.signal("grant_plan_permissions")
+revoke_plan_permissions = emisor.signal("revoke_plan_permissions")
