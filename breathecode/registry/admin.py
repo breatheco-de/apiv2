@@ -417,6 +417,36 @@ class LearnpackDeployed(admin.SimpleListFilter):
             return queryset.filter(learnpack_deploy_url__isnull=True)
 
 
+class AcademySlugFilter(admin.SimpleListFilter):
+    title = "Academy Slug"
+    parameter_name = "academy_slug"
+
+    def lookups(self, request, model_admin):
+        from breathecode.admissions.models import Academy
+
+        # Get all academies that have assets
+        academies_with_assets = Academy.objects.filter(asset__isnull=False).distinct().order_by("slug")
+
+        # Check if there are assets with null academy
+        has_null_academy = Asset.objects.filter(academy__isnull=True).exists()
+
+        lookups = []
+        if has_null_academy:
+            lookups.append(("null", "No Academy"))
+
+        for academy in academies_with_assets:
+            lookups.append((academy.slug, academy.slug))
+
+        return lookups
+
+    def queryset(self, request, queryset):
+        if self.value() == "null":
+            return queryset.filter(academy__isnull=True)
+        elif self.value():
+            return queryset.filter(academy__slug=self.value())
+        return queryset
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -437,6 +467,7 @@ class AssetAdmin(admin.ModelAdmin):
         WithDescription,
         IsMarkdown,
         LearnpackDeployed,
+        AcademySlugFilter,
     ]
     raw_id_fields = ["author", "owner", "superseded_by"]
     actions = (
