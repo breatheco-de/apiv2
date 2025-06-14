@@ -259,21 +259,62 @@ def apush_to_github(asset_slug, owner=None):
 
 
 def get_blob_content(repo, path_name, branch="main"):
+    """
+    Get blob content from a GitHub repository with enhanced error handling for private repositories.
 
+    Args:
+        repo: GitHub repository object
+        path_name: Path to the file in the repository
+        branch: Branch name (default: "main")
+
+    Returns:
+        Blob object or None if not found
+
+    Raises:
+        Exception: For authentication, permission, or other access issues
+    """
     if "?" in path_name:
         path_name = path_name.split("?")[0]
 
-    # first get the branch reference
-    ref = repo.get_git_ref(f"heads/{branch}")
-    # then get the tree
-    tree = repo.get_git_tree(ref.object.sha, recursive="/" in path_name).tree
-    # look for path in tree
-    sha = [x.sha for x in tree if x.path == path_name]
-    if not sha:
-        # well, not found..
-        return None
-    # we have sha
-    return repo.get_git_blob(sha[0])
+    try:
+        # First get the branch reference
+        ref = repo.get_git_ref(f"heads/{branch}")
+
+        # Then get the tree
+        tree = repo.get_git_tree(ref.object.sha, recursive="/" in path_name).tree
+
+        # Look for path in tree
+        sha = [x.sha for x in tree if x.path == path_name]
+        if not sha:
+            # File not found in tree
+            logger.debug(f"File '{path_name}' not found in repository tree on branch '{branch}'")
+            return None
+
+        # We have sha, get the blob
+        blob = repo.get_git_blob(sha[0])
+        logger.debug(f"Successfully retrieved blob for '{path_name}' from branch '{branch}'")
+        return blob
+
+    except Exception as e:
+        error_str = str(e).lower()
+
+        # Handle specific error types
+        if "404" in error_str or "not found" in error_str:
+            if f"heads/{branch}" in str(e) or f"branch {branch}" in str(e):
+                raise Exception(f"Branch '{branch}' not found in repository")
+            else:
+                logger.debug(f"File '{path_name}' not found in repository on branch '{branch}'")
+                return None
+        elif "403" in error_str or "forbidden" in error_str:
+            raise Exception(
+                f"Access forbidden when retrieving '{path_name}' from branch '{branch}'. Repository is accessible but file/branch permissions may be restricted."
+            )
+        elif "401" in error_str or "unauthorized" in error_str:
+            raise Exception(
+                f"Authentication failed when retrieving '{path_name}' from branch '{branch}'. Check GitHub credentials."
+            )
+        else:
+            raise Exception(f"Error retrieving '{path_name}' from branch '{branch}': {str(e)}")
 
 
 def set_blob_content(repo, path_name, content, file_name, branch="main"):
@@ -394,7 +435,36 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
         raise Exception("Missing Readme URL for lesson " + asset.slug + ".")
 
     org_name, repo_name, branch_name = asset.get_repo_meta()
-    repo = github.get_repo(f"{org_name}/{repo_name}")
+
+    # First check if we have access to the repository itself
+    # This is especially important for private repositories
+    try:
+        repo = github.get_repo(f"{org_name}/{repo_name}")
+
+        # Log repository accessibility for debugging
+        try:
+            repo_info = repo.raw_data
+            logger.debug(
+                f"Repository {org_name}/{repo_name} is accessible for lesson sync. "
+                f"Private: {repo_info.get('private', 'unknown')}"
+            )
+        except Exception:
+            logger.warning(f"Could not get repository details for lesson sync {org_name}/{repo_name}")
+
+    except Exception as e:
+        error_str = str(e).lower()
+        if "404" in error_str or "not found" in error_str:
+            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible")
+        elif "403" in error_str or "forbidden" in error_str:
+            raise Exception(
+                f"Access forbidden to repository {org_name}/{repo_name}. Check GitHub credentials and repository permissions."
+            )
+        elif "401" in error_str or "unauthorized" in error_str:
+            raise Exception(
+                f"GitHub authentication failed for repository {org_name}/{repo_name}. Check GitHub credentials."
+            )
+        else:
+            raise Exception(f"Error accessing repository {org_name}/{repo_name}: {str(e)}")
 
     os.path.basename(asset.readme_url)
 
@@ -405,17 +475,34 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
     _, file_path = result.groups()
     logger.debug(f"Fetching readme: {file_path}")
 
-    blob_file = get_blob_content(repo, file_path, branch=branch_name)
-    if blob_file is None:
-        raise Exception("Nothing was found under " + file_path)
+    # Try to get the readme file with enhanced error handling
+    try:
+        blob_file = get_blob_content(repo, file_path, branch=branch_name)
+        if blob_file is None:
+            raise Exception(
+                f"Lesson README file '{file_path}' not found in repository {org_name}/{repo_name} on branch '{branch_name}'"
+            )
 
-    base64_readme = blob_file.content
-    asset.readme_raw = base64_readme
+        base64_readme = blob_file.content
+        asset.readme_raw = base64_readme
 
-    # this avoids to keep using the old readme file, we do have a new version
-    # the asset.get_readme function will not update the asset if we keep the old version
-    if asset.readme_raw is not None:
-        asset.readme = asset.readme_raw
+        # this avoids to keep using the old readme file, we do have a new version
+        # the asset.get_readme function will not update the asset if we keep the old version
+        if asset.readme_raw is not None:
+            asset.readme = asset.readme_raw
+
+        logger.debug(f"Successfully retrieved lesson README from {org_name}/{repo_name}")
+
+    except Exception as e:
+        # get_blob_content already handles most error categorization, so we can re-raise
+        # but add more context for lesson-specific errors
+        error_str = str(e).lower()
+        if "nothing was found" in error_str or "not found" in error_str:
+            raise Exception(
+                f"Lesson README file '{file_path}' not found in repository {org_name}/{repo_name} on branch '{branch_name}'"
+            )
+        else:
+            raise Exception(f"Error retrieving lesson README from repository {org_name}/{repo_name}: {str(e)}")
 
     # only the first time a lesson is synched it will override some of the properties
     readme = asset.get_readme(parse=True)
@@ -491,6 +578,7 @@ def clean_asset_readme(asset: Asset):
     try:
         asset = clean_readme_relative_paths(asset)
         asset = clean_readme_hide_comments(asset)
+        asset = replace_private_github_urls(asset)
         asset = clean_h1s(asset)
         asset = clean_content_variables(asset)
         readme = asset.get_readme(parse=True)
@@ -519,7 +607,6 @@ def clean_content_variables(asset: Asset):
         r"{%\s+([^\s%]+)\s+%}"  # This regex pattern matches {% variable_name %} or {% variable_name:"default_value" %}
     )
     markdown_text = readme["decoded"]
-    logger.debug("Original text:" + markdown_text)
 
     variables_dict = {}
     variables = ContentVariable.objects.filter(academy=asset.academy).filter(Q(lang__isnull=True) | Q(lang=asset.lang))
@@ -548,7 +635,7 @@ def clean_content_variables(asset: Asset):
         return value if value is not None else match.group(0)
 
     replaced_text = re.sub(pattern, replace, markdown_text)
-    logger.debug("Replaced text:" + replaced_text)
+    # logger.debug("Replaced text:" + replaced_text)
     asset.set_readme(replaced_text)
     return asset
 
@@ -574,6 +661,63 @@ def clean_readme_relative_paths(asset: Asset):
             replaced = replaced.replace(found_url, base_url + "/" + found_url + "?raw=true")
 
     asset.set_readme(replaced)
+    return asset
+
+
+def replace_private_github_urls(asset: Asset):
+    """
+    Replace internal GitHub URLs with internal link proxy URLs.
+
+    This function scans the asset's readme content for GitHub URLs that point to the same
+    repository as the asset's readme_url. When found, it replaces them with internal
+    proxy URLs that use the asset owner's GitHub credentials to access private content.
+
+    Args:
+        asset: The Asset object to process
+
+    Returns:
+        Asset: The updated asset with replaced URLs
+    """
+    from breathecode.registry.utils import is_internal_github_url
+    from breathecode.services.github import Github
+
+    if not asset.readme_url or not asset.owner:
+        return asset
+
+    readme = asset.get_readme()
+    content = readme["decoded"]
+
+    # Find all GitHub URLs in the content
+    github_url_pattern = r'https://github\.com/[^\s\)"\'\]]+|https://raw\.githubusercontent\.com/[^\s\)"\'\]]+'
+    github_urls = re.findall(github_url_pattern, content)
+
+    if not github_urls:
+        return asset
+
+    # Parse the asset's repository information
+    github_service = Github()
+    asset_repo_info = github_service.parse_github_url(asset.readme_url)
+
+    if not asset_repo_info:
+        return asset
+
+    replaced_content = content
+
+    for url in github_urls:
+        # Check if this URL points to the same repository
+        if is_internal_github_url(url, asset.readme_url):
+            url_info = github_service.parse_github_url(url)
+
+            # Only replace URLs that point to files (blob, raw)
+            if url_info and url_info["url_type"] in ["blob", "raw"] and url_info.get("path"):
+                # Create the internal link URL
+                # Token can be added as a query parameter when accessing the link
+                internal_url = f"{os.getenv('API_URL')}/asset/internal-link?id={asset.id}&path={url_info['path']}"
+                replaced_content = replaced_content.replace(url, internal_url)
+
+    if replaced_content != content:
+        asset.set_readme(replaced_content)
+
     return asset
 
 
@@ -958,7 +1102,42 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
         raise Exception("Missing Readme URL for asset " + asset.slug + ".")
 
     org_name, repo_name, branch_name = asset.get_repo_meta()
-    repo = github.get_repo(f"{org_name}/{repo_name}")
+
+    # First check if we have access to the repository itself
+    # This is especially important for private repositories
+    try:
+        repo = github.get_repo(f"{org_name}/{repo_name}")
+
+        # Log repository accessibility for debugging
+        try:
+            repo_info = repo.raw_data
+            logger.debug(
+                f"Repository {org_name}/{repo_name} is accessible for learnpack asset sync. "
+                f"Private: {repo_info.get('private', 'unknown')}"
+            )
+        except Exception:
+            logger.warning(f"Could not get repository details for learnpack asset sync {org_name}/{repo_name}")
+
+    except Exception as e:
+        error_str = str(e).lower()
+        # Add more detailed debugging information
+        logger.error(f"GitHub API Error accessing {org_name}/{repo_name}: {str(e)}")
+        logger.error(f"Full exception details: {repr(e)}")
+
+        if "404" in error_str or "not found" in error_str:
+            raise Exception(
+                f"Repository {org_name}/{repo_name} not found or not accessible. This could be due to: 1) Repository doesn't exist, 2) Repository is private and token lacks 'repo' scope, 3) User doesn't have access to the repository"
+            )
+        elif "403" in error_str or "forbidden" in error_str:
+            raise Exception(
+                f"Access forbidden to repository {org_name}/{repo_name}. Check GitHub credentials and repository permissions."
+            )
+        elif "401" in error_str or "unauthorized" in error_str:
+            raise Exception(
+                f"GitHub authentication failed for repository {org_name}/{repo_name}. Check GitHub credentials."
+            )
+        else:
+            raise Exception(f"Error accessing repository {org_name}/{repo_name}: {str(e)}")
 
     lang = asset.lang
     if lang is None or lang == "":
@@ -968,34 +1147,86 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
     else:
         lang = "." + lang
 
+    # Try to get README file with better error handling
     readme_file = None
+    readme_filename = f"README{lang}.md"
     try:
-        readme_file = repo.get_contents(f"README{lang}.md")
-    except Exception:
-        raise Exception(f"Translation on README{lang}.md not found")
+        readme_file = repo.get_contents(readme_filename)
+        logger.debug(f"Successfully retrieved {readme_filename} from {org_name}/{repo_name}")
+    except Exception as e:
+        error_str = str(e).lower()
+        if "404" in error_str or "not found" in error_str:
+            raise Exception(f"README file '{readme_filename}' not found in repository {org_name}/{repo_name}")
+        elif "403" in error_str or "forbidden" in error_str:
+            logger.warning(
+                f"Access forbidden for {readme_filename} in repository {org_name}/{repo_name}. "
+                f"Repository is accessible but file permissions may be restricted."
+            )
+            raise Exception(f"Access forbidden to README file '{readme_filename}' in repository {org_name}/{repo_name}")
+        elif "401" in error_str or "unauthorized" in error_str:
+            raise Exception(
+                f"Authentication failed when accessing README file '{readme_filename}' in repository {org_name}/{repo_name}"
+            )
+        else:
+            raise Exception(
+                f"Error retrieving README file '{readme_filename}' from repository {org_name}/{repo_name}: {str(e)}"
+            )
 
+    # Try to get configuration file with better error handling
     learn_file = None
-    try:
-        learn_file = repo.get_contents("learn.json")
-    except Exception:
+    config_files = ["learn.json", ".learn/learn.json", "bc.json", ".learn/bc.json"]
+
+    for config_filename in config_files:
         try:
-            learn_file = repo.get_contents(".learn/learn.json")
-        except Exception:
-            try:
-                learn_file = repo.get_contents("bc.json")
-            except Exception:
-                try:
-                    learn_file = repo.get_contents(".learn/bc.json")
-                except Exception:
-                    raise Exception("No configuration learn.json or bc.json file was found")
+            learn_file = repo.get_contents(config_filename)
+            logger.debug(f"Successfully retrieved config file {config_filename} from {org_name}/{repo_name}")
+            break
+        except Exception as e:
+            error_str = str(e).lower()
+
+            # For config files, only log detailed errors for the last attempt
+            if config_filename == config_files[-1]:
+                if "404" in error_str or "not found" in error_str:
+                    logger.debug(
+                        f"No configuration files found in repository {org_name}/{repo_name}. Tried: {', '.join(config_files)}"
+                    )
+                elif "403" in error_str or "forbidden" in error_str:
+                    logger.warning(
+                        f"Access forbidden to configuration files in repository {org_name}/{repo_name}. "
+                        f"Repository is accessible but file permissions may be restricted."
+                    )
+                elif "401" in error_str or "unauthorized" in error_str:
+                    logger.warning(
+                        f"Authentication failed when accessing configuration files in repository {org_name}/{repo_name}"
+                    )
+                else:
+                    logger.warning(
+                        f"Error accessing configuration files in repository {org_name}/{repo_name}: {str(e)}"
+                    )
+            else:
+                # For intermediate attempts, just log debug info
+                logger.debug(f"Config file {config_filename} not found, trying next option")
+                continue
+
+    # If no config file was found, raise an exception
+    if learn_file is None:
+        raise Exception(
+            f"No configuration file (learn.json, bc.json) found in repository {org_name}/{repo_name}. Tried: {', '.join(config_files)}"
+        )
 
     base64_readme = str(readme_file.content)
     asset.readme_raw = base64_readme
 
     config = None
     if learn_file is not None and (asset.last_synch_at is None or override_meta):
-        config = json.loads(learn_file.decoded_content.decode("utf-8"))
-        asset.config = config
+        try:
+            config = json.loads(learn_file.decoded_content.decode("utf-8"))
+            asset.config = config
+            logger.debug(f"Successfully parsed configuration from {org_name}/{repo_name}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Invalid JSON in configuration file: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Error processing configuration file: {str(e)}")
 
     asset = process_asset_config(asset, config)
     return asset
@@ -1008,20 +1239,51 @@ def pull_repo_dependencies(github, asset):
     Parameters:
     - github: Authenticated GitHub client instance (e.g., from PyGithub).
     - asset: Asset object with `get_repo_meta()` to retrieve repo metadata.
-    - override_meta: Optional metadata to override repository details.
 
     Returns:
     - languages: Dictionary of main programming languages and their versions.
     """
     org_name, repo_name, branch_name = asset.get_repo_meta()
 
-    # Access the repository
-    repo = github.get_repo(f"{org_name}/{repo_name}")
+    # First check if we have access to the repository itself
+    # This is especially important for private repositories
+    try:
+        repo = github.get_repo(f"{org_name}/{repo_name}")
+
+        # Log repository accessibility for debugging
+        try:
+            repo_info = repo.raw_data
+            logger.debug(
+                f"Repository {org_name}/{repo_name} is accessible for dependency analysis. "
+                f"Private: {repo_info.get('private', 'unknown')}"
+            )
+        except Exception:
+            logger.warning(f"Could not get repository details for dependency analysis {org_name}/{repo_name}")
+
+    except Exception as e:
+        error_str = str(e).lower()
+        if "404" in error_str or "not found" in error_str:
+            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible for dependency analysis")
+        elif "403" in error_str or "forbidden" in error_str:
+            raise Exception(
+                f"Access forbidden to repository {org_name}/{repo_name} for dependency analysis. Check GitHub credentials and repository permissions."
+            )
+        elif "401" in error_str or "unauthorized" in error_str:
+            raise Exception(
+                f"GitHub authentication failed for repository {org_name}/{repo_name} dependency analysis. Check GitHub credentials."
+            )
+        else:
+            raise Exception(f"Error accessing repository {org_name}/{repo_name} for dependency analysis: {str(e)}")
 
     # Retrieve programming languages from GitHub
-    languages = repo.get_languages()
-    if not languages:
-        return "No languages detected by Github"
+    try:
+        languages = repo.get_languages()
+        if not languages:
+            logger.debug(f"No programming languages detected by GitHub for repository {org_name}/{repo_name}")
+            return ""  # Return empty string for no languages detected
+    except Exception as e:
+        logger.warning(f"Error retrieving programming languages from repository {org_name}/{repo_name}: {str(e)}")
+        raise Exception(f"Error retrieving programming languages from repository {org_name}/{repo_name}: {str(e)}")
 
     # Parse version from dependency files
     dependency_files = ["requirements.txt", "pyproject.toml", "Pipfile", "package.json"]
@@ -1034,12 +1296,33 @@ def pull_repo_dependencies(github, asset):
             detected_version = detect_language_version(file_name, content)
             if detected_version:
                 language_versions.update(detected_version)
-        except Exception:
+                logger.debug(f"Found version info in {file_name}: {detected_version}")
+        except Exception as e:
+            error_str = str(e).lower()
+
+            # Only log detailed errors for meaningful issues, not normal 404s
+            if "404" in error_str or "not found" in error_str:
+                logger.debug(f"Dependency file {file_name} not found in repository {org_name}/{repo_name}")
+            elif "403" in error_str or "forbidden" in error_str:
+                logger.warning(
+                    f"Access forbidden to dependency file {file_name} in repository {org_name}/{repo_name}. "
+                    f"Repository is accessible but file permissions may be restricted."
+                )
+            elif "401" in error_str or "unauthorized" in error_str:
+                logger.warning(
+                    f"Authentication failed when accessing dependency file {file_name} in repository {org_name}/{repo_name}"
+                )
+            else:
+                logger.debug(
+                    f"Error accessing dependency file {file_name} in repository {org_name}/{repo_name}: {str(e)}"
+                )
             continue
 
     # Combine languages and versions
     combined = {lang: language_versions.get(lang, "unknown") for lang in languages}
     dependencies_str = ",".join(f"{lang.lower()}={version}" for lang, version in combined.items())
+
+    logger.debug(f"Dependencies analysis complete for {org_name}/{repo_name}: {dependencies_str}")
     return dependencies_str
 
 
@@ -1099,7 +1382,36 @@ def pull_quiz_asset(github, asset: Asset):
         raise Exception("Missing Readme URL for quiz " + asset.slug + ".")
 
     org_name, repo_name, branch_name = asset.get_repo_meta()
-    repo = github.get_repo(f"{org_name}/{repo_name}")
+
+    # First check if we have access to the repository itself
+    # This is especially important for private repositories
+    try:
+        repo = github.get_repo(f"{org_name}/{repo_name}")
+
+        # Log repository accessibility for debugging
+        try:
+            repo_info = repo.raw_data
+            logger.debug(
+                f"Repository {org_name}/{repo_name} is accessible for quiz asset sync. "
+                f"Private: {repo_info.get('private', 'unknown')}"
+            )
+        except Exception:
+            logger.warning(f"Could not get repository details for quiz asset sync {org_name}/{repo_name}")
+
+    except Exception as e:
+        error_str = str(e).lower()
+        if "404" in error_str or "not found" in error_str:
+            raise Exception(f"Repository {org_name}/{repo_name} not found or not accessible")
+        elif "403" in error_str or "forbidden" in error_str:
+            raise Exception(
+                f"Access forbidden to repository {org_name}/{repo_name}. Check GitHub credentials and repository permissions."
+            )
+        elif "401" in error_str or "unauthorized" in error_str:
+            raise Exception(
+                f"GitHub authentication failed for repository {org_name}/{repo_name}. Check GitHub credentials."
+            )
+        else:
+            raise Exception(f"Error accessing repository {org_name}/{repo_name}: {str(e)}")
 
     os.path.basename(asset.readme_url)
 
@@ -1110,11 +1422,39 @@ def pull_quiz_asset(github, asset: Asset):
     _, file_path = result.groups()
     logger.debug(f"Fetching quiz json: {file_path}")
 
-    encoded_config = get_blob_content(repo, file_path, branch=branch_name).content
-    decoded_config = Asset.decode(encoded_config)
+    # Try to get the quiz configuration file with better error handling
+    try:
+        blob_file = get_blob_content(repo, file_path, branch=branch_name)
+        if blob_file is None:
+            raise Exception(f"Quiz configuration file '{file_path}' not found in repository {org_name}/{repo_name}")
 
-    _config = json.loads(decoded_config)
-    asset.config = _config
+        encoded_config = blob_file.content
+        decoded_config = Asset.decode(encoded_config)
+
+        try:
+            _config = json.loads(decoded_config)
+            asset.config = _config
+            logger.debug(f"Successfully parsed quiz configuration from {org_name}/{repo_name}")
+        except json.JSONDecodeError as e:
+            raise Exception(f"Invalid JSON in quiz configuration file '{file_path}': {str(e)}")
+
+    except Exception as e:
+        # Check if this is a repository access error vs file-specific error
+        error_str = str(e).lower()
+        if "404" in error_str or "not found" in error_str:
+            raise Exception(f"Quiz configuration file '{file_path}' not found in repository {org_name}/{repo_name}")
+        elif "403" in error_str or "forbidden" in error_str:
+            raise Exception(
+                f"Access forbidden to quiz configuration file '{file_path}' in repository {org_name}/{repo_name}"
+            )
+        elif "401" in error_str or "unauthorized" in error_str:
+            raise Exception(
+                f"Authentication failed when accessing quiz configuration file '{file_path}' in repository {org_name}/{repo_name}"
+            )
+        else:
+            raise Exception(
+                f"Error retrieving quiz configuration from '{file_path}' in repository {org_name}/{repo_name}: {str(e)}"
+            )
 
     # "slug":    "introduction-networking-es",
     # "name":    "Introducción a redes",
@@ -1152,22 +1492,22 @@ def pull_quiz_asset(github, asset: Asset):
     return asset
 
 
-def test_asset(asset: Asset, log_errors=False):
+def test_asset(asset: Asset, log_errors=False, reset_errors=False):
     try:
 
         validator = None
         if asset.asset_type == "LESSON":
-            validator = LessonValidator(asset, log_errors)
+            validator = LessonValidator(asset, log_errors, reset_errors)
         if asset.asset_type == "STARTER":
-            validator = StarterValidator(asset, log_errors)
+            validator = StarterValidator(asset, log_errors, reset_errors)
         elif asset.asset_type == "EXERCISE":
-            validator = ExerciseValidator(asset, log_errors)
+            validator = ExerciseValidator(asset, log_errors, reset_errors)
         elif asset.asset_type == "PROJECT":
-            validator = ProjectValidator(asset, log_errors)
+            validator = ProjectValidator(asset, log_errors, reset_errors)
         elif asset.asset_type == "QUIZ":
-            validator = QuizValidator(asset, log_errors)
+            validator = QuizValidator(asset, log_errors, reset_errors)
         elif asset.asset_type == "ARTICLE":
-            validator = ArticleValidator(asset, log_errors)
+            validator = ArticleValidator(asset, log_errors, reset_errors)
 
         validator.validate()
         asset.status_text = "Test Successfull"
@@ -1190,8 +1530,8 @@ def test_asset(asset: Asset, log_errors=False):
 
 
 @sync_to_async
-def atest_asset(asset: Asset, log_errors=False):
-    return test_asset(asset, log_errors)
+def atest_asset(asset: Asset, log_errors=False, reset_errors=False):
+    return test_asset(asset, log_errors, reset_errors)
 
 
 def scan_asset_originality(asset: Asset):

@@ -514,7 +514,7 @@ class AcademyAuthSettingsAdmin(admin.ModelAdmin):
         if settings.github_owner is None:
             return format_html("no owner")
 
-        scopes = str(base64.urlsafe_b64encode(b"user repo admin:org"), "utf-8")
+        scopes = str(base64.urlsafe_b64encode(b"user repo admin:org delete_repo"), "utf-8")
         return format_html(
             f"<a href='/v1/auth/github?user={obj.github_owner.id}&url={self.callback_url}&scope={scopes}'>connect github</a>"
         )

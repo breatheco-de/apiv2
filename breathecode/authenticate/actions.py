@@ -58,7 +58,7 @@ def get_github_scopes(user, default_scopes=""):
 
     owns_github_organization = AcademyAuthSettings.objects.filter(github_owner=user).exists()
     if owns_github_organization:
-        scopes.update({"admin:org", "delete_repo"})
+        scopes.update({"admin:org", "delete_repo", "repo", "user"})
 
     return " ".join(sorted(scopes))
 

@@ -14,7 +14,6 @@ from breathecode.utils.admin import change_field
 from .actions import (
     AssetThumbnailGenerator,
     add_syllabus_translations,
-    clean_asset_readme,
     get_user_from_github_username,
     process_asset_config,
     push_to_github,
@@ -43,6 +42,7 @@ from .tasks import (
     async_pull_from_github,
     async_remove_img_from_cloud,
     async_test_asset,
+    async_regenerate_asset_readme,
     async_update_frontend_asset_cache,
     async_upload_image_to_bucket,
     sync_asset_telemetry_stats,
@@ -116,12 +116,12 @@ def pull_content_from_github_override_meta(modeladmin, request, queryset):
         # pull_from_github(a.slug, override_meta=True)  # uncomment for testing purposes
 
 
+@admin.display(description="Clean and regenerate readme (sync)")
 def async_regenerate_readme(modeladmin, request, queryset):
     queryset.update(cleaning_status="PENDING", cleaning_status_details="Starting to clean...")
     assets = queryset.all()
     for a in assets:
-        # async_regenerate_asset_readme.delay(a.slug)
-        clean_asset_readme(a)
+        async_regenerate_asset_readme.delay(a.slug)
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -196,13 +196,24 @@ def generate_spanish_translation(modeladmin, request, queryset):
             new_asset.technologies.add(t)
 
 
-def test_asset_integrity(modeladmin, request, queryset):
+def async_test_asset_integrity(modeladmin, request, queryset):
     queryset.update(test_status="PENDING")
     assets = queryset.all()
 
     for a in assets:
         try:
             async_test_asset.delay(a.slug)
+        except Exception as e:
+            messages.error(request, a.slug + ": " + str(e))
+
+
+def test_asset_integrity(modeladmin, request, queryset):
+    queryset.update(test_status="PENDING")
+    assets = queryset.all()
+
+    for a in assets:
+        try:
+            async_test_asset(a.slug)
         except Exception as e:
             messages.error(request, a.slug + ": " + str(e))
 
@@ -431,6 +442,7 @@ class AssetAdmin(admin.ModelAdmin):
     actions = (
         [
             test_asset_integrity,
+            async_test_asset_integrity,
             add_gitpod,
             remove_gitpod,
             process_config_object,
@@ -457,18 +469,42 @@ class AssetAdmin(admin.ModelAdmin):
         + change_field(["us", "es"], name="lang")
     )
 
-    def get_form(self, request, obj=None, **kwargs):
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = list(super().get_readonly_fields(request, obj))
 
-        if (
-            obj is not None
-            and obj.readme is not None
-            and obj.url is not None
-            and "ipynb" in obj.url
-            and len(obj.readme) > 2000
-        ):
-            self.exclude = ("readme", "html")
-        form = super(AssetAdmin, self).get_form(request, obj, **kwargs)
-        return form
+        # Make readme field read-only when updating an existing asset
+        if obj is not None and "readme" not in readonly_fields:
+            readonly_fields.append("readme_decoded")
+
+        return readonly_fields
+
+    def get_exclude(self, request, obj=None):
+        """Hide the readme field from the admin form."""
+        exclude = list(super().get_exclude(request, obj) or [])
+        exclude.append("readme")
+        return exclude
+
+    def readme_decoded(self, obj):
+        """Display the decoded (human-readable) version of the base64-encoded readme field."""
+        if obj and obj.readme:
+            try:
+                decoded_content = Asset.decode(obj.readme)
+                # Truncate if too long for admin display
+                if len(decoded_content) > 1000:
+                    return format_html(
+                        '<div style="max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px;">{}</div>',
+                        decoded_content[:1000] + "\n\n... (content truncated, showing first 1000 characters)",
+                    )
+                else:
+                    return format_html(
+                        '<div style="max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px;">{}</div>',
+                        decoded_content,
+                    )
+            except Exception as e:
+                return format_html('<span style="color: red;">Error decoding readme: {}</span>', str(e))
+        return "No readme content"
+
+    readme_decoded.short_description = "Readme Content (Decoded)"
 
     def url_path(self, obj):
         return format_html(
