@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content text-center">
+    <h1 class="title" style="margin-bottom: 30px;">Thank you for your mentorship session!</h1>
+    
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+        Dear {{ MENTOR_NAME }},
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+        Thank you for completing your {{ SERVICE_NAME }} session with {{ MENTEE_NAME }}. 
+        Your dedication to mentoring students is greatly appreciated!
+    </p>
+    
+    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+        To help us improve our mentorship program and ensure proper documentation, 
+        please take a few moments to complete the session feedback form. This will help us 
+        track the session details and gather valuable insights about the mentoring experience.
+    </p>
+    
+    <tr>
+        <td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+			padding-top: 25px;
+			padding-bottom: 5px;" class="button">
+            <a href="{{ LINK }}" target="_blank" style="display: block; max-width: 280px;">
+                <table border="0" cellpadding="0" cellspacing="0" align="center"
+                    style="max-width: 280px; min-width: 180px; border-collapse: collapse; border-spacing: 0; padding: 0;">
+                    <tr>
+                        <td align="center" valign="middle"
+                            style="padding: 15px 30px; margin: 0; border-collapse: collapse; border-spacing: 0; border-radius: 6px; -webkit-border-radius: 6px; -moz-border-radius: 6px; -khtml-border-radius: 6px;"
+                            bgcolor="#0097cd">
+                            <a target="_blank" style="text-decoration: none;
+					color: #FFFFFF; font-family: sans-serif; font-size: 18px; font-weight: 600; line-height: 120%;" href="{{ LINK }}">
+                                {{ BUTTON }}
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+            </a>
+        </td>
+    </tr>
+    
+    <p style="font-size: 14px; line-height: 1.5; margin-top: 30px; color: #666;">
+        <strong>Session ID:</strong> {{ SESSION_ID }}<br>
+        <strong>Service:</strong> {{ SERVICE_NAME }}<br>
+        <strong>Mentee:</strong> {{ MENTEE_NAME }}
+    </p>
+    
+    <p style="font-size: 14px; line-height: 1.5; margin-top: 20px; color: #888;">
+        If you have any questions or need assistance, please don't hesitate to contact our support team.
+    </p>
+</div>
+{% endblock %} 
