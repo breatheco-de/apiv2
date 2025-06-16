@@ -85,6 +85,11 @@ PERMISSIONS = [
         "description": "You are allowed to create new learnpack packages",
         "codename": "learnpack_create_package",
     },
+    {
+        "name": "Get private link",
+        "description": "Access to private links",
+        "codename": "get_private_link",
+    },
 ]
 
 GROUPS = [
@@ -123,6 +128,7 @@ GROUPS = [
     {"name": "Events", "permissions": ["event_join"], "inherit": []},
     {"name": "Classes", "permissions": ["live_class_join"], "inherit": []},
     {"name": "Legacy", "permissions": ["get_my_certificate"], "inherit": ["Classes", "Events", "Mentorships"]},
+    {"name": "Paid Student", "permissions": ["get_private_link"], "inherit": []},
 ]
 
 
