@@ -1239,14 +1239,14 @@ class AcademyAssetActionView(APIView):
     """
 
     @staticmethod
-    async def update_asset_action(asset: Asset, user: User, data: dict[str, Any]):
+    async def update_asset_action(asset: Asset, user: User, data: dict[str, Any], academy_id: int):
         """
         This function updates the asset type based on the action slug
         """
 
         action_slug = data.get("action_slug")
 
-        possible_actions = ["test", "pull", "push", "analyze_seo", "clean", "originality"]
+        possible_actions = ["test", "pull", "push", "analyze_seo", "clean", "originality", "claim_asset"]
         if action_slug not in possible_actions:
             raise ValidationException(f"Invalid action {action_slug}")
         try:
@@ -1274,6 +1274,20 @@ class AcademyAssetActionView(APIView):
                 if asset.asset_type not in ["ARTICLE", "LESSON"]:
                     raise ValidationException("Only lessons and articles can be scanned for originality")
                 await ascan_asset_originality(asset)
+            elif action_slug == "claim_asset":
+
+                if asset.academy is not None:
+                    raise ValidationException(
+                        translation(
+                            "en",
+                            en=f"Asset {asset.slug} already belongs to academy {asset.academy.name}",
+                            es=f"El asset {asset.slug} ya pertenece a la academia {asset.academy.name}",
+                            slug="asset-already-claimed",
+                        )
+                    )
+                academy = await Academy.objects.filter(id=academy_id).afirst()
+                asset.academy = academy
+                await asset.asave()
 
         except Exception as e:
             logger.exception(e)
@@ -1300,7 +1314,7 @@ class AcademyAssetActionView(APIView):
 
         # Fetch asset asynchronously, prefetching related fields needed by the serializer
         asset = (
-            await Asset.objects.select_related("category", "assessment", "author", "owner")
+            await Asset.objects.select_related("category", "assessment", "author", "owner", "academy")
             .prefetch_related(
                 # Prefetching previous_version might need adjustment if it causes deep recursion issues
                 "seo_keywords__cluster",
@@ -1309,18 +1323,21 @@ class AcademyAssetActionView(APIView):
                 "technologies",
                 "assets_related",
             )
-            .filter(slug__iexact=asset_slug, academy__id=academy_id)
+            .filter(slug__iexact=asset_slug)
+            .filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
             .afirst()
         )
 
         if asset is None:
             raise ValidationException(f"This asset {asset_slug} does not exist for this academy {academy_id}", 404)
 
-        data = await self.update_asset_action(asset, request.user, request.data)
+        data = await self.update_asset_action(
+            asset, request.user, {**request.data, "action_slug": action_slug}, academy_id
+        )
         return Response(data, status=status.HTTP_200_OK)
 
     @staticmethod
-    async def create_asset_action(action_slug: str, asset: Asset, user: User, data: dict[str, Any]):
+    async def create_asset_action(action_slug: str, asset: Asset, user: User, data: dict[str, Any], academy_id: int):
         """
         This function creates a new asset
         """
@@ -1345,6 +1362,20 @@ class AcademyAssetActionView(APIView):
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
                 await report.astart()
+            elif action_slug == "claim_asset":
+
+                if asset.academy is not None:
+                    raise ValidationException(
+                        translation(
+                            "en",
+                            en=f"Asset {asset.slug} already belongs to academy {asset.academy.name}",
+                            es=f"El asset {asset.slug} ya pertenece a la academia {asset.academy.name}",
+                            slug="asset-already-claimed",
+                        )
+                    )
+                academy = await Academy.objects.filter(id=academy_id).afirst()
+                asset.academy = academy
+                await asset.asave()
 
             return True
 
@@ -1354,7 +1385,7 @@ class AcademyAssetActionView(APIView):
 
     @acapable_of("crud_asset")
     async def post(self, request, action_slug, academy_id=None):
-        if action_slug not in ["test", "pull", "push", "analyze_seo"]:
+        if action_slug not in ["test", "pull", "push", "analyze_seo", "claim_asset"]:
             raise ValidationException(f"Invalid action {action_slug}")
 
         # Check if 'assets' key exists
@@ -1370,12 +1401,17 @@ class AcademyAssetActionView(APIView):
         invalid_assets = []
 
         for asset_slug in assets:
-            asset = await Asset.objects.filter(slug__iexact=asset_slug, academy__id=academy_id).afirst()
+            asset = (
+                await Asset.objects.select_related("academy")
+                .filter(slug__iexact=asset_slug)
+                .filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+                .afirst()
+            )
             if asset is None:
                 invalid_assets.append(asset_slug)
                 continue
 
-            if not await self.create_asset_action(action_slug, asset, request.user, request.data):
+            if not await self.create_asset_action(action_slug, asset, request.user, request.data, academy_id):
                 invalid_assets.append(asset_slug)
 
         pulled_assets = list(set(assets).difference(set(invalid_assets)))
