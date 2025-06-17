@@ -336,6 +336,11 @@ class AcademyAssetSerializer(AssetSerializer):
     clusters = serpy.MethodField()
     previous_versions = serpy.MethodField()
 
+    academy = serpy.MethodField()
+
+    def get_academy(self, obj):
+        return obj.academy.id if obj.academy else None
+
     def get_clusters(self, obj):
         return [k.cluster.slug for k in obj.seo_keywords.all() if k.cluster is not None]
 
