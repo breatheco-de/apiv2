@@ -1191,7 +1191,8 @@ class AssetMeView(APIView, GenerateLookupsMixin):
         serializer = PostAssetSerializer(data=data, context={"request": request})
         if serializer.is_valid():
             instance = serializer.save()
-            if instance.readme_url and "github.com" in instance.readme_url:
+            # only pull if the readme raw is not already set
+            if instance.readme_url and "github.com" in instance.readme_url and instance.readme_raw is None:
                 async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1818,7 +1819,9 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         serializer = PostAcademyAssetSerializer(data=data, context={"request": request, "academy": academy_id})
         if serializer.is_valid():
             instance = serializer.save()
-            async_pull_from_github.delay(instance.slug)
+            # only pull if the readme raw is not already set
+            if instance.readme_url and "github.com" in instance.readme_url and instance.readme_raw is None:
+                async_pull_from_github.delay(instance.slug)
             return Response(AssetBigSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

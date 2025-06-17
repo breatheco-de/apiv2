@@ -1118,8 +1118,10 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                     repo_url += f"/{path_parts[0]}/{path_parts[1]}"
                 return repo_url
 
-            repo = get_repo_url(validated_data["readme_url"])
-            data["url"] = repo
+            # Only update url if readme_url is not None/empty
+            if validated_data["readme_url"]:
+                repo = get_repo_url(validated_data["readme_url"])
+                data["url"] = repo
 
         # Check if preview img is being deleted
         if "preview" in validated_data:
@@ -1231,8 +1233,10 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
                     repo_url += f"/{path_parts[0]}/{path_parts[1]}"
                 return repo_url
 
-            repo = get_repo_url(validated_data["readme_url"])
-            data["url"] = repo
+            # Only update url if readme_url is not None/empty
+            if validated_data["readme_url"]:
+                repo = get_repo_url(validated_data["readme_url"])
+                data["url"] = repo
 
         # Check if preview img is being deleted
         if "preview" in validated_data:
