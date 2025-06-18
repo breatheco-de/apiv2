@@ -318,7 +318,7 @@ class Asset(models.Model):
     category = models.ForeignKey(
         AssetCategory,
         on_delete=models.SET_NULL,
-        blank=False,
+        blank=True,
         null=True,
     )
 
