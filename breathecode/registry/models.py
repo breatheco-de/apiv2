@@ -778,7 +778,7 @@ class Asset(models.Model):
                     path=self.slug,
                     asset_type=self.asset_type,
                     asset=self,
-                    status_text="Invalid Readme URL",
+                    status_text=f"Invalid Readme URL with extension {extension}",
                 ).save()
         return readme
 
