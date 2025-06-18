@@ -40,6 +40,7 @@ from .models import (
 from .tasks import (
     async_download_readme_images,
     async_pull_from_github,
+    async_push_project_or_exercise_to_github,
     async_remove_img_from_cloud,
     async_test_asset,
     async_regenerate_asset_readme,
@@ -121,7 +122,7 @@ def async_regenerate_readme(modeladmin, request, queryset):
     queryset.update(cleaning_status="PENDING", cleaning_status_details="Starting to clean...")
     assets = queryset.all()
     for a in assets:
-        async_regenerate_asset_readme.delay(a.slug)
+        async_regenerate_asset_readme(a.slug)
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -290,6 +291,40 @@ def sync_telemetry_stats(modeladmin, request, queryset):
             messages.success(request, f"Queued telemetry sync for asset {asset.slug}")
         except Exception as e:
             messages.error(request, f"Error queueing telemetry sync for asset {asset.slug}: {str(e)}")
+
+
+@admin.display(description="Push PROJECT/EXERCISE assets to GitHub")
+def push_projects_or_exercises_to_github(modeladmin, request, queryset):
+    """Push selected PROJECT or EXERCISE assets to GitHub."""
+    assets = queryset.filter(asset_type__in=["PROJECT", "EXERCISE"])
+
+    if assets.count() == 0:
+        messages.error(
+            request, "No PROJECT or EXERCISE assets selected. This action only works with PROJECT and EXERCISE assets."
+        )
+        return
+
+    # Check if any non-PROJECT/EXERCISE assets were selected
+    total_selected = queryset.count()
+    if total_selected > assets.count():
+        skipped_count = total_selected - assets.count()
+        messages.warning(request, f"Skipped {skipped_count} assets that are not PROJECT or EXERCISE type.")
+
+    # Queue push tasks for valid assets
+    for asset in assets:
+        try:
+            asset.sync_status = "PENDING"
+            asset.status_text = "Queued for GitHub push..."
+            asset.save()
+
+            # async_push_project_or_exercise_to_github.delay(asset.slug, create_or_update=True)
+            async_push_project_or_exercise_to_github.delay(asset.slug, create_or_update=True)
+            messages.success(request, f"Queued GitHub push for asset {asset.slug}")
+        except Exception as e:
+            messages.error(request, f"Error queueing GitHub push for asset {asset.slug}: {str(e)}")
+
+    if assets.count() > 0:
+        messages.info(request, f"Queued {assets.count()} assets for GitHub push. Check sync status for progress.")
 
 
 class AssessmentFilter(admin.SimpleListFilter):
@@ -480,6 +515,7 @@ class AssetAdmin(admin.ModelAdmin):
             pull_content_from_github,
             pull_content_from_github_override_meta,
             push_content_to_github,
+            push_projects_or_exercises_to_github,
             seo_optimization_off,
             seo_optimization_on,
             seo_report,

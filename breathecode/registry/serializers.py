@@ -660,6 +660,9 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
             validated_data["category"] = category_translation
 
+        if data["category"] == "uncategorized":
+            validated_data["category"] = None
+
         alias = AssetAlias.objects.filter(slug=validated_data["slug"]).first()
         if alias is not None:
             raise ValidationException("Asset alias already exists with this slug")

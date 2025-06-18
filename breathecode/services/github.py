@@ -445,3 +445,71 @@ class Github:
         except Exception as e:
             logger.debug(f"Could not get repository information for {owner}/{repo}: {str(e)}")
             return None
+
+    def create_repository(self, owner: str, repo_name: str, description: str = "", private: bool = True):
+        """
+        Create a new repository under the given owner (user or organization).
+
+        Args:
+            owner: The owner (username or organization) under which to create the repository
+            repo_name: The name of the repository to create
+            description: Optional repository description
+            private: Whether the repository should be private (default: True)
+
+        Returns:
+            dict: Repository information from GitHub API
+        """
+        payload = {
+            "name": repo_name,
+            "description": description,
+            "private": private,
+            "auto_init": True,  # Initialize with README
+        }
+
+        logger.debug(f"Creating repository: owner={owner}, self.org={getattr(self, 'org', 'None')}")
+
+        # Create under organization only - no fallback to user account
+        logger.debug(f"Attempting to create repository under organization: {owner}")
+        try:
+            result = self.post(f"/orgs/{owner}/repos", request_data=payload)
+            logger.debug(f"Successfully created repository under organization {owner}")
+            return result
+        except Exception as org_error:
+            logger.error(f"Failed to create repository under organization {owner}: {str(org_error)}")
+            error_msg = str(org_error).lower()
+
+            if "not found" in error_msg:
+                raise Exception(
+                    f"Organization '{owner}' not found or you don't have permission to create repositories under it. Please verify the organization name and ensure your GitHub token has the necessary permissions."
+                )
+            elif "forbidden" in error_msg or "permission" in error_msg:
+                raise Exception(
+                    f"Permission denied: Your GitHub token doesn't have permission to create repositories under organization '{owner}'. Please ensure you have admin access to the organization."
+                )
+            else:
+                raise Exception(
+                    f"Failed to create repository '{repo_name}' under organization '{owner}': {str(org_error)}"
+                )
+
+    def create_file(self, owner: str, repo: str, file_path: str, content: str, message: str, branch: str = "main"):
+        """
+        Create a new file in a repository.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            file_path: Path where the file should be created
+            content: File content (will be base64 encoded)
+            message: Commit message
+            branch: Branch to commit to (default: "main")
+
+        Returns:
+            dict: Response from GitHub API
+        """
+        import base64
+
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+
+        payload = {"message": message, "content": encoded_content, "branch": branch}
+
+        return self.post(f"/repos/{owner}/{repo}/contents/{file_path}", request_data=payload)

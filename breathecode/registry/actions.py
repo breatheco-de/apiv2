@@ -317,10 +317,28 @@ def get_blob_content(repo, path_name, branch="main"):
             raise Exception(f"Error retrieving '{path_name}' from branch '{branch}': {str(e)}")
 
 
-def set_blob_content(repo, path_name, content, file_name, branch="main"):
+def set_blob_content(repo, path_name, content, file_name, branch="main", create_or_update=False, is_binary=False):
+    """
+    Upload content (text or binary) to GitHub repository.
 
-    if content is None or content == "":
-        raise Exception(f"Blob content is empty for {path_name}")
+    Args:
+        repo: GitHub repository object
+        path_name: Path where to store the file
+        content: Content to upload (string for text, bytes for binary)
+        file_name: Name of the file for commit message
+        branch: Branch to upload to
+        create_or_update: Whether to create file if it doesn't exist
+        is_binary: Whether the content is binary (images, etc.) or text
+
+    Returns:
+        GitHub API response or None if file not found and create_or_update=False
+    """
+    if is_binary:
+        if content is None or len(content) == 0:
+            raise Exception(f"Binary content is empty for {path_name}")
+    else:
+        if content is None or content == "":
+            raise Exception(f"Blob content is empty for {path_name}")
 
     # first get the branch reference
     ref = repo.get_git_ref(f"heads/{branch}")
@@ -329,11 +347,16 @@ def set_blob_content(repo, path_name, content, file_name, branch="main"):
     # look for path in tree
     file = [x for x in tree if x.path == path_name]
     if not file:
-        # well, not found..
-        return None
+        # file not found
+        if create_or_update:
+            # create new file - PyGithub handles base64 encoding automatically for binary content
+            return repo.create_file(path_name, f"Create {file_name}", content, branch=branch)
+        else:
+            # well, not found and not allowed to create
+            return None
 
-    # update
-    return repo.update_file(file[0].path, f"Update {file_name}", content, file[0].sha)
+    # update existing file - PyGithub handles base64 encoding automatically for binary content
+    return repo.update_file(file[0].path, f"Update {file_name}", content, file[0].sha, branch=branch)
 
 
 def get_screenshot_machine_params(url: str, dimension: str = "1200x630", **kwargs):
@@ -1672,3 +1695,389 @@ def add_syllabus_translations(_json: dict):
 
                     _json["days"][day_count]["technologies"] = list(unique_technologies.values())
     return _json
+
+
+def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organization_github_username=None):
+    """
+    Push a project or exercise asset to GitHub.
+
+    This function uploads the asset.config content as learn.json and all translation
+    READMEs to their respective locations in the GitHub repository.
+
+    The function automatically detects whether to create a new repository or update an existing one:
+    - If asset has readme_url or url pointing to GitHub -> UPDATE mode (regardless of create_or_update)
+    - If asset has no GitHub URLs and create_or_update=True -> CREATE mode
+    - If asset has no GitHub URLs and create_or_update=False -> ERROR (cannot update non-existent repo)
+
+    GitHub credentials are resolved in the following order:
+    1. asset.owner (if exists)
+    2. asset.author (if exists)
+    3. asset.academy.github_owner (if exists and asset has no owner/author)
+
+    Args:
+        asset_slug (str): The slug of the asset to push
+        create_or_update (bool): If True, allows creating repository when no GitHub URLs exist.
+                                If False, only allows updating existing repositories.
+        organization_github_username (str, optional): GitHub organization username for repo creation
+
+    Returns:
+        Asset: The updated asset object
+
+    Raises:
+        Exception: For various error conditions with translated messages
+    """
+    from capyc.core.i18n import translation
+    from breathecode.authenticate.models import AcademyAuthSettings
+    from breathecode.services.github import Github as GithubService
+
+    logger.debug(f"Push project/exercise {asset_slug} to github")
+
+    asset = None
+    try:
+        asset = Asset.objects.filter(slug=asset_slug).first()
+        if asset is None:
+            raise Exception(f"Asset with slug {asset_slug} not found when attempting to push to github")
+
+        # Validate asset type
+        if asset.asset_type not in ["PROJECT", "EXERCISE"]:
+            raise Exception(
+                translation(
+                    en=f"Asset type {asset.asset_type} is not supported. Only PROJECT and EXERCISE assets can be pushed to GitHub.",
+                    es=f"El tipo de asset {asset.asset_type} no está soportado. Solo assets de tipo PROJECT y EXERCISE se pueden subir a GitHub.",
+                )
+            )
+
+        asset.status_text = "Starting to push to GitHub..."
+        asset.sync_status = "PENDING"
+        asset.save()
+
+        # Determine operation mode based on existing URLs
+        has_existing_repo = bool(asset.readme_url and "github.com" in asset.readme_url) or bool(
+            asset.url and "github.com" in asset.url
+        )
+
+        if has_existing_repo:
+            # Repository exists, we're in update mode
+            operation_mode = "update"
+            logger.debug(f"Asset {asset_slug} has existing repository, using update mode")
+
+            # Ensure we have a valid readme_url for updates
+            if not asset.readme_url or "github.com" not in asset.readme_url:
+                raise Exception(
+                    translation(
+                        en=f"Missing or invalid readme_url on {asset_slug}, it must point to github.com for updates",
+                        es=f"readme_url faltante o inválida en {asset_slug}, debe apuntar a github.com para actualizaciones",
+                    )
+                )
+
+            # Set asset.url based on readme_url if empty
+            if not asset.url and asset.readme_url:
+                # Extract organization and repo name from readme_url
+                import re
+
+                result = re.search(r"https?:\/\/github\.com\/([\w\-]+)\/([\w\-]+)\/?", asset.readme_url)
+                if result:
+                    org_name = result.group(1)
+                    repo_name = result.group(2)
+                    asset.url = f"https://github.com/{org_name}/{repo_name}"
+                    asset.save()
+        else:
+            # No existing repository
+            if create_or_update:
+                # We're allowed to create a new repository
+                operation_mode = "create"
+                logger.debug(f"Asset {asset_slug} has no existing repository, using create mode")
+            else:
+                # We're not allowed to create, only update
+                raise Exception(
+                    translation(
+                        en=f"Asset {asset_slug} has no existing repository URLs (readme_url/url) and create_or_update=False. Cannot proceed with update-only mode.",
+                        es=f"El asset {asset_slug} no tiene URLs de repositorio existentes (readme_url/url) y create_or_update=False. No se puede proceder en modo solo actualización.",
+                    )
+                )
+
+        # Get owner credentials
+        owner = asset.owner
+
+        # If no owner/author, try to use academy's github_owner
+        if owner is None and asset.academy:
+            auth_settings = AcademyAuthSettings.objects.filter(academy=asset.academy).first()
+            if auth_settings and auth_settings.github_owner:
+                owner = auth_settings.github_owner
+                asset.owner = owner
+                asset.save()
+                logger.debug(f"Using academy's github_owner {owner.id} for asset {asset_slug}")
+
+        if owner is None:
+            raise Exception(
+                translation(
+                    en="Asset must have an owner, author, or academy with GitHub credentials",
+                    es="El asset debe tener un propietario, autor, o academia con credenciales de GitHub",
+                )
+            )
+
+        credentials = CredentialsGithub.objects.filter(user__id=owner.id).first()
+        if credentials is None:
+            raise Exception(
+                translation(
+                    en=f"GitHub credentials not found for user {owner.first_name} {owner.last_name} (id: {owner.id})",
+                    es=f"Credenciales de GitHub no encontradas para el usuario {owner.first_name} {owner.last_name} (id: {owner.id})",
+                )
+            )
+
+        # Initialize GitHub service
+        github_service = GithubService(token=credentials.token)
+        github = Github(credentials.token)
+
+        # Handle repository creation or access based on operation mode
+        if operation_mode == "create":
+            # Get organization username
+            org_username = organization_github_username
+            if not org_username and asset.academy:
+                auth_settings = AcademyAuthSettings.objects.filter(academy=asset.academy).first()
+                if auth_settings and auth_settings.github_username:
+                    org_username = auth_settings.github_username
+
+            if not org_username:
+                raise Exception(
+                    translation(
+                        en="Organization GitHub username is required for repository creation",
+                        es="Se requiere el nombre de usuario de GitHub de la organización para crear el repositorio",
+                    )
+                )
+
+            # Create repository
+            logger.debug(f"Creating repository {org_username}/{asset.slug}")
+            repo_data = github_service.create_repository(
+                owner=org_username,
+                repo_name=asset.slug,
+                description=asset.description or f"{asset.asset_type}: {asset.title}",
+                private=True,
+            )
+            logger.debug(f"Repository created successfully: {repo_data.get('html_url', 'Unknown URL')}")
+
+            # Set asset URLs based on created repository
+            repo_url = f"https://github.com/{org_username}/{asset.slug}"
+            asset.url = repo_url
+            asset.readme_url = f"{repo_url}/blob/main/README.md"
+            asset.save()
+
+            # Give GitHub a moment to fully initialize the repository
+            import time
+
+            time.sleep(2)
+
+            # Get the repo object for further operations
+            repo = github.get_repo(f"{org_username}/{asset.slug}")
+            logger.debug(f"Retrieved repository object: {repo.full_name}")
+        else:
+            # Update mode: use existing repository
+            org_name, repo_name, branch_name = asset.get_repo_meta()
+            repo = github.get_repo(f"{org_name}/{repo_name}")
+            logger.debug(f"Using existing repository {org_name}/{repo_name}")
+
+        # Upload preview image first (if exists)
+        if asset.preview and asset.config:
+            logger.debug(f"Uploading preview image for asset {asset.slug}")
+            try:
+                # Try to download the preview image directly first
+                preview_response = requests.get(asset.preview, stream=True, timeout=30)
+                image_content = None
+                image_base64 = None
+
+                if preview_response.status_code == 200:
+                    image_content = preview_response.content
+                    image_base64 = base64.b64encode(image_content).decode("utf-8")
+                    logger.debug(f"Successfully downloaded preview image directly from {asset.preview}")
+                else:
+                    logger.debug(
+                        f"Direct download failed (status {preview_response.status_code}), trying GitHub API fallback"
+                    )
+
+                    # Fallback: Try to download using GitHub API if it's a GitHub URL
+                    if "github.com" in asset.preview:
+                        try:
+                            from breathecode.services.github import Github as GithubService
+
+                            github_service = GithubService(token=credentials.token)
+                            url_info = github_service.parse_github_url(asset.preview)
+
+                            if url_info and url_info.get("path"):
+                                # Get the file from GitHub API
+                                github_repo = github.get_repo(f"{url_info['owner']}/{url_info['repo']}")
+                                blob_file = get_blob_content(
+                                    github_repo, url_info["path"], branch=url_info.get("branch", "main")
+                                )
+
+                                if blob_file:
+                                    # blob_file.content is already base64 encoded from GitHub API
+                                    image_base64 = blob_file.content
+                                    image_content = base64.b64decode(image_base64)
+                                    logger.debug(
+                                        f"Successfully downloaded preview image via GitHub API from {asset.preview}"
+                                    )
+                                else:
+                                    logger.warning(f"Could not find preview image file via GitHub API: {asset.preview}")
+                            else:
+                                logger.warning(f"Could not parse GitHub URL for preview image: {asset.preview}")
+
+                        except Exception as api_error:
+                            logger.warning(f"GitHub API fallback failed for preview image: {str(api_error)}")
+
+                if image_content and image_base64:
+                    # Determine image filename and extension
+                    import pathlib
+                    from urllib.parse import urlparse
+
+                    parsed_url = urlparse(asset.preview)
+                    path = parsed_url.path
+
+                    # Try to get extension from URL path
+                    extension = pathlib.Path(path).suffix
+                    if not extension:
+                        # Try to get extension from content-type header if available
+                        content_type = ""
+                        if preview_response.status_code == 200:
+                            content_type = preview_response.headers.get("content-type", "")
+
+                        if "png" in content_type:
+                            extension = ".png"
+                        elif "jpg" in content_type or "jpeg" in content_type:
+                            extension = ".jpg"
+                        elif "gif" in content_type:
+                            extension = ".gif"
+                        elif "svg" in content_type:
+                            extension = ".svg"
+                        else:
+                            extension = ".png"  # Default
+
+                    preview_filename = f"preview{extension}"
+
+                    # Upload image to repository
+                    try:
+                        result = set_blob_content(
+                            repo,
+                            preview_filename,
+                            image_content,
+                            preview_filename,
+                            create_or_update=True,
+                            is_binary=True,
+                        )
+
+                        if result and "commit" in result:
+                            # Update asset.config with new preview URL
+                            new_preview_url = f"{asset.url}/blob/main/{preview_filename}?raw=true"
+                            asset.config["preview"] = new_preview_url
+                            asset.preview = new_preview_url
+                            asset.save()
+                            logger.debug(
+                                f"Successfully uploaded preview image and updated config with URL: {new_preview_url}"
+                            )
+                        else:
+                            logger.warning(f"Preview image upload may have failed for {preview_filename}")
+
+                    except Exception as e:
+                        logger.warning(f"Failed to upload preview image {preview_filename}: {str(e)}")
+                        # Don't fail the entire process, just continue without updating preview
+                else:
+                    logger.warning(
+                        f"Could not download preview image from {asset.preview} using direct download or GitHub API fallback"
+                    )
+
+            except Exception as e:
+                logger.warning(f"Error processing preview image for asset {asset.slug}: {str(e)}")
+                # Don't fail the entire process, just continue
+
+        # Upload learn.json (asset.config)
+        if asset.config:
+            logger.debug(f"Uploading learn.json for asset {asset.slug}")
+            config_content = json.dumps(asset.config, indent=4)
+
+            # Determine config file location
+            config_files = ["learn.json", ".learn/learn.json", "bc.json", ".learn/bc.json"]
+            config_path = "learn.json"  # Default
+
+            # Try to find existing config file location
+            for config_file in config_files:
+                try:
+                    existing_file = get_blob_content(repo, config_file)
+                    if existing_file is not None:
+                        config_path = config_file
+                        logger.debug(f"Found existing config at {config_file}")
+                        break
+                except Exception:
+                    continue
+
+            # Upload or update config file
+            try:
+                logger.debug(f"Attempting to upload/update {config_path} in {repo.full_name}")
+                result = set_blob_content(repo, config_path, config_content, "learn.json", create_or_update=True)
+                if result and "commit" in result:
+                    asset.github_commit_hash = result["commit"].sha
+                    logger.debug(f"Successfully uploaded/updated {config_path}")
+            except Exception as e:
+                logger.error(f"Error in config file upload process for {config_path} in {repo.full_name}: {str(e)}")
+                # Handle any other GitHub API errors
+                raise Exception(f"Error uploading {config_path}: {str(e)}")
+
+        # Get all translations including the main asset
+        translations = list(asset.all_translations.all())
+        if asset not in translations:
+            translations.append(asset)
+
+        # Upload README files for each translation
+        for translation_asset in translations:
+            if not translation_asset.readme_raw:
+                logger.debug(f"Skipping {translation_asset.slug} - no readme_raw content")
+                continue
+
+            logger.debug(f"Uploading README for translation {translation_asset.slug}")
+
+            # Determine README filename based on language
+            lang = translation_asset.lang
+            if lang in ["us", "en", "", None]:
+                readme_filename = "README.md"
+            else:
+                readme_filename = f"README.{lang}.md"
+
+            # Decode the readme content
+            readme_content = base64.b64decode(translation_asset.readme_raw.encode("utf-8")).decode("utf-8")
+
+            # Upload or update README file
+            try:
+                logger.debug(f"Attempting to upload/update {readme_filename} in {repo.full_name}")
+                result = set_blob_content(repo, readme_filename, readme_content, readme_filename, create_or_update=True)
+                if result and "commit" in result:
+                    if translation_asset == asset:
+                        asset.github_commit_hash = result["commit"].sha
+                    logger.debug(f"Successfully uploaded/updated {readme_filename}")
+            except Exception as e:
+                logger.error(f"Error in README file upload process for {readme_filename} in {repo.full_name}: {str(e)}")
+                # Handle any other GitHub API errors
+                raise Exception(f"Error uploading {readme_filename}: {str(e)}")
+
+        asset.status_text = "Successfully pushed to GitHub"
+        asset.sync_status = "OK"
+        asset.last_synch_at = timezone.now()
+        asset.save()
+        logger.debug(f"Successfully pushed asset {asset_slug} to GitHub")
+
+        return asset
+
+    except Exception as e:
+        logger.exception(e)
+        message = str(e).replace('"', "'")
+
+        logger.error(f"Error pushing {asset_slug} to GitHub: " + message)
+
+        if asset is not None:
+            asset.status_text = message
+            asset.sync_status = "ERROR"
+            asset.save()
+
+        raise e
+
+
+@sync_to_async
+def apush_project_or_exercise_to_github(asset_slug, create_or_update=False, organization_github_username=None):
+    return push_project_or_exercise_to_github(asset_slug, create_or_update, organization_github_username)

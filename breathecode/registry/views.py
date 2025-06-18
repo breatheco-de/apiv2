@@ -44,6 +44,7 @@ from .actions import (
     aclean_asset_readme,
     apull_from_github,
     apush_to_github,
+    apush_project_or_exercise_to_github,
     ascan_asset_originality,
     atest_asset,
     test_asset,
@@ -1100,13 +1101,19 @@ class AssetMeView(APIView, GenerateLookupsMixin):
         for data in data_list:
 
             if "technologies" in data and len(data["technologies"]) > 0 and isinstance(data["technologies"][0], str):
+                found_technology_slugs = list(
+                    AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list("slug", flat=True)
+                )
+                not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+
+                if not_found_technologies:
+                    raise ValidationException(
+                        f"The following technologies were not found: {', '.join(not_found_technologies)}"
+                    )
+
                 technology_ids = AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list(
                     "pk", flat=True
                 )
-                delta = len(data["technologies"]) - len(technology_ids)
-                if delta != 0:
-                    raise ValidationException(f"{delta} of the assigned technologies for this asset are not found")
-
                 data["technologies"] = technology_ids
 
             if "seo_keywords" in data and len(data["seo_keywords"]) > 0:
@@ -1177,15 +1184,21 @@ class AssetMeView(APIView, GenerateLookupsMixin):
             )
 
         if "technologies" in data and len(data["technologies"]) > 0 and isinstance(data["technologies"][0], str):
+            found_technology_slugs = list(
+                AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list("slug", flat=True)
+            )
+            not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+
+            if not_found_technologies:
+                raise ValidationException(
+                    f"The following technologies were not found: {', '.join(not_found_technologies)}"
+                )
+
             technology_ids = (
                 AssetTechnology.objects.filter(slug__in=data["technologies"])
                 .values_list("pk", flat=True)
                 .order_by("sort_priority")
             )
-            delta = len(data["technologies"]) - len(technology_ids)
-            if delta != 0:
-                raise ValidationException(f"{delta} of the assigned technologies for this asset are not found")
-
             data["technologies"] = technology_ids
 
         serializer = PostAssetSerializer(data=data, context={"request": request})
@@ -1247,7 +1260,7 @@ class AcademyAssetActionView(APIView):
 
         action_slug = data.get("action_slug")
 
-        possible_actions = ["test", "pull", "push", "analyze_seo", "clean", "originality", "claim_asset"]
+        possible_actions = ["test", "pull", "push", "analyze_seo", "clean", "originality", "claim_asset", "create_repo"]
         if action_slug not in possible_actions:
             raise ValidationException(f"Invalid action {action_slug}")
         try:
@@ -1267,6 +1280,17 @@ class AcademyAssetActionView(APIView):
                     )
 
                 await apush_to_github(asset.slug, owner=user)
+            elif action_slug == "create_repo":
+                if asset.asset_type not in ["PROJECT", "EXERCISE"]:
+                    raise ValidationException(
+                        f"Asset type {asset.asset_type} cannot use create_repo action. Only PROJECT and EXERCISE assets can create repositories."
+                    )
+
+                # Extract organization_github_username from data if provided
+                organization_github_username = data.get("organization_github_username")
+                await apush_project_or_exercise_to_github(
+                    asset.slug, create_or_update=True, organization_github_username=organization_github_username
+                )
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
                 await report.astart()
@@ -1360,6 +1384,17 @@ class AcademyAssetActionView(APIView):
                     )
 
                 await apush_to_github(asset.slug, owner=user)
+            elif action_slug == "create_repo":
+                if asset.asset_type not in ["PROJECT", "EXERCISE"]:
+                    raise ValidationException(
+                        f"Asset type {asset.asset_type} cannot use create_repo action. Only PROJECT and EXERCISE assets can create repositories."
+                    )
+
+                # Extract organization_github_username from data if provided
+                organization_github_username = data.get("organization_github_username")
+                await apush_project_or_exercise_to_github(
+                    asset.slug, create_or_update=True, organization_github_username=organization_github_username
+                )
             elif action_slug == "analyze_seo":
                 report = SEOAnalyzer(asset)
                 await report.astart()
@@ -1386,7 +1421,7 @@ class AcademyAssetActionView(APIView):
 
     @acapable_of("crud_asset")
     async def post(self, request, action_slug, academy_id=None):
-        if action_slug not in ["test", "pull", "push", "analyze_seo", "claim_asset"]:
+        if action_slug not in ["test", "pull", "push", "analyze_seo", "claim_asset", "create_repo"]:
             raise ValidationException(f"Invalid action {action_slug}")
 
         # Check if 'assets' key exists
@@ -1726,13 +1761,19 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
         for data in data_list:
 
             if "technologies" in data and len(data["technologies"]) > 0 and isinstance(data["technologies"][0], str):
+                found_technology_slugs = list(
+                    AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list("slug", flat=True)
+                )
+                not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+
+                if not_found_technologies:
+                    raise ValidationException(
+                        f"The following technologies were not found: {', '.join(not_found_technologies)}"
+                    )
+
                 technology_ids = AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list(
                     "pk", flat=True
                 )
-                delta = len(data["technologies"]) - len(technology_ids)
-                if delta != 0:
-                    raise ValidationException(f"{delta} of the assigned technologies for this lesson are not found")
-
                 data["technologies"] = technology_ids
 
             if "seo_keywords" in data and len(data["seo_keywords"]) > 0:
@@ -1805,15 +1846,21 @@ class AcademyAssetView(APIView, GenerateLookupsMixin):
             )
 
         if "technologies" in data and len(data["technologies"]) > 0 and isinstance(data["technologies"][0], str):
+            found_technology_slugs = list(
+                AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list("slug", flat=True)
+            )
+            not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+
+            if not_found_technologies:
+                raise ValidationException(
+                    f"The following technologies were not found: {', '.join(not_found_technologies)}"
+                )
+
             technology_ids = (
                 AssetTechnology.objects.filter(slug__in=data["technologies"])
                 .values_list("pk", flat=True)
                 .order_by("sort_priority")
             )
-            delta = len(data["technologies"]) - len(technology_ids)
-            if delta != 0:
-                raise ValidationException(f"{delta} of the assigned technologies for this asset are not found")
-
             data["technologies"] = technology_ids
 
         serializer = PostAcademyAssetSerializer(data=data, context={"request": request, "academy": academy_id})
