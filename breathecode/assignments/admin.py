@@ -5,6 +5,7 @@ from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 from django import forms
+from django.db import models
 
 from breathecode.assignments.tasks import async_learnpack_webhook
 from breathecode.authenticate.models import Token
@@ -114,14 +115,104 @@ class UserAttachmentAdmin(admin.ModelAdmin):
     list_filter = ["mime"]
 
 
+class HasLiveUrlFilter(admin.SimpleListFilter):
+    title = "Has Live URL"
+    parameter_name = "has_live_url"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Yes"),
+            ("no", "No"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(public_url__isnull=False).exclude(public_url="")
+        if self.value() == "no":
+            return queryset.filter(models.Q(public_url__isnull=True) | models.Q(public_url=""))
+        return queryset
+
+
+class HasGithubUrlFilter(admin.SimpleListFilter):
+    title = "Has GitHub URL"
+    parameter_name = "has_github_url"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Yes"),
+            ("no", "No"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(repo_url__isnull=False).exclude(repo_url="")
+        if self.value() == "no":
+            return queryset.filter(models.Q(repo_url__isnull=True) | models.Q(repo_url=""))
+        return queryset
+
+
+class HasScreenshotFilter(admin.SimpleListFilter):
+    title = "Has Screenshot"
+    parameter_name = "has_screenshot"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Yes"),
+            ("no", "No"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(screenshot__isnull=False).exclude(screenshot="")
+        if self.value() == "no":
+            return queryset.filter(models.Q(screenshot__isnull=True) | models.Q(screenshot=""))
+        return queryset
+
+
 @admin.register(FinalProject)
 class FinalProjectAdmin(admin.ModelAdmin):
-    list_display = ["name", "cohort", "project_status", "revision_status", "visibility_status"]
+    list_display = [
+        "name",
+        "cohort",
+        "project_status",
+        "revision_status",
+        "visibility_status",
+        "github_url",
+        "live_url",
+        "has_screenshot",
+    ]
     search_fields = ("name", "cohort__slug", "repo_url", "members__email")
     filter_horizontal = ["members"]
     raw_id_fields = ["cohort"]
-    list_filter = ["project_status", "revision_status", "visibility_status", "cohort__academy__slug"]
+    list_filter = [
+        "project_status",
+        "revision_status",
+        "visibility_status",
+        "cohort__academy__slug",
+        HasLiveUrlFilter,
+        HasGithubUrlFilter,
+        HasScreenshotFilter,
+    ]
     # actions = [mark_as_delivered, mark_as_approved, mark_as_rejected, mark_as_ignored]
+
+    def github_url(self, obj):
+        if obj.repo_url:
+            return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.repo_url}'>🔗 GitHub</a>")
+        return "-"
+
+    def live_url(self, obj):
+        if obj.public_url:
+            return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.public_url}'>🌐 Live</a>")
+        return "-"
+
+    def has_screenshot(self, obj):
+        if obj.screenshot:
+            return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.screenshot}'>📸 View</a>")
+        return "-"
+
+    github_url.short_description = "GitHub"
+    live_url.short_description = "Live URL"
+    has_screenshot.short_description = "Screenshot"
 
     # def delivery_url(self, obj):
     #     token, created = Token.get_or_create(obj.user, token_type='temporal')
