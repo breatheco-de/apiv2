@@ -108,8 +108,16 @@ def test_url(url, allow_relative=False, allow_hash=True):
             raise Exception(f"Invalid URL format (Missing Schema?): {url}")
 
         try:
+            # Try HEAD request first
             response = requests.head(url, allow_redirects=True, timeout=25)
             print(f"🔍 Validating external URL: {url} with status code {response.status_code}")
+
+            # If HEAD request fails with 405 (Method Not Allowed) or 404, try GET as fallback
+            if response.status_code in [405, 404]:
+                print(f"🔄 HEAD request failed with {response.status_code}, trying GET request as fallback")
+                response = requests.get(url, allow_redirects=True, timeout=25)
+                print(f"🔍 GET fallback for {url} returned status code {response.status_code}")
+
             if response.status_code not in [200, 302, 301, 307]:
                 raise Exception(f"Invalid URL with code {response.status_code}: {url}")
 
@@ -134,10 +142,20 @@ async def atest_url(url, allow_relative=False, allow_hash=True):
 
         try:
             async with aiohttp.ClientSession() as session:
+                # Try HEAD request first
                 async with session.head(
                     url, allow_redirects=False, timeout=aiohttp.ClientTimeout(total=25)
                 ) as response:
-                    if response.status not in [200, 302, 301, 307]:
+                    # If HEAD request fails with 405 (Method Not Allowed) or 404, try GET as fallback
+                    if response.status in [405, 404]:
+                        print(f"🔄 HEAD request failed with {response.status}, trying GET request as fallback")
+                        async with session.get(
+                            url, allow_redirects=False, timeout=aiohttp.ClientTimeout(total=25)
+                        ) as get_response:
+                            print(f"🔍 GET fallback for {url} returned status code {get_response.status}")
+                            if get_response.status not in [200, 302, 301, 307]:
+                                raise Exception(f"Invalid URL with code {get_response.status}: {url}")
+                    elif response.status not in [200, 302, 301, 307]:
                         raise Exception(f"Invalid URL with code {response.status}: {url}")
 
         except asyncio.TimeoutError:
