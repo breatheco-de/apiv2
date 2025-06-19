@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import re
+from datetime import timedelta
 from typing import Any, Optional
 
 import requests
@@ -136,14 +137,22 @@ def async_pull_project_dependencies(asset_slug):
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)
-def async_test_asset(asset_slug, log_errors=True, reset_errors=True):
+def async_test_asset(asset_slug, log_errors=True, reset_errors=True, force=False):
+    """
+    This task is used to test an asset.
+    force: If True, it will test the asset even if it was tested in the last 30 days.
+    log_errors: If True, it will log the errors in the AssetErrorLog model.
+    reset_errors: If True, it will erase all previous errors about this asset.
+    """
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
         logger.debug(f"Error: Error testing asset with slug {asset_slug}, does not exist.")
 
     try:
-        if test_asset(a, log_errors=log_errors, reset_errors=reset_errors):
-            return True
+        # if the asset was tested in the last 30 days, we don't need to test it again unless force is True
+        if a.last_test_at is not None and a.last_test_at > timezone.now() - timedelta(days=30) and not force:
+            if test_asset(a, log_errors=log_errors, reset_errors=reset_errors):
+                return True
     except Exception:
         logger.exception(f"Error testing asset {a.slug}")
 

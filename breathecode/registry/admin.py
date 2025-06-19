@@ -203,7 +203,7 @@ def async_test_asset_integrity(modeladmin, request, queryset):
 
     for a in assets:
         try:
-            async_test_asset.delay(a.slug)
+            async_test_asset.delay(a.slug, log_errors=True, reset_errors=True, force=True)
         except Exception as e:
             messages.error(request, a.slug + ": " + str(e))
 
@@ -214,7 +214,7 @@ def test_asset_integrity(modeladmin, request, queryset):
 
     for a in assets:
         try:
-            async_test_asset(a.slug)
+            async_test_asset(a.slug, log_errors=True, reset_errors=True, force=True)
         except Exception as e:
             messages.error(request, a.slug + ": " + str(e))
 

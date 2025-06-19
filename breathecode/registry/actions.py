@@ -1516,6 +1516,11 @@ def pull_quiz_asset(github, asset: Asset):
 
 
 def test_asset(asset: Asset, log_errors=False, reset_errors=False):
+    """
+    This function is used to test an asset.
+    log_errors: If True, it will log the errors in the AssetErrorLog model.
+    reset_errors: If True, it will erase all previous errors about this asset.
+    """
     try:
 
         validator = None
