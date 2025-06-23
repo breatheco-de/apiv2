@@ -389,6 +389,8 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             logs[academy.id] = ls
 
         provisioning_bill = context["provisioning_bills"].get(academy.id, None)
+        provisioning_bills[academy.id] = provisioning_bill
+
         if not provisioning_bill and (
             provisioning_bill := ProvisioningBill.objects.filter(
                 academy=academy, status="PENDING", hash=context["hash"]
