@@ -355,7 +355,9 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     if not academies:
         not_found = True
         github_academy_users = GithubAcademyUser.objects.filter(
-            username=field["username"], storage_status="PAYMENT_CONFLICT", storage_action="IGNORE"
+            Q(storage_status="PAYMENT_CONFLICT") | Q(storage_status="UNKNOWN"),
+            username=field["username"],
+            storage_action="IGNORE",
         )
 
         academies = [x.academy for x in github_academy_users]
