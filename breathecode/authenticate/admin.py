@@ -70,7 +70,7 @@ def send_reset_password(modeladmin, request, queryset):
 @admin.register(CredentialsGithub)
 class CredentialsGithubAdmin(admin.ModelAdmin):
     list_display = ("github_id", "user_id", "email", "token")
-    search_fields = ["user__first_name", "user__last_name", "user__email", "email"]
+    search_fields = ["user__first_name", "user__last_name", "user__email", "email", "username"]
     raw_id_fields = ["user"]
 
 
