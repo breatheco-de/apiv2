@@ -304,10 +304,10 @@ def handle_pending_github_user(
 
 def get_multiplier() -> Decimal:
     try:
-        x = os.getenv("PROVISIONING_MULTIPLIER", "1.3").replace(",", ".")
+        x = os.getenv("PROVISIONING_MULTIPLIER", "1.1").replace(",", ".")
         x = Decimal(x)
     except Exception:
-        x = Decimal("1.3")
+        x = Decimal("1.1")
 
     return x
 
@@ -355,7 +355,9 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     if not academies:
         not_found = True
         github_academy_users = GithubAcademyUser.objects.filter(
-            username=field["username"], storage_status="PAYMENT_CONFLICT", storage_action="IGNORE"
+            Q(storage_status="PAYMENT_CONFLICT") | Q(storage_status="UNKNOWN"),
+            username=field["username"],
+            storage_action="IGNORE",
         )
 
         academies = [x.academy for x in github_academy_users]
@@ -389,6 +391,8 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             logs[academy.id] = ls
 
         provisioning_bill = context["provisioning_bills"].get(academy.id, None)
+        provisioning_bills[academy.id] = provisioning_bill
+
         if not provisioning_bill and (
             provisioning_bill := ProvisioningBill.objects.filter(
                 academy=academy, status="PENDING", hash=context["hash"]
