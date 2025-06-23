@@ -304,10 +304,10 @@ def handle_pending_github_user(
 
 def get_multiplier() -> Decimal:
     try:
-        x = os.getenv("PROVISIONING_MULTIPLIER", "1.3").replace(",", ".")
+        x = os.getenv("PROVISIONING_MULTIPLIER", "1.1").replace(",", ".")
         x = Decimal(x)
     except Exception:
-        x = Decimal("1.3")
+        x = Decimal("1.1")
 
     return x
 
