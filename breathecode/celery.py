@@ -132,7 +132,7 @@ def get_workers_amount():
     return dynos * workers
 
 
-if os.getenv("ENV") != "test"  and (WORKER := os.getenv("CELERY_POOL", "prefork")) not in ["prefork"]:
+if os.getenv("ENV") != "test" and (WORKER := os.getenv("CELERY_POOL", "prefork")) not in ["prefork"]:
     raise ValueError(f'CELERY_POOL must be "prefork" but got {WORKER} that is not supported yet.')
 
 
