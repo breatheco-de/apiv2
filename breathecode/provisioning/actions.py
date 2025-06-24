@@ -321,6 +321,13 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
 
     field["Multiplier"] = Decimal("1.0")  # Use Decimal instead of integer
 
+    # Initialize variables
+    errors = []
+    warnings = []
+    logs = {}
+    provisioning_bills = {}
+    provisioning_vendor = None
+
     # change this
     date = datetime.fromisoformat(field["formatted_date"])
 
@@ -353,26 +360,48 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         academies = [x.academy_user.academy for x in github_academy_user_log]
 
     if not academies:
-        not_found = True
-        github_academy_users = GithubAcademyUser.objects.filter(
-            Q(storage_status="PAYMENT_CONFLICT") | Q(storage_status="UNKNOWN"),
-            username=field["username"],
-            storage_action="IGNORE",
-        )
+        credentials = CredentialsGithub.objects.filter(username__iexact=field["username"]).first()
+        if credentials and credentials.user and credentials.user.email:
+            email_academy_users = GithubAcademyUser.objects.filter(
+                user=credentials.user, storage_status="SYNCHED", storage_action="ADD"
+            )
+            academies = [x.academy for x in email_academy_users]
 
-        academies = [x.academy for x in github_academy_users]
+    if not academies:
+        not_found = True
+
+    if not academies and GithubAcademyUser.objects.filter(username=field["username"]).count():
+        invited_synched = GithubAcademyUser.objects.filter(
+            username=field["username"], storage_status="SYNCHED", storage_action="INVITE"
+        )
+        if invited_synched.exists():
+            academies = [x.academy for x in invited_synched]
+            warnings.append(
+                f'User {field["username"]} assigned to academies ({len(academies)}) that had SYNCHED+INVITE status with this user.'
+            )
+
+        elif GithubAcademyUser.objects.filter(username=field["username"], storage_status="SYNCHED").exists():
+            last_synched_github_academy_user = GithubAcademyUser.objects.filter(
+                username=field["username"], storage_status="SYNCHED"
+            )
+            academies = [x.academy for x in last_synched_github_academy_user]
+            warnings.append(
+                f'User {field["username"]} assigned to academies ({len(academies)}) that had SYNCHED status with this user.'
+            )
+
+        else:
+            all_github_academy_users = GithubAcademyUser.objects.filter(username=field["username"])
+            academies = [x.academy for x in all_github_academy_users]
+            warnings.append(
+                f'User {field["username"]} has GithubAcademyUser records but none with SYNCHED status. '
+                f"Assigning to all academies ({len(academies)}) for investigation."
+            )
 
     if not academies and not GithubAcademyUser.objects.filter(username=field["username"]).count():
         academies = handle_pending_github_user(field["organization"], field["username"], date)
 
     if not not_found and academies:
         academies = random.choices(academies, k=1)
-
-    errors = []
-    warnings = []
-    logs = {}
-    provisioning_bills = {}
-    provisioning_vendor = None
 
     provisioning_vendor = context["provisioning_vendors"].get("Codespaces", None)
     if not provisioning_vendor:
