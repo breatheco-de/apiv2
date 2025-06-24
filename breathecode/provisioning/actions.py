@@ -367,6 +367,9 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
             )
             academies = [x.academy for x in email_academy_users]
 
+    if not academies:
+        not_found = True
+
     if not academies and GithubAcademyUser.objects.filter(username=field["username"]).count():
         invited_synched = GithubAcademyUser.objects.filter(
             username=field["username"], storage_status="SYNCHED", storage_action="INVITE"
