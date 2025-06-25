@@ -605,6 +605,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "delete_calendly_organization",
                 "get_academy_feedback_settings",
                 "crud_academy_feedback_settings",
+                "get_academy_auth_settings",
             ],
         }
     )
