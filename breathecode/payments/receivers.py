@@ -101,16 +101,20 @@ def grant_plan_permissions_receiver(
 
 @receiver(revoke_plan_permissions, sender=Subscription)
 @receiver(revoke_plan_permissions, sender=PlanFinancing)
-def revoke_plan_permissions_receiver(
-    sender: Type[Subscription] | Type[PlanFinancing], instance: Subscription | PlanFinancing, **kwargs
-):
+def revoke_plan_permissions_receiver(sender, instance, **kwargs):
     """
-    Remove the user from the Paid Student group when the status changes to CANCELLED, DEPRECATED,
-    PAYMENT_ISSUE, ERROR or EXPIRED
+    Remove the user from the Paid Student group only if the user has
+    NO other active subscriptions or plan financings.
     """
     group = Group.objects.filter(name="Paid Student").first()
-    if group and instance.user.groups.filter(name="Paid Student").exists():
-        instance.user.groups.remove(group)
+    user = instance.user
+
+    has_active_subscription = Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE).exists()
+    has_active_planfinancing = PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE).exists()
+
+    if group and user.groups.filter(name="Paid Student").exists():
+        if not (has_active_subscription or has_active_planfinancing):
+            user.groups.remove(group)
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
