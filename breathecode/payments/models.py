@@ -1344,7 +1344,8 @@ class PlanFinancing(AbstractIOweYou):
         if on_create:
             signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
             signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
-        elif old_instance and old_instance.status != self.status:
+
+        if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
             elif self.status in revoke_statuses:
@@ -1424,7 +1425,8 @@ class Subscription(AbstractIOweYou):
         if on_create:
             signals.subscription_created.send_robust(instance=self, sender=self.__class__)
             signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
-        elif old_instance and old_instance.status != self.status:
+
+        if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
             elif self.status in revoke_statuses:
