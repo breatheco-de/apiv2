@@ -1260,6 +1260,30 @@ class UserCouponView(APIView):
         return Response(serializer.data)
 
 
+class MeUserCouponsView(APIView):
+    """Get coupons available to the current user (including user-restricted coupons)."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        """Get all coupons that the current user can use."""
+        handler = self.extensions(request)
+        user = request.user
+        utc_now = timezone.now()
+
+        # Get coupons restricted to this user
+        user_restricted_coupons = Coupon.objects.filter(
+            Q(offered_at=None) | Q(offered_at__lte=utc_now),
+            Q(expires_at=None) | Q(expires_at__gte=utc_now),
+            allowed_user=user,
+        ).exclude(how_many_offers=0)
+
+        coupons = handler.queryset(user_restricted_coupons)
+        serializer = GetCouponSerializer(coupons, many=True)
+
+        return handler.response(serializer.data)
+
+
 class AcademyInvoiceView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
@@ -1288,11 +1312,6 @@ class AcademyInvoiceView(APIView):
         serializer = GetInvoiceSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
-
-    # @capable_of("crud_invoice")
-    # def post(self, request, academy_id=None):
-    #     add_invoice_externally_managed(request, request.user, academy_id)
-    #     return Response({"status": "ok"})
 
 
 class CardView(APIView):
@@ -1339,6 +1358,65 @@ class CardView(APIView):
             raise ValidationException(str(e), code=400)
 
         return Response({"status": "ok"})
+
+
+class V2CardView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def post(self, request):
+        lang = get_user_language(request)
+        academy = get_academy_from_body(request.data, lang=lang, raise_exception=False)
+
+        s = Stripe(academy=academy)
+        s.set_language(lang)
+
+        token = request.data.get("token")
+        card_number = request.data.get("card_number")
+        exp_month = request.data.get("exp_month")
+        exp_year = request.data.get("exp_year")
+        cvc = request.data.get("cvc")
+
+        if not ((card_number and exp_month and exp_year and cvc) or token):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing card information",
+                    es="Falta la información de la tarjeta",
+                    slug="missing-card-information",
+                ),
+                code=404,
+            )
+
+        if academy:
+            s.add_contact(request.user)
+
+        try:
+            if not token:
+                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+
+            success, errors, details = s.update_all_payment_methods(
+                user=request.user, token=token, card_number=card_number, exp_month=exp_month, exp_year=exp_year, cvc=cvc
+            )
+
+            if not success:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Failed to update payment method",
+                        es="Error al actualizar el método de pago",
+                        slug="payment-method-update-failed",
+                    ),
+                    code=400,
+                )
+
+        except ValidationException as e:
+            raise e
+        except PaymentException as e:
+            raise e
+        except Exception as e:
+            raise ValidationException(str(e), code=400)
+
+        return Response({"status": "ok", "details": details})
 
 
 class ServiceBlocked(APIView):

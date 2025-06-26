@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
+from django.contrib.auth.models import Group
 
 from breathecode.authenticate.models import GoogleWebhook
 from breathecode.authenticate.signals import google_webhook_saved
@@ -12,13 +13,15 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments import tasks
 
-from .models import Consumable, Plan
+from .models import Consumable, Plan, PlanFinancing, Subscription
 from .signals import (
     consume_service,
     grant_service_permissions,
     lose_service_permissions,
     reimburse_service_units,
     update_plan_m2m_service_items,
+    grant_plan_permissions,
+    revoke_plan_permissions,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,6 +83,38 @@ def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consu
     for group in groups:
         if not instance.user.groups.filter(name=group.name).exists():
             instance.user.groups.add(group)
+
+
+@receiver(grant_plan_permissions, sender=Subscription)
+@receiver(grant_plan_permissions, sender=PlanFinancing)
+def grant_plan_permissions_receiver(
+    sender: Type[Subscription] | Type[PlanFinancing], instance: Subscription | PlanFinancing, **kwargs
+):
+    """
+    Add the user to the Paid Student group when a subscription/plan financing is created
+    or when its status changes to ACTIVE
+    """
+    group = Group.objects.filter(name="Paid Student").first()
+    if group and not instance.user.groups.filter(name="Paid Student").exists():
+        instance.user.groups.add(group)
+
+
+@receiver(revoke_plan_permissions, sender=Subscription)
+@receiver(revoke_plan_permissions, sender=PlanFinancing)
+def revoke_plan_permissions_receiver(sender, instance, **kwargs):
+    """
+    Remove the user from the Paid Student group only if the user has
+    NO other active subscriptions or plan financings.
+    """
+    group = Group.objects.filter(name="Paid Student").first()
+    user = instance.user
+
+    has_active_subscription = Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE).exists()
+    has_active_planfinancing = PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE).exists()
+
+    if group and user.groups.filter(name="Paid Student").exists():
+        if not (has_active_subscription or has_active_planfinancing):
+            user.groups.remove(group)
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
