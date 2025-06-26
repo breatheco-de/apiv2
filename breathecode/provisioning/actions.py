@@ -328,7 +328,6 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
     provisioning_bills = {}
     provisioning_vendor = None
 
-    # change this
     date = datetime.fromisoformat(field["formatted_date"])
 
     if isinstance(field["username"], float):
