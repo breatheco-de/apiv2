@@ -319,7 +319,7 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         Decimal(".000000001"), rounding=ROUND_HALF_UP
     )
 
-    field["Multiplier"] = Decimal("1.0")  # Use Decimal instead of integer
+    field["Multiplier"] = Decimal("1.1")  # Use Decimal instead of integer
 
     # Initialize variables
     errors = []

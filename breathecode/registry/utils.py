@@ -18,6 +18,8 @@ class AssetErrorLogType:
     EMPTY_CATEGORY = "empty-category"
     INVALID_OWNER = "invalid-owner"
     MISSING_TECHNOLOGIES = "missing-technologies"
+    MISSING_DIFFICULTY = "missing-difficulty"
+    MISSING_TRANSLATIONS = "missing-translations"
     POOR_DESCRIPTION = "poor-description"
     EMPTY_HTML = "empty-html"
     INVALID_URL = "invalid-url"
@@ -54,6 +56,30 @@ def get_urls_from_html(html_content):
     return urls
 
 
+def is_internal_github_url(url, asset_readme_url):
+    """
+    Check if a URL points to the same GitHub repository as the asset's readme_url.
+    Internal URLs are those that point to blobs, files, or paths within the same repository.
+    Uses the Github service's parse_github_url method to avoid code duplication.
+    """
+    if not url or not asset_readme_url:
+        return False
+
+    # Use Github service to parse URLs (we don't need authentication for parsing)
+    github_service = Github()
+
+    # Parse both URLs
+    url_parsed = github_service.parse_github_url(url)
+    readme_parsed = github_service.parse_github_url(asset_readme_url)
+
+    # If either URL is not a GitHub URL, it's not internal
+    if not (url_parsed and readme_parsed):
+        return False
+
+    # Check if both URLs point to the same repository
+    return url_parsed["owner"] == readme_parsed["owner"] and url_parsed["repo"] == readme_parsed["repo"]
+
+
 def _shared_test_url(url, allow_relative=False, allow_hash=True):
     if url is None or url == "":
         raise Exception("Empty url")
@@ -82,7 +108,16 @@ def test_url(url, allow_relative=False, allow_hash=True):
             raise Exception(f"Invalid URL format (Missing Schema?): {url}")
 
         try:
+            # Try HEAD request first
             response = requests.head(url, allow_redirects=True, timeout=25)
+            print(f"🔍 Validating external URL: {url} with status code {response.status_code}")
+
+            # If HEAD request fails with 405 (Method Not Allowed) or 404, try GET as fallback
+            if response.status_code in [405, 404]:
+                print(f"🔄 HEAD request failed with {response.status_code}, trying GET request as fallback")
+                response = requests.get(url, allow_redirects=True, timeout=25)
+                print(f"🔍 GET fallback for {url} returned status code {response.status_code}")
+
             if response.status_code not in [200, 302, 301, 307]:
                 raise Exception(f"Invalid URL with code {response.status_code}: {url}")
 
@@ -107,10 +142,20 @@ async def atest_url(url, allow_relative=False, allow_hash=True):
 
         try:
             async with aiohttp.ClientSession() as session:
+                # Try HEAD request first
                 async with session.head(
                     url, allow_redirects=False, timeout=aiohttp.ClientTimeout(total=25)
                 ) as response:
-                    if response.status not in [200, 302, 301, 307]:
+                    # If HEAD request fails with 405 (Method Not Allowed) or 404, try GET as fallback
+                    if response.status in [405, 404]:
+                        print(f"🔄 HEAD request failed with {response.status}, trying GET request as fallback")
+                        async with session.get(
+                            url, allow_redirects=False, timeout=aiohttp.ClientTimeout(total=25)
+                        ) as get_response:
+                            print(f"🔍 GET fallback for {url} returned status code {get_response.status}")
+                            if get_response.status not in [200, 302, 301, 307]:
+                                raise Exception(f"Invalid URL with code {get_response.status}: {url}")
+                    elif response.status not in [200, 302, 301, 307]:
                         raise Exception(f"Invalid URL with code {response.status}: {url}")
 
         except asyncio.TimeoutError:
@@ -139,24 +184,53 @@ class AssetValidator:
     warns = []
     errors = []
 
-    def __init__(self, _asset, log_errors=False):
+    def __init__(self, _asset, log_errors=False, reset_errors=False):
         from breathecode.registry.models import Asset
 
         self.asset: Asset = _asset
         self.log_errors = log_errors
+        self.reset_errors = reset_errors
         self.warns = self.base_warns + self.warns
         self.errors = self.base_errors + self.errors
+
+    def _reset_asset_errors(self):
+        """
+        Reset all existing AssetErrorLog entries for this asset.
+        This prevents duplicate errors when running validation multiple times.
+        """
+        if not self.reset_errors:
+            return
+
+        from breathecode.registry.models import AssetErrorLog
+
+        # Get all error types that could be generated during validation
+        all_error_types = []
+        for error_type in dir(AssetErrorLogType):
+            if not error_type.startswith("_"):  # Skip private attributes
+                all_error_types.append(getattr(AssetErrorLogType, error_type))
+
+        # Delete existing error logs for this asset of validation error types
+        deleted_count = AssetErrorLog.objects.filter(asset=self.asset, slug__in=all_error_types).delete()[0]
+
+        if deleted_count > 0:
+            logger.debug(f"Reset {deleted_count} previous error logs for asset {self.asset.slug}")
 
     def error(self, type, _msg):
         if self.log_errors:
             self.asset.log_error(type, _msg)
         raise Exception(_msg)
 
+    def warning(self, type, _msg):
+        pass
+
     def validate(self):
+        # Reset errors before starting validation if requested
+        self._reset_asset_errors()
 
         try:
             for validation in self.errors:
                 if hasattr(self, validation):
+                    print(f"🔍 Validating errors for: {validation}")
                     getattr(self, validation)()
                 else:
                     raise Exception("Invalid asset error validation " + validation)
@@ -173,7 +247,7 @@ class AssetValidator:
             raise AssetException(str(e), severity="WARNING")
 
     def readme_url(self):
-        if self.asset.readme_url is not None or self.asset.readme_url != "":
+        if self.asset.readme_url is not None and self.asset.readme_url != "":
             if not self.asset.owner:
                 self.error(
                     AssetErrorLogType.INVALID_OWNER,
@@ -186,15 +260,59 @@ class AssetValidator:
 
             gb = Github(credentials.token)
             try:
+                # First, let's get repository information for debugging
+                parsed_url = gb.parse_github_url(self.asset.readme_url)
+                if parsed_url:
+                    repo_info = gb.get_repository(parsed_url["owner"], parsed_url["repo"])
+                    if repo_info:
+                        logger.debug(
+                            f"Repository {parsed_url['owner']}/{parsed_url['repo']} is accessible. "
+                            f"Private: {repo_info.get('private', 'unknown')}"
+                        )
+                    else:
+                        logger.warning(
+                            f"Repository {parsed_url['owner']}/{parsed_url['repo']} is not accessible "
+                            f"with current credentials"
+                        )
+
+                # Now check if the specific file exists
                 if not gb.file_exists(self.asset.readme_url):
-                    self.error(AssetErrorLogType.INVALID_README_URL, "Readme URL points to a missing file")
+                    self.error(
+                        AssetErrorLogType.INVALID_README_URL,
+                        f"Readme URL points to a missing file: {self.asset.readme_url}",
+                    )
             except GithubAuthException:
                 self.error(
                     AssetErrorLogType.INVALID_OWNER,
                     "Cannot connect to github to validate readme url, please fix owner or credentials",
                 )
             except Exception as e:
-                raise AssetException(str(e), severity="ERROR")
+                # Log the error with more context for debugging
+                error_str = str(e).lower()
+                logger.warning(f"Could not validate readme URL {self.asset.readme_url}: {str(e)}")
+
+                # Only fail validation for clear 404 errors (file definitely doesn't exist)
+                if "404" in error_str or "not found" in error_str:
+                    self.error(
+                        AssetErrorLogType.INVALID_README_URL,
+                        f"Readme URL points to a missing file: {self.asset.readme_url}",
+                    )
+
+                # For 403/401 errors or other issues with private repos, log but don't fail validation
+                elif "403" in error_str or "forbidden" in error_str:
+                    logger.info(
+                        f"Access forbidden for readme URL {self.asset.readme_url}. "
+                        f"This might be a private repository that the credentials don't have access to."
+                    )
+                elif "401" in error_str or "unauthorized" in error_str:
+                    logger.warning(
+                        f"Authentication failed for readme URL {self.asset.readme_url}. "
+                        f"GitHub credentials might be invalid or expired."
+                    )
+                else:
+                    logger.warning(f"Could not validate readme URL {self.asset.readme_url} due to: {str(e)}")
+
+                # For all non-404 errors, we don't fail validation to avoid false negatives
 
     def urls(self):
 
@@ -202,7 +320,96 @@ class AssetValidator:
         if "html" in readme:
             urls = get_urls_from_html(readme["html"])
             for url in urls:
-                test_url(url, allow_relative=False)
+                try:
+                    # Skip test_url for internal GitHub repository URLs
+                    if is_internal_github_url(url, self.asset.readme_url):
+                        print(f"🔍 Validating internal GitHub URL: {url}")
+                        # Internal URLs will be validated using GitHub API instead
+                        self._validate_internal_github_url(url)
+                        continue
+
+                    test_url(url, allow_relative=False)
+                except Exception as e:
+                    self.error(AssetErrorLogType.INVALID_URL, str(e))
+                    raise AssetException(str(e), severity="ERROR")
+
+    def _validate_internal_github_url(self, url):
+        """
+        Validate internal GitHub URLs using the GitHub API.
+        Only validates if the asset has an owner with GitHub credentials.
+        Handles various GitHub URL patterns:
+        - github.com/org/repo/blob/branch/path
+        - raw.githubusercontent.com/org/repo/branch/path
+        - github.com/org/repo/issues/number
+        - github.com/org/repo/pulls/number
+        - etc.
+        """
+        if not self.asset.owner:
+            # If no owner, we can't validate through GitHub API, just skip silently
+            return
+
+        credentials = CredentialsGithub.objects.filter(user=self.asset.owner).first()
+        if credentials is None:
+            # If no GitHub credentials, we can't validate through GitHub API, just skip silently
+            return
+
+        gb = Github(credentials.token)
+        try:
+            # Check if URL points to a file that can be validated
+            if self._is_github_file_url(url):
+                # For file URLs (blob, raw), check if the file exists
+                if not gb.file_exists(url):
+                    raise Exception(f"Internal GitHub file not found: {url}")
+            # For other internal URLs (issues, PRs, discussions, etc.), we assume they're valid
+            # since they point to the same repository and we can't easily validate them via API
+            # without making additional requests
+        except GithubAuthException:
+            # If we can't authenticate with GitHub, just skip validation
+            # rather than failing the entire validation
+            logger.warning(f"GitHub authentication failed when validating internal URL: {url}")
+            pass
+        except Exception as e:
+            # Handle different types of errors more gracefully
+            error_str = str(e).lower()
+
+            # Only fail for clear 404 errors (file definitely doesn't exist)
+            if "404" in error_str or "not found" in error_str:
+                raise Exception(f"Internal GitHub file not found: {url}")
+
+            # For access/auth issues with private repos, log but don't fail
+            elif "403" in error_str or "forbidden" in error_str:
+                logger.info(
+                    f"Access forbidden for internal GitHub URL: {url}. "
+                    f"This might be a private repository access issue."
+                )
+            elif "401" in error_str or "unauthorized" in error_str:
+                logger.warning(
+                    f"Authentication failed for internal GitHub URL: {url}. " f"GitHub credentials might be invalid."
+                )
+            else:
+                # For other errors, log the issue but don't fail validation
+                logger.warning(f"Could not validate internal GitHub URL {url}: {str(e)}")
+
+            # Don't re-raise for non-404 errors to avoid failing validation on private repo access issues
+
+    def _is_github_file_url(self, url):
+        """
+        Check if a GitHub URL points to a file that can be validated.
+        Returns True for URLs that point to actual files (blob, raw content).
+        Uses the Github service's parse_github_url method to avoid code duplication.
+        """
+        if not url:
+            return False
+
+        # Use Github service to parse the URL (we don't need authentication for parsing)
+        github_service = Github()
+        parsed = github_service.parse_github_url(url)
+
+        if not parsed:
+            return False
+
+        # Return True for URL types that point to actual files
+        return parsed["url_type"] in ["blob", "raw", "api"] and parsed.get("path")
 
     def lang(self):
 
@@ -213,7 +420,7 @@ class AssetValidator:
 
     def translations(self):
         if self.asset.all_translations.exists() == 0:
-            raise Exception("No translations")
+            self.warning(AssetErrorLogType.MISSING_TRANSLATIONS, "No translations")
 
     def technologies(self):
         if self.asset.technologies.count() < 2:
@@ -221,7 +428,7 @@ class AssetValidator:
 
     def difficulty(self):
         if not self.asset.difficulty:
-            raise Exception("No difficulty")
+            self.error(AssetErrorLogType.MISSING_DIFFICULTY, "Asset is missing a difficulty")
 
     def description(self):
         if not self.asset.description or len(self.asset.description) < 100:
@@ -257,30 +464,48 @@ class LessonValidator(AssetValidator):
     warns = []
     errors = ["readme"]
 
+    def __init__(self, _asset, log_errors=False, reset_errors=False):
+        super().__init__(_asset, log_errors, reset_errors)
+
 
 class ArticleValidator(AssetValidator):
     warns = []
     errors = ["readme"]
+
+    def __init__(self, _asset, log_errors=False, reset_errors=False):
+        super().__init__(_asset, log_errors, reset_errors)
 
 
 class StarterValidator(AssetValidator):
     warns = []
     errors = ["readme"]
 
+    def __init__(self, _asset, log_errors=False, reset_errors=False):
+        super().__init__(_asset, log_errors, reset_errors)
+
 
 class ExerciseValidator(AssetValidator):
     warns = ["difficulty"]
     errors = ["readme", "preview"]
+
+    def __init__(self, _asset, log_errors=False, reset_errors=False):
+        super().__init__(_asset, log_errors, reset_errors)
 
 
 class ProjectValidator(ExerciseValidator):
     warns = ["difficulty"]
     errors = ["readme", "preview"]
 
+    def __init__(self, _asset, log_errors=False, reset_errors=False):
+        super().__init__(_asset, log_errors, reset_errors)
+
 
 class QuizValidator(AssetValidator):
     warns = ["difficulty"]
     errors = ["preview"]
+
+    def __init__(self, _asset, log_errors=False, reset_errors=False):
+        super().__init__(_asset, log_errors, reset_errors)
 
 
 class OriginalityWrapper:

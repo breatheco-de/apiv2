@@ -335,10 +335,13 @@ class UploadView(APIView):
 
             try:
                 first = df2["formatted_date"][0].split("-")
-                last = df["formatted_date"][0].split("-")
+                last = df2["formatted_date"][0].split("-")
 
-                first[2] = first[2].split("T")[0]
-                last[2] = last[2].split("T")[0]
+                # Handle both formats: "2025-02-01T00:00:00.0000000Z" and "2025-03-01"
+                if "T" in first[2]:
+                    first[2] = first[2].split("T")[0]
+                if "T" in last[2]:
+                    last[2] = last[2].split("T")[0]
 
                 first = date(int(first[0]), int(first[1]), int(first[2]))
                 last = date(int(last[0]), int(last[1]), int(last[2]))

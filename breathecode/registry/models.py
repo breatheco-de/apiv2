@@ -124,7 +124,7 @@ class AssetCategory(models.Model):
 
     slug = models.SlugField(max_length=200)
     title = models.CharField(max_length=200)
-    lang = models.CharField(max_length=2, help_text="E.g: en, es, it")
+    lang = models.CharField(max_length=2, help_text="E.g: us, es, it")
     description = models.TextField(null=True, blank=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
@@ -318,7 +318,7 @@ class Asset(models.Model):
     category = models.ForeignKey(
         AssetCategory,
         on_delete=models.SET_NULL,
-        blank=False,
+        blank=True,
         null=True,
     )
 
@@ -778,7 +778,7 @@ class Asset(models.Model):
                     path=self.slug,
                     asset_type=self.asset_type,
                     asset=self,
-                    status_text="Invalid Readme URL",
+                    status_text=f"Invalid Readme URL with extension {extension}",
                 ).save()
         return readme
 

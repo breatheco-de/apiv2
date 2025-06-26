@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import re
+from datetime import timedelta
 from typing import Any, Optional
 
 import requests
@@ -36,6 +37,7 @@ from .actions import (
     generate_screenshot,
     pull_from_github,
     pull_repo_dependencies,
+    push_project_or_exercise_to_github,
     screenshots_bucket,
     test_asset,
     upload_image_to_bucket,
@@ -135,14 +137,22 @@ def async_pull_project_dependencies(asset_slug):
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)
-def async_test_asset(asset_slug):
+def async_test_asset(asset_slug, log_errors=True, reset_errors=True, force=False):
+    """
+    This task is used to test an asset.
+    force: If True, it will test the asset even if it was tested in the last 30 days.
+    log_errors: If True, it will log the errors in the AssetErrorLog model.
+    reset_errors: If True, it will erase all previous errors about this asset.
+    """
     a = Asset.objects.filter(slug=asset_slug).first()
     if a is None:
         logger.debug(f"Error: Error testing asset with slug {asset_slug}, does not exist.")
 
     try:
-        if test_asset(a, log_errors=True):
-            return True
+        # if the asset was tested in the last 30 days, we don't need to test it again unless force is True
+        if a.last_test_at is not None and a.last_test_at > timezone.now() - timedelta(days=30) and not force:
+            if test_asset(a, log_errors=log_errors, reset_errors=reset_errors):
+                return True
     except Exception:
         logger.exception(f"Error testing asset {a.slug}")
 
@@ -746,3 +756,31 @@ def sync_asset_telemetry_stats(asset_id: int, **_: Any):
 
     logger.info(f"Finished sync_asset_telemetry_stats for asset {asset.slug}")
     return stats
+
+
+@shared_task(priority=TaskPriority.ACADEMY.value)
+def async_push_project_or_exercise_to_github(asset_slug, create_or_update=False, organization_github_username=None):
+    """
+    Async task to push a project or exercise asset to GitHub.
+
+    Args:
+        asset_slug (str): The slug of the asset to push
+        create_or_update (bool): If True, creates repository if readme_url/url are empty
+        organization_github_username (str, optional): GitHub organization username for repo creation
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    logger.debug(f"Async task: pushing project/exercise {asset_slug} to GitHub")
+
+    try:
+        asset = push_project_or_exercise_to_github(
+            asset_slug=asset_slug,
+            create_or_update=create_or_update,
+            organization_github_username=organization_github_username,
+        )
+        logger.info(f"Successfully pushed asset {asset_slug} to GitHub")
+        return asset.id
+    except Exception as e:
+        logger.exception(f"Error pushing asset {asset_slug} to GitHub: {str(e)}")
+        return False

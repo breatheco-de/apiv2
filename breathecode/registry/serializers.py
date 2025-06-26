@@ -336,6 +336,11 @@ class AcademyAssetSerializer(AssetSerializer):
     clusters = serpy.MethodField()
     previous_versions = serpy.MethodField()
 
+    academy = serpy.MethodField()
+
+    def get_academy(self, obj):
+        return obj.academy.id if obj.academy else None
+
     def get_clusters(self, obj):
         return [k.cluster.slug for k in obj.seo_keywords.all() if k.cluster is not None]
 
@@ -619,6 +624,7 @@ class TechSerializer(serializers.ModelSerializer):
 
 class PostAssetSerializer(serializers.ModelSerializer):
     technologies = serializers.ListField(required=False)
+    category = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Asset
@@ -633,7 +639,38 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
         validated_data["lang"] = validated_data["lang"].lower()
 
-        if "category" not in data or data["category"] is None:
+        # Handle category field validation
+        if "category" in data:
+            category_value = data["category"]
+
+            # Check for null or empty values - not allowed
+            if category_value is None or category_value == "":
+                raise ValidationException("Category cannot be null or empty. Please specify a valid category ID")
+
+            # Handle "uncategorized" string - convert to None
+            if category_value == "uncategorized":
+                validated_data["category"] = None
+            else:
+                # Validate that it's a valid category ID
+                try:
+                    if isinstance(category_value, str) and category_value.isdigit():
+                        category_id = int(category_value)
+                    elif isinstance(category_value, int):
+                        category_id = category_value
+                    else:
+                        raise ValidationException("Category must be an ID or 'uncategorized'")
+
+                    category = AssetCategory.objects.filter(id=category_id).first()
+                    if category is None:
+                        raise ValidationException(f"Category with ID {category_id} not found")
+
+                    validated_data["category"] = category
+                except ValueError:
+                    raise ValidationException("Category must be an ID or 'uncategorized'")
+
+        # Handle fallback category logic when category is not provided at all
+        if "category" not in data:
+            # Fallback to translation logic if no category provided
             if "all_translations" not in validated_data or len(validated_data["all_translations"]) == 0:
                 raise ValidationException(
                     "No category was specified and we could not retrieve it from any translation", slug="no-category"
@@ -683,6 +720,7 @@ class PostAssetSerializer(serializers.ModelSerializer):
 
 class PostAcademyAssetSerializer(serializers.ModelSerializer):
     technologies = serializers.ListField(required=False)
+    category = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = Asset
@@ -697,7 +735,40 @@ class PostAcademyAssetSerializer(serializers.ModelSerializer):
 
         validated_data["lang"] = validated_data["lang"].lower()
 
-        if "category" not in data or data["category"] is None:
+        # Handle category field validation
+        if "category" in data:
+            category_value = data["category"]
+
+            # Check for null or empty values - not allowed
+            if category_value is None or category_value == "":
+                raise ValidationException(
+                    "Category cannot be null or empty. Use 'uncategorized' or a valid category ID"
+                )
+
+            # Handle "uncategorized" string - convert to None
+            if category_value == "uncategorized":
+                validated_data["category"] = None
+            else:
+                # Validate that it's a valid category ID
+                try:
+                    if isinstance(category_value, str) and category_value.isdigit():
+                        category_id = int(category_value)
+                    elif isinstance(category_value, int):
+                        category_id = category_value
+                    else:
+                        raise ValidationException("Category must be an ID or 'uncategorized'")
+
+                    category = AssetCategory.objects.filter(id=category_id).first()
+                    if category is None:
+                        raise ValidationException(f"Category with ID {category_id} not found")
+
+                    validated_data["category"] = category
+                except ValueError:
+                    raise ValidationException("Category must be an ID or 'uncategorized'")
+
+        # Handle fallback category logic when category is not provided at all
+        if "category" not in data:
+            # Fallback to translation logic if no category provided
             if "all_translations" not in validated_data or len(validated_data["all_translations"]) == 0:
                 raise ValidationException(
                     "No category was specified and we could not retrieve it from any translation", slug="no-category"
@@ -1113,8 +1184,10 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                     repo_url += f"/{path_parts[0]}/{path_parts[1]}"
                 return repo_url
 
-            repo = get_repo_url(validated_data["readme_url"])
-            data["url"] = repo
+            # Only update url if readme_url is not None/empty
+            if validated_data["readme_url"]:
+                repo = get_repo_url(validated_data["readme_url"])
+                data["url"] = repo
 
         # Check if preview img is being deleted
         if "preview" in validated_data:
@@ -1226,8 +1299,10 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
                     repo_url += f"/{path_parts[0]}/{path_parts[1]}"
                 return repo_url
 
-            repo = get_repo_url(validated_data["readme_url"])
-            data["url"] = repo
+            # Only update url if readme_url is not None/empty
+            if validated_data["readme_url"]:
+                repo = get_repo_url(validated_data["readme_url"])
+                data["url"] = repo
 
         # Check if preview img is being deleted
         if "preview" in validated_data:

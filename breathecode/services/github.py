@@ -100,20 +100,200 @@ class Github:
     def unsubscribe_from_repo(self, owner, repo_name, hook_id):
         return self.delete(f"/repos/{owner}/{repo_name}/hooks/{hook_id}")
 
+    def parse_github_url(self, url):
+        """
+        Parse various GitHub URL patterns to extract repository information.
+
+        Supported URL patterns:
+        - https://github.com/owner/repo/blob/branch/path/to/file
+        - https://github.com/owner/repo/issues/123
+        - https://github.com/owner/repo/pull/456
+        - https://raw.githubusercontent.com/owner/repo/branch/path/to/file
+        - https://raw.githubusercontent.com/owner/repo/branch/path/to/file?token=...
+        - https://api.github.com/repos/owner/repo/contents/path/to/file
+
+        Returns:
+            dict: {
+                'owner': str,
+                'repo': str,
+                'branch': str or None,
+                'path': str or None,
+                'url_type': str ('blob', 'raw', 'api', 'issue', 'pull', 'repo')
+            }
+            or None if URL is not a valid GitHub URL
+        """
+        if not url:
+            return None
+
+        try:
+            # Handle github.com URLs
+            if "github.com" in url:
+                parts = url.split("/")
+                if len(parts) < 5:
+                    return None
+
+                owner = parts[3]
+                repo = parts[4]
+
+                result = {"owner": owner, "repo": repo, "branch": None, "path": None, "url_type": "repo"}
+
+                if len(parts) > 5:
+                    if parts[5] == "blob" and len(parts) > 6:
+                        result["url_type"] = "blob"
+                        result["branch"] = parts[6]
+                        if len(parts) > 7:
+                            result["path"] = "/".join(parts[7:])
+                    elif parts[5] == "issues":
+                        result["url_type"] = "issue"
+                    elif parts[5] == "pull":
+                        result["url_type"] = "pull"
+
+                return result
+
+            # Handle raw.githubusercontent.com URLs
+            elif "raw.githubusercontent.com" in url:
+                # Remove query parameters if present
+                clean_url = url.split("?")[0]
+                parts = clean_url.split("/")
+                if len(parts) < 6:
+                    return None
+
+                owner = parts[3]
+                repo = parts[4]
+                branch = parts[5]
+                path = "/".join(parts[6:]) if len(parts) > 6 else None
+
+                return {"owner": owner, "repo": repo, "branch": branch, "path": path, "url_type": "raw"}
+
+            # Handle api.github.com URLs
+            elif "api.github.com" in url and "/repos/" in url:
+                parts = url.split("/")
+                repo_index = parts.index("repos")
+                if len(parts) < repo_index + 3:
+                    return None
+
+                owner = parts[repo_index + 1]
+                repo = parts[repo_index + 2]
+
+                result = {"owner": owner, "repo": repo, "branch": None, "path": None, "url_type": "api"}
+
+                if len(parts) > repo_index + 3 and parts[repo_index + 3] == "contents":
+                    result["path"] = "/".join(parts[repo_index + 4 :])
+
+                return result
+
+        except (IndexError, ValueError):
+            return None
+
+        return None
+
+    def repo_exists(self, owner: str, repo: str):
+        """
+        Check if a repository exists and is accessible.
+        Uses the GitHub API "Get a repository" endpoint as recommended for private repos.
+        """
+        try:
+            # Use GET instead of HEAD for better private repository support
+            # Following GitHub API documentation recommendations
+            response = self.get(f"/repos/{owner}/{repo}")
+            return response is not None
+        except Exception as e:
+            error_str = str(e).lower()
+
+            # 404 means repository doesn't exist or is not accessible
+            if "404" in error_str or "not found" in error_str:
+                return False
+
+            # Log other errors but return False for safety
+            logger.debug(f"Error checking repository existence {owner}/{repo}: {str(e)}")
+            return False
+
     def file_exists(self, url):
-        # Example URL: https://github.com/owner/repo/blob/branch/path/to/file
-        # Extract necessary parts of the URL
-        parts = url.split("/")
-        owner = parts[3]
-        repo_name = parts[4]
-        branch = parts[6]
-        path_to_file = "/".join(parts[7:])  # Join the remaining parts to form the path
+        """
+        Check if a file exists in a GitHub repository using various URL formats.
+        This method properly handles private repositories by first checking repository access
+        as recommended in GitHub API documentation.
 
-        # Make a request to the GitHub API
-        response = self.head(f"/repos/{owner}/{repo_name}/contents/{path_to_file}?ref={branch}")
+        Supported URL formats:
+        - https://github.com/owner/repo/blob/branch/path/to/file
+        - https://raw.githubusercontent.com/owner/repo/branch/path/to/file
+        - https://api.github.com/repos/owner/repo/contents/path/to/file
+        """
+        parsed = self.parse_github_url(url)
+        if not parsed:
+            return False
 
-        # Check if the file exists
-        return response.status_code == 200
+        # Only check existence for file URLs
+        if parsed["url_type"] not in ["blob", "raw", "api"]:
+            return False
+
+        owner = parsed["owner"]
+        repo_name = parsed["repo"]
+        branch = parsed["branch"] or "main"  # Default to main if no branch specified
+        path_to_file = parsed["path"]
+
+        if not path_to_file:
+            return False
+
+        # First, check if we have access to the repository itself
+        # This is especially important for private repositories
+        # Following GitHub API documentation: https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#get-a-repository
+        if not self.repo_exists(owner, repo_name):
+            logger.debug(f"Repository {owner}/{repo_name} is not accessible or doesn't exist")
+            return False
+
+        try:
+            # Now check if the specific file exists within the accessible repository
+            # Use GET request to the GitHub API contents endpoint
+            response = self.get(f"/repos/{owner}/{repo_name}/contents/{path_to_file}?ref={branch}")
+
+            # If we get a successful response, the file exists
+            if response:
+                # The response could be a file object or a list (if it's a directory)
+                # For files, we expect a 'type' field with value 'file'
+                if isinstance(response, dict) and response.get("type") == "file":
+                    return True
+                # If it's a list, it means the path points to a directory, not a file
+                elif isinstance(response, list):
+                    return False
+                # For any other successful response format, assume file exists
+                else:
+                    return True
+            return False
+
+        except Exception as e:
+            # Log the specific error for debugging
+            logger.debug(f"Error checking file existence for {url}: {str(e)}")
+
+            # Check for specific error types to determine if file doesn't exist vs other issues
+            error_str = str(e).lower()
+
+            # 404 errors clearly indicate the file doesn't exist (but repo is accessible)
+            if "404" in error_str or "not found" in error_str:
+                return False
+
+            # 403 errors might indicate permission issues with specific files/paths
+            # Since we already confirmed repo access, this is likely a file-level permission issue
+            if "403" in error_str or "forbidden" in error_str:
+                logger.warning(
+                    f"Access forbidden for file {path_to_file} in repository {owner}/{repo_name}. "
+                    f"Repository is accessible but file permissions may be restricted."
+                )
+                # For file-level permission issues, assume file exists but is restricted
+                return True
+
+            # 401 errors shouldn't happen here since we already validated repo access
+            if "401" in error_str or "unauthorized" in error_str:
+                logger.warning(
+                    f"Unexpected authentication error when checking file {path_to_file} "
+                    f"in accessible repository {owner}/{repo_name}."
+                )
+                return True
+
+            # For any other errors (network issues, API problems, etc.)
+            # we'll be conservative and assume the file exists
+            logger.warning(f"Could not verify file existence for {url} due to error: {str(e)}")
+            return True
 
     def create_container(self, repo_name):
         return self.post(f"/repos/{self.org}/{repo_name}/codespaces")
@@ -225,13 +405,6 @@ class Github:
             request_data={"new_owner": new_owner, "new_name": new_name},
         )
 
-    def repo_exists(self, owner: str, repo: str):
-        try:
-            response = self.head(f"/repos/{owner}/{repo}")
-            return response.status_code == 200
-        except Exception:
-            return False
-
     def get_repo_events(
         self,
         owner: str,
@@ -258,3 +431,85 @@ class Github:
 
             if len(res) < per_page:
                 break
+
+    def get_repository(self, owner: str, repo: str):
+        """
+        Get detailed repository information.
+        This is useful for debugging and understanding repository access permissions.
+
+        Returns:
+            dict: Repository information or None if not accessible
+        """
+        try:
+            return self.get(f"/repos/{owner}/{repo}")
+        except Exception as e:
+            logger.debug(f"Could not get repository information for {owner}/{repo}: {str(e)}")
+            return None
+
+    def create_repository(self, owner: str, repo_name: str, description: str = "", private: bool = True):
+        """
+        Create a new repository under the given owner (user or organization).
+
+        Args:
+            owner: The owner (username or organization) under which to create the repository
+            repo_name: The name of the repository to create
+            description: Optional repository description
+            private: Whether the repository should be private (default: True)
+
+        Returns:
+            dict: Repository information from GitHub API
+        """
+        payload = {
+            "name": repo_name,
+            "description": description,
+            "private": private,
+            "auto_init": True,  # Initialize with README
+        }
+
+        logger.debug(f"Creating repository: owner={owner}, self.org={getattr(self, 'org', 'None')}")
+
+        # Create under organization only - no fallback to user account
+        logger.debug(f"Attempting to create repository under organization: {owner}")
+        try:
+            result = self.post(f"/orgs/{owner}/repos", request_data=payload)
+            logger.debug(f"Successfully created repository under organization {owner}")
+            return result
+        except Exception as org_error:
+            logger.error(f"Failed to create repository under organization {owner}: {str(org_error)}")
+            error_msg = str(org_error).lower()
+
+            if "not found" in error_msg:
+                raise Exception(
+                    f"Organization '{owner}' not found or you don't have permission to create repositories under it. Please verify the organization name and ensure your GitHub token has the necessary permissions."
+                )
+            elif "forbidden" in error_msg or "permission" in error_msg:
+                raise Exception(
+                    f"Permission denied: Your GitHub token doesn't have permission to create repositories under organization '{owner}'. Please ensure you have admin access to the organization."
+                )
+            else:
+                raise Exception(
+                    f"Failed to create repository '{repo_name}' under organization '{owner}': {str(org_error)}"
+                )
+
+    def create_file(self, owner: str, repo: str, file_path: str, content: str, message: str, branch: str = "main"):
+        """
+        Create a new file in a repository.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            file_path: Path where the file should be created
+            content: File content (will be base64 encoded)
+            message: Commit message
+            branch: Branch to commit to (default: "main")
+
+        Returns:
+            dict: Response from GitHub API
+        """
+        import base64
+
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+
+        payload = {"message": message, "content": encoded_content, "branch": branch}
+
+        return self.post(f"/repos/{owner}/{repo}/contents/{file_path}", request_data=payload)

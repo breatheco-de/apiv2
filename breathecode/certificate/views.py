@@ -77,6 +77,16 @@ def get_certificate(request, token):
 
     lang = get_user_language(request)
     cohort_user = CohortUser.objects.filter(cohort__id=item.cohort.id, user__id=item.user.id, role="STUDENT").first()
+    if cohort_user is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Certificate is not valid because no record of this user has been found as student in this cohort",
+                es="Este certificado no es válido porque no se encontró ningún registro de este usuario como estudiante en esta cohorte",
+                slug="certificate-not-valid",
+            ),
+            code=400,
+        )
 
     if cohort_user.finantial_status == "LATE":
         raise ValidationException(
