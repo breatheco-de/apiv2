@@ -81,6 +81,6 @@ urlpatterns = [
     path("completion_job/<int:task_id>", CompletionJobView.as_view(), name="completion_job"),
     path("me/deletion_order", RepositoryDeletionsMeView.as_view(), name="me_deletion_order"),
     path("academy/flag", FlagView.as_view(), name="flag"),
-    path("academy/asset/<str:asset_id>/flag", AssetFlagView.as_view(), name="flag_asset"),
+    path("academy/asset/flag", AssetFlagView.as_view(), name="flag_asset"),
     path("academy/asset/<str:asset_id>/flag/legacy", LegacyFlagAssetView.as_view(), name="flag_asset_legacy"),
 ]
