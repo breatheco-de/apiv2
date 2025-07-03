@@ -310,10 +310,10 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                 related_id=instance.id,
             )
 
-            if validated_data["task_status"] == "DONE" and "flags" in validated_data:
-                from breathecode.assignments.tasks import async_validate_flags
+        if "task_status" in validated_data and validated_data["task_status"] == "DONE" and "flags" in validated_data:
+            from breathecode.assignments.tasks import async_validate_flags
 
-                async_validate_flags.delay(instance.id, instance.associated_slug, validated_data["flags"])
+            async_validate_flags.delay(instance.id, instance.associated_slug, validated_data["flags"])
 
         return super().update(instance, validated_data)
 
