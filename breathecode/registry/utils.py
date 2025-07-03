@@ -1,14 +1,101 @@
+"""
+Registry utility functions for asset validation.
+
+This module includes a trusted URL system that allows skipping validation for specific domains
+and URLs that are known to be reliable but may have intermittent connectivity issues.
+
+The trusted URL system supports:
+- Trusted domains: Any URL from these domains will be skipped
+- Trusted URLs: Specific URLs (ignoring query strings) that will be skipped
+
+Configuration is done through TRUSTED_DOMAINS and TRUSTED_URLS sets below.
+"""
+
 import asyncio
 import logging
 import re
 import aiohttp
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse, urlunparse
 
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.services.github import Github, GithubAuthException
 
 logger = logging.getLogger(__name__)
+
+# Trusted domains and URLs configuration
+TRUSTED_DOMAINS = {
+    'exploit-db.com',
+    # Add more trusted domains here as needed
+    # Common domains that might have reliability issues but are trusted:
+    # 'docs.python.org',
+    # 'developer.mozilla.org',
+    # 'stackoverflow.com',
+}
+
+TRUSTED_URLS = {
+    # Add trusted full URLs here (without query strings)
+    # 'https://example.com/specific/path',
+    # 'https://another-site.com/another/path',
+}
+
+
+def normalize_url_for_comparison(url):
+    """
+    Normalize a URL by removing query strings and fragments for comparison.
+    Returns the normalized URL or None if the URL is invalid.
+    """
+    try:
+        parsed = urlparse(url)
+        # Remove query and fragment
+        normalized = urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', '', ''))
+        return normalized
+    except Exception:
+        return None
+
+
+def is_trusted_url(url):
+    """
+    Check if a URL is in the trusted domains or trusted URLs lists.
+    Returns True if the URL should be trusted and skipped from validation.
+    """
+    if not url:
+        return False
+    
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        
+        # Remove 'www.' prefix for domain comparison
+        if domain.startswith('www.'):
+            domain = domain[4:]
+        
+        # Check if domain is in trusted domains
+        if domain in TRUSTED_DOMAINS:
+            return True
+        
+        # Check if the normalized URL (without query string) is in trusted URLs
+        normalized_url = normalize_url_for_comparison(url)
+        if normalized_url and normalized_url in TRUSTED_URLS:
+            return True
+        
+        return False
+    except Exception:
+        return False
+
+def get_trusted_domains():
+    """
+    Get a copy of the current trusted domains set.
+    """
+    return TRUSTED_DOMAINS.copy()
+
+
+def get_trusted_urls():
+    """
+    Get a copy of the current trusted URLs set.
+    """
+    return TRUSTED_URLS.copy()
 
 
 class AssetErrorLogType:
@@ -104,6 +191,11 @@ def test_url(url, allow_relative=False, allow_hash=True):
     # Handle URL validation for HTTP/HTTPS URLs
     # Only attempt network request if it's not relative and not just a hash
     if not is_relative and not is_hash:
+        # Check if URL is trusted and should be skipped
+        if is_trusted_url(url):
+            print(f"✅ Skipping validation for trusted URL: {url}")
+            return
+
         if not re.match(r"^[a-zA-Z]+://", url) and not url.startswith("//"):
             raise Exception(f"Invalid URL format (Missing Schema?): {url}")
 
@@ -137,6 +229,11 @@ async def atest_url(url, allow_relative=False, allow_hash=True):
     # Handle URL validation for HTTP/HTTPS URLs
     # Only attempt network request if it's not relative and not just a hash
     if not is_relative and not is_hash:
+        # Check if URL is trusted and should be skipped
+        if is_trusted_url(url):
+            print(f"✅ Skipping validation for trusted URL: {url}")
+            return
+
         if not re.match(r"^[a-zA-Z]+://", url) and not url.startswith("//"):
             raise Exception(f"Invalid URL format (Missing Schema?): {url}")
 
@@ -321,6 +418,11 @@ class AssetValidator:
             urls = get_urls_from_html(readme["html"])
             for url in urls:
                 try:
+                    # Skip validation for trusted URLs
+                    if is_trusted_url(url):
+                        print(f"✅ Skipping validation for trusted URL: {url}")
+                        continue
+
                     # Skip test_url for internal GitHub repository URLs
                     if is_internal_github_url(url, self.asset.readme_url):
                         print(f"🔍 Validating internal GitHub URL: {url}")
