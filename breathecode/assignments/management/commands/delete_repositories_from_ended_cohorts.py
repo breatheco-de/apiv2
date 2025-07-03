@@ -144,6 +144,7 @@ class Command(BaseCommand):
 
         # Process repositories in batches
         deleted_count = 0
+        to_delete = []
         for i in range(0, len(repositories), self.batch_size):
             # Check if we've reached the maximum deletion limit
             if self.total_deleted + deleted_count >= self.max_deletions:
@@ -157,24 +158,56 @@ class Command(BaseCommand):
             # Process only the remaining repositories up to the limit
             batch = repositories[i : i + batch_size]
 
-            batch_deleted = self.process_repository_batch(github_client, org_name, batch)
-            deleted_count += batch_deleted
+            # Preview phase: collect which repos would be deleted
+            preview_batch = []
+            for owner, repo_name in batch:
+                if self.should_delete_repository(owner, repo_name):
+                    preview_batch.append((owner, repo_name))
+            to_delete.extend(preview_batch)
+
+            # Simulate deletion for --dry-run, or just preview for confirmation
+            batch_deleted = 0
+            for owner, repo_name in batch:
+                if self.should_delete_repository(owner, repo_name):
+                    msg = (
+                        f"[DRY RUN] Would delete repository: {owner}/{repo_name}"
+                        if self.dry_run
+                        else f"[WARNING] Will delete repository: {owner}/{repo_name}"
+                    )
+                    self.stdout.write(self.style.WARNING(msg))
+                    batch_deleted += 1
+                else:
+                    logger.debug(f"Skipping repository {owner}/{repo_name} (whitelisted or other reason)")
 
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Batch {i//self.batch_size + 1}: "
-                    f"{'Would delete' if self.dry_run else 'Deleted'} {batch_deleted} repositories "
-                    f"(Total: {self.total_deleted + deleted_count}/{self.max_deletions})"
+                    f"{'Would delete' if self.dry_run else 'Will delete'} {batch_deleted} repositories "
+                    f"(Total: {self.total_deleted + deleted_count + batch_deleted}/{self.max_deletions})"
                 )
             )
 
             # Check if we've reached the limit after this batch
+            deleted_count += batch_deleted
+
             if self.total_deleted + deleted_count >= self.max_deletions:
                 self.stdout.write(
                     self.style.WARNING(f"Reached maximum deletion limit of {self.max_deletions} repositories.")
                 )
                 break
 
+        # Confirmation before actual deletion
+        if not self.dry_run and to_delete:
+            confirm = input("Are you sure you want to delete these repositories? (y/n): ")
+            if confirm.lower() != "y":
+                self.stdout.write(self.style.ERROR("Operation cancelled by user."))
+                return 0
+            # Now actually delete
+            actually_deleted = 0
+            for owner, repo_name in to_delete:
+                if self.delete_repository(github_client, owner, repo_name):
+                    actually_deleted += 1
+            return actually_deleted
         return deleted_count
 
     def get_github_client(self, org_name: str) -> Optional[Github]:
@@ -206,19 +239,6 @@ class Command(BaseCommand):
                 repositories.add((owner, repo))
 
         return list(repositories)
-
-    def process_repository_batch(self, github_client: Github, org_name: str, batch: list[tuple[str, str]]) -> int:
-        """Process a batch of repositories for deletion."""
-        deleted_count = 0
-
-        for owner, repo_name in batch:
-            if self.should_delete_repository(owner, repo_name):
-                if self.delete_repository(github_client, owner, repo_name):
-                    deleted_count += 1
-            else:
-                logger.debug(f"Skipping repository {owner}/{repo_name} (whitelisted or other reason)")
-
-        return deleted_count
 
     def should_delete_repository(self, owner: str, repo_name: str) -> bool:
         """Check if a repository should be deleted based on whitelist and other criteria."""
