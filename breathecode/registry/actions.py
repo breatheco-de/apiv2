@@ -1431,7 +1431,7 @@ def pull_quiz_asset(github, asset: Asset):
             )
         elif "401" in error_str or "unauthorized" in error_str:
             raise Exception(
-                f"GitHub authentication failed for repository {org_name}/{repo_name}. Check GitHub credentials."
+                f"GitHub authentication failed for repository {org_name}/{repo_name}. Check GitHub credentials. {str(error_str)}"
             )
         else:
             raise Exception(f"Error accessing repository {org_name}/{repo_name}: {str(e)}")

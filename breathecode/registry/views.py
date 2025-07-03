@@ -278,7 +278,7 @@ def render_preview_html(request, asset_slug):
     readme = asset.get_readme(parse=True)
     response = render(
         request,
-        readme["frontmatter"]["format"] + ".html",
+        readme["frontmatter"]["format"] + ".html" if "frontmatter" in readme else "markdown.html",
         {
             **AssetBigSerializer(asset).data,
             "html": readme["html"],
