@@ -1709,7 +1709,7 @@ class AssetFlagView(APIView):
             return False
 
 
-class FlagAssetView(APIView):
+class LegacyFlagAssetView(APIView):
 
     # POST method for flag generation (legacy approach - does not store in database)
     @capable_of("crud_flag")
