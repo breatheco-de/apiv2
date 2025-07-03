@@ -394,25 +394,13 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
             )
         except Exception as e:
             validation_results.append({"flag": flag, "is_valid": False, "error": str(e)})
-            logger.error(f"Error validating flag '{flag}': {str(e)}")
 
     # Update the task with the validation results
     valid_flags = [result["flag"] for result in validation_results if result["is_valid"]]
     invalid_flags = [result["flag"] for result in validation_results if not result["is_valid"]]
 
-    # Store the validated flags in the delivered_flags field
-    if valid_flags:
-        if assignment.delivered_flags is None:
-            assignment.delivered_flags = {"approved": [], "rejected": []}
-
-        # Add only new valid flags that aren't already in the list
-        for flag in valid_flags:
-            if flag not in assignment.delivered_flags:
-                assignment.delivered_flags["approved"].append(flag)
-
-        for flag in invalid_flags:
-            if flag not in assignment.delivered_flags:
-                assignment.delivered_flags["rejected"].append(flag)
+    # Store the validated flags in the delivered_flags field as a simple list
+    assignment.delivered_flags = valid_flags + invalid_flags
 
     # Update the task description with validation results
     validation_summary = f"Flag validation results: {len(valid_flags)} valid, {len(invalid_flags)} invalid."
@@ -429,8 +417,8 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
                 updated_lines.append(line)
         assignment.description = "\n".join(updated_lines)
 
-    assignment.delivered_flags = valid_flags + invalid_flags
-    if assignment.delivered_flags == asset.config["delivery"]["quantity"]:
+    # Check if we have enough valid flags to approve
+    if len(valid_flags) == asset.config["delivery"]["quantity"]:
         assignment.revision_status = "APPROVED"
     else:
         assignment.revision_status = "REJECTED"
