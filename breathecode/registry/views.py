@@ -275,10 +275,15 @@ def render_preview_html(request, asset_slug):
     if asset.asset_type == "QUIZ":
         return render_message(request, "Quiz cannot be previewed", academy=asset.academy)
 
-    readme = asset.get_readme(parse=True)
+    readme = None
+    try:
+        readme = asset.get_readme(parse=True, silent=False)
+    except Exception as e:
+        return render_message(request, f"Error parsing readme for asset {asset_slug}: {str(e)}", academy=asset.academy)
+
     response = render(
         request,
-        readme["frontmatter"]["format"] + ".html" if "frontmatter" in readme else "markdown.html",
+        readme["frontmatter"]["format"] + ".html",
         {
             **AssetBigSerializer(asset).data,
             "html": readme["html"],
@@ -1267,7 +1272,7 @@ class AcademyAssetActionView(APIView):
             if action_slug == "test":
                 await atest_asset(asset)
             elif action_slug == "clean":
-                await aclean_asset_readme(asset)
+                await aclean_asset_readme(asset, silent=False)
             elif action_slug == "pull":
                 override_meta = False
                 if data and "override_meta" in data:
@@ -1371,7 +1376,7 @@ class AcademyAssetActionView(APIView):
             if action_slug == "test":
                 await atest_asset(asset)
             elif action_slug == "clean":
-                await aclean_asset_readme(asset)
+                await aclean_asset_readme(asset, silent=False)
             elif action_slug == "pull":
                 override_meta = False
                 if data and "override_meta" in data:
