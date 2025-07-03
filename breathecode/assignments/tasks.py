@@ -344,21 +344,9 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
         asset_slug: The slug of the asset being validated
         flags: The flags to validate
     """
-    logger.info("=== ASYNC_VALIDATE_FLAGS STARTED ===")
-    logger.info(f"Assignment ID: {assignment_id}")
-    logger.info(f"Associated slug: {associated_slug}")
-    logger.info(f"Raw flags parameter: {repr(flags)}")
-    logger.info(f"Flags type: {type(flags)}")
-    logger.info(f"Flags length: {len(flags) if hasattr(flags, '__len__') else 'No length'}")
-
-    if isinstance(flags, list):
-        logger.info(f"Flags is a list with {len(flags)} elements:")
-        for i, flag in enumerate(flags):
-            logger.info(f"  Flag {i}: {repr(flag)} (type: {type(flag)})")
-    elif isinstance(flags, str):
-        logger.info(f"Flags is a string: {repr(flags)}")
-    else:
-        logger.info(f"Flags is unexpected type: {type(flags)}")
+    logger.info(
+        f"Starting async_validate_flags for ASSIGNMENT {assignment_id}, ASSET {associated_slug} and FLAGS {flags}"
+    )
 
     from breathecode.registry.models import Asset
     from .utils.flags import FlagManager
@@ -372,26 +360,12 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
     if not asset:
         raise AbortTask(f"Asset {associated_slug} not found")
 
-    logger.info(f"Asset found: {asset.slug}, title: {asset.title}")
-    logger.info(f"Asset config delivery: {asset.config.get('delivery', {})}")
-
     # Create a flag manager instance
     flag_manager = FlagManager()
 
     # Parse the comma-separated flags
-    logger.info(f"Processing flags - isinstance(flags, str): {isinstance(flags, str)}")
-    if isinstance(flags, str):
-        logger.info("Splitting string flags by comma")
-        flag_list = flags.split(",")
-    else:
-        logger.info("Using flags as-is (assuming list)")
-        flag_list = flags
-
+    flag_list = flags.split(",") if isinstance(flags, str) else flags
     flag_list = [flag.strip() for flag in flag_list if flag.strip()]
-
-    logger.info(f"Final processed flag_list: {flag_list}")
-    logger.info(f"Flag_list type: {type(flag_list)}")
-    logger.info(f"Flag_list count: {len(flag_list)}")
 
     if "flags" not in asset.config["delivery"]["formats"]:
         raise AbortTask(f"Delivery of asset {associated_slug} is not expected to have flags, check the asset config")
@@ -400,9 +374,6 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
             f"Missing quantity in the asset.config.delivery of {associated_slug}. How many flags are we expecting?"
         )
 
-    expected_quantity = asset.config["delivery"]["quantity"]
-    logger.info(f"Expected flag quantity: {expected_quantity}")
-
     if not flag_list:
         raise AbortTask(f"No flags provided for validation: {flags}")
 
@@ -410,16 +381,12 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
     if not asset.flag_seed:
         raise AbortTask(f"Asset {associated_slug} does not have a flag_seed")
 
-    logger.info(f"Asset flag_seed: {asset.flag_seed}")
-
     # Check for any revoked flags (if applicable)
     revoked_flags = []  # This could be populated from a database if needed
-    logger.info(f"Revoked flags: {revoked_flags}")
 
     # Validate each flag
     validation_results = []
-    for i, flag in enumerate(flag_list):
-        logger.info(f"Validating flag {i+1}/{len(flag_list)}: {repr(flag)}")
+    for flag in flag_list:
         try:
             is_valid = flag_manager.validate_flag(
                 submitted_flag=flag, asset_seed=asset.flag_seed, revoked_flags=revoked_flags
@@ -427,19 +394,12 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
             validation_results.append(
                 {"flag": flag, "is_valid": is_valid, "error": None if is_valid else "Invalid flag"}
             )
-            logger.info(f"Flag {i+1} validation result: {is_valid}")
         except Exception as e:
             validation_results.append({"flag": flag, "is_valid": False, "error": str(e)})
-            logger.error(f"Flag {i+1} validation error: {str(e)}")
 
     # Update the task with the validation results
     valid_flags = [result["flag"] for result in validation_results if result["is_valid"]]
     invalid_flags = [result["flag"] for result in validation_results if not result["is_valid"]]
-
-    logger.info("Validation summary:")
-    logger.info(f"  - Valid flags: {len(valid_flags)} {valid_flags}")
-    logger.info(f"  - Invalid flags: {len(invalid_flags)} {invalid_flags}")
-    logger.info(f"  - Expected quantity: {expected_quantity}")
 
     # Store the validated flags in the delivered_flags field as a simple list
     assignment.delivered_flags = valid_flags + invalid_flags
@@ -460,26 +420,12 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
         assignment.description = "\n".join(updated_lines)
 
     # Check if we have enough valid flags to approve
-    logger.info(
-        f"Decision logic: {len(valid_flags)} valid flags == {expected_quantity} expected? {len(valid_flags) == expected_quantity}"
-    )
-
     if len(valid_flags) == asset.config["delivery"]["quantity"]:
         assignment.revision_status = "APPROVED"
-        logger.info(
-            f"Assignment {assignment_id} APPROVED: {len(valid_flags)} valid flags match expected {expected_quantity}"
-        )
     else:
         assignment.revision_status = "REJECTED"
         assignment.description = f'We are expecting {asset.config["delivery"]["quantity"]} valid flags, and you delivered the following: \n\n{validation_summary}'
-        logger.info(
-            f"Assignment {assignment_id} REJECTED: {len(valid_flags)} valid flags != {expected_quantity} expected"
-        )
-
     assignment.save()
 
     logger.info(f"Flag validation completed for assignment {assignment_id}: {assignment.revision_status}")
-    logger.info(f"Final delivered_flags: {assignment.delivered_flags}")
-    logger.info("=== ASYNC_VALIDATE_FLAGS ENDED ===")
-
     return assignment.revision_status
