@@ -1545,7 +1545,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 i.user = user
                 i.save()
 
-        if not self.instance and user:
+        if not self.instance and user and invites.exists():
             raise ValidationException(
                 translation(
                     lang,
