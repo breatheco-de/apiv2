@@ -357,11 +357,17 @@ class AssetForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(AssetForm, self).__init__(*args, **kwargs)
-        self.fields["all_translations"].queryset = Asset.objects.filter(asset_type=self.instance.asset_type).order_by(
-            "slug"
-        )  # or something else
-        self.fields["technologies"].queryset = AssetTechnology.objects.all().order_by("slug")  # or something else
-        self.fields["assets_related"].queryset = Asset.objects.exclude(pk=self.instance.pk)
+
+        if "all_translations" in self.fields and self.instance.pk:
+            self.fields["all_translations"].queryset = Asset.objects.filter(
+                asset_type=self.instance.asset_type
+            ).order_by("slug")
+
+        if "technologies" in self.fields:
+            self.fields["technologies"].queryset = AssetTechnology.objects.all().order_by("slug")
+
+        if "assets_related" in self.fields and self.instance.pk:
+            self.fields["assets_related"].queryset = Asset.objects.exclude(pk=self.instance.pk)
 
 
 class WithDescription(admin.SimpleListFilter):
