@@ -24,6 +24,7 @@ from .views import (
     AcademyAliasView,
     ActiveCampaignView,
     UploadView,
+    CourseTranslationsView,
     validate_email_from_app,
     get_alias,
 )
@@ -71,4 +72,5 @@ urlpatterns = [
     path("googleads/data", googleads_csv, name="googleads_csv"),
     path("course", CourseView.as_view(), name="course"),
     path("course/<slug:course_slug>", CourseView.as_view(), name="course_slug"),
+    path("course/<slug:course_slug>/translations", CourseTranslationsView.as_view(), name="course_translations"),
 ]

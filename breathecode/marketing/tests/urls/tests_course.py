@@ -169,3 +169,144 @@ class LeadTestSuite(MarketingTestCase):
         self.assertEqual(
             self.bc.database.list_of("marketing.CourseTranslation"), self.bc.format.to_dict(model.course_translation)
         )
+
+
+class CourseTranslationsTestSuite(MarketingTestCase):
+    """
+    🔽🔽🔽 Zero Course
+    """
+
+    @patch("breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event", MagicMock())
+    def test_zero_courses(self):
+        url = reverse_lazy("marketing:course_translations", kwargs={"course_slug": "gangster"})
+
+        response = self.client.get(url, format="json")
+        json = response.json()
+
+        expected = {"detail": "course-not-found", "status_code": 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(self.bc.database.list_of("marketing.Course"), [])
+        self.assertEqual(self.bc.database.list_of("marketing.CourseTranslation"), [])
+
+    """
+    🔽🔽🔽 One Course with no translations
+    """
+
+    @patch("breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event", MagicMock())
+    def test_one_course__status_active__good_visibility__no_translations(self):
+        course = {"status": "ACTIVE", "visibility": random.choice(["PUBLIC", "UNLISTED"])}
+        model = self.bc.database.create(course=course)
+
+        url = reverse_lazy("marketing:course_translations", kwargs={"course_slug": model.course.slug})
+
+        response = self.client.get(url, format="json")
+        json = response.json()
+
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.bc.database.list_of("marketing.Course"), [self.bc.format.to_dict(model.course)])
+        self.assertEqual(self.bc.database.list_of("marketing.CourseTranslation"), [])
+
+    """
+    🔽🔽🔽 One Course with multiple translations
+    """
+
+    @patch("breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event", MagicMock())
+    def test_one_course__status_active__good_visibility__with_translations(self):
+        course = {"status": "ACTIVE", "visibility": random.choice(["PUBLIC", "UNLISTED"])}
+        course_translations = [
+            {"lang": "en"},
+            {"lang": "es"},
+            {"lang": "pt"},
+        ]
+        model = self.bc.database.create(course=course, course_translation=course_translations)
+
+        url = reverse_lazy("marketing:course_translations", kwargs={"course_slug": model.course.slug})
+
+        response = self.client.get(url, format="json")
+        json = response.json()
+
+        expected = [
+            course_translation_serializer(model.course_translation[0]),
+            course_translation_serializer(model.course_translation[1]),
+            course_translation_serializer(model.course_translation[2]),
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.bc.database.list_of("marketing.Course"), [self.bc.format.to_dict(model.course)])
+        self.assertEqual(
+            self.bc.database.list_of("marketing.CourseTranslation"),
+            self.bc.format.to_dict(model.course_translation),
+        )
+
+    """
+    🔽🔽🔽 One Course with wrong status
+    """
+
+    @patch("breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event", MagicMock())
+    def test_one_course__wrong_status__with_translations(self):
+        course = {
+            "status": random.choice(["ARCHIVED", "DELETED"]),
+            "visibility": random.choice(["PUBLIC", "UNLISTED"]),
+        }
+        course_translations = [
+            {"lang": "en"},
+            {"lang": "es"},
+        ]
+        model = self.bc.database.create(course=course, course_translation=course_translations)
+
+        url = reverse_lazy("marketing:course_translations", kwargs={"course_slug": model.course.slug})
+
+        response = self.client.get(url, format="json")
+        json = response.json()
+
+        expected = {"detail": "course-not-found", "status_code": 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(self.bc.database.list_of("marketing.Course"), [self.bc.format.to_dict(model.course)])
+        self.assertEqual(
+            self.bc.database.list_of("marketing.CourseTranslation"),
+            self.bc.format.to_dict(model.course_translation),
+        )
+
+    """
+    🔽🔽🔽 One Course with wrong visibility
+    """
+
+    @patch("breathecode.notify.utils.hook_manager.HookManagerClass.process_model_event", MagicMock())
+    def test_one_course__wrong_visibility__with_translations(self):
+        course = {
+            "status": "ACTIVE",
+            "visibility": "PRIVATE",
+        }
+        course_translations = [
+            {"lang": "en"},
+            {"lang": "es"},
+        ]
+        model = self.bc.database.create(course=course, course_translation=course_translations)
+
+        url = reverse_lazy("marketing:course_translations", kwargs={"course_slug": model.course.slug})
+
+        response = self.client.get(url, format="json")
+        json = response.json()
+
+        expected = {"detail": "course-not-found", "status_code": 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(self.bc.database.list_of("marketing.Course"), [self.bc.format.to_dict(model.course)])
+        self.assertEqual(
+            self.bc.database.list_of("marketing.CourseTranslation"),
+            self.bc.format.to_dict(model.course_translation),
+        )
