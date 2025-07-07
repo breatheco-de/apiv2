@@ -366,6 +366,7 @@ class GetInvoiceSmallSerializer(serpy.Serializer):
 
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
+    id = serpy.Field()
     amount = serpy.Field()
     paid_at = serpy.Field()
     status = serpy.Field()
