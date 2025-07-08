@@ -726,13 +726,16 @@ class Asset(models.Model):
 
         return org_name, repo_name, branch_name
 
-    def get_readme(self, parse=None, remove_frontmatter=False):
+    def get_readme(self, parse=None, remove_frontmatter=False, silent=True):
 
         if self.readme is None:
             self.readme = self.readme_raw
 
         if self.readme is None or self.readme == "":
             if self.asset_type != "QUIZ":
+                if not silent:
+                    raise Exception("Readme file was not found")
+                    
                 AssetErrorLog(
                     slug=AssetErrorLogType.EMPTY_README,
                     path=self.slug,
@@ -773,6 +776,9 @@ class Asset(models.Model):
             elif extension in [".ipynb"]:
                 readme = self.parse(readme, format="notebook")
             else:
+                if not silent:
+                    raise Exception(f"Invalid Readme URL with extension: {extension if extension else 'no extension'}")
+
                 AssetErrorLog(
                     slug=AssetErrorLogType.INVALID_README_URL,
                     path=self.slug,

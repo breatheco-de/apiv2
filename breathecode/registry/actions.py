@@ -592,8 +592,10 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
     return asset
 
-
-def clean_asset_readme(asset: Asset):
+def clean_asset_readme(asset: Asset, silent=True):
+    """
+    Clean the asset readme, if silent is True, it will not raise an exception if the readme is not found
+    """
     if asset.readme_raw is None or asset.readme_raw == "":
         return asset
 
@@ -604,7 +606,8 @@ def clean_asset_readme(asset: Asset):
         asset = replace_private_github_urls(asset)
         asset = clean_h1s(asset)
         asset = clean_content_variables(asset)
-        readme = asset.get_readme(parse=True)
+
+        readme = asset.get_readme(parse=True, silent=silent)
         if "html" in readme:
             asset.html = readme["html"]
 
@@ -619,7 +622,7 @@ def clean_asset_readme(asset: Asset):
 
 
 @sync_to_async
-def aclean_asset_readme(asset: Asset):
+def aclean_asset_readme(asset: Asset, silent=True):
     return clean_asset_readme(asset)
 
 
@@ -1431,7 +1434,7 @@ def pull_quiz_asset(github, asset: Asset):
             )
         elif "401" in error_str or "unauthorized" in error_str:
             raise Exception(
-                f"GitHub authentication failed for repository {org_name}/{repo_name}. Check GitHub credentials."
+                f"GitHub authentication failed for repository {org_name}/{repo_name}. Check GitHub credentials. {str(error_str)}"
             )
         else:
             raise Exception(f"Error accessing repository {org_name}/{repo_name}: {str(e)}")

@@ -79,6 +79,9 @@ class CohortAdmin(admin.ModelAdmin):
 def mark_as_delivered(modeladmin, request, queryset):
     queryset.update(task_status="DONE")
 
+@admin.display(description="Mark task status as PENDING")
+def mark_as_delivered(modeladmin, request, queryset):
+    queryset.update(task_status="PENDING")
 
 @admin.display(description="Mark revision status as APPROVED")
 def mark_as_approved(modeladmin, request, queryset):
@@ -95,6 +98,10 @@ def mark_as_rejected(modeladmin, request, queryset):
     queryset.update(revision_status="REJECTED")
 
 
+@admin.display(description="Mark revision status as PENDING")
+def mark_as_rejected(modeladmin, request, queryset):
+    queryset.update(revision_status="PENDING")
+    
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     search_fields = ["title", "associated_slug", "user__first_name", "user__last_name", "user__email"]
