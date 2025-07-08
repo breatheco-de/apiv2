@@ -159,7 +159,7 @@ class PlanView(APIView):
 class AcademyPlanView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
-    @capable_of("read_plan")
+    @capable_of("read_subscription")
     def get(self, request, plan_id=None, plan_slug=None, service_slug=None, academy_id=None):
 
         def is_onboarding(value: str):
@@ -228,7 +228,7 @@ class AcademyPlanView(APIView):
 
         return handler.response(serializer.data)
 
-    @capable_of("crud_plan")
+    @capable_of("crud_subscription")
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
 
@@ -260,7 +260,7 @@ class AcademyPlanView(APIView):
 
         return Response(serializer.data, status=201)
 
-    @capable_of("crud_plan")
+    @capable_of("crud_subscription")
     def put(self, request, plan_id=None, plan_slug=None, academy_id=None):
         lang = get_user_language(request)
 
@@ -292,7 +292,7 @@ class AcademyPlanView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of("crud_plan")
+    @capable_of("crud_subscription")
     def delete(self, request, plan_id=None, plan_slug=None, academy_id=None):
         lang = get_user_language(request)
 
