@@ -6,7 +6,7 @@ from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import CharField, Q, Value
+from django.db.models import CharField, Count, F, Q, Value
 from django.utils import timezone
 from django_redis import get_redis_connection
 from linked_services.rest_framework.decorators import scope
@@ -1105,7 +1105,9 @@ class AcademyPlanFinancingView(APIView):
             serializer = GetPlanFinancingSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = PlanFinancing.objects.filter(valid_until__gte=now)
+        items = PlanFinancing.objects.annotate(
+            fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED"))
+        ).filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
