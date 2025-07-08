@@ -145,35 +145,40 @@ class UserIndicatorCalculator:
         return datetime.fromtimestamp(ts / 1000)
 
     def calculate_step_metrics(self, step):
+        def normalize_timestamps(items):
+            for item in items:
+                if 'starting_at' in item and 'started_at' not in item:
+                    item['started_at'] = item['starting_at']
+                if 'ending_at' in item and 'ended_at' not in item:
+                    item['ended_at'] = item['ending_at']
+            return items
+    
         status = "unread"
         time_spent = 0
         comp_struggles = 0
         test_struggles = 0
-
-        compilations = step.get("compilations", [])
-        tests = step.get("tests", [])
-
+    
+        compilations = normalize_timestamps(step.get("compilations", []))
+        tests = normalize_timestamps(step.get("tests", []))
+    
         if "opened_at" in step:
             opened_at = self.parse_timestamp(step["opened_at"])
-
+    
             if "completed_at" in step:
                 status = "completed"
                 completed_at = self.parse_timestamp(step["completed_at"])
                 time_spent = (completed_at - opened_at).total_seconds()
-
-                # Sort compilations, handling missing keys or None values
-                compilations = sorted(compilations, key=lambda x: x.get("starting_at") or 0)
-                tests = sorted(tests, key=lambda x: x.get("starting_at") or 0)
-
-                # html compilations should not be considered as "successfull" or "failure" because there is not compilation engine
+    
+                compilations = sorted(compilations, key=lambda x: x.get("started_at") or 0)
+                tests = sorted(tests, key=lambda x: x.get("started_at") or 0)
+    
                 compilable_compilations = [c for c in compilations if "exit_code" in c]
-
                 first_success_comp = next((i for i, comp in enumerate(compilable_compilations) if comp["exit_code"] == 0), None)
                 if first_success_comp is not None:
                     comp_struggles = sum(1 for comp in compilable_compilations[:first_success_comp] if comp["exit_code"] != 0)
                 else:
                     comp_struggles = sum(1 for comp in compilable_compilations if comp["exit_code"] != 0)
-
+    
                 first_success_test = next((i for i, test in enumerate(tests) if test["exit_code"] == 0), None)
                 if first_success_test is not None:
                     test_struggles = sum(1 for test in tests[:first_success_test] if test["exit_code"] != 0)
@@ -182,36 +187,35 @@ class UserIndicatorCalculator:
             else:
                 if compilations or tests:
                     status = "attempted"
-                    comp_ended_ats = [self.parse_timestamp(comp["ended_at"]) for comp in compilations]
-                    test_ended_ats = [self.parse_timestamp(test["ended_at"]) for test in tests]
-                    all_ended_ats = comp_ended_ats + test_ended_ats
-                    all_ended_ats = [ts for ts in all_ended_ats if ts is not None]
-
+                    comp_ended_ats = [self.parse_timestamp(comp.get("ended_at")) for comp in compilations]
+                    test_ended_ats = [self.parse_timestamp(test.get("ended_at")) for test in tests]
+                    all_ended_ats = [ts for ts in (comp_ended_ats + test_ended_ats) if ts is not None]
+    
                     if all_ended_ats:
                         last_interaction_in_step = max(all_ended_ats)
                     else:
                         last_interaction_in_step = self.last_interaction_at
-
+    
                     if last_interaction_in_step is not None:
                         time_spent = (last_interaction_in_step - opened_at).total_seconds()
-                        time_spent = min(time_spent, 1800)  # Cap at 30 minutes
-                
-                    # html compilations should not be considered as "successfull" or "failure" because there is not compilation engine
+                        time_spent = min(time_spent, 1800)
+    
                     compilable_compilations = [c for c in compilations if "exit_code" in c]
                     comp_struggles = sum(1 for comp in compilable_compilations if comp["exit_code"] != 0)
-                    
                     test_struggles = sum(1 for test in tests if test["exit_code"] != 0)
                 else:
                     status = "skipped"
                     time_spent = (self.last_interaction_at - opened_at).total_seconds()
-                    time_spent = min(time_spent, 1800)  # Cap at 30 minutes
-
+                    time_spent = min(time_spent, 1800)
+    
         return {
             "status": status,
             "time_spent": time_spent,
             "comp_struggles": comp_struggles,
             "test_struggles": test_struggles,
         }
+
+
 
     def calculate_global_metrics(self):
         step_metrics = [self.calculate_step_metrics(step) for step in self.steps]
