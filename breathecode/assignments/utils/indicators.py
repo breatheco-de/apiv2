@@ -165,11 +165,14 @@ class UserIndicatorCalculator:
                 compilations = sorted(compilations, key=lambda x: x.get("starting_at") or 0)
                 tests = sorted(tests, key=lambda x: x.get("starting_at") or 0)
 
-                first_success_comp = next((i for i, comp in enumerate(compilations) if comp["exit_code"] == 0), None)
+                # html compilations should not be considered as "successfull" or "failure" because there is not compilation engine
+                compilable_compilations = [c for c in compilations if "exit_code" in c]
+
+                first_success_comp = next((i for i, comp in enumerate(compilable_compilations) if comp["exit_code"] == 0), None)
                 if first_success_comp is not None:
-                    comp_struggles = sum(1 for comp in compilations[:first_success_comp] if comp["exit_code"] != 0)
+                    comp_struggles = sum(1 for comp in compilable_compilations[:first_success_comp] if comp["exit_code"] != 0)
                 else:
-                    comp_struggles = sum(1 for comp in compilations if comp["exit_code"] != 0)
+                    comp_struggles = sum(1 for comp in compilable_compilations if comp["exit_code"] != 0)
 
                 first_success_test = next((i for i, test in enumerate(tests) if test["exit_code"] == 0), None)
                 if first_success_test is not None:
@@ -192,8 +195,11 @@ class UserIndicatorCalculator:
                     if last_interaction_in_step is not None:
                         time_spent = (last_interaction_in_step - opened_at).total_seconds()
                         time_spent = min(time_spent, 1800)  # Cap at 30 minutes
-
-                    comp_struggles = sum(1 for comp in compilations if comp["exit_code"] != 0)
+                
+                    # html compilations should not be considered as "successfull" or "failure" because there is not compilation engine
+                    compilable_compilations = [c for c in compilations if "exit_code" in c]
+                    comp_struggles = sum(1 for comp in compilable_compilations if comp["exit_code"] != 0)
+                    
                     test_struggles = sum(1 for test in tests if test["exit_code"] != 0)
                 else:
                     status = "skipped"
