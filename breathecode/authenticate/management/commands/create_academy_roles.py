@@ -283,7 +283,6 @@ ROLES = [
         "name": "Staff (Base)",
         "caps": [
             "chatbot_message",
-            "read_subscription",
             "read_member",
             "read_syllabus",
             "read_student",
@@ -408,6 +407,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             + [
                 "read_assignment",
                 "crud_assignment",
+                "read_subscription",
                 "read_cohort_activity",
                 "read_nps_answers",
                 "classroom_activity",
@@ -607,6 +607,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "get_academy_feedback_settings",
                 "crud_academy_feedback_settings",
                 "get_academy_auth_settings",
+                "read_subscription",
             ],
         }
     )
