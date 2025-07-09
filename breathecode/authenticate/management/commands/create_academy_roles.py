@@ -283,6 +283,7 @@ ROLES = [
         "name": "Staff (Base)",
         "caps": [
             "chatbot_message",
+            "read_subscription",
             "read_member",
             "read_syllabus",
             "read_student",
