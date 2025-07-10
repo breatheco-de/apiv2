@@ -608,6 +608,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "crud_academy_feedback_settings",
                 "get_academy_auth_settings",
                 "read_subscription",
+                "crud_subscription",
             ],
         }
     )
