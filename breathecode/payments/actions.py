@@ -853,7 +853,7 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
                 "items": [],
             }
 
-        if consumable.how_many <= 0:
+        if consumable.how_many < 0:
             result[service.id]["balance"]["unit"] = -1
 
         elif result[service.id]["balance"]["unit"] != -1:
