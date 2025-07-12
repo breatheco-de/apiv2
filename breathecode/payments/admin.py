@@ -277,6 +277,13 @@ class EventTypeSetTranslationAdmin(admin.ModelAdmin):
 class PlanServiceItemAdmin(admin.ModelAdmin):
     list_display = ("id", "plan", "service_item")
     list_filter = ["plan__slug", "plan__owner__slug"]
+    raw_id_fields = ["service_item"]
+    search_fields = ["plan__slug", "plan__translations__title", "service_item__service__slug"]
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "plan":
+            kwargs["queryset"] = Plan.objects.select_related().order_by("slug")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(PlanServiceItemHandler)
