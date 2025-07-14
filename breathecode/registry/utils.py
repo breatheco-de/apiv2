@@ -29,8 +29,8 @@ TRUSTED_DOMAINS = {
     'exploit-db.com',
     # Add more trusted domains here as needed
     # Common domains that might have reliability issues but are trusted:
-    # 'docs.python.org',
-    # 'developer.mozilla.org',
+    'twitter.com',
+    'x.com',
     # 'stackoverflow.com',
 }
 
