@@ -364,7 +364,7 @@ class FormEntry(models.Model):
     )  # validators should be a list
 
     course = models.CharField(max_length=70, null=True, default=None, blank=True)
-    client_comments = models.CharField(max_length=250, blank=True, null=True, default=None)
+    client_comments = models.TextField(max_length=1000, blank=True, null=True, default=None)
     location = models.CharField(max_length=70, blank=True, null=True, default=None)
     language = models.CharField(max_length=2, default="en")
     utm_url = models.CharField(max_length=2000, null=True, default=None, blank=True)
