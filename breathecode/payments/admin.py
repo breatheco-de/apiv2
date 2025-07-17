@@ -166,6 +166,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "selected_event_type_set",
     ]
     actions = [renew_subscription_consumables, charge_subscription]
+    filter_horizontal = ("joined_cohorts",)
 
 
 @admin.register(SubscriptionServiceItem)
