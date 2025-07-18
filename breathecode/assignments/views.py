@@ -1579,6 +1579,7 @@ class AssetFlagView(APIView):
     def get(self, request, academy_id):
         submitted_flag = request.query_params.get("flag")
         asset_id = request.query_params.get("asset_id")
+        academy_id = int(academy_id)
         lang = get_user_language(request)
 
         if not submitted_flag:
