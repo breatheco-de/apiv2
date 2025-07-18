@@ -103,7 +103,7 @@ from .serializers import (
     TechnologyPUTSerializer,
     VariableSmallSerializer,
 )
-from .tasks import async_build_asset_context, async_pull_from_github
+from .tasks import async_build_asset_context, async_pull_from_github, async_regenerate_asset_readme
 from .utils import AssetErrorLogType, is_url, prompt_technologies
 
 logger = logging.getLogger(__name__)
@@ -1272,7 +1272,7 @@ class AcademyAssetActionView(APIView):
             if action_slug == "test":
                 await atest_asset(asset)
             elif action_slug == "clean":
-                await aclean_asset_readme(asset, silent=False)
+                async_regenerate_asset_readme.delay(asset.slug)
             elif action_slug == "pull":
                 override_meta = False
                 if data and "override_meta" in data:
