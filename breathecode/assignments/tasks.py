@@ -395,7 +395,7 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
                 validation_results.append({"flag": flag, "is_valid": False, "error": "Flag not found"})
                 continue
 
-            validation_results.append({"flag": flag, "is_valid": asset_flag.is_valid(), "error": None})
+            validation_results.append({"flag": flag, "is_valid": asset_flag.is_valid(), "error": "Tag was revoked or it already expired"})
         else:
             try:
                 is_valid = flag_manager.validate_flag(

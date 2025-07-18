@@ -1670,10 +1670,9 @@ class AssetFlagView(APIView):
         flag_id = flag_manager.extract_flag_id(submitted_flag)
 
         if not flag_id:
-            return False
-
-        # Look for the flag in the database
-        asset_flag = AssetFlag.objects.filter(asset=asset, flag_id=flag_id, flag_value=submitted_flag).first()
+            asset_flag = AssetFlag.objects.filter(asset=asset, flag_value=submitted_flag).first()
+        else:
+            asset_flag = AssetFlag.objects.filter(asset=asset, flag_id=flag_id, flag_value=submitted_flag).first()
 
         if not asset_flag:
             return False
