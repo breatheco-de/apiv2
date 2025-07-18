@@ -100,7 +100,7 @@ class FinancingOptionAdmin(admin.ModelAdmin):
 class PlanAdmin(admin.ModelAdmin):
     list_display = ("id", "slug", "status", "trial_duration", "trial_duration_unit", "owner")
     list_filter = ["trial_duration_unit", "owner"]
-    search_fields = ["lang", "title"]
+    search_fields = ["title"]
     raw_id_fields = ["owner"]
     filter_horizontal = ("invites",)
 
@@ -166,6 +166,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "selected_event_type_set",
     ]
     actions = [renew_subscription_consumables, charge_subscription]
+    filter_horizontal = ("joined_cohorts",)
 
 
 @admin.register(SubscriptionServiceItem)
