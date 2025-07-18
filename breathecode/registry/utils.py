@@ -29,8 +29,8 @@ TRUSTED_DOMAINS = {
     'exploit-db.com',
     # Add more trusted domains here as needed
     # Common domains that might have reliability issues but are trusted:
-    # 'docs.python.org',
-    # 'developer.mozilla.org',
+    'twitter.com',
+    'x.com',
     # 'stackoverflow.com',
 }
 
@@ -126,21 +126,42 @@ def is_url(value):
         r"(#[-A-Za-z0-9_]*)?$"  # fragment locator
     )
     return re.match(url_pattern, value) is not None
+    
+def extract_urls_from_text(text):
+    """
+    Extract valid http/https URLs from any text.
+    """
+    url_pattern = re.compile(r'https?://[^\s\'"<>]+')
+    return url_pattern.findall(text or "")
 
 
 def get_urls_from_html(html_content):
     soup = BeautifulSoup(html_content, features="lxml")
     urls = []
 
-    anchors = soup.findAll("a")
-    for a in anchors:
-        urls.append(a.get("href"))
+    # Anchor tags
+    for a in soup.find_all("a"):
+        href = a.get("href")
+        if href:
+            urls.append(href)
 
-    images = images = soup.findAll("img")
-    for img in images:
-        urls.append(img.get("src"))
+    # Image tags
+    for img in soup.find_all("img"):
+        src = img.get("src")
+        if src:
+            urls.append(src)
 
-    return urls
+    # Extract URLs from <code>, <pre>, and full page text
+    text_blocks = soup.find_all(["code", "pre"])
+    text_blocks.append(soup)  # add full document text
+
+    for el in text_blocks:
+        text = el.get_text()
+        if text:
+            urls += extract_urls_from_text(text)
+
+    # Deduplicate and clean
+    return list(set(filter(None, urls)))
 
 
 def is_internal_github_url(url, asset_readme_url):
