@@ -302,6 +302,7 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     list_display = ("id", "subscription", "service_item", "plan_financing", "valid_until")
     search_fields = [
         "subscription_handler__subscription__user__email",
+        "plan_handler__subscription__user__email",
         "plan_handler__plan_financing__user__email",
     ]
     actions = [renew_consumables]
