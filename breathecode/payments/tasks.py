@@ -291,8 +291,13 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         if bag:
             bag.delete()
 
-        subscription.status = "PAYMENT_ISSUE"
-        subscription.save()
+        if subscription.status not in [
+            Subscription.Status.CANCELLED,
+            Subscription.Status.DEPRECATED,
+            Subscription.Status.EXPIRED,
+        ]:
+            subscription.status = "PAYMENT_ISSUE"
+            subscription.save()
 
     def handle_deprecated_subscription():
         plan = subscription.plans.first()
@@ -358,10 +363,21 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         Subscription.Status.FULLY_PAID,
     ]
 
+    no_charge_statuses = [
+        Subscription.Status.CANCELLED,
+        Subscription.Status.DEPRECATED,
+        Subscription.Status.EXPIRED,
+    ]
+
     try:
         with Lock(client, f"lock:subscription:{subscription_id}", timeout=30, blocking_timeout=30):
             if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
                 raise AbortTask(f"Subscription with id {subscription_id} not found")
+
+            if subscription.status in no_charge_statuses:
+                raise AbortTask(
+                    f"Subscription with id {subscription_id} is in status {subscription.status} and cannot be charged"
+                )
 
             utc_now = timezone.now()
 
@@ -408,9 +424,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     )
                     alert_payment_issue(message, button)
 
-                    manager = schedule_task(charge_subscription, "1d")
-                    if not manager.exists(subscription.id):
-                        manager.call(subscription.id)
+                    if subscription.status not in no_charge_statuses:
+                        manager = schedule_task(charge_subscription, "1d")
+                        if not manager.exists(subscription.id):
+                            manager.call(subscription.id)
 
                     raise AbortTask(f"Payment to Subscription {subscription_id} failed")
 
@@ -424,9 +441,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     subscription.status_message = str(e)
                     subscription.save()
 
-                    manager = schedule_task(charge_subscription, "1d")
-                    if not manager.exists(subscription.id):
-                        manager.call(subscription.id)
+                    if subscription.status not in no_charge_statuses:
+                        manager = schedule_task(charge_subscription, "1d")
+                        if not manager.exists(subscription.id):
+                            manager.call(subscription.id)
 
                     raise AbortTask(f"Error getting bag from subscription {subscription_id}: {e}")
 
@@ -461,9 +479,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     )
                     alert_payment_issue(message, button)
 
-                    manager = schedule_task(charge_subscription, "1d")
-                    if not manager.exists(subscription.id):
-                        manager.call(subscription.id)
+                    if subscription.status not in no_charge_statuses:
+                        manager = schedule_task(charge_subscription, "1d")
+                        if not manager.exists(subscription.id):
+                            manager.call(subscription.id)
 
                     raise AbortTask(f"Payment to Subscription {subscription_id} failed")
 
@@ -578,8 +597,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
         if bag:
             bag.delete()
 
-        plan_financing.status = "PAYMENT_ISSUE"
-        plan_financing.save()
+        if plan_financing.status not in [
+            PlanFinancing.Status.CANCELLED,
+            PlanFinancing.Status.DEPRECATED,
+            PlanFinancing.Status.EXPIRED,
+        ]:
+            plan_financing.status = "PAYMENT_ISSUE"
+            plan_financing.save()
 
     bag = None
     client = None
@@ -593,11 +617,22 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
         PlanFinancing.Status.FULLY_PAID,
     ]
 
+    no_charge_statuses = [
+        PlanFinancing.Status.CANCELLED,
+        PlanFinancing.Status.DEPRECATED,
+        PlanFinancing.Status.EXPIRED,
+    ]
+
     try:
         with Lock(client, f"lock:plan_financing:{plan_financing_id}", timeout=30, blocking_timeout=30):
 
             if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} not found")
+
+            if plan_financing.status in no_charge_statuses:
+                raise AbortTask(
+                    f"PlanFinancing with id {plan_financing_id} is in status {plan_financing.status} and cannot be charged"
+                )
 
             utc_now = timezone.now()
 
@@ -655,9 +690,10 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         )
                         alert_payment_issue(message, button)
 
-                        manager = schedule_task(charge_plan_financing, "1d")
-                        if not manager.exists(plan_financing.id):
-                            manager.call(plan_financing.id)
+                        if plan_financing.status not in no_charge_statuses:
+                            manager = schedule_task(charge_plan_financing, "1d")
+                            if not manager.exists(plan_financing.id):
+                                manager.call(plan_financing.id)
 
                         raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
 
@@ -671,9 +707,10 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                         plan_financing.status_message = str(e)
                         plan_financing.save()
 
-                        manager = schedule_task(charge_plan_financing, "1d")
-                        if not manager.exists(plan_financing.id):
-                            manager.call(plan_financing.id)
+                        if plan_financing.status not in no_charge_statuses:
+                            manager = schedule_task(charge_plan_financing, "1d")
+                            if not manager.exists(plan_financing.id):
+                                manager.call(plan_financing.id)
 
                         raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
 
