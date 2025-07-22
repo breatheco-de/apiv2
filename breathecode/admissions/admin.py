@@ -18,6 +18,7 @@ from breathecode.assignments.actions import sync_student_tasks
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
 from breathecode.utils import getLogger
 from breathecode.utils.datetime_integer import from_now
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from .actions import ImportCohortTimeSlots, test_syllabus
 from .models import (
@@ -272,6 +273,10 @@ class CohortAdmin(admin.ModelAdmin):
     list_display = ("id", "slug", "stage", "name", "kickoff_date", "syllabus_version", "schedule", "academy")
     list_filter = ["stage", "academy__slug", "schedule__name", "syllabus_version__version"]
     filter_horizontal = ("micro_cohorts",)
+
+    formfield_overrides = {
+        "shortcuts": {"widget": PrettyJSONWidget()},
+    }
 
     if os.getenv("ENV") == "development":
         actions = cohort_actions + [link_randomly_relations_to_cohorts]
