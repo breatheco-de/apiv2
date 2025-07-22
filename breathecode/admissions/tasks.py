@@ -48,7 +48,7 @@ def async_test_syllabus(syllabus_slug, syllabus_version) -> None:
 def build_cohort_user(cohort_id: int, user_id: int, role: str = "STUDENT", **_: Any) -> None:
     logger.info(f"Starting build_cohort_user for cohort {cohort_id} and user {user_id}")
 
-    bad_stages = ["DELETED", "ENDED", "FINAL_PROJECT", "STARTED"]
+    bad_stages = ["DELETED", "ENDED"]
 
     if not (cohort := Cohort.objects.filter(id=cohort_id).exclude(stage__in=bad_stages).first()):
         raise AbortTask(f"Cohort with id {cohort_id} not found")

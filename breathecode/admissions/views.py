@@ -2112,6 +2112,19 @@ class CohortJoinView(APIView):
                 code=400,
             )
 
+        bad_stages = ["DELETED", "ENDED"]
+        cohort = Cohort.objects.filter(id=cohort_id).exclude(stage__in=bad_stages).first()
+        if not cohort:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"No cohorts found with a valid stage (not in {bad_stages}) for id={cohort_id}",
+                    es=f"No se encontraron cohortes con un stage correcto (no en {bad_stages}) para id={cohort_id}",
+                    slug="cohort-not-found",
+                ),
+                code=404,
+            )
+
         if cohort.never_ends == False and resource.joined_cohorts.filter(never_ends=False).count() > 0:
             raise ValidationException(
                 translation(
@@ -2125,7 +2138,7 @@ class CohortJoinView(APIView):
 
         resource.joined_cohorts.add(cohort)
 
-        tasks.build_cohort_user.delay(cohort_id, request.user.id, "STUDENT")
+        tasks.build_cohort_user.delay(cohort.id, request.user.id, "STUDENT")
         tasks.build_profile_academy.delay(cohort.academy.id, request.user.id, "student")
 
         serializer = GetAbstractIOweYouSerializer(resource, many=False)

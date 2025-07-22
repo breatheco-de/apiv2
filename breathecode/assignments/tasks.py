@@ -390,12 +390,14 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
 
         # Some old flags start with 4GEEKS{ instead of FLAG{
         if flag.startswith("4GEEKS{"):
-            asset_flag = AssetFlag.objects.filter(asset=asset, flag_id=flag).first()
+            asset_flag = AssetFlag.objects.filter(asset=asset, flag_value=flag).first()
             if not asset_flag:
                 validation_results.append({"flag": flag, "is_valid": False, "error": "Flag not found"})
                 continue
 
-            validation_results.append({"flag": flag, "is_valid": asset_flag.is_valid(), "error": "Tag was revoked or it already expired"})
+            validation_results.append(
+                {"flag": flag, "is_valid": asset_flag.is_valid(), "error": "Tag was revoked or it already expired"}
+            )
         else:
             try:
                 is_valid = flag_manager.validate_flag(
