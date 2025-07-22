@@ -374,6 +374,8 @@ class Asset(models.Model):
 
     html = models.TextField(null=True, blank=True, default=None)
 
+    solution_readme = models.TextField(null=True, blank=True, default=None)
+
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
     config = models.JSONField(null=True, blank=True, default=None)
@@ -653,6 +655,9 @@ class Asset(models.Model):
 
             context += f" of this {self.asset_type} is the following: {self.html}."
 
+        if self.solution_readme:
+            context += f"the following steps are the solutions we propose for students to follow, when ask for advice use this information to help them: {self.solution_readme}."
+
         return context
 
     def save(self, *args, **kwargs):
@@ -735,7 +740,7 @@ class Asset(models.Model):
             if self.asset_type != "QUIZ":
                 if not silent:
                     raise Exception("Readme file was not found")
-                    
+
                 AssetErrorLog(
                     slug=AssetErrorLogType.EMPTY_README,
                     path=self.slug,
