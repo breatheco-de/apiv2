@@ -348,7 +348,7 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
         f"Starting async_validate_flags for ASSIGNMENT {assignment_id}, ASSET {associated_slug} and FLAGS {flags}"
     )
 
-    from breathecode.registry.models import Asset
+    from breathecode.registry.models import Asset, AssetFlag
     from .utils.flags import FlagManager
 
     # Get the assignment and asset
@@ -387,15 +387,27 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
     # Validate each flag
     validation_results = []
     for flag in flag_list:
-        try:
-            is_valid = flag_manager.validate_flag(
-                submitted_flag=flag, asset_seed=asset.flag_seed, revoked_flags=revoked_flags
-            )
+
+        # Some old flags start with 4GEEKS{ instead of FLAG{
+        if flag.startswith("4GEEKS{"):
+            asset_flag = AssetFlag.objects.filter(asset=asset, flag_value=flag).first()
+            if not asset_flag:
+                validation_results.append({"flag": flag, "is_valid": False, "error": "Flag not found"})
+                continue
+
             validation_results.append(
-                {"flag": flag, "is_valid": is_valid, "error": None if is_valid else "Invalid flag"}
+                {"flag": flag, "is_valid": asset_flag.is_valid(), "error": "Tag was revoked or it already expired"}
             )
-        except Exception as e:
-            validation_results.append({"flag": flag, "is_valid": False, "error": str(e)})
+        else:
+            try:
+                is_valid = flag_manager.validate_flag(
+                    submitted_flag=flag, asset_seed=asset.flag_seed, revoked_flags=revoked_flags
+                )
+                validation_results.append(
+                    {"flag": flag, "is_valid": is_valid, "error": None if is_valid else "Invalid flag"}
+                )
+            except Exception as e:
+                validation_results.append({"flag": flag, "is_valid": False, "error": str(e)})
 
     # Update the task with the validation results
     valid_flags = [result["flag"] for result in validation_results if result["is_valid"]]

@@ -1579,6 +1579,7 @@ class AssetFlagView(APIView):
     def get(self, request, academy_id):
         submitted_flag = request.query_params.get("flag")
         asset_id = request.query_params.get("asset_id")
+        academy_id = int(academy_id)
         lang = get_user_language(request)
 
         if not submitted_flag:
@@ -1669,11 +1670,10 @@ class AssetFlagView(APIView):
         flag_manager = FlagManager()
         flag_id = flag_manager.extract_flag_id(submitted_flag)
 
-        if not flag_id:
-            return False
-
-        # Look for the flag in the database
-        asset_flag = AssetFlag.objects.filter(asset=asset, flag_id=flag_id, flag_value=submitted_flag).first()
+        if flag_id is None:
+            asset_flag = AssetFlag.objects.filter(asset=asset, flag_value=submitted_flag).first()
+        else:
+            asset_flag = AssetFlag.objects.filter(asset=asset, flag_id=flag_id, flag_value=submitted_flag).first()
 
         if not asset_flag:
             return False

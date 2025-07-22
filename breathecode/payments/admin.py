@@ -100,7 +100,7 @@ class FinancingOptionAdmin(admin.ModelAdmin):
 class PlanAdmin(admin.ModelAdmin):
     list_display = ("id", "slug", "status", "trial_duration", "trial_duration_unit", "owner")
     list_filter = ["trial_duration_unit", "owner"]
-    search_fields = ["lang", "title"]
+    search_fields = ["title"]
     raw_id_fields = ["owner"]
     filter_horizontal = ("invites",)
 
@@ -166,6 +166,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "selected_event_type_set",
     ]
     actions = [renew_subscription_consumables, charge_subscription]
+    filter_horizontal = ("joined_cohorts",)
 
 
 @admin.register(SubscriptionServiceItem)
@@ -277,6 +278,13 @@ class EventTypeSetTranslationAdmin(admin.ModelAdmin):
 class PlanServiceItemAdmin(admin.ModelAdmin):
     list_display = ("id", "plan", "service_item")
     list_filter = ["plan__slug", "plan__owner__slug"]
+    raw_id_fields = ["service_item"]
+    search_fields = ["plan__slug", "plan__translations__title", "service_item__service__slug"]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "plan":
+            kwargs["queryset"] = Plan.objects.select_related().order_by("slug")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 @admin.register(PlanServiceItemHandler)
@@ -292,6 +300,11 @@ def renew_consumables(modeladmin, request, queryset):
 @admin.register(ServiceStockScheduler)
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     list_display = ("id", "subscription", "service_item", "plan_financing", "valid_until")
+    search_fields = [
+        "subscription_handler__subscription__user__email",
+        "plan_handler__subscription__user__email",
+        "plan_handler__plan_financing__user__email",
+    ]
     actions = [renew_consumables]
 
     def subscription(self, obj):

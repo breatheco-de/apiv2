@@ -149,7 +149,7 @@ class PlanFinder:
         plans = Plan.objects.filter(
             *args,
             cohort_set__cohorts__id=self.cohort.id,
-            cohort_set__cohorts__stage__in=["INACTIVE", "PREWORK"],
+            cohort_set__cohorts__stage__in=["INACTIVE", "PREWORK", "STARTED"],
             **additional_args,
         ).distinct()
 
@@ -853,7 +853,7 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
                 "items": [],
             }
 
-        if consumable.how_many <= 0:
+        if consumable.how_many < 0:
             result[service.id]["balance"]["unit"] = -1
 
         elif result[service.id]["balance"]["unit"] != -1:
