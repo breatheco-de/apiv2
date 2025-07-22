@@ -26,8 +26,10 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             "slug": cohort.slug,
             "stage": cohort.stage,
             "available_as_saas": cohort.available_as_saas,
+            "shortcuts": cohort.shortcuts,
         },
         "created_at": self.bc.datetime.to_iso_string(UTC_NOW),
+        "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "educational_status": "ACTIVE",
         "finantial_status": None,
         "id": 1,
@@ -80,8 +82,10 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             "slug": cohort.slug,
             "stage": cohort.stage,
             "available_as_saas": cohort.available_as_saas,
+            "shortcuts": cohort.shortcuts,
         },
         "created_at": self.bc.datetime.to_iso_string(cohort_user.created_at),
+        "updated_at": self.bc.datetime.to_iso_string(cohort_user.updated_at),
         "educational_status": cohort_user.educational_status,
         "finantial_status": cohort_user.finantial_status,
         "id": cohort_user.id,
@@ -360,6 +364,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data, format="json")
         json = response.json()
+
+        # Refresh the model to get the updated_at value after the PUT operation
+        model["cohort_user"].refresh_from_db()
+
         expected = put_serializer(
             self, model.cohort_user, model.cohort, model.user, model.profile_academy, data={"role": "STUDENT"}
         )
@@ -432,6 +440,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data, format="json")
         json = response.json()
+
+        # Refresh the model to get the updated_at value after the PUT operation
+        model["cohort_user"].refresh_from_db()
+
         expected = put_serializer(
             self, model.cohort_user, model.cohort, model.user, model.profile_academy, data={"role": "TEACHER"}
         )
