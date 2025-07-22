@@ -335,6 +335,8 @@ class CohortSet(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
+    
+
 
 
 class CohortSetTranslation(models.Model):
@@ -385,6 +387,9 @@ class CohortSetCohort(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
+    
+    def __str__(self) -> str:
+        return self.cohort_set.slug
 
 
 class MentorshipServiceSet(models.Model):
