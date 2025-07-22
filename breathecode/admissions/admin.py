@@ -184,6 +184,12 @@ def sync_timeslots(modeladmin, request, queryset):
 
 
 class CohortForm(forms.ModelForm):
+    class Meta:
+        model = Cohort
+        fields = "__all__"
+        widgets = {
+            "shortcuts": PrettyJSONWidget(),
+        }
 
     def __init__(self, *args, **kwargs):
         super(CohortForm, self).__init__(*args, **kwargs)
@@ -273,10 +279,6 @@ class CohortAdmin(admin.ModelAdmin):
     list_display = ("id", "slug", "stage", "name", "kickoff_date", "syllabus_version", "schedule", "academy")
     list_filter = ["stage", "academy__slug", "schedule__name", "syllabus_version__version"]
     filter_horizontal = ("micro_cohorts",)
-
-    formfield_overrides = {
-        "shortcuts": {"widget": PrettyJSONWidget()},
-    }
 
     if os.getenv("ENV") == "development":
         actions = cohort_actions + [link_randomly_relations_to_cohorts]
