@@ -5,6 +5,7 @@ import math
 import os
 from datetime import timedelta
 from typing import Any, Optional
+import random
 
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -946,6 +947,21 @@ class Coupon(models.Model):
 
     def __str__(self) -> str:
         return self.slug
+
+    @classmethod
+    def generate_coupon_key(cls, length=8, prefix=None):
+        """
+        Generates a random, readable coupon key (slug).
+        Ensures uniqueness in the database.
+        Uses an ambiguity-free character set for readability.
+        """
+        READABLE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  # No I, O, 0, 1, S, 5, B, 8
+        while True:
+            key = ''.join(random.choices(READABLE_CHARS, k=length))
+            if prefix:
+                key = f"{prefix.upper()}{key}"
+            if not cls.objects.filter(slug=key).exists():
+                return key
 
 
 def limit_coupon_choices():

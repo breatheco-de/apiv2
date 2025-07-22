@@ -1231,14 +1231,7 @@ class UserCouponView(APIView):
                 )
 
             # Create a unique slug for the coupon
-            base_slug = f"referral-{user.id}"
-            slug = base_slug
-            counter = 1
-
-            # Ensure slug uniqueness
-            while Coupon.objects.filter(slug=slug).exists():
-                slug = f"{base_slug}-{counter}"
-                counter += 1
+            slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
 
             coupon = Coupon(
                 slug=slug,
