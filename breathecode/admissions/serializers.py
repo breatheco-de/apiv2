@@ -368,6 +368,7 @@ class GetCohortSerializer(serpy.Serializer):
     timeslots = serpy.MethodField()
     is_hidden_on_prework = serpy.Field()
     available_as_saas = serpy.Field()
+    shortcuts = serpy.Field()
 
     def get_timeslots(self, obj):
         timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
@@ -417,6 +418,7 @@ class GetSmallCohortSerializer(serpy.Serializer):
     ending_date = serpy.Field()
     stage = serpy.Field()
     available_as_saas = serpy.Field()
+    shortcuts = serpy.Field()
 
 
 class GetTeacherAcademySmallSerializer(serpy.Serializer):
@@ -471,6 +473,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     stage = serpy.Field()
     is_hidden_on_prework = serpy.Field()
     available_as_saas = serpy.Field()
+    shortcuts = serpy.Field()
 
     def get_micro_cohorts(self, obj):
         cohorts = obj.micro_cohorts.all()
@@ -520,6 +523,7 @@ class CohortHookSerializer(serpy.Serializer):
     stage = serpy.Field()
     is_hidden_on_prework = serpy.Field()
     available_as_saas = serpy.Field()
+    shortcuts = serpy.Field()
 
 
 class GetCohortUserSerializer(serpy.Serializer):
@@ -877,6 +881,7 @@ class CohortSerializer(CohortSerializerMixin):
             "timezone",
             "is_hidden_on_prework",
             "available_as_saas",
+            "shortcuts",
         )
 
     def create(self, validated_data):
@@ -927,6 +932,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
             "current_module",
             "is_hidden_on_prework",
             "available_as_saas",
+            "shortcuts",
         )
 
     def update(self, instance, validated_data):
