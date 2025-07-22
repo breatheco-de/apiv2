@@ -1601,7 +1601,7 @@ def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, b
             referral_value=0,
             auto=False,
             how_many_offers=1,  # Single use
-            seller=coupon.seller,
+            seller=buyer_user,
             allowed_user=seller_user,  # Restrict to seller only
             offered_at=utc_now,
             expires_at=utc_now + timedelta(days=90),  # 90 days to use the reward
