@@ -950,6 +950,61 @@ class MeSubscriptionCancelView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class MeSubscriptionReactivateView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def put(self, request, subscription_id):
+        lang = get_user_language(request)
+        utc_now = timezone.now()
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id, user=request.user).first()):
+            raise ValidationException(
+                translation(lang, en="Subscription not found", es="No existe la suscripción", slug="not-found"),
+                code=404,
+            )
+
+        if subscription.status == "ACTIVE":
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Subscription already active",
+                    es="La suscripción ya está activa",
+                    slug="already-active",
+                ),
+                code=400,
+            )
+
+        # Check if subscription can still be reactivated based on dates
+        if subscription.next_payment_at and subscription.next_payment_at < utc_now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"The reactivation period was until {subscription.next_payment_at.strftime('%Y-%m-%d %H:%M:%S')}, then user should buy a new subscription",
+                    es=f"El período de reactivación fue hasta {subscription.next_payment_at.strftime('%Y-%m-%d %H:%M:%S')}, entonces el usuario debe comprar una nueva suscripción",
+                    slug="reactivation-period-expired",
+                ),
+                code=400,
+            )
+
+        if subscription.valid_until and subscription.valid_until < utc_now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"The reactivation period was until {subscription.valid_until.strftime('%Y-%m-%d %H:%M:%S')}, then user should buy a new subscription",
+                    es=f"El período de reactivación fue hasta {subscription.valid_until.strftime('%Y-%m-%d %H:%M:%S')}, entonces el usuario debe comprar una nueva suscripción",
+                    slug="reactivation-period-expired",
+                ),
+                code=400,
+            )
+
+        subscription.status = "ACTIVE"
+        subscription.save()
+
+        serializer = GetSubscriptionSerializer(subscription)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class MePlanFinancingChargeView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 

@@ -25,6 +25,7 @@ from ..views import (
     MeInvoiceView,
     MentorshipServiceSetView,
     MePlanFinancingChargeView,
+    MeSubscriptionReactivateView,
     MeSubscriptionCancelView,
     MeSubscriptionChargeView,
     MeSubscriptionView,
@@ -74,6 +75,11 @@ urlpatterns = [
         "me/subscription/<int:subscription_id>/cancel",
         MeSubscriptionCancelView.as_view(),
         name="me_subscription_id_cancel",
+    ),
+    path(
+        "me/subscription/<int:subscription_id>/reactivate",
+        MeSubscriptionReactivateView.as_view(),
+        name="me_subscription_id_reactivate",
     ),
     path(
         "me/planfinancing/<int:plan_financing_id>/charge",
