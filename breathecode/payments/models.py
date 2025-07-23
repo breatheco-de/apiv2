@@ -885,6 +885,14 @@ class Coupon(models.Model):
         help_text="Seller",
     )
 
+    referred_buyer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        help_text="The person that bought something and activated this reward coupon",
+    )
+
     # Add field to restrict coupon usage to specific users
     allowed_user = models.ForeignKey(
         User,

@@ -44,7 +44,7 @@ from rest_framework.schemas.openapi import AutoSchema
 import breathecode.activity.tasks as tasks_activity
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings, sync_with_rigobot
+from breathecode.authenticate.actions import get_user_settings, sync_with_rigobot, replace_user_email
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
@@ -53,7 +53,7 @@ from breathecode.notify.models import SlackTeam
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import has_permission
+from breathecode.utils.decorators import has_permission, superuser_required
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.shorteners import C
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -3231,3 +3231,32 @@ class AppTokenView(APIView):
                 "email": t.user.email,
             }
         )
+
+
+class UpdateEmailEverywhereView(APIView):
+    """
+    Update user email across all models in the database that store email addresses.
+    Only superusers can call this endpoint. Users cannot change their own email.
+    """
+    
+    @superuser_required
+    def put(self, request, user_id=None):
+        if user_id is None:
+            from capyc.core.i18n import translation
+            from capyc.rest_framework.exceptions import ValidationException
+            lang = getattr(request.user, 'lang', 'en')
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You must specify a user_id to update email.",
+                    es="Debes especificar un user_id para actualizar el email.",
+                    slug="missing-user-id"
+                ),
+                code=400
+            )
+        new_email = request.data.get('email')
+        result = replace_user_email(request.user, user_id, new_email)
+        return Response({
+            'message': f'Email successfully updated from {result["old_email"]} to {result["new_email"]}. Keep in mind that user statistics with the new email will be reset and other non-essential funcionalities will also be lost.',
+            **result
+        }, status=status.HTTP_200_OK)

@@ -14,7 +14,6 @@ prev_key = None
 def is_test_env():
     return os.getenv("ENV") == "test"
 
-
 IS_TEST_ENV = is_test_env()
 
 logger = logging.getLogger(__name__)

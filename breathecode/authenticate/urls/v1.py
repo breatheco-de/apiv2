@@ -74,6 +74,7 @@ from ..views import (
     save_google_token,
     save_slack_token,
     sync_gitpod_users_view,
+    UpdateEmailEverywhereView,
 )
 
 # avoiding issues on test environment due that the fixture are loaded after this app
@@ -91,6 +92,9 @@ if TEST_ENV and not app_url:
 
 app_name = "authenticate"
 urlpatterns = [
+    # The following are endpoitns user by sistem admins
+    path("admin/user/<int:user_id>/email", UpdateEmailEverywhereView.as_view(), name="email_update_user"),
+
     path("emailverification/<str:email>", EmailVerification.as_view(), name="email_verification"),
     path("confirmation/<str:token>", ConfirmEmailView.as_view(), name="confirmation_token"),
     path("invite/resend/<str:invite_id>", ResendInviteView.as_view(), name="invite_resend_id"),
