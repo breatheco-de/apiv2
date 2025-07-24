@@ -1473,6 +1473,23 @@ class Consumable(AbstractServiceItem):
     # if null, this is valid until resources are exhausted
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
 
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Subscription that generated this consumable",
+    )
+    plan_financing = models.ForeignKey(
+        PlanFinancing,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="PlanFinancing that generated this consumable",
+    )
+
     # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
     cohort_set = models.ForeignKey(
         CohortSet,
@@ -1636,8 +1653,11 @@ class Consumable(AbstractServiceItem):
 
     def clean(self) -> None:
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
+        parent_entities = [self.subscription, self.plan_financing]
 
         how_many_resources_are_set = len([r for r in resources if r])
+        how_many_parent_entities_are_set = len([p for p in parent_entities if p])
+
         settings = get_user_settings(self.user.id)
 
         if how_many_resources_are_set > 1:
@@ -1646,6 +1666,15 @@ class Consumable(AbstractServiceItem):
                     settings.lang,
                     en="A consumable can only be associated with one resource",
                     es="Un consumible solo se puede asociar con un recurso",
+                )
+            )
+
+        if how_many_parent_entities_are_set > 1:
+            raise forms.ValidationError(
+                translation(
+                    settings.lang,
+                    en="A consumable can only be associated with one parent entity (subscription or plan_financing)",
+                    es="Un consumible solo se puede asociar con una entidad padre (suscripción o plan de financiamiento)",
                 )
             )
 
