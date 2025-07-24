@@ -801,10 +801,18 @@ class MeSubscriptionView(APIView):
             plan_financings = plan_financings.filter(status__in=status.split(","))
         else:
             subscriptions = (
-                subscriptions.exclude(status="CANCELLED").exclude(status="DEPRECATED").exclude(status="PAYMENT_ISSUE")
+                subscriptions.exclude(status="DEPRECATED")
+                .exclude(status="PAYMENT_ISSUE")
+                .exclude(status="ERROR")
+                .exclude(status="EXPIRED")
+                .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
             )
             plan_financings = (
-                plan_financings.exclude(status="CANCELLED").exclude(status="DEPRECATED").exclude(status="PAYMENT_ISSUE")
+                plan_financings.exclude(status="DEPRECATED")
+                .exclude(status="PAYMENT_ISSUE")
+                .exclude(status="ERROR")
+                .exclude(status="EXPIRED")
+                .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
             )
 
         if invoice := request.GET.get("invoice"):
@@ -1060,9 +1068,11 @@ class AcademySubscriptionView(APIView):
         if subscription_id:
             item = (
                 Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None), id=subscription_id)
-                .exclude(status="CANCELLED")
                 .exclude(status="DEPRECATED")
                 .exclude(status="PAYMENT_ISSUE")
+                .exclude(status="ERROR")
+                .exclude(status="EXPIRED")
+                .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
                 .first()
             )
 
@@ -1080,7 +1090,13 @@ class AcademySubscriptionView(APIView):
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
         else:
-            items = items.exclude(status="CANCELLED").exclude(status="DEPRECATED").exclude(status="PAYMENT_ISSUE")
+            items = (
+                items.exclude(status="DEPRECATED")
+                .exclude(status="PAYMENT_ISSUE")
+                .exclude(status="ERROR")
+                .exclude(status="EXPIRED")
+                .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
+            )
 
         if invoice_ids := request.GET.get("invoice_ids"):
             items = items.filter(invoices__id__in=invoice_ids.split(","))
