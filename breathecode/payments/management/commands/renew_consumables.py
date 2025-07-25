@@ -20,7 +20,7 @@ class Command(BaseCommand):
         stock_schedulers_to_renew = (
             ServiceStockScheduler.objects.annotate(last_consumable_valid_until=Max("consumables__valid_until"))
             .filter(
-                last_consumable_valid_until__lte=self.utc_now + timedelta(hours=2),
+                last_consumable_valid_until__lte=self.utc_now + timedelta(hours=1),
                 plan_handler__subscription__next_payment_at__gt=self.utc_now,
             )
             .exclude(plan_handler__subscription__status="CANCELLED")

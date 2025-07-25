@@ -131,11 +131,14 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     service_item = None
     resource_valid_until = None
     selected_lookup = {}
+    subscription = None
+    plan_financing = None
 
     if scheduler.plan_handler and scheduler.plan_handler.subscription:
         user = scheduler.plan_handler.subscription.user
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.subscription.valid_until
+        subscription = scheduler.plan_handler.subscription
 
         selected_lookup = get_resource_lookup(scheduler.plan_handler.subscription, service_item.service)
 
@@ -143,6 +146,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         user = scheduler.plan_handler.plan_financing.user
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.plan_financing.plan_expires_at
+        plan_financing = scheduler.plan_handler.plan_financing
 
         selected_lookup = get_resource_lookup(scheduler.plan_handler.plan_financing, service_item.service)
 
@@ -150,6 +154,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         user = scheduler.subscription_handler.subscription.user
         service_item = scheduler.subscription_handler.service_item
         resource_valid_until = scheduler.subscription_handler.subscription.valid_until
+        subscription = scheduler.subscription_handler.subscription
 
         selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription, service_item.service)
 
@@ -158,7 +163,26 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
     delta = actions.calculate_relative_delta(unit, unit_type)
     scheduler.valid_until = scheduler.valid_until or utc_now
-    scheduler.valid_until = scheduler.valid_until + delta
+
+    max_attempts = 100
+    attempts = 0
+
+    while attempts < max_attempts:
+        new_valid_until = scheduler.valid_until + delta
+
+        if new_valid_until > utc_now:
+            if attempts > 0:
+                logger.info(f"Scheduler {scheduler.id}: Found future date after {attempts + 1} attempts")
+            scheduler.valid_until = new_valid_until
+            break
+
+        scheduler.valid_until = new_valid_until
+        attempts += 1
+
+        if attempts >= max_attempts:
+            logger.warning(f"Could not find a future date for scheduler {scheduler.id} after {max_attempts} attempts")
+            scheduler.valid_until = scheduler.valid_until + delta
+            break
 
     if resource_valid_until and scheduler.valid_until and scheduler.valid_until > resource_valid_until:
         scheduler.valid_until = resource_valid_until
@@ -175,6 +199,8 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         unit_type=service_item.unit_type,
         how_many=service_item.how_many,
         valid_until=scheduler.valid_until,
+        subscription=subscription,
+        plan_financing=plan_financing,
         **selected_lookup,
     )
 
@@ -380,6 +406,13 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 )
 
             utc_now = timezone.now()
+
+            if subscription.status == Subscription.Status.PAYMENT_ISSUE:
+                if (utc_now - subscription.next_payment_at).days >= 5:
+                    subscription.status = Subscription.Status.EXPIRED
+                    subscription.status_message = "Payment failed for more than 5 days"
+                    subscription.save()
+                    raise AbortTask(f"Subscription {subscription_id} cancelled after 5 days of payment failure")
 
             settings = get_user_settings(subscription.user.id)
 
@@ -632,6 +665,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 )
 
             utc_now = timezone.now()
+
+            if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
+                if (utc_now - plan_financing.next_payment_at).days >= 5:
+                    plan_financing.status = PlanFinancing.Status.EXPIRED
+                    plan_financing.status_message = "Payment failed for more than 5 days"
+                    plan_financing.save()
+                    raise AbortTask(f"PlanFinancing {plan_financing_id} cancelled after 5 days of payment failure")
 
             if plan_financing.status in statuses and (
                 plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now

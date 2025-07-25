@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("payments", "0003_coupon_allowed_user"),
+        ("payments", "0004_consumable_plan_financing_consumable_subscription"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
