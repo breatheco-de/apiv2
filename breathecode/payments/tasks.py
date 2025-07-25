@@ -424,9 +424,6 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 subscription.save()
                 handle_deprecated_subscription()
 
-            # 1. Check if subscription is accionable
-            # 2. Check if subscription is over
-            # 3. Expire the subscription if it is over
             if subscription.valid_until and subscription.valid_until < utc_now and subscription.status in statuses:
                 if subscription.status != Subscription.Status.EXPIRED:
                     subscription.status = Subscription.Status.EXPIRED

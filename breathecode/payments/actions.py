@@ -256,7 +256,7 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
         and plan.is_renewable
         and subscriptions.filter(
             Q(valid_until=None, next_payment_at__gte=utc_now) | Q(valid_until__gte=utc_now)
-        ).exclude(status__in=["CANCELLED", "DEPRECATED"])
+        ).exclude(status__in=["CANCELLED", "DEPRECATED", "EXPIRED"])
     ):
         raise ValidationException(
             translation(
@@ -1600,8 +1600,8 @@ def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, b
             referral_type=Coupon.Referral.NO_REFERRAL,
             referral_value=0,
             auto=False,
+            referred_buyer=buyer_user,
             how_many_offers=1,  # Single use
-            seller=coupon.seller,
             allowed_user=seller_user,  # Restrict to seller only
             offered_at=utc_now,
             expires_at=utc_now + timedelta(days=90),  # 90 days to use the reward

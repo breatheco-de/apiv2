@@ -385,6 +385,13 @@ class Cohort(models.Model):
         help_text="Add the color with hexadecimal format, i.e.: #FFFFFF",
     )
 
+    shortcuts = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Array of shortcut objects, adding shortcuts will create a widget on the header of the cohort dashboard",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

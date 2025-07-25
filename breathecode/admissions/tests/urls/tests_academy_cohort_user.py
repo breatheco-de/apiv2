@@ -45,8 +45,10 @@ def post_serializer(self, cohort, user, profile_academy=None, data={}):
             "slug": cohort.slug,
             "stage": cohort.stage,
             "available_as_saas": cohort.available_as_saas,
+            "shortcuts": cohort.shortcuts,
         },
         "created_at": self.bc.datetime.to_iso_string(UTC_NOW),
+        "updated_at": self.bc.datetime.to_iso_string(UTC_NOW),
         "educational_status": "ACTIVE",
         "finantial_status": None,
         "id": 1,
@@ -86,8 +88,10 @@ def put_serializer(self, cohort_user, cohort, user, profile_academy=None, data={
             "slug": cohort.slug,
             "stage": cohort.stage,
             "available_as_saas": cohort.available_as_saas,
+            "shortcuts": cohort.shortcuts,
         },
         "created_at": self.bc.datetime.to_iso_string(cohort_user.created_at),
+        "updated_at": self.bc.datetime.to_iso_string(cohort_user.updated_at),
         "educational_status": cohort_user.educational_status,
         "finantial_status": cohort_user.finantial_status,
         "id": cohort_user.id,
@@ -182,6 +186,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "cohort": {
                     "id": model["cohort_user"].cohort.id,
                     "slug": model["cohort_user"].cohort.slug,
@@ -190,6 +195,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -262,6 +268,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "cohort": {
                     "id": model["cohort_user"].cohort.id,
                     "slug": model["cohort_user"].cohort.slug,
@@ -270,6 +277,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -334,11 +342,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "role": model["cohort_user"].role,
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "watching": False,
             }
         ]
@@ -402,6 +412,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "cohort": {
                     "id": model["cohort_user"].cohort.id,
                     "slug": model["cohort_user"].cohort.slug,
@@ -410,6 +421,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "user": {
                     "id": model["cohort_user"].user.id,
@@ -460,6 +472,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -482,6 +495,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -546,6 +560,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -568,6 +583,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -604,6 +620,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -626,6 +643,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -666,6 +684,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -688,6 +707,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -724,6 +744,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -746,6 +767,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -806,6 +828,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
+                "cohort": {
+                    "id": model["cohort_user"].cohort.id,
+                    "slug": model["cohort_user"].cohort.slug,
+                    "name": model["cohort_user"].cohort.name,
+                    "kickoff_date": re.sub(r"\+00:00$", "Z", model["cohort_user"].cohort.kickoff_date.isoformat()),
+                    "ending_date": model["cohort_user"].cohort.ending_date,
+                    "stage": model["cohort_user"].cohort.stage,
+                    "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
+                },
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -819,15 +852,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "last_name": model["profile_academy"].last_name,
                     "email": model["profile_academy"].email,
                     "phone": model["profile_academy"].phone,
-                },
-                "cohort": {
-                    "id": model["cohort_user"].cohort.id,
-                    "slug": model["cohort_user"].cohort.slug,
-                    "name": model["cohort_user"].cohort.name,
-                    "kickoff_date": re.sub(r"\+00:00$", "Z", model["cohort_user"].cohort.kickoff_date.isoformat()),
-                    "ending_date": model["cohort_user"].cohort.ending_date,
-                    "stage": model["cohort_user"].cohort.stage,
-                    "available_as_saas": model["cohort_user"].cohort.available_as_saas,
                 },
                 "watching": False,
             }
@@ -879,6 +903,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "phone": model["profile_academy"].phone,
                 },
                 "tasks": [],
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "cohort": {
                     "id": model["cohort_user"].cohort.id,
                     "slug": model["cohort_user"].cohort.slug,
@@ -887,6 +912,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -923,6 +949,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -946,6 +973,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -986,6 +1014,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -1014,6 +1043,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -1057,6 +1087,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 "finantial_status": model["cohort_user"].finantial_status,
                 "educational_status": model["cohort_user"].educational_status,
                 "created_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].created_at.isoformat()),
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "user": {
                     "id": model["cohort_user"].user.id,
                     "first_name": model["cohort_user"].user.first_name,
@@ -1085,6 +1116,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -1156,6 +1188,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                         "title": model["task"].title,
                     }
                 ],
+                "updated_at": re.sub(r"\+00:00$", "Z", model["cohort_user"].updated_at.isoformat()),
                 "cohort": {
                     "id": model["cohort_user"].cohort.id,
                     "slug": model["cohort_user"].cohort.slug,
@@ -1164,6 +1197,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     "ending_date": model["cohort_user"].cohort.ending_date,
                     "stage": model["cohort_user"].cohort.stage,
                     "available_as_saas": model["cohort_user"].cohort.available_as_saas,
+                    "shortcuts": model["cohort_user"].cohort.shortcuts,
                 },
                 "watching": False,
             }
@@ -1264,6 +1298,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         data = [{"id": model["cohort_user"].id}]
         response = self.client.put(url, data, format="json")
         json = response.json()
+
+        # Refresh the model to get the updated_at value after the PUT operation
+        model["cohort_user"].refresh_from_db()
+
         expected = [
             put_serializer(
                 self,
@@ -1316,6 +1354,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         ]
         response = self.client.put(url, data, format="json")
         json = response.json()
+
+        # Refresh the models to get the updated_at values after the PUT operation
+        for m in model:
+            m["cohort_user"].refresh_from_db()
 
         expected = [
             put_serializer(

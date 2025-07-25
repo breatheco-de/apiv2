@@ -51,6 +51,10 @@ from .models import (
     ShortLink,
     Tag,
     UTMField,
+    CourseTranslation,
+    ACTIVE,
+    UNLISTED,
+    PUBLIC,
 )
 from .serializers import (
     AcademyAliasSmallSerializer,
@@ -71,6 +75,7 @@ from .serializers import (
     ShortlinkSmallSerializer,
     TagSmallSerializer,
     UTMSmallSerializer,
+    GetCourseTranslationSerializer,
 )
 from .tasks import async_activecampaign_webhook, persist_single_lead, update_link_viewcount
 
@@ -1281,4 +1286,37 @@ class CourseView(APIView):
         items = items.order_by("created_at")
         items = handler.queryset(items)
         serializer = GetCourseSerializer(items, context={"lang": lang, "country_code": country_code}, many=True)
+        return handler.response(serializer.data)
+
+
+class CourseTranslationsView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=CourseCache, sort="-updated_at", paginate=True)
+
+    def get(self, request, course_slug=None):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        if not course_slug:
+            raise ValidationException(
+                translation(
+                    en="Course slug is required", es="El slug del curso es requerido", slug="course-slug-required"
+                ),
+                code=400,
+            )
+
+        # First check if the course exists and is accessible
+        course = Course.objects.filter(slug=course_slug, status=ACTIVE, visibility__in=[PUBLIC, UNLISTED]).first()
+
+        if not course:
+            raise ValidationException(
+                translation(en="Course not found", es="Curso no encontrado", slug="course-not-found"), code=404
+            )
+
+        # Then get its translations
+        translations = CourseTranslation.objects.filter(course=course)
+        serializer = GetCourseTranslationSerializer(translations, many=True)
         return handler.response(serializer.data)

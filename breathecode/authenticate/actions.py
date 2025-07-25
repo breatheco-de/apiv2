@@ -1004,3 +1004,162 @@ def get_academy_from_body(body: dict[str, Any], lang: str = "en", raise_exceptio
         )
 
     return academy
+
+
+def replace_user_email(requesting_user, target_user_id, new_email):
+    """
+    Update user email across all models in the database that store email addresses.
+    Only superusers can call this action. Users cannot change their own email.
+    """
+    from breathecode.events.models import EventCheckin
+    from breathecode.marketing.models import Contact, FormEntry
+    from breathecode.assessment.models import UserAssessment
+    from breathecode.mentorship.models import SupportAgent, MentorProfile
+    from breathecode.notify.models import SlackUser
+    from breathecode.authenticate.models import User, UserInvite, ProfileAcademy, CredentialsGithub
+    from capyc.core.i18n import translation
+    from capyc.rest_framework.exceptions import ValidationException
+    from django.core.validators import validate_email
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    lang = getattr(requesting_user, 'lang', 'en')
+    if not requesting_user.is_superuser:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Only superusers can update user emails everywhere.",
+                es="Solo los superusuarios pueden actualizar emails de usuarios en toda la base de datos.",
+                slug="not-superuser"
+            ),
+            code=403
+        )
+
+    if requesting_user.id == target_user_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="You cannot change your own email using this endpoint.",
+                es="No puedes cambiar tu propio email usando este endpoint.",
+                slug="cannot-change-own-email"
+            ),
+            code=400
+        )
+
+    user = User.objects.filter(id=target_user_id).first()
+    if not user:
+        raise ValidationException(
+            translation(
+                lang,
+                en="User not found",
+                es="Usuario no encontrado",
+                slug="user-not-found"
+            ),
+            code=404
+        )
+
+    if not new_email:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Email is required",
+                es="El email es requerido",
+                slug="email-required"
+            ),
+            code=400
+        )
+
+    try:
+        validate_email(new_email)
+    except DjangoValidationError:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invalid email format {new_email}",
+                es=f"Formato de email inválido {new_email}",
+                slug="invalid-email-format"
+            ),
+            code=400
+        )
+
+    new_email = new_email.lower().strip()
+    old_email = user.email
+
+    if old_email == new_email:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The new email is the same as the current email",
+                es="El nuevo email es igual al email actual",
+                slug="same-email"
+            ),
+            code=400
+        )
+
+    if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="This email is already in use by another user",
+                es="Este email ya está siendo utilizado por otro usuario",
+                slug="email-already-exists"
+            ),
+            code=400
+        )
+
+    updated_models = {}
+    try:
+        user.email = new_email
+        user.save()
+        updated_models['User'] = 1
+        user_invites_updated = UserInvite.objects.filter(email=old_email).update(email=new_email)
+        if user_invites_updated > 0:
+            updated_models['UserInvite'] = user_invites_updated
+        profile_academies_updated = ProfileAcademy.objects.filter(email=old_email).update(email=new_email)
+        if profile_academies_updated > 0:
+            updated_models['ProfileAcademy'] = profile_academies_updated
+        github_creds_updated = CredentialsGithub.objects.filter(email=old_email).update(email=new_email)
+        if github_creds_updated > 0:
+            updated_models['CredentialsGithub'] = github_creds_updated
+        event_checkins_updated = EventCheckin.objects.filter(email=old_email).update(email=new_email)
+        if event_checkins_updated > 0:
+            updated_models['EventCheckin'] = event_checkins_updated
+        contacts_updated = Contact.objects.filter(email=old_email).update(email=new_email)
+        if contacts_updated > 0:
+            updated_models['Contact'] = contacts_updated
+        form_entries_updated = FormEntry.objects.filter(email=old_email).update(email=new_email)
+        if form_entries_updated > 0:
+            updated_models['FormEntry'] = form_entries_updated
+        assessments_updated = UserAssessment.objects.filter(owner_email=old_email).update(owner_email=new_email)
+        if assessments_updated > 0:
+            updated_models['UserAssessment'] = assessments_updated
+        support_agents_updated = SupportAgent.objects.filter(email=old_email).update(email=new_email)
+        if support_agents_updated > 0:
+            updated_models['SupportAgent'] = support_agents_updated
+        mentor_profiles_updated = MentorProfile.objects.filter(email=old_email).update(email=new_email)
+        if mentor_profiles_updated > 0:
+            updated_models['MentorProfile'] = mentor_profiles_updated
+        slack_users_updated = SlackUser.objects.filter(email=old_email).update(email=new_email)
+        if slack_users_updated > 0:
+            updated_models['SlackUser'] = slack_users_updated
+        return {
+            'old_email': old_email,
+            'new_email': new_email,
+            'user_id': user.id,
+            'updated_models': updated_models,
+            'total_records_updated': sum(updated_models.values())
+        }
+    except Exception as e:
+        try:
+            user.email = old_email
+            user.save()
+        except:
+            pass
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Error updating email: {str(e)}",
+                es=f"Error actualizando el email: {str(e)}",
+                slug="email-update-error"
+            ),
+            code=500
+        )

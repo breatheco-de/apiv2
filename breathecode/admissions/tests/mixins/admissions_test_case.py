@@ -328,6 +328,7 @@ class AdmissionsTestCase(
                     "stage": model["cohort"].stage,
                     "language": model["cohort"].language,
                     "current_day": model["cohort"].current_day,
+                    "shortcuts": model["cohort"].shortcuts,
                     "current_module": model["cohort"].current_module,
                     "online_meeting_url": model["cohort"].online_meeting_url,
                     "timezone": model["cohort"].timezone,

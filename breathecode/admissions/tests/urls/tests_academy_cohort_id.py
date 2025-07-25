@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
 from django.utils import timezone
+from datetime import timezone as datetime_timezone
 from rest_framework import status
 
 from breathecode.admissions.caches import CohortCache
@@ -197,6 +198,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             "timeslots": [],
             "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
             "available_as_saas": model["cohort"].available_as_saas,
+            "shortcuts": model["cohort"].shortcuts,
             "academy": {
                 "id": model.academy.id,
                 "slug": model.academy.slug,
@@ -617,6 +619,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             "timezone": model["cohort"].timezone,
             "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
             "available_as_saas": model["cohort"].available_as_saas,
+            "shortcuts": model["cohort"].shortcuts,
             "timeslots": [
                 {
                     "ending_at": DatetimeInteger.to_iso_string(
@@ -679,7 +682,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "cohorts_order": None,
                     "ending_date": model["cohort"].ending_date,
                     "id": model["cohort"].id,
-                    "kickoff_date": model["cohort"].kickoff_date,
+                    "kickoff_date": model["cohort"].kickoff_date.replace(tzinfo=datetime_timezone.utc),
                     "remote_available": model["cohort"].remote_available,
                     "online_meeting_url": model["cohort"].online_meeting_url,
                     "language": data["language"],
@@ -694,6 +697,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "timezone": None,
                     "is_hidden_on_prework": True,
                     "available_as_saas": model["cohort"].available_as_saas,
+                    "shortcuts": None,
                     "color": None,
                 }
             ],
@@ -792,6 +796,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             "timezone": model["cohort"].timezone,
             "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
             "available_as_saas": model["cohort"].available_as_saas,
+            "shortcuts": model["cohort"].shortcuts,
             "timeslots": [
                 {
                     "ending_at": DatetimeInteger.to_iso_string(
@@ -854,7 +859,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "cohorts_order": None,
                     "ending_date": model["cohort"].ending_date,
                     "id": model["cohort"].id,
-                    "kickoff_date": model["cohort"].kickoff_date,
+                    "kickoff_date": model["cohort"].kickoff_date.replace(tzinfo=datetime_timezone.utc),
                     "remote_available": model["cohort"].remote_available,
                     "online_meeting_url": model["cohort"].online_meeting_url,
                     "language": data["language"],
@@ -869,6 +874,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "timezone": "Europe/Monaco",
                     "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
                     "available_as_saas": model["cohort"].available_as_saas,
+                    "shortcuts": None,
                     "color": None,
                 }
             ],
@@ -973,6 +979,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             "timezone": model["cohort"].timezone,
             "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
             "available_as_saas": model["cohort"].available_as_saas,
+            "shortcuts": model["cohort"].shortcuts,
             "timeslots": [
                 {
                     "ending_at": DatetimeInteger.to_iso_string(
@@ -1050,6 +1057,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "timezone": None,
                     "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
                     "available_as_saas": model["cohort"].available_as_saas,
+                    "shortcuts": None,
                     "color": None,
                 }
             ],
@@ -1155,6 +1163,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             "timeslots": [],
             "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
             "available_as_saas": model["cohort"].available_as_saas,
+            "shortcuts": model["cohort"].shortcuts,
             "schedule": {
                 "id": model2.syllabus_schedule.id,
                 "name": model2.syllabus_schedule.name,
@@ -1218,6 +1227,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                     "timezone": None,
                     "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
                     "available_as_saas": model["cohort"].available_as_saas,
+                    "shortcuts": None,
                     "color": None,
                 }
             ],
@@ -1277,6 +1287,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             "timeslots": [],
             "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
             "available_as_saas": model["cohort"].available_as_saas,
+            "shortcuts": model["cohort"].shortcuts,
             "schedule": {
                 "id": model["cohort"].schedule.id,
                 "name": model["cohort"].schedule.name,
@@ -1396,6 +1407,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             "timeslots": [],
             "is_hidden_on_prework": model["cohort"].is_hidden_on_prework,
             "available_as_saas": model["cohort"].available_as_saas,
+            "shortcuts": model["cohort"].shortcuts,
             "schedule": {
                 "id": model["cohort"].schedule.id,
                 "name": model["cohort"].schedule.name,

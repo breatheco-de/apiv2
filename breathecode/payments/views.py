@@ -801,10 +801,18 @@ class MeSubscriptionView(APIView):
             plan_financings = plan_financings.filter(status__in=status.split(","))
         else:
             subscriptions = (
-                subscriptions.exclude(status="CANCELLED").exclude(status="DEPRECATED").exclude(status="PAYMENT_ISSUE")
+                subscriptions.exclude(status="DEPRECATED")
+                .exclude(status="PAYMENT_ISSUE")
+                .exclude(status="ERROR")
+                .exclude(status="EXPIRED")
+                .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
             )
             plan_financings = (
-                plan_financings.exclude(status="CANCELLED").exclude(status="DEPRECATED").exclude(status="PAYMENT_ISSUE")
+                plan_financings.exclude(status="DEPRECATED")
+                .exclude(status="PAYMENT_ISSUE")
+                .exclude(status="ERROR")
+                .exclude(status="EXPIRED")
+                .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
             )
 
         if invoice := request.GET.get("invoice"):
@@ -950,6 +958,61 @@ class MeSubscriptionCancelView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class MeSubscriptionReactivateView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def put(self, request, subscription_id):
+        lang = get_user_language(request)
+        utc_now = timezone.now()
+
+        if not (subscription := Subscription.objects.filter(id=subscription_id, user=request.user).first()):
+            raise ValidationException(
+                translation(lang, en="Subscription not found", es="No existe la suscripción", slug="not-found"),
+                code=404,
+            )
+
+        if subscription.status == "ACTIVE":
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Subscription already active",
+                    es="La suscripción ya está activa",
+                    slug="already-active",
+                ),
+                code=400,
+            )
+
+        # Check if subscription can still be reactivated based on dates
+        if subscription.next_payment_at and subscription.next_payment_at < utc_now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"The reactivation period was until {subscription.next_payment_at.strftime('%Y-%m-%d %H:%M:%S')}, then user should buy a new subscription",
+                    es=f"El período de reactivación fue hasta {subscription.next_payment_at.strftime('%Y-%m-%d %H:%M:%S')}, entonces el usuario debe comprar una nueva suscripción",
+                    slug="reactivation-period-expired",
+                ),
+                code=400,
+            )
+
+        if subscription.valid_until and subscription.valid_until < utc_now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"The reactivation period was until {subscription.valid_until.strftime('%Y-%m-%d %H:%M:%S')}, then user should buy a new subscription",
+                    es=f"El período de reactivación fue hasta {subscription.valid_until.strftime('%Y-%m-%d %H:%M:%S')}, entonces el usuario debe comprar una nueva suscripción",
+                    slug="reactivation-period-expired",
+                ),
+                code=400,
+            )
+
+        subscription.status = "ACTIVE"
+        subscription.save()
+
+        serializer = GetSubscriptionSerializer(subscription)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class MePlanFinancingChargeView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
@@ -1005,9 +1068,11 @@ class AcademySubscriptionView(APIView):
         if subscription_id:
             item = (
                 Subscription.objects.filter(Q(valid_until__gte=now) | Q(valid_until=None), id=subscription_id)
-                .exclude(status="CANCELLED")
                 .exclude(status="DEPRECATED")
                 .exclude(status="PAYMENT_ISSUE")
+                .exclude(status="ERROR")
+                .exclude(status="EXPIRED")
+                .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
                 .first()
             )
 
@@ -1025,7 +1090,13 @@ class AcademySubscriptionView(APIView):
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
         else:
-            items = items.exclude(status="CANCELLED").exclude(status="DEPRECATED").exclude(status="PAYMENT_ISSUE")
+            items = (
+                items.exclude(status="DEPRECATED")
+                .exclude(status="PAYMENT_ISSUE")
+                .exclude(status="ERROR")
+                .exclude(status="EXPIRED")
+                .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
+            )
 
         if invoice_ids := request.GET.get("invoice_ids"):
             items = items.filter(invoices__id__in=invoice_ids.split(","))
@@ -1231,14 +1302,7 @@ class UserCouponView(APIView):
                 )
 
             # Create a unique slug for the coupon
-            base_slug = f"referral-{user.id}"
-            slug = base_slug
-            counter = 1
-
-            # Ensure slug uniqueness
-            while Coupon.objects.filter(slug=slug).exists():
-                slug = f"{base_slug}-{counter}"
-                counter += 1
+            slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
 
             coupon = Coupon(
                 slug=slug,

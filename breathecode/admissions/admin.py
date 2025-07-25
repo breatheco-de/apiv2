@@ -18,6 +18,7 @@ from breathecode.assignments.actions import sync_student_tasks
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
 from breathecode.utils import getLogger
 from breathecode.utils.datetime_integer import from_now
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from .actions import ImportCohortTimeSlots, test_syllabus
 from .models import (
@@ -183,6 +184,12 @@ def sync_timeslots(modeladmin, request, queryset):
 
 
 class CohortForm(forms.ModelForm):
+    class Meta:
+        model = Cohort
+        fields = "__all__"
+        widgets = {
+            "shortcuts": PrettyJSONWidget(),
+        }
 
     def __init__(self, *args, **kwargs):
         super(CohortForm, self).__init__(*args, **kwargs)
