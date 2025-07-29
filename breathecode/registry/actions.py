@@ -592,6 +592,7 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
 
     return asset
 
+
 def clean_asset_readme(asset: Asset, silent=True):
     """
     Clean the asset readme, if silent is True, it will not raise an exception if the readme is not found
@@ -1255,6 +1256,24 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
             raise Exception(f"Error processing configuration file: {str(e)}")
 
     asset = process_asset_config(asset, config)
+
+    if asset.asset_type == "PROJECT":
+        solution_filename = f"SOLUTION{lang}.md"
+
+        try:
+            solution_file = repo.get_contents(solution_filename)
+            solution_base64 = str(solution_file.content)
+            asset.solution_readme = base64.b64decode(solution_base64).decode("utf-8")
+            logger.debug(f"Successfully retrieved solution README {solution_filename} for asset {asset.slug}")
+        except Exception as e:
+            error_str = str(e).lower()
+            if "404" in error_str or "not found" in error_str:
+                logger.debug(f"Solution README file '{solution_filename}' not found for asset {asset.slug}")
+            else:
+                logger.debug(
+                    f"Error accessing solution README file '{solution_filename}' for asset {asset.slug}: {str(e)}"
+                )
+
     return asset
 
 
