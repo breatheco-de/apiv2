@@ -1541,7 +1541,8 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         user = User.objects.filter(email=data["email"]).first()
 
         if user:
-            for i in UserInvite.objects.filter(user__isnull=True, email=data["email"], status="ACCEPTED"):
+            valid_email = invites.filter(status="ACCEPTED", is_email_validated=True).exists()
+            for i in UserInvite.objects.filter(user__isnull=True, email=data["email"], status="ACCEPTED", is_email_validated=valid_email):
                 i.user = user
                 i.save()
 
