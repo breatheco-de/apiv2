@@ -337,6 +337,9 @@ class CohortSet(models.Model):
         self.full_clean()
         return super().save(*args, **kwargs)
     
+    def __str__(self) -> str:
+        return f"{self.slug} ({self.academy.slug})"
+    
 
 
 
@@ -406,6 +409,9 @@ class MentorshipServiceSet(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     mentorship_services = models.ManyToManyField(MentorshipService, blank=True)
 
+    def __str__(self) -> str:
+        return f"{self.slug} ({self.academy.slug})"
+
 
 class MentorshipServiceSetTranslation(models.Model):
     mentorship_service_set = models.ForeignKey(
@@ -433,6 +439,9 @@ class EventTypeSet(models.Model):
     )
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
     event_types = models.ManyToManyField(EventType, blank=True, help_text="Event types")
+
+    def __str__(self) -> str:
+        return f"{self.slug} ({self.academy.slug})"
 
 
 class EventTypeSetTranslation(models.Model):

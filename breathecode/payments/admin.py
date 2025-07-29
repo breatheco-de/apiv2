@@ -99,10 +99,10 @@ class FinancingOptionAdmin(admin.ModelAdmin):
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = ("id", "slug", "status", "trial_duration", "trial_duration_unit", "owner")
-    list_filter = ["trial_duration_unit", "owner"]
-    search_fields = ["title"]
-    raw_id_fields = ["owner"]
-    filter_horizontal = ("invites",)
+    list_filter = ["trial_duration_unit", "owner", "status", "is_renewable"]
+    search_fields = ["slug"]
+    raw_id_fields = ["owner", "invites"]
+    # filter_horizontal = ("invites",)
 
 
 @admin.register(PlanTranslation)
