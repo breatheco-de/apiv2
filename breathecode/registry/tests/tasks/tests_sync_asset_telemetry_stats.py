@@ -20,13 +20,16 @@ def setup(db):
     yield
 
 
+from task_manager.core.exceptions import AbortTask
+
+
 @patch("logging.Logger.warning", MagicMock())
 @patch("logging.Logger.error", MagicMock())
 def test__without_asset(bc: Breathecode, client: APIClient):
-    sync_asset_telemetry_stats.delay(1)
+    with pytest.raises(AbortTask, match="Asset with id 1 not found"):
+        sync_asset_telemetry_stats(1)
 
     assert bc.database.list_of("registry.Asset") == []
-    assert logging.Logger.error.call_args_list == [call("Asset with id 1 not found", exc_info=True)]
 
 
 @patch("logging.Logger.warning", MagicMock())
@@ -36,7 +39,7 @@ def test__with_asset_with_no_telemetries(bc: Breathecode, client: APIClient):
     model = bc.database.create(asset={"slug": "megadeth"})
 
     logging.Logger.info.call_args_list = []
-    sync_asset_telemetry_stats.delay(model.asset.id)
+    sync_asset_telemetry_stats(model.asset.id)
 
     assert bc.database.list_of("registry.Asset") == [
         bc.format.to_dict(model.asset),
