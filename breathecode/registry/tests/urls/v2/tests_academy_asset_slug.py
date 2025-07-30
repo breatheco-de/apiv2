@@ -66,6 +66,10 @@ def get_serializer(bc: Breathecode, asset, asset_category=None, data={}):
         "translations": {},
         "url": None,
         "visibility": "PUBLIC",
+        "allow_contributions": asset.allow_contributions,
+        "academy": asset.academy.id if asset.academy else None,
+        "config": asset.config,
+        "flag_seed": asset.flag_seed,
         "created_at": bc.datetime.to_iso_string(asset.created_at),
         "updated_at": bc.datetime.to_iso_string(asset.updated_at),
         **data,
@@ -157,7 +161,7 @@ def test_with_asset(bc: Breathecode, client: APIClient):
         capability="read_asset",
         service={"consumer": "READ_LESSON"},
         consumable=1,
-        asset=1,
+        asset={"allow_contributions": True},
         asset_category=1,
         academy=1,
     )
@@ -221,7 +225,7 @@ def test_with_asset__no_saas__finantial_status_no_late(
         capability="read_asset",
         service={"consumer": "READ_LESSON"},
         consumable=1,
-        asset=1,
+        asset={"allow_contributions": True},
         asset_category=1,
         academy=academy,
         cohort=cohort,
@@ -266,7 +270,7 @@ def test_with_asset__no_saas__finantial_status_late(bc: Breathecode, client: API
         capability="read_asset",
         service={"consumer": "READ_LESSON"},
         consumable=1,
-        asset={"slug": slug},
+        asset={"slug": slug, "allow_contributions": True},
         syllabus_version={
             "json": {
                 "x": slug,
