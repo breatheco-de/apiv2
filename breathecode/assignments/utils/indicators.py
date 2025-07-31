@@ -164,6 +164,8 @@ class UserIndicatorCalculator:
         if "opened_at" in step:
             opened_at = self.parse_timestamp(step["opened_at"])
     
+            # If the step had no quiz or coding test but it was completed it means that
+            # the student read the whole step
             if "completed_at" in step:
                 status = "completed"
                 completed_at = self.parse_timestamp(step["completed_at"])

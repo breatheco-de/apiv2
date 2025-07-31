@@ -12,7 +12,7 @@ from breathecode.authenticate.models import Token
 from breathecode.services.learnpack import LearnPack
 from breathecode.utils.admin.widgets import PrettyJSONWidget
 
-from .actions import sync_student_tasks
+from .actions import sync_student_tasks, calculate_telemetry_indicator
 from .models import (
     AssignmentTelemetry,
     CohortProxy,
@@ -294,10 +294,15 @@ class FrustrationScoreFilter(admin.SimpleListFilter):
         return queryset
 
 
+@admin.action(description="Async: Calculate Telemetry Indicators")
+def async_calculate_telemetry_indicators(modeladmin, request, queryset):
+    for telemetry in queryset:
+        async_calculate_telemetry_indicator.delay(telemetry.id)
+
 @admin.action(description="Calculate Telemetry Indicators")
 def calculate_telemetry_indicators(modeladmin, request, queryset):
     for telemetry in queryset:
-        async_calculate_telemetry_indicator.delay(telemetry.id)
+        calculate_telemetry_indicator(telemetry)
 
 
 @admin.register(AssignmentTelemetry)
@@ -315,7 +320,7 @@ class AssignmentTelemetryAdmin(admin.ModelAdmin):
     search_fields = ["asset_slug", "user__email", "user__id"]
     raw_id_fields = ["user"]
     list_filter = [EngagementScoreFilter, FrustrationScoreFilter]
-    actions = [calculate_telemetry_indicators]
+    actions = [calculate_telemetry_indicators, async_calculate_telemetry_indicators]
 
     def engagement_score_display(self, obj):
         if obj.engagement_score is None:

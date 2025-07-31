@@ -1,7 +1,7 @@
 import logging
 import os
 from datetime import timedelta
-
+from django.utils import timezone
 import requests
 from capyc.rest_framework.exceptions import ValidationException
 from task_manager.core.exceptions import AbortTask
@@ -147,9 +147,8 @@ def validate_task_for_notifications(task: Task) -> bool:
         raise AbortTask(f"The language {language} is not implemented in teacher_task_notification")
 
 
-def calculate_telemetry_indicator(telemetry):
+def calculate_telemetry_indicator(telemetry, asset_tasks=None):
     indicators = [EngagementIndicator(), FrustrationIndicator()]
-
     if telemetry.telemetry:
         calculator = UserIndicatorCalculator(telemetry.telemetry, indicators)
         scores = calculator.calculate_indicators()
@@ -160,6 +159,29 @@ def calculate_telemetry_indicator(telemetry):
         telemetry.total_time = timedelta(seconds=scores["global"]["metrics"]["total_time_on_platform"])
         telemetry.completion_rate = scores["global"]["metrics"]["completion_rate"]
         telemetry.save()
+
+        if asset_tasks is None:
+            asset_tasks = Task.objects.filter(
+                associated_slug=telemetry.asset_slug,
+                user=telemetry.user
+            )
+        print(f"telemetry.completion_rate: {telemetry.completion_rate}")
+        if telemetry.completion_rate >= 99.999:
+            for task in asset_tasks:
+                task.task_status = Task.TaskStatus.DONE
+                task.revision_status = Task.RevisionStatus.APPROVED
+                task.description = "You have completed all steps on this exercise"
+                task.delivered_at = timezone.now()
+                task.reviewed_at = timezone.now()
+                task.save()
+        else:
+            for task in asset_tasks:
+                task.task_status = Task.TaskStatus.PENDING
+                task.revision_status = Task.RevisionStatus.PENDING
+                task.description = ""
+                task.delivered_at = None
+                task.reviewed_at = timezone.now()
+                task.save()
 
 
 def process_asset_telemetries(telemetries):

@@ -42,7 +42,8 @@ def post_asset_slug_modified(sender, instance: Asset, **kwargs):
     # add the asset as the first translation
     a = Asset.objects.get(id=instance.id)
     a.all_translations.add(instance)
-    instance.save()
+    # Use update() instead of save() to avoid recursive signal triggering
+    Asset.objects.filter(id=instance.id).update(lang=instance.lang)
     async_update_frontend_asset_cache.delay(instance.slug)
 
 
@@ -155,12 +156,20 @@ def model_b_deleted(sender, instance, **kwargs):
 
 
 def update_asset_context(instance: Asset):
-    x = AssetContext.objects.filter(asset=instance).first()
-    if x is None:
-        x = AssetContext(asset=instance)
+    try:
+        x = AssetContext.objects.filter(asset=instance).first()
+        if x is None:
+            x = AssetContext(asset=instance)
 
-    x.ai_context = instance.build_ai_context()
-    x.save()
+        x.ai_context = instance.build_ai_context()
+        # Use update() instead of save() to avoid triggering more signals
+        if x.pk is None:
+            x.save()
+        else:
+            AssetContext.objects.filter(pk=x.pk).update(ai_context=x.ai_context)
+    except Exception as e:
+        logger.error(f"Error updating asset context for asset {instance.slug}: {str(e)}")
+        # Don't raise the exception to avoid breaking the transaction
 
 
 @receiver(asset_saved, sender=Asset)
