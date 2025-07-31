@@ -356,6 +356,9 @@ def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: 
     if not assignment:
         raise AbortTask(f"Assignment {assignment_id} not found")
 
+    if assignment.revision_status == "APPROVED":
+        raise AbortTask(f"Assignment {assignment_id} is already approved, skipping flag validation")
+
     asset = Asset.objects.filter(Q(slug=associated_slug) | Q(assetalias__slug=associated_slug)).first()
     if not asset:
         raise AbortTask(f"Asset {associated_slug} not found")
