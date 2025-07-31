@@ -26,11 +26,15 @@ def get_serializer(asset, data={}):
         "enable_table_of_content": asset.enable_table_of_content,
         "interactive": asset.interactive,
         "feature": asset.feature,
-        "category": {
-            "id": asset.category.id,
-            "slug": asset.category.slug,
-            "title": asset.category.title,
-        },
+        "category": (
+            {
+                "id": asset.category.id,
+                "slug": asset.category.slug,
+                "title": asset.category.title,
+            }
+            if asset.category
+            else None
+        ),
         "description": asset.description,
         "assets_related": (
             [
@@ -41,11 +45,15 @@ def get_serializer(asset, data={}):
                     "asset_type": related.asset_type,
                     "status": related.status,
                     "published_at": related.published_at,
-                    "category": {
-                        "id": related.category.id,
-                        "slug": related.category.slug,
-                        "title": related.category.title,
-                    },
+                    "category": (
+                        {
+                            "id": related.category.id,
+                            "slug": related.category.slug,
+                            "title": related.category.title,
+                        }
+                        if related.category
+                        else None
+                    ),
                     "technologies": (
                         [get_serializer_technology(tech) for tech in related.technologies.all()]
                         if related.technologies
@@ -78,6 +86,7 @@ def get_serializer(asset, data={}):
         "enable_table_of_content": asset.enable_table_of_content,
         "interactive": asset.interactive,
         "learnpack_deploy_url": asset.learnpack_deploy_url,
+        "allow_contributions": asset.allow_contributions,
         **data,
     }
 

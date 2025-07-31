@@ -448,7 +448,7 @@ class Cohort(models.Model):
         self._current_history_log = self.history_log
 
     def __str__(self):
-        return self.name + "(" + self.slug + ")"
+        return f"{self.name} ({self.slug} - {self.id})"
 
 
 TEACHER = "TEACHER"

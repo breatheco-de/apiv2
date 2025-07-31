@@ -141,6 +141,7 @@ def post_serializer(academy, category, data={}):
         "updated_at": UTC_NOW.isoformat().replace("+00:00", "Z"),
         "template_url": None,
         "dependencies": None,
+        "allow_contributions": True,
         **data,
     }
 
@@ -197,6 +198,10 @@ def put_serializer(academy, category, asset, data={}):
         "translations": {},
         "url": None,
         "visibility": "PUBLIC",
+        "allow_contributions": asset.allow_contributions,
+        "academy": asset.academy.id if asset.academy else None,
+        "config": asset.config,
+        "flag_seed": asset.flag_seed,
         **data,
     }
 
