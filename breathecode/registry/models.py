@@ -577,94 +577,99 @@ class Asset(models.Model):
         return f"{self.slug}"
 
     def build_ai_context(self):
-        lang = self.lang or self.category.lang
-        lang_name = LANG_MAP.get(lang, lang)
+        try:
+            lang = self.lang or (self.category.lang if self.category else None)
+            lang_name = LANG_MAP.get(lang, lang) if lang else "unknown"
 
-        context = f"This {self.asset_type} about {self.title} is written in {lang_name}. "
+            context = f"This {self.asset_type} about {self.title} is written in {lang_name}. "
 
-        translations = ", ".join([x.title for x in self.all_translations.all()])
-        if translations:
-            context = context[:-2]
-            context += f", and it has the following translations: {translations}. "
+            translations = ", ".join([x.title for x in self.all_translations.all()])
+            if translations:
+                context = context[:-2]
+                context += f", and it has the following translations: {translations}. "
 
-        if self.solution_url:
-            context = context[:-2]
-            context += f", and it has a solution code this link is: {self.solution_url}. "
+            if self.solution_url:
+                context = context[:-2]
+                context += f", and it has a solution code this link is: {self.solution_url}. "
 
-        if self.solution_video_url:
-            context = context[:-2]
-            context += f", and it has a video solution this link is {self.solution_video_url}. "
+            if self.solution_video_url:
+                context = context[:-2]
+                context += f", and it has a video solution this link is {self.solution_video_url}. "
 
-        context += f"It's category related is (what type of skills the student will get) {self.category.title}. "
+            if self.category:
+                context += f"Its category related is (what type of skills the student will get) {self.category.title}. "
 
-        technologies = ", ".join([x.title for x in self.technologies.filter(Q(lang=lang) | Q(lang=None))])
-        if technologies:
-            context += f"This asset is about the following technologies: {technologies}. "
+            technologies = ", ".join([x.title for x in self.technologies.filter(Q(lang=lang) | Q(lang=None))])
+            if technologies:
+                context += f"This asset is about the following technologies: {technologies}. "
 
-        if self.external:
-            context += "This asset is external, which means it opens outside 4geeks. "
+            if self.external:
+                context += "This asset is external, which means it opens outside 4geeks. "
 
-        if self.interactive:
-            context += (
-                "This asset opens on LearnPack so it has a step-by-step of the exercises that you should follow. "
-            )
+            if self.interactive:
+                context += (
+                    "This asset opens on LearnPack so it has a step-by-step of the exercises that you should follow. "
+                )
 
-        if self.gitpod:
-            context += (
-                f"This {self.asset_type} can be opened both locally or with click and code (This "
-                "way you don't have to install anything and it will open automatically on gitpod or github codespaces). "
-            )
+            if self.gitpod:
+                context += (
+                    f"This {self.asset_type} can be opened both locally or with click and code (This "
+                    "way you don't have to install anything and it will open automatically on gitpod or github codespaces). "
+                )
 
-        if self.interactive == True and self.with_video == True:
-            context += f"This {self.asset_type} has videos on each step. "
+            if self.interactive == True and self.with_video == True:
+                context += f"This {self.asset_type} has videos on each step. "
 
-        if self.interactive == True and self.with_solutions == True:
-            context += f"This {self.asset_type} has a code solution on each step. "
+            if self.interactive == True and self.with_solutions == True:
+                context += f"This {self.asset_type} has a code solution on each step. "
 
-        if self.duration:
-            context += f"This {self.asset_type} will last {self.duration} hours. "
+            if self.duration:
+                context += f"This {self.asset_type} will last {self.duration} hours. "
 
-        if self.difficulty:
-            context += f"Its difficulty is considered as {self.difficulty}. "
+            if self.difficulty:
+                context += f"Its difficulty is considered as {self.difficulty}. "
 
-        if self.superseded_by and self.superseded_by.title != self.title:
-            context += f"This {self.asset_type} has a previous version which is: {self.superseded_by.title}. "
+            if self.superseded_by and self.superseded_by.title != self.title:
+                context += f"This {self.asset_type} has a previous version which is: {self.superseded_by.title}. "
 
-        if self.asset_type == "PROJECT" and not self.delivery_instructions:
-            context += "This project should be delivered by sending a github repository URL. "
+            if self.asset_type == "PROJECT" and not self.delivery_instructions:
+                context += "This project should be delivered by sending a github repository URL. "
 
-        if self.asset_type == "PROJECT" and self.delivery_instructions and self.delivery_formats:
-            context += (
-                f"This project should be delivered by adding a file of one of these types: {self.delivery_formats}. "
-            )
+            if self.asset_type == "PROJECT" and self.delivery_instructions and self.delivery_formats:
+                context += (
+                    f"This project should be delivered by adding a file of one of these types: {self.delivery_formats}. "
+                )
 
-        if self.asset_type == "PROJECT" and self.delivery_regex_url:
-            context += (
-                f"This project should be delivered with a URL that follows this format: {self.delivery_regex_url}. "
-            )
+            if self.asset_type == "PROJECT" and self.delivery_regex_url:
+                context += (
+                    f"This project should be delivered with a URL that follows this format: {self.delivery_regex_url}. "
+                )
 
-        assets_related = ", ".join([x.slug for x in self.assets_related.all()])
-        if assets_related:
-            context += (
-                f"In case you still need to learn more about the basics of this {self.asset_type}, "
-                "you can check these lessons, and exercises, "
-                f"and related projects to get ready for this content: {assets_related}. "
-            )
+            assets_related = ", ".join([x.slug for x in self.assets_related.all()])
+            if assets_related:
+                context += (
+                    f"In case you still need to learn more about the basics of this {self.asset_type}, "
+                    "you can check these lessons, and exercises, "
+                    f"and related projects to get ready for this content: {assets_related}. "
+                )
 
-        if self.html:
-            context += "The markdown file with "
+            if self.html:
+                context += "The markdown file with "
 
-            if self.asset_type == "PROJECT":
-                context += "the instructions"
-            else:
-                context += "the content"
+                if self.asset_type == "PROJECT":
+                    context += "the instructions"
+                else:
+                    context += "the content"
 
-            context += f" of this {self.asset_type} is the following: {self.html}."
+                context += f" of this {self.asset_type} is the following: {self.html}."
 
-        if self.solution_readme:
-            context += f"\n\n the following steps are the solutions we propose for students to follow, when ask for advice use this information to help them:\n\n{self.solution_readme}."
+            if self.solution_readme:
+                context += f"\n\n the following steps are the solutions we propose for students to follow, when ask for advice use this information to help them:\n\n{self.solution_readme}."
 
-        return context
+            return context
+        except Exception as e:
+            # Return a basic context if there's an error
+            return f"This {self.asset_type} about {self.title} has an error building context: {str(e)}"
 
     def save(self, *args, **kwargs):
 
@@ -711,7 +716,8 @@ class Asset(models.Model):
         if status_modified:
             asset_status_updated.send_robust(instance=self, sender=Asset)
 
-        asset_saved.delay(instance=self, sender=Asset)
+        # Send asset_saved signal synchronously to avoid transaction issues
+        asset_saved.send_robust(instance=self, sender=Asset)
 
     def get_preview_generation_url(self):
 
@@ -766,7 +772,8 @@ class Asset(models.Model):
 
         if self.readme_url is None and self.asset_type == "LESSON":
             self.readme_url = self.url
-            self.save()
+            # Use update() instead of save() to avoid recursive signal triggering
+            Asset.objects.filter(id=self.id).update(readme_url=self.url)
 
         readme = {
             "clean": self.readme,
