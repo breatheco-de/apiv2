@@ -467,12 +467,15 @@ def pull_github_lesson(github, asset: Asset, override_meta=False):
         # Log repository accessibility for debugging
         try:
             repo_info = repo.raw_data
+            is_private = repo_info.get("private", False)
+            asset.allow_contributions = not is_private
             logger.debug(
                 f"Repository {org_name}/{repo_name} is accessible for lesson sync. "
-                f"Private: {repo_info.get('private', 'unknown')}"
+                f"Private: {is_private}, Allow contributions: {asset.allow_contributions}"
             )
         except Exception:
             logger.warning(f"Could not get repository details for lesson sync {org_name}/{repo_name}")
+            asset.allow_contributions = True
 
     except Exception as e:
         error_str = str(e).lower()
@@ -1138,12 +1141,15 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
         # Log repository accessibility for debugging
         try:
             repo_info = repo.raw_data
+            is_private = repo_info.get("private", False)
+            asset.allow_contributions = not is_private
             logger.debug(
                 f"Repository {org_name}/{repo_name} is accessible for learnpack asset sync. "
-                f"Private: {repo_info.get('private', 'unknown')}"
+                f"Private: {is_private}, Allow contributions: {asset.allow_contributions}"
             )
         except Exception:
             logger.warning(f"Could not get repository details for learnpack asset sync {org_name}/{repo_name}")
+            asset.allow_contributions = True
 
     except Exception as e:
         error_str = str(e).lower()
@@ -1436,12 +1442,15 @@ def pull_quiz_asset(github, asset: Asset):
         # Log repository accessibility for debugging
         try:
             repo_info = repo.raw_data
+            is_private = repo_info.get("private", False)
+            asset.allow_contributions = not is_private
             logger.debug(
                 f"Repository {org_name}/{repo_name} is accessible for quiz asset sync. "
-                f"Private: {repo_info.get('private', 'unknown')}"
+                f"Private: {is_private}, Allow contributions: {asset.allow_contributions}"
             )
         except Exception:
             logger.warning(f"Could not get repository details for quiz asset sync {org_name}/{repo_name}")
+            asset.allow_contributions = True
 
     except Exception as e:
         error_str = str(e).lower()

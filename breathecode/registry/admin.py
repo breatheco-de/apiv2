@@ -858,7 +858,7 @@ def change_status_ignored_including_similar(modeladmin, request, queryset):
 @admin.register(AssetErrorLog)
 class AssetErrorLogAdmin(admin.ModelAdmin):
     search_fields = ["slug", "user__email", "user__first_name", "user__last_name"]
-    list_display = ("slug", "path", "current_status", "user", "created_at", "asset")
+    list_display = ("slug", "path", "status_text", "user", "created_at", "asset")
     raw_id_fields = ["user", "asset"]
     list_filter = ["status", "slug", "asset_type"]
     actions = [

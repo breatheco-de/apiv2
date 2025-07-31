@@ -36,7 +36,14 @@ def get_serializer(utc_now, asset, asset_category):
         "slug": asset.slug,
         "title": asset.title,
         "lang": asset.lang,
-        "category": {"id": asset_category.id, "slug": asset_category.slug, "title": asset_category.title},
+        "academy": asset.academy.id if asset.academy else None,
+        "config": asset.config,
+        "flag_seed": asset.flag_seed,
+        "category": (
+            {"id": asset_category.id, "slug": asset_category.slug, "title": asset_category.title}
+            if asset_category
+            else None
+        ),
         "asset_type": asset.asset_type,
         "visibility": asset.visibility,
         "url": asset.url,
@@ -81,6 +88,7 @@ def get_serializer(utc_now, asset, asset_category):
         "owner": asset.owner,
         "created_at": utc_now.isoformat().replace("+00:00", "Z"),
         "updated_at": utc_now.isoformat().replace("+00:00", "Z"),
+        "allow_contributions": asset.allow_contributions,
         "clusters": [],
         "previous_versions": [],
     }
@@ -190,7 +198,10 @@ async def test_put_action_success(action_slug, aclient: AsyncMock, bc: Breatheco
 
     # Verify mock call
     action_mock = setup_mocks["update_asset_action"]
-    action_mock.assert_called_once_with(model.asset, model.user, put_data)
+
+    expected_data = put_data.copy()
+    expected_data["action_slug"] = action_slug
+    action_mock.assert_called_once_with(model.asset, model.user, expected_data, str(model.academy.id))
 
 
 @pytest.mark.asyncio
@@ -286,6 +297,7 @@ async def test_put_action_success_serialization_check(
         role=1,
         profile_academy=1,
         asset=asset_kwargs,
+        asset_category=1,
         token=1,
         capability="crud_asset",
     )

@@ -47,7 +47,7 @@ __all__ = [
 ]
 
 TOKEN_TYPE = ["login", "one_time", "temporal", "permanent"]
-LOGIN_TOKEN_LIFETIME = timezone.timedelta(days=1)
+LOGIN_TOKEN_LIFETIME = timezone.timedelta(days=7)
 TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(minutes=10)
 
 

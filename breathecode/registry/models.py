@@ -564,6 +564,12 @@ class Asset(models.Model):
         help_text="Auto-generated seed for CTF and other delivery flags, this is used by the assignment app to validate the flags automatically",
     )
 
+    allow_contributions = models.BooleanField(
+        default=True,
+        help_text="Indicates if the repo of the asset is public or private. if its public, it will be set as True, otherwise it will be set as False",
+        db_index=True,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
