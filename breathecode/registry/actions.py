@@ -1263,21 +1263,48 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
 
     asset = process_asset_config(asset, config)
 
-    if asset.asset_type == "PROJECT":
-        solution_filename = f"SOLUTION{lang}.md"
+    if asset.asset_type == "PROJECT" and asset.solution_url:
+        from breathecode.services.github import Github as GithubService
 
-        try:
-            solution_file = repo.get_contents(solution_filename)
-            solution_base64 = str(solution_file.content)
-            asset.solution_readme = base64.b64decode(solution_base64).decode("utf-8")
-            logger.debug(f"Successfully retrieved solution README {solution_filename} for asset {asset.slug}")
-        except Exception as e:
-            error_str = str(e).lower()
-            if "404" in error_str or "not found" in error_str:
-                logger.debug(f"Solution README file '{solution_filename}' not found for asset {asset.slug}")
-            else:
+        github_service = GithubService()
+        solution_url_info = github_service.parse_github_url(asset.solution_url)
+        solution_path = solution_url_info.get("path")
+        solution_branch = solution_url_info.get("branch")
+        solution_owner = solution_url_info.get("owner")
+        solution_repo = solution_url_info.get("repo")
+
+        if solution_path and solution_branch:
+            try:
+                solution_repo = github.get_repo(f"{solution_owner}/{solution_repo}")
+                solution_blob = get_blob_content(solution_repo, solution_path, branch=solution_branch)
+                if solution_blob is not None:
+                    asset.solution_readme = base64.b64decode(solution_blob.content).decode("utf-8")
+                    logger.debug(
+                        f"Successfully retrieved solution README from {asset.solution_url} for asset {asset.slug}"
+                    )
+                else:
+                    logger.debug(
+                        f"Solution file '{solution_url_info['path']}' not found in repository on branch '{solution_url_info['branch']}'"
+                    )
+            except Exception as e:
                 logger.debug(
-                    f"Error accessing solution README file '{solution_filename}' for asset {asset.slug}: {str(e)}"
+                    f"Error accessing solution README file at {asset.solution_url} for asset {asset.slug}: {str(e)}"
+                )
+        else:
+            try:
+                response = requests.get(asset.solution_url)
+                if response.status_code == 200:
+                    asset.solution_readme = response.text
+                    logger.debug(
+                        f"Successfully retrieved solution README via direct GET from {asset.solution_url} for asset {asset.slug}"
+                    )
+                else:
+                    logger.debug(
+                        f"Failed to retrieve solution README via direct GET from {asset.solution_url} for asset {asset.slug}, status code: {response.status_code}"
+                    )
+            except Exception as e:
+                logger.debug(
+                    f"Error making direct GET request to {asset.solution_url} for asset {asset.slug}: {str(e)}"
                 )
 
     return asset
