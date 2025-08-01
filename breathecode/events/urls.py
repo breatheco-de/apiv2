@@ -29,6 +29,7 @@ from .views import (
     get_events,
     join_event,
     join_live_class,
+    live_workshop_status,
 )
 
 app_name = "events"
@@ -91,4 +92,5 @@ urlpatterns = [
     ),
     path("academy/checkin", AcademyEventCheckinView.as_view(), name="academy_checkin"),
     path("eventbrite/webhook/<int:organization_id>", eventbrite_webhook, name="eventbrite_webhook_id"),
+    path("live-workshop-status", live_workshop_status, name="live_workshop_status"),
 ]

@@ -7,6 +7,7 @@ import pytz
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db.models.query_utils import Q
 from django.http.response import HttpResponse
 from django.shortcuts import redirect, render
@@ -43,6 +44,7 @@ from breathecode.utils.views import private_view, render_message
 
 from .actions import fix_datetime_weekday, update_timeslots_out_of_range  # get_my_event_types,
 from .models import (
+    ACTIVE,
     Event,
     EventbriteWebhook,
     EventCheckin,
@@ -1632,9 +1634,10 @@ class ICalEventView(APIView):
                 "You need to specify at least one academy id, event id or academy_slug (comma separated) in the querystring"
             )
 
-        if not event_ids and (Academy.objects.filter(id__in=academy_ids).count() != len(academy_ids) or Academy.objects.filter(
-            slug__in=slugs
-        ).count() != len(slugs)):
+        if not event_ids and (
+            Academy.objects.filter(id__in=academy_ids).count() != len(academy_ids)
+            or Academy.objects.filter(slug__in=slugs).count() != len(slugs)
+        ):
             raise ValidationException("Some academy not exist")
 
         upcoming = request.GET.get("upcoming")
@@ -1739,3 +1742,41 @@ class ICalEventView(APIView):
         response = HttpResponse(calendar_text, content_type="text/calendar")
         response["Content-Disposition"] = 'attachment; filename="calendar.ics"'
         return response
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def live_workshop_status(request):
+    cache_key = "live_workshop_status"
+    result = cache.get(cache_key)
+    if result is None:
+        now_dt = timezone.now()
+        live_event = Event.objects.filter(
+            status=ACTIVE,
+            starting_at__lte=now_dt,
+            ending_at__gte=now_dt,
+        ).first()
+        if live_event is not None:
+            result = {
+                "title": live_event.title,
+                "slug": live_event.slug,
+                "starting_at": live_event.starting_at,
+                "ending_at": live_event.ending_at,
+            }
+            timeout = max(30, int((live_event.ending_at - now_dt).total_seconds()))
+        else:
+            next_event = (
+                Event.objects.filter(
+                    status=ACTIVE,
+                    starting_at__gt=now_dt,
+                )
+                .order_by("starting_at")
+                .first()
+            )
+            if next_event:
+                timeout = max(30, int((next_event.starting_at - now_dt).total_seconds()))
+            else:
+                timeout = None
+            result = None
+        cache.set(cache_key, result, timeout=timeout)
+    return Response(result)
