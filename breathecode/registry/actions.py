@@ -1283,13 +1283,22 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
                         f"Successfully retrieved solution README from {asset.solution_url} for asset {asset.slug}"
                     )
                 else:
-                    logger.debug(
-                        f"Solution file '{solution_url_info['path']}' not found in repository on branch '{solution_url_info['branch']}'"
-                    )
+                    error_msg = f"Solution file '{solution_path}' not found in repository on branch '{solution_branch}'"
+                    logger.error(f"{error_msg} for asset {asset.slug}")
+                    raise Exception(error_msg)
             except Exception as e:
-                logger.debug(
-                    f"Error accessing solution README file at {asset.solution_url} for asset {asset.slug}: {str(e)}"
-                )
+                error_str = str(e).lower()
+                if "404" in error_str or "not found" in error_str:
+                    error_msg = f"Solution repository {solution_repo} not found or not accessible"
+                elif "403" in error_str or "forbidden" in error_str:
+                    error_msg = f"Access forbidden to solution repository {solution_repo}. Check GitHub credentials and repository permissions."
+                elif "401" in error_str or "unauthorized" in error_str:
+                    error_msg = f"GitHub authentication failed for solution repository {solution_repo}. Check GitHub credentials."
+                else:
+                    error_msg = f"Error accessing solution README file at {asset.solution_url}: {str(e)}"
+
+                logger.error(f"{error_msg} for asset {asset.slug}")
+                raise Exception(error_msg)
         else:
             try:
                 response = requests.get(asset.solution_url)
@@ -1299,13 +1308,13 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
                         f"Successfully retrieved solution README via direct GET from {asset.solution_url} for asset {asset.slug}"
                     )
                 else:
-                    logger.debug(
-                        f"Failed to retrieve solution README via direct GET from {asset.solution_url} for asset {asset.slug}, status code: {response.status_code}"
-                    )
+                    error_msg = f"Failed to retrieve solution README via direct GET from {asset.solution_url}, status code: {response.status_code}"
+                    logger.error(f"{error_msg} for asset {asset.slug}")
+                    raise Exception(error_msg)
             except Exception as e:
-                logger.debug(
-                    f"Error making direct GET request to {asset.solution_url} for asset {asset.slug}: {str(e)}"
-                )
+                error_msg = f"Error making direct GET request to {asset.solution_url}: {str(e)}"
+                logger.error(f"{error_msg} for asset {asset.slug}")
+                raise Exception(error_msg)
 
     return asset
 
