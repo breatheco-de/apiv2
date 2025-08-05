@@ -31,6 +31,7 @@ TRUSTED_DOMAINS = {
     # Common domains that might have reliability issues but are trusted:
     'twitter.com',
     'x.com',
+    'example.com',
     # 'stackoverflow.com',
 }
 
