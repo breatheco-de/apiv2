@@ -586,7 +586,7 @@ class Asset(models.Model):
             translations = ", ".join([x.title for x in self.all_translations.all()])
             if translations:
                 context = context[:-2]
-                context += f", and it has the following translations: {translations}. "
+                context += f", and it has the following language translations: {translations}. "
 
             if self.solution_url:
                 context = context[:-2]
@@ -608,7 +608,7 @@ class Asset(models.Model):
 
             if self.interactive:
                 context += (
-                    "This asset opens on LearnPack so it has a step-by-step of the exercises that you should follow. "
+                    "This asset opens as a LearnPack Package so it has a step-by-step of the exercises that you should follow. "
                 )
 
             if self.gitpod:
@@ -664,7 +664,7 @@ class Asset(models.Model):
                 context += f" of this {self.asset_type} is the following: {self.html}."
 
             if self.solution_readme:
-                context += f"\n\n the following steps are the solutions we propose for students to follow, when ask for advice use this information to help them:\n\n{self.solution_readme}."
+                context += f"\n\n the following steps are the solutions we propose for students to follow, when asked use this information to help students but don't provide the whole solution, only hints on how to approach the problem:\n\n{self.solution_readme}."
 
             return context
         except Exception as e:
