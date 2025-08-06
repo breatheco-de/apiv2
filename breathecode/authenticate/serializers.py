@@ -1406,6 +1406,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "phone",
+            "course",
             "cohort",
             "syllabus",
             "access_token",
@@ -1427,8 +1428,6 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     def validate(self, data: dict[str, str]):
         from breathecode.marketing.models import Course
         from breathecode.payments.models import Plan
-
-        country = data["country"] if "country" in data else None
 
         lang = self.context.get("lang", "en")
         if "email" not in data:
@@ -1542,7 +1541,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if user:
             valid_email = invites.filter(status="ACCEPTED", is_email_validated=True).exists()
-            for i in UserInvite.objects.filter(user__isnull=True, email=data["email"], status="ACCEPTED", is_email_validated=valid_email):
+            for i in UserInvite.objects.filter(
+                user__isnull=True, email=data["email"], status="ACCEPTED", is_email_validated=valid_email
+            ):
                 i.user = user
                 i.save()
 
@@ -1572,27 +1573,28 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
                 )
             )
 
-        event_slug = data.get("event_slug") or data.get("event")
+        if course:
+            data["course"] = course
+            if not data.get("academy"):
+                data["academy"] = course.academy
+            if syllabus:
+                data["syllabus"] = syllabus
+
+        if cohort:
+            data["cohort"] = cohort
+            if not data.get("academy"):
+                data["academy"] = cohort.academy
 
         if plan and plan.has_waiting_list == False:
             data["status"] = "ACCEPTED"
             data["process_status"] = "DONE"
-
         elif course and course.has_waiting_list == True:
-            data["academy"] = course.academy
-            data["syllabus"] = syllabus
             data["status"] = "WAITING_LIST"
             data["process_status"] = "PENDING"
-
         elif course and course.has_waiting_list == False:
-            data["academy"] = course.academy
-            data["syllabus"] = syllabus
             data["status"] = "ACCEPTED"
             data["process_status"] = "DONE"
-
         elif cohort:
-            data["academy"] = cohort.academy
-            data["cohort"] = cohort
             data["status"] = "ACCEPTED"
             data["process_status"] = "DONE"
 

@@ -131,7 +131,7 @@ def validate_email(modeladmin, request, queryset: QuerySet[UserInvite]):
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ["email", "first_name", "last_name", "user__email"]
-    raw_id_fields = ["user", "author", "cohort"]
+    raw_id_fields = ["user", "author", "cohort", "course"]
     list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country"]
     list_display = (
         "email",

@@ -28,6 +28,7 @@ def course_translation_serializer(course_translation):
         "preview_url": course_translation.preview_url,
         "video_url": course_translation.video_url,
         "heading": course_translation.heading,
+        "prerequisite": course_translation.prerequisite,
     }
 
 

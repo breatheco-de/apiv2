@@ -411,6 +411,7 @@ class GetCourseTranslationSerializer(serpy.Serializer):
     preview_url = serpy.Field()
     video_url = serpy.Field()
     heading = serpy.Field()
+    prerequisite = serpy.Field()
 
 
 class GetCourseSmallSerializer(serpy.Serializer):

@@ -898,6 +898,12 @@ class CourseTranslation(models.Model):
         null=True,
         help_text="Different variables that can be used for marketing purposes in the landing page.",
     )
+    prerequisite = models.TextField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text="markdown content describing course prerequisites.",
+    )
 
     def __str__(self) -> str:
         return f"{self.lang}: {self.title}"

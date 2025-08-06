@@ -43,7 +43,8 @@ from rest_framework.schemas.openapi import AutoSchema
 
 import breathecode.activity.tasks as tasks_activity
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, CohortUser, Syllabus
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.marketing.models import Course
 from breathecode.authenticate.actions import get_user_settings, sync_with_rigobot, replace_user_email
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
@@ -266,12 +267,86 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if syllabus:
             data["syllabus"] = syllabus.id
 
+        course = None
+        if v := data.pop("course", None):
+            if v and str(v).strip():
+                try:
+                    args = {}
+                    if isinstance(v, int):
+                        args["id"] = v
+                    else:
+                        args["slug"] = v
+
+                    course = Course.objects.filter(**args).get()
+
+                except Exception:
+                    raise ValidationException(
+                        translation(
+                            lang, en="The course does not exist", es="El curso no existe", slug="course-not-found"
+                        )
+                    )
+
+        if course:
+            data["course"] = course.id
+
+        cohort = None
+        if v := data.pop("cohort", None):
+            if v and str(v).strip():
+                try:
+                    args = {}
+                    if isinstance(v, int):
+                        args["id"] = v
+                    else:
+                        args["slug"] = v
+
+                    cohort = Cohort.objects.filter(**args).get()
+
+                except Exception:
+                    raise ValidationException(
+                        translation(
+                            lang, en="The cohort does not exist", es="El cohort no existe", slug="cohort-not-found"
+                        )
+                    )
+
+        if cohort:
+            data["cohort"] = cohort.id
+
+        academy = None
+        if v := data.pop("academy", None):
+            if v and str(v).strip():
+                try:
+                    args = {}
+                    if isinstance(v, int):
+                        args["id"] = v
+                    else:
+                        args["slug"] = v
+
+                    academy = Academy.objects.filter(**args).get()
+
+                except Exception:
+                    raise ValidationException(
+                        translation(
+                            lang, en="The academy does not exist", es="La academia no existe", slug="academy-not-found"
+                        )
+                    )
+
+        if not academy:
+            if course:
+                academy = course.academy
+            elif cohort:
+                academy = cohort.academy
+
+        if academy:
+            data["academy"] = academy.id
+
         serializer = UserInviteWaitingListSerializer(
             data=data,
             context={
                 "lang": lang,
                 "plan": data.get("plan"),
-                "course": data.get("course"),
+                "course": course,
+                "cohort": cohort,
+                "academy": academy,
                 "syllabus": syllabus,
             },
         )
@@ -299,6 +374,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         data = {**request.data}
 
+        # Handle syllabus
         syllabus = None
         if v := data.pop("syllabus", None):
             try:
@@ -320,13 +396,84 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if syllabus:
             data["syllabus"] = syllabus.id
 
+        # Handle course
+        course = None
+        if v := data.pop("course", None):
+            try:
+                args = {}
+                if isinstance(v, int):
+                    args["id"] = v
+                else:
+                    args["slug"] = v
+
+                course = Course.objects.filter(**args).get()
+
+            except Exception:
+                raise ValidationException(
+                    translation(lang, en="The course does not exist", es="El curso no existe", slug="course-not-found")
+                )
+
+        if course:
+            data["course"] = course.id
+
+        # Handle cohort
+        cohort = None
+        if v := data.pop("cohort", None):
+            try:
+                args = {}
+                if isinstance(v, int):
+                    args["id"] = v
+                else:
+                    args["slug"] = v
+
+                cohort = Cohort.objects.filter(**args).get()
+
+            except Exception:
+                raise ValidationException(
+                    translation(lang, en="The cohort does not exist", es="El cohort no existe", slug="cohort-not-found")
+                )
+
+        if cohort:
+            data["cohort"] = cohort.id
+
+        # Handle academy - set from course or cohort if not provided
+        academy = None
+        if v := data.pop("academy", None):
+            try:
+                args = {}
+                if isinstance(v, int):
+                    args["id"] = v
+                else:
+                    args["slug"] = v
+
+                academy = Academy.objects.filter(**args).get()
+
+            except Exception:
+                raise ValidationException(
+                    translation(
+                        lang, en="The academy does not exist", es="La academia no existe", slug="academy-not-found"
+                    )
+                )
+
+        # If no academy provided, get it from course or cohort
+        if not academy:
+            if course:
+                academy = course.academy
+            elif cohort:
+                academy = cohort.academy
+
+        if academy:
+            data["academy"] = academy.id
+
         serializer = UserInviteWaitingListSerializer(
             invite,
             data=data,
             context={
                 "lang": lang,
                 "plan": data.get("plan"),
-                "course": data.get("course"),
+                "course": course,
+                "cohort": cohort,
+                "academy": academy,
                 "syllabus": syllabus,
             },
         )
@@ -3238,25 +3385,29 @@ class UpdateEmailEverywhereView(APIView):
     Update user email across all models in the database that store email addresses.
     Only superusers can call this endpoint. Users cannot change their own email.
     """
-    
+
     @superuser_required
     def put(self, request, user_id=None):
         if user_id is None:
             from capyc.core.i18n import translation
             from capyc.rest_framework.exceptions import ValidationException
-            lang = getattr(request.user, 'lang', 'en')
+
+            lang = getattr(request.user, "lang", "en")
             raise ValidationException(
                 translation(
                     lang,
                     en="You must specify a user_id to update email.",
                     es="Debes especificar un user_id para actualizar el email.",
-                    slug="missing-user-id"
+                    slug="missing-user-id",
                 ),
-                code=400
+                code=400,
             )
-        new_email = request.data.get('email')
+        new_email = request.data.get("email")
         result = replace_user_email(request.user, user_id, new_email)
-        return Response({
-            'message': f'Email successfully updated from {result["old_email"]} to {result["new_email"]}. Keep in mind that user statistics with the new email will be reset and other non-essential funcionalities will also be lost.',
-            **result
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "message": f'Email successfully updated from {result["old_email"]} to {result["new_email"]}. Keep in mind that user statistics with the new email will be reset and other non-essential funcionalities will also be lost.',
+                **result,
+            },
+            status=status.HTTP_200_OK,
+        )
