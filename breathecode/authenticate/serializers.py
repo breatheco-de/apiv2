@@ -1590,9 +1590,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             data["process_status"] = "DONE"
         elif course and course.has_waiting_list == True:
             data["status"] = "WAITING_LIST"
+            data["syllabus"] = syllabus
             data["process_status"] = "PENDING"
         elif course and course.has_waiting_list == False:
             data["status"] = "ACCEPTED"
+            data["syllabus"] = syllabus
             data["process_status"] = "DONE"
         elif cohort:
             data["status"] = "ACCEPTED"
