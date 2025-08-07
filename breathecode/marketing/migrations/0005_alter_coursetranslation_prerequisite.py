@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="prerequisite",
             field=models.JSONField(
                 blank=True,
-                default=list,
+                default=None,
                 help_text="Array of markdown content describing course prerequisites.",
                 null=True,
             ),

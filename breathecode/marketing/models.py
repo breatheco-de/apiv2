@@ -899,7 +899,7 @@ class CourseTranslation(models.Model):
         help_text="Different variables that can be used for marketing purposes in the landing page.",
     )
     prerequisite = models.JSONField(
-        default=list,
+        default=None,
         blank=True,
         null=True,
         help_text="Array of markdown content describing course prerequisites.",
