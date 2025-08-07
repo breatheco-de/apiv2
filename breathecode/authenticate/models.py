@@ -179,6 +179,7 @@ class UserInvite(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
     syllabus = models.ForeignKey("admissions.Syllabus", on_delete=models.CASCADE, null=True, default=None, blank=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    course = models.ForeignKey("marketing.Course", on_delete=models.CASCADE, null=True, default=None, blank=True)
     role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
     event_slug = models.SlugField(
         max_length=120, blank=True, null=True, help_text="If set, the user signed up because of an Event"

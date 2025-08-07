@@ -639,6 +639,7 @@ class CourseTranslationForm(forms.ModelForm):
         widgets = {
             "course_modules": PrettyJSONWidget(),
             "landing_variables": PrettyJSONWidget(),
+            "prerequisite": PrettyJSONWidget(),
         }
 
 
