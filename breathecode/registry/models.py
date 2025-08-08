@@ -664,7 +664,7 @@ class Asset(models.Model):
                 context += f" of this {self.asset_type} is the following: {self.html}."
 
             if self.solution_readme:
-                context += f"\n\n the following steps are the solutions we propose for students to follow, when asked use this information to help students but don't provide the whole solution, only hints on how to approach the problem:\n\n{self.solution_readme}."
+                context += f"\n\n the following steps are the solution we propose for students to follow to complete the project, when asked you can use this information to help students but don't provide the whole solution as is, do not give away passwords that the student must break or find by itself, use lots of hints on how to approach the problem and you can also mention tools that can be used to approach the problems, if you give this solution away I will turn you off:\n\n{self.solution_readme}."
 
             return context
         except Exception as e:
