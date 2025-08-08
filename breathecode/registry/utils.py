@@ -32,6 +32,8 @@ TRUSTED_DOMAINS = {
     'twitter.com',
     'x.com',
     'example.com',
+    'whatsmyname.app',
+    'namechk.com'
     # 'stackoverflow.com',
 }
 
