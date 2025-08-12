@@ -69,6 +69,7 @@ def plan_serializer(plan, data={}):
     return {
         "service_items": [],
         "financing_options": [],
+        "title": plan.title,
         "slug": plan.slug,
         "status": plan.status,
         "time_of_life": plan.time_of_life,

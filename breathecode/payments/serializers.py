@@ -199,7 +199,7 @@ class GetFinancingOptionSerializer(serpy.Serializer):
 
 
 class GetPlanSmallSerializer(serpy.Serializer):
-    # title = serpy.Field()
+    title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
     status = serpy.Field()

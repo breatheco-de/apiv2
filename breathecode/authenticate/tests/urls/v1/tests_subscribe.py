@@ -101,6 +101,7 @@ def plan_serializer(plan):
     return {
         "financing_options": [],
         "service_items": [],
+        "title": plan.title,
         "has_available_cohorts": bool(plan.cohort_set),
         "slug": plan.slug,
         "status": plan.status,

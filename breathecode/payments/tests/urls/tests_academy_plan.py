@@ -58,6 +58,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
 
     return {
         "id": event.id,
+        "title": event.title,
         "slug": event.slug,
         "currency": {
             "code": currency.code,

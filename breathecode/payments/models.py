@@ -635,6 +635,9 @@ class Plan(AbstractPriceByTime):
         help_text="A human-readable identifier, it must be unique and it can only contain letters, "
         "numbers and hyphens",
     )
+
+    title = models.CharField(max_length=100, blank=True, null=True, help_text="Plan title, used on checkout process")
+
     financing_options = models.ManyToManyField(FinancingOption, blank=True, help_text="Available financing options")
 
     is_renewable = models.BooleanField(
