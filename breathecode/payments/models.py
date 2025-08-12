@@ -336,11 +336,9 @@ class CohortSet(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         return f"{self.slug} ({self.academy.slug})"
-    
-
 
 
 class CohortSetTranslation(models.Model):
@@ -391,7 +389,7 @@ class CohortSetCohort(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         return self.cohort_set.slug
 
@@ -972,9 +970,9 @@ class Coupon(models.Model):
         Ensures uniqueness in the database.
         Uses an ambiguity-free character set for readability.
         """
-        READABLE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  # No I, O, 0, 1, S, 5, B, 8
+        READABLE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # No I, O, 0, 1, S, 5, B, 8
         while True:
-            key = ''.join(random.choices(READABLE_CHARS, k=length))
+            key = "".join(random.choices(READABLE_CHARS, k=length))
             if prefix:
                 key = f"{prefix.upper()}{key}"
             if not cls.objects.filter(slug=key).exists():
@@ -1091,6 +1089,10 @@ class PaymentMethod(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
+    is_backed = models.BooleanField(
+        default=False,
+        help_text="if this payment method is backed by real life transaction, usually backed payments are considered real income",
+    )
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
