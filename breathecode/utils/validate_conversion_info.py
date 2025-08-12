@@ -29,6 +29,8 @@ def validate_conversion_info(conversion_info, lang):
             "landing_url",
             "user_agent",
             "plan",
+            "coupon",
+            "ref",
             "location",
             "translations",
             "internal_cta_placement",

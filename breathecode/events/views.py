@@ -1762,6 +1762,7 @@ def live_workshop_status(request):
                 "slug": live_event.slug,
                 "starting_at": live_event.starting_at,
                 "ending_at": live_event.ending_at,
+                "lang": live_event.lang,
             }
             timeout = max(30, int((live_event.ending_at - now_dt).total_seconds()))
         else:
