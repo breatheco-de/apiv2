@@ -117,6 +117,14 @@ def make_edu_stat_active(modeladmin, request, queryset):
         cu.save()
 
 
+@admin.display(description="Finantial_status = FULLY_PAID")
+def make_fin_stat_fully_paid(modeladmin, request, queryset):
+    cohort_users = queryset.all()
+    for cu in cohort_users:
+        cu.finantial_status = "FULLY_PAID"
+        cu.save()
+
+
 @admin.display(description="Educational_status = GRADUATED")
 def make_edu_stat_graduate(modeladmin, request, queryset):
     cohort_users = queryset.all()
@@ -138,7 +146,14 @@ class CohortUserAdmin(admin.ModelAdmin):
     list_display = ("get_student", "cohort", "role", "educational_status", "finantial_status", "created_at")
     list_filter = ["role", "educational_status", "finantial_status"]
     raw_id_fields = ["user", "cohort"]
-    actions = [make_assistant, make_teacher, make_student, make_edu_stat_active, add_student_tag_to_active_campaign]
+    actions = [
+        make_assistant,
+        make_teacher,
+        make_student,
+        make_edu_stat_active,
+        make_fin_stat_fully_paid,
+        add_student_tag_to_active_campaign,
+    ]
 
     def get_student(self, obj):
         return obj.user.first_name + " " + obj.user.last_name + "(" + obj.user.email + ")"
