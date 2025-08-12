@@ -1110,6 +1110,9 @@ class PaymentMethod(models.Model):
         help_text="A list of country codes that represent countries that can use this payment method, comma separated",
     )
 
+    def __str__(self) -> str:
+        return f"{self.title} ({'Credit Card' if self.is_credit_card else 'No Credit Card'})"
+
 
 class ProofOfPayment(models.Model):
     """Represents a payment made by a user."""
@@ -1150,6 +1153,9 @@ class ProofOfPayment(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.reference} {self.status}"
 
 
 class Invoice(models.Model):
