@@ -49,6 +49,14 @@ ALLOWED_TYPES = {
     ],
 }
 
+ENGAGEMENT_POINTS: dict[tuple[str, str], float] = {
+    ("admissions.CohortUser", "joined_cohort"): 1.0,
+    ("assignments.Task", "open_syllabus_module"): 0.5,
+    ("assignments.Task", "read_assignment"): 1.0,
+    ("assignments.Task", "assignment_status_updated"): 4.0,
+    ("assignments.Task", "assignment_review_status_updated"): 2.0,
+}
+
 
 class FillActivityMeta:
 
@@ -662,3 +670,7 @@ def get_current_worker_number() -> int:
 
     # If the process is not found, return None or raise an exception based on your requirements
     return 0
+
+
+def get_engagement_points(related_type: str, kind: str) -> float:
+    return ENGAGEMENT_POINTS.get((related_type, kind), 0.0)
