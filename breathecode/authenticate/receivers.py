@@ -53,6 +53,10 @@ def set_user_group(sender, instance, created: bool, **_):
             group = Group.objects.filter(name="Teacher").first()
             groups = instance.user.groups
 
+        if is_valid_profile_academy and instance.role.slug == "teacher_creator":
+            group = Group.objects.filter(name="TeacherInfluencer").first()
+            groups = instance.user.groups
+
         if sender == MentorProfile:
             group = Group.objects.filter(name="Mentor").first()
             groups = instance.user.groups
