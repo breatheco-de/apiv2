@@ -92,7 +92,7 @@ def grant_plan_permissions_receiver(
 ):
     """
     Add the user to the Paid Student group when a subscription/plan financing is created
-    or when its status changes to ACTIVE
+    or when its status changes to ACTIVE. The signal is only emitted for paid plans.
     """
     group = Group.objects.filter(name="Paid Student").first()
     if group and not instance.user.groups.filter(name="Paid Student").exists():
@@ -104,17 +104,18 @@ def grant_plan_permissions_receiver(
 def revoke_plan_permissions_receiver(sender, instance, **kwargs):
     """
     Remove the user from the Paid Student group only if the user has
-    NO other active subscriptions or plan financings.
+    NO other active PAID subscriptions or plan financings.
     """
     group = Group.objects.filter(name="Paid Student").first()
     user = instance.user
 
-    has_active_subscription = Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE).exists()
-    has_active_planfinancing = PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE).exists()
+    if not group or not user.groups.filter(name="Paid Student").exists():
+        return
 
-    if group and user.groups.filter(name="Paid Student").exists():
-        if not (has_active_subscription or has_active_planfinancing):
-            user.groups.remove(group)
+    from .actions import user_has_active_paid_plans
+
+    if not user_has_active_paid_plans(user):
+        user.groups.remove(group)
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)

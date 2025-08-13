@@ -563,7 +563,7 @@ def extend_roles(roles: list[RoleType]) -> None:
         }
     )
     roles.append({"slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) + ["crud_cohort"]})
-    roles.append({"slug": "teacherInfluencer", "name": "TeacherInfluencer", "caps": extend(roles, ["teacher"])})
+    roles.append({"slug": "teacher_influencer", "name": "Teacher Influencer", "caps": extend(roles, ["teacher"])})
     roles.append(
         {
             "slug": "academy_coordinator",
