@@ -76,14 +76,14 @@ def calculate_bill_amounts(hash: str, *, force: bool = False, **_: Any):
     elif first_bill.vendor.name == "Codespaces":
         fields = [
             "username",
-            "formatted_date",
+            "date",
             "product",
             "sku",
             "quantity",
             "unit_type",
             "applied_cost_per_quantity",
         ]
-        start_field, end_field = "formatted_date", "formatted_date"
+        start_field, end_field = "date", "date"
 
     elif first_bill.vendor.name == "Rigobot":
         fields = [
@@ -284,7 +284,7 @@ def upload(hash: str, *, page: int = 0, force: bool = False, task_manager_id: in
     if not handler:
         codespaces_fields = [
             "username",
-            "formatted_date",
+            "date",
             "product",
             "sku",
             "quantity",
