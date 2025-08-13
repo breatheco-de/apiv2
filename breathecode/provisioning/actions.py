@@ -486,8 +486,8 @@ def add_codespaces_activity(context: ActivityContext, field: dict, position: int
         price=price,
         registered_at=date,
         quantity=quantity,
-        repository_url=f"https://github.com/{field['organization']}/{field['repository_name']}",
-        task_associated_slug=field["repository_name"],
+        repository_url=f"https://github.com/{field['organization']}/{field['repository']}",
+        task_associated_slug=field["repository"],
         csv_row=position,
     )
 
