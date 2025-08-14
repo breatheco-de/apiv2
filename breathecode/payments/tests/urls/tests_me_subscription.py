@@ -87,6 +87,7 @@ def plan_serializer(self, plan, service, groups=[], permissions=[], service_item
         "service_items": [
             service_item_serializer(self, service_item, service, groups, permissions) for service_item in service_items
         ],
+        "title": plan.title,
         "slug": plan.slug,
         "status": plan.status,
         "time_of_life": plan.time_of_life,

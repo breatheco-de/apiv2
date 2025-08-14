@@ -560,6 +560,7 @@ class GetPlanSerializer(serpy.Serializer):
 
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
+    title = serpy.Field()
     slug = serpy.Field()
 
 

@@ -40,13 +40,14 @@ def random_duration():
 
 def serialize_invoice(invoice, currency, user, data={}):
     return {
+        "id": invoice.id,
         "amount": invoice.amount,
         "currency": {
             "code": currency.code,
             "name": currency.name,
         },
         "paid_at": invoice.paid_at.isoformat().replace("+00:00", "Z"),
-        "status": invoice.status,
+        "status": str(invoice.status),
         "user": {
             "email": user.email,
             "first_name": user.first_name,
@@ -59,11 +60,11 @@ def serialize_invoice(invoice, currency, user, data={}):
 def serialize_coupon(coupon, data={}):
     return {
         "auto": coupon.auto,
-        "discount_type": coupon.discount_type,
+        "discount_type": str(coupon.discount_type),
         "discount_value": coupon.discount_value,
         "expires_at": coupon.expires_at,
         "offered_at": coupon.offered_at.isoformat().replace("+00:00", "Z"),
-        "referral_type": coupon.referral_type,
+        "referral_type": str(coupon.referral_type),
         "referral_value": coupon.referral_value,
         "slug": coupon.slug,
         **data,

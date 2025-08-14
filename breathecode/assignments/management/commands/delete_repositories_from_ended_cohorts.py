@@ -236,6 +236,10 @@ class Command(BaseCommand):
             if match:
                 owner = match.group("user")
                 repo = match.group("repo")
+
+                if "." in repo:
+                    repo = repo.split(".")[0]
+
                 repositories.add((owner, repo))
 
         return list(repositories)

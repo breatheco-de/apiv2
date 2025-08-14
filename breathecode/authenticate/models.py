@@ -242,6 +242,14 @@ class UserInvite(models.Model):
         if self.pk and self._email and self.email != self._email:
             raise forms.ValidationError("Email is readonly")
 
+        # we don't have to validate email if previous invite already has
+        if created and self.email:
+            pre_invite = UserInvite.objects.filter(email=self.email, is_email_validated=True).first()
+            if pre_invite is not None:
+                self.is_email_validated = True
+                self.email_quality = pre_invite.email_quality
+                self.email_status = pre_invite.email_status
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
         # this does not work without the created condition due to a bug

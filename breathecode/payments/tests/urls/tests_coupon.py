@@ -14,11 +14,11 @@ def setup(db):
 def get_serializer(bc: Breathecode, coupon):
     return {
         "auto": coupon.auto,
-        "discount_type": coupon.discount_type,
+        "discount_type": str(coupon.discount_type),
         "discount_value": coupon.discount_value,
         "expires_at": coupon.expires_at,
         "offered_at": bc.datetime.to_iso_string(coupon.offered_at),
-        "referral_type": coupon.referral_type,
+        "referral_type": str(coupon.referral_type),
         "referral_value": coupon.referral_value,
         "slug": coupon.slug,
     }

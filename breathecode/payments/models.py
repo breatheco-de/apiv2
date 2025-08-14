@@ -635,6 +635,9 @@ class Plan(AbstractPriceByTime):
         help_text="A human-readable identifier, it must be unique and it can only contain letters, "
         "numbers and hyphens",
     )
+
+    title = models.CharField(max_length=100, blank=True, null=True, help_text="Plan title, used on checkout process")
+
     financing_options = models.ManyToManyField(FinancingOption, blank=True, help_text="Available financing options")
 
     is_renewable = models.BooleanField(
@@ -1089,6 +1092,10 @@ class PaymentMethod(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
+    is_backed = models.BooleanField(
+        default=False,
+        help_text="if this payment method is backed by real life transaction, usually backed payments are considered real income",
+    )
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
