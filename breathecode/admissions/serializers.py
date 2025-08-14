@@ -1443,7 +1443,7 @@ class AcademyReportSerializer(serpy.Serializer):
         }
         active["total"] = int(active["main"]) + int(active["assistant"]) + int(active["reviewer"])
 
-        total = ProfileAcademy.objects.filter(role__slug__in=["teacher", "assistant"])
+        total = ProfileAcademy.objects.filter(role__slug__in=["teacher", "assistant", "teacher_influencer"])
         return {
             "total": total.count(),
             "active": active,

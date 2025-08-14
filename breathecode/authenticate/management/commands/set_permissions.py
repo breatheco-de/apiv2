@@ -123,6 +123,7 @@ GROUPS = [
         "inherit": [],
     },
     {"name": "Teacher", "permissions": ["add_code_review"], "inherit": []},
+    {"name": "Teacher Influencer", "permissions": [], "inherit": ["Teacher"]},
     {"name": "Mentor", "permissions": ["join_mentorship", "get_my_mentoring_sessions"], "inherit": []},
     {"name": "Mentorships", "permissions": ["join_mentorship", "get_my_mentoring_sessions"], "inherit": []},
     {"name": "Events", "permissions": ["event_join"], "inherit": []},

@@ -53,6 +53,10 @@ def set_user_group(sender, instance, created: bool, **_):
             group = Group.objects.filter(name="Teacher").first()
             groups = instance.user.groups
 
+        if is_valid_profile_academy and instance.role.slug == "teacher_influencer":
+            group = Group.objects.filter(name="Teacher Influencer").first()
+            groups = instance.user.groups
+
         if sender == MentorProfile:
             group = Group.objects.filter(name="Mentor").first()
             groups = instance.user.groups
@@ -92,6 +96,14 @@ def unset_user_group(sender, instance, **_):
         ).exists()
 
         group = Group.objects.filter(name="Teacher").first()
+        groups = instance.user.groups
+
+    if is_valid_profile_academy and instance.role.slug == "teacher_influencer":
+        should_be_deleted = not ProfileAcademy.objects.filter(
+            user=instance.user, role__slug="teacher_influencer", status="ACTIVE"
+        ).exists()
+
+        group = Group.objects.filter(name="Teacher Influencer").first()
         groups = instance.user.groups
 
     if sender == MentorProfile:
