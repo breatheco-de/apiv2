@@ -7,6 +7,7 @@ from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign, Co
 from .tasks import remove_screenshot, reset_screenshot, generate_cohort_certificates
 from .actions import generate_certificate
 from django.http import HttpResponse
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -83,15 +84,44 @@ def export_user_specialty_csv(self, request, queryset):
 @admin.register(UserSpecialty)
 class UserSpecialtyAdmin(admin.ModelAdmin):
     search_fields = ["user__email", "user__first_name", "user__last_name", "cohort__name", "cohort__slug"]
-    list_display = ("user", "specialty", "expires_at", "academy", "cohort", "pdf", "preview")
+    list_display = ("user", "specialty", "current_status", "expires_at", "academy", "cohort", "pdf", "preview")
     list_filter = ["specialty", "academy__slug", "cohort__slug"]
     raw_id_fields = ["user"]
     actions = [screenshot, delete_screenshot, export_user_specialty_csv]
 
-    def pdf(self, obj):
+    def current_status(self, obj):
+        colors = {
+            "PENDING": "bg-warning",
+            "PERSISTED": "bg-success",
+            "ERROR": "bg-error",
+            None: "bg-warning",
+        }
+
+        def from_status(s):
+            if s in colors:
+                return colors[s]
+            return ""
+
+        status = "No status"
+        if obj.status_text is not None:
+            status = re.sub(r"[^\w\._\-]", " ", obj.status_text)
+
         return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='https://certificate.4geeks.com/pdf/{obj.token}'>pdf</a>"
+            f"""<table style='max-width: 200px;'>
+        <td><span class='badge {from_status(obj.status)}'>{obj.status}</span></td>
+        <tr><td colspan='1'>{status}</td></tr>
+        </table>"""
         )
+
+    current_status.short_description = "Status"
+
+    def pdf(self, obj):
+        if obj.status == "PERSISTED":
+            return format_html(
+                f"<a rel='noopener noreferrer' target='_blank' href='https://certificate.4geeks.com/pdf/{obj.token}'>pdf</a>"
+            )
+        else:
+            return format_html('<span style="color: #dc3545;">check errors</span>')
 
     def preview(self, obj):
         if obj.preview_url is None or obj.preview_url == "":

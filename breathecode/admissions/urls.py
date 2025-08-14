@@ -34,6 +34,7 @@ from .views import (
     handle_test_syllabus,
     render_syllabus_preview,
 )
+from .admin_views import AdminCohortView, AdminStudentView
 
 app_name = "admissions"
 urlpatterns = [
@@ -153,7 +154,7 @@ urlpatterns = [
         name="academy_id_syllabus_slug_version",
     ),
     path(
-        "academy/<int:academy_id>/syllabus/<str:syllabus_slug>/version/<int:version>",
+        "academy/<int:academy_id>/syllabus/<str:syllabus_slug>/version/<str:version>",
         SyllabusVersionView.as_view(),
         name="academy_id_syllabus_slug_version_version",
     ),
@@ -163,4 +164,7 @@ urlpatterns = [
     path("admin/syllabus/asset/<str:asset_slug>", SyllabusAssetView.as_view(), name="syllabus_asset"),
     # Public Endpoints anyone can call
     path("public/cohort/user", PublicCohortUserView.as_view(), name="public_cohort_user"),
+    # Admin Endpoints - Superuser only
+    path("admin/cohort", AdminCohortView.as_view(), name="admin_cohort"),
+    path("admin/student", AdminStudentView.as_view(), name="admin_student"),
 ]
