@@ -199,7 +199,7 @@ class GetFinancingOptionSerializer(serpy.Serializer):
 
 
 class GetPlanSmallSerializer(serpy.Serializer):
-    # title = serpy.Field()
+    title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
     status = serpy.Field()
@@ -715,6 +715,7 @@ class PutPlanSerializer(PlanSerializer):
 class GetPaymentMethod(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
+    is_backed = serpy.Field()
     lang = serpy.Field()
     is_credit_card = serpy.Field()
     description = serpy.Field()
@@ -740,6 +741,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "third_party_link",
+            "is_backed",
             "lang",
             "is_credit_card",
             "currency",

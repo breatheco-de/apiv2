@@ -90,6 +90,7 @@ def format_invoice_item(data={}):
 
 def get_serializer(currency, user, data={}):
     return {
+        "id": 1,
         "amount": 0,
         "currency": {
             "code": currency.code,
@@ -781,7 +782,7 @@ class SignalTestSuite(PaymentsTestCase):
             model.currency,
             model.user,
             data={
-                "amount": amount,
+                "amount": float(amount),
             },
         )
 
@@ -886,7 +887,7 @@ class SignalTestSuite(PaymentsTestCase):
             model.currency,
             model.user,
             data={
-                "amount": amount,
+                "amount": float(amount),
             },
         )
 
@@ -1041,7 +1042,7 @@ def test_checkout_with_country_code_and_exceptions(
         final_currency,
         model.user,
         data={
-            "amount": expected_price_ceil,
+            "amount": float(expected_price_ceil),
         },
     )
 
