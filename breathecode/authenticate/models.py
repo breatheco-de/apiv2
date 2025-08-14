@@ -268,6 +268,7 @@ class ProfileAcademy(models.Model):
     def __init__(self, *args, **kwargs):
         super(ProfileAcademy, self).__init__(*args, **kwargs)
         self.__old_status = self.status
+        self.__old_role = self.role if hasattr(self, "role") else None
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
 
@@ -294,11 +295,29 @@ class ProfileAcademy(models.Model):
         return f"{self.email} for academy ({self.academy.name})"
 
     def save(self, *args, **kwargs):
+        role_changed = False
+        old_role = None
+
+        if hasattr(self, "_state") and not self._state.adding:
+            try:
+                old_instance = ProfileAcademy.objects.get(pk=self.pk)
+                if old_instance.role_id != self.role_id:
+                    role_changed = True
+                    old_role = old_instance.role
+            except ProfileAcademy.DoesNotExist:
+                pass
 
         if self.__old_status != self.status and self.status == "ACTIVE":
             academy_invite_accepted.send_robust(instance=self, sender=ProfileAcademy)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
+        if role_changed:
+            from .signals import profile_academy_role_changed
+
+            profile_academy_role_changed.send_robust(
+                instance=self, sender=ProfileAcademy, old_role=old_role, new_role=self.role
+            )
 
 
 class CredentialsGithub(models.Model):

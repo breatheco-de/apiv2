@@ -16,6 +16,7 @@ from breathecode.authenticate.signals import (
     invite_status_updated,
     user_info_deleted,
     user_info_updated,
+    profile_academy_role_changed,
 )
 from breathecode.mentorship.models import MentorProfile
 
@@ -163,3 +164,44 @@ def handle_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **_):
         and User.objects.filter(email=instance.email).exists() is False
     ):
         tasks.create_user_from_invite.apply_async(args=[instance.id], countdown=60)
+
+
+@receiver(profile_academy_role_changed)
+def handle_profile_academy_role_change(instance, old_role, new_role, **kwargs):
+    """
+    Handle group changes when ProfileAcademy role changes between student, teacher, and teacher_influencer.
+    This ensures proper group transitions when switching between these main roles.
+    """
+    if not instance.user:
+        return
+
+    main_roles = ["student", "teacher", "teacher_influencer"]
+
+    if not (old_role and new_role and (old_role.slug in main_roles or new_role.slug in main_roles)):
+        return
+
+    role_group_mapping = {
+        "student": "Student",
+        "teacher": "Teacher",
+        "teacher_influencer": "Teacher Influencer",
+    }
+
+    old_group_name = role_group_mapping.get(old_role.slug)
+    new_group_name = role_group_mapping.get(new_role.slug)
+
+    if not old_group_name or not new_group_name:
+        return
+
+    old_group = Group.objects.filter(name=old_group_name).first()
+    if old_group and old_group in instance.user.groups.all():
+        instance.user.groups.remove(old_group)
+        logger.info(
+            f"Removed user {instance.user.id} from group {old_group_name} (role changed from {old_role.slug} to {new_role.slug})"
+        )
+
+    new_group = Group.objects.filter(name=new_group_name).first()
+    if new_group and new_group not in instance.user.groups.all():
+        instance.user.groups.add(new_group)
+        logger.info(
+            f"Added user {instance.user.id} to group {new_group_name} (role changed from {old_role.slug} to {new_role.slug})"
+        )
