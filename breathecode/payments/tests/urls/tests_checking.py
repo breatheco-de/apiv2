@@ -75,6 +75,7 @@ def plan_serializer(plan, service_items, service, cohorts=[], financing_options=
         "financing_options": [
             financing_option_serializer(financing_option, currency) for financing_option in financing_options
         ],
+        "title": plan.title,
         "slug": plan.slug,
         "status": plan.status,
         "time_of_life": plan.time_of_life,

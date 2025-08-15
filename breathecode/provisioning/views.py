@@ -318,7 +318,7 @@ class UploadView(APIView):
             # codespaces
             fields = [
                 "username",
-                "formatted_date",
+                "date",
                 "product",
                 "sku",
                 "quantity",
@@ -334,8 +334,8 @@ class UploadView(APIView):
             df2.reset_index()
 
             try:
-                first = df2["formatted_date"][0].split("-")
-                last = df2["formatted_date"][0].split("-")
+                first = df2["date"][0].split("-")
+                last = df2["date"][0].split("-")
 
                 # Handle both formats: "2025-02-01T00:00:00.0000000Z" and "2025-03-01"
                 if "T" in first[2]:

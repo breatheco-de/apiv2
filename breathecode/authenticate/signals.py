@@ -14,3 +14,4 @@ user_info_deleted = emisor.signal("user_info_deleted")
 
 cohort_user_deleted = emisor.signal("cohort_user_deleted")
 google_webhook_saved = emisor.signal("google_webhook_saved")
+profile_academy_role_changed = emisor.signal("profile_academy_role_changed")

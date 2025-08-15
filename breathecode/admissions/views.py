@@ -181,9 +181,9 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
         if cache is not None:
             return cache
 
-        items = ProfileAcademy.objects.filter(academy__id=academy_id, role__slug__in=["teacher", "assistant"]).exclude(
-            user__email__contains="@token.com"
-        )
+        items = ProfileAcademy.objects.filter(
+            academy__id=academy_id, role__slug__in=["teacher", "assistant", "teacher_influencer"]
+        ).exclude(user__email__contains="@token.com")
 
         roles = request.GET.get("roles", None)
         if roles is not None:

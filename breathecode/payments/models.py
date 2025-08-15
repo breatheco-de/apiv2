@@ -336,11 +336,9 @@ class CohortSet(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         return f"{self.slug} ({self.academy.slug})"
-    
-
 
 
 class CohortSetTranslation(models.Model):
@@ -391,7 +389,7 @@ class CohortSetCohort(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         return super().save(*args, **kwargs)
-    
+
     def __str__(self) -> str:
         return self.cohort_set.slug
 
@@ -637,6 +635,9 @@ class Plan(AbstractPriceByTime):
         help_text="A human-readable identifier, it must be unique and it can only contain letters, "
         "numbers and hyphens",
     )
+
+    title = models.CharField(max_length=100, blank=True, null=True, help_text="Plan title, used on checkout process")
+
     financing_options = models.ManyToManyField(FinancingOption, blank=True, help_text="Available financing options")
 
     is_renewable = models.BooleanField(
@@ -972,9 +973,9 @@ class Coupon(models.Model):
         Ensures uniqueness in the database.
         Uses an ambiguity-free character set for readability.
         """
-        READABLE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  # No I, O, 0, 1, S, 5, B, 8
+        READABLE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # No I, O, 0, 1, S, 5, B, 8
         while True:
-            key = ''.join(random.choices(READABLE_CHARS, k=length))
+            key = "".join(random.choices(READABLE_CHARS, k=length))
             if prefix:
                 key = f"{prefix.upper()}{key}"
             if not cls.objects.filter(slug=key).exists():
@@ -1091,6 +1092,10 @@ class PaymentMethod(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
+    is_backed = models.BooleanField(
+        default=False,
+        help_text="if this payment method is backed by real life transaction, usually backed payments are considered real income",
+    )
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
@@ -1385,12 +1390,17 @@ class PlanFinancing(AbstractIOweYou):
             self.Status.EXPIRED,
         ]
 
+        from .actions import is_plan_financing_paid
+
+        is_paid = is_plan_financing_paid(self)
+
         if on_create:
             signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
-            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+            if is_paid:
+                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
         if old_instance and old_instance.status != self.status:
-            if self.status == self.Status.ACTIVE:
+            if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
             elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
@@ -1466,12 +1476,18 @@ class Subscription(AbstractIOweYou):
             self.Status.EXPIRED,
         ]
 
+        # Check if this is a paid subscription
+        from .actions import is_subscription_paid
+
+        is_paid = is_subscription_paid(self)
+
         if on_create:
             signals.subscription_created.send_robust(instance=self, sender=self.__class__)
-            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+            if is_paid:
+                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
         if old_instance and old_instance.status != self.status:
-            if self.status == self.Status.ACTIVE:
+            if self.status == self.Status.ACTIVE and is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
             elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)

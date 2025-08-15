@@ -62,6 +62,7 @@ def plan_serializer(self, plan, service, currency, groups=[], permissions=[], se
             service_item_serializer(self, service_item, service, groups, permissions) for service_item in service_items
         ],
         "currency": currency_serializer(currency),
+        "title": plan.title,
         "slug": plan.slug,
         "status": plan.status,
         "id": plan.id,
