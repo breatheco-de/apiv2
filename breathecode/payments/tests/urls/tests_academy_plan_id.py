@@ -144,7 +144,7 @@ class SignalTestSuite(PaymentsTestCase):
 
         json = response.json()
         expected = {
-            "detail": "You (user: 1) don't have this capability: read_plan for academy 1",
+            "detail": "You (user: 1) don't have this capability: read_subscription for academy 1",
             "status_code": 403,
         }
 
@@ -157,7 +157,7 @@ class SignalTestSuite(PaymentsTestCase):
     def test__not_found(self):
         model = self.bc.database.create(
             user=1,
-            capability="read_plan",
+            capability="read_subscription",
             role=1,
             profile_academy=1,
             skip_cohort=True,
@@ -185,7 +185,7 @@ class SignalTestSuite(PaymentsTestCase):
         model = self.bc.database.create(
             plan=plan,
             user=1,
-            capability="read_plan",
+            capability="read_subscription",
             role=1,
             profile_academy=1,
             skip_cohort=True,
@@ -229,7 +229,7 @@ class SignalTestSuite(PaymentsTestCase):
         model = self.bc.database.create(
             plan=plan,
             user=1,
-            capability="read_plan",
+            capability="read_subscription",
             role=1,
             profile_academy=1,
             skip_cohort=True,
@@ -267,7 +267,7 @@ class SignalTestSuite(PaymentsTestCase):
         model = self.bc.database.create(
             plan=plan,
             user=1,
-            capability="crud_plan",
+            capability="crud_subscription",
             role=1,
             profile_academy=1,
             skip_cohort=True,
@@ -331,7 +331,7 @@ class SignalTestSuite(PaymentsTestCase):
         model = self.bc.database.create(
             plan=plan,
             user=1,
-            capability="crud_plan",
+            capability="crud_subscription",
             role=1,
             profile_academy=1,
             skip_cohort=True,

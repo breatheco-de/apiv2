@@ -184,9 +184,12 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "selected_cohort_set",
         "selected_mentorship_service_set",
         "selected_event_type_set",
+        "joined_cohorts",
+        "plans",
+        "invoices",
+        "coupons"
     ]
     actions = [renew_subscription_consumables, charge_subscription]
-    filter_horizontal = ("joined_cohorts",)
 
 
 @admin.register(SubscriptionServiceItem)
