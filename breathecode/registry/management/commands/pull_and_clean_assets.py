@@ -208,9 +208,9 @@ class Command(BaseCommand):
             # Wait a bit before the next operation
             time.sleep(0.5)
             
-            # Clean/regenerate README
-            self.stdout.write(f"    Cleaning README...")
-            async_regenerate_asset_readme.delay(asset.slug)
+            # WARNING ⚠️ 
+            # THERE IS NOT NEED TO CLEAN/REGENERATE README BECAUSE THE PULL FROM GITHUB WILL DO IT
+            # WARNING ⚠️ 
             
             self.stdout.write(
                 self.style.SUCCESS(f"    ✓ {asset.slug} queued for processing")
