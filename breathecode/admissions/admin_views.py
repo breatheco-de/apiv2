@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.authenticate.actions import get_user_language
-from breathecode.utils.decorators import superuser_required
+from breathecode.utils.decorators import has_permission
 from breathecode.utils import APIViewExtensions
 
 from .models import Cohort, CohortUser
@@ -26,7 +26,7 @@ class AdminCohortView(APIView):
     permission_classes = [IsAuthenticated]
     extensions = APIViewExtensions(paginate=True, sort="-kickoff_date")
 
-    @superuser_required
+    @has_permission("read_cohorts_from_all")
     def get(self, request):
         handler = self.extensions(request)
         lang = get_user_language(request)
@@ -158,7 +158,7 @@ class AdminStudentView(APIView):
     permission_classes = [IsAuthenticated]
     extensions = APIViewExtensions(paginate=True, sort="-date_joined")
 
-    @superuser_required
+    @has_permission("read_students_from_all")
     def get(self, request):
         handler = self.extensions(request)
         lang = get_user_language(request)

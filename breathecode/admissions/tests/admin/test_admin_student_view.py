@@ -10,26 +10,33 @@ from ..mixins import AdmissionsTestCase
 class TestAdminStudentView(AdmissionsTestCase):
     """Test the admin student endpoint"""
 
-    def test_admin_student_endpoint_requires_superuser(self):
-        """Test that the endpoint requires superuser access"""
+    def _create_user_with_permission(self):
+        """Helper method to create a user with read_students_from_all permission"""
+        user = self.bc.database.create(user={'is_superuser': False})
+        permission = self.bc.database.create(permission={'codename': 'read_students_from_all'})
+        user.user.user_permissions.add(permission.permission)
+        return user
+
+    def test_admin_student_endpoint_requires_permission(self):
+        """Test that the endpoint requires read_students_from_all permission"""
         url = reverse("admissions:admin_student")
 
         # Test without authentication
         response = self.client.get(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        # Test with regular user (non-superuser)
+        # Test with regular user (without permission)
         user = self.bc.database.create(user={'is_superuser': False})
         self.client.force_authenticate(user=user.user)
         response = self.client.get(url)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_admin_student_endpoint_success_with_superuser(self):
-        """Test successful retrieval with superuser"""
+    def test_admin_student_endpoint_success_with_permission(self):
+        """Test successful retrieval with read_students_from_all permission"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data
@@ -61,8 +68,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test filtering by cohort IDs"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data
@@ -92,8 +99,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test filtering by like (first name, last name, email)"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data
@@ -138,8 +145,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test filtering by financial status"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data
@@ -173,8 +180,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test filtering by educational status"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data
@@ -208,8 +215,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test that students are not duplicated when they belong to multiple cohorts"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data
@@ -247,8 +254,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test pagination functionality"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data - multiple students
@@ -283,8 +290,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test sorting functionality"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data
@@ -352,8 +359,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test error handling for invalid cohort format"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Test with invalid cohort format
@@ -365,8 +372,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test that students without cohorts are included (only ProfileAcademy)"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data
@@ -394,8 +401,8 @@ class TestAdminStudentView(AdmissionsTestCase):
         """Test students who have both CohortUser and ProfileAcademy records"""
         url = reverse("admissions:admin_student")
         
-        # Create superuser
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create test data

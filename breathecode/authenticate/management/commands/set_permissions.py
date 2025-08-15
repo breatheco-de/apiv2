@@ -90,6 +90,16 @@ PERMISSIONS = [
         "description": "Access to private links",
         "codename": "get_private_link",
     },
+    {
+        "name": "Read students from all academies",
+        "description": "Admin permission to read students from all academies",
+        "codename": "read_students_from_all",
+    },
+    {
+        "name": "Read cohorts from all academies",
+        "description": "Admin permission to read cohorts from all academies",
+        "codename": "read_cohorts_from_all",
+    },
 ]
 
 GROUPS = [
