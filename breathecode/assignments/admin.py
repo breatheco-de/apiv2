@@ -79,9 +79,11 @@ class CohortAdmin(admin.ModelAdmin):
 def mark_as_delivered(modeladmin, request, queryset):
     queryset.update(task_status="DONE")
 
+
 @admin.display(description="Mark task status as PENDING")
-def mark_as_delivered(modeladmin, request, queryset):
+def mark_as_pending(modeladmin, request, queryset):
     queryset.update(task_status="PENDING")
+
 
 @admin.display(description="Mark revision status as APPROVED")
 def mark_as_approved(modeladmin, request, queryset):
@@ -99,20 +101,32 @@ def mark_as_rejected(modeladmin, request, queryset):
 
 
 @admin.display(description="Mark revision status as PENDING")
-def mark_as_rejected(modeladmin, request, queryset):
+def mark_revision_as_pending(modeladmin, request, queryset):
     queryset.update(revision_status="PENDING")
-    
+
+
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     search_fields = ["title", "associated_slug", "user__first_name", "user__last_name", "user__email"]
     list_display = ("title", "task_type", "associated_slug", "task_status", "revision_status", "user", "delivery_url")
     list_filter = ["task_type", "task_status", "revision_status"]
-    actions = [mark_as_delivered, mark_as_approved, mark_as_rejected, mark_as_ignored]
+    actions = [
+        mark_as_delivered,
+        mark_as_pending,
+        mark_as_approved,
+        mark_as_rejected,
+        mark_as_ignored,
+        mark_revision_as_pending,
+    ]
+    raw_id_fields = ["user", "cohort", "telemetry", "attachments"]
 
     def delivery_url(self, obj):
         token, created = Token.get_or_create(obj.user, token_type="temporal")
         url = os.getenv("API_URL") + f"/v1/assignment/task/{str(obj.id)}/deliver/{token}"
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user", "cohort", "telemetry")
 
 
 @admin.register(UserAttachment)
@@ -298,6 +312,7 @@ class FrustrationScoreFilter(admin.SimpleListFilter):
 def async_calculate_telemetry_indicators(modeladmin, request, queryset):
     for telemetry in queryset:
         async_calculate_telemetry_indicator.delay(telemetry.id)
+
 
 @admin.action(description="Calculate Telemetry Indicators")
 def calculate_telemetry_indicators(modeladmin, request, queryset):
