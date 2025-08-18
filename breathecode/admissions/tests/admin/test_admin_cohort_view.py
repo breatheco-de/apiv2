@@ -13,26 +13,33 @@ from ..mixins import AdmissionsTestCase
 class TestAdminCohortView(AdmissionsTestCase):
     """Test the admin cohort endpoint"""
 
-    def test_admin_cohort_endpoint_requires_superuser(self):
-        """Test that the endpoint requires superuser access"""
+    def _create_user_with_permission(self):
+        """Helper method to create a user with read_cohorts_from_all permission"""
+        user = self.bc.database.create(user={'is_superuser': False})
+        permission = self.bc.database.create(permission={'codename': 'read_cohorts_from_all'})
+        user.user.user_permissions.add(permission.permission)
+        return user
+
+    def test_admin_cohort_endpoint_requires_permission(self):
+        """Test that the endpoint requires read_cohorts_from_all permission"""
         url = reverse("admissions:admin_cohort")
         
         # Test without authentication
         response = self.client.get(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        # Test with regular user (non-superuser)
+        # Test with regular user (without permission)
         user = self.bc.database.create(user={'is_superuser': False})
         self.client.force_authenticate(user=user.user)
         response = self.client.get(url)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_admin_cohort_endpoint_with_superuser(self):
-        """Test that the endpoint works with superuser access"""
+    def test_admin_cohort_endpoint_with_permission(self):
+        """Test that the endpoint works with read_cohorts_from_all permission"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Test with no cohorts
@@ -44,8 +51,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test filtering by academy IDs"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create academies and cohorts
@@ -69,8 +76,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test filtering by stage"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create cohorts with different stages
@@ -93,8 +100,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test filtering by private status"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create cohorts with different private status
@@ -118,8 +125,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test filtering by date ranges"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create cohorts with different dates
@@ -145,8 +152,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test filtering by never_ends status"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create cohorts with different never_ends status
@@ -170,8 +177,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test filtering by available_as_saas status"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create cohorts with different saas status
@@ -195,8 +202,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test filtering by language"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create cohorts with different languages
@@ -219,8 +226,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test error handling for invalid academy_ids format"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Test with invalid academy_ids format
@@ -232,8 +239,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test error handling for invalid date format"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Test with invalid date format
@@ -245,8 +252,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test that the endpoint supports pagination"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create multiple cohorts
@@ -267,8 +274,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         """Test that the endpoint supports sorting"""
         url = reverse("admissions:admin_cohort")
         
-        # Create superuser and authenticate
-        user = self.bc.database.create(user={'is_superuser': True})
+        # Create user with permission and authenticate
+        user = self._create_user_with_permission()
         self.client.force_authenticate(user=user.user)
         
         # Create cohorts with different kickoff dates
