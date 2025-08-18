@@ -101,6 +101,62 @@ def mark_as_rejected(modeladmin, request, queryset):
 @admin.display(description="Mark revision status as PENDING")
 def mark_as_rejected(modeladmin, request, queryset):
     queryset.update(revision_status="PENDING")
+
+
+@admin.display(description="Re-validate flags for selected tasks")
+def revalidate_flags(modeladmin, request, queryset):
+    """Re-validate flags for selected tasks by calling async_validate_flags task."""
+    count = 0
+    for task in queryset:
+        if task.delivered_flags and task.associated_slug:
+            # Convert delivered_flags list to comma-separated string
+            flags_str = ",".join(task.delivered_flags) if isinstance(task.delivered_flags, list) else str(task.delivered_flags)
+            
+            # Call the async task
+            async_validate_flags.delay(
+                assignment_id=task.id,
+                associated_slug=task.associated_slug,
+                flags=flags_str
+            )
+            count += 1
+    
+    if count > 0:
+        messages.success(request, f"Flag re-validation scheduled for {count} task(s)")
+    else:
+        messages.warning(request, "No tasks with flags found for re-validation")
+
+
+class DeliveryTypeFilter(admin.SimpleListFilter):
+    title = "Delivery Type"
+    parameter_name = "delivery_type"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("url", "URL (Live URL)"),
+            ("flag", "Flag (CTF)"),
+            ("file", "File (Attachments)"),
+            ("repository", "Repository (GitHub)"),
+            ("none", "No Delivery"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "url":
+            return queryset.filter(live_url__isnull=False).exclude(live_url="")
+        elif self.value() == "flag":
+            return queryset.filter(delivered_flags__isnull=False).exclude(delivered_flags=[])
+        elif self.value() == "file":
+            return queryset.filter(attachments__isnull=False)
+        elif self.value() == "repository":
+            return queryset.filter(github_url__isnull=False).exclude(github_url="")
+        elif self.value() == "none":
+            return queryset.filter(
+                models.Q(live_url__isnull=True) | models.Q(live_url=""),
+                models.Q(delivered_flags__isnull=True) | models.Q(delivered_flags=[]),
+                models.Q(attachments__isnull=True),
+                models.Q(github_url__isnull=True) | models.Q(github_url="")
+            )
+        return queryset
+
     
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
@@ -175,37 +231,6 @@ class HasScreenshotFilter(admin.SimpleListFilter):
             return queryset.filter(models.Q(screenshot__isnull=True) | models.Q(screenshot=""))
         return queryset
 
-
-class DeliveryTypeFilter(admin.SimpleListFilter):
-    title = "Delivery Type"
-    parameter_name = "delivery_type"
-
-    def lookups(self, request, model_admin):
-        return (
-            ("url", "URL (Live URL)"),
-            ("flag", "Flag (CTF)"),
-            ("file", "File (Attachments)"),
-            ("repository", "Repository (GitHub)"),
-            ("none", "No Delivery"),
-        )
-
-    def queryset(self, request, queryset):
-        if self.value() == "url":
-            return queryset.filter(live_url__isnull=False).exclude(live_url="")
-        elif self.value() == "flag":
-            return queryset.filter(delivered_flags__isnull=False).exclude(delivered_flags=[])
-        elif self.value() == "file":
-            return queryset.filter(attachments__isnull=False)
-        elif self.value() == "repository":
-            return queryset.filter(github_url__isnull=False).exclude(github_url="")
-        elif self.value() == "none":
-            return queryset.filter(
-                models.Q(live_url__isnull=True) | models.Q(live_url=""),
-                models.Q(delivered_flags__isnull=True) | models.Q(delivered_flags=[]),
-                models.Q(attachments__isnull=True),
-                models.Q(github_url__isnull=True) | models.Q(github_url="")
-            )
-        return queryset
 
 
 @admin.register(FinalProject)
@@ -432,25 +457,3 @@ class RepositoryWhiteListAdmin(admin.ModelAdmin):
     search_fields = ["repository_user", "repository_name"]
     list_filter = ["provider"]
 
-
-@admin.display(description="Re-validate flags for selected tasks")
-def revalidate_flags(modeladmin, request, queryset):
-    """Re-validate flags for selected tasks by calling async_validate_flags task."""
-    count = 0
-    for task in queryset:
-        if task.delivered_flags and task.associated_slug:
-            # Convert delivered_flags list to comma-separated string
-            flags_str = ",".join(task.delivered_flags) if isinstance(task.delivered_flags, list) else str(task.delivered_flags)
-            
-            # Call the async task
-            async_validate_flags.delay(
-                assignment_id=task.id,
-                associated_slug=task.associated_slug,
-                flags=flags_str
-            )
-            count += 1
-    
-    if count > 0:
-        messages.success(request, f"Flag re-validation scheduled for {count} task(s)")
-    else:
-        messages.warning(request, "No tasks with flags found for re-validation")
