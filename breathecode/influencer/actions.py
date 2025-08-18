@@ -1,0 +1,169 @@
+from __future__ import annotations
+
+from collections import defaultdict
+from datetime import datetime
+from typing import Any
+
+from django.contrib.auth.models import User
+from django.db.models import Sum
+
+from breathecode.activity.actions import ENGAGEMENT_POINTS
+from breathecode.admissions.models import Cohort
+from .models import CohortTeacherInfluencer
+from breathecode.authenticate.models import ProfileAcademy
+from breathecode.payments.models import Invoice
+from breathecode.services.google_cloud.big_query import BigQuery
+
+
+def get_teacher_influencer_academy_ids(influencer: User) -> list[int]:
+    return list(
+        ProfileAcademy.objects.filter(user=influencer, role__slug="teacher_influencer", status="ACTIVE").values_list(
+            "academy_id", flat=True
+        )
+    )
+
+
+def get_eligible_cohort_ids(influencer: User, academy_ids: list[int]) -> list[int]:
+    cohort_ids = list(
+        CohortTeacherInfluencer.objects.filter(
+            influencer=influencer, is_active=True, cohort__academy_id__in=academy_ids
+        ).values_list("cohort_id", flat=True)
+    )
+
+    eligible: list[int] = []
+    for cohort_id in cohort_ids:
+        if not cohort_id:
+            continue
+        if Cohort.objects.filter(id=cohort_id, micro_cohorts__isnull=False).exists():
+            continue
+        eligible.append(cohort_id)
+    return eligible
+
+
+def get_usage_invoices_excluding_referrals(start_dt: datetime, end_dt: datetime, referral_buyer_ids: set[int]):
+    return (
+        Invoice.objects.filter(
+            status=Invoice.Status.FULFILLED, refunded_at__isnull=True, paid_at__gte=start_dt, paid_at__lt=end_dt
+        )
+        .select_related("bag", "currency", "academy", "user")
+        .exclude(user_id__in=referral_buyer_ids)
+    )
+
+
+def compute_usage_rows_and_total(
+    influencer: User,
+    start_dt: datetime,
+    end_dt: datetime,
+    usage_invoices,
+    eligible_cohort_ids: list[int],
+) -> tuple[list[dict[str, Any]], float, dict[tuple[int, int], dict[str, float]]]:
+    rows: list[dict[str, Any]] = []
+    total = 0.0
+    breakdown_by_kind: dict[tuple[int, int], dict[str, float]] = {}
+
+    candidate_user_ids = list(usage_invoices.values_list("user_id", flat=True).distinct())
+    if not candidate_user_ids or not eligible_cohort_ids:
+        return rows, total
+
+    client, project_id, dataset = BigQuery.client()
+
+    allowed = [
+        (rt, k)
+        for (rt, k), v in ENGAGEMENT_POINTS.items()
+        if v > 0 and rt in ("assignments.Task", "admissions.CohortUser")
+    ]
+    task_kinds = [k for (rt, k) in allowed]
+    related_types = list({rt for (rt, _) in allowed})
+
+    kinds_in = ",".join([f"'{k}'" for k in task_kinds]) if task_kinds else "''"
+    rtypes_in = ",".join([f"'{t}'" for t in related_types]) if related_types else "''"
+
+    user_ids_in = ",".join(str(x) for x in set(candidate_user_ids))
+
+    sql = f"""
+        WITH task_events AS (
+          SELECT
+            CAST(user_id AS INT64) AS user_id,
+            related.type AS related_type,
+            CAST(related.id AS INT64) AS related_id,
+            kind,
+            SAFE_CAST(meta.cohort AS INT64) AS cohort_id,
+            TIMESTAMP(timestamp) AS ts
+          FROM `{project_id}.{dataset}.activity`
+          WHERE related.type IN ({rtypes_in})
+            AND TIMESTAMP(timestamp) >= TIMESTAMP('{start_dt.isoformat()}')
+            AND TIMESTAMP(timestamp) <  TIMESTAMP('{end_dt.isoformat()}')
+            AND user_id IN ({user_ids_in})
+            AND kind IN ({kinds_in})
+        )
+        SELECT AS VALUE ARRAY_AGG(t ORDER BY ts ASC LIMIT 1)[OFFSET(0)]
+        FROM task_events t
+        WHERE cohort_id IS NOT NULL
+        GROUP BY user_id, related_id, kind
+    """
+
+    bq_rows = list(client.query(sql).result())
+
+    user_total_points: dict[int, float] = defaultdict(float)
+    user_cohort_points: dict[int, dict[int, float]] = defaultdict(dict)
+
+    for r in bq_rows:
+        uid = int(r["user_id"]) if "user_id" in r else int(r[0])
+        rtype = str(r["related_type"]) if "related_type" in r else str(r[1])
+        kind = str(r["kind"]) if "kind" in r else str(r[2])
+        cid = int(r["cohort_id"]) if "cohort_id" in r else int(r[3])
+
+        pts = ENGAGEMENT_POINTS.get((rtype, kind), 0.0)
+        if pts <= 0:
+            continue
+
+        user_total_points[uid] += pts
+        if cid in eligible_cohort_ids:
+            user_cohort_points.setdefault(uid, {})[cid] = user_cohort_points.get(uid, {}).get(cid, 0.0) + pts
+            key = (uid, cid)
+            if key not in breakdown_by_kind:
+                breakdown_by_kind[key] = {}
+            breakdown_by_kind[key][kind] = breakdown_by_kind[key].get(kind, 0.0) + pts
+
+    paid_by_user_currency = (
+        usage_invoices.values("user_id", "currency_id")
+        .annotate(total_amount=Sum("amount"))
+        .values_list("user_id", "currency_id", "total_amount")
+    )
+
+    currency_map = {inv.currency_id: inv.currency.code for inv in usage_invoices}
+
+    for user_id, currency_id, total_amount in paid_by_user_currency:
+        total_amount = float(total_amount or 0)
+        if total_amount <= 0:
+            continue
+        if user_id not in user_total_points:
+            continue
+
+        total_pts = user_total_points.get(user_id, 0.0)
+        if total_pts <= 0:
+            continue
+
+        pool = round(total_amount * 0.3, 2)
+        cohort_points = user_cohort_points.get(user_id, {})
+        inf_pts = sum(cohort_points.values())
+        if inf_pts <= 0:
+            continue
+
+        for cid, pts in cohort_points.items():
+            cohort_commission = pool * (pts / total_pts)
+            rows.append(
+                {
+                    "type": "usage",
+                    "user_id": user_id,
+                    "cohort_id": cid,
+                    "currency": currency_map.get(currency_id, ""),
+                    "paid_amount": round(total_amount, 2),
+                    "total_points": round(total_pts, 2),
+                    "cohort_points": round(pts, 2),
+                    "commission": round(cohort_commission, 2),
+                }
+            )
+            total += round(cohort_commission, 2)
+
+    return rows, total, breakdown_by_kind
