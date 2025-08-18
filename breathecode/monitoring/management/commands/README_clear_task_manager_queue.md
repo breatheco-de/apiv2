@@ -46,7 +46,7 @@ python manage.py clear_task_manager_queue --status SCHEDULED
 python manage.py clear_task_manager_queue --task-module "breathecode.notify.tasks"
 
 # Clear records by task name
-python manage.py clear_task_manager_queue --task-name "async_deliver_hook"
+python manage.py clear_task_manager_queue --task-name "persist_single_lead"
 ```
 
 ### Combined Filters

@@ -7,7 +7,7 @@ from django.utils.html import format_html
 from django import forms
 from django.db import models
 
-from breathecode.assignments.tasks import async_learnpack_webhook
+from breathecode.assignments.tasks import async_learnpack_webhook, async_validate_flags
 from breathecode.authenticate.models import Token
 from breathecode.services.learnpack import LearnPack
 from breathecode.utils.admin.widgets import PrettyJSONWidget
@@ -106,8 +106,8 @@ def mark_as_rejected(modeladmin, request, queryset):
 class TaskAdmin(admin.ModelAdmin):
     search_fields = ["title", "associated_slug", "user__first_name", "user__last_name", "user__email"]
     list_display = ("title", "task_type", "associated_slug", "task_status", "revision_status", "user", "delivery_url")
-    list_filter = ["task_type", "task_status", "revision_status"]
-    actions = [mark_as_delivered, mark_as_approved, mark_as_rejected, mark_as_ignored]
+    list_filter = ["task_type", "task_status", "revision_status", DeliveryTypeFilter]
+    actions = [mark_as_delivered, mark_as_approved, mark_as_rejected, mark_as_ignored, revalidate_flags]
 
     def delivery_url(self, obj):
         token, created = Token.get_or_create(obj.user, token_type="temporal")
@@ -173,6 +173,38 @@ class HasScreenshotFilter(admin.SimpleListFilter):
             return queryset.filter(screenshot__isnull=False).exclude(screenshot="")
         if self.value() == "no":
             return queryset.filter(models.Q(screenshot__isnull=True) | models.Q(screenshot=""))
+        return queryset
+
+
+class DeliveryTypeFilter(admin.SimpleListFilter):
+    title = "Delivery Type"
+    parameter_name = "delivery_type"
+
+    def lookups(self, request, model_admin):
+        return (
+            ("url", "URL (Live URL)"),
+            ("flag", "Flag (CTF)"),
+            ("file", "File (Attachments)"),
+            ("repository", "Repository (GitHub)"),
+            ("none", "No Delivery"),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == "url":
+            return queryset.filter(live_url__isnull=False).exclude(live_url="")
+        elif self.value() == "flag":
+            return queryset.filter(delivered_flags__isnull=False).exclude(delivered_flags=[])
+        elif self.value() == "file":
+            return queryset.filter(attachments__isnull=False)
+        elif self.value() == "repository":
+            return queryset.filter(github_url__isnull=False).exclude(github_url="")
+        elif self.value() == "none":
+            return queryset.filter(
+                models.Q(live_url__isnull=True) | models.Q(live_url=""),
+                models.Q(delivered_flags__isnull=True) | models.Q(delivered_flags=[]),
+                models.Q(attachments__isnull=True),
+                models.Q(github_url__isnull=True) | models.Q(github_url="")
+            )
         return queryset
 
 
@@ -399,3 +431,26 @@ class RepositoryWhiteListAdmin(admin.ModelAdmin):
     list_display = ("provider", "repository_user", "repository_name")
     search_fields = ["repository_user", "repository_name"]
     list_filter = ["provider"]
+
+
+@admin.display(description="Re-validate flags for selected tasks")
+def revalidate_flags(modeladmin, request, queryset):
+    """Re-validate flags for selected tasks by calling async_validate_flags task."""
+    count = 0
+    for task in queryset:
+        if task.delivered_flags and task.associated_slug:
+            # Convert delivered_flags list to comma-separated string
+            flags_str = ",".join(task.delivered_flags) if isinstance(task.delivered_flags, list) else str(task.delivered_flags)
+            
+            # Call the async task
+            async_validate_flags.delay(
+                assignment_id=task.id,
+                associated_slug=task.associated_slug,
+                flags=flags_str
+            )
+            count += 1
+    
+    if count > 0:
+        messages.success(request, f"Flag re-validation scheduled for {count} task(s)")
+    else:
+        messages.warning(request, "No tasks with flags found for re-validation")
