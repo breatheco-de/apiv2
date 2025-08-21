@@ -83,11 +83,11 @@ class InfluencerPayoutReportView(APIView):
         next_mon = 1 if mon == 12 else mon + 1
         end_dt = datetime(next_year if mon == 12 else year, next_mon, 1, 0, 0, 0, tzinfo=tz)
 
-        referral_created_qs = TeacherInfluencerReferralCommission.objects.filter(
+        all_referrals = TeacherInfluencerReferralCommission.objects.filter(
             teacher_influencer=influencer, created_at__gte=start_dt, created_at__lt=end_dt
         ).select_related("invoice", "currency")
 
-        referral_matured_qs = TeacherInfluencerReferralCommission.objects.filter(
+        matured_referrals = TeacherInfluencerReferralCommission.objects.filter(
             teacher_influencer=influencer, status="MATURED", matured_at__gte=start_dt, matured_at__lt=end_dt
         ).select_related("invoice", "currency")
 
@@ -95,8 +95,9 @@ class InfluencerPayoutReportView(APIView):
             status=Invoice.Status.FULFILLED, refunded_at__isnull=True, paid_at__gte=start_dt, paid_at__lt=end_dt
         ).select_related("bag", "currency", "academy", "user")
 
-        users_with_referral = set(referral_created_qs.values_list("buyer_id", flat=True))
+        users_with_referral = set(all_referrals.values_list("buyer_id", flat=True))
 
+        # Exclude invoices that comes from referrals to avoid double counting
         usage_invoices = invoices_in_range.exclude(user_id__in=users_with_referral)
 
         influencer_academy_ids = get_teacher_influencer_academy_ids(influencer)
@@ -151,14 +152,11 @@ class InfluencerPayoutReportView(APIView):
         for x in paid_by_user_currency:
             paid_map[(x["user_id"], x["currency_id"])] = float(x["total_amount"] or 0)
 
-        # aggregate usage_rows by (user, cohort, currency) to persist
-        # usage_rows entries already have: user_id, cohort_id, currency, paid_amount, total_points, cohort_points, commission
         with transaction.atomic():
             for row in usage_rows:
                 uid = row["user_id"]
                 cid = row["cohort_id"]
                 currency_code = row["currency"]
-                # find currency object from any invoice in range matching code
                 currency_obj = next((c for c in currency_map.values() if c.code == currency_code), None)
                 if not currency_obj:
                     continue
@@ -211,7 +209,7 @@ class InfluencerPayoutReportView(APIView):
 
         referral_commissions = []
         matured = (
-            referral_matured_qs.values("currency_id")
+            matured_referrals.values("currency_id")
             .annotate(total_amount=Sum("amount"), users=Count("buyer_id", distinct=True))
             .values("currency_id", "total_amount", "users")
         )
@@ -228,7 +226,7 @@ class InfluencerPayoutReportView(APIView):
             inst.num_users = int(x["users"] or 0)
             inst.details = {
                 "invoices": list(
-                    referral_matured_qs.filter(currency_id=x["currency_id"]).values_list("invoice_id", flat=True)
+                    matured_referrals.filter(currency_id=x["currency_id"]).values_list("invoice_id", flat=True)
                 )
             }
             inst.save()
@@ -273,7 +271,7 @@ class InfluencerPayoutReportView(APIView):
                 "status": r.status,
                 "available_at": r.available_at,
             }
-            for r in referral_created_qs
+            for r in all_referrals
         ]
 
         referral_matured_rows = [
@@ -286,7 +284,7 @@ class InfluencerPayoutReportView(APIView):
                 "status": r.status,
                 "matured_at": r.matured_at,
             }
-            for r in referral_matured_qs
+            for r in matured_referrals
         ]
 
         df = pd.DataFrame(referral_created_rows + referral_matured_rows + usage_rows)

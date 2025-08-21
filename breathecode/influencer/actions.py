@@ -31,12 +31,15 @@ def get_eligible_cohort_ids(influencer: User, academy_ids: list[int]) -> list[in
     )
 
     eligible: list[int] = []
-    for cohort_id in cohort_ids:
-        if not cohort_id:
-            continue
-        if Cohort.objects.filter(id=cohort_id, micro_cohorts__isnull=False).exists():
-            continue
-        eligible.append(cohort_id)
+
+    if len(cohort_ids) > 0:
+        for cohort_id in cohort_ids:
+            if not cohort_id:
+                continue
+            if Cohort.objects.filter(id=cohort_id, micro_cohorts__isnull=False).exists():
+                continue
+            eligible.append(cohort_id)
+
     return eligible
 
 
