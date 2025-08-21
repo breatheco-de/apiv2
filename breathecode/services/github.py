@@ -100,10 +100,11 @@ class Github:
     def unsubscribe_from_repo(self, owner, repo_name, hook_id):
         return self.delete(f"/repos/{owner}/{repo_name}/hooks/{hook_id}")
 
-    def parse_github_url(self, url):
+    def parse_github_url(url):
         """
-        Parse various GitHub URL patterns to extract repository information.
-
+        Parse various GitHub URL patterns to extract repository information and
+        detect whether the target is a file (and if it's an image).
+    
         Supported URL patterns:
         - https://github.com/owner/repo/blob/branch/path/to/file
         - https://github.com/owner/repo/issues/123
@@ -111,81 +112,126 @@ class Github:
         - https://raw.githubusercontent.com/owner/repo/branch/path/to/file
         - https://raw.githubusercontent.com/owner/repo/branch/path/to/file?token=...
         - https://api.github.com/repos/owner/repo/contents/path/to/file
-
-        Returns:
-            dict: {
+    
+        Returns dict or None:
+            {
                 'owner': str,
                 'repo': str,
-                'branch': str or None,
-                'path': str or None,
-                'url_type': str ('blob', 'raw', 'api', 'issue', 'pull', 'repo')
+                'branch': str|None,
+                'path': str|None,
+                'url_type': 'blob'|'raw'|'api'|'issue'|'pull'|'repo',
+                'is_file': bool,     # True when URL points to a file path
+                'is_image': bool,    # True when file extension matches known image types
+                'ext': str|None      # Lowercase extension without dot (e.g., 'png')
             }
-            or None if URL is not a valid GitHub URL
         """
         if not url:
             return None
-
+    
+        # Known image extensions (lowercase, no dot)
+        IMAGE_EXTS = {
+            "png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "webp",
+            "svg", "ico", "heic", "heif", "avif", "jfif"
+        }
+    
+        def strip_query_fragment(p: str) -> str:
+            # Remove ?query and #fragment
+            p = p.split("?", 1)[0]
+            p = p.split("#", 1)[0]
+            return p
+    
+        def ext_from_path(p: str) -> str | None:
+            if not p:
+                return None
+            p = strip_query_fragment(p)
+            _, ext = os.path.splitext(p)
+            return ext[1:].lower() if ext else None
+    
+        def finalize(result: dict) -> dict:
+            # Derive is_file/is_image/ext from path + url_type
+            path = result.get("path")
+            url_type = result.get("url_type")
+    
+            # Heuristic: blob/raw/api contents with a non-empty path are files.
+            is_file = bool(path) and url_type in {"blob", "raw", "api"}
+            ext = ext_from_path(path) if is_file else None
+            is_image = bool(ext and ext in IMAGE_EXTS)
+    
+            result["is_file"] = is_file
+            result["is_image"] = is_image
+            result["ext"] = ext
+            return result
+    
         try:
-            # Handle github.com URLs
-            if "github.com" in url:
+            # github.com paths
+            if "github.com" in url and "raw.githubusercontent.com" not in url and "api.github.com" not in url:
                 parts = url.split("/")
                 if len(parts) < 5:
                     return None
-
+    
                 owner = parts[3]
                 repo = parts[4]
-
+    
                 result = {"owner": owner, "repo": repo, "branch": None, "path": None, "url_type": "repo"}
-
+    
                 if len(parts) > 5:
                     if parts[5] == "blob" and len(parts) > 6:
                         result["url_type"] = "blob"
                         result["branch"] = parts[6]
                         if len(parts) > 7:
+                            # Join remaining as path (keep potential ?raw, we'll strip later)
                             result["path"] = "/".join(parts[7:])
                     elif parts[5] == "issues":
                         result["url_type"] = "issue"
                     elif parts[5] == "pull":
                         result["url_type"] = "pull"
-
-                return result
-
-            # Handle raw.githubusercontent.com URLs
+    
+                return finalize(result)
+    
+            # raw.githubusercontent.com
             elif "raw.githubusercontent.com" in url:
-                # Remove query parameters if present
                 clean_url = url.split("?")[0]
                 parts = clean_url.split("/")
                 if len(parts) < 6:
                     return None
-
+    
                 owner = parts[3]
                 repo = parts[4]
                 branch = parts[5]
                 path = "/".join(parts[6:]) if len(parts) > 6 else None
-
-                return {"owner": owner, "repo": repo, "branch": branch, "path": path, "url_type": "raw"}
-
-            # Handle api.github.com URLs
+    
+                return finalize({
+                    "owner": owner,
+                    "repo": repo,
+                    "branch": branch,
+                    "path": path,
+                    "url_type": "raw",
+                })
+    
+            # api.github.com/repos/.../contents/...
             elif "api.github.com" in url and "/repos/" in url:
                 parts = url.split("/")
                 repo_index = parts.index("repos")
                 if len(parts) < repo_index + 3:
                     return None
-
+    
                 owner = parts[repo_index + 1]
                 repo = parts[repo_index + 2]
-
+    
                 result = {"owner": owner, "repo": repo, "branch": None, "path": None, "url_type": "api"}
-
+    
+                # contents/path/to/file (may be omitted if listing a dir or repo)
                 if len(parts) > repo_index + 3 and parts[repo_index + 3] == "contents":
-                    result["path"] = "/".join(parts[repo_index + 4 :])
-
-                return result
-
+                    raw_path = "/".join(parts[repo_index + 4 :])
+                    result["path"] = strip_query_fragment(raw_path) if raw_path else None
+    
+                return finalize(result)
+    
         except (IndexError, ValueError):
             return None
-
+    
         return None
+
 
     def repo_exists(self, owner: str, repo: str):
         """
