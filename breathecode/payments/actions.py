@@ -1612,3 +1612,81 @@ def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, b
             f"Created user-restricted reward coupon {reward_coupon.slug} of {reward_amount} "
             f"for seller {seller_user.id} from coupon {coupon.slug}"
         )
+
+
+def is_plan_paid(plan: Plan) -> bool:
+    """
+    Check if a plan is paid by examining its pricing structure.
+
+    Args:
+        plan: The plan to check
+
+    Returns:
+        bool: True if the plan is paid, False if it's free
+    """
+    if not plan.is_renewable:
+        # For non-renewable plans, check if they have financing options
+        return plan.financing_options.exists()
+
+    # For renewable plans, check if any pricing field is greater than 0
+    return (
+        getattr(plan, "price_per_month", 0) > 0
+        or getattr(plan, "price_per_quarter", 0) > 0
+        or getattr(plan, "price_per_half", 0) > 0
+        or getattr(plan, "price_per_year", 0) > 0
+    )
+
+
+def is_subscription_paid(subscription: Subscription) -> bool:
+    """
+    Check if a subscription is paid by examining its plans.
+
+    Args:
+        subscription: The subscription to check
+
+    Returns:
+        bool: True if the subscription is paid, False if it's free
+    """
+    for plan in subscription.plans.all():
+        if is_plan_paid(plan):
+            return True
+    return False
+
+
+def is_plan_financing_paid(plan_financing: PlanFinancing) -> bool:
+    """
+    Check if a plan financing is paid by examining its plans.
+
+    Args:
+        plan_financing: The plan financing to check
+
+    Returns:
+        bool: True if the plan financing is paid, False if it's free
+    """
+    for plan in plan_financing.plans.all():
+        if plan.financing_options.exists():
+            return True
+    return False
+
+
+def user_has_active_paid_plans(user: User) -> bool:
+    """
+    Check if a user has any active paid subscriptions or plan financings.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if the user has active paid plans, False otherwise
+    """
+    # Check for active PAID subscriptions
+    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
+        if is_subscription_paid(subscription):
+            return True
+
+    # Check for active PAID plan financings
+    for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
+        if is_plan_financing_paid(plan_financing):
+            return True
+
+    return False

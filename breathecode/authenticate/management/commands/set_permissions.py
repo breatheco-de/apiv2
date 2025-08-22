@@ -90,6 +90,16 @@ PERMISSIONS = [
         "description": "Access to private links",
         "codename": "get_private_link",
     },
+    {
+        "name": "Read students from all academies",
+        "description": "Admin permission to read students from all academies",
+        "codename": "read_students_from_all",
+    },
+    {
+        "name": "Read cohorts from all academies",
+        "description": "Admin permission to read cohorts from all academies",
+        "codename": "read_cohorts_from_all",
+    },
 ]
 
 GROUPS = [
@@ -123,6 +133,7 @@ GROUPS = [
         "inherit": [],
     },
     {"name": "Teacher", "permissions": ["add_code_review"], "inherit": []},
+    {"name": "Teacher Influencer", "permissions": [], "inherit": ["Teacher"]},
     {"name": "Mentor", "permissions": ["join_mentorship", "get_my_mentoring_sessions"], "inherit": []},
     {"name": "Mentorships", "permissions": ["join_mentorship", "get_my_mentoring_sessions"], "inherit": []},
     {"name": "Events", "permissions": ["event_join"], "inherit": []},

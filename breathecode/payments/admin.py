@@ -187,7 +187,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "joined_cohorts",
         "plans",
         "invoices",
-        "coupons"
+        "coupons",
     ]
     actions = [renew_subscription_consumables, charge_subscription]
 
@@ -208,6 +208,11 @@ def charge_plan_financing(modeladmin, request, queryset):
         tasks.charge_plan_financing.delay(item.id)
 
 
+def regenerate_service_stock_schedulers(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(item.id)
+
+
 @admin.register(PlanFinancing)
 class PlanFinancingAdmin(admin.ModelAdmin):
     list_display = ("id", "next_payment_at", "valid_until", "status", "user")
@@ -220,7 +225,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "selected_mentorship_service_set",
         "selected_event_type_set",
     ]
-    actions = [renew_plan_financing_consumables, charge_plan_financing]
+    actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
 
 
 def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):
