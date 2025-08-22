@@ -739,7 +739,7 @@ def replace_private_github_urls(asset: Asset):
             url_info = github_service.parse_github_url(url)
 
             # Only replace URLs that point to files (blob, raw)
-            if url_info and url_info["url_type"] in ["blob", "raw"] and url_info.get("path"):
+            if url_info and not url_info["is_image"] and url_info["url_type"] in ["blob", "raw"] and url_info.get("path"):
                 # Create the internal link URL
                 # Token can be added as a query parameter when accessing the link
                 internal_url = f"{os.getenv('API_URL')}/asset/internal-link?id={asset.id}&path={url_info['path']}"
