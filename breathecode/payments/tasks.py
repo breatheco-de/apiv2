@@ -130,6 +130,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
     service_item = None
     resource_valid_until = None
+    resource_next_payment_at = None
     selected_lookup = {}
     subscription = None
     plan_financing = None
@@ -138,6 +139,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         user = scheduler.plan_handler.subscription.user
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.subscription.valid_until
+        resource_next_payment_at = scheduler.plan_handler.subscription.next_payment_at
         subscription = scheduler.plan_handler.subscription
 
         selected_lookup = get_resource_lookup(scheduler.plan_handler.subscription, service_item.service)
@@ -146,6 +148,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         user = scheduler.plan_handler.plan_financing.user
         service_item = scheduler.plan_handler.handler.service_item
         resource_valid_until = scheduler.plan_handler.plan_financing.plan_expires_at
+        resource_next_payment_at = scheduler.plan_handler.plan_financing.next_payment_at
         plan_financing = scheduler.plan_handler.plan_financing
 
         selected_lookup = get_resource_lookup(scheduler.plan_handler.plan_financing, service_item.service)
@@ -154,6 +157,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         user = scheduler.subscription_handler.subscription.user
         service_item = scheduler.subscription_handler.service_item
         resource_valid_until = scheduler.subscription_handler.subscription.valid_until
+        resource_next_payment_at = scheduler.subscription_handler.subscription.next_payment_at
         subscription = scheduler.subscription_handler.subscription
 
         selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription, service_item.service)
@@ -186,6 +190,14 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
     if resource_valid_until and scheduler.valid_until and scheduler.valid_until > resource_valid_until:
         scheduler.valid_until = resource_valid_until
+
+    if (
+        not resource_valid_until
+        and resource_next_payment_at
+        and scheduler.valid_until
+        and scheduler.valid_until > resource_next_payment_at
+    ):
+        scheduler.valid_until = resource_next_payment_at
 
     scheduler.save()
 
