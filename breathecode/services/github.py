@@ -100,7 +100,7 @@ class Github:
     def unsubscribe_from_repo(self, owner, repo_name, hook_id):
         return self.delete(f"/repos/{owner}/{repo_name}/hooks/{hook_id}")
 
-    def parse_github_url(url):
+    def parse_github_url(self, url):
         """
         Parse various GitHub URL patterns to extract repository information and
         detect whether the target is a file (and if it's an image).
