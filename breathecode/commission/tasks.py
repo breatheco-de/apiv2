@@ -162,7 +162,7 @@ def build_commissions_for_month(influencer_id: int, year: int, month: int, **_: 
 
     matured = (
         TeacherInfluencerReferralCommission.objects.filter(
-            teacher_influencer_id=influencer_id, status="MATURED", matured_at__gte=start_dt, matured_at__lt=end_dt
+            teacher_influencer_id=influencer_id, available_at__gte=start_dt, available_at__lt=end_dt
         )
         .values("currency_id")
         .annotate(total_amount=Sum("amount"), users=Count("buyer_id", distinct=True))
