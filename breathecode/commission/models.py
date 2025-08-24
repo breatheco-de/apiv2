@@ -84,7 +84,7 @@ class TeacherInfluencerReferralCommission(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self) -> str:
-        return f"ReferralRecord invoice={self.invoice_id} influencer={self.influencer_id} buyer={self.buyer_id}"
+        return f"ReferralRecord invoice={self.invoice_id} influencer={self.teacher_influencer_id} buyer={self.buyer_id}"
 
 
 class UserCohortEngagement(models.Model):

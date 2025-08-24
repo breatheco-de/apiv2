@@ -1,4 +1,5 @@
 import calendar
+from typing import Any
 
 from task_manager.django.decorators import task
 from breathecode.utils.decorators import TaskPriority
@@ -23,7 +24,7 @@ from .actions import (
 
 
 @task(priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def register_referral_from_invoice(invoice_id: int) -> None:
+def register_referral_from_invoice(invoice_id: int, **_: Any) -> None:
     """Create a TeacherInfluencerReferralCommission if the invoice used a referral coupon and the seller is teacher influencer."""
     invoice = (
         Invoice.objects.select_related("bag", "currency", "academy", "user")
@@ -69,7 +70,7 @@ def register_referral_from_invoice(invoice_id: int) -> None:
 
 
 @task(priority=TaskPriority.BACKGROUND.value)
-def build_user_engagement_for_user_month(influencer_id: int, user_id: int, year: int, month: int) -> None:
+def build_user_engagement_for_user_month(influencer_id: int, user_id: int, year: int, month: int, **_: Any) -> None:
     influencer = User.objects.filter(id=influencer_id).first()
     if not influencer:
         return
@@ -135,7 +136,7 @@ def build_user_engagement_for_user_month(influencer_id: int, user_id: int, year:
 
 
 @task(priority=TaskPriority.BACKGROUND.value)
-def build_commissions_for_month(influencer_id: int, year: int, month: int) -> None:
+def build_commissions_for_month(influencer_id: int, year: int, month: int, **_: Any) -> None:
     tz = timezone.get_current_timezone()
     start_dt = datetime(year, month, 1, 0, 0, 0, tzinfo=tz)
     month_date = start_dt.date().replace(day=1)
