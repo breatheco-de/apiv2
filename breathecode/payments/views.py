@@ -18,7 +18,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.influencer.tasks import register_referral_from_invoice
+from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language

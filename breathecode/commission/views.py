@@ -7,22 +7,26 @@ import pandas as pd
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
+from django.db import transaction
+from django.db.models import Sum, Count
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.authenticate.actions import get_user_language
-from breathecode.influencer.models import (
+from breathecode.admissions.models import Cohort
+from breathecode.commission.models import (
     TeacherInfluencerReferralCommission,
     TeacherInfluencerCommission,
     TeacherInfluencerPayment,
+    UserCohortEngagement,
 )
-import breathecode.influencer.tasks as influencer_tasks
+import breathecode.commission.tasks as influencer_tasks
 from breathecode.payments.models import Invoice
-from breathecode.admissions.models import Cohort
 from .actions import (
     get_teacher_influencer_academy_ids,
     get_eligible_cohort_ids,
+    filter_invoices_by_plans_and_cohorts,
     compute_usage_rows_and_total,
 )
 
@@ -37,6 +41,9 @@ class InfluencerPayoutReportView(APIView):
         month_str = request.GET.get("month")
         async_param = request.GET.get("async")
         is_async_requested = str(async_param).lower() in ("1", "true", "yes")
+
+        include_plans = request.GET.get("include_plans")
+        exclude_plans = request.GET.get("exclude_plans")
 
         if not influencer_id:
             raise ValidationException(
@@ -92,7 +99,11 @@ class InfluencerPayoutReportView(APIView):
         ).select_related("invoice", "currency")
 
         invoices_in_range = Invoice.objects.filter(
-            status=Invoice.Status.FULFILLED, refunded_at__isnull=True, paid_at__gte=start_dt, paid_at__lt=end_dt
+            status=Invoice.Status.FULFILLED,
+            amount__gt=0,
+            refunded_at__isnull=True,
+            paid_at__gte=start_dt,
+            paid_at__lt=end_dt,
         ).select_related("bag", "currency", "academy", "user")
 
         users_with_referral = set(all_referrals.values_list("buyer_id", flat=True))
@@ -112,6 +123,13 @@ class InfluencerPayoutReportView(APIView):
                 code=400,
             )
         eligible_cohort_ids = get_eligible_cohort_ids(influencer, influencer_academy_ids)
+
+        usage_invoices = filter_invoices_by_plans_and_cohorts(
+            usage_invoices,
+            include_plans=include_plans,
+            exclude_plans=exclude_plans,
+            eligible_cohort_ids=eligible_cohort_ids,
+        )
 
         if is_async_requested:
             scheduled_users = 0
@@ -139,9 +157,6 @@ class InfluencerPayoutReportView(APIView):
         )
 
         # Persist UserCohortEngagement rows for auditability
-        from django.db import transaction
-        from .models import UserCohortEngagement
-        from django.db.models import Sum
 
         # map currency ids to code
         currency_map = {inv.currency_id: inv.currency for inv in usage_invoices}
@@ -151,6 +166,12 @@ class InfluencerPayoutReportView(APIView):
         paid_map = {}
         for x in paid_by_user_currency:
             paid_map[(x["user_id"], x["currency_id"])] = float(x["total_amount"] or 0)
+
+        cohort_ids = {row["cohort_id"] for row in usage_rows}
+        cohort_academy_map = {
+            cohort["id"]: cohort["academy_id"]
+            for cohort in Cohort.objects.filter(id__in=cohort_ids).values("id", "academy_id")
+        }
 
         with transaction.atomic():
             for row in usage_rows:
@@ -164,14 +185,17 @@ class InfluencerPayoutReportView(APIView):
                 # compute details breakdown for this user/cohort
                 kind_breakdown = breakdown_by_kind.get((uid, cid), {})
 
-                obj, _ = UserCohortEngagement.objects.update_or_create(
+                # Usar el mapa pre-calculado
+                academy_id = cohort_academy_map.get(cid)
+
+                obj, created = UserCohortEngagement.objects.get_or_create(
                     influencer=influencer,
                     user_id=uid,
                     cohort_id=cid,
                     month=start_dt.date().replace(day=1),
                     currency=currency_obj,
                     defaults={
-                        "academy_id": Cohort.objects.filter(id=cid).values_list("academy_id", flat=True).first(),
+                        "academy_id": academy_id,
                         "user_total_points": float(row["total_points"]),
                         "cohort_points": float(row["cohort_points"]),
                         "paid_amount": float(row["paid_amount"]),
@@ -180,13 +204,23 @@ class InfluencerPayoutReportView(APIView):
                     },
                 )
 
-        # Build TeacherInfluencerCommission (USAGE) from UserCohortEngagement
-        from .models import UserCohortEngagement
+                if not created:
+                    current_total = float(row["total_points"])
+                    current_paid = float(row["paid_amount"])
 
+                    if abs(obj.user_total_points - current_total) > 0.01 or abs(obj.paid_amount - current_paid) > 0.01:
+
+                        obj.user_total_points = current_total
+                        obj.cohort_points = float(row["cohort_points"])
+                        obj.paid_amount = current_paid
+                        obj.commission_amount = float(row["commission"])
+                        obj.details = {"breakdown": kind_breakdown}
+                        obj.save()
+
+        # Build TeacherInfluencerCommission (USAGE) from UserCohortEngagement
         month_date = start_dt.date().replace(day=1)
 
         usage_commissions = []
-        from django.db.models import Sum, Count
 
         usage_agg = (
             UserCohortEngagement.objects.filter(influencer=influencer, month=month_date)

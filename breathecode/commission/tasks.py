@@ -3,7 +3,7 @@ import calendar
 from task_manager.django.decorators import task
 from breathecode.utils.decorators import TaskPriority
 
-from breathecode.influencer.models import (
+from breathecode.commission.models import (
     TeacherInfluencerReferralCommission,
     TeacherInfluencerCommission,
     TeacherInfluencerPayment,
