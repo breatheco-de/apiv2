@@ -38,9 +38,10 @@ def register_referral_from_invoice(invoice_id: int) -> None:
     if not coupon or not coupon.seller or not coupon.seller.user:
         return
 
-    influencer_user = coupon.seller.user
+    teacher_influencer = coupon.seller.user
+
     if not ProfileAcademy.objects.filter(
-        user=influencer_user, academy_id=invoice.academy_id, role__slug="teacher_influencer", status="ACTIVE"
+        user=teacher_influencer, academy_id=invoice.academy_id, role__slug="teacher_influencer", status="ACTIVE"
     ).exists():
         return
 
@@ -56,7 +57,7 @@ def register_referral_from_invoice(invoice_id: int) -> None:
     TeacherInfluencerReferralCommission.objects.get_or_create(
         invoice_id=invoice.id,
         defaults={
-            "teacher_influencer_id": influencer_user.id,
+            "teacher_influencer_id": teacher_influencer.id,
             "academy_id": invoice.academy_id,
             "buyer_id": invoice.user_id,
             "amount": float(invoice.amount),

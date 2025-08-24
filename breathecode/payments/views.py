@@ -2617,7 +2617,11 @@ class PayView(APIView):
                         if plan.owner != cohort.academy:
                             admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
 
+                has_referral_coupons = False
                 if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
+                    has_referral_coupons = coupons.exclude(referral_type="NO_REFERRAL").exists()
+
+                if has_referral_coupons:
                     transaction.on_commit(lambda inv_id=invoice.id: register_referral_from_invoice.delay(inv_id))
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
