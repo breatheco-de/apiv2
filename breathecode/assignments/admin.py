@@ -112,16 +112,14 @@ def revalidate_flags(modeladmin, request, queryset):
     for task in queryset:
         if task.delivered_flags and task.associated_slug:
             # Convert delivered_flags list to comma-separated string
-            flags_str = ",".join(task.delivered_flags) if isinstance(task.delivered_flags, list) else str(task.delivered_flags)
-            
-            # Call the async task
-            async_validate_flags.delay(
-                assignment_id=task.id,
-                associated_slug=task.associated_slug,
-                flags=flags_str
+            flags_str = (
+                ",".join(task.delivered_flags) if isinstance(task.delivered_flags, list) else str(task.delivered_flags)
             )
+
+            # Call the async task
+            async_validate_flags.delay(assignment_id=task.id, associated_slug=task.associated_slug, flags=flags_str)
             count += 1
-    
+
     if count > 0:
         messages.success(request, f"Flag re-validation scheduled for {count} task(s)")
     else:
@@ -155,11 +153,11 @@ class DeliveryTypeFilter(admin.SimpleListFilter):
                 models.Q(live_url__isnull=True) | models.Q(live_url=""),
                 models.Q(delivered_flags__isnull=True) | models.Q(delivered_flags=[]),
                 models.Q(attachments__isnull=True),
-                models.Q(github_url__isnull=True) | models.Q(github_url="")
+                models.Q(github_url__isnull=True) | models.Q(github_url=""),
             )
         return queryset
 
-    
+
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     search_fields = ["title", "associated_slug", "user__first_name", "user__last_name", "user__email"]
@@ -172,10 +170,9 @@ class TaskAdmin(admin.ModelAdmin):
         mark_as_rejected,
         mark_as_ignored,
         mark_revision_as_pending,
-        revalidate_flags
+        revalidate_flags,
     ]
     raw_id_fields = ["user", "cohort", "telemetry", "attachments"]
-
 
     def delivery_url(self, obj):
         token, created = Token.get_or_create(obj.user, token_type="temporal")
@@ -245,7 +242,6 @@ class HasScreenshotFilter(admin.SimpleListFilter):
         if self.value() == "no":
             return queryset.filter(models.Q(screenshot__isnull=True) | models.Q(screenshot=""))
         return queryset
-
 
 
 @admin.register(FinalProject)
@@ -472,4 +468,3 @@ class RepositoryWhiteListAdmin(admin.ModelAdmin):
     list_display = ("provider", "repository_user", "repository_name")
     search_fields = ["repository_user", "repository_name"]
     list_filter = ["provider"]
-
