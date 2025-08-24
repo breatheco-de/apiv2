@@ -8,7 +8,6 @@ class CohortTeacherInfluencer(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        app_label = "commission"
         unique_together = ("cohort", "influencer")
 
 
@@ -31,7 +30,6 @@ class TeacherInfluencerCommission(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        app_label = "commission"
         unique_together = ("influencer", "cohort", "month", "commission_type", "currency")
 
 
@@ -51,9 +49,6 @@ class TeacherInfluencerPayment(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    class Meta:
-        app_label = "commission"
 
 
 class TeacherInfluencerReferralCommission(models.Model):
@@ -88,9 +83,6 @@ class TeacherInfluencerReferralCommission(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    class Meta:
-        app_label = "commission"
-
     def __str__(self) -> str:
         return f"ReferralRecord invoice={self.invoice_id} influencer={self.influencer_id} buyer={self.buyer_id}"
 
@@ -121,5 +113,4 @@ class UserCohortEngagement(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        app_label = "commission"
         unique_together = ("influencer", "user", "cohort", "month", "currency")

@@ -20,6 +20,9 @@ import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 from linked_services.core import settings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from breathecode.setup import configure_redis
 
@@ -76,6 +79,7 @@ INSTALLED_APPS = [
     "breathecode.career",
     "breathecode.commons",
     "breathecode.payments",
+    "breathecode.commission",
     "breathecode.provisioning",
     "breathecode.websocket",
     "explorer",
