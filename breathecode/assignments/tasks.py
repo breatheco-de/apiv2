@@ -128,7 +128,7 @@ def teacher_task_notification(self, task_id, **_: Any):
     )
 
 
-@task(bind=False, priority=TaskPriority.ACADEMY.value)
+@task(bind=False, priority=TaskPriority.STUDENT.value)
 def set_cohort_user_assignments(task_id: int, **_: Any):
     logger.info("Executing set_cohort_user_assignments")
 
@@ -199,7 +199,7 @@ def set_cohort_user_assignments(task_id: int, **_: Any):
         raise AbortTask(str(e))
 
 
-@task(bind=False, priority=TaskPriority.ACADEMY.value)
+@task(bind=False, priority=TaskPriority.STUDENT.value)
 def sync_cohort_user_tasks(cohort_user_id: int, **_: Any):
     logger.info(f"Executing sync_cohort_user_tasks for cohort user {cohort_user_id}")
     cohort_user = CohortUser.objects.filter(id=cohort_user_id).first()
@@ -334,7 +334,7 @@ def async_calculate_telemetry_indicator(self, telemetry_id, **_: Any):
         calculate_telemetry_indicator(telemetry)
 
 
-@task(bind=True, priority=TaskPriority.ACADEMY.value)
+@task(bind=True, priority=TaskPriority.STUDENT.value)
 def async_validate_flags(self, assignment_id: int, associated_slug: str, flags: str, **_: Any):
     """
     Validate CTF flags for an assignment submission.

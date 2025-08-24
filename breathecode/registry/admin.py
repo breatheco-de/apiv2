@@ -118,11 +118,18 @@ def pull_content_from_github_override_meta(modeladmin, request, queryset):
 
 
 @admin.display(description="Clean and regenerate readme (sync)")
-def async_regenerate_readme(modeladmin, request, queryset):
+def sync_regenerate_readme(modeladmin, request, queryset):
     queryset.update(cleaning_status="PENDING", cleaning_status_details="Starting to clean...")
     assets = queryset.all()
     for a in assets:
         async_regenerate_asset_readme(a.slug)
+
+@admin.display(description="Clean and regenerate readme (async)")
+def async_regenerate_readme(modeladmin, request, queryset):
+    queryset.update(cleaning_status="PENDING", cleaning_status_details="Starting to clean...")
+    assets = queryset.all()
+    for a in assets:
+        async_regenerate_asset_readme.delay(a.slug)
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -533,6 +540,7 @@ class AssetAdmin(admin.ModelAdmin):
             remove_dot_from_slug,
             load_readme_tasks,
             async_regenerate_readme,
+            sync_regenerate_readme,
             async_generate_thumbnail,
             download_and_replace_images,
             reset_4geeks_com_cache,

@@ -421,10 +421,18 @@ class ParentAssetTechnologySerializer(serpy.Serializer):
 class AssetBigAndTechnologySerializer(AssetBigSerializer):
 
     technologies = serpy.MethodField()
+    aliases = serpy.MethodField()
 
     def get_technologies(self, obj):
         techs = AssetTechnology.objects.filter(id__in=obj.technologies.filter(is_deprecated=False))
         return ParentAssetTechnologySerializer(techs, many=True).data
+
+    def get_aliases(self, obj):
+        aliases = []
+        items = AssetAlias.objects.filter(asset=obj)
+        for item in items:
+            aliases.append(item.slug)
+        return aliases
 
 
 # Remove anything not published or visible, this serializer will be using for public API
