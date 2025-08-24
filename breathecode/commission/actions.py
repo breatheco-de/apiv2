@@ -88,8 +88,7 @@ def filter_invoices_by_plans_and_cohorts(
         logger.info(f"After excluding plans {plan_slugs}: {filtered_invoices.count()} invoices")
 
     if not include_plans and not exclude_plans and eligible_cohort_ids:
-        from breathecode.admissions.models import CohortSet
-        from breathecode.payments.models import Plan
+        from breathecode.payments.models import CohortSet, Plan
 
         cohort_sets = CohortSet.objects.filter(cohorts__id__in=eligible_cohort_ids).distinct()
         related_plans = Plan.objects.filter(cohort_set__in=cohort_sets).distinct()
