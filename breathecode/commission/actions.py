@@ -15,6 +15,7 @@ from breathecode.authenticate.models import ProfileAcademy
 from breathecode.payments.models import Invoice
 from breathecode.services.google_cloud.big_query import BigQuery
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -161,6 +162,7 @@ def compute_usage_rows_and_total(
         logger.info(f"BigQuery returned {len(bq_rows)} rows")
         if bq_rows:
             logger.info(f"Sample row structure: {type(bq_rows[0])} - {bq_rows[0]}")
+
     except Exception as e:
         logger.warning(f"BigQuery query failed: {e}. Skipping usage commission calculation.")
         return rows, total, breakdown_by_kind
@@ -178,11 +180,39 @@ def compute_usage_rows_and_total(
                 cohort_id = int(r.get("cohort_id", 0))
             else:
                 # BigQuery Row format: Row((values...), {column_name: index})
-                data_tuple = r[0]
-                user_id = int(data_tuple[0]) if len(data_tuple) > 0 else 0
-                related_type = str(data_tuple[1]) if len(data_tuple) > 1 else ""
-                kind = str(data_tuple[3]) if len(data_tuple) > 3 else ""
-                cohort_id = int(data_tuple[4]) if len(data_tuple) > 4 else 0
+                # Based on big_query.py structure, Row objects have values and schema
+                if hasattr(r, "__getitem__") and len(r) == 2:  # Check for Row-like object with values and schema
+                    try:
+                        # BigQuery Row structure: Row(values_tuple, schema_dict)
+                        # r[0] = (4630, 'assignments.Task', 733561, 'read_assignment', 1320, datetime...)
+                        # r[1] = {'user_id': 0, 'related_type': 1, 'related_id': 2, 'kind': 3, 'cohort_id': 4, 'ts': 5}
+                        data_tuple = r[0]  # Get the actual values tuple
+                        schema_dict = r[1]  # Get the schema mapping
+
+                        if not isinstance(data_tuple, (tuple, list)):
+                            logger.warning(
+                                f"Expected data_tuple to be a tuple or list, got {type(data_tuple)} - {data_tuple}"
+                            )
+                            continue
+
+                        # Use schema to get correct indices
+                        user_id_idx = schema_dict.get("user_id", 0)
+                        related_type_idx = schema_dict.get("related_type", 1)
+                        kind_idx = schema_dict.get("kind", 3)
+                        cohort_id_idx = schema_dict.get("cohort_id", 4)
+
+                        # Extract values using schema indices
+                        user_id = int(data_tuple[user_id_idx]) if len(data_tuple) > user_id_idx else 0
+                        related_type = str(data_tuple[related_type_idx]) if len(data_tuple) > related_type_idx else ""
+                        kind = str(data_tuple[kind_idx]) if len(data_tuple) > kind_idx else ""
+                        cohort_id = int(data_tuple[cohort_id_idx]) if len(data_tuple) > cohort_id_idx else 0
+
+                    except (IndexError, KeyError, ValueError) as e:
+                        logger.warning(f"Failed to parse BigQuery Row object: {e}")
+                        continue
+                else:
+                    logger.warning(f"Unexpected BigQuery row format: {type(r)} - {r}")
+                    continue
         except (ValueError, TypeError, IndexError) as e:
             logger.warning(f"Failed to parse BigQuery row {r}: {e}")
             continue
