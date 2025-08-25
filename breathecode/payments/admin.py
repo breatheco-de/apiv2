@@ -74,8 +74,6 @@ class ServiceItemAdmin(admin.ModelAdmin):
         "service__slug",
         "service__title",
         "service__groups__name",
-        "service__cohorts__slug",
-        "service__mentorship_services__slug",
     ]
 
 
@@ -261,7 +259,7 @@ class CohortSetAdmin(admin.ModelAdmin):
 class CohortSetTranslationAdmin(admin.ModelAdmin):
     list_display = ("id", "cohort_set", "lang", "title", "description", "short_description")
     list_filter = ["lang"]
-    search_fields = ["slug", "academy__slug", "academy__name"]
+    search_fields = ["cohort_set__slug", "cohort_set__academy__slug", "cohort_set__academy__name"]
 
 
 @admin.register(MentorshipServiceSet)
@@ -275,7 +273,7 @@ class MentorshipServiceSetAdmin(admin.ModelAdmin):
 class CohortSetCohortAdmin(admin.ModelAdmin):
     list_display = ("id", "cohort_set", "cohort")
     list_filter = ["cohort_set__academy__slug"]
-    search_fields = ["cohort_set__slug", "cohort_set__name", "cohort__slug", "cohort__name"]
+    search_fields = ["cohort_set__slug", "cohort__slug", "cohort__name"]
     raw_id_fields = ["cohort"]
 
 
@@ -283,7 +281,11 @@ class CohortSetCohortAdmin(admin.ModelAdmin):
 class MentorshipServiceSetTranslationAdmin(admin.ModelAdmin):
     list_display = ("id", "mentorship_service_set", "lang", "title", "description", "short_description")
     list_filter = ["lang"]
-    search_fields = ["slug", "academy__slug", "academy__name"]
+    search_fields = [
+        "mentorship_service_set__slug",
+        "mentorship_service_set__academy__slug",
+        "mentorship_service_set__academy__name",
+    ]
 
 
 @admin.register(EventTypeSet)
@@ -298,7 +300,7 @@ class EventTypeSetAdmin(admin.ModelAdmin):
 class EventTypeSetTranslationAdmin(admin.ModelAdmin):
     list_display = ("id", "event_type_set", "lang", "title", "description", "short_description")
     list_filter = ["lang"]
-    search_fields = ["slug", "academy__slug", "academy__name"]
+    search_fields = ["event_type_set__slug", "event_type_set__academy__slug", "event_type_set__academy__name"]
     raw_id_fields = ["event_type_set"]
 
 
@@ -307,7 +309,7 @@ class PlanServiceItemAdmin(admin.ModelAdmin):
     list_display = ("id", "plan", "service_item")
     list_filter = ["plan__slug", "plan__owner__slug"]
     raw_id_fields = ["service_item"]
-    search_fields = ["plan__slug", "plan__translations__title", "service_item__service__slug"]
+    search_fields = ["plan__slug", "service_item__service__slug"]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "plan":
