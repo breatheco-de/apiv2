@@ -5,7 +5,7 @@ from .models import (
     TeacherInfluencerCommission,
     TeacherInfluencerPayment,
     TeacherInfluencerReferralCommission,
-    UserCohortEngagement,
+    UserUsageCommission,
 )
 
 
@@ -63,8 +63,8 @@ class TeacherInfluencerReferralCommissionAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(UserCohortEngagement)
-class UserCohortEngagementAdmin(admin.ModelAdmin):
+@admin.register(UserUsageCommission)
+class UserUsageCommissionAdmin(admin.ModelAdmin):
     list_display = (
         "influencer",
         "user",

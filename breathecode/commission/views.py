@@ -19,7 +19,7 @@ from breathecode.commission.models import (
     TeacherInfluencerReferralCommission,
     TeacherInfluencerCommission,
     TeacherInfluencerPayment,
-    UserCohortEngagement,
+    UserUsageCommission,
 )
 import breathecode.commission.tasks as influencer_tasks
 from breathecode.payments.models import Invoice
@@ -94,9 +94,16 @@ class InfluencerPayoutReportView(APIView):
             teacher_influencer=influencer, created_at__gte=start_dt, created_at__lt=end_dt
         ).select_related("invoice", "currency")
 
-        matured_referrals = TeacherInfluencerReferralCommission.objects.filter(
-            teacher_influencer=influencer, available_at__gte=start_dt, available_at__lt=end_dt
+        referrals_created_in_month = TeacherInfluencerReferralCommission.objects.filter(
+            teacher_influencer=influencer, created_at__gte=start_dt, created_at__lt=end_dt
         ).select_related("invoice", "currency")
+
+        referrals_without_refunds = [r for r in referrals_created_in_month if not r.invoice.refunded_at]
+
+        current_time = timezone.now()
+        effective_referrals = [r for r in referrals_without_refunds if current_time >= r.available_at]
+
+        matured_referrals = referrals_created_in_month
 
         invoices_in_range = Invoice.objects.filter(
             status=Invoice.Status.FULFILLED,
@@ -156,8 +163,6 @@ class InfluencerPayoutReportView(APIView):
             influencer, start_dt, end_dt, usage_invoices, eligible_cohort_ids
         )
 
-        # Persist UserCohortEngagement rows for auditability
-
         # map currency ids to code
         currency_map = {inv.currency_id: inv.currency for inv in usage_invoices}
 
@@ -188,7 +193,7 @@ class InfluencerPayoutReportView(APIView):
                 # Usar el mapa pre-calculado
                 academy_id = cohort_academy_map.get(cid)
 
-                obj, created = UserCohortEngagement.objects.get_or_create(
+                obj, created = UserUsageCommission.objects.get_or_create(
                     influencer=influencer,
                     user_id=uid,
                     cohort_id=cid,
@@ -217,13 +222,13 @@ class InfluencerPayoutReportView(APIView):
                         obj.details = {"breakdown": kind_breakdown}
                         obj.save()
 
-        # Build TeacherInfluencerCommission (USAGE) from UserCohortEngagement
+        # Build TeacherInfluencerCommission (USAGE) from UserUsageCommission
         month_date = start_dt.date().replace(day=1)
 
         usage_commissions = []
 
         usage_agg = (
-            UserCohortEngagement.objects.filter(influencer=influencer, month=month_date)
+            UserUsageCommission.objects.filter(influencer=influencer, month=month_date)
             .values("cohort_id", "currency_id")
             .annotate(total_amount=Sum("commission_amount"), users=Count("id"))
         )
@@ -242,8 +247,10 @@ class InfluencerPayoutReportView(APIView):
             usage_commissions.append(inst)
 
         referral_commissions = []
+        effective_referral_ids = [r.id for r in effective_referrals]
         matured = (
-            matured_referrals.values("currency_id")
+            TeacherInfluencerReferralCommission.objects.filter(id__in=effective_referral_ids)
+            .values("currency_id")
             .annotate(total_amount=Sum("amount"), users=Count("buyer_id", distinct=True))
             .values("currency_id", "total_amount", "users")
         )
@@ -260,7 +267,9 @@ class InfluencerPayoutReportView(APIView):
             inst.num_users = int(x["users"] or 0)
             inst.details = {
                 "invoices": list(
-                    matured_referrals.filter(currency_id=x["currency_id"]).values_list("invoice_id", flat=True)
+                    TeacherInfluencerReferralCommission.objects.filter(
+                        id__in=effective_referral_ids, currency_id=x["currency_id"]
+                    ).values_list("invoice_id", flat=True)
                 )
             }
             inst.save()
@@ -295,7 +304,8 @@ class InfluencerPayoutReportView(APIView):
             )
             bills.append({"currency_id": currency_id, "total": bill.total_amount})
 
-        referral_created_rows = [
+        # Generate only one row per referral with all information
+        referral_rows = [
             {
                 "type": "referral_created",
                 "invoice_id": r.invoice_id,
@@ -303,32 +313,33 @@ class InfluencerPayoutReportView(APIView):
                 "amount": r.amount,
                 "currency": r.currency.code,
                 "status": r.status,
+                "created_at": r.created_at,
                 "available_at": r.available_at,
-            }
-            for r in all_referrals
-        ]
-
-        referral_matured_rows = [
-            {
-                "type": "referral_matured",
-                "invoice_id": r.invoice_id,
-                "user_id": r.buyer_id,
-                "amount": r.amount,
-                "currency": r.currency.code,
-                "status": r.status,
-                "available_at": r.available_at,
-                "is_matured": r.is_matured,
+                "is_effective": r.id in [eff.id for eff in effective_referrals],
+                "has_refund": bool(r.invoice.refunded_at),
             }
             for r in matured_referrals
         ]
 
-        df = pd.DataFrame(referral_created_rows + referral_matured_rows + usage_rows)
+        df = pd.DataFrame(referral_rows + usage_rows)
 
-        matured_total = sum(x["amount"] * 0.5 for x in referral_matured_rows)
+        matured_total = sum(x["amount"] * 0.5 for x in referral_rows if x["is_effective"])
 
         buffer = io.StringIO()
         df.to_csv(buffer, index=False)
         buffer.seek(0)
+
+        # Check if user wants CSV download
+        download_csv = request.GET.get("download_csv", "").lower() in ("1", "true", "yes")
+
+        if download_csv:
+            from django.http import HttpResponse
+
+            response = HttpResponse(buffer.getvalue(), content_type="text/csv")
+            response["Content-Disposition"] = (
+                f'attachment; filename="commission_report_{influencer.email}_{year}_{mon:02d}.csv"'
+            )
+            return response
 
         return Response(
             {
