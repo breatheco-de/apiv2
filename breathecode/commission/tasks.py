@@ -8,7 +8,7 @@ from breathecode.commission.models import (
     TeacherInfluencerReferralCommission,
     TeacherInfluencerCommission,
     TeacherInfluencerPayment,
-    UserCohortEngagement,
+    UserUsageCommission,
 )
 from breathecode.payments.models import Invoice, Coupon
 from breathecode.authenticate.models import ProfileAcademy
@@ -118,7 +118,7 @@ def build_user_engagement_for_user_month(influencer_id: int, user_id: int, year:
             continue
         kind_breakdown = breakdown_by_kind.get((user_id, row["cohort_id"]), {})
 
-        UserCohortEngagement.objects.update_or_create(
+        UserUsageCommission.objects.update_or_create(
             influencer_id=influencer_id,
             user_id=user_id,
             cohort_id=row["cohort_id"],
@@ -143,7 +143,7 @@ def build_commissions_for_month(influencer_id: int, year: int, month: int, **_: 
     end_dt = datetime(year + (month // 12), 1 if month == 12 else month + 1, 1, 0, 0, 0, tzinfo=tz)
 
     usage_agg = (
-        UserCohortEngagement.objects.filter(influencer_id=influencer_id, month=month_date)
+        UserUsageCommission.objects.filter(influencer_id=influencer_id, month=month_date)
         .values("cohort_id", "currency_id")
         .annotate(total_amount=Sum("commission_amount"), users=Count("id"))
     )
@@ -160,16 +160,34 @@ def build_commissions_for_month(influencer_id: int, year: int, month: int, **_: 
         inst.num_users = int(x["users"] or 0)
         inst.save()
 
-    matured = (
-        TeacherInfluencerReferralCommission.objects.filter(
-            teacher_influencer_id=influencer_id, available_at__gte=start_dt, available_at__lt=end_dt
-        )
-        .values("currency_id")
-        .annotate(total_amount=Sum("amount"), users=Count("buyer_id", distinct=True))
-        .values("currency_id", "total_amount", "users")
-    )
+    # Get all referrals created in the month
+    referrals_created_in_month = TeacherInfluencerReferralCommission.objects.filter(
+        teacher_influencer_id=influencer_id, created_at__gte=start_dt, created_at__lt=end_dt
+    ).select_related("invoice")
 
-    for x in matured:
+    # Filter out referrals with refunds
+    referrals_without_refunds = [r for r in referrals_created_in_month if not r.invoice.refunded_at]
+
+    # Calculate which referrals are effective (matured) as of now
+    current_time = timezone.now()
+    effective_referrals = [r for r in referrals_without_refunds if current_time >= r.available_at]
+
+    # Group effective referrals by currency
+    matured = {}
+    for r in effective_referrals:
+        currency_id = r.currency_id
+        if currency_id not in matured:
+            matured[currency_id] = {"total_amount": 0, "users": set()}
+        matured[currency_id]["total_amount"] += r.amount
+        matured[currency_id]["users"].add(r.buyer_id)
+
+    # Convert to list format
+    matured_list = [
+        {"currency_id": currency_id, "total_amount": data["total_amount"], "users": len(data["users"])}
+        for currency_id, data in matured.items()
+    ]
+
+    for x in matured_list:
         inst, _ = TeacherInfluencerCommission.objects.get_or_create(
             influencer_id=influencer_id,
             cohort=None,

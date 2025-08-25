@@ -115,10 +115,15 @@ def compute_usage_rows_and_total(
     breakdown_by_kind: dict[tuple[int, int], dict[str, float]] = {}
 
     candidate_user_ids = list(usage_invoices.values_list("user_id", flat=True).distinct())
-    if not candidate_user_ids or not eligible_cohort_ids:
-        return rows, total
 
-    client, project_id, dataset = BigQuery.client()
+    if not candidate_user_ids or not eligible_cohort_ids:
+        return rows, total, breakdown_by_kind
+
+    try:
+        client, project_id, dataset = BigQuery.client()
+    except Exception as e:
+        logger.warning(f"BigQuery not available: {e}. Skipping usage commission calculation.")
+        return rows, total, breakdown_by_kind
 
     allowed = [(rt, k) for (rt, k), v in ENGAGEMENT_POINTS.items() if v > 0]
     task_kinds = [kind for (_, kind) in allowed]
@@ -151,7 +156,11 @@ def compute_usage_rows_and_total(
         GROUP BY user_id, related_id, kind
     """
 
-    bq_rows = list(client.query(sql).result())
+    try:
+        bq_rows = list(client.query(sql).result())
+    except Exception as e:
+        logger.warning(f"BigQuery query failed: {e}. Skipping usage commission calculation.")
+        return rows, total, breakdown_by_kind
 
     user_total_points: dict[int, float] = defaultdict(float)
     user_cohort_points: dict[int, dict[int, float]] = defaultdict(dict)

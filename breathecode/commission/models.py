@@ -93,8 +93,8 @@ class TeacherInfluencerReferralCommission(models.Model):
         return timezone.now() >= self.available_at
 
 
-class UserCohortEngagement(models.Model):
-    """Monthly engagement snapshot for a user in a cohort of a teacher influencer.
+class UserUsageCommission(models.Model):
+    """Monthly usage commission snapshot for a user in a cohort of a teacher influencer.
 
     One row per (influencer, user, cohort, month, currency) when the user had activity in that cohort.
     """
