@@ -18,6 +18,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 import breathecode.activity.tasks as tasks_activity
+from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language
@@ -2615,6 +2616,13 @@ class PayView(APIView):
 
                         if plan.owner != cohort.academy:
                             admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
+
+                has_referral_coupons = False
+                if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
+                    has_referral_coupons = coupons.exclude(referral_type="NO_REFERRAL").exists()
+
+                if has_referral_coupons:
+                    transaction.on_commit(lambda inv_id=invoice.id: register_referral_from_invoice.delay(inv_id))
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
 
