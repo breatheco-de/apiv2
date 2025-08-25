@@ -158,6 +158,9 @@ def compute_usage_rows_and_total(
 
     try:
         bq_rows = list(client.query(sql).result())
+        logger.info(f"BigQuery returned {len(bq_rows)} rows")
+        if bq_rows:
+            logger.info(f"Sample row structure: {type(bq_rows[0])} - {bq_rows[0]}")
     except Exception as e:
         logger.warning(f"BigQuery query failed: {e}. Skipping usage commission calculation.")
         return rows, total, breakdown_by_kind
@@ -166,11 +169,29 @@ def compute_usage_rows_and_total(
     user_cohort_points: dict[int, dict[int, float]] = defaultdict(dict)
 
     for r in bq_rows:
-        # Adding else as fallback in case of tuple response by bq
-        user_id = int(r["user_id"]) if "user_id" in r else int(r[0])
-        related_type = str(r["related_type"]) if "related_type" in r else str(r[1])
-        kind = str(r["kind"]) if "kind" in r else str(r[2])
-        cohort_id = int(r["cohort_id"]) if "cohort_id" in r else int(r[3])
+        try:
+            # Try dictionary format first
+            if isinstance(r, dict):
+                user_id = int(r.get("user_id", 0))
+                related_type = str(r.get("related_type", ""))
+                kind = str(r.get("kind", ""))
+                cohort_id = int(r.get("cohort_id", 0))
+            else:
+                # Fallback to tuple format
+                user_id = int(r[0]) if len(r) > 0 else 0
+                related_type = str(r[1]) if len(r) > 1 else ""
+                kind = str(r[2]) if len(r) > 2 else ""
+                cohort_id = int(r[3]) if len(r) > 3 else 0
+        except (ValueError, TypeError, IndexError) as e:
+            logger.warning(f"Failed to parse BigQuery row {r}: {e}")
+            continue
+
+        # Validate parsed data
+        if user_id <= 0 or not related_type or not kind or cohort_id <= 0:
+            logger.warning(
+                f"Skipping invalid row: user_id={user_id}, related_type={related_type}, kind={kind}, cohort_id={cohort_id}"
+            )
+            continue
 
         pts = ENGAGEMENT_POINTS.get((related_type, kind), 0.0)
         if pts <= 0:
