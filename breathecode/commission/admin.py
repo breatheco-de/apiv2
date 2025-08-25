@@ -44,12 +44,23 @@ class TeacherInfluencerReferralCommissionAdmin(admin.ModelAdmin):
         "currency",
         "status",
         "available_at",
-        "matured_at",
         "created_at",
     )
-    list_filter = ("currency", "status")
-    search_fields = ("influencer__email", "buyer__email", "invoice__id")
+    list_filter = ("currency", "status", "created_at")
+    search_fields = ("teacher_influencer__email", "buyer__email", "invoice__id")
     raw_id_fields = ("invoice", "teacher_influencer", "buyer", "academy", "currency")
+    fields = (
+        "invoice",
+        "teacher_influencer",
+        "academy",
+        "buyer",
+        "amount",
+        "currency",
+        "status",
+        "available_at",
+        "created_at",
+        "status_text",
+    )
 
 
 @admin.register(UserCohortEngagement)

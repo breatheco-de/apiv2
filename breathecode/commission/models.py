@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class CohortTeacherInfluencer(models.Model):
@@ -54,7 +55,6 @@ class TeacherInfluencerPayment(models.Model):
 class TeacherInfluencerReferralCommission(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
-        MATURED = "MATURED", "Matured"
         PAID = "PAID", "Paid"
         CANCELLED = "CANCELLED", "Cancelled"
 
@@ -77,14 +77,20 @@ class TeacherInfluencerReferralCommission(models.Model):
 
     status = models.CharField(max_length=10, choices=Status, default=Status.PENDING, db_index=True)
     available_at = models.DateTimeField(help_text="Date when this referral becomes eligible (e.g., paid_at + 30d)")
-    matured_at = models.DateTimeField(null=True, blank=True)
     status_text = models.TextField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    created_at = models.DateTimeField(default=timezone.now, editable=True)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self) -> str:
         return f"ReferralRecord invoice={self.invoice_id} influencer={self.teacher_influencer_id} buyer={self.buyer_id}"
+
+    @property
+    def is_matured(self) -> bool:
+        """Check if the referral is matured based on available_at date."""
+        from django.utils import timezone
+
+        return timezone.now() >= self.available_at
 
 
 class UserCohortEngagement(models.Model):

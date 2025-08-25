@@ -95,7 +95,7 @@ class InfluencerPayoutReportView(APIView):
         ).select_related("invoice", "currency")
 
         matured_referrals = TeacherInfluencerReferralCommission.objects.filter(
-            teacher_influencer=influencer, status="MATURED", matured_at__gte=start_dt, matured_at__lt=end_dt
+            teacher_influencer=influencer, available_at__gte=start_dt, available_at__lt=end_dt
         ).select_related("invoice", "currency")
 
         invoices_in_range = Invoice.objects.filter(
@@ -316,7 +316,8 @@ class InfluencerPayoutReportView(APIView):
                 "amount": r.amount,
                 "currency": r.currency.code,
                 "status": r.status,
-                "matured_at": r.matured_at,
+                "available_at": r.available_at,
+                "is_matured": r.is_matured,
             }
             for r in matured_referrals
         ]
