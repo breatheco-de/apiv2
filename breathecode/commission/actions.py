@@ -177,11 +177,12 @@ def compute_usage_rows_and_total(
                 kind = str(r.get("kind", ""))
                 cohort_id = int(r.get("cohort_id", 0))
             else:
-                # Fallback to tuple format
-                user_id = int(r[0]) if len(r) > 0 else 0
-                related_type = str(r[1]) if len(r) > 1 else ""
-                kind = str(r[2]) if len(r) > 2 else ""
-                cohort_id = int(r[3]) if len(r) > 3 else 0
+                # BigQuery Row format: Row((values...), {column_name: index})
+                data_tuple = r[0]
+                user_id = int(data_tuple[0]) if len(data_tuple) > 0 else 0
+                related_type = str(data_tuple[1]) if len(data_tuple) > 1 else ""
+                kind = str(data_tuple[3]) if len(data_tuple) > 3 else ""
+                cohort_id = int(data_tuple[4]) if len(data_tuple) > 4 else 0
         except (ValueError, TypeError, IndexError) as e:
             logger.warning(f"Failed to parse BigQuery row {r}: {e}")
             continue
