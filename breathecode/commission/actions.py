@@ -181,7 +181,7 @@ def compute_usage_rows_and_total(
             else:
                 # BigQuery Row format: Row((values...), {column_name: index})
                 # Based on big_query.py structure, Row objects have values and schema
-                if hasattr(r, "__getitem__") and len(r) == 2:  # Check for Row-like object with values and schema
+                if hasattr(r, "__getitem__"):  # Check for Row-like object with values and schema
                     try:
                         # BigQuery Row structure: Row(values_tuple, schema_dict)
                         # r[0] = (4630, 'assignments.Task', 733561, 'read_assignment', 1320, datetime...)
@@ -206,6 +206,10 @@ def compute_usage_rows_and_total(
                         related_type = str(data_tuple[related_type_idx]) if len(data_tuple) > related_type_idx else ""
                         kind = str(data_tuple[kind_idx]) if len(data_tuple) > kind_idx else ""
                         cohort_id = int(data_tuple[cohort_id_idx]) if len(data_tuple) > cohort_id_idx else 0
+
+                        logger.info(
+                            f"Successfully parsed: user_id={user_id}, related_type={related_type}, kind={kind}, cohort_id={cohort_id}"
+                        )
 
                     except (IndexError, KeyError, ValueError) as e:
                         logger.warning(f"Failed to parse BigQuery Row object: {e}")
