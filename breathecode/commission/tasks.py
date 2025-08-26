@@ -1,8 +1,11 @@
 import calendar
+import logging
 from typing import Any
 
 from task_manager.django.decorators import task
 from breathecode.utils.decorators import TaskPriority
+
+logger = logging.getLogger(__name__)
 
 from breathecode.commission.models import (
     TeacherInfluencerReferralCommission,
@@ -61,7 +64,7 @@ def register_referral_from_invoice(invoice_id: int, **_: Any) -> None:
             "teacher_influencer_id": teacher_influencer.id,
             "academy_id": invoice.academy_id,
             "buyer_id": invoice.user_id,
-            "amount": float(invoice.amount),
+            "amount": float(invoice.amount) * 0.5,
             "currency_id": invoice.currency_id,
             "available_at": available_at,
             "status_text": status_text,
@@ -106,7 +109,7 @@ def build_user_engagement_for_user_month(influencer_id: int, user_id: int, year:
     if not usage_invoices.exists():
         return
 
-    rows, _total, breakdown_by_kind = compute_usage_rows_and_total(
+    rows, _total, user_breakdown_by_cohort = compute_usage_rows_and_total(
         influencer, start_dt, end_dt, usage_invoices, eligible_cohort_ids
     )
 
@@ -116,7 +119,7 @@ def build_user_engagement_for_user_month(influencer_id: int, user_id: int, year:
         currency_obj = next((inv.currency for inv in usage_invoices if inv.currency.code == row["currency"]), None)
         if not currency_obj:
             continue
-        kind_breakdown = breakdown_by_kind.get((user_id, row["cohort_id"]), {})
+        user_breakdown = user_breakdown_by_cohort.get(user_id, {})
 
         UserUsageCommission.objects.update_or_create(
             influencer_id=influencer_id,
@@ -130,13 +133,78 @@ def build_user_engagement_for_user_month(influencer_id: int, user_id: int, year:
                 "cohort_points": float(row["cohort_points"]),
                 "paid_amount": float(row["paid_amount"]),
                 "commission_amount": float(row["commission"]),
-                "details": {"breakdown": kind_breakdown},
+                "details": {"breakdown": user_breakdown},
             },
         )
 
 
 @task(priority=TaskPriority.BACKGROUND.value)
 def build_commissions_for_month(influencer_id: int, year: int, month: int, **_: Any) -> None:
+    tz = timezone.get_current_timezone()
+    start_dt = datetime(year, month, 1, 0, 0, 0, tzinfo=tz)
+    end_dt = datetime(year + (month // 12), 1 if month == 12 else month + 1, 1, 0, 0, 0, tzinfo=tz)
+
+    usage_invoices = Invoice.objects.filter(
+        status=Invoice.Status.FULFILLED,
+        amount__gt=0,
+        refunded_at__isnull=True,
+        paid_at__gte=start_dt,
+        paid_at__lt=end_dt,
+    ).exclude(
+        user_id__in=TeacherInfluencerReferralCommission.objects.filter(
+            teacher_influencer_id=influencer_id, created_at__gte=start_dt, created_at__lt=end_dt
+        ).values_list("buyer_id", flat=True)
+    )
+
+    influencer = User.objects.filter(id=influencer_id).first()
+    if not influencer:
+        return
+
+    academy_ids = get_teacher_influencer_academy_ids(influencer)
+    eligible_cohort_ids = get_eligible_cohort_ids(influencer, academy_ids)
+    if not eligible_cohort_ids:
+        return
+
+    usage_invoices = usage_invoices.filter(bag__plans__cohorts__id__in=eligible_cohort_ids).distinct()
+
+    user_ids = list(usage_invoices.values_list("user_id", flat=True).distinct())
+
+    batch_size = 100
+    for i in range(0, len(user_ids), batch_size):
+        batch_user_ids = user_ids[i : i + batch_size]
+
+        process_user_batch.delay(
+            influencer_id=influencer_id,
+            user_ids=batch_user_ids,
+            year=year,
+            month=month,
+            batch_number=i // batch_size + 1,
+            total_batches=(len(user_ids) + batch_size - 1) // batch_size,
+        )
+
+    final_aggregation_delay = max(300, len(user_ids) // 10)
+    aggregate_commissions_for_month.apply_async(args=[influencer_id, year, month], countdown=final_aggregation_delay)
+
+
+@task(priority=TaskPriority.BACKGROUND.value)
+def process_user_batch(
+    influencer_id: int, user_ids: list[int], year: int, month: int, batch_number: int, total_batches: int, **_: Any
+) -> None:
+    """Process a batch of users for commission calculation."""
+    logger.info(
+        f"Processing batch {batch_number}/{total_batches} for influencer {influencer_id}, users: {len(user_ids)}"
+    )
+
+    for user_id in user_ids:
+        try:
+            build_user_engagement_for_user_month.delay(influencer_id, user_id, year, month)
+        except Exception:
+            logger.error(f"Failed to schedule user {user_id} for influencer {influencer_id}")
+
+
+@task(priority=TaskPriority.BACKGROUND.value)
+def aggregate_commissions_for_month(influencer_id: int, year: int, month: int, **_: Any) -> None:
+    """Aggregate all user commissions into TeacherInfluencerCommission records."""
     tz = timezone.get_current_timezone()
     start_dt = datetime(year, month, 1, 0, 0, 0, tzinfo=tz)
     month_date = start_dt.date().replace(day=1)
@@ -160,7 +228,16 @@ def build_commissions_for_month(influencer_id: int, year: int, month: int, **_: 
         inst.num_users = int(x["users"] or 0)
         inst.save()
 
-    # Get all referrals created in the month
+        # TODO: Establish relationships with UserUsageCommission records after migration
+        # UserUsageCommission.objects.filter(
+        #     influencer_id=influencer_id,
+        #     cohort_id=x["cohort_id"],
+        #     month=month_date,
+        #     currency_id=x["currency_id"],
+        #     teacher_commission__isnull=True
+        # ).update(teacher_commission=inst)
+
+    # Process referral commissions
     referrals_created_in_month = TeacherInfluencerReferralCommission.objects.filter(
         teacher_influencer_id=influencer_id, created_at__gte=start_dt, created_at__lt=end_dt
     ).select_related("invoice")
@@ -195,9 +272,18 @@ def build_commissions_for_month(influencer_id: int, year: int, month: int, **_: 
             commission_type=TeacherInfluencerCommission.CommissionType.REFERRAL,
             currency_id=x["currency_id"],
         )
-        inst.amount_paid = float(x["total_amount"] or 0) * 0.5
+        inst.amount_paid = float(x["total_amount"] or 0)  # amount already includes 50% commission
         inst.num_users = int(x["users"] or 0)
         inst.save()
+
+        # TODO: Establish relationships with TeacherInfluencerReferralCommission records after migration
+        # effective_referral_ids_for_currency = [
+        #     r.id for r in effective_referrals if r.currency_id == x["currency_id"]
+        # ]
+        # TeacherInfluencerReferralCommission.objects.filter(
+        #     id__in=effective_referral_ids_for_currency,
+        #     teacher_commission__isnull=True
+        # ).update(teacher_commission=inst)
 
     currency_ids = list(
         TeacherInfluencerCommission.objects.filter(influencer_id=influencer_id, month=month_date)
@@ -223,3 +309,5 @@ def build_commissions_for_month(influencer_id: int, year: int, month: int, **_: 
                 influencer_id=influencer_id, month=month_date, currency_id=currency_id
             )
         )
+
+    logger.info(f"Completed aggregation for influencer {influencer_id}, month {year}-{month:02d}")
