@@ -15,6 +15,7 @@ from breathecode.authenticate.models import ProfileAcademy
 from breathecode.payments.models import Invoice
 from breathecode.services.google_cloud.big_query import BigQuery
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,9 +51,13 @@ def get_eligible_cohort_ids(influencer: User, academy_ids: list[int]) -> list[in
 def get_usage_invoices_excluding_referrals(start_dt: datetime, end_dt: datetime, referral_buyer_ids: set[int]):
     return (
         Invoice.objects.filter(
-            status=Invoice.Status.FULFILLED, refunded_at__isnull=True, paid_at__gte=start_dt, paid_at__lt=end_dt
+            status=Invoice.Status.FULFILLED,
+            refunded_at__isnull=True,
+            paid_at__gte=start_dt,
+            paid_at__lt=end_dt,
+            payment_method__is_backed=True,
         )
-        .select_related("bag", "currency", "academy", "user")
+        .select_related("bag", "currency", "academy", "user", "payment_method")
         .exclude(user_id__in=referral_buyer_ids)
     )
 
@@ -109,21 +114,21 @@ def compute_usage_rows_and_total(
     end_dt: datetime,
     usage_invoices,
     eligible_cohort_ids: list[int],
-) -> tuple[list[dict[str, Any]], float, dict[tuple[int, int], dict[str, float]]]:
+) -> tuple[list[dict[str, Any]], float, dict[int, dict[int, dict[str, float]]]]:
     rows: list[dict[str, Any]] = []
     total = 0.0
-    breakdown_by_kind: dict[tuple[int, int], dict[str, float]] = {}
+    user_breakdown_by_cohort: dict[int, dict[int, dict[str, float]]] = defaultdict(lambda: defaultdict(dict))
 
     candidate_user_ids = list(usage_invoices.values_list("user_id", flat=True).distinct())
 
     if not candidate_user_ids or not eligible_cohort_ids:
-        return rows, total, breakdown_by_kind
+        return rows, total, user_breakdown_by_cohort
 
     try:
         client, project_id, dataset = BigQuery.client()
     except Exception as e:
         logger.warning(f"BigQuery not available: {e}. Skipping usage commission calculation.")
-        return rows, total, breakdown_by_kind
+        return rows, total, user_breakdown_by_cohort
 
     allowed = [(rt, k) for (rt, k), v in ENGAGEMENT_POINTS.items() if v > 0]
     task_kinds = [kind for (_, kind) in allowed]
@@ -158,19 +163,27 @@ def compute_usage_rows_and_total(
 
     try:
         bq_rows = list(client.query(sql).result())
-    except Exception as e:
-        logger.warning(f"BigQuery query failed: {e}. Skipping usage commission calculation.")
-        return rows, total, breakdown_by_kind
+        logger.info(f"BigQuery returned {len(bq_rows)} rows")
+
+    except Exception:
+        logger.warning("BigQuery query failed. Skipping usage commission calculation.")
+        return rows, total, user_breakdown_by_cohort
 
     user_total_points: dict[int, float] = defaultdict(float)
     user_cohort_points: dict[int, dict[int, float]] = defaultdict(dict)
 
     for r in bq_rows:
-        # Adding else as fallback in case of tuple response by bq
-        user_id = int(r["user_id"]) if "user_id" in r else int(r[0])
-        related_type = str(r["related_type"]) if "related_type" in r else str(r[1])
-        kind = str(r["kind"]) if "kind" in r else str(r[2])
-        cohort_id = int(r["cohort_id"]) if "cohort_id" in r else int(r[3])
+        try:
+            user_id = int(r[0]) if len(r) > 0 else 0
+            related_type = str(r[1]) if len(r) > 1 else ""
+            kind = str(r[3]) if len(r) > 3 else ""
+            cohort_id = int(r[4]) if len(r) > 4 else 0
+
+        except Exception:
+            continue
+
+        if user_id <= 0 or not related_type or not kind or cohort_id <= 0:
+            continue
 
         pts = ENGAGEMENT_POINTS.get((related_type, kind), 0.0)
         if pts <= 0:
@@ -181,10 +194,11 @@ def compute_usage_rows_and_total(
             user_cohort_points.setdefault(user_id, {})[cohort_id] = (
                 user_cohort_points.get(user_id, {}).get(cohort_id, 0.0) + pts
             )
-            key = (user_id, cohort_id)
-            if key not in breakdown_by_kind:
-                breakdown_by_kind[key] = {}
-            breakdown_by_kind[key][kind] = breakdown_by_kind[key].get(kind, 0.0) + pts
+
+        # Track breakdown by user and cohort
+        user_breakdown_by_cohort[user_id][cohort_id][kind] = (
+            user_breakdown_by_cohort[user_id][cohort_id].get(kind, 0.0) + pts
+        )
 
     paid_by_user_currency = (
         usage_invoices.values("user_id", "currency_id")
@@ -227,4 +241,4 @@ def compute_usage_rows_and_total(
             )
             total += round(cohort_commission, 2)
 
-    return rows, total, breakdown_by_kind
+    return rows, total, user_breakdown_by_cohort
