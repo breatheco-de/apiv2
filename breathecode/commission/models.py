@@ -187,6 +187,7 @@ class UserUsageCommission(models.Model):
 
     details = models.JSONField(
         default=dict, blank=True, help_text="Additional details and metadata about this usage commission"
+
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
