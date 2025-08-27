@@ -741,7 +741,7 @@ def accept_invite(accepting_ids=None, user=None):
 
         if invite.cohort is not None:
             role = "student"
-            if invite.role is not None and invite.role.slug == "teacher_influencer":
+            if invite.role is not None and invite.role.slug == "geek_creator":
                 role = "teacher"
             if invite.role is not None and invite.role.slug != "student":
                 role = invite.role.slug.upper()

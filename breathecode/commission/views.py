@@ -17,15 +17,15 @@ from rest_framework.views import APIView
 from breathecode.authenticate.actions import get_user_language
 from breathecode.admissions.models import Cohort
 from breathecode.commission.models import (
-    TeacherInfluencerReferralCommission,
-    TeacherInfluencerCommission,
-    TeacherInfluencerPayment,
+    GeekCreatorReferralCommission,
+    GeekCreatorCommission,
+    GeekCreatorPayment,
     UserUsageCommission,
 )
 import breathecode.commission.tasks as influencer_tasks
 from breathecode.payments.models import Invoice
 from .actions import (
-    get_teacher_influencer_academy_ids,
+    get_geek_creator_academy_ids,
     get_eligible_cohort_ids,
     filter_invoices_by_plans_and_cohorts,
     compute_usage_rows_and_total,
@@ -34,19 +34,20 @@ from .serializers import (
     CommissionReportResponseSerializer,
     AsyncCommissionResponseSerializer,
 )
+from breathecode.utils.decorators import capable_of
 
 
 class InfluencerPayoutReportView(APIView):
     """CSV report of referral (matured and pending) and usage for an influencer in a date range."""
 
-    def get(self, request):
+    @capable_of("crud_commission")
+    def get(self, request, academy_id=None, extension=None):
         lang = get_user_language(request)
         influencer_id = request.GET.get("influencer_id")
         month_str = request.GET.get("month")
         async_param = request.GET.get("async")
         include_plans = request.GET.get("include_plans")
         exclude_plans = request.GET.get("exclude_plans")
-        download_csv = request.GET.get("download_csv", "").lower() in ("1", "true", "yes")
         is_async_requested = str(async_param).lower() in ("1", "true", "yes")
 
         if not influencer_id:
@@ -131,14 +132,14 @@ class InfluencerPayoutReportView(APIView):
         )
         matured_total = sum(x["commission_amount"] for x in all_rows if x["type"] == "referral" and x["is_effective"])
 
-        # Create CSV
-        df = pd.DataFrame(all_rows)
-        buffer = io.StringIO()
-        df.to_csv(buffer, index=False)
-        buffer.seek(0)
+        # Handle CSV extension like TechnologyView handles .txt
+        if extension == "csv":
+            # Create CSV
+            df = pd.DataFrame(all_rows)
+            buffer = io.StringIO()
+            df.to_csv(buffer, index=False)
+            buffer.seek(0)
 
-        # Return response
-        if download_csv:
             response = HttpResponse(buffer.getvalue(), content_type="text/csv")
             response["Content-Disposition"] = (
                 f'attachment; filename="commission_report_{influencer.email}_{year}_{mon:02d}.csv"'
@@ -150,7 +151,6 @@ class InfluencerPayoutReportView(APIView):
             "month": f"{year}-{mon:02d}",
             "matured_referral_total": round(matured_total, 2),
             "usage_total": round(usage_total, 2),
-            "csv": buffer.getvalue(),
         }
 
         serializer = CommissionReportResponseSerializer(data=response_data)
@@ -179,14 +179,14 @@ class InfluencerPayoutReportView(APIView):
 
         # Get referral user IDs to exclude
         referral_user_ids = set(
-            TeacherInfluencerReferralCommission.objects.filter(
-                teacher_influencer=influencer, created_at__gte=start_dt, created_at__lt=end_dt
+            GeekCreatorReferralCommission.objects.filter(
+                geek_creator=influencer, created_at__gte=start_dt, created_at__lt=end_dt
             ).values_list("buyer_id", flat=True)
         )
 
         # Filter invoices and get eligible cohorts
         usage_invoices = invoices_in_range.exclude(user_id__in=referral_user_ids)
-        influencer_academy_ids = get_teacher_influencer_academy_ids(influencer)
+        influencer_academy_ids = get_geek_creator_academy_ids(influencer)
         eligible_cohort_ids = (
             get_eligible_cohort_ids(influencer, influencer_academy_ids) if influencer_academy_ids else set()
         )
@@ -217,8 +217,8 @@ class InfluencerPayoutReportView(APIView):
         self, influencer: User, start_dt: datetime, end_dt: datetime, current_time: datetime
     ) -> dict:
         """Get all referral"""
-        referrals_created = TeacherInfluencerReferralCommission.objects.filter(
-            teacher_influencer=influencer, created_at__gte=start_dt, created_at__lt=end_dt
+        referrals_created = GeekCreatorReferralCommission.objects.filter(
+            geek_creator=influencer, created_at__gte=start_dt, created_at__lt=end_dt
         ).select_related("invoice", "currency", "buyer")
 
         referrals_without_refunds = [r for r in referrals_created if not r.invoice.refunded_at]
@@ -254,14 +254,14 @@ class InfluencerPayoutReportView(APIView):
         )
 
         # Get eligible cohorts
-        influencer_academy_ids = get_teacher_influencer_academy_ids(influencer)
+        influencer_academy_ids = get_geek_creator_academy_ids(influencer)
         if not influencer_academy_ids:
             raise ValidationException(
                 translation(
                     "en",
-                    en="This user is not an active teacher influencer in any academy",
-                    es="Este usuario no es un teacher influencer activo en ninguna academia",
-                    slug="not-teacher-influencer",
+                    en="This user is not an active geek creator in any academy",
+                    es="Este usuario no es un geek creator activo en ninguna academia",
+                    slug="not-geek-creator",
                 ),
                 code=400,
             )
@@ -349,11 +349,11 @@ class InfluencerPayoutReportView(APIView):
 
         usage_commissions = []
         for x in usage_agg:
-            inst, _ = TeacherInfluencerCommission.objects.get_or_create(
+            inst, _ = GeekCreatorCommission.objects.get_or_create(
                 influencer=influencer,
                 cohort_id=x["cohort_id"],
                 month=month_date,
-                commission_type=TeacherInfluencerCommission.CommissionType.USAGE,
+                commission_type=GeekCreatorCommission.CommissionType.USAGE,
                 currency_id=x["currency_id"],
             )
             inst.amount_paid = float(x["total_amount"] or 0)
@@ -361,14 +361,10 @@ class InfluencerPayoutReportView(APIView):
             inst.save()
             usage_commissions.append(inst)
 
-            # TODO: Establish relationships with UserUsageCommission records after migration
-            # UserUsageCommission.objects.filter(
-            #     influencer=influencer,
-            #     cohort_id=x["cohort_id"],
-            #     month=month_date,
-            #     currency_id=x["currency_id"],
-            #     teacher_commission__isnull=True
-            # ).update(teacher_commission=inst)
+            usage_records = UserUsageCommission.objects.filter(
+                influencer=influencer, cohort_id=x["cohort_id"], month=month_date, currency_id=x["currency_id"]
+            )
+            inst.usage_commissions.set(usage_records)
 
         return usage_commissions
 
@@ -377,7 +373,7 @@ class InfluencerPayoutReportView(APIView):
     ) -> list:
         """Build TeacherInfluencerCommission records for referrals."""
         matured = (
-            TeacherInfluencerReferralCommission.objects.filter(id__in=effective_referral_ids)
+            GeekCreatorReferralCommission.objects.filter(id__in=effective_referral_ids)
             .values("currency_id")
             .annotate(total_amount=Sum("amount"), users=Count("buyer_id", distinct=True))
             .values("currency_id", "total_amount", "users")
@@ -385,18 +381,18 @@ class InfluencerPayoutReportView(APIView):
 
         referral_commissions = []
         for x in matured:
-            inst, _ = TeacherInfluencerCommission.objects.get_or_create(
+            inst, _ = GeekCreatorCommission.objects.get_or_create(
                 influencer=influencer,
                 cohort=None,
                 month=month_date,
-                commission_type=TeacherInfluencerCommission.CommissionType.REFERRAL,
+                commission_type=GeekCreatorCommission.CommissionType.REFERRAL,
                 currency_id=x["currency_id"],
             )
             inst.amount_paid = float(x["total_amount"] or 0)
             inst.num_users = int(x["users"] or 0)
             inst.details = {
                 "invoices": list(
-                    TeacherInfluencerReferralCommission.objects.filter(
+                    GeekCreatorReferralCommission.objects.filter(
                         id__in=effective_referral_ids, currency_id=x["currency_id"]
                     ).values_list("invoice_id", flat=True)
                 )
@@ -404,12 +400,10 @@ class InfluencerPayoutReportView(APIView):
             inst.save()
             referral_commissions.append(inst)
 
-            # TODO: Establish relationships with TeacherInfluencerReferralCommission records after migration
-            # TeacherInfluencerReferralCommission.objects.filter(
-            #     id__in=effective_referral_ids,
-            #     currency_id=x["currency_id"],
-            #     teacher_commission__isnull=True
-            # ).update(teacher_commission=inst)
+            referral_records = GeekCreatorReferralCommission.objects.filter(
+                id__in=effective_referral_ids, currency_id=x["currency_id"]
+            )
+            inst.referral_commissions.set(referral_records)
 
         return referral_commissions
 
@@ -429,7 +423,7 @@ class InfluencerPayoutReportView(APIView):
                 if c.currency_id == currency_id:
                     total += c.amount_paid
 
-            bill, _ = TeacherInfluencerPayment.objects.get_or_create(
+            bill, _ = GeekCreatorPayment.objects.get_or_create(
                 influencer=influencer,
                 month=month_date,
                 currency_id=currency_id,
@@ -438,11 +432,8 @@ class InfluencerPayoutReportView(APIView):
             bill.total_amount = round(total, 2)
             bill.save()
 
-            # Ensure m2m contains current commissions of this month/currency
             bill.commissions.set(
-                TeacherInfluencerCommission.objects.filter(
-                    influencer=influencer, month=month_date, currency_id=currency_id
-                )
+                GeekCreatorCommission.objects.filter(influencer=influencer, month=month_date, currency_id=currency_id)
             )
             bills.append({"currency_id": currency_id, "total": bill.total_amount})
 
