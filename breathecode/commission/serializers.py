@@ -12,7 +12,6 @@ class CommissionReportResponseSerializer(serializers.Serializer):
     month = serializers.CharField()
     matured_referral_total = serializers.FloatField()
     usage_total = serializers.FloatField()
-    csv = serializers.CharField()
 
 
 class AsyncCommissionResponseSerializer(serializers.Serializer):

@@ -10,7 +10,7 @@ from django.db.models import Sum
 
 from breathecode.activity.actions import ENGAGEMENT_POINTS
 from breathecode.admissions.models import Cohort
-from .models import CohortTeacherInfluencer
+from .models import GeekCreatorCohort
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.payments.models import Invoice
 from breathecode.services.google_cloud.big_query import BigQuery
@@ -19,9 +19,9 @@ from breathecode.services.google_cloud.big_query import BigQuery
 logger = logging.getLogger(__name__)
 
 
-def get_teacher_influencer_academy_ids(influencer: User) -> list[int]:
+def get_geek_creator_academy_ids(influencer: User) -> list[int]:
     return list(
-        ProfileAcademy.objects.filter(user=influencer, role__slug="teacher_influencer", status="ACTIVE").values_list(
+        ProfileAcademy.objects.filter(user=influencer, role__slug="geek_creator", status="ACTIVE").values_list(
             "academy_id", flat=True
         )
     )
@@ -29,7 +29,7 @@ def get_teacher_influencer_academy_ids(influencer: User) -> list[int]:
 
 def get_eligible_cohort_ids(influencer: User, academy_ids: list[int]) -> list[int]:
     cohort_ids = list(
-        CohortTeacherInfluencer.objects.filter(
+        GeekCreatorCohort.objects.filter(
             influencer=influencer, is_active=True, cohort__academy_id__in=academy_ids
         ).values_list("cohort_id", flat=True)
     )
