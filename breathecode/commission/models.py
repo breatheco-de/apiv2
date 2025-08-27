@@ -185,6 +185,10 @@ class UserUsageCommission(models.Model):
         default=0.0, help_text="Commission amount earned by the influencer from this user's activity"
     )
 
+    details = models.JSONField(
+        default=dict, blank=True, help_text="Additional details and metadata about this usage commission"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
