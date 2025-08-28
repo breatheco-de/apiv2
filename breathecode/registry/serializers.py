@@ -1214,6 +1214,7 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
     url = serializers.CharField(required=False)
     technologies = serializers.ListField(required=False)
     slug = serializers.CharField(required=False)
+    category = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     status = serializers.CharField(required=False)
     visibility = serializers.CharField(required=False)
     asset_type = serializers.CharField(required=False)
@@ -1248,6 +1249,10 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
 
         category = self.instance.category
         if "category" in data:
+            if data["category"] is None:
+                raise ValidationException("Asset category cannot be null", status.HTTP_400_BAD_REQUEST)
+            if data["category"] == "uncategorized":
+                data["category"] = None
             category = data["category"]
 
         if "superseded_by" in data and data["superseded_by"]:
@@ -1271,10 +1276,7 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
             except Exception:
                 pass
 
-        if category is None:
-            raise ValidationException("Asset category cannot be null", status.HTTP_400_BAD_REQUEST)
-
-        if lang != category.lang:
+        if category and lang != category.lang:
             translated_category = category.all_translations.filter(lang=lang).first()
             if translated_category is None:
                 raise ValidationException(
