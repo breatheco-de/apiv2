@@ -8,7 +8,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework.response import Response
@@ -33,8 +33,13 @@ from .actions import (
 from .serializers import (
     CommissionReportResponseSerializer,
     AsyncCommissionResponseSerializer,
+    GeekCreatorPaymentSerializer,
+    GeekCreatorCommissionSerializer,
+    UserUsageCommissionSerializer,
+    GeekCreatorReferralCommissionSerializer,
 )
 from breathecode.utils.decorators import capable_of
+from breathecode.utils import HeaderLimitOffsetPagination
 
 
 class InfluencerPayoutReportView(APIView):
@@ -43,16 +48,17 @@ class InfluencerPayoutReportView(APIView):
     @capable_of("crud_commission")
     def get(self, request, academy_id=None, extension=None):
         lang = get_user_language(request)
-        influencer_id = request.GET.get("influencer_id")
+        creator_id = request.GET.get("creator_id")
         month_str = request.GET.get("month")
         async_param = request.GET.get("async")
         include_plans = request.GET.get("include_plans")
         exclude_plans = request.GET.get("exclude_plans")
         is_async_requested = str(async_param).lower() in ("1", "true", "yes")
+        is_preview = request.GET.get("preview", "").lower() in ("1", "true", "yes")
 
-        if not influencer_id:
+        if not creator_id:
             raise ValidationException(
-                translation(lang, en="Missing influencer_id", es="Falta influencer_id", slug="missing-influencer-id"),
+                translation(lang, en="Missing creator_id", es="Falta creator_id", slug="missing-creator-id"),
                 code=400,
             )
 
@@ -79,12 +85,10 @@ class InfluencerPayoutReportView(APIView):
             )
 
         try:
-            influencer = User.objects.get(id=int(influencer_id))
+            influencer = User.objects.get(id=int(creator_id))
         except Exception:
             raise ValidationException(
-                translation(
-                    lang, en="Influencer not found", es="Influencer no encontrado", slug="influencer-not-found"
-                ),
+                translation(lang, en="Creator not found", es="Creator no encontrado", slug="creator-not-found"),
                 code=404,
             )
 
@@ -96,6 +100,21 @@ class InfluencerPayoutReportView(APIView):
         end_dt = datetime(next_year if mon == 12 else year, next_mon, 1, 0, 0, 0, tzinfo=tz)
         month_date = start_dt.date().replace(day=1)
         current_time = timezone.now()
+
+        if not is_preview:
+            current_month = current_time.date().replace(day=1)
+            if month_date >= current_month:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Cannot create commission report for {year}-{mon:02d} as the month is not complete. "
+                        f"Use ?preview=true to see a preview of the current month.",
+                        es=f"No se puede crear el reporte de comisiones para {year}-{mon:02d} porque el mes no está completo. "
+                        f"Use ?preview=true para ver una vista previa del mes actual.",
+                        slug="month-not-complete",
+                    ),
+                    code=400,
+                )
 
         if is_async_requested:
             return self._handle_async_mode(influencer, year, mon, start_dt, end_dt, include_plans, exclude_plans)
@@ -124,7 +143,7 @@ class InfluencerPayoutReportView(APIView):
         )
 
         # Create TeacherInfluencerPayment records
-        self._create_teacher_payments(influencer, month_date, usage_commissions, referral_commissions)
+        self._create_teacher_payments(influencer, month_date, usage_commissions, referral_commissions, is_preview)
 
         # Generate CSV data
         all_rows = self._generate_csv_rows(
@@ -134,7 +153,6 @@ class InfluencerPayoutReportView(APIView):
 
         # Handle CSV extension like TechnologyView handles .txt
         if extension == "csv":
-            # Create CSV
             df = pd.DataFrame(all_rows)
             buffer = io.StringIO()
             df.to_csv(buffer, index=False)
@@ -152,6 +170,10 @@ class InfluencerPayoutReportView(APIView):
             "matured_referral_total": round(matured_total, 2),
             "usage_total": round(usage_total, 2),
         }
+
+        if is_preview:
+            response_data["is_preview"] = True
+            response_data["warning"] = "This is a preview. The month is not complete and amounts may change."
 
         serializer = CommissionReportResponseSerializer(data=response_data)
         serializer.is_valid(raise_exception=True)
@@ -408,7 +430,12 @@ class InfluencerPayoutReportView(APIView):
         return referral_commissions
 
     def _create_teacher_payments(
-        self, influencer: User, month_date: datetime, usage_commissions: list, referral_commissions: list
+        self,
+        influencer: User,
+        month_date: datetime,
+        usage_commissions: list,
+        referral_commissions: list,
+        is_preview: bool = False,
     ) -> list:
         """Create TeacherInfluencerPayment records."""
         bills = []
@@ -423,12 +450,24 @@ class InfluencerPayoutReportView(APIView):
                 if c.currency_id == currency_id:
                     total += c.amount_paid
 
-            bill, _ = GeekCreatorPayment.objects.get_or_create(
+            if is_preview:
+                default_status = GeekCreatorPayment.Status.PREVIEW
+                default_status_text = "This is a preview. The month is not complete and amounts may change. This is why this payment cannot change status."
+            else:
+                default_status = GeekCreatorPayment.Status.PENDING
+                default_status_text = None
+
+            bill, created = GeekCreatorPayment.objects.get_or_create(
                 influencer=influencer,
                 month=month_date,
                 currency_id=currency_id,
-                defaults={"total_amount": 0.0},
+                defaults={"total_amount": 0.0, "status": default_status, "status_text": default_status_text},
             )
+
+            if not created and is_preview:
+                bill.status = GeekCreatorPayment.Status.PREVIEW
+                bill.status_text = "This is a preview. The month is not complete and amounts may change. This is why this payment cannot change status."
+
             bill.total_amount = round(total, 2)
             bill.save()
 
@@ -486,3 +525,417 @@ class InfluencerPayoutReportView(APIView):
             )
 
         return all_rows
+
+
+class GeekCreatorPaymentView(APIView, HeaderLimitOffsetPagination):
+    """Administrative view for managing GeekCreatorPayment records."""
+
+    @capable_of("crud_commission")
+    def get(self, request, academy_id=None):
+        """List payments with filters."""
+        lang = get_user_language(request)
+
+        queryset = GeekCreatorPayment.objects.filter(
+            Q(commissions__cohort__academy__id=academy_id)
+            | Q(commissions__referral_commissions__academy__id=academy_id)
+        ).distinct()
+
+        lookup = {}
+
+        if "creator_id" in request.GET:
+            try:
+                lookup["influencer_id"] = int(request.GET.get("creator_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid creator_id", es="creator_id inválido", slug="invalid-creator-id"),
+                    code=400,
+                )
+
+        if "status" in request.GET:
+            status_param = request.GET.get("status")
+            status_list = [s.strip().upper() for s in status_param.split(",")]
+            valid_statuses = [choice[0] for choice in GeekCreatorPayment.Status.choices]
+
+            invalid_statuses = [s for s in status_list if s not in valid_statuses]
+            if invalid_statuses:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Invalid statuses: {', '.join(invalid_statuses)}",
+                        es=f"Estados inválidos: {', '.join(invalid_statuses)}",
+                        slug="invalid-statuses",
+                    ),
+                    code=400,
+                )
+            lookup["status__in"] = status_list
+
+        if "month" in request.GET:
+            try:
+                month = request.GET.get("month")
+                year, mon = month.split("-")
+                month_date = datetime(int(year), int(mon), 1).date()
+                lookup["month"] = month_date
+            except (ValueError, TypeError):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid month format (YYYY-MM)",
+                        es="Formato de mes inválido (YYYY-MM)",
+                        slug="invalid-month-format",
+                    ),
+                    code=400,
+                )
+
+        if "currency_id" in request.GET:
+            try:
+                lookup["currency_id"] = int(request.GET.get("currency_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid currency_id", es="currency_id inválido", slug="invalid-currency-id"),
+                    code=400,
+                )
+
+        queryset = queryset.filter(**lookup)
+
+        page = self.paginate_queryset(queryset, request)
+        payment_data = [GeekCreatorPaymentSerializer(payment).data for payment in page]
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(payment_data)
+        else:
+            return Response(payment_data)
+
+    @capable_of("crud_commission")
+    def patch(self, request, payment_id, academy_id=None):
+        """Update payment status."""
+        lang = get_user_language(request)
+
+        try:
+            payment = GeekCreatorPayment.objects.get(id=payment_id)
+        except GeekCreatorPayment.DoesNotExist:
+            raise ValidationException(
+                translation(lang, en="Payment not found", es="Pago no encontrado", slug="payment-not-found"),
+                code=404,
+            )
+
+        new_status = request.data.get("status")
+        if not new_status:
+            raise ValidationException(
+                translation(lang, en="Missing status", es="Falta status", slug="missing-status"),
+                code=400,
+            )
+
+        if new_status not in dict(GeekCreatorPayment.Status.choices):
+            raise ValidationException(
+                translation(lang, en="Invalid status", es="Estado inválido", slug="invalid-status"),
+                code=400,
+            )
+
+        if payment.status == GeekCreatorPayment.Status.PREVIEW:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot change status of PREVIEW payments. Preview payments are for informational purposes only.",
+                    es="No se puede cambiar el estado de los pagos PREVIEW. Los pagos en preview son solo para fines informativos.",
+                    slug="preview-status-change-not-allowed",
+                ),
+                code=400,
+            )
+
+        payment.status = new_status
+
+        if new_status == "PAID" and payment.payment_date is None:
+            payment.payment_date = timezone.now()
+
+            referral_commissions = GeekCreatorReferralCommission.objects.filter(
+                aggregated_referral_commissions__in=payment.commissions.filter(commission_type="REFERRAL")
+            ).distinct()
+
+            if referral_commissions.exists():
+                referral_commissions.update(status="PAID")
+
+        payment.save()
+
+        return Response(GeekCreatorPaymentSerializer(payment).data)
+
+
+class GeekCreatorCommissionView(APIView, HeaderLimitOffsetPagination):
+    """Administrative view for managing GeekCreatorCommission records."""
+
+    @capable_of("crud_commission")
+    def get(self, request, academy_id=None):
+        """List commissions with filters."""
+        lang = get_user_language(request)
+
+        queryset = GeekCreatorCommission.objects.filter(cohort__academy__id=academy_id)
+        lookup = {}
+
+        if "creator_id" in request.GET:
+            try:
+                lookup["influencer_id"] = int(request.GET.get("creator_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid creator_id", es="creator_id inválido", slug="invalid-creator-id"),
+                    code=400,
+                )
+
+        if "commission_type" in request.GET:
+            commission_type = request.GET.get("commission_type")
+            if commission_type not in dict(GeekCreatorCommission.CommissionType.choices):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid commission_type",
+                        es="Tipo de comisión inválido",
+                        slug="invalid-commission-type",
+                    ),
+                    code=400,
+                )
+            lookup["commission_type"] = commission_type
+
+        if "month" in request.GET:
+            try:
+                month = request.GET.get("month")
+                year, mon = month.split("-")
+                month_date = datetime(int(year), int(mon), 1).date()
+                lookup["month"] = month_date
+            except (ValueError, TypeError):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid month format (YYYY-MM)",
+                        es="Formato de mes inválido (YYYY-MM)",
+                        slug="invalid-month-format",
+                    ),
+                    code=400,
+                )
+
+        if "cohort_id" in request.GET:
+            try:
+                lookup["cohort_id"] = int(request.GET.get("cohort_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid cohort_id", es="cohort_id inválido", slug="invalid-cohort-id"),
+                    code=400,
+                )
+
+        if "currency_id" in request.GET:
+            try:
+                lookup["currency_id"] = int(request.GET.get("currency_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid currency_id", es="currency_id inválido", slug="invalid-currency-id"),
+                    code=400,
+                )
+
+        queryset = queryset.filter(**lookup)
+
+        page = self.paginate_queryset(queryset, request)
+        commission_data = [GeekCreatorCommissionSerializer(commission).data for commission in page]
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(commission_data)
+        else:
+            return Response(commission_data)
+
+
+class UserUsageCommissionView(APIView, HeaderLimitOffsetPagination):
+    """Administrative view for managing UserUsageCommission records."""
+
+    @capable_of("crud_commission")
+    def get(self, request, academy_id=None):
+        """List usage commissions with filters."""
+        lang = get_user_language(request)
+
+        queryset = UserUsageCommission.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        if "creator_id" in request.GET:
+            try:
+                lookup["influencer_id"] = int(request.GET.get("creator_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid creator_id", es="creator_id inválido", slug="invalid-creator-id"),
+                    code=400,
+                )
+
+        if "user_id" in request.GET:
+            try:
+                lookup["user_id"] = int(request.GET.get("user_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid user_id", es="user_id inválido", slug="invalid-user-id"),
+                    code=400,
+                )
+
+        if "cohort_id" in request.GET:
+            try:
+                lookup["cohort_id"] = int(request.GET.get("cohort_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid cohort_id", es="cohort_id inválido", slug="invalid-cohort-id"),
+                    code=400,
+                )
+
+        if "month" in request.GET:
+            try:
+                month = request.GET.get("month")
+                year, mon = month.split("-")
+                month_date = datetime(int(year), int(mon), 1).date()
+                lookup["month"] = month_date
+            except (ValueError, TypeError):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid month format (YYYY-MM)",
+                        es="Formato de mes inválido (YYYY-MM)",
+                        slug="invalid-month-format",
+                    ),
+                    code=400,
+                )
+
+        if "currency_id" in request.GET:
+            try:
+                lookup["currency_id"] = int(request.GET.get("currency_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid currency_id", es="currency_id inválido", slug="invalid-currency-id"),
+                    code=400,
+                )
+
+        queryset = queryset.filter(**lookup)
+
+        page = self.paginate_queryset(queryset, request)
+        commission_data = [UserUsageCommissionSerializer(commission).data for commission in page]
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(commission_data)
+        else:
+            return Response(commission_data)
+
+
+class GeekCreatorReferralCommissionView(APIView, HeaderLimitOffsetPagination):
+    """Administrative view for managing GeekCreatorReferralCommission records."""
+
+    @capable_of("crud_commission")
+    def get(self, request, academy_id=None):
+        """List referral commissions with filters."""
+        lang = get_user_language(request)
+
+        queryset = GeekCreatorReferralCommission.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        if "geek_creator_id" in request.GET:
+            try:
+                lookup["geek_creator_id"] = int(request.GET.get("geek_creator_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid geek_creator_id",
+                        es="geek_creator_id inválido",
+                        slug="invalid-geek-creator-id",
+                    ),
+                    code=400,
+                )
+
+        if "buyer_id" in request.GET:
+            try:
+                lookup["buyer_id"] = int(request.GET.get("buyer_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid buyer_id", es="buyer_id inválido", slug="invalid-buyer-id"),
+                    code=400,
+                )
+
+        if "invoice_id" in request.GET:
+            try:
+                lookup["invoice_id"] = int(request.GET.get("invoice_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid invoice_id", es="invoice_id inválido", slug="invalid-invoice-id"),
+                    code=400,
+                )
+
+        if "status" in request.GET:
+            status = request.GET.get("status")
+            if status not in dict(GeekCreatorReferralCommission.Status.choices):
+                raise ValidationException(
+                    translation(lang, en="Invalid status", es="Estado inválido", slug="invalid-status"),
+                    code=400,
+                )
+            lookup["status"] = status
+
+        if "currency_id" in request.GET:
+            try:
+                lookup["currency_id"] = int(request.GET.get("currency_id"))
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid currency_id", es="currency_id inválido", slug="invalid-currency-id"),
+                    code=400,
+                )
+
+        queryset = queryset.filter(**lookup)
+
+        page = self.paginate_queryset(queryset, request)
+        commission_data = [GeekCreatorReferralCommissionSerializer(commission).data for commission in page]
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(commission_data)
+        else:
+            return Response(commission_data)
+
+    @capable_of("crud_commission")
+    def patch(self, request, commission_id, academy_id=None):
+        """Update referral commission status or available_at date."""
+        lang = get_user_language(request)
+
+        try:
+            commission = GeekCreatorReferralCommission.objects.get(id=commission_id)
+        except GeekCreatorReferralCommission.DoesNotExist:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Referral commission not found",
+                    es="Comisión de referral no encontrada",
+                    slug="referral-commission-not-found",
+                ),
+                code=404,
+            )
+
+        new_status = request.data.get("status")
+        new_available_at = request.data.get("available_at")
+
+        if new_status:
+            if new_status not in dict(GeekCreatorReferralCommission.Status.choices):
+                raise ValidationException(
+                    translation(lang, en="Invalid status", es="Estado inválido", slug="invalid-status"),
+                    code=400,
+                )
+            commission.status = new_status
+
+        if new_available_at:
+            try:
+                commission.available_at = datetime.fromisoformat(new_available_at.replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid available_at format",
+                        es="Formato de available_at inválido",
+                        slug="invalid-available-at-format",
+                    ),
+                    code=400,
+                )
+
+        commission.save()
+
+        return Response(
+            {
+                "id": commission.id,
+                "status": commission.status,
+                "available_at": commission.available_at.isoformat() if commission.available_at else None,
+                "is_matured": commission.is_matured,
+                "updated_at": commission.updated_at.isoformat(),
+            }
+        )
