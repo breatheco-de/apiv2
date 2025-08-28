@@ -203,6 +203,14 @@ class Syllabus(models.Model):
     def __str__(self):
         return self.slug if self.slug else "unknown"
 
+    def save(self, *args, **kwargs):
+        created = not self.id
+        super().save(*args, **kwargs)
+        
+        if created:
+            from .signals import syllabus_created
+            syllabus_created.send_robust(instance=self, sender=self.__class__)
+
 
 PUBLISHED = "PUBLISHED"
 DRAFT = "DRAFT"
