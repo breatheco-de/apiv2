@@ -50,11 +50,10 @@ ALLOWED_TYPES = {
 }
 
 ENGAGEMENT_POINTS: dict[tuple[str, str], float] = {
-    ("admissions.CohortUser", "joined_cohort"): 1.0,
     ("assignments.Task", "open_syllabus_module"): 0.5,
-    ("assignments.Task", "read_assignment"): 1.0,
-    ("assignments.Task", "assignment_status_updated"): 4.0,
-    ("assignments.Task", "assignment_review_status_updated"): 2.0,
+    ("assignments.Task", "read_assignment"): 0.5,
+    ("assignments.Task", "assignment_status_updated"): 2.0,
+    ("assignments.Task", "assignment_review_status_updated"): 1.0,
 }
 
 

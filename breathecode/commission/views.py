@@ -9,6 +9,7 @@ from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Sum, Count
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,49 +17,43 @@ from rest_framework.views import APIView
 from breathecode.authenticate.actions import get_user_language
 from breathecode.admissions.models import Cohort
 from breathecode.commission.models import (
-    TeacherInfluencerReferralCommission,
-    TeacherInfluencerCommission,
-    TeacherInfluencerPayment,
+    GeekCreatorReferralCommission,
+    GeekCreatorCommission,
+    GeekCreatorPayment,
     UserUsageCommission,
 )
 import breathecode.commission.tasks as influencer_tasks
 from breathecode.payments.models import Invoice
 from .actions import (
-    get_teacher_influencer_academy_ids,
+    get_geek_creator_academy_ids,
     get_eligible_cohort_ids,
     filter_invoices_by_plans_and_cohorts,
     compute_usage_rows_and_total,
 )
+from .serializers import (
+    CommissionReportResponseSerializer,
+    AsyncCommissionResponseSerializer,
+)
+from breathecode.utils.decorators import capable_of
 
 
 class InfluencerPayoutReportView(APIView):
     """CSV report of referral (matured and pending) and usage for an influencer in a date range."""
 
-    def get(self, request):
+    @capable_of("crud_commission")
+    def get(self, request, academy_id=None, extension=None):
         lang = get_user_language(request)
-
         influencer_id = request.GET.get("influencer_id")
         month_str = request.GET.get("month")
         async_param = request.GET.get("async")
-        is_async_requested = str(async_param).lower() in ("1", "true", "yes")
-
         include_plans = request.GET.get("include_plans")
         exclude_plans = request.GET.get("exclude_plans")
+        is_async_requested = str(async_param).lower() in ("1", "true", "yes")
 
         if not influencer_id:
             raise ValidationException(
                 translation(lang, en="Missing influencer_id", es="Falta influencer_id", slug="missing-influencer-id"),
                 code=400,
-            )
-
-        try:
-            influencer = User.objects.get(id=int(influencer_id))
-        except Exception:
-            raise ValidationException(
-                translation(
-                    lang, en="Influencer not found", es="Influencer no encontrado", slug="influencer-not-found"
-                ),
-                code=404,
             )
 
         if not month_str:
@@ -83,95 +78,221 @@ class InfluencerPayoutReportView(APIView):
                 code=400,
             )
 
+        try:
+            influencer = User.objects.get(id=int(influencer_id))
+        except Exception:
+            raise ValidationException(
+                translation(
+                    lang, en="Influencer not found", es="Influencer no encontrado", slug="influencer-not-found"
+                ),
+                code=404,
+            )
+
+        # Calculate date range
         tz = timezone.get_current_timezone()
         start_dt = datetime(year, mon, 1, 0, 0, 0, tzinfo=tz)
-        # next month
         next_year = year + (mon // 12)
         next_mon = 1 if mon == 12 else mon + 1
         end_dt = datetime(next_year if mon == 12 else year, next_mon, 1, 0, 0, 0, tzinfo=tz)
-
-        all_referrals = TeacherInfluencerReferralCommission.objects.filter(
-            teacher_influencer=influencer, created_at__gte=start_dt, created_at__lt=end_dt
-        ).select_related("invoice", "currency")
-
-        referrals_created_in_month = TeacherInfluencerReferralCommission.objects.filter(
-            teacher_influencer=influencer, created_at__gte=start_dt, created_at__lt=end_dt
-        ).select_related("invoice", "currency")
-
-        referrals_without_refunds = [r for r in referrals_created_in_month if not r.invoice.refunded_at]
-
+        month_date = start_dt.date().replace(day=1)
         current_time = timezone.now()
-        effective_referrals = [r for r in referrals_without_refunds if current_time >= r.available_at]
 
-        matured_referrals = referrals_created_in_month
+        if is_async_requested:
+            return self._handle_async_mode(influencer, year, mon, start_dt, end_dt, include_plans, exclude_plans)
 
+        referral_data = self._get_referral_data(influencer, start_dt, end_dt, current_time)
+        usage_data = self._get_usage_data(
+            influencer, start_dt, end_dt, include_plans, exclude_plans, referral_data["user_ids"]
+        )
+
+        # Process usage commissions
+        usage_rows, usage_total, user_breakdown_by_cohort = (
+            usage_data["rows"],
+            usage_data["total"],
+            usage_data["breakdown"],
+        )
+
+        # Create/update UserUsageCommission records
+        self._create_usage_commissions(
+            influencer, usage_rows, user_breakdown_by_cohort, start_dt, usage_data["currency_map"]
+        )
+
+        # Build TeacherInfluencerCommission records
+        usage_commissions = self._build_usage_teacher_commissions(influencer, month_date)
+        referral_commissions = self._build_referral_teacher_commissions(
+            influencer, month_date, referral_data["effective_ids"]
+        )
+
+        # Create TeacherInfluencerPayment records
+        self._create_teacher_payments(influencer, month_date, usage_commissions, referral_commissions)
+
+        # Generate CSV data
+        all_rows = self._generate_csv_rows(
+            usage_rows, referral_data["matured_referrals"], referral_data["effective_ids"], start_dt
+        )
+        matured_total = sum(x["commission_amount"] for x in all_rows if x["type"] == "referral" and x["is_effective"])
+
+        # Handle CSV extension like TechnologyView handles .txt
+        if extension == "csv":
+            # Create CSV
+            df = pd.DataFrame(all_rows)
+            buffer = io.StringIO()
+            df.to_csv(buffer, index=False)
+            buffer.seek(0)
+
+            response = HttpResponse(buffer.getvalue(), content_type="text/csv")
+            response["Content-Disposition"] = (
+                f'attachment; filename="commission_report_{influencer.email}_{year}_{mon:02d}.csv"'
+            )
+            return response
+
+        response_data = {
+            "influencer": influencer.email,
+            "month": f"{year}-{mon:02d}",
+            "matured_referral_total": round(matured_total, 2),
+            "usage_total": round(usage_total, 2),
+        }
+
+        serializer = CommissionReportResponseSerializer(data=response_data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
+
+    def _handle_async_mode(
+        self,
+        influencer: User,
+        year: int,
+        mon: int,
+        start_dt: datetime,
+        end_dt: datetime,
+        include_plans: str,
+        exclude_plans: str,
+    ) -> Response:
+        """Handle async mode by scheduling tasks."""
+        # Get usage invoices for scheduling
         invoices_in_range = Invoice.objects.filter(
             status=Invoice.Status.FULFILLED,
             amount__gt=0,
             refunded_at__isnull=True,
             paid_at__gte=start_dt,
             paid_at__lt=end_dt,
-        ).select_related("bag", "currency", "academy", "user")
+        ).select_related("currency")
 
-        users_with_referral = set(all_referrals.values_list("buyer_id", flat=True))
+        # Get referral user IDs to exclude
+        referral_user_ids = set(
+            GeekCreatorReferralCommission.objects.filter(
+                geek_creator=influencer, created_at__gte=start_dt, created_at__lt=end_dt
+            ).values_list("buyer_id", flat=True)
+        )
 
-        # Exclude invoices that comes from referrals to avoid double counting
-        usage_invoices = invoices_in_range.exclude(user_id__in=users_with_referral)
+        # Filter invoices and get eligible cohorts
+        usage_invoices = invoices_in_range.exclude(user_id__in=referral_user_ids)
+        influencer_academy_ids = get_geek_creator_academy_ids(influencer)
+        eligible_cohort_ids = (
+            get_eligible_cohort_ids(influencer, influencer_academy_ids) if influencer_academy_ids else set()
+        )
 
-        influencer_academy_ids = get_teacher_influencer_academy_ids(influencer)
+        usage_invoices = filter_invoices_by_plans_and_cohorts(
+            usage_invoices, include_plans, exclude_plans, eligible_cohort_ids
+        )
+
+        # Get candidate user IDs for reporting
+        candidate_user_ids = set(usage_invoices.values_list("user_id", flat=True).distinct())
+
+        # Schedule batch processing instead of individual tasks
+        influencer_tasks.build_commissions_for_month.delay(influencer.id, year, mon)
+
+        response_data = {
+            "influencer": influencer.email,
+            "month": f"{year}-{mon:02d}",
+            "scheduled_user_engagements": len(candidate_user_ids),
+            "scheduled_commissions": True,
+            "mode": "async",
+        }
+
+        serializer = AsyncCommissionResponseSerializer(data=response_data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=202)
+
+    def _get_referral_data(
+        self, influencer: User, start_dt: datetime, end_dt: datetime, current_time: datetime
+    ) -> dict:
+        """Get all referral"""
+        referrals_created = GeekCreatorReferralCommission.objects.filter(
+            geek_creator=influencer, created_at__gte=start_dt, created_at__lt=end_dt
+        ).select_related("invoice", "currency", "buyer")
+
+        referrals_without_refunds = [r for r in referrals_created if not r.invoice.refunded_at]
+        effective_referrals = [r for r in referrals_without_refunds if current_time >= r.available_at]
+
+        return {
+            "matured_referrals": referrals_created,
+            "effective_referrals": effective_referrals,
+            "effective_ids": {r.id for r in effective_referrals},
+            "user_ids": {r.buyer_id for r in referrals_created},
+        }
+
+    def _get_usage_data(
+        self,
+        influencer: User,
+        start_dt: datetime,
+        end_dt: datetime,
+        include_plans: str,
+        exclude_plans: str,
+        referral_user_ids: set,
+    ) -> dict:
+        """Get usage data"""
+        invoices_in_range = (
+            Invoice.objects.filter(
+                status=Invoice.Status.FULFILLED,
+                amount__gt=0,
+                refunded_at__isnull=True,
+                paid_at__gte=start_dt,
+                paid_at__lt=end_dt,
+            )
+            .exclude(user_id__in=referral_user_ids)
+            .select_related("bag", "currency", "academy", "user")
+        )
+
+        # Get eligible cohorts
+        influencer_academy_ids = get_geek_creator_academy_ids(influencer)
         if not influencer_academy_ids:
             raise ValidationException(
                 translation(
-                    lang,
-                    en="This user is not an active teacher influencer in any academy",
-                    es="Este usuario no es un teacher influencer activo en ninguna academia",
-                    slug="not-teacher-influencer",
+                    "en",
+                    en="This user is not an active geek creator in any academy",
+                    es="Este usuario no es un geek creator activo en ninguna academia",
+                    slug="not-geek-creator",
                 ),
                 code=400,
             )
+
         eligible_cohort_ids = get_eligible_cohort_ids(influencer, influencer_academy_ids)
 
+        # Filter invoices by plans and cohorts
         usage_invoices = filter_invoices_by_plans_and_cohorts(
-            usage_invoices,
-            include_plans=include_plans,
-            exclude_plans=exclude_plans,
-            eligible_cohort_ids=eligible_cohort_ids,
+            invoices_in_range, include_plans, exclude_plans, eligible_cohort_ids
         )
 
-        if is_async_requested:
-            scheduled_users = 0
-            candidate_user_ids = list(usage_invoices.values_list("user_id", flat=True).distinct())
-            for candidate_user_id in candidate_user_ids:
-                influencer_tasks.build_user_engagement_for_user_month.delay(influencer.id, candidate_user_id, year, mon)
-                scheduled_users += 1
-
-            # schedule commissions build with a short delay to allow user tasks to finish
-            influencer_tasks.build_commissions_for_month.apply_async(args=[influencer.id, year, mon], countdown=120)
-
-            return Response(
-                {
-                    "influencer": influencer.email,
-                    "month": f"{year}-{mon:02d}",
-                    "scheduled_user_engagements": scheduled_users,
-                    "scheduled_commissions": True,
-                    "mode": "async",
-                },
-                status=202,
-            )
-
-        usage_rows, usage_total, breakdown_by_kind = compute_usage_rows_and_total(
+        # Compute usage data
+        usage_rows, usage_total, user_breakdown_by_cohort = compute_usage_rows_and_total(
             influencer, start_dt, end_dt, usage_invoices, eligible_cohort_ids
         )
 
-        # map currency ids to code
+        # Create currency map
         currency_map = {inv.currency_id: inv.currency for inv in usage_invoices}
 
-        # sum paid per user/currency in range
-        paid_by_user_currency = usage_invoices.values("user_id", "currency_id").annotate(total_amount=Sum("amount"))
-        paid_map = {}
-        for x in paid_by_user_currency:
-            paid_map[(x["user_id"], x["currency_id"])] = float(x["total_amount"] or 0)
+        return {
+            "rows": usage_rows,
+            "total": usage_total,
+            "breakdown": user_breakdown_by_cohort,
+            "currency_map": currency_map,
+            "invoices": usage_invoices,
+        }
 
+    def _create_usage_commissions(
+        self, influencer: User, usage_rows: list, user_breakdown_by_cohort: dict, start_dt: datetime, currency_map: dict
+    ) -> None:
+        """Create or update UserUsageCommission records."""
         cohort_ids = {row["cohort_id"] for row in usage_rows}
         cohort_academy_map = {
             cohort["id"]: cohort["academy_id"]
@@ -187,10 +308,7 @@ class InfluencerPayoutReportView(APIView):
                 if not currency_obj:
                     continue
 
-                # compute details breakdown for this user/cohort
-                kind_breakdown = breakdown_by_kind.get((uid, cid), {})
-
-                # Usar el mapa pre-calculado
+                user_breakdown = user_breakdown_by_cohort.get(uid, {})
                 academy_id = cohort_academy_map.get(cid)
 
                 obj, created = UserUsageCommission.objects.get_or_create(
@@ -205,7 +323,7 @@ class InfluencerPayoutReportView(APIView):
                         "cohort_points": float(row["cohort_points"]),
                         "paid_amount": float(row["paid_amount"]),
                         "commission_amount": float(row["commission"]),
-                        "details": {"breakdown": kind_breakdown},
+                        "details": {"breakdown": user_breakdown},
                     },
                 )
 
@@ -214,31 +332,28 @@ class InfluencerPayoutReportView(APIView):
                     current_paid = float(row["paid_amount"])
 
                     if abs(obj.user_total_points - current_total) > 0.01 or abs(obj.paid_amount - current_paid) > 0.01:
-
                         obj.user_total_points = current_total
                         obj.cohort_points = float(row["cohort_points"])
                         obj.paid_amount = current_paid
                         obj.commission_amount = float(row["commission"])
-                        obj.details = {"breakdown": kind_breakdown}
+                        obj.details = {"breakdown": user_breakdown}
                         obj.save()
 
-        # Build TeacherInfluencerCommission (USAGE) from UserUsageCommission
-        month_date = start_dt.date().replace(day=1)
-
-        usage_commissions = []
-
+    def _build_usage_teacher_commissions(self, influencer: User, month_date: datetime) -> list:
+        """Build TeacherInfluencerCommission records for usage."""
         usage_agg = (
             UserUsageCommission.objects.filter(influencer=influencer, month=month_date)
             .values("cohort_id", "currency_id")
             .annotate(total_amount=Sum("commission_amount"), users=Count("id"))
         )
 
+        usage_commissions = []
         for x in usage_agg:
-            inst, _ = TeacherInfluencerCommission.objects.get_or_create(
+            inst, _ = GeekCreatorCommission.objects.get_or_create(
                 influencer=influencer,
                 cohort_id=x["cohort_id"],
                 month=month_date,
-                commission_type=TeacherInfluencerCommission.CommissionType.USAGE,
+                commission_type=GeekCreatorCommission.CommissionType.USAGE,
                 currency_id=x["currency_id"],
             )
             inst.amount_paid = float(x["total_amount"] or 0)
@@ -246,28 +361,38 @@ class InfluencerPayoutReportView(APIView):
             inst.save()
             usage_commissions.append(inst)
 
-        referral_commissions = []
-        effective_referral_ids = [r.id for r in effective_referrals]
+            usage_records = UserUsageCommission.objects.filter(
+                influencer=influencer, cohort_id=x["cohort_id"], month=month_date, currency_id=x["currency_id"]
+            )
+            inst.usage_commissions.set(usage_records)
+
+        return usage_commissions
+
+    def _build_referral_teacher_commissions(
+        self, influencer: User, month_date: datetime, effective_referral_ids: set
+    ) -> list:
+        """Build TeacherInfluencerCommission records for referrals."""
         matured = (
-            TeacherInfluencerReferralCommission.objects.filter(id__in=effective_referral_ids)
+            GeekCreatorReferralCommission.objects.filter(id__in=effective_referral_ids)
             .values("currency_id")
             .annotate(total_amount=Sum("amount"), users=Count("buyer_id", distinct=True))
             .values("currency_id", "total_amount", "users")
         )
 
+        referral_commissions = []
         for x in matured:
-            inst, _ = TeacherInfluencerCommission.objects.get_or_create(
+            inst, _ = GeekCreatorCommission.objects.get_or_create(
                 influencer=influencer,
                 cohort=None,
                 month=month_date,
-                commission_type=TeacherInfluencerCommission.CommissionType.REFERRAL,
+                commission_type=GeekCreatorCommission.CommissionType.REFERRAL,
                 currency_id=x["currency_id"],
             )
-            inst.amount_paid = float(x["total_amount"] or 0) * 0.5
+            inst.amount_paid = float(x["total_amount"] or 0)
             inst.num_users = int(x["users"] or 0)
             inst.details = {
                 "invoices": list(
-                    TeacherInfluencerReferralCommission.objects.filter(
+                    GeekCreatorReferralCommission.objects.filter(
                         id__in=effective_referral_ids, currency_id=x["currency_id"]
                     ).values_list("invoice_id", flat=True)
                 )
@@ -275,7 +400,17 @@ class InfluencerPayoutReportView(APIView):
             inst.save()
             referral_commissions.append(inst)
 
-        # Create or update TeacherInfluencerPayment (bill) per currency
+            referral_records = GeekCreatorReferralCommission.objects.filter(
+                id__in=effective_referral_ids, currency_id=x["currency_id"]
+            )
+            inst.referral_commissions.set(referral_records)
+
+        return referral_commissions
+
+    def _create_teacher_payments(
+        self, influencer: User, month_date: datetime, usage_commissions: list, referral_commissions: list
+    ) -> list:
+        """Create TeacherInfluencerPayment records."""
         bills = []
         for currency_id in set(
             [c.currency_id for c in usage_commissions] + [c.currency_id for c in referral_commissions]
@@ -288,7 +423,7 @@ class InfluencerPayoutReportView(APIView):
                 if c.currency_id == currency_id:
                     total += c.amount_paid
 
-            bill, _ = TeacherInfluencerPayment.objects.get_or_create(
+            bill, _ = GeekCreatorPayment.objects.get_or_create(
                 influencer=influencer,
                 month=month_date,
                 currency_id=currency_id,
@@ -296,57 +431,58 @@ class InfluencerPayoutReportView(APIView):
             )
             bill.total_amount = round(total, 2)
             bill.save()
-            # ensure m2m contains current commissions of this month/currency
+
             bill.commissions.set(
-                TeacherInfluencerCommission.objects.filter(
-                    influencer=influencer, month=month_date, currency_id=currency_id
-                )
+                GeekCreatorCommission.objects.filter(influencer=influencer, month=month_date, currency_id=currency_id)
             )
             bills.append({"currency_id": currency_id, "total": bill.total_amount})
 
-        # Generate only one row per referral with all information
-        referral_rows = [
-            {
-                "type": "referral_created",
-                "invoice_id": r.invoice_id,
-                "user_id": r.buyer_id,
-                "amount": r.amount,
-                "currency": r.currency.code,
-                "status": r.status,
-                "created_at": r.created_at,
-                "available_at": r.available_at,
-                "is_effective": r.id in [eff.id for eff in effective_referrals],
-                "has_refund": bool(r.invoice.refunded_at),
-            }
-            for r in matured_referrals
-        ]
+        return bills
 
-        df = pd.DataFrame(referral_rows + usage_rows)
+    def _generate_csv_rows(
+        self, usage_rows: list, matured_referrals: list, effective_referral_ids: set, start_dt: datetime
+    ) -> list:
+        """Generate CSV rows for both usage and referral commissions."""
+        all_rows = []
 
-        matured_total = sum(x["amount"] * 0.5 for x in referral_rows if x["is_effective"])
-
-        buffer = io.StringIO()
-        df.to_csv(buffer, index=False)
-        buffer.seek(0)
-
-        # Check if user wants CSV download
-        download_csv = request.GET.get("download_csv", "").lower() in ("1", "true", "yes")
-
-        if download_csv:
-            from django.http import HttpResponse
-
-            response = HttpResponse(buffer.getvalue(), content_type="text/csv")
-            response["Content-Disposition"] = (
-                f'attachment; filename="commission_report_{influencer.email}_{year}_{mon:02d}.csv"'
+        # Add usage commission rows
+        for row in usage_rows:
+            all_rows.append(
+                {
+                    "type": "usage",
+                    "invoice_id": "",
+                    "user_id": row["user_id"],
+                    "cohort_id": row["cohort_id"],
+                    "currency": row["currency"],
+                    "status": "PENDING",
+                    "created_at": start_dt.date().replace(day=1),
+                    "available_at": start_dt.date().replace(day=1),
+                    "is_effective": True,
+                    "total_points": row["total_points"],
+                    "cohort_points": row["cohort_points"],
+                    "paid_amount": row["paid_amount"],
+                    "commission_amount": row["commission"],
+                }
             )
-            return response
 
-        return Response(
-            {
-                "influencer": influencer.email,
-                "month": f"{year}-{mon:02d}",
-                "matured_referral_total": round(matured_total, 2),
-                "usage_total": round(usage_total, 2),
-                "csv": buffer.getvalue(),
-            }
-        )
+        # Add referral commission rows
+        for r in matured_referrals:
+            all_rows.append(
+                {
+                    "type": "referral",
+                    "invoice_id": r.invoice_id,
+                    "user_id": r.buyer_id,
+                    "cohort_id": "",
+                    "currency": r.currency.code,
+                    "status": r.status,
+                    "created_at": r.created_at,
+                    "available_at": r.available_at,
+                    "is_effective": r.id in effective_referral_ids,
+                    "total_points": "",
+                    "cohort_points": "",
+                    "paid_amount": r.invoice.amount if r.invoice else "",
+                    "commission_amount": r.amount,
+                }
+            )
+
+        return all_rows
