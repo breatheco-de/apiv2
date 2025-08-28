@@ -41,9 +41,6 @@ class GeekCreatorCommission(models.Model):
         "payments.Currency", on_delete=models.CASCADE, help_text="Currency of the commission amount"
     )
     num_users = models.IntegerField(default=0, help_text="Number of users involved in this commission")
-    details = models.JSONField(
-        default=dict, blank=True, help_text="Additional details and metadata about the commission"
-    )
 
     usage_commissions = models.ManyToManyField(
         "UserUsageCommission",
@@ -67,6 +64,7 @@ class GeekCreatorCommission(models.Model):
 
 class GeekCreatorPayment(models.Model):
     class Status(models.TextChoices):
+        PREVIEW = "PREVIEW", "Preview"
         PENDING = "PENDING", "Pending"
         PAID = "PAID", "Paid"
 
@@ -82,6 +80,9 @@ class GeekCreatorPayment(models.Model):
         max_length=10, choices=Status, default=Status.PENDING, db_index=True, help_text="Current status of the payment"
     )
     payment_date = models.DateTimeField(null=True, blank=True, help_text="When the payment was actually made")
+    status_text = models.TextField(
+        null=True, blank=True, help_text="Additional text explaining the status (e.g., why a payment is in preview)"
+    )
 
     commissions = models.ManyToManyField(
         GeekCreatorCommission, blank=True, help_text="Commissions included in this payment"
@@ -115,7 +116,9 @@ class GeekCreatorReferralCommission(models.Model):
         related_name="influencer_referred_buys",
         help_text="The person that paid and used the referral coupon",
     )
-    amount = models.FloatField(default=0.0, help_text="Commission amount earned from this referral")
+    amount = models.FloatField(
+        default=0.0, help_text="Commission amount earned from this referral (already applied 0.5 commission)"
+    )
     currency = models.ForeignKey(
         "payments.Currency", on_delete=models.CASCADE, help_text="Currency of the referral commission"
     )
