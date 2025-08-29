@@ -56,10 +56,28 @@ class GeekCreatorCommission(admin.ModelAdmin):
 
 @admin.register(GeekCreatorPayment)
 class GeekCreatorPaymentAdmin(admin.ModelAdmin):
-    list_display = ("influencer", "month", "total_amount", "currency", "status", "payment_date")
+    list_display = ("influencer", "month", "total_amount", "currency", "status", "payment_date", "get_status_text")
     list_filter = ("status", "month", "currency")
     search_fields = ("influencer__email",)
     raw_id_fields = ("influencer", "currency", "commissions")
+    fields = (
+        "influencer",
+        "month",
+        "total_amount",
+        "currency",
+        "status",
+        "status_text",
+        "payment_date",
+        "commissions",
+    )
+
+    def get_status_text(self, obj):
+        """Display status text with formatting."""
+        if obj.status_text:
+            return format_html(f"<span style='color: orange;'>{obj.status_text}</span>")
+        return "-"
+
+    get_status_text.short_description = "Status Info"
 
 
 @admin.register(GeekCreatorReferralCommission)
