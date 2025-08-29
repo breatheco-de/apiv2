@@ -103,14 +103,21 @@ class InfluencerPayoutReportView(APIView):
 
         if not is_preview:
             current_month = current_time.date().replace(day=1)
-            if month_date >= current_month:
+            if mon == 12:
+                next_month_year = year + 1
+                next_month = 1
+            else:
+                next_month_year = year
+                next_month = mon + 1
+
+            if current_month <= datetime(next_month_year, next_month, 1).date():
                 raise ValidationException(
                     translation(
                         lang,
-                        en=f"Cannot create commission report for {year}-{mon:02d} as the month is not complete. "
-                        f"Use ?preview=true to see a preview of the current month.",
-                        es=f"No se puede crear el reporte de comisiones para {year}-{mon:02d} porque el mes no está completo. "
-                        f"Use ?preview=true para ver una vista previa del mes actual.",
+                        en=f"Cannot create commission report for {year}-{mon:02d}. Reports are only available after the next month ends "
+                        f"to ensure all referrals have matured. Use ?preview=true to see current status.",
+                        es=f"No se puede crear el reporte de comisiones para {year}-{mon:02d}. Los reportes solo están disponibles después de que termine el mes siguiente "
+                        f"para asegurar que todos los referrals hayan madurado. Use ?preview=true para ver el estado actual.",
                         slug="month-not-complete",
                     ),
                     code=400,
@@ -667,7 +674,9 @@ class GeekCreatorCommissionView(APIView, HeaderLimitOffsetPagination):
         """List commissions with filters."""
         lang = get_user_language(request)
 
-        queryset = GeekCreatorCommission.objects.filter(cohort__academy__id=academy_id)
+        queryset = GeekCreatorCommission.objects.filter(
+            Q(cohort__academy__id=academy_id) | Q(commission_type=GeekCreatorCommission.CommissionType.REFERRAL)
+        ).distinct()
         lookup = {}
 
         if "creator_id" in request.GET:
@@ -725,6 +734,22 @@ class GeekCreatorCommissionView(APIView, HeaderLimitOffsetPagination):
             except ValueError:
                 raise ValidationException(
                     translation(lang, en="Invalid currency_id", es="currency_id inválido", slug="invalid-currency-id"),
+                    code=400,
+                )
+
+        if "payment_id" in request.GET:
+            try:
+                payment_id = int(request.GET.get("payment_id"))
+                payment = GeekCreatorPayment.objects.get(id=payment_id)
+                queryset = payment.commissions.all()
+            except GeekCreatorPayment.DoesNotExist:
+                raise ValidationException(
+                    translation(lang, en="Payment not found", es="Pago no encontrado", slug="payment-not-found"),
+                    code=404,
+                )
+            except ValueError:
+                raise ValidationException(
+                    translation(lang, en="Invalid payment_id", es="payment_id inválido", slug="invalid-payment-id"),
                     code=400,
                 )
 
@@ -803,6 +828,18 @@ class UserUsageCommissionView(APIView, HeaderLimitOffsetPagination):
                     code=400,
                 )
 
+        if "commission_id" in request.GET:
+            try:
+                commission_id = int(request.GET.get("commission_id"))
+                queryset = queryset.filter(aggregated_usage_commissions__id=commission_id)
+            except ValueError:
+                raise ValidationException(
+                    translation(
+                        lang, en="Invalid commission_id", es="commission_id inválido", slug="invalid-commission-id"
+                    ),
+                    code=400,
+                )
+
         queryset = queryset.filter(**lookup)
 
         page = self.paginate_queryset(queryset, request)
@@ -872,6 +909,19 @@ class GeekCreatorReferralCommissionView(APIView, HeaderLimitOffsetPagination):
             except ValueError:
                 raise ValidationException(
                     translation(lang, en="Invalid currency_id", es="currency_id inválido", slug="invalid-currency-id"),
+                    code=400,
+                )
+
+        if "commission_id" in request.GET:
+            try:
+                commission_id = int(request.GET.get("commission_id"))
+                # Filter referral commissions that belong to the specified aggregated commission
+                queryset = queryset.filter(aggregated_referral_commissions__id=commission_id)
+            except ValueError:
+                raise ValidationException(
+                    translation(
+                        lang, en="Invalid commission_id", es="commission_id inválido", slug="invalid-commission-id"
+                    ),
                     code=400,
                 )
 
