@@ -1090,12 +1090,18 @@ class PaymentMethod(models.Model):
     Different payment methods of each academy have.
     """
 
+    class Visibility(models.TextChoices):
+        PUBLIC = "PUBLIC", "Public"
+        INTERNAL = "INTERNAL", "Internal"
+        HIDDEN = "HIDDEN", "Hidden"
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
     is_backed = models.BooleanField(
         default=False,
         help_text="if this payment method is backed by real life transaction, usually backed payments are considered real income",
     )
+
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
@@ -1113,6 +1119,18 @@ class PaymentMethod(models.Model):
         blank=True,
         default="",
         help_text="A list of country codes that represent countries that can use this payment method, comma separated",
+    )
+    visibility = models.CharField(
+        max_length=10,
+        choices=Visibility,
+        default=Visibility.PUBLIC,
+        help_text="Visibility level of the payment method",
+        db_index=True,
+    )
+    deprecated = models.BooleanField(
+        default=False,
+        help_text="If true, this payment method is deprecated and cannot be used for new purchases",
+        db_index=True,
     )
 
     def __str__(self) -> str:
