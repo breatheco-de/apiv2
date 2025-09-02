@@ -8,8 +8,9 @@ from typing import Any
 from django.contrib.auth.models import User
 from django.db.models import Sum
 
-from breathecode.activity.actions import ENGAGEMENT_POINTS
+from breathecode.activity.actions import get_engagement_points, ENGAGEMENT_POINTS
 from breathecode.admissions.models import Cohort
+from breathecode.assignments.models import Task
 from .models import GeekCreatorCohort
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.payments.models import Invoice
@@ -130,7 +131,14 @@ def compute_usage_rows_and_total(
         logger.warning(f"BigQuery not available: {e}. Skipping usage commission calculation.")
         return rows, total, user_breakdown_by_cohort
 
-    allowed = [(rt, k) for (rt, k), v in ENGAGEMENT_POINTS.items() if v > 0]
+    allowed = []
+    for (rt, k), v in ENGAGEMENT_POINTS.items():
+        if isinstance(v, dict):
+            if any(points > 0 for points in v.values()):
+                allowed.append((rt, k))
+        elif isinstance(v, (int, float)) and v > 0:
+            allowed.append((rt, k))
+
     task_kinds = [kind for (_, kind) in allowed]
     related_types = list({related_type for (related_type, _) in allowed})
 
@@ -172,10 +180,16 @@ def compute_usage_rows_and_total(
     user_total_points: dict[int, float] = defaultdict(float)
     user_cohort_points: dict[int, dict[int, float]] = defaultdict(dict)
 
+    # Collect task IDs and process points in a single loop
+    task_details = {}
+    assignment_review_related_ids = set()
+    processed_events = []  # Store events to process after getting task details
+
     for r in bq_rows:
         try:
             user_id = int(r[0]) if len(r) > 0 else 0
             related_type = str(r[1]) if len(r) > 1 else ""
+            related_id = int(r[2]) if len(r) > 2 else 0
             kind = str(r[3]) if len(r) > 3 else ""
             cohort_id = int(r[4]) if len(r) > 4 else 0
 
@@ -185,8 +199,35 @@ def compute_usage_rows_and_total(
         if user_id <= 0 or not related_type or not kind or cohort_id <= 0:
             continue
 
-        pts = ENGAGEMENT_POINTS.get((related_type, kind), 0.0)
+        if related_type == "assignments.Task" and kind == "assignment_review_status_updated":
+            assignment_review_related_ids.add(related_id)
+            processed_events.append((user_id, related_type, related_id, kind, cohort_id))
+        else:
+            pts = get_engagement_points(related_type, kind, related_id)
+            if pts > 0:
+                breakdown_key = kind
+                user_total_points[user_id] += pts
+                if cohort_id in eligible_cohort_ids:
+                    user_cohort_points.setdefault(user_id, {})[cohort_id] = (
+                        user_cohort_points.get(user_id, {}).get(cohort_id, 0.0) + pts
+                    )
+                user_breakdown_by_cohort[user_id][cohort_id][breakdown_key] = (
+                    user_breakdown_by_cohort[user_id][cohort_id].get(breakdown_key, 0.0) + pts
+                )
+
+    if assignment_review_related_ids:
+        tasks = Task.objects.filter(id__in=assignment_review_related_ids).values("id", "task_type", "revision_status")
+        task_details = {task["id"]: task for task in tasks}
+
+    for user_id, related_type, related_id, kind, cohort_id in processed_events:
+        pts = get_engagement_points(related_type, kind, related_id)
         if pts <= 0:
+            continue
+
+        task = task_details.get(related_id)
+        if task and task["revision_status"] == Task.RevisionStatus.APPROVED:
+            breakdown_key = f"{kind}_{task['task_type']}"
+        else:
             continue
 
         user_total_points[user_id] += pts
@@ -194,10 +235,8 @@ def compute_usage_rows_and_total(
             user_cohort_points.setdefault(user_id, {})[cohort_id] = (
                 user_cohort_points.get(user_id, {}).get(cohort_id, 0.0) + pts
             )
-
-        # Track breakdown by user and cohort
-        user_breakdown_by_cohort[user_id][cohort_id][kind] = (
-            user_breakdown_by_cohort[user_id][cohort_id].get(kind, 0.0) + pts
+        user_breakdown_by_cohort[user_id][cohort_id][breakdown_key] = (
+            user_breakdown_by_cohort[user_id][cohort_id].get(breakdown_key, 0.0) + pts
         )
 
     paid_by_user_currency = (
