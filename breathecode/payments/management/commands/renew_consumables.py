@@ -22,10 +22,12 @@ class Command(BaseCommand):
             .filter(
                 last_consumable_valid_until__lte=self.utc_now + timedelta(hours=1),
                 plan_handler__subscription__next_payment_at__gt=self.utc_now,
+                plan_handler__subscription__invoices__amount__gt=0,
             )
             .exclude(plan_handler__subscription__status="CANCELLED")
             .exclude(plan_handler__subscription__status="DEPRECATED")
             .exclude(plan_handler__subscription__status="PAYMENT_ISSUE")
+            .distinct()
         )
 
         stock_schedulers_to_renew_ids = list(stock_schedulers_to_renew.values_list("id", flat=True))
