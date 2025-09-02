@@ -180,10 +180,9 @@ def compute_usage_rows_and_total(
     user_total_points: dict[int, float] = defaultdict(float)
     user_cohort_points: dict[int, dict[int, float]] = defaultdict(dict)
 
-    # Collect task IDs and process points in a single loop
     task_details = {}
     assignment_review_related_ids = set()
-    processed_events = []  # Store events to process after getting task details
+    processed_events = []
 
     for r in bq_rows:
         try:
