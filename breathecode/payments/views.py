@@ -2692,6 +2692,7 @@ class PaymentMethodView(APIView):
                     "currency_code",
                     "lang",
                     "academy_id",
+                    "visibility",
                 ],
             },
             # Use the custom field handler
