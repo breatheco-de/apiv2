@@ -123,7 +123,7 @@ class ServiceItem(AbstractServiceItem):
     # New fields for team management
     is_team_allowed = models.BooleanField(
         default=False, 
-        help_text="Whether this service item supports team members"
+        help_text="Whether this service item supports team members, only one team_allowed service item is allowed per plan"
     )
     max_team_members = models.IntegerField(
         default=1, 
@@ -1097,7 +1097,7 @@ class Plan(AbstractPriceByTime):
     # New fields for team support
     supports_teams = models.BooleanField(
         default=False, 
-        help_text="Whether this plan supports team members"
+        help_text="Whether this plan supports team members, this field should be read only and set automatically when a service iteam with is_team_allowed is added/removed from the plan"
     )
     seat_add_on_service = models.ForeignKey(
         AcademyService,
@@ -1119,18 +1119,44 @@ class Plan(AbstractPriceByTime):
         return self.get_team_enabled_service_items().exists()
     
     def clean(self):
-        # ... existing validation ...
-        
-        if self.supports_teams and not self.seat_add_on_service:
-            raise forms.ValidationError(
-                "Plans that support teams must have a seat add-on service configured"
-            )
-        
-        # Validate that if supports_teams is True, at least one service item supports teams
-        if self.supports_teams and not self.has_team_enabled_services():
-            raise forms.ValidationError(
-                "Plans that support teams must have at least one service item with is_team_allowed=True"
-            )
+        """Validate the model before saving."""
+        # Ensure supports_teams is not manually set
+        expected_supports_teams = self.has_team_enabled_services()
+        if self.supports_teams != expected_supports_teams:
+            raise ValidationError({
+                'supports_teams': 'This field is read-only and cannot be set manually.'
+            })
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure supports_teams is set correctly."""
+        # Calculate supports_teams before saving
+        self.supports_teams = self.has_team_enabled_services()
+
+        # Use a transaction to ensure atomicity
+        with transaction.atomic():
+            # Validate the model
+            self.clean()
+            # Call the parent save method
+            super().save(*args, **kwargs)
+
+
+# Signal handlers to make sure many to many relations between service iteam and plan also cover the validation for team enabled
+@receiver(m2m_changed, sender=Plan.service_items.through)
+def update_plan_supports_teams_on_m2m(sender, instance, action, **kwargs):
+    """Update supports_teams when PlanServiceItem relationships change."""
+    if action in ['post_add', 'post_remove', 'post_clear']:
+        with transaction.atomic():
+            instance.supports_teams = instance.has_team_enabled_services()
+            instance.save()
+
+@receiver([post_save, post_delete], sender=ServiceItem)
+def update_plan_supports_teams_on_service_item(sender, instance, **kwargs):
+    """Update supports_teams when a ServiceItem is saved or deleted."""
+    plans = Plan.objects.filter(service_items=instance).distinct()
+    with transaction.atomic():
+        for plan in plans:
+            plan.supports_teams = plan.has_team_enabled_services()
+            plan.save()
 ```
 
 #### 6.2 Update Bag Handler for Seat Add-ons
@@ -1200,104 +1226,9 @@ class BagHandler:
         # ... rest of execution ...
 ```
 
-### Phase 7: Frontend Integration
+### Phase 7: Supervisor Implementation
 
-#### 7.1 Team Management Interface
-
-```typescript
-// Frontend components for team management
-
-interface TeamMember {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  status: 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'REMOVED';
-  invited_at: string;
-  joined_at?: string;
-  removed_at?: string;
-}
-
-interface SubscriptionWithTeam {
-  id: number;
-  is_team_subscription: boolean;
-  max_team_members: number;
-  team_member_count: number;
-  team_members: TeamMember[];
-}
-
-// Team member management component
-const TeamMemberManagement: React.FC<{ subscription: SubscriptionWithTeam }> = ({ subscription }) => {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(subscription.team_members);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showBulkImport, setShowBulkImport] = useState(false);
-  
-  const addTeamMember = async (memberData: Partial<TeamMember>) => {
-    const response = await fetch(`/api/payments/subscriptions/${subscription.id}/team-members/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(memberData)
-    });
-    
-    if (response.ok) {
-      const newMember = await response.json();
-      setTeamMembers([...teamMembers, newMember]);
-    }
-  };
-  
-  const bulkImportMembers = async (csvData: string) => {
-    const response = await fetch(`/api/payments/subscriptions/${subscription.id}/team-members/bulk-import/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ csv_data: csvData })
-    });
-    
-    if (response.ok) {
-      const result = await response.json();
-      setTeamMembers([...teamMembers, ...result.team_members]);
-    }
-  };
-  
-  return (
-    <div className="team-management">
-      <h3>Team Members ({teamMembers.length}/{subscription.max_team_members})</h3>
-      
-      <div className="team-actions">
-        <button onClick={() => setShowAddForm(true)}>Add Member</button>
-        <button onClick={() => setShowBulkImport(true)}>Bulk Import</button>
-      </div>
-      
-      <div className="team-members-list">
-        {teamMembers.map(member => (
-          <TeamMemberCard 
-            key={member.id} 
-            member={member} 
-            onRemove={() => removeTeamMember(member.id)}
-          />
-        ))}
-      </div>
-      
-      {showAddForm && (
-        <AddTeamMemberForm 
-          onAdd={addTeamMember}
-          onClose={() => setShowAddForm(false)}
-        />
-      )}
-      
-      {showBulkImport && (
-        <BulkImportForm 
-          onImport={bulkImportMembers}
-          onClose={() => setShowBulkImport(false)}
-        />
-      )}
-    </div>
-  );
-};
-```
-
-### Phase 8: Supervisor Implementation
-
-#### 8.1 Add Team Management Supervisors
+#### 7.1 Add Team Management Supervisors
 
 ```python
 # breathecode/payments/supervisors.py
@@ -1431,150 +1362,6 @@ def fix_team_size_exceeded(subscription_id: int, service_item_id: int, current_c
         return None  # Retry
 ```
 
-### Phase 9: Feature Flags
-
-#### 9.1 Add Feature Flag Support
-
-```python
-# breathecode/payments/flags.py
-
-from breathecode.utils import FeatureFlag
-
-TEAM_MANAGEMENT_ENABLED = FeatureFlag(
-    name="team_management_enabled",
-    default=False,
-    description="Enable team management features for seat-based pricing"
-)
-
-BULK_TEAM_IMPORT_ENABLED = FeatureFlag(
-    name="bulk_team_import_enabled", 
-    default=False,
-    description="Enable bulk CSV import for team members"
-)
-
-TEAM_SUPERVISORS_ENABLED = FeatureFlag(
-    name="team_supervisors_enabled",
-    default=True,
-    description="Enable supervisors for team management monitoring"
-)
-```
-
-#### 9.2 Update Apps Configuration
-
-```python
-# breathecode/payments/apps.py
-
-from django.apps import AppConfig
-
-class PaymentsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'breathecode.payments'
-    
-    def ready(self):
-        from .flags import TEAM_MANAGEMENT_ENABLED, TEAM_SUPERVISORS_ENABLED
-        
-        # Initialize feature flags
-        if TEAM_SUPERVISORS_ENABLED.is_enabled():
-            # Import supervisors to register them
-            try:
-                from . import supervisors
-            except ImportError:
-                pass
-```
-
-### Phase 10: Management Commands
-
-#### 10.1 Add Management Commands
-
-```python
-# breathecode/payments/management/commands/migrate_team_members.py
-
-from django.core.management.base import BaseCommand
-from breathecode.payments.models import TeamMember, Consumable, Subscription
-
-class Command(BaseCommand):
-    help = 'Migrate existing team data to new team member structure'
-    
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--dry-run', 
-            action='store_true', 
-            help='Show what would be migrated without making changes'
-        )
-        parser.add_argument(
-            '--subscription-id',
-            type=int,
-            help='Migrate specific subscription only'
-        )
-    
-    def handle(self, *args, **options):
-        dry_run = options['dry_run']
-        subscription_id = options.get('subscription_id')
-        
-        if subscription_id:
-            subscriptions = Subscription.objects.filter(id=subscription_id)
-        else:
-            subscriptions = Subscription.objects.all()
-        
-        self.stdout.write(f"Found {subscriptions.count()} subscriptions to check")
-        
-        for subscription in subscriptions:
-            self.migrate_subscription(subscription, dry_run)
-    
-    def migrate_subscription(self, subscription, dry_run):
-        # Migration logic for existing team data
-        self.stdout.write(f"Processing subscription {subscription.id}")
-        
-        if dry_run:
-            self.stdout.write(self.style.WARNING("DRY RUN - No changes will be made"))
-```
-
-```python
-# breathecode/payments/management/commands/fix_team_consumables.py
-
-from django.core.management.base import BaseCommand
-from breathecode.payments.models import TeamMember, Consumable
-from breathecode.payments.actions import create_team_member_consumables
-
-class Command(BaseCommand):
-    help = 'Fix missing consumables for team members'
-    
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--team-member-id',
-            type=int,
-            help='Fix specific team member only'
-        )
-    
-    def handle(self, *args, **options):
-        team_member_id = options.get('team_member_id')
-        
-        if team_member_id:
-            team_members = TeamMember.objects.filter(id=team_member_id)
-        else:
-            # Find all active team members without consumables
-            team_members = TeamMember.objects.filter(
-                status=TeamMember.Status.ACTIVE
-            ).exclude(
-                id__in=Consumable.objects.filter(
-                    team_member__isnull=False
-                ).values_list('team_member_id', flat=True)
-            )
-        
-        self.stdout.write(f"Found {team_members.count()} team members needing consumables")
-        
-        for team_member in team_members:
-            try:
-                create_team_member_consumables(team_member)
-                self.stdout.write(
-                    self.style.SUCCESS(f"Fixed consumables for team member {team_member.id}")
-                )
-            except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"Failed to fix team member {team_member.id}: {e}")
-                )
-```
-
 ### Phase 11: Testing
 
 #### 11.1 Unit Tests
@@ -1706,185 +1493,6 @@ class TeamManagementTestCase(TestCase):
             )
 ```
 
-#### 8.2 Integration Tests
-
-```python
-# breathecode/payments/tests/test_team_api.py
-
-class TeamManagementAPITestCase(APITestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(email='owner@test.com')
-        self.academy = Academy.objects.create(slug='test-academy')
-        self.service = Service.objects.create(slug='seat-service')
-        self.service_item = ServiceItem.objects.create(
-            service=self.service,
-            is_team_allowed=True,
-            max_team_members=10,
-            how_many=1
-        )
-        self.subscription = Subscription.objects.create(
-            user=self.user,
-            academy=self.academy
-        )
-        self.subscription.service_items.add(self.service_item)
-        # Create a seat consumable for testing
-        self.seat_consumable = Consumable.objects.create(
-            service_item=self.service_item,
-            user=self.user,
-            subscription=self.subscription,
-            how_many=1
-        )
-        self.client.force_authenticate(user=self.user)
-    
-    def test_create_team_member_api(self):
-        """Test creating team member via API."""
-        data = {
-            'email': 'member@test.com',
-            'first_name': 'John',
-            'last_name': 'Doe',
-            'seat_consumable_id': self.seat_consumable.id
-        }
-        
-        response = self.client.post(
-            f'/api/payments/subscriptions/{self.subscription.id}/team-members/',
-            data
-        )
-        
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(TeamMember.objects.count(), 1)
-    
-    def test_bulk_import_team_members_api(self):
-        """Test bulk importing team members via API."""
-        csv_data = "email,first_name,last_name\nmember1@test.com,John,Doe\nmember2@test.com,Jane,Smith"
-        
-        response = self.client.post(
-            f'/api/payments/subscriptions/{self.subscription.id}/team-members/bulk-import/',
-            {
-                'csv_data': csv_data,
-                'seat_consumable_id': self.seat_consumable.id
-            }
-        )
-        
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(TeamMember.objects.count(), 2)
-    
-    def test_team_member_activation_api(self):
-        """Test team member activation via API."""
-        team_member = TeamMember.objects.create(
-            seat_consumable=self.seat_consumable,
-            email='member@test.com',
-            first_name='John',
-            last_name='Doe'
-        )
-        
-        # Create user with matching email
-        member_user = User.objects.create_user(email='member@test.com')
-        self.client.force_authenticate(user=member_user)
-        
-        response = self.client.post(
-            f'/api/payments/subscriptions/{self.subscription.id}/team-members/{team_member.id}/activate/'
-        )
-        
-        self.assertEqual(response.status_code, 200)
-        team_member.refresh_from_db()
-        self.assertEqual(team_member.status, TeamMember.Status.ACTIVE)
-```
-
-### Phase 9: Migration Strategy
-
-#### 9.1 Database Migrations
-
-```python
-# breathecode/payments/migrations/XXXX_add_team_management.py
-
-from django.db import migrations, models
-import django.db.models.deletion
-
-class Migration(migrations.Migration):
-    dependencies = [
-        ('payments', 'XXXX_previous_migration'),
-        ('authenticate', 'XXXX_user_invite_model'),
-        ('auth', 'XXXX_user_model'),
-    ]
-
-    operations = [
-        # First, add team_member field to UserInvite
-        migrations.AddField(
-            model_name='userinvite',
-            name='team_member',
-            field=models.ForeignKey(
-                blank=True,
-                help_text='Team member this invite is for (if it\'s a team invitation)',
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name='invites',
-                to='payments.teammember'
-            ),
-        ),
-        
-        # Create TeamMember model
-        migrations.CreateModel(
-            name='TeamMember',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('email', models.EmailField(help_text='The email used to invite the member', max_length=254)),
-                ('first_name', models.CharField(help_text='The first name used to invite the user', max_length=150)),
-                ('last_name', models.CharField(help_text='The last name used to invite the user', max_length=150)),
-                ('status', models.CharField(choices=[('INVITED', 'Invited'), ('ACTIVE', 'Active'), ('REMOVED', 'Removed')], default='INVITED', help_text='Team member status', max_length=10)),
-                ('invited_at', models.DateTimeField(auto_now_add=True, help_text='When the team member was invited')),
-                ('joined_at', models.DateTimeField(blank=True, help_text='When the team member joined', null=True)),
-                ('removed_at', models.DateTimeField(blank=True, help_text='When the team member was removed', null=True)),
-                ('seat_consumable', models.ForeignKey(help_text='Consumable user to add the teams, links the member with the owner original subscription', on_delete=django.db.models.deletion.CASCADE, related_name='team_members', to='payments.consumable')),
-                ('user', models.ForeignKey(blank=True, help_text='User account if team member has registered', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='team_memberships', to='auth.user')),
-            ],
-            options={
-                'unique_together': {('subscription', 'email')},
-            },
-        ),
-        
-        # Add team fields to ServiceItem
-        migrations.AddField(
-            model_name='serviceitem',
-            name='is_team_allowed',
-            field=models.BooleanField(default=False, help_text='Whether this service item supports team members'),
-        ),
-        migrations.AddField(
-            model_name='serviceitem',
-            name='max_team_members',
-            field=models.IntegerField(default=1, help_text='Maximum number of team members allowed for this service item'),
-        ),
-        
-        # Add team field to Consumable
-        migrations.AddField(
-            model_name='consumable',
-            name='team_member',
-            field=models.ForeignKey(blank=True, help_text='Team member this consumable belongs to', null=True, on_delete=django.db.models.deletion.CASCADE, to='payments.teammember'),
-        ),
-        
-        # Add team fields to Plan
-        migrations.AddField(
-            model_name='plan',
-            name='supports_teams',
-            field=models.BooleanField(default=False, help_text='Whether this plan supports team members'),
-        ),
-        migrations.AddField(
-            model_name='plan',
-            name='seat_add_on_service',
-            field=models.ForeignKey(blank=True, help_text='Service used for additional seat add-ons', null=True, on_delete=django.db.models.deletion.SET_NULL, to='payments.academyservice'),
-        ),
-        
-        # Create indexes
-        migrations.AddIndex(
-            model_name='teammember',
-            index=models.Index(fields=['subscription', 'status'], name='payments_teammember_subscription_status_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='teammember',
-            index=models.Index(fields=['email'], name='payments_teammember_email_idx'),
-        ),
-    ]
-```
-
 ### Phase 10: Documentation and Deployment
 
 #### 10.1 API Documentation
@@ -1971,9 +1579,7 @@ This implementation plan provides a comprehensive solution for seat-based pricin
 - **Enhanced Validation**: Robust input validation with proper error messages and email format checking
 - **Database Constraints**: Unique constraints and indexes to prevent data inconsistencies
 - **Supervisor System**: Automated monitoring for orphaned team members and team size violations
-- **Feature Flags**: Safe deployment with feature toggles for team management components
 - **Async Support**: Async versions of key functions for better performance
-- **Management Commands**: Administrative tools for data migration and fixing issues
 - **Enhanced Serializers**: Detailed serializers with consumable summaries and owner information
 - **Security Improvements**: Rate limiting, input sanitization, and proper authentication checks
 - **Signal Integration**: Automatic team member activation when invites are accepted through existing BreatheCode flows
