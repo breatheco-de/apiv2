@@ -71,7 +71,7 @@ name = "scripts" # do not change this because this allows to run the scripts
 version = "0.1.0"
 description = ""
 authors = [{ name = "jefer94", email = "jdefreitaspinto@gmail.com" }]
-readme = "README.md"
+readme = "docs/README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "django (>=5.1.5,<6.0.0)",
