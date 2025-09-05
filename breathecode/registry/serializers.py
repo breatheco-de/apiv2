@@ -253,6 +253,7 @@ class AssetSerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
+    assessment = AssessmentSmallSerializer(required=False)
     category = AssetCategorySmallSerializer(required=False)
     asset_type = serpy.Field()
     visibility = serpy.Field()
