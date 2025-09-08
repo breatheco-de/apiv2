@@ -1653,6 +1653,52 @@ def is_subscription_paid(subscription: Subscription) -> bool:
     return False
 
 
+def manage_plan_financing_add_ons(request: Request, bag: Bag, lang: str) -> float:
+    """Return the sum of add-on prices from an object list in request.data.
+
+    Expected format (always objects):
+      add_ons: [
+        { id: <academy_service_id>, quantity?: <int>, ... },
+        ...
+      ]
+    Rules:
+      - Only AcademyServices in plan.add_ons are considered
+      - quantity defaults to 1 if missing; must be > 0
+    """
+
+    plan = bag.plans.filter().first()
+    if not plan:
+        return 0.0
+
+    payload = request.data.get("add_ons")
+    if not isinstance(payload, list) or not payload:
+        return 0.0
+
+    allowed_addons = {a.id: a for a in plan.add_ons.all()}
+
+    total = 0.0
+    for entry in payload:
+        if not isinstance(entry, dict):
+            continue
+
+        academy_service_id = entry.get("id") if isinstance(entry.get("id"), int) else None
+        if academy_service_id is None:
+            continue
+
+        add_on = allowed_addons.get(academy_service_id)
+        if not add_on:
+            continue
+
+        qty = entry.get("quantity")
+        if not isinstance(qty, int) or qty <= 0:
+            qty = 1
+
+        price, _, _ = add_on.get_discounted_price(qty, bag.country_code, lang)
+        total += float(price or 0)
+
+    return total
+
+
 def is_plan_financing_paid(plan_financing: PlanFinancing) -> bool:
     """
     Check if a plan financing is paid by examining its plans.

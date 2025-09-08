@@ -2481,6 +2481,11 @@ class PayView(APIView):
                             bag.currency = c
                             bag.save()
 
+                        if request.data.get("add_ons"):
+                            add_ons_amount = actions.manage_plan_financing_add_ons(request, bag, lang)
+
+                        adjusted_price += add_ons_amount
+
                         # Then apply coupons
                         coupons = bag.coupons.all()
                         amount = get_discounted_price(adjusted_price, coupons)
