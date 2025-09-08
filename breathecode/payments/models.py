@@ -236,6 +236,28 @@ class ServiceItem(AbstractServiceItem):
         help_text="If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values.",
     )
 
+    # NEW: team settings
+    is_team_allowed = models.BooleanField(default=False, db_index=True, help_text="Allow team seats for this item")
+    team_group = models.ForeignKey(
+        Group,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Required auth group for team members of this item",
+    )
+    # -1 means unlimited team members
+    max_team_members = models.IntegerField(default=-1, help_text="Max team members allowed (-1 = unlimited)")
+
+    # JSON structure describing allowed team consumables per service slug
+    # Example:
+    # {
+    #   "allowed": [
+    #       {"service_slug": "mentorship-service", "unit_type": "UNIT", "renew_at_unit": "MONTH"}
+    #   ]
+    # }
+    team_consumables = models.JSONField(default=dict, blank=True, help_text="Team consumables policy JSON")
+
     # the below fields are useless when is_renewable=False
     renew_at = models.IntegerField(
         default=1, help_text="Renew at (e.g. 1, 2, 3, ...) it going to be used to build the balance of " "customer"
@@ -250,6 +272,46 @@ class ServiceItem(AbstractServiceItem):
         if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
             raise forms.ValidationError("You cannot update a service item")
 
+        if self.is_team_allowed:
+            # team_group is required when team is enabled
+            if not self.team_group:
+                raise forms.ValidationError("team_group is required when is_team_allowed is True")
+
+            # validate team_consumables shape and referenced services
+            data = self.team_consumables or {}
+            allowed = data.get("allowed")
+            if not isinstance(allowed, list) or not allowed:
+                raise forms.ValidationError("team_consumables.allowed must be a non-empty list")
+
+            valid_unit_types = {x[0] for x in SERVICE_UNITS}
+            valid_renew_units = {x[0] for x in PAY_EVERY_UNIT}
+
+            for i, entry in enumerate(allowed):
+                if not isinstance(entry, dict):
+                    raise forms.ValidationError(f"team_consumables.allowed[{i}] must be an object")
+
+                service_slug = entry.get("service_slug")
+                unit_type = entry.get("unit_type")
+                renew_at_unit = entry.get("renew_at_unit")
+
+                if not service_slug or not isinstance(service_slug, str):
+                    raise forms.ValidationError(f"team_consumables.allowed[{i}].service_slug must be a string")
+
+                if not Service.objects.filter(slug=service_slug).exists():
+                    raise forms.ValidationError(
+                        f"Unknown service_slug '{service_slug}' in team_consumables.allowed[{i}]"
+                    )
+
+                if unit_type not in valid_unit_types:
+                    raise forms.ValidationError(
+                        f"Invalid unit_type '{unit_type}' in team_consumables.allowed[{i}] (valid: {valid_unit_types})"
+                    )
+
+                if renew_at_unit not in valid_renew_units:
+                    raise forms.ValidationError(
+                        f"Invalid renew_at_unit '{renew_at_unit}' in team_consumables.allowed[{i}] (valid: {valid_renew_units})"
+                    )
+
     def save(self, *args, **kwargs):
         self.full_clean()
 
@@ -260,6 +322,31 @@ class ServiceItem(AbstractServiceItem):
 
     def __str__(self) -> str:
         return f"{self.service.slug} ({self.how_many})"
+
+    # Helper methods for team management
+    def team_members_qs_for_subscription(self, subscription: "Subscription") -> QuerySet["SubscriptionSeat"]:
+        from .models import SubscriptionSeat  # local import to avoid circular
+
+        return SubscriptionSeat.objects.filter(subscription=subscription, service_item=self)
+
+    def count_team_members_for_subscription(self, subscription: "Subscription") -> int:
+        return self.team_members_qs_for_subscription(subscription).count()
+
+    def can_add_team_member_for_subscription(self, subscription: "Subscription", additional: int = 1) -> bool:
+        if not self.is_team_allowed:
+            return False
+
+        if self.max_team_members is None or self.max_team_members < 0:
+            return True
+
+        current = self.count_team_members_for_subscription(subscription)
+
+        # also count pending seat invites targeting this subscription/item
+        from .models import SubscriptionSeatInvite
+
+        pending_invites = SubscriptionSeatInvite.objects.filter(subscription=subscription, service_item=self).count()
+
+        return (current + pending_invites + additional) <= self.max_team_members
 
 
 class ServiceItemFeature(models.Model):
@@ -1539,6 +1626,142 @@ class SubscriptionServiceItem(models.Model):
         return str(self.service_item)
 
 
+class SubscriptionSeat(models.Model):
+    """Seat assignment per subscription and service item (add-on).
+
+    This model maps users to the number of seats consumed within a subscription
+    for a given seat-bearing service item. Billing remains on the subscription owner;
+    this is used to distribute access/consumables to members.
+    """
+
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text="Subscription")
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text="Seat service item")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Assigned user")
+
+    # number of seats assigned to this user for this service item in this subscription
+    seats = models.PositiveIntegerField(default=1, help_text="Number of seats assigned to the user (>= 1)")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["subscription", "service_item", "user"], name="uniq_subscription_seat_per_user"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.subscription_id}:{self.service_item_id}:{self.user_id}({self.seats})"
+
+
+class SubscriptionSeatInvite(models.Model):
+    """Link a UserInvite to a specific subscription and seat-bearing service item.
+
+    When the invite is accepted and associated to a User, it will be converted
+    into a SubscriptionSeat assignment for that user.
+    """
+
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text="Subscription")
+    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text="Seat service item")
+    invite = models.ForeignKey(UserInvite, on_delete=models.CASCADE, help_text="User invite")
+    seats = models.PositiveIntegerField(default=1, help_text="Number of seats to grant upon acceptance (>= 1)")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["subscription", "service_item", "invite"], name="uniq_subscription_seat_invite"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.subscription_id}:{self.service_item_id}:invite={self.invite_id}(x{self.seats})"
+
+
+class BillingTeam(models.Model):
+    """A simple team entity to group users under an owner and academy.
+
+    Teams can hold multiple members and one or more subscriptions allocate seats to the team.
+    Billing remains on the subscription owner(s).
+    """
+
+    name = models.CharField(max_length=80, help_text="Team name")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Team owner")
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy context")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        unique_together = ("owner", "name", "academy")
+
+    def __str__(self) -> str:
+        return f"{self.academy.slug}:{self.name}"
+
+
+class BillingTeamMembership(models.Model):
+    team = models.ForeignKey(BillingTeam, on_delete=models.CASCADE, help_text="Team")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Member user")
+    is_admin = models.BooleanField(default=False, help_text="Team admin")
+
+    # NEW: email, status, seat_consumable
+    email = models.CharField(max_length=150, default=None, null=True, blank=True, db_index=True)
+
+    class Status(models.TextChoices):
+        PENDING = ("PENDING", "Pending")
+        ACTIVE = ("ACTIVE", "Active")
+        REVOKED = ("REVOKED", "Revoked")
+
+    status = models.CharField(max_length=10, choices=Status, default=Status.PENDING, db_index=True)
+
+    # Optional link to consumable representing the seat issued to this member
+    seat_consumable = models.ForeignKey(
+        "payments.Consumable",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Consumable issued for this team member seat",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        unique_together = ("team", "user")
+        constraints = [
+            models.UniqueConstraint(fields=["seat_consumable", "email"], name="uniq_btm_seat_consumable_email")
+        ]
+        indexes = [
+            models.Index(fields=["status"]),
+            models.Index(fields=["email"]),
+            models.Index(fields=["user"]),
+        ]
+
+    def clean(self):
+        # normalize email
+        if self.email:
+            self.email = self.email.strip().lower()
+        # basic validation: either user or email must be present
+        if not self.user_id and not self.email:
+            raise forms.ValidationError("Either user or email must be set for a team membership")
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        first_name = getattr(self.user, "first_name", "") or ""
+        last_name = getattr(self.user, "last_name", "") or ""
+        name = (first_name + " " + last_name).strip() or (self.email or str(self.user_id))
+        email = self.user.email if getattr(self.user, "email", None) else (self.email or "")
+        return f"{name} ({email})"
+
+
 class Consumable(AbstractServiceItem):
     """This model is used to represent the units of a service that can be consumed."""
 
@@ -1566,6 +1789,17 @@ class Consumable(AbstractServiceItem):
         blank=True,
         null=True,
         help_text="PlanFinancing that generated this consumable",
+    )
+
+    # link to team membership (optional)
+    team_member = models.ForeignKey(
+        "payments.BillingTeamMembership",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Team member associated to this consumable (if any)",
+        db_index=True,
     )
 
     # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
@@ -1611,7 +1845,7 @@ class Consumable(AbstractServiceItem):
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: Optional[dict] = None,
-    ) -> QuerySet[Consumable]:
+    ) -> QuerySet["Consumable"]:
 
         if extra is None:
             extra = {}
@@ -1688,7 +1922,7 @@ class Consumable(AbstractServiceItem):
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: dict = None,
-    ) -> QuerySet[Consumable]:
+    ) -> QuerySet["Consumable"]:
 
         return cls.list(
             user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
@@ -1733,10 +1967,10 @@ class Consumable(AbstractServiceItem):
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
         parent_entities = [self.subscription, self.plan_financing]
 
+        settings = get_user_settings(self.user.id)
+
         how_many_resources_are_set = len([r for r in resources if r])
         how_many_parent_entities_are_set = len([p for p in parent_entities if p])
-
-        settings = get_user_settings(self.user.id)
 
         if how_many_resources_are_set > 1:
             raise forms.ValidationError(
@@ -1767,6 +2001,43 @@ class Consumable(AbstractServiceItem):
 
         if self.how_many < 0 and self.service_item.how_many >= 0:
             self.how_many = 0
+
+        # Team checks
+        if self.team_member and self.service_item.is_team_allowed:
+            # ensure user matches member or email
+            if self.team_member.user_id and self.team_member.user_id != self.user_id:
+                raise forms.ValidationError(
+                    translation(
+                        settings.lang,
+                        en="Team member does not match consumable user",
+                        es="El miembro del equipo no coincide con el usuario del consumible",
+                    )
+                )
+
+            # ensure required group
+            if (
+                self.service_item.team_group
+                and not self.user.groups.filter(id=self.service_item.team_group_id).exists()
+            ):
+                raise forms.ValidationError(
+                    translation(
+                        settings.lang,
+                        en="User is not in the required team group",
+                        es="El usuario no está en el grupo requerido del equipo",
+                    )
+                )
+
+            # ensure service is allowed in team_consumables
+            policy = (self.service_item.team_consumables or {}).get("allowed") or []
+            allowed_slugs = {x.get("service_slug") for x in policy if isinstance(x, dict)}
+            if self.service_item.service.slug not in allowed_slugs:
+                raise forms.ValidationError(
+                    translation(
+                        settings.lang,
+                        en="Service is not allowed by team_consumables",
+                        es="El servicio no está permitido por team_consumables",
+                    )
+                )
 
         return super().clean()
 

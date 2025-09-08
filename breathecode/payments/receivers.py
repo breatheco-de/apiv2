@@ -7,13 +7,14 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import Group
 
-from breathecode.authenticate.models import GoogleWebhook
-from breathecode.authenticate.signals import google_webhook_saved
+from breathecode.authenticate.models import GoogleWebhook, UserInvite
+from breathecode.authenticate.signals import google_webhook_saved, invite_status_updated
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments import tasks
 
-from .models import Consumable, Plan, PlanFinancing, Subscription
+from .models import Consumable, Plan, PlanFinancing, Subscription, SubscriptionSeat, SubscriptionSeatInvite
+from . import actions as payments_actions
 from .signals import (
     consume_service,
     grant_service_permissions,
@@ -98,6 +99,12 @@ def grant_plan_permissions_receiver(
     if group and not instance.user.groups.filter(name="Paid Student").exists():
         instance.user.groups.add(group)
 
+    # Propagate group access to seat assignees for this subscription
+    if isinstance(instance, Subscription) and group:
+        for seat in SubscriptionSeat.objects.filter(subscription=instance).select_related("user"):
+            if not seat.user.groups.filter(name="Paid Student").exists():
+                seat.user.groups.add(group)
+
 
 @receiver(revoke_plan_permissions, sender=Subscription)
 @receiver(revoke_plan_permissions, sender=PlanFinancing)
@@ -116,6 +123,45 @@ def revoke_plan_permissions_receiver(sender, instance, **kwargs):
 
     if not user_has_active_paid_plans(user):
         user.groups.remove(group)
+
+    # Revoke for seat assignees of this subscription if they have no other paid access
+    if isinstance(instance, Subscription) and group:
+        for seat in SubscriptionSeat.objects.filter(subscription=instance).select_related("user"):
+            seat_user = seat.user
+            if not user_has_active_paid_plans(seat_user):
+                seat_user.groups.remove(group)
+
+
+@receiver(invite_status_updated, sender=UserInvite)
+def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **kwargs):
+    """When a seat invite is accepted and binded to a user, convert it into a SubscriptionSeat."""
+    if instance.status != "ACCEPTED" or not instance.user_id:
+        return
+
+    for seat_invite in SubscriptionSeatInvite.objects.filter(invite=instance).select_related(
+        "subscription", "service_item"
+    ):
+        # Capacity enforcement at acceptance time
+        item = seat_invite.service_item
+        subscription = seat_invite.subscription
+        if not item.can_add_team_member_for_subscription(subscription, additional=1):
+            continue
+
+        seat, _ = SubscriptionSeat.objects.get_or_create(
+            subscription=subscription,
+            service_item=item,
+            user=instance.user,
+            defaults={"seats": seat_invite.seats},
+        )
+
+        # If subscription is already active and paid, ensure group is granted and consumables are issued now
+        if subscription.status == Subscription.Status.ACTIVE and payments_actions.is_subscription_paid(subscription):
+            group = Group.objects.filter(name="Paid Student").first()
+            if group and not instance.user.groups.filter(name="Paid Student").exists():
+                instance.user.groups.add(group)
+
+            # Issue consumables for the new seat assignee
+            tasks.renew_subscription_consumables.delay(subscription.id)
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)

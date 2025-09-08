@@ -44,6 +44,7 @@ from .models import (
     ServiceStockScheduler,
     Subscription,
     SubscriptionServiceItem,
+    SubscriptionSeat,
 )
 
 logger = logging.getLogger(__name__)
@@ -205,30 +206,67 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         logger.error(f"The Plan not have a resource linked to it for the ServiceStockScheduler {scheduler.id}")
         return
 
-    consumable = Consumable(
-        service_item=service_item,
-        user=user,
-        unit_type=service_item.unit_type,
-        how_many=service_item.how_many,
-        valid_until=scheduler.valid_until,
-        subscription=subscription,
-        plan_financing=plan_financing,
-        **selected_lookup,
-    )
-
-    consumable.save()
-
-    scheduler.consumables.add(consumable)
-
-    if selected_lookup:
-
-        key = list(selected_lookup.keys())[0]
-        id = selected_lookup[key].id
-        name = key.replace("selected_", "").replace("_", " ")
-        logger.info(f"The consumable {consumable.id} for {name} {id} was built")
-
+    # If there are seat assignments for this subscription and service_item,
+    # create consumables for each assigned user instead of only the owner.
+    if subscription:
+        seat_rows = list(
+            SubscriptionSeat.objects.filter(subscription=subscription, service_item=service_item).select_related("user")
+        )
     else:
-        logger.info(f"The consumable {consumable.id} was built")
+        seat_rows = []
+
+    if seat_rows:
+        for seat in seat_rows:
+            seat_consumable = Consumable(
+                service_item=service_item,
+                user=seat.user,
+                unit_type=service_item.unit_type,
+                how_many=service_item.how_many if service_item.how_many < 0 else service_item.how_many * seat.seats,
+                valid_until=scheduler.valid_until,
+                subscription=subscription,
+                plan_financing=plan_financing,
+                **selected_lookup,
+            )
+
+            seat_consumable.save()
+            scheduler.consumables.add(seat_consumable)
+
+            if selected_lookup:
+                key = list(selected_lookup.keys())[0]
+                id = selected_lookup[key].id
+                name = key.replace("selected_", "").replace("_", " ")
+                logger.info(
+                    f"The consumable {seat_consumable.id} for {name} {id} was built for seat user {seat.user_id} (x{seat.seats})"
+                )
+            else:
+                logger.info(
+                    f"The consumable {seat_consumable.id} was built for seat user {seat.user_id} (x{seat.seats})"
+                )
+    else:
+        consumable = Consumable(
+            service_item=service_item,
+            user=user,
+            unit_type=service_item.unit_type,
+            how_many=service_item.how_many,
+            valid_until=scheduler.valid_until,
+            subscription=subscription,
+            plan_financing=plan_financing,
+            **selected_lookup,
+        )
+
+        consumable.save()
+
+        scheduler.consumables.add(consumable)
+
+        if selected_lookup:
+
+            key = list(selected_lookup.keys())[0]
+            id = selected_lookup[key].id
+            name = key.replace("selected_", "").replace("_", " ")
+            logger.info(f"The consumable {consumable.id} for {name} {id} was built")
+
+        else:
+            logger.info(f"The consumable {consumable.id} was built")
 
     logger.info(f"The scheduler {scheduler.id} was renewed")
 
@@ -1049,6 +1087,10 @@ def build_subscription(
 
     subscription.plans.set(bag.plans.all())
 
+    # Persist add-ons (bag.service_items) into the subscription so they renew and can be billed monthly
+    for service_item in bag.service_items.all():
+        SubscriptionServiceItem.objects.get_or_create(subscription=subscription, service_item=service_item)
+
     # Add coupons from the bag to the subscription
     bag_coupons = bag.coupons.all()
     if bag_coupons.exists():
@@ -1578,3 +1620,30 @@ def check_and_retry_pending_bags(**_: Any):
         retry_pending_bag_delivery.delay(bag_id=bag.id)
 
     return count
+
+
+@task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def renew_team_member_consumables(self, subscription_id: int, **_: Any):
+    """Renew per-member consumables for team-enabled items in the subscription.
+
+    Safe to run multiple times; it revokes prior items and issues fresh ones using the policy.
+    """
+    from .actions import create_team_member_consumables, revoke_team_member_consumables
+
+    logger.info(f"Starting renew_team_member_consumables for subscription {subscription_id}")
+
+    if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+        raise RetryTask(f"Subscription with id {subscription_id} not found")
+
+    seats = (
+        SubscriptionSeat.objects.select_related("service_item", "subscription", "user")
+        .filter(subscription=subscription)
+        .all()
+    )
+
+    for seat in seats:
+        if not seat.service_item.is_team_allowed:
+            continue
+
+        revoke_team_member_consumables(seat)
+        create_team_member_consumables(seat)

@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 import re
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -17,7 +18,9 @@ from pytz import UTC
 from rest_framework.request import Request
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.actions import get_user_settings, get_app_url
+from breathecode.authenticate.models import UserInvite
+from breathecode.notify import actions as notify_actions
 from breathecode.authenticate.models import UserSetting
 from breathecode.media.models import File
 from breathecode.payments import tasks
@@ -44,6 +47,8 @@ from .models import (
     Service,
     ServiceItem,
     Subscription,
+    SubscriptionSeat,
+    SubscriptionSeatInvite,
 )
 
 logger = getLogger(__name__)
@@ -737,6 +742,12 @@ def get_bag_from_subscription(
 
     for plan in subscription.plans.all():
         bag.plans.add(plan)
+
+    # Include persisted subscription add-ons (SubscriptionServiceItem) in the bag so they are billed monthly
+    for handler in subscription.subscriptionserviceitem_set.select_related("service_item").all():
+        service_item = handler.service_item
+        # Attach the same service_item reference into bag so pricing logic picks it up via plan.add_ons mapping
+        bag.service_items.add(service_item)
 
     # Add only valid (non-expired) coupons from the subscription to the bag
     # Also exclude coupons where the user is the seller
@@ -1679,14 +1690,455 @@ def user_has_active_paid_plans(user: User) -> bool:
     Returns:
         bool: True if the user has active paid plans, False otherwise
     """
-    # Check for active PAID subscriptions
-    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
+    # Check for active PAID subscriptions owned by the user or where the user has a seat
+    owned_subscriptions = Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE)
+    seated_subscription_ids = SubscriptionSeat.objects.filter(user=user).values_list("subscription_id", flat=True)
+    seat_subscriptions = Subscription.objects.filter(id__in=seated_subscription_ids, status=Subscription.Status.ACTIVE)
+
+    for subscription in owned_subscriptions.union(seat_subscriptions):
         if is_subscription_paid(subscription):
             return True
 
-    # Check for active PAID plan financings
-    for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
-        if is_plan_financing_paid(plan_financing):
-            return True
-
     return False
+
+
+def _generate_unique_invite_token() -> str:
+    import hashlib
+    import os
+
+    token = hashlib.sha512(os.urandom(64)).hexdigest()
+    while UserInvite.objects.filter(token=token).exists():
+        token = hashlib.sha512(os.urandom(64)).hexdigest()
+    return token
+
+
+def create_subscription_seat_invites(
+    *,
+    subscription: Subscription,
+    service_item: ServiceItem,
+    emails: list[str],
+    seats: int = 1,
+    author: User | None = None,
+    lang: str = "en",
+) -> list[UserInvite]:
+    """Create UserInvite rows and link them to a subscription/service_item as seat invites.
+
+    Reuses the existing UserInvite flow and email templates; upon acceptance the
+    invite will be converted to a SubscriptionSeat via receivers.
+    """
+
+    if seats < 1:
+        raise ValidationException(
+            translation(lang, en="Seats must be >= 1", es="Los asientos deben ser >= 1", slug="invalid-seats")
+        )
+
+    # Capacity enforcement
+    additional = len({e.strip().lower() for e in emails if e and e.strip()})
+    if not service_item.can_add_team_member_for_subscription(subscription, additional=additional):
+        raise ValidationException(
+            translation(
+                lang,
+                en="No capacity left to invite more team members",
+                es="No hay capacidad para invitar más miembros del equipo",
+                slug="no-team-capacity",
+            ),
+            code=400,
+        )
+
+    academy = subscription.academy
+    created_invites: list[UserInvite] = []
+
+    for email in {e.strip().lower() for e in emails if e and e.strip()}:
+        # Create or reuse an existing pending invite for this email+academy
+        invite = UserInvite.objects.filter(email=email, academy=academy, status="PENDING").first()
+        if not invite:
+            token = _generate_unique_invite_token()
+            expires_at = timezone.now() + relativedelta(months=6)
+
+            invite = UserInvite(
+                email=email,
+                academy=academy,
+                author=author,
+                token=token,
+                expires_at=expires_at,
+                status="PENDING",
+            )
+            invite.save()
+
+            # Send invite email using existing template/flow
+            query = urllib.parse.urlencode({"callback": get_app_url()})
+            url = os.getenv("API_URL", "") + f"/v1/auth/member/invite/{invite.token}?{query}"
+            subject = translation(
+                lang, en=f"You are invited to {academy.name}", es=f"Has sido invitado a {academy.name}"
+            )
+
+            notify_actions.send_email_message(
+                "welcome_academy",
+                email,
+                {
+                    "email": email,
+                    "subject": subject,
+                    "LINK": url,
+                    "FIST_NAME": invite.first_name or "",
+                },
+                academy=academy,
+            )
+
+        # Link invite to subscription/service_item
+        SubscriptionSeatInvite.objects.get_or_create(
+            subscription=subscription, service_item=service_item, invite=invite, defaults={"seats": seats}
+        )
+
+        created_invites.append(invite)
+
+    return created_invites
+
+
+# ------------------------------
+# Team member consumables (per-member issuance from JSON)
+# ------------------------------
+
+
+def _get_team_policy_entries(service_item: ServiceItem) -> list[dict]:
+    policy = service_item.team_consumables or {}
+    entries = policy.get("allowed")
+    if isinstance(entries, list):
+        return [e for e in entries if isinstance(e, dict)]
+    return []
+
+
+def _get_target_service_item_for_entry(entry: dict) -> ServiceItem | None:
+    slug = entry.get("service_slug")
+    unit_type = entry.get("unit_type")
+    if not slug:
+        return None
+
+    qs = ServiceItem.objects.filter(service__slug=slug)
+    if unit_type:
+        qs = qs.filter(unit_type=unit_type)
+    return qs.order_by("id").first()
+
+
+def create_team_member_consumables(seat: "SubscriptionSeat", lang: str = "en") -> list[Consumable]:
+    """Create per-member consumables for a seat, based on seat.service_item.team_consumables.
+
+    - Skips entries with missing service_slug
+    - Idempotent: if an active consumable already exists for the entry, it won't duplicate
+    """
+    created: list[Consumable] = []
+
+    if not seat.service_item.is_team_allowed:
+        return created
+
+    entries = _get_team_policy_entries(seat.service_item)
+    utc_now = timezone.now()
+
+    for entry in entries:
+        service_slug = entry.get("service_slug")
+        if not service_slug:
+            logger.warning(
+                "Skipping team consumable entry without service_slug for subscription=%s user=%s",
+                seat.subscription_id,
+                seat.user_id,
+            )
+            continue
+
+        target_item = _get_target_service_item_for_entry(entry)
+        if not target_item:
+            logger.warning(
+                "No matching ServiceItem for service_slug=%s (unit_type=%s)", service_slug, entry.get("unit_type")
+            )
+            continue
+
+        # Check if there's already an active consumable for this target
+        existing = (
+            Consumable.objects.filter(user=seat.user, subscription=seat.subscription, service_item=target_item)
+            .filter(Q(valid_until__gte=utc_now) | Q(valid_until=None))
+            .exclude(how_many=0)
+            .order_by("-id")
+            .first()
+        )
+        if existing:
+            continue
+
+        how_many = entry.get("how_many", target_item.how_many)
+        unit_type = entry.get("unit_type", target_item.unit_type)
+        renew_at = entry.get("renew_at", seat.service_item.renew_at)
+        renew_at_unit = entry.get("renew_at_unit", seat.service_item.renew_at_unit)
+
+        # Compute valid_until bounded by subscription
+        delta = calculate_relative_delta(renew_at, renew_at_unit)
+        valid_until = utc_now + delta
+
+        if seat.subscription.next_payment_at and valid_until > seat.subscription.next_payment_at:
+            valid_until = seat.subscription.next_payment_at
+
+        if seat.subscription.valid_until and valid_until and valid_until > seat.subscription.valid_until:
+            valid_until = seat.subscription.valid_until
+
+        c = Consumable(
+            service_item=target_item,
+            user=seat.user,
+            unit_type=unit_type,
+            how_many=how_many,
+            valid_until=valid_until,
+            subscription=seat.subscription,
+        )
+        c.save()
+        created.append(c)
+
+        logger.info(
+            "Created team consumable id=%s for user=%s subscription=%s service=%s",
+            c.id,
+            seat.user_id,
+            seat.subscription_id,
+            target_item.service.slug,
+        )
+
+    return created
+
+
+def revoke_team_member_consumables(seat: "SubscriptionSeat") -> int:
+    """Revoke all non-zero consumables for this seat's user and team policy services under the subscription."""
+    entries = _get_team_policy_entries(seat.service_item)
+    slugs = {e.get("service_slug") for e in entries if isinstance(e, dict) and e.get("service_slug")}
+    if not slugs:
+        return 0
+
+    qs = Consumable.objects.filter(
+        user=seat.user,
+        subscription=seat.subscription,
+        service_item__service__slug__in=slugs,
+    ).exclude(how_many=0)
+
+    revoked = 0
+    for c in qs:
+        c.how_many = 0
+        c.save()
+        from breathecode.payments import signals as payment_signals
+
+        payment_signals.lose_service_permissions.send_robust(instance=c, sender=Consumable)
+        revoked += 1
+
+    return revoked
+
+    # # Check for active PAID plan financings
+    # for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
+    #     if is_plan_financing_paid(plan_financing):
+    #         return True
+
+    # return False
+
+
+def _normalize_email(email: str) -> str:
+    return (email or "").strip().lower()
+
+
+def _validate_team_item_or_raise(service_item: ServiceItem, lang: str) -> None:
+    if not service_item.is_team_allowed:
+        raise ValidationException(
+            translation(
+                lang,
+                en="This service item does not allow team members",
+                es="Este elemento de servicio no permite miembros del equipo",
+                slug="team-not-allowed",
+            ),
+            code=400,
+        )
+
+    if not service_item.team_group:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Team group is required for this team-enabled service item",
+                es="Se requiere un grupo de equipo para este elemento de servicio habilitado para equipos",
+                slug="team-group-required",
+            ),
+            code=400,
+        )
+
+
+def create_team_member_with_invite(
+    *,
+    subscription: Subscription,
+    service_item: ServiceItem,
+    email: str,
+    seats: int = 1,
+    author: User | None = None,
+    lang: str = "en",
+) -> UserInvite:
+    """Create a team invite for a member with capacity and duplicate checks."""
+    email = _normalize_email(email)
+
+    _validate_team_item_or_raise(service_item, lang)
+
+    if not email or "@" not in email:
+        raise ValidationException(
+            translation(lang, en="Invalid email", es="Email inválido", slug="invalid-email"), code=400
+        )
+
+    if seats < 1:
+        raise ValidationException(
+            translation(lang, en="Seats must be >= 1", es="Los asientos deben ser >= 1", slug="invalid-seats"),
+            code=400,
+        )
+
+    # Duplicate checks: existing invite or assigned seat for this subscription+service
+    if (
+        SubscriptionSeatInvite.objects.filter(
+            subscription=subscription, service_item=service_item, invite__email=email
+        ).exists()
+        or SubscriptionSeat.objects.filter(
+            subscription=subscription, service_item=service_item, user__email=email
+        ).exists()
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="A team invite or seat for this email already exists",
+                es="Ya existe una invitación o asiento para este email",
+                slug="duplicate-team-invite",
+            ),
+            code=400,
+        )
+
+    # Capacity check
+    if not service_item.can_add_team_member_for_subscription(subscription, additional=1):
+        raise ValidationException(
+            translation(
+                lang,
+                en="No capacity left to invite more team members",
+                es="No hay capacidad para invitar más miembros del equipo",
+                slug="no-team-capacity",
+            ),
+            code=400,
+        )
+
+    # Reuse the existing invitation pipeline
+    invites = create_subscription_seat_invites(
+        subscription=subscription, service_item=service_item, emails=[email], seats=seats, author=author, lang=lang
+    )
+
+    return invites[0]
+
+
+def activate_team_member(
+    *, subscription: Subscription, service_item: ServiceItem, user: User, lang: str = "en"
+) -> SubscriptionSeat:
+    """Activate a team member by assigning a seat and triggering consumable issuance."""
+    _validate_team_item_or_raise(service_item, lang)
+
+    # Group requirement
+    if service_item.team_group and not user.groups.filter(id=service_item.team_group_id).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="User is not in the required team group",
+                es="El usuario no está en el grupo requerido del equipo",
+                slug="user-not-in-team-group",
+            ),
+            code=400,
+        )
+
+    if SubscriptionSeat.objects.filter(subscription=subscription, service_item=service_item, user=user).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="User already has a seat for this subscription",
+                es="El usuario ya tiene un asiento para esta suscripción",
+                slug="duplicate-team-seat",
+            ),
+            code=400,
+        )
+
+    # Capacity check
+    if not service_item.can_add_team_member_for_subscription(subscription, additional=1):
+        raise ValidationException(
+            translation(
+                lang,
+                en="No capacity left to add more team members",
+                es="No hay capacidad para agregar más miembros del equipo",
+                slug="no-team-capacity",
+            ),
+            code=400,
+        )
+
+    seat = SubscriptionSeat.objects.create(subscription=subscription, service_item=service_item, user=user, seats=1)
+
+    # Issue consumables via existing renewal flow (step 7 will add per-member JSON issuance)
+    from . import tasks as payment_tasks
+
+    payment_tasks.renew_subscription_consumables.delay(subscription.id)
+
+    return seat
+
+
+def remove_team_member(
+    *,
+    subscription: Subscription,
+    service_item: ServiceItem,
+    user: User | None = None,
+    email: str | None = None,
+    lang: str = "en",
+) -> None:
+    """Remove a team member: drop seat and revoke consumables for that subscription/item."""
+    if not user and not email:
+        raise ValidationException(
+            translation(lang, en="User or email is required", es="Se requiere usuario o email", slug="user-required"),
+            code=400,
+        )
+
+    email = _normalize_email(email) if email else None
+
+    if not user and email:
+        user = User.objects.filter(email=email).first()
+
+    # Remove seat
+    if user:
+        SubscriptionSeat.objects.filter(subscription=subscription, service_item=service_item, user=user).delete()
+
+        # Revoke consumables generated for this user+subscription
+        consumables = Consumable.objects.filter(user=user, subscription=subscription, service_item=service_item)
+        for c in consumables:
+            if c.how_many != 0:
+                c.how_many = 0
+                c.save()
+                # Explicitly send revoke signal
+                from breathecode.payments import signals as payment_signals
+
+                payment_signals.lose_service_permissions.send_robust(instance=c, sender=Consumable)
+
+
+def bulk_create_team_members_with_invites(
+    *,
+    subscription: Subscription,
+    service_item: ServiceItem,
+    emails: list[str],
+    seats: int = 1,
+    author: User | None = None,
+    lang: str = "en",
+) -> dict:
+    """Bulk invite team members. Returns partial success with aggregated per-row errors."""
+    results = {"created": [], "errors": []}
+
+    unique_emails = []
+    seen = set()
+    for e in emails or []:
+        n = _normalize_email(e)
+        if n and n not in seen:
+            seen.add(n)
+            unique_emails.append(n)
+
+    for email in unique_emails:
+        try:
+            inv = create_team_member_with_invite(
+                subscription=subscription, service_item=service_item, email=email, seats=seats, author=author, lang=lang
+            )
+            results["created"].append({"email": email, "invite_id": inv.id, "status": inv.status})
+        except ValidationException as e:
+            # e.detail could be a dict or string; serialize minimally
+            results["errors"].append({"email": email, "error": str(e.detail), "slug": getattr(e, "slug", None)})
+        except Exception as e:  # unexpected
+            results["errors"].append({"email": email, "error": str(e), "slug": "unexpected-error"})
+
+    return results

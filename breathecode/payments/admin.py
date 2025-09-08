@@ -41,6 +41,10 @@ from breathecode.payments.models import (
     ServiceTranslation,
     Subscription,
     SubscriptionServiceItem,
+    SubscriptionSeat,
+    SubscriptionSeatInvite,
+    BillingTeam,
+    BillingTeamMembership,
 )
 
 # Register your models here.
@@ -68,8 +72,8 @@ class ServiceTranslationAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceItem)
 class ServiceItemAdmin(admin.ModelAdmin):
-    list_display = ("id", "unit_type", "how_many", "service")
-    list_filter = ["service__owner"]
+    list_display = ("id", "unit_type", "how_many", "is_team_allowed", "max_team_members", "service")
+    list_filter = ["service__owner", "is_team_allowed"]
     search_fields = [
         "service__slug",
         "service__title",
@@ -194,6 +198,54 @@ class SubscriptionAdmin(admin.ModelAdmin):
 class SubscriptionServiceItemAdmin(admin.ModelAdmin):
     list_display = ("id", "subscription", "service_item")
     list_filter = ["subscription__user__email", "subscription__user__first_name", "subscription__user__last_name"]
+
+
+@admin.register(SubscriptionSeat)
+class SubscriptionSeatAdmin(admin.ModelAdmin):
+    list_display = ("id", "subscription", "service_item", "user", "seats")
+    list_filter = [
+        "subscription__user__email",
+        "subscription__user__first_name",
+        "subscription__user__last_name",
+    ]
+    search_fields = [
+        "subscription__id",
+        "service_item__service__slug",
+        "user__email",
+    ]
+    raw_id_fields = ["subscription", "service_item", "user"]
+
+
+@admin.register(SubscriptionSeatInvite)
+class SubscriptionSeatInviteAdmin(admin.ModelAdmin):
+    list_display = ("id", "subscription", "service_item", "invite", "seats")
+    list_filter = [
+        "subscription__user__email",
+        "subscription__user__first_name",
+        "subscription__user__last_name",
+    ]
+    search_fields = [
+        "subscription__id",
+        "service_item__service__slug",
+        "invite__email",
+    ]
+    raw_id_fields = ["subscription", "service_item", "invite"]
+
+
+@admin.register(BillingTeam)
+class BillingTeamAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "owner", "academy")
+    list_filter = ["academy__slug"]
+    search_fields = ["name", "owner__email", "academy__slug"]
+    raw_id_fields = ["owner", "academy"]
+
+
+@admin.register(BillingTeamMembership)
+class BillingTeamMembershipAdmin(admin.ModelAdmin):
+    list_display = ("id", "team", "user", "email", "status", "is_admin", "seat_consumable")
+    list_filter = ["team__academy__slug", "is_admin", "status"]
+    search_fields = ["team__name", "user__email", "email"]
+    raw_id_fields = ["team", "user", "seat_consumable"]
 
 
 def renew_plan_financing_consumables(modeladmin, request, queryset):
