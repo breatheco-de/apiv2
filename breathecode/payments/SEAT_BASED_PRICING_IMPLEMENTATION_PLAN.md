@@ -91,12 +91,19 @@ class TeamMember(models.Model):
 
     def clean(self):
         super().clean()
-        
+
         # Validate email format
         import re
         if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', self.email):
             raise ValidationError("Invalid email format")
-        
+
+        if self.user and self.seat_consumable and self.seat_consumable.service_item:
+            team_group = self.seat_consumable.service_item.team_group
+            if team_group and not self.user.groups.filter(id=team_group.id).exists():
+                raise ValidationError(
+                    f"User {self.user.email} is not in the required group {team_group.name}"
+                )
+
         # Normalize email
         self.email = self.email.lower().strip()
         self.first_name = self.first_name.strip()
@@ -119,15 +126,28 @@ class ServiceItem(AbstractServiceItem):
         default=False,
         help_text="If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values.",
     )
-    
-    # New fields for team management
+
     is_team_allowed = models.BooleanField(
-        default=False, 
+        default=False,
         help_text="Whether this service item supports team members"
     )
-    max_team_members = models.IntegerField(
-        default=1, 
+    team_group = models.ForeignKey(
+        Group,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="The Django group for team members using this service item (e.g., teacher, student)"
+    )
+    max_team_members = models.PositiveIntegerField(
+        default=1,
         help_text="Maximum number of team members allowed for this service item"
+    )
+    team_consumables = JSONField(
+        default=list,
+        blank=True,
+        help_text="List of consumable definitions for team members, e.g., "
+                  "[{'service_slug': 'course-creation', 'how_many': 10, 'unit_type': 'UNIT', "
+                  "'renew_at': 1, 'renew_at_unit': 'WEEK'}]"
     )
     
     # the below fields are useless when is_renewable=False
@@ -160,6 +180,29 @@ class ServiceItem(AbstractServiceItem):
         if not self.is_team_allowed:
             return False
         return self.get_team_member_count_for_subscription(subscription) < self.max_team_members
+
+    def clean(self):
+        super().clean()
+        if self.is_team_allowed and not self.team_group:
+            raise ValidationError("Team-enabled service item must have a team group")
+        if self.is_team_allowed and not self.team_consumables:
+            raise ValidationError("Team-enabled service item must define team consumables")
+        for consumable in self.team_consumables:
+            required_keys = ['service_slug', 'how_many', 'unit_type']
+            if not all(key in consumable for key in required_keys):
+                raise ValidationError("Each team consumable must have service_slug, how_many, and unit_type")
+            if not Service.objects.filter(slug=consumable['service_slug']).exists():
+                raise ValidationError(f"Service {consumable['service_slug']} does not exist")
+            if not isinstance(consumable['how_many'], int) or consumable['how_many'] < 0:
+                raise ValidationError("how_many must be a non-negative integer")
+            if consumable['unit_type'] not in [choice[0] for choice in PAY_EVERY_UNIT]:
+                raise ValidationError(f"Invalid unit_type: {consumable['unit_type']}")
+            # Validate optional renew_at and renew_at_unit
+            if 'renew_at' in consumable or 'renew_at_unit' in consumable:
+                if not (isinstance(consumable.get('renew_at'), int) and consumable.get('renew_at', 0) > 0):
+                    raise ValidationError("renew_at must be a positive integer")
+                if consumable.get('renew_at_unit') not in [choice[0] for choice in PAY_EVERY_UNIT]:
+                    raise ValidationError(f"Invalid renew_at_unit: {consumable.get('renew_at_unit')}")
 ```
 
 #### 1.3 Update Consumable Model
@@ -173,24 +216,17 @@ class Consumable(AbstractServiceItem):
     
     def clean(self):
         super().clean()
-        
-        # Validate team member association
-        if hasattr(self, 'team_member') and self.team_member:
-            if self.subscription and self.team_member.seat_consumable.subscription != self.subscription:
+        if self.team_member and self.team_member.user and self.service_item.team_group:
+            if not self.team_member.user.groups.filter(id=self.service_item.team_group.id).exists():
                 raise ValidationError(
-                    "Team member's seat consumable must belong to the same subscription"
+                    f"Team member {self.team_member.email} is not in the required group {self.service_item.team_group.name}"
                 )
-            
-            if self.plan_financing and self.team_member.seat_consumable.plan_financing != self.plan_financing:
-                raise ValidationError(
-                    "Team member's seat consumable must belong to the same plan financing"
-                )
-            
-            # Ensure team member consumables don't exceed limits
-            if not self.service_item.is_team_allowed:
-                raise ValidationError(
-                    "Cannot create consumable for team member on non-team service item"
-                )
+            if self.service_item.is_team_allowed:
+                team_consumables = self.service_item.team_consumables
+                if not any(c['service_slug'] == self.service_item.service.slug for c in team_consumables):
+                    raise ValidationError(
+                        f"Service {self.service_item.service.slug} is not in the team consumables for this service item"
+                    )
 ```
 
 ### Phase 2: Business Logic Implementation
@@ -502,33 +538,54 @@ def validate_service_supports_teams(service_item: ServiceItem, lang: str = "en")
 ```python
 # breathecode/payments/actions.py
 
+def calculate_valid_until(start_date, renew_at, renew_at_unit):
+    """Calculate the valid_until date based on renew_at and renew_at_unit."""
+    if renew_at_unit == 'DAY':
+        return start_date + timedelta(days=renew_at)
+    elif renew_at_unit == 'WEEK':
+        return start_date + timedelta(weeks=renew_at)
+    elif renew_at_unit == 'MONTH':
+        return start_date + timedelta(days=renew_at * 30)  # Approximation
+    elif renew_at_unit == 'YEAR':
+        return start_date + timedelta(days=renew_at * 365)
+    return start_date
+
 def create_team_member_consumables(team_member: TeamMember) -> None:
-    """Create consumables for a team member based on their seat consumable's subscription."""
-    
+    """Create consumables for a team member based on their seat consumable's service item."""
     subscription = team_member.seat_consumable.subscription
+    service_item = team_member.seat_consumable.service_item
+    team_group = service_item.team_group
     
-    # Get all service items from the subscription's plans
-    for plan in subscription.plans.all():
-        for plan_service_item in plan.service_items.all():
-            service_item = plan_service_item.service_item
-            
-            # Create consumable for team member
-            consumable = Consumable.objects.create(
-                service_item=service_item,
-                user=team_member.user or subscription.user,  # Fallback to subscription owner
-                subscription=subscription,
-                how_many=service_item.how_many,
-                unit_type=service_item.unit_type,
-                sort_priority=service_item.sort_priority,
-                team_member=team_member,
-                cohort_set=subscription.selected_cohort_set,
-                event_type_set=subscription.selected_event_type_set,
-                mentorship_service_set=subscription.selected_mentorship_service_set,
-                valid_until=subscription.valid_until
-            )
-            
-            # Create service stock scheduler for team member
-            create_team_member_service_stock_scheduler(consumable, subscription)
+    if not service_item.is_team_allowed or not team_group:
+        return
+    
+    for consumable_def in service_item.team_consumables:
+        service = Service.objects.filter(slug=consumable_def['service_slug']).first()
+        if not service:
+            logger.warning(f"Service {consumable_def['service_slug']} not found for team member {team_member.id}")
+            continue
+        
+        # Use renew_at and renew_at_unit from team_consumables, fall back to ServiceItem's
+        renew_at = consumable_def.get('renew_at', service_item.renew_at)
+        renew_at_unit = consumable_def.get('renew_at_unit', service_item.renew_at_unit)
+        valid_until = calculate_valid_until(timezone.now(), renew_at, renew_at_unit)
+        
+        Consumable.objects.create(
+            service_item=ServiceItem.objects.get_or_create(
+                service=service,
+                defaults={'how_many': consumable_def['how_many'], 'unit_type': consumable_def['unit_type']}
+            )[0],
+            user=team_member.user or subscription.user,
+            subscription=subscription,
+            how_many=consumable_def['how_many'],
+            unit_type=consumable_def['unit_type'],
+            sort_priority=service_item.sort_priority,
+            team_member=team_member,
+            cohort_set=subscription.selected_cohort_set,
+            event_type_set=subscription.selected_event_type_set,
+            mentorship_service_set=subscription.selected_mentorship_service_set,
+            valid_until=valid_until
+        )
 
 def revoke_team_member_consumables(team_member: TeamMember) -> None:
     """Revoke all consumables for a team member."""
@@ -564,6 +621,77 @@ def create_team_member_service_stock_scheduler(consumable: Consumable, subscript
     
     # Add consumable to scheduler
     scheduler.consumables.add(consumable)
+
+def calculate_next_period_date(start_date, renew_at, renew_at_unit):
+    """Calculate the next period date based on renew_at and renew_at_unit."""
+    if renew_at_unit == 'DAY':
+        return start_date + timedelta(days=renew_at)
+    elif renew_at_unit == 'WEEK':
+        return start_date + timedelta(weeks=renew_at)
+    elif renew_at_unit == 'MONTH':
+        return start_date + timedelta(days=renew_at * 30)  # Approximation
+    elif renew_at_unit == 'YEAR':
+        return start_date + timedelta(days=renew_at * 365)
+    return start_date
+
+@task(priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def renew_team_member_consumables(self, subscription_id: int):
+    """Renew consumables for active team members based on team_consumables renewal periods."""
+    subscription = Subscription.objects.get(id=subscription_id)
+    
+    for seat_consumable in Consumable.objects.filter(
+        subscription=subscription,
+        team_member__isnull=False
+    ):
+        service_item = seat_consumable.service_item
+        if not service_item.is_team_allowed or not service_item.is_renewable:
+            continue
+        
+        for team_member in seat_consumable.team_members.filter(status=TeamMember.Status.ACTIVE):
+            # Check each team_consumable for renewal
+            for consumable_def in service_item.team_consumables:
+                # Find the latest consumable for this team member and service
+                latest_consumable = Consumable.objects.filter(
+                    team_member=team_member,
+                    service_item__service__slug=consumable_def['service_slug'],
+                    valid_until__gt=timezone.now()
+                ).order_by('-created_at').first()
+                
+                # Use renew_at and renew_at_unit from team_consumables, fall back to ServiceItem
+                renew_at = consumable_def.get('renew_at', service_item.renew_at)
+                renew_at_unit = consumable_def.get('renew_at_unit', service_item.renew_at_unit)
+                
+                # Determine if renewal is needed
+                last_renewal = latest_consumable.created_at if latest_consumable else team_member.joined_at
+                next_renewal = calculate_next_period_date(last_renewal, renew_at, renew_at_unit)
+                
+                if timezone.now() >= next_renewal:
+                    # Revoke old consumables for this service
+                    Consumable.objects.filter(
+                        team_member=team_member,
+                        service_item__service__slug=consumable_def['service_slug'],
+                        valid_until__gt=timezone.now()
+                    ).update(how_many=0, valid_until=timezone.now())
+                    
+                    # Create new consumable
+                    service = Service.objects.filter(slug=consumable_def['service_slug']).first()
+                    if service:
+                        Consumable.objects.create(
+                            service_item=ServiceItem.objects.get_or_create(
+                                service=service,
+                                defaults={'how_many': consumable_def['how_many'], 'unit_type': consumable_def['unit_type']}
+                            )[0],
+                            user=team_member.user or subscription.user,
+                            subscription=subscription,
+                            how_many=consumable_def['how_many'],
+                            unit_type=consumable_def['unit_type'],
+                            sort_priority=service_item.sort_priority,
+                            team_member=team_member,
+                            cohort_set=subscription.selected_cohort_set,
+                            event_type_set=subscription.selected_event_type_set,
+                            mentorship_service_set=subscription.selected_mentorship_service_set,
+                            valid_until=calculate_valid_until(timezone.now(), renew_at, renew_at_unit)
+                        )
 
 #### 2.3 Integration with Existing accept_invite Function
 
@@ -687,16 +815,13 @@ class PaymentsConfig(AppConfig):
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_service_stock_scheduler_from_subscription(self, subscription_id: int, **kwargs):
-    """Updated to handle team members."""
-    
+    """Updated to handle team members and their consumables."""
     subscription = Subscription.objects.get(id=subscription_id)
     
     # Create consumables for subscription owner
     for plan in subscription.plans.all():
         for plan_service_item in plan.service_items.all():
             service_item = plan_service_item.service_item
-            
-            # Create consumable for subscription owner
             consumable = Consumable.objects.create(
                 service_item=service_item,
                 user=subscription.user,
@@ -709,34 +834,10 @@ def build_service_stock_scheduler_from_subscription(self, subscription_id: int, 
                 mentorship_service_set=subscription.selected_mentorship_service_set,
                 valid_until=subscription.valid_until
             )
-            
-            # Create service stock scheduler
             create_service_stock_scheduler(consumable, subscription)
     
-    # Create consumables for team members for team-enabled service items
-    # Get all seat consumables for this subscription
-    seat_consumables = Consumable.objects.filter(
-        subscription=subscription,
-        team_member__isnull=False
-    )
-    for seat_consumable in seat_consumables:
-        # Check if the service item supports teams
-        if seat_consumable.service_item.is_team_allowed:
-            for team_member in seat_consumable.team_members.filter(status=TeamMember.Status.ACTIVE):
-                create_team_member_consumables(team_member)
-    
-    # Handle add-ons for team members
-    for plan in subscription.plans.all():
-        for add_on in plan.add_ons.all():
-            # Create add-on consumables for each team member
-            seat_consumables = Consumable.objects.filter(
-                subscription=subscription,
-                team_member__isnull=False
-            )
-            for seat_consumable in seat_consumables:
-                if seat_consumable.service_item.is_team_allowed:
-                    for team_member in seat_consumable.team_members.filter(status=TeamMember.Status.ACTIVE):
-                        create_add_on_consumable_for_team_member(add_on, team_member, subscription)
+    # Trigger team member consumable renewals
+    renew_team_member_consumables.apply_async(args=(subscription_id,))
 
 def create_add_on_consumable_for_team_member(
     add_on: AcademyService, 
