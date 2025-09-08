@@ -123,7 +123,7 @@ class ServiceItem(AbstractServiceItem):
     # New fields for team management
     is_team_allowed = models.BooleanField(
         default=False, 
-        help_text="Whether this service item supports team members, only one team_allowed service item is allowed per plan"
+        help_text="Whether this service item supports team members"
     )
     max_team_members = models.IntegerField(
         default=1, 
