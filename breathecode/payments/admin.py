@@ -468,8 +468,8 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentMethod)
 class PaymentMethodAdmin(admin.ModelAdmin):
-    list_display = ("title", "description", "academy", "third_party_link", "lang")
-    list_filter = ["academy__name", "lang"]
+    list_display = ("title", "description", "academy", "third_party_link", "lang", "visibility", "deprecated")
+    list_filter = ["academy__name", "lang", "visibility", "deprecated"]
     raw_id_fields = ["academy"]
     search_fields = ["title", "academy__name"]
 

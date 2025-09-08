@@ -723,6 +723,8 @@ class GetPaymentMethod(serpy.Serializer):
     academy = GetAcademySmallSerializer(required=False, many=False)
     currency = GetCurrencySmallSerializer(required=False, many=False)
     included_country_codes = serpy.Field()
+    visibility = serpy.Field()
+    deprecated = serpy.Field()
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
@@ -747,6 +749,8 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "currency",
             "academy",
             "included_country_codes",
+            "visibility",
+            "deprecated",
         )
 
 
