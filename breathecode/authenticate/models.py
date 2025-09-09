@@ -227,6 +227,17 @@ class UserInvite(models.Model):
     email_quality = models.FloatField(default=None, blank=True, null=True)
     email_status = models.JSONField(default=None, blank=True, null=True)
 
+    # link to team membership (optional)
+    team_member = models.ForeignKey(
+        "payments.BillingTeamMembership",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Related team membership for team invitations",
+        db_index=True,
+    )
+
     def __str__(self):
         return f"Invite for {self.email}"
 

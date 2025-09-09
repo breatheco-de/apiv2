@@ -16,6 +16,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.commission.tasks import register_referral_from_invoice
@@ -35,6 +36,9 @@ from breathecode.payments.actions import (
     get_balance_by_resource,
     get_discounted_price,
     max_coupons_allowed,
+    create_team_member_with_invite,
+    bulk_create_team_members_with_invites,
+    remove_team_member,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -57,6 +61,7 @@ from breathecode.payments.models import (
     Service,
     ServiceItem,
     Subscription,
+    SubscriptionSeatInvite,
 )
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
@@ -2758,3 +2763,290 @@ class AcademyPaymentMethodView(APIView):
 
         method.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ------------------------------
+# Team member endpoints (scaffold)
+# ------------------------------
+
+
+class AcademyTeamMemberView(APIView):
+    """Owner-only create/remove of team members via invites or direct removal.
+
+    POST: body { seat_consumable_id: int, email: str, seats?: int }
+    DELETE: query { seat_consumable_id: int, email?: str, user?: int }
+    """
+
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def _get_subscription_and_item(self, subscription_id: int, seat_consumable_id: int, lang: str):
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        consumable = (
+            Consumable.objects.filter(id=seat_consumable_id, subscription=subscription)
+            .select_related("service_item")
+            .first()
+        )
+        if not consumable:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Seat consumable not found",
+                    es="Consumible de asiento no encontrado",
+                    slug="seat-consumable-not-found",
+                ),
+                code=404,
+            )
+
+        return subscription, consumable.service_item
+
+    def post(self, request, subscription_id: int):
+        # handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        data = request.data or {}
+        seat_consumable_id = data.get("seat_consumable_id")
+        email = (data.get("email", "") or "").strip().lower()
+        seats = int(data.get("seats", 1) or 1)
+
+        if seat_consumable_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="seat_consumable_id is required",
+                    es="seat_consumable_id es requerido",
+                    slug="seat-consumable-id-required",
+                ),
+                code=400,
+            )
+
+        subscription, service_item = self._get_subscription_and_item(subscription_id, seat_consumable_id, lang)
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team members",
+                    es="Solo el dueño puede gestionar miembros del equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        invite = create_team_member_with_invite(
+            subscription=subscription,
+            service_item=service_item,
+            email=email,
+            seats=seats,
+            author=request.user,
+            lang=lang,
+        )
+
+        return Response(
+            {"invite_id": invite.id, "invite_token": invite.token, "invite_status": invite.status},
+            status=status.HTTP_201_CREATED,
+        )
+
+    def delete(self, request, subscription_id: int):
+        # handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        seat_consumable_id = request.GET.get("seat_consumable_id")
+        email = (request.GET.get("email") or "").strip().lower() or None
+        user_id = request.GET.get("user")
+
+        if not seat_consumable_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="seat_consumable_id is required",
+                    es="seat_consumable_id es requerido",
+                    slug="seat-consumable-id-required",
+                ),
+                code=400,
+            )
+
+        subscription, service_item = self._get_subscription_and_item(subscription_id, int(seat_consumable_id), lang)
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team members",
+                    es="Solo el dueño puede gestionar miembros del equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        user = None
+        if user_id:
+            user = (
+                ServiceItem._meta.model.objects.model._meta.apps.get_model("auth", "User")
+                .objects.filter(id=int(user_id))
+                .first()
+            )
+
+        remove_team_member(subscription=subscription, service_item=service_item, user=user, email=email, lang=lang)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    extensions = APIViewExtensions(sort="-id")
+
+
+class AcademyTeamMemberBulkView(APIView):
+    """Owner-only bulk invite team members.
+
+    POST: body { seat_consumable_id: int, emails: [str], seats?: int }
+    """
+
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def post(self, request, subscription_id: int):
+        # handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        data = request.data or {}
+        seat_consumable_id = data.get("seat_consumable_id")
+        emails = [(e or "").strip().lower() for e in (data.get("emails") or [])]
+        seats = int(data.get("seats", 1) or 1)
+
+        if seat_consumable_id is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="seat_consumable_id is required",
+                    es="seat_consumable_id es requerido",
+                    slug="seat-consumable-id-required",
+                ),
+                code=400,
+            )
+
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team members",
+                    es="Solo el dueño puede gestionar miembros del equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        consumable = (
+            Consumable.objects.filter(id=seat_consumable_id, subscription=subscription)
+            .select_related("service_item")
+            .first()
+        )
+        if not consumable:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Seat consumable not found",
+                    es="Consumible de asiento no encontrado",
+                    slug="seat-consumable-not-found",
+                ),
+                code=404,
+            )
+
+        result = bulk_create_team_members_with_invites(
+            subscription=subscription,
+            service_item=consumable.service_item,
+            emails=emails,
+            seats=seats,
+            author=request.user,
+            lang=lang,
+        )
+
+        return Response(result, status=status.HTTP_207_MULTI_STATUS)
+
+    extensions = APIViewExtensions(sort="-id")
+
+
+class TeamMemberInviteStatusView(APIView):
+    """Read invite status by email for a subscription+seat item. Allowed for owner or same email user."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def get(self, request, subscription_id: int):
+        # handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        seat_consumable_id = request.GET.get("seat_consumable_id")
+        email = (request.GET.get("email") or "").strip().lower()
+
+        if not seat_consumable_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="seat_consumable_id is required",
+                    es="seat_consumable_id es requerido",
+                    slug="seat-consumable-id-required",
+                ),
+                code=400,
+            )
+
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        # access: owner or same email as requester (if authenticated)
+        if request.user and request.user.id:
+            is_owner = request.user.id == subscription.user_id
+            is_same_email = email and request.user.email.lower() == email
+            if not (is_owner or is_same_email):
+                raise ValidationException(
+                    translation(lang, en="Not allowed", es="No permitido", slug="not-allowed"),
+                    code=403,
+                )
+
+        consumable = (
+            Consumable.objects.filter(id=seat_consumable_id, subscription=subscription)
+            .select_related("service_item")
+            .first()
+        )
+        if not consumable:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Seat consumable not found",
+                    es="Consumible de asiento no encontrado",
+                    slug="seat-consumable-not-found",
+                ),
+                code=404,
+            )
+
+        invite = (
+            SubscriptionSeatInvite.objects.select_related("invite")
+            .filter(subscription=subscription, service_item=consumable.service_item, invite__email=email)
+            .order_by("-id")
+            .first()
+        )
+
+        if not invite:
+            return Response({"status": "NOT_FOUND"}, status=status.HTTP_200_OK)
+
+        return Response({"status": invite.invite.status, "token": invite.invite.token}, status=status.HTTP_200_OK)
+
+    extensions = APIViewExtensions(sort="-id")

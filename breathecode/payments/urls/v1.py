@@ -9,6 +9,9 @@ from ..views import (
     AcademyPlanView,
     AcademyServiceView,
     AcademySubscriptionView,
+    AcademyTeamMemberView,
+    AcademyTeamMemberBulkView,
+    TeamMemberInviteStatusView,
     AppCancelConsumptionView,
     AppConsumableView,
     AppConsumeView,
@@ -147,5 +150,21 @@ urlpatterns = [
         "academy/plan/<slug:plan_slug>/subscription",
         AcademyPlanSubscriptionView.as_view(),
         name="academy_plan_slug_subscription",
+    ),
+    # Team member endpoints
+    path(
+        "academy/subscription/<int:subscription_id>/team-member",
+        AcademyTeamMemberView.as_view(),
+        name="academy_subscription_id_team_member",
+    ),
+    path(
+        "academy/subscription/<int:subscription_id>/team-member/bulk",
+        AcademyTeamMemberBulkView.as_view(),
+        name="academy_subscription_id_team_member_bulk",
+    ),
+    path(
+        "academy/subscription/<int:subscription_id>/team-member/invite-status",
+        TeamMemberInviteStatusView.as_view(),
+        name="academy_subscription_id_team_member_invite_status",
     ),
 ]

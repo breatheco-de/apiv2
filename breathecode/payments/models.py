@@ -285,6 +285,7 @@ class ServiceItem(AbstractServiceItem):
 
             valid_unit_types = {x[0] for x in SERVICE_UNITS}
             valid_renew_units = {x[0] for x in PAY_EVERY_UNIT}
+            seen = set()
 
             for i, entry in enumerate(allowed):
                 if not isinstance(entry, dict):
@@ -293,6 +294,8 @@ class ServiceItem(AbstractServiceItem):
                 service_slug = entry.get("service_slug")
                 unit_type = entry.get("unit_type")
                 renew_at_unit = entry.get("renew_at_unit")
+                how_many = entry.get("how_many", None)
+                renew_at = entry.get("renew_at", None)
 
                 if not service_slug or not isinstance(service_slug, str):
                     raise forms.ValidationError(f"team_consumables.allowed[{i}].service_slug must be a string")
@@ -311,6 +314,30 @@ class ServiceItem(AbstractServiceItem):
                     raise forms.ValidationError(
                         f"Invalid renew_at_unit '{renew_at_unit}' in team_consumables.allowed[{i}] (valid: {valid_renew_units})"
                     )
+
+                if how_many is not None:
+                    if not isinstance(how_many, int):
+                        raise forms.ValidationError(
+                            f"team_consumables.allowed[{i}].how_many must be an integer (use -1 for unlimited)"
+                        )
+                    if how_many < -1:
+                        raise forms.ValidationError(f"team_consumables.allowed[{i}].how_many must be -1 or >= 0")
+
+                if renew_at is not None:
+                    if not isinstance(renew_at, int) or renew_at <= 0:
+                        raise forms.ValidationError(
+                            f"team_consumables.allowed[{i}].renew_at must be a positive integer when provided"
+                        )
+
+                key = (service_slug, unit_type)
+                if key in seen:
+                    raise forms.ValidationError(
+                        f"Duplicated entry for service_slug '{service_slug}' and unit_type '{unit_type}' in team_consumables.allowed"
+                    )
+                seen.add(key)
+
+        if self.max_team_members is not None and self.max_team_members < -1:
+            raise forms.ValidationError("max_team_members must be -1 (unlimited) or >= 0")
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -759,6 +786,23 @@ class Plan(AbstractPriceByTime):
         AcademyService, blank=True, help_text="Service item bundles that can be purchased with this plan"
     )
 
+    # Team support (automation)
+    supports_teams = models.BooleanField(
+        default=False,
+        editable=False,
+        db_index=True,
+        help_text="Derived: plan supports team features",
+    )
+    seat_add_on_service = models.ForeignKey(
+        AcademyService,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Optional AcademyService used as seat add-on for per-seat purchases",
+        related_name="seat_add_on_of_plans",
+    )
+
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     is_onboarding = models.BooleanField(default=False, help_text="Is onboarding plan?", db_index=True)
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
@@ -839,8 +883,13 @@ class Plan(AbstractPriceByTime):
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
-
-        super().save(*args, **kwargs)
+        # recompute supports_teams
+        try:
+            has_team_items = PlanServiceItem.objects.filter(plan=self, service_item__is_team_allowed=True).exists()
+        except Exception:
+            has_team_items = False
+        self.supports_teams = bool(self.seat_add_on_service_id) or bool(has_team_items)
+        return super().save(*args, **kwargs)
 
 
 class PlanTranslation(models.Model):

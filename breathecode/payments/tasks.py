@@ -955,6 +955,8 @@ def build_service_stock_scheduler_from_subscription(
 
     if not update_mode:
         renew_subscription_consumables.delay(subscription.id)
+        # enqueue team member renewals after owner consumables
+        renew_team_member_consumables.delay(subscription.id)
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
@@ -1112,6 +1114,9 @@ def build_subscription(
         manager.call(subscription.id)
 
     logger.info(f"Subscription was created with id {subscription.id}")
+
+    # Also trigger team member renewals idempotently
+    renew_team_member_consumables.delay(subscription.id)
 
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)

@@ -147,12 +147,32 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
         if not item.can_add_team_member_for_subscription(subscription, additional=1):
             continue
 
-        seat, _ = SubscriptionSeat.objects.get_or_create(
+        seat, created = SubscriptionSeat.objects.get_or_create(
             subscription=subscription,
             service_item=item,
             user=instance.user,
             defaults={"seats": seat_invite.seats},
         )
+
+        if created:
+            logger.info(
+                "Activated team seat via invite: subscription=%s service_item=%s user=%s",
+                subscription.id,
+                item.id,
+                instance.user_id,
+            )
+
+        # Issue per-member consumables immediately (idempotent)
+        try:
+            payments_actions.create_team_member_consumables(seat)
+        except Exception as e:
+            logger.error(
+                "Error creating team member consumables on invite acceptance: subscription=%s user=%s: %s",
+                subscription.id,
+                instance.user_id,
+                str(e),
+                exc_info=True,
+            )
 
         # If subscription is already active and paid, ensure group is granted and consumables are issued now
         if subscription.status == Subscription.Status.ACTIVE and payments_actions.is_subscription_paid(subscription):
@@ -160,8 +180,9 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
             if group and not instance.user.groups.filter(name="Paid Student").exists():
                 instance.user.groups.add(group)
 
-            # Issue consumables for the new seat assignee
+            # Schedule broader renewals (owner + team) to ensure consistency
             tasks.renew_subscription_consumables.delay(subscription.id)
+            tasks.renew_team_member_consumables.delay(subscription.id)
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
@@ -181,6 +202,19 @@ def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, *
 @receiver(update_plan_m2m_service_items, sender=Plan.service_items.through)
 def plan_m2m_changed(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
     tasks.update_service_stock_schedulers.delay(instance.id)
+
+    # Recompute supports_teams when service items change
+    try:
+        from .models import PlanServiceItem
+
+        has_team_items = PlanServiceItem.objects.filter(plan=instance, service_item__is_team_allowed=True).exists()
+        supports = bool(instance.seat_add_on_service_id) or bool(has_team_items)
+        if instance.supports_teams != supports:
+            instance.supports_teams = supports
+            instance.save(update_fields=["supports_teams"])
+    except Exception:
+        # avoid side effects in receiver
+        pass
 
 
 @receiver(google_webhook_saved, sender=GoogleWebhook)

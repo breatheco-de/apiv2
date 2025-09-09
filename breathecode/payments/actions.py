@@ -294,6 +294,8 @@ class BagHandler:
         self.selected_event_type_set = request.data.get("event_type_set")
         self.selected_mentorship_service_set = request.data.get("mentorship_service_set")
         self.country_code = request.data.get("country_code")
+        # NEW: team seats for seat add-ons
+        self.team_seats = request.data.get("team_seats")
 
         self.plans_not_found = set()
         self.service_items_not_found = set()
@@ -505,6 +507,76 @@ class BagHandler:
 
             raise ValidationException(self._more_than_one_generator(en="plan", es="plan"), code=400)
 
+    # NEW: validate team seat add-ons for selected plan
+    def _validate_seat_add_ons(self):
+        if not self.team_seats:
+            return
+
+        # normalize
+        try:
+            seats = int(self.team_seats)
+        except Exception:
+            seats = 0
+
+        if seats <= 0:
+            return
+
+        plan = self.bag.plans.first()
+        if not plan:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="You must select a plan to add seats",
+                    es="Debes seleccionar un plan para agregar asientos",
+                    slug="plan-required-for-seats",
+                ),
+                code=400,
+            )
+
+        if not plan.supports_teams:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="This plan does not support teams",
+                    es="Este plan no soporta equipos",
+                    slug="plan-not-support-teams",
+                ),
+                code=400,
+            )
+
+        if not plan.seat_add_on_service:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="Seat add-on service is not configured",
+                    es="El servicio de asientos no está configurado",
+                    slug="seat-add-on-not-configured",
+                ),
+                code=400,
+            )
+
+    # NEW: add seat add-ons as ServiceItems into the bag
+    def _add_seat_add_ons(self):
+        if not self.team_seats:
+            return
+
+        try:
+            seats = int(self.team_seats)
+        except Exception:
+            seats = 0
+
+        if seats <= 0:
+            return
+
+        plan = self.bag.plans.first()
+        if not plan or not plan.seat_add_on_service:
+            return
+
+        # create or reuse a ServiceItem for the seat add-on Service with the requested quantity
+        seat_service = plan.seat_add_on_service.service
+        seat_item, _ = ServiceItem.objects.get_or_create(service=seat_service, how_many=seats)
+        self.bag.service_items.add(seat_item)
+
     def _ask_to_add_plan_and_charge_it_in_the_bag(self):
         for plan in self.bag.plans.all():
             ask_to_add_plan_and_charge_it_in_the_bag(plan, self.bag.user, self.lang)
@@ -519,6 +591,10 @@ class BagHandler:
         self._get_plans_that_not_found()
         self._report_items_not_found()
         self._add_plans_to_bag()
+        # validate and add seat add-ons if requested
+        self._validate_just_one_plan()
+        self._validate_seat_add_ons()
+        self._add_seat_add_ons()
         self._add_service_items_to_bag()
         self._validate_just_one_plan()
 
@@ -619,6 +695,10 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
         for add_on in plan.add_ons.filter(currency=currency):
             if add_on.service.id not in add_ons:
                 add_ons[add_on.service.id] = add_on
+        # include seat add-on service if configured and currency matches
+        if plan.seat_add_on_service and plan.seat_add_on_service.currency_id == currency.id:
+            if plan.seat_add_on_service.service.id not in add_ons:
+                add_ons[plan.seat_add_on_service.service.id] = plan.seat_add_on_service
 
     for service_item in bag.service_items.all():
         if service_item.service.id in add_ons:
