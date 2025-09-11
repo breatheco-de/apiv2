@@ -2097,6 +2097,7 @@ def _validate_team_item_or_raise(service_item: ServiceItem, lang: str) -> None:
         )
 
 
+# TODO: use or move to receivers
 def create_team_member_with_invite(
     *,
     subscription: Subscription,
@@ -2258,6 +2259,7 @@ def remove_team_member(
                 payment_signals.lose_service_permissions.send_robust(instance=c, sender=Consumable)
 
 
+# TODO: use or move to receivers
 def replace_team_member(
     *,
     subscription: Subscription,
@@ -2359,38 +2361,3 @@ def replace_team_member(
         ),
         code=400,
     )
-
-
-def bulk_create_team_members_with_invites(
-    *,
-    subscription: Subscription,
-    service_item: ServiceItem,
-    emails: list[str],
-    seats: int = 1,
-    author: User | None = None,
-    lang: str = "en",
-) -> dict:
-    """Bulk invite team members. Returns partial success with aggregated per-row errors."""
-    results = {"created": [], "errors": []}
-
-    unique_emails = []
-    seen = set()
-    for e in emails or []:
-        n = _normalize_email(e)
-        if n and n not in seen:
-            seen.add(n)
-            unique_emails.append(n)
-
-    for email in unique_emails:
-        try:
-            inv = create_team_member_with_invite(
-                subscription=subscription, service_item=service_item, email=email, seats=seats, author=author, lang=lang
-            )
-            results["created"].append({"email": email, "invite_id": inv.id, "status": inv.status})
-        except ValidationException as e:
-            # e.detail could be a dict or string; serialize minimally
-            results["errors"].append({"email": email, "error": str(e.detail), "slug": getattr(e, "slug", None)})
-        except Exception as e:  # unexpected
-            results["errors"].append({"email": email, "error": str(e), "slug": "unexpected-error"})
-
-    return results

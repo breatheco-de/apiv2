@@ -161,6 +161,7 @@ class Service(AbstractAsset):
         MENTORSHIP_SERVICE_SET = ("MENTORSHIP_SERVICE_SET", "Mentorship service set")
         EVENT_TYPE_SET = ("EVENT_TYPE_SET", "Event type set")
         VOID = ("VOID", "Void")
+        SEAT = ("SEAT", "Seat")
 
     class Consumer(models.TextChoices):
         ADD_CODE_REVIEW = ("ADD_CODE_REVIEW", "Add code review")
@@ -238,25 +239,6 @@ class ServiceItem(AbstractServiceItem):
 
     # NEW: team settings
     is_team_allowed = models.BooleanField(default=False, db_index=True, help_text="Allow team seats for this item")
-    team_group = models.ForeignKey(
-        Group,
-        on_delete=models.SET_NULL,
-        null=True,
-        default=None,
-        blank=True,
-        help_text="Required auth group for team members of this item",
-    )
-    # -1 means unlimited team members
-    max_team_members = models.IntegerField(default=-1, help_text="Max team members allowed (-1 = unlimited)")
-
-    # JSON structure describing allowed team consumables per service slug
-    # Example:
-    # {
-    #   "allowed": [
-    #       {"service_slug": "mentorship-service", "unit_type": "UNIT", "renew_at_unit": "MONTH"}
-    #   ]
-    # }
-    team_consumables = models.JSONField(default=dict, blank=True, help_text="Team consumables policy JSON")
 
     # the below fields are useless when is_renewable=False
     renew_at = models.IntegerField(
@@ -790,32 +772,24 @@ class Plan(AbstractPriceByTime):
         ServiceItem, blank=True, through="PlanServiceItem", through_fields=("plan", "service_item")
     )
 
-    add_ons = models.ManyToManyField(
-        AcademyService, blank=True, help_text="Service item bundles that can be purchased with this plan"
-    )
-
-    # Team support (automation)
-    supports_teams = models.BooleanField(
-        default=False,
-        editable=False,
-        db_index=True,
-        help_text="Derived: plan supports team features",
-    )
-    consumption_strategy = models.CharField(
-        max_length=8,
-        help_text="Consumption strategy",
-        choices=ConsumptionStrategy.choices,
-        default=ConsumptionStrategy.PER_SEAT,
-    )
-
-    seat_add_on_service = models.ForeignKey(
+    seat_service_price = models.ForeignKey(
         AcademyService,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
-        help_text="Optional AcademyService used as seat add-on for per-seat purchases",
-        related_name="seat_add_on_of_plans",
+        help_text="AcademyService used as seat pricing for per-seat purchases",
+    )
+
+    add_ons = models.ManyToManyField(
+        AcademyService, blank=True, help_text="Service item bundles that can be purchased with this plan"
+    )
+
+    consumption_strategy = models.CharField(
+        max_length=8,
+        help_text="Consumption strategy",
+        choices=ConsumptionStrategy.choices,
+        default=ConsumptionStrategy.PER_SEAT,
     )
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
@@ -1615,7 +1589,7 @@ class Subscription(AbstractIOweYou):
     )
 
     # flag to indicate this subscription has team management/billing team
-    supports_billing_team = models.BooleanField(
+    has_billing_team = models.BooleanField(
         default=False, db_index=True, help_text="If true, this subscription has a billing team"
     )
 
@@ -1798,7 +1772,15 @@ class Consumable(AbstractServiceItem):
     )
 
     # if null, this is valid until resources are exhausted
-    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer", null=True, blank=True, default=None)
+    subscription_billing_team = models.ForeignKey(
+        SubscriptionBillingTeam,
+        on_delete=models.CASCADE,
+        help_text="Subscription billing team",
+        null=True,
+        blank=True,
+        default=None,
+    )
 
     subscription = models.ForeignKey(
         Subscription,
@@ -1815,17 +1797,6 @@ class Consumable(AbstractServiceItem):
         blank=True,
         null=True,
         help_text="PlanFinancing that generated this consumable",
-    )
-
-    # link to team membership (optional)
-    subscription_billing_team = models.ForeignKey(
-        SubscriptionBillingTeam,
-        on_delete=models.SET_NULL,
-        null=True,
-        default=None,
-        blank=True,
-        help_text="Subscription billing team associated to this consumable (if any)",
-        db_index=True,
     )
 
     # link to team membership (optional)
@@ -2008,11 +1979,21 @@ class Consumable(AbstractServiceItem):
             self.subscription_billing_team,
             self.subscription_seat,
         ]
-
+        owners = [self.user, self.subscription_billing_team]
         settings = get_user_settings(self.user.id)
 
         how_many_resources_are_set = len([r for r in resources if r])
         how_many_parent_entities_are_set = len([p for p in parent_entities if p])
+        how_many_owners_are_set = len([o for o in owners if o])
+
+        if how_many_owners_are_set == 0:
+            raise forms.ValidationError(
+                translation(
+                    settings.lang,
+                    en="A consumable must be associated with one owner (user or subscription billing team)",
+                    es="Un consumible debe estar asociado con un propietario (usuario o suscripción con equipo de facturación)",
+                )
+            )
 
         if how_many_resources_are_set > 1:
             raise forms.ValidationError(

@@ -36,10 +36,7 @@ from breathecode.payments.actions import (
     get_balance_by_resource,
     get_discounted_price,
     max_coupons_allowed,
-    create_team_member_with_invite,
-    bulk_create_team_members_with_invites,
     remove_team_member,
-    replace_team_member,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -58,10 +55,13 @@ from breathecode.payments.models import (
     Plan,
     PlanFinancing,
     PlanOffer,
+    PlanTranslation,
     Seller,
     Service,
     ServiceItem,
     Subscription,
+    SubscriptionBillingTeam,
+    SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
@@ -2771,11 +2771,168 @@ class AcademyPaymentMethodView(APIView):
 
 
 class AcademyTeamMemberView(APIView):
-    """Owner-only create/remove of team members via invites or direct removal.
+    """Manage Subscription's billing team (create/update/show)."""
 
-    POST: body { seat_consumable_id: int, email: str, seats?: int }
-    DELETE: query { seat_consumable_id: int, email?: str, user?: int }
-    """
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def get(self, request, subscription_id: int):
+        lang = get_user_language(request)
+
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team",
+                    es="Solo el dueño puede gestionar el equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+        if not team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Billing team not found",
+                    es="Equipo de facturación no encontrado",
+                    slug="billing-team-not-found",
+                ),
+                code=404,
+            )
+
+        data = {
+            "id": team.id,
+            "subscription": subscription.id,
+            "name": team.name,
+            "seats_limit": team.seats_limit,
+            "consumption_strategy": team.consumption_strategy,
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+    def post(self, request, subscription_id: int):
+        lang = get_user_language(request)
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team",
+                    es="Solo el dueño puede gestionar el equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        plan = subscription.plans.first()
+        if not plan:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Subscription has no plan",
+                    es="La suscripción no tiene un plan",
+                    slug="subscription-has-no-plan",
+                ),
+                code=404,
+            )
+
+        if not plan.supports_billing_team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan does not support billing team",
+                    es="El plan no soporta equipo de facturación",
+                    slug="plan-does-not-support-billing-team",
+                ),
+                code=400,
+            )
+
+        plan_title = request.data.get("name", None)
+        if not plan_title:
+            translations = PlanTranslation.objects.filter(plan=plan).only("title", "lang")
+            # Get the best translation for the plan title
+            if translations:
+                # Try to find translation matching user's language
+                for translation_obj in translations:
+                    if translation_obj.lang == lang:
+                        plan_title = translation_obj.title
+                        break
+
+                # try to match a similar locale
+                for translation_obj in translations:
+                    if translation_obj.lang.startswith(lang):
+                        plan_title = translation_obj.title
+                        break
+
+                # If no exact match, use English as fallback
+                if not plan_title:
+                    for translation_obj in translations:
+                        if translation_obj.lang.startswith("en"):
+                            plan_title = translation_obj.title
+                            break
+
+                # If no English translation, use the first available
+                if not plan_title and translations:
+                    plan_title = translations[0].title
+
+            # Use plan slug as final fallback
+            if not plan_title:
+                plan_title = translation(
+                    lang, en=f"Subscription {subscription.id}", es=f"Suscripción {subscription.id}"
+                )
+
+        name = plan_title
+        seats_limit = int(request.data.get("seats_limit") or 1)
+        strategy = request.data.get("consumption_strategy")
+
+        team, created = SubscriptionBillingTeam.objects.get_or_create(
+            subscription=subscription,
+            defaults={"name": name, "seats_limit": seats_limit, "consumption_strategy": strategy},
+        )
+
+        if not created:
+            team.name = name
+            team.seats_limit = seats_limit
+            team.consumption_strategy = strategy
+            team.save()
+
+            subscription.has_billing_team = True
+            subscription.save()
+
+        data = {
+            "id": team.id,
+            "subscription": subscription.id,
+            "name": team.name,
+            "seats_limit": team.seats_limit,
+            "consumption_strategy": team.consumption_strategy,
+        }
+        return Response(data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    def put(self, request, subscription_id: int):
+        return self.post(request, subscription_id)
+
+    extensions = APIViewExtensions(sort="-id")
+
+
+class AcademySubscriptionSeatView(APIView):
+    """CRUD for SubscriptionSeat under a subscription's billing team."""
 
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
 
@@ -2789,7 +2946,6 @@ class AcademyTeamMemberView(APIView):
                 code=404,
             )
 
-        # Harden consumable scoping: owner-bound, team-enabled item only
         consumable = (
             Consumable.objects.filter(
                 id=seat_consumable_id,
@@ -2813,28 +2969,17 @@ class AcademyTeamMemberView(APIView):
 
         return subscription, consumable.service_item
 
-    def post(self, request, subscription_id: int, seat_id: int = None):
-        # handler = self.extensions(request)
+    def get(self, request, subscription_id: int, seat_id: int = None):
         lang = get_user_language(request)
 
-        data = request.data or {}
-        seat_consumable_id = data.get("seat_consumable_id")
-        email = (data.get("email", "") or "").strip().lower()
-        seats = int(data.get("seats", 1) or 1)
-
-        if seat_consumable_id is None:
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
             raise ValidationException(
                 translation(
-                    lang,
-                    en="seat_consumable_id is required",
-                    es="seat_consumable_id es requerido",
-                    slug="seat-consumable-id-required",
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
                 ),
-                code=400,
+                code=404,
             )
-
-        subscription, service_item = self._get_subscription_and_item(subscription_id, seat_consumable_id, lang)
-
         if request.user.id != subscription.user_id:
             raise ValidationException(
                 translation(
@@ -2846,28 +2991,31 @@ class AcademyTeamMemberView(APIView):
                 code=403,
             )
 
-        invite = create_team_member_with_invite(
-            subscription=subscription,
-            service_item=service_item,
-            email=email,
-            seats=seats,
-            author=request.user,
-            lang=lang,
-        )
+        qs = SubscriptionSeat.objects.filter(billing_team__subscription=subscription)
+        if seat_id:
+            seat = qs.filter(id=seat_id).first()
+            if not seat:
+                raise ValidationException(
+                    translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"),
+                    code=404,
+                )
+            data = {"id": seat.id, "email": seat.email, "user": seat.user_id, "seat_multiplier": seat.seat_multiplier}
+            return Response(data, status=status.HTTP_200_OK)
 
-        return Response(
-            {"invite_id": invite.id, "invite_token": invite.token, "invite_status": invite.status},
-            status=status.HTTP_201_CREATED,
-        )
+        items = [{"id": s.id, "email": s.email, "user": s.user_id, "seat_multiplier": s.seat_multiplier} for s in qs]
+        return Response(items, status=status.HTTP_200_OK)
 
-    def delete(self, request, subscription_id: int, seat_id: int = None):
-        # handler = self.extensions(request)
+    def post(self, request, subscription_id: int, seat_id: int = None):
         lang = get_user_language(request)
+        data = request.data or {}
+        email = (data.get("email") or "").strip().lower()
+        seat_multiplier = int(data.get("seat_multiplier") or 1)
+        seat_consumable_id = data.get("seat_consumable_id")
 
-        seat_consumable_id = request.GET.get("seat_consumable_id")
-        email = (request.GET.get("email") or "").strip().lower() or None
-        user_id = request.GET.get("user")
-
+        if not email:
+            raise ValidationException(
+                translation(lang, en="Email is required", es="Email es requerido", slug="email-required"), code=400
+            )
         if not seat_consumable_id:
             raise ValidationException(
                 translation(
@@ -2880,7 +3028,6 @@ class AcademyTeamMemberView(APIView):
             )
 
         subscription, service_item = self._get_subscription_and_item(subscription_id, int(seat_consumable_id), lang)
-
         if request.user.id != subscription.user_id:
             raise ValidationException(
                 translation(
@@ -2892,61 +3039,81 @@ class AcademyTeamMemberView(APIView):
                 code=403,
             )
 
-        # Optional replace flow: transfer credits instead of revoke/recreate
-        replace_email = (request.GET.get("replace_with_email") or "").strip().lower() or None
-        replace_user_id = request.GET.get("replace_with_user")
-
-        user = None
-        if user_id:
-            user = (
-                ServiceItem._meta.model.objects.model._meta.apps.get_model("auth", "User")
-                .objects.filter(id=int(user_id))
-                .first()
+        if not service_item.can_add_team_member_for_subscription(subscription, additional=1):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="No capacity left to add more team members",
+                    es="No hay capacidad para agregar más miembros del equipo",
+                    slug="no-team-capacity",
+                ),
+                code=400,
             )
 
-        if replace_email or replace_user_id:
-            to_user = None
-            if replace_user_id:
-                to_user = (
-                    ServiceItem._meta.model.objects.model._meta.apps.get_model("auth", "User")
-                    .objects.filter(id=int(replace_user_id))
-                    .first()
-                )
-
-            replace_team_member(
-                subscription=subscription,
-                service_item=service_item,
-                from_user=user,
-                from_email=email,
-                to_user=to_user,
-                to_email=replace_email,
-                lang=lang,
+        team, _ = SubscriptionBillingTeam.objects.get_or_create(
+            subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+        )
+        if SubscriptionSeat.objects.filter(billing_team=team).filter(Q(email=email) | Q(user__email=email)).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="A team seat for this email already exists",
+                    es="Ya existe un asiento para este email",
+                    slug="duplicate-team-seat",
+                ),
+                code=400,
             )
-        else:
-            remove_team_member(subscription=subscription, service_item=service_item, user=user, email=email, lang=lang)
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    extensions = APIViewExtensions(sort="-id")
+        seat = SubscriptionSeat.objects.create(billing_team=team, email=email, seat_multiplier=seat_multiplier)
+        return Response(
+            {"id": seat.id, "email": seat.email, "user": seat.user_id, "seat_multiplier": seat.seat_multiplier},
+            status=status.HTTP_201_CREATED,
+        )
 
-
-class AcademyTeamMemberBulkView(APIView):
-    """Owner-only bulk invite team members.
-
-    POST: body { seat_consumable_id: int, emails: [str], seats?: int }
-    """
-
-    throttle_classes = [UserRateThrottle, AnonRateThrottle]
-
-    def post(self, request, subscription_id: int):
-        # handler = self.extensions(request)
+    def put(self, request, subscription_id: int, seat_id: int):
         lang = get_user_language(request)
-
         data = request.data or {}
-        seat_consumable_id = data.get("seat_consumable_id")
-        emails = [(e or "").strip().lower() for e in (data.get("emails") or [])]
-        seats = int(data.get("seats", 1) or 1)
 
-        if seat_consumable_id is None:
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team members",
+                    es="Solo el dueño puede gestionar miembros del equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        seat = SubscriptionSeat.objects.filter(billing_team__subscription=subscription, id=seat_id).first()
+        if not seat:
+            raise ValidationException(
+                translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"), code=404
+            )
+
+        email = (data.get("email") or seat.email or "").strip().lower()
+        seat_multiplier = int(data.get("seat_multiplier") or seat.seat_multiplier)
+
+        seat.email = email
+        seat.seat_multiplier = seat_multiplier
+        seat.save()
+        return Response(
+            {"id": seat.id, "email": seat.email, "user": seat.user_id, "seat_multiplier": seat.seat_multiplier},
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, subscription_id: int, seat_id: int):
+        lang = get_user_language(request)
+        seat_consumable_id = request.GET.get("seat_consumable_id")
+        if not seat_consumable_id:
             raise ValidationException(
                 translation(
                     lang,
@@ -2957,15 +3124,7 @@ class AcademyTeamMemberBulkView(APIView):
                 code=400,
             )
 
-        subscription = Subscription.objects.filter(id=subscription_id).first()
-        if not subscription:
-            raise ValidationException(
-                translation(
-                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
-                ),
-                code=404,
-            )
-
+        subscription, service_item = self._get_subscription_and_item(subscription_id, int(seat_consumable_id), lang)
         if request.user.id != subscription.user_id:
             raise ValidationException(
                 translation(
@@ -2977,49 +3136,25 @@ class AcademyTeamMemberBulkView(APIView):
                 code=403,
             )
 
-        consumable = (
-            Consumable.objects.filter(
-                id=seat_consumable_id,
-                subscription=subscription,
-                user_id=subscription.user_id,
-                service_item__is_team_allowed=True,
-            )
-            .select_related("service_item")
-            .first()
-        )
-        if not consumable:
+        seat = SubscriptionSeat.objects.filter(billing_team__subscription=subscription, id=seat_id).first()
+        if not seat:
             raise ValidationException(
-                translation(
-                    lang,
-                    en="Seat consumable not found",
-                    es="Consumible de asiento no encontrado",
-                    slug="seat-consumable-not-found",
-                ),
-                code=404,
+                translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"), code=404
             )
 
-        result = bulk_create_team_members_with_invites(
-            subscription=subscription,
-            service_item=consumable.service_item,
-            emails=emails,
-            seats=seats,
-            author=request.user,
-            lang=lang,
+        remove_team_member(
+            subscription=subscription, service_item=service_item, user=seat.user, email=seat.email, lang=lang
         )
-
-        return Response(result, status=status.HTTP_207_MULTI_STATUS)
-
-    extensions = APIViewExtensions(sort="-id")
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TeamMemberInviteStatusView(APIView):
-    """Read invite status by email for a subscription+seat item. Allowed for owner or same email user."""
+    """Create/update/read invites tied to a subscription/team seat policy."""
 
     permission_classes = [AllowAny]
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
 
-    def get(self, request, subscription_id: int):
-        # handler = self.extensions(request)
+    def get(self, request, subscription_id: int, seat_id: int = None):
         lang = get_user_language(request)
 
         seat_consumable_id = request.GET.get("seat_consumable_id")
@@ -3045,36 +3180,13 @@ class TeamMemberInviteStatusView(APIView):
                 code=404,
             )
 
-        # access: owner or same email as requester (if authenticated)
         if request.user and request.user.id:
             is_owner = request.user.id == subscription.user_id
             is_same_email = email and request.user.email.lower() == email
             if not (is_owner or is_same_email):
                 raise ValidationException(
-                    translation(lang, en="Not allowed", es="No permitido", slug="not-allowed"),
-                    code=403,
+                    translation(lang, en="Not allowed", es="No permitido", slug="not-allowed"), code=403
                 )
-
-        consumable = (
-            Consumable.objects.filter(
-                id=seat_consumable_id,
-                subscription=subscription,
-                user_id=subscription.user_id,
-                service_item__is_team_allowed=True,
-            )
-            .select_related("service_item")
-            .first()
-        )
-        if not consumable:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Seat consumable not found",
-                    es="Consumible de asiento no encontrado",
-                    slug="seat-consumable-not-found",
-                ),
-                code=404,
-            )
 
         from breathecode.authenticate.models import UserInvite
 
@@ -3082,6 +3194,110 @@ class TeamMemberInviteStatusView(APIView):
 
         if not invite:
             return Response({"status": "NOT_FOUND"}, status=status.HTTP_200_OK)
+
+        return Response({"status": invite.status, "token": invite.token}, status=status.HTTP_200_OK)
+
+    def post(self, request, subscription_id: int, seat_id: int = None):
+        lang = get_user_language(request)
+        email = (request.data.get("email") or "").strip().lower()
+        seat_consumable_id = request.data.get("seat_consumable_id")
+
+        if not email:
+            raise ValidationException(
+                translation(lang, en="Email is required", es="Email es requerido", slug="email-required"), code=400
+            )
+        if not seat_consumable_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="seat_consumable_id is required",
+                    es="seat_consumable_id es requerido",
+                    slug="seat-consumable-id-required",
+                ),
+                code=400,
+            )
+
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage invites",
+                    es="Solo el dueño puede gestionar invitaciones",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        # ensure seat exists (pending or active) for email
+        team, _ = SubscriptionBillingTeam.objects.get_or_create(
+            subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+        )
+        seat = SubscriptionSeat.objects.filter(billing_team=team).filter(Q(email=email) | Q(user__email=email)).first()
+        if not seat:
+            seat = SubscriptionSeat.objects.create(billing_team=team, email=email, seat_multiplier=1)
+
+        # create or update invite
+        from breathecode.authenticate.models import UserInvite
+
+        invite, created = UserInvite.objects.get_or_create(
+            email=email,
+            academy=subscription.academy,
+            defaults={"author": request.user, "team_member_id": seat.id},
+        )
+        if not created:
+            invite.team_member_id = seat.id
+            invite.author = invite.author or request.user
+            invite.save()
+
+        return Response(
+            {"status": invite.status, "token": invite.token},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def put(self, request, subscription_id: int, seat_id: int = None):
+        lang = get_user_language(request)
+        email = (request.data.get("email") or "").strip().lower()
+        status_value = request.data.get("status")
+
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage invites",
+                    es="Solo el dueño puede gestionar invitaciones",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        from breathecode.authenticate.models import UserInvite
+
+        invite = UserInvite.objects.filter(email=email, academy=subscription.academy).order_by("-id").first()
+        if not invite:
+            raise ValidationException(
+                translation(lang, en="Invite not found", es="Invitación no encontrada", slug="invite-not-found"),
+                code=404,
+            )
+
+        if status_value:
+            invite.status = status_value
+            invite.save()
 
         return Response({"status": invite.status, "token": invite.token}, status=status.HTTP_200_OK)
 
