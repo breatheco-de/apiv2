@@ -95,8 +95,8 @@ def supervise_team_member_limits():
         for item in ServiceItem.objects.filter(plan__subscription=sub, is_team_allowed=True).distinct():
             if item.max_team_members is None or item.max_team_members < 0:
                 continue
-            members = SubscriptionSeat.objects.filter(subscription=sub).exclude(user__isnull=True).count()
-            invites = SubscriptionSeat.objects.filter(subscription=sub, user__isnull=True).count()
+            members = SubscriptionSeat.objects.filter(billing_team__subscription=sub).exclude(user__isnull=True).count()
+            invites = SubscriptionSeat.objects.filter(billing_team__subscription=sub, user__isnull=True).count()
             total = members + invites
             if total > item.max_team_members:
                 yield {

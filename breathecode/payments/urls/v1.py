@@ -10,7 +10,6 @@ from ..views import (
     AcademyServiceView,
     AcademySubscriptionView,
     AcademyTeamMemberView,
-    AcademyTeamMemberBulkView,
     TeamMemberInviteStatusView,
     AppCancelConsumptionView,
     AppConsumableView,
@@ -143,19 +142,29 @@ urlpatterns = [
     ),
     # Team member endpoints
     path(
-        "academy/subscription/<int:subscription_id>/team-member",
+        "academy/subscription/<int:subscription_id>/billing-team",
         AcademyTeamMemberView.as_view(),
-        name="academy_subscription_id_team_member",
+        name="academy_subscription_id_billing_team",
     ),
     path(
-        "academy/subscription/<int:subscription_id>/team-member/bulk",
-        AcademyTeamMemberBulkView.as_view(),
-        name="academy_subscription_id_team_member_bulk",
+        "academy/subscription/<int:subscription_id>/billing-team/invite",
+        AcademyTeamMemberView.as_view(),
+        name="academy_subscription_id_billing_team",
     ),
     path(
-        "academy/subscription/<int:subscription_id>/team-member/invite-status",
+        "academy/subscription/<int:subscription_id>/billing-team/seat",
+        AcademyTeamMemberView.as_view(),
+        name="academy_subscription_id_billing_team_seat",
+    ),
+    path(
+        "academy/subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>",
+        AcademyTeamMemberView.as_view(),
+        name="academy_subscription_id_billing_team_seat_id",
+    ),
+    path(
+        "academy/subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>/invite",
         TeamMemberInviteStatusView.as_view(),
-        name="academy_subscription_id_team_member_invite_status",
+        name="academy_subscription_id_billing_team_seat_id",
     ),
     # payments endpoints
     path("card", CardView.as_view(), name="card"),

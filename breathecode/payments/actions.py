@@ -48,6 +48,7 @@ from .models import (
     ServiceItem,
     Subscription,
     SubscriptionSeat,
+    SubscriptionBillingTeam,
 )
 
 logger = getLogger(__name__)
@@ -76,7 +77,7 @@ def calculate_relative_delta(unit: float, unit_type: str):
 
 
 def _append_seat_log(seat: SubscriptionSeat, action: str) -> None:
-    """Append a log entry to both seat.seat_log and subscription.seats_log."""
+    """Append a log entry to both seat.seat_log and billing_team.seats_log."""
     utc_now = timezone.now()
     entry = {
         "email": (seat.email or "").strip().lower(),
@@ -90,10 +91,11 @@ def _append_seat_log(seat: SubscriptionSeat, action: str) -> None:
     seat.seat_log = logs
     seat.save(update_fields=["seat_log", "updated_at"])
 
-    subs_logs = list(seat.subscription.seats_log or [])
-    subs_logs.append(entry)
-    seat.subscription.seats_log = subs_logs
-    seat.subscription.save(update_fields=["seats_log", "updated_at"])
+    team = seat.billing_team
+    team_logs = list(team.seats_log or [])
+    team_logs.append(entry)
+    team.seats_log = team_logs
+    team.save(update_fields=["seats_log", "updated_at"])
 
 
 class PlanFinder:
@@ -1797,7 +1799,9 @@ def user_has_active_paid_plans(user: User) -> bool:
     """
     # Check for active PAID subscriptions owned by the user or where the user has a seat
     owned_subscriptions = Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE)
-    seated_subscription_ids = SubscriptionSeat.objects.filter(user=user).values_list("subscription_id", flat=True)
+    seated_subscription_ids = SubscriptionSeat.objects.filter(user=user).values_list(
+        "billing_team__subscription_id", flat=True
+    )
     seat_subscriptions = Subscription.objects.filter(id__in=seated_subscription_ids, status=Subscription.Status.ACTIVE)
 
     for subscription in owned_subscriptions.union(seat_subscriptions):
@@ -1853,6 +1857,14 @@ def create_subscription_seat_invites(
     academy = subscription.academy
     created_invites: list[UserInvite] = []
 
+    # Ensure billing team exists for this subscription
+    team, _ = SubscriptionBillingTeam.objects.get_or_create(
+        subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+    )
+    if not subscription.supports_billing_team:
+        subscription.supports_billing_team = True
+        subscription.save(update_fields=["supports_billing_team"])
+
     for email in {e.strip().lower() for e in emails if e and e.strip()}:
         # Create or reuse an existing pending invite for this email+academy
         invite = UserInvite.objects.filter(email=email, academy=academy, status="PENDING").first()
@@ -1891,7 +1903,7 @@ def create_subscription_seat_invites(
 
         # Reserve seat directly in SubscriptionSeat (pending seat)
         seat, created = SubscriptionSeat.objects.get_or_create(
-            subscription=subscription,
+            billing_team=team,
             email=email,
             defaults={
                 "user": None,
@@ -1933,7 +1945,13 @@ def _get_target_service_item_for_entry(entry: dict) -> ServiceItem | None:
 
 
 def create_team_member_consumables(
-    *, subscription: Subscription, user: User, policy_item: ServiceItem, lang: str = "en"
+    *,
+    subscription: Subscription,
+    user: User,
+    policy_item: ServiceItem,
+    seat: SubscriptionSeat | None = None,
+    team: SubscriptionBillingTeam | None = None,
+    lang: str = "en",
 ) -> list[Consumable]:
     """Create per-member consumables for a seat user, based on policy_item.team_consumables.
 
@@ -1998,6 +2016,8 @@ def create_team_member_consumables(
             how_many=how_many,
             valid_until=valid_until,
             subscription=subscription,
+            subscription_billing_team=team,
+            subscription_seat=seat,
         )
         c.save()
         created.append(c)
@@ -2013,7 +2033,9 @@ def create_team_member_consumables(
     return created
 
 
-def revoke_team_member_consumables(*, subscription: Subscription, user: User, policy_item: ServiceItem) -> int:
+def revoke_team_member_consumables(
+    *, subscription: Subscription, user: User, policy_item: ServiceItem, seat: SubscriptionSeat | None = None
+) -> int:
     """Revoke all non-zero consumables for this user and policy services under the subscription."""
     entries = _get_team_policy_entries(policy_item)
     slugs = {e.get("service_slug") for e in entries if isinstance(e, dict) and e.get("service_slug")}
@@ -2025,6 +2047,8 @@ def revoke_team_member_consumables(*, subscription: Subscription, user: User, po
         subscription=subscription,
         service_item__service__slug__in=slugs,
     ).exclude(how_many=0)
+    if seat:
+        qs = qs.filter(subscription_seat=seat)
 
     revoked = 0
     for c in qs:
@@ -2098,12 +2122,11 @@ def create_team_member_with_invite(
             code=400,
         )
 
-    # Duplicate checks: existing invite or assigned seat for this subscription+service
-    if (
-        SubscriptionSeat.objects.filter(subscription=subscription)
-        .filter(Q(user__email=email) | Q(email=email))
-        .exists()
-    ):
+    # Duplicate checks: existing invite or assigned seat for this subscription
+    team, _ = SubscriptionBillingTeam.objects.get_or_create(
+        subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+    )
+    if SubscriptionSeat.objects.filter(billing_team=team).filter(Q(user__email=email) | Q(email=email)).exists():
         raise ValidationException(
             translation(
                 lang,
@@ -2152,7 +2175,11 @@ def activate_team_member(
             code=400,
         )
 
-    if SubscriptionSeat.objects.filter(subscription=subscription, user=user).exists():
+    team, _ = SubscriptionBillingTeam.objects.get_or_create(
+        subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+    )
+
+    if SubscriptionSeat.objects.filter(billing_team=team, user=user).exists():
         raise ValidationException(
             translation(
                 lang,
@@ -2175,7 +2202,7 @@ def activate_team_member(
             code=400,
         )
 
-    seat = SubscriptionSeat.objects.create(subscription=subscription, user=user, seat_multiplier=1, email=user.email)
+    seat = SubscriptionSeat.objects.create(billing_team=team, user=user, seat_multiplier=1, email=user.email)
     _append_seat_log(seat, "ADDED")
 
     # Issue consumables via existing renewal flow (step 7 will add per-member JSON issuance)
@@ -2209,9 +2236,9 @@ def remove_team_member(
     # Remove seat
     if user:
         # Log and delete seat assignment
-        if seat := SubscriptionSeat.objects.filter(subscription=subscription, user=user).first():
+        if seat := SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=user).first():
             _append_seat_log(seat, "REMOVED")
-        SubscriptionSeat.objects.filter(subscription=subscription, user=user).delete()
+        SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=user).delete()
 
         # Revoke per-member consumables using policy-aware helper
         try:
@@ -2266,7 +2293,7 @@ def replace_team_member(
 
     # If target user exists: transfer consumables and rebind seat
     if to_user:
-        if SubscriptionSeat.objects.filter(subscription=subscription, user=to_user).exists():
+        if SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=to_user).exists():
             raise ValidationException(
                 translation(
                     lang,
@@ -2289,11 +2316,14 @@ def replace_team_member(
             c.save()
 
         # Rebind seat
-        if s := SubscriptionSeat.objects.filter(subscription=subscription, user=from_user).first():
+        if s := SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=from_user).first():
             _append_seat_log(s, "REMOVED")
-        SubscriptionSeat.objects.filter(subscription=subscription, user=from_user).delete()
+        SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=from_user).delete()
+        team, _ = SubscriptionBillingTeam.objects.get_or_create(
+            subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+        )
         new_seat, created = SubscriptionSeat.objects.get_or_create(
-            subscription=subscription, user=to_user, defaults={"seat_multiplier": 1, "email": to_user.email}
+            billing_team=team, user=to_user, defaults={"seat_multiplier": 1, "email": to_user.email}
         )
         if created:
             _append_seat_log(new_seat, "ADDED")

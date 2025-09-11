@@ -207,69 +207,31 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         logger.error(f"The Plan not have a resource linked to it for the ServiceStockScheduler {scheduler.id}")
         return
 
-    # If there are seat assignments for this subscription and service_item,
-    # create consumables for each assigned user instead of only the owner.
-    if subscription:
-        seat_rows = list(
-            SubscriptionSeat.objects.filter(subscription=subscription, service_item=service_item).select_related("user")
-        )
+    # Issue owner consumable; per-seat issuance is handled by renew_team_member_consumables
+    consumable = Consumable(
+        service_item=service_item,
+        user=user,
+        unit_type=service_item.unit_type,
+        how_many=service_item.how_many,
+        valid_until=scheduler.valid_until,
+        subscription=subscription,
+        plan_financing=plan_financing,
+        **selected_lookup,
+    )
+
+    consumable.save()
+
+    scheduler.consumables.add(consumable)
+
+    if selected_lookup:
+
+        key = list(selected_lookup.keys())[0]
+        id = selected_lookup[key].id
+        name = key.replace("selected_", "").replace("_", " ")
+        logger.info(f"The consumable {consumable.id} for {name} {id} was built")
+
     else:
-        seat_rows = []
-
-    if seat_rows:
-        for seat in seat_rows:
-            seat_consumable = Consumable(
-                service_item=service_item,
-                user=seat.user,
-                unit_type=service_item.unit_type,
-                how_many=(
-                    service_item.how_many if service_item.how_many < 0 else service_item.how_many * seat.seat_multiplier
-                ),
-                valid_until=scheduler.valid_until,
-                subscription=subscription,
-                plan_financing=plan_financing,
-                **selected_lookup,
-            )
-
-            seat_consumable.save()
-            scheduler.consumables.add(seat_consumable)
-
-            if selected_lookup:
-                key = list(selected_lookup.keys())[0]
-                id = selected_lookup[key].id
-                name = key.replace("selected_", "").replace("_", " ")
-                logger.info(
-                    f"The consumable {seat_consumable.id} for {name} {id} was built for seat user {seat.user_id} (x{seat.seat_multiplier})"
-                )
-            else:
-                logger.info(
-                    f"The consumable {seat_consumable.id} was built for seat user {seat.user_id} (x{seat.seat_multiplier})"
-                )
-    else:
-        consumable = Consumable(
-            service_item=service_item,
-            user=user,
-            unit_type=service_item.unit_type,
-            how_many=service_item.how_many,
-            valid_until=scheduler.valid_until,
-            subscription=subscription,
-            plan_financing=plan_financing,
-            **selected_lookup,
-        )
-
-        consumable.save()
-
-        scheduler.consumables.add(consumable)
-
-        if selected_lookup:
-
-            key = list(selected_lookup.keys())[0]
-            id = selected_lookup[key].id
-            name = key.replace("selected_", "").replace("_", " ")
-            logger.info(f"The consumable {consumable.id} for {name} {id} was built")
-
-        else:
-            logger.info(f"The consumable {consumable.id} was built")
+        logger.info(f"The consumable {consumable.id} was built")
 
     logger.info(f"The scheduler {scheduler.id} was renewed")
 
@@ -1643,12 +1605,24 @@ def renew_team_member_consumables(self, subscription_id: int, **_: Any):
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         raise RetryTask(f"Subscription with id {subscription_id} not found")
 
-    seats = SubscriptionSeat.objects.select_related("subscription", "user").filter(subscription=subscription).all()
+    seats = (
+        SubscriptionSeat.objects.select_related("billing_team", "billing_team__subscription", "user")
+        .filter(billing_team__subscription=subscription)
+        .all()
+    )
 
     for seat in seats:
         # For each seat, apply all team-enabled policy items present in this subscription
         policy_items = ServiceItem.objects.filter(plan__subscription=subscription, is_team_allowed=True).distinct()
 
         for policy_item in policy_items:
-            revoke_team_member_consumables(subscription=subscription, user=seat.user, policy_item=policy_item)
-            create_team_member_consumables(subscription=subscription, user=seat.user, policy_item=policy_item)
+            revoke_team_member_consumables(
+                subscription=subscription, user=seat.user, policy_item=policy_item, seat=seat
+            )
+            create_team_member_consumables(
+                subscription=subscription,
+                user=seat.user,
+                policy_item=policy_item,
+                seat=seat,
+                team=seat.billing_team,
+            )

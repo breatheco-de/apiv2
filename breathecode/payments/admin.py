@@ -142,6 +142,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "cohort_set",
         "event_type_set",
         "mentorship_service_set",
+        "subscription_billing_team",
+        "subscription_seat",
     ]
     actions = [grant_service_permissions]
 
@@ -200,18 +202,18 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionSeat)
 class SubscriptionSeatAdmin(admin.ModelAdmin):
-    list_display = ("id", "subscription", "email", "user", "seat_multiplier")
+    list_display = ("id", "billing_team", "email", "user", "seat_multiplier")
     list_filter = [
-        "subscription__user__email",
-        "subscription__user__first_name",
-        "subscription__user__last_name",
+        "billing_team__subscription__user__email",
+        "billing_team__subscription__user__first_name",
+        "billing_team__subscription__user__last_name",
     ]
     search_fields = [
-        "subscription__id",
+        "billing_team__subscription__id",
         "email",
         "user__email",
     ]
-    raw_id_fields = ["subscription", "user"]
+    raw_id_fields = ["billing_team", "user"]
 
 
 # SubscriptionSeatInvite is deprecated in favor of pending SubscriptionSeat (email-only)

@@ -835,13 +835,13 @@ class SubscriptionTeamEnabledServiceSerializer(serpy.Serializer):
         sub: Subscription = self.context.get("subscription")
         if not sub:
             return 0
-        return SubscriptionSeat.objects.filter(subscription=sub).exclude(user__isnull=True).count()
+        return SubscriptionSeat.objects.filter(billing_team__subscription=sub).exclude(user__isnull=True).count()
 
     def get_invites_count(self, obj: ServiceItem):
         sub: Subscription = self.context.get("subscription")
         if not sub:
             return 0
-        return SubscriptionSeat.objects.filter(subscription=sub, user__isnull=True).count()
+        return SubscriptionSeat.objects.filter(billing_team__subscription=sub, user__isnull=True).count()
 
     def get_available_slots(self, obj: ServiceItem):
         sub: Subscription = self.context.get("subscription")

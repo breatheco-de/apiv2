@@ -354,8 +354,8 @@ class ServiceItem(AbstractServiceItem):
     def team_members_qs_for_subscription(self, subscription: "Subscription") -> QuerySet["SubscriptionSeat"]:
         from .models import SubscriptionSeat  # local import to avoid circular
 
-        # Seats are bound to the subscription (plan-level policy), not to a specific service item
-        return SubscriptionSeat.objects.filter(subscription=subscription)
+        # Seats are bound via billing team for the subscription (plan-level policy)
+        return SubscriptionSeat.objects.filter(billing_team__subscription=subscription)
 
     def count_team_members_for_subscription(self, subscription: "Subscription") -> int:
         return self.team_members_qs_for_subscription(subscription).count()
@@ -372,7 +372,9 @@ class ServiceItem(AbstractServiceItem):
         # also count pending seats (email reserved without user)
         from .models import SubscriptionSeat
 
-        pending_invites = SubscriptionSeat.objects.filter(subscription=subscription, user__isnull=True).count()
+        pending_invites = SubscriptionSeat.objects.filter(
+            billing_team__subscription=subscription, user__isnull=True
+        ).count()
 
         return (current + pending_invites + additional) <= self.max_team_members
 
@@ -1727,7 +1729,12 @@ class SubscriptionSeat(models.Model):
     """
 
     billing_team = models.ForeignKey(
-        SubscriptionBillingTeam, on_delete=models.CASCADE, help_text="Subscription billing team"
+        SubscriptionBillingTeam,
+        on_delete=models.CASCADE,
+        help_text="Subscription billing team",
+        null=True,
+        blank=True,
+        default=None,
     )
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, help_text="Assigned user", null=True, blank=True, default=None
@@ -1746,12 +1753,16 @@ class SubscriptionSeat(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["subscription", "user"], name="uniq_subscription_seat_per_user"),
-            models.UniqueConstraint(fields=["subscription", "email"], name="uniq_subscription_seat_per_email"),
+            models.UniqueConstraint(
+                fields=["billing_team", "user"],
+                name="uniq_subscription_seat_per_user",
+                condition=Q(user__isnull=False),
+            ),
+            models.UniqueConstraint(fields=["billing_team", "email"], name="uniq_subscription_seat_per_email"),
         ]
 
     def __str__(self) -> str:
-        return f"{self.subscription_id}:{self.user_id}({self.seat_multiplier})"
+        return f"{self.billing_team_id}:{self.user_id}({self.seat_multiplier})"
 
     def clean(self):
         # normalize email
@@ -2033,15 +2044,19 @@ class Consumable(AbstractServiceItem):
         if self.how_many < 0 and self.service_item.how_many >= 0:
             self.how_many = 0
 
-        # Team checks
-        if self.team_member and self.service_item.is_team_allowed:
-            # ensure user matches member or email
-            if self.team_member.user_id and self.team_member.user_id != self.user_id:
+        # Team checks using subscription seat / billing team
+        if (self.subscription_seat or self.subscription_billing_team) and self.service_item.is_team_allowed:
+            # ensure user matches seat user when seat is present
+            if (
+                self.subscription_seat
+                and self.subscription_seat.user_id
+                and self.subscription_seat.user_id != self.user_id
+            ):
                 raise forms.ValidationError(
                     translation(
                         settings.lang,
-                        en="Team member does not match consumable user",
-                        es="El miembro del equipo no coincide con el usuario del consumible",
+                        en="Subscription seat does not match consumable user",
+                        es="El asiento de la suscripción no coincide con el usuario del consumible",
                     )
                 )
 

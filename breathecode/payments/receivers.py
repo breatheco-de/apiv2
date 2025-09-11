@@ -101,7 +101,7 @@ def grant_plan_permissions_receiver(
 
     # Propagate group access to seat assignees for this subscription
     if isinstance(instance, Subscription) and group:
-        for seat in SubscriptionSeat.objects.filter(subscription=instance).select_related("user"):
+        for seat in SubscriptionSeat.objects.filter(billing_team__subscription=instance).select_related("user"):
             if not seat.user.groups.filter(name="Paid Student").exists():
                 seat.user.groups.add(group)
 
@@ -126,7 +126,7 @@ def revoke_plan_permissions_receiver(sender, instance, **kwargs):
 
     # Revoke for seat assignees of this subscription if they have no other paid access
     if isinstance(instance, Subscription) and group:
-        for seat in SubscriptionSeat.objects.filter(subscription=instance).select_related("user"):
+        for seat in SubscriptionSeat.objects.filter(billing_team__subscription=instance).select_related("user"):
             seat_user = seat.user
             if not user_has_active_paid_plans(seat_user):
                 seat_user.groups.remove(group)
@@ -141,7 +141,7 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
     # Find pending seats by email across subscriptions with team-enabled items
     seats = SubscriptionSeat.objects.filter(email=instance.email.lower().strip(), user__isnull=True)
     for seat in seats.select_related("subscription"):
-        subscription = seat.subscription
+        subscription = seat.billing_team.subscription
 
         # Find any team-enabled policy item for capacity and issuance
         item = ServiceItem.objects.filter(plan__subscription=subscription, is_team_allowed=True).first()
@@ -165,7 +165,11 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
         # Issue per-member consumables immediately (idempotent)
         try:
             payments_actions.create_team_member_consumables(
-                subscription=subscription, user=instance.user, policy_item=item
+                subscription=subscription,
+                user=instance.user,
+                policy_item=item,
+                seat=seat,
+                team=seat.billing_team,
             )
         except Exception as e:
             logger.error(
