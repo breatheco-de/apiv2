@@ -19,14 +19,14 @@ def supervise_orphaned_team_members():
     """
     utc_now = timezone.now()
 
-    seats = (
-        SubscriptionSeat.objects.select_related("subscription", "service_item", "user")
-        .filter(service_item__is_team_allowed=True)
-        .all()
-    )
+    seats = SubscriptionSeat.objects.select_related("subscription", "user").all()
 
     for seat in seats:
-        entries = (seat.service_item.team_consumables or {}).get("allowed") or []
+        # evaluate against all team-enabled policy items in the subscription
+        policy_items = ServiceItem.objects.filter(plan__subscription=seat.subscription, is_team_allowed=True).distinct()
+        entries = []
+        for policy_item in policy_items:
+            entries.extend((policy_item.team_consumables or {}).get("allowed") or [])
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
@@ -56,11 +56,7 @@ def supervise_orphaned_team_members():
 @issue(supervise_orphaned_team_members, delta=timedelta(minutes=30), attempts=3)
 def fix_orphaned_team_member(seat_id: int, service_slug: str):
     """Create missing consumables for a seat; idempotent via action helper."""
-    seat = (
-        SubscriptionSeat.objects.select_related("subscription", "service_item", "user")
-        .filter(id=seat_id, service_item__is_team_allowed=True)
-        .first()
-    )
+    seat = SubscriptionSeat.objects.select_related("subscription", "user").filter(id=seat_id).first()
     if not seat:
         return True
 
@@ -72,7 +68,12 @@ def fix_orphaned_team_member(seat_id: int, service_slug: str):
         .count()
     )
 
-    payments_actions.create_team_member_consumables(seat)
+    # apply policy across all team-enabled items
+    policy_items = ServiceItem.objects.filter(plan__subscription=seat.subscription, is_team_allowed=True).distinct()
+    for policy_item in policy_items:
+        payments_actions.create_team_member_consumables(
+            subscription=seat.subscription, user=seat.user, policy_item=policy_item
+        )
 
     after = (
         Consumable.objects.filter(
@@ -91,18 +92,11 @@ def supervise_team_member_limits():
     subs = Subscription.objects.all()
     for sub in subs:
         # find distinct team-enabled items linked to this subscription via seats
-        item_ids = (
-            SubscriptionSeat.objects.filter(subscription=sub, service_item__is_team_allowed=True)
-            .values_list("service_item_id", flat=True)
-            .distinct()
-        )
-        for item in ServiceItem.objects.filter(id__in=item_ids, is_team_allowed=True):
+        for item in ServiceItem.objects.filter(plan__subscription=sub, is_team_allowed=True).distinct():
             if item.max_team_members is None or item.max_team_members < 0:
                 continue
-            members = SubscriptionSeat.objects.filter(subscription=sub, service_item=item).count()
-            invites = payments_actions.SubscriptionSeatInvite.objects.filter(
-                subscription=sub, service_item=item
-            ).count()
+            members = SubscriptionSeat.objects.filter(subscription=sub).exclude(user__isnull=True).count()
+            invites = SubscriptionSeat.objects.filter(subscription=sub, user__isnull=True).count()
             total = members + invites
             if total > item.max_team_members:
                 yield {

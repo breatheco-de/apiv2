@@ -141,16 +141,6 @@ urlpatterns = [
         AppConsumeView.as_view(),
         name="app_service_slug_consumptionsession_hash",
     ),
-    path("card", CardView.as_view(), name="card"),
-    path("bag", BagView.as_view(), name="bag"),
-    path("bag/<int:bag_id>/coupon", BagCouponView.as_view(), name="bag_id_coupon"),
-    path("checking", CheckingView.as_view(), name="checking"),
-    path("pay", PayView.as_view(), name="pay"),
-    path(
-        "academy/plan/<slug:plan_slug>/subscription",
-        AcademyPlanSubscriptionView.as_view(),
-        name="academy_plan_slug_subscription",
-    ),
     # Team member endpoints
     path(
         "academy/subscription/<int:subscription_id>/team-member",
@@ -166,5 +156,16 @@ urlpatterns = [
         "academy/subscription/<int:subscription_id>/team-member/invite-status",
         TeamMemberInviteStatusView.as_view(),
         name="academy_subscription_id_team_member_invite_status",
+    ),
+    # payments endpoints
+    path("card", CardView.as_view(), name="card"),
+    path("bag", BagView.as_view(), name="bag"),
+    path("bag/<int:bag_id>/coupon", BagCouponView.as_view(), name="bag_id_coupon"),
+    path("checking", CheckingView.as_view(), name="checking"),
+    path("pay", PayView.as_view(), name="pay"),
+    path(
+        "academy/plan/<slug:plan_slug>/subscription",
+        AcademyPlanSubscriptionView.as_view(),
+        name="academy_plan_slug_subscription",
     ),
 ]

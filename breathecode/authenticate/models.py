@@ -229,7 +229,7 @@ class UserInvite(models.Model):
 
     # link to team membership (optional)
     team_member = models.ForeignKey(
-        "payments.BillingTeamMembership",
+        "payments.SubscriptionSeat",
         on_delete=models.SET_NULL,
         null=True,
         default=None,

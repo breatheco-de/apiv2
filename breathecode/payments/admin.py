@@ -42,9 +42,7 @@ from breathecode.payments.models import (
     Subscription,
     SubscriptionServiceItem,
     SubscriptionSeat,
-    SubscriptionSeatInvite,
-    BillingTeam,
-    BillingTeamMembership,
+    SubscriptionBillingTeam,
 )
 
 # Register your models here.
@@ -202,7 +200,7 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionSeat)
 class SubscriptionSeatAdmin(admin.ModelAdmin):
-    list_display = ("id", "subscription", "service_item", "user", "seats")
+    list_display = ("id", "subscription", "email", "user", "seat_multiplier")
     list_filter = [
         "subscription__user__email",
         "subscription__user__first_name",
@@ -210,42 +208,22 @@ class SubscriptionSeatAdmin(admin.ModelAdmin):
     ]
     search_fields = [
         "subscription__id",
-        "service_item__service__slug",
+        "email",
         "user__email",
     ]
-    raw_id_fields = ["subscription", "service_item", "user"]
+    raw_id_fields = ["subscription", "user"]
 
 
-@admin.register(SubscriptionSeatInvite)
-class SubscriptionSeatInviteAdmin(admin.ModelAdmin):
-    list_display = ("id", "subscription", "service_item", "invite", "seats")
-    list_filter = [
-        "subscription__user__email",
-        "subscription__user__first_name",
-        "subscription__user__last_name",
-    ]
-    search_fields = [
-        "subscription__id",
-        "service_item__service__slug",
-        "invite__email",
-    ]
-    raw_id_fields = ["subscription", "service_item", "invite"]
+# SubscriptionSeatInvite is deprecated in favor of pending SubscriptionSeat (email-only)
 
 
-@admin.register(BillingTeam)
-class BillingTeamAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "owner", "academy")
-    list_filter = ["academy__slug"]
-    search_fields = ["name", "owner__email", "academy__slug"]
-    raw_id_fields = ["owner", "academy"]
+@admin.register(SubscriptionBillingTeam)
+class SubscriptionBillingTeamAdmin(admin.ModelAdmin):
+    list_display = ("id", "subscription", "name")
+    search_fields = ["subscription__id", "name"]
 
 
-@admin.register(BillingTeamMembership)
-class BillingTeamMembershipAdmin(admin.ModelAdmin):
-    list_display = ("id", "team", "user", "email", "status", "is_admin", "seat_consumable")
-    list_filter = ["team__academy__slug", "is_admin", "status"]
-    search_fields = ["team__name", "user__email", "email"]
-    raw_id_fields = ["team", "user", "seat_consumable"]
+# BillingTeamMembership removed; managed via SubscriptionSeat
 
 
 def renew_plan_financing_consumables(modeladmin, request, queryset):

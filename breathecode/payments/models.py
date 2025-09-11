@@ -354,7 +354,8 @@ class ServiceItem(AbstractServiceItem):
     def team_members_qs_for_subscription(self, subscription: "Subscription") -> QuerySet["SubscriptionSeat"]:
         from .models import SubscriptionSeat  # local import to avoid circular
 
-        return SubscriptionSeat.objects.filter(subscription=subscription, service_item=self)
+        # Seats are bound to the subscription (plan-level policy), not to a specific service item
+        return SubscriptionSeat.objects.filter(subscription=subscription)
 
     def count_team_members_for_subscription(self, subscription: "Subscription") -> int:
         return self.team_members_qs_for_subscription(subscription).count()
@@ -368,10 +369,10 @@ class ServiceItem(AbstractServiceItem):
 
         current = self.count_team_members_for_subscription(subscription)
 
-        # also count pending seat invites targeting this subscription/item
-        from .models import SubscriptionSeatInvite
+        # also count pending seats (email reserved without user)
+        from .models import SubscriptionSeat
 
-        pending_invites = SubscriptionSeatInvite.objects.filter(subscription=subscription, service_item=self).count()
+        pending_invites = SubscriptionSeat.objects.filter(subscription=subscription, user__isnull=True).count()
 
         return (current + pending_invites + additional) <= self.max_team_members
 
@@ -742,6 +743,11 @@ class Plan(AbstractPriceByTime):
         DELETED = ("DELETED", "Deleted")
         DISCONTINUED = ("DISCONTINUED", "Discontinued")
 
+    class ConsumptionStrategy(models.TextChoices):
+        PER_TEAM = "PER_TEAM", "Per team"
+        PER_SEAT = "PER_SEAT", "Per seat"
+        BOTH = "BOTH", "Both"
+
     slug = models.CharField(
         max_length=60,
         unique=True,
@@ -793,6 +799,13 @@ class Plan(AbstractPriceByTime):
         db_index=True,
         help_text="Derived: plan supports team features",
     )
+    consumption_strategy = models.CharField(
+        max_length=8,
+        help_text="Consumption strategy",
+        choices=ConsumptionStrategy.choices,
+        default=ConsumptionStrategy.PER_SEAT,
+    )
+
     seat_add_on_service = models.ForeignKey(
         AcademyService,
         on_delete=models.SET_NULL,
@@ -1599,6 +1612,11 @@ class Subscription(AbstractIOweYou):
         max_length=10, choices=PAY_EVERY_UNIT, default=MONTH, help_text="Pay every unit (e.g. DAY, WEEK, MONTH or YEAR)"
     )
 
+    # flag to indicate this subscription has team management/billing team
+    supports_billing_team = models.BooleanField(
+        default=False, db_index=True, help_text="If true, this subscription has a billing team"
+    )
+
     def __str__(self) -> str:
         return f"{self.user.email} ({self.valid_until})"
 
@@ -1675,6 +1693,31 @@ class SubscriptionServiceItem(models.Model):
         return str(self.service_item)
 
 
+class SubscriptionBillingTeam(models.Model):
+    """Team entity per subscription."""
+
+    class ConsumptionStrategy(models.TextChoices):
+        PER_TEAM = "PER_TEAM", "Per team"
+        PER_SEAT = "PER_SEAT", "Per seat"
+
+    subscription = models.OneToOneField(Subscription, on_delete=models.CASCADE, help_text="Subscription")
+    name = models.CharField(max_length=80, help_text="Team name")
+    seats_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this billing team")
+    seats_limit = models.PositiveIntegerField(default=1, help_text="Limit of seats for this team")
+    consumption_strategy = models.CharField(
+        max_length=8,
+        help_text="Consumption strategy",
+        choices=ConsumptionStrategy.choices,
+        default=ConsumptionStrategy.PER_SEAT,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self) -> str:
+        return f"{self.subscription_id}:{self.name}"
+
+
 class SubscriptionSeat(models.Model):
     """Seat assignment per subscription and service item (add-on).
 
@@ -1683,132 +1726,55 @@ class SubscriptionSeat(models.Model):
     this is used to distribute access/consumables to members.
     """
 
-    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text="Subscription")
-    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text="Seat service item")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Assigned user")
+    billing_team = models.ForeignKey(
+        SubscriptionBillingTeam, on_delete=models.CASCADE, help_text="Subscription billing team"
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, help_text="Assigned user", null=True, blank=True, default=None
+    )
+    email = models.CharField(max_length=150, help_text="Email of the member (normalized)", db_index=True, default="")
 
-    # number of seats assigned to this user for this service item in this subscription
-    seats = models.PositiveIntegerField(default=1, help_text="Number of seats assigned to the user (>= 1)")
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["subscription", "service_item", "user"], name="uniq_subscription_seat_per_user"
-            )
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.subscription_id}:{self.service_item_id}:{self.user_id}({self.seats})"
-
-
-class SubscriptionSeatInvite(models.Model):
-    """Link a UserInvite to a specific subscription and seat-bearing service item.
-
-    When the invite is accepted and associated to a User, it will be converted
-    into a SubscriptionSeat assignment for that user.
-    """
-
-    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text="Subscription")
-    service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text="Seat service item")
-    invite = models.ForeignKey(UserInvite, on_delete=models.CASCADE, help_text="User invite")
-    seats = models.PositiveIntegerField(default=1, help_text="Number of seats to grant upon acceptance (>= 1)")
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["subscription", "service_item", "invite"], name="uniq_subscription_seat_invite"
-            )
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.subscription_id}:{self.service_item_id}:invite={self.invite_id}(x{self.seats})"
-
-
-class BillingTeam(models.Model):
-    """A simple team entity to group users under an owner and academy.
-
-    Teams can hold multiple members and one or more subscriptions allocate seats to the team.
-    Billing remains on the subscription owner(s).
-    """
-
-    name = models.CharField(max_length=80, help_text="Team name")
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Team owner")
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy context")
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    class Meta:
-        unique_together = ("owner", "name", "academy")
-
-    def __str__(self) -> str:
-        return f"{self.academy.slug}:{self.name}"
-
-
-class BillingTeamMembership(models.Model):
-    team = models.ForeignKey(BillingTeam, on_delete=models.CASCADE, help_text="Team")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Member user")
-    is_admin = models.BooleanField(default=False, help_text="Team admin")
-
-    # NEW: email, status, seat_consumable
-    email = models.CharField(max_length=150, default=None, null=True, blank=True, db_index=True)
-
-    class Status(models.TextChoices):
-        PENDING = ("PENDING", "Pending")
-        ACTIVE = ("ACTIVE", "Active")
-        REVOKED = ("REVOKED", "Revoked")
-
-    status = models.CharField(max_length=10, choices=Status, default=Status.PENDING, db_index=True)
-
-    # Optional link to consumable representing the seat issued to this member
-    seat_consumable = models.ForeignKey(
-        "payments.Consumable",
-        on_delete=models.SET_NULL,
-        null=True,
-        default=None,
-        blank=True,
-        help_text="Consumable issued for this team member seat",
+    # number multiplier applied to per-member issuance from policy items
+    seat_multiplier = models.PositiveIntegerField(
+        default=1, help_text="Multiplier applied to per-member consumables issuance (>= 1)"
     )
 
+    seat_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this seat")
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     class Meta:
-        unique_together = ("team", "user")
         constraints = [
-            models.UniqueConstraint(fields=["seat_consumable", "email"], name="uniq_btm_seat_consumable_email")
+            models.UniqueConstraint(fields=["subscription", "user"], name="uniq_subscription_seat_per_user"),
+            models.UniqueConstraint(fields=["subscription", "email"], name="uniq_subscription_seat_per_email"),
         ]
-        indexes = [
-            models.Index(fields=["status"]),
-            models.Index(fields=["email"]),
-            models.Index(fields=["user"]),
-        ]
+
+    def __str__(self) -> str:
+        return f"{self.subscription_id}:{self.user_id}({self.seat_multiplier})"
 
     def clean(self):
         # normalize email
         if self.email:
             self.email = self.email.strip().lower()
-        # basic validation: either user or email must be present
-        if not self.user_id and not self.email:
-            raise forms.ValidationError("Either user or email must be set for a team membership")
+
+        # email is mandatory
+        if not self.email:
+            raise forms.ValidationError("Email is required for a subscription seat")
+
+        # if user is provided, ensure it matches the email
+        if self.user_id and getattr(self.user, "email", None):
+            if (self.user.email or "").strip().lower() != self.email:
+                raise forms.ValidationError("User email does not match seat email")
+
         return super().clean()
 
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
 
-    def __str__(self) -> str:
-        first_name = getattr(self.user, "first_name", "") or ""
-        last_name = getattr(self.user, "last_name", "") or ""
-        name = (first_name + " " + last_name).strip() or (self.email or str(self.user_id))
-        email = self.user.email if getattr(self.user, "email", None) else (self.email or "")
-        return f"{name} ({email})"
+
+# SubscriptionSeatInvite has been removed; pending seats are managed via SubscriptionSeat with user=None and email set
 
 
 class Consumable(AbstractServiceItem):
@@ -1841,13 +1807,24 @@ class Consumable(AbstractServiceItem):
     )
 
     # link to team membership (optional)
-    team_member = models.ForeignKey(
-        "payments.BillingTeamMembership",
+    subscription_billing_team = models.ForeignKey(
+        SubscriptionBillingTeam,
         on_delete=models.SET_NULL,
         null=True,
         default=None,
         blank=True,
-        help_text="Team member associated to this consumable (if any)",
+        help_text="Subscription billing team associated to this consumable (if any)",
+        db_index=True,
+    )
+
+    # link to team membership (optional)
+    subscription_seat = models.ForeignKey(
+        SubscriptionSeat,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Subscription seat associated to this consumable (if any)",
         db_index=True,
     )
 
@@ -2014,7 +1991,12 @@ class Consumable(AbstractServiceItem):
 
     def clean(self) -> None:
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
-        parent_entities = [self.subscription, self.plan_financing]
+        parent_entities = [
+            self.subscription,
+            self.plan_financing,
+            self.subscription_billing_team,
+            self.subscription_seat,
+        ]
 
         settings = get_user_settings(self.user.id)
 

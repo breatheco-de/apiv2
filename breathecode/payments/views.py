@@ -39,6 +39,7 @@ from breathecode.payments.actions import (
     create_team_member_with_invite,
     bulk_create_team_members_with_invites,
     remove_team_member,
+    replace_team_member,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -61,7 +62,6 @@ from breathecode.payments.models import (
     Service,
     ServiceItem,
     Subscription,
-    SubscriptionSeatInvite,
 )
 from breathecode.payments.serializers import (
     GetAcademyServiceSmallSerializer,
@@ -2789,8 +2789,14 @@ class AcademyTeamMemberView(APIView):
                 code=404,
             )
 
+        # Harden consumable scoping: owner-bound, team-enabled item only
         consumable = (
-            Consumable.objects.filter(id=seat_consumable_id, subscription=subscription)
+            Consumable.objects.filter(
+                id=seat_consumable_id,
+                subscription=subscription,
+                user_id=subscription.user_id,
+                service_item__is_team_allowed=True,
+            )
             .select_related("service_item")
             .first()
         )
@@ -2886,6 +2892,10 @@ class AcademyTeamMemberView(APIView):
                 code=403,
             )
 
+        # Optional replace flow: transfer credits instead of revoke/recreate
+        replace_email = (request.GET.get("replace_with_email") or "").strip().lower() or None
+        replace_user_id = request.GET.get("replace_with_user")
+
         user = None
         if user_id:
             user = (
@@ -2894,7 +2904,26 @@ class AcademyTeamMemberView(APIView):
                 .first()
             )
 
-        remove_team_member(subscription=subscription, service_item=service_item, user=user, email=email, lang=lang)
+        if replace_email or replace_user_id:
+            to_user = None
+            if replace_user_id:
+                to_user = (
+                    ServiceItem._meta.model.objects.model._meta.apps.get_model("auth", "User")
+                    .objects.filter(id=int(replace_user_id))
+                    .first()
+                )
+
+            replace_team_member(
+                subscription=subscription,
+                service_item=service_item,
+                from_user=user,
+                from_email=email,
+                to_user=to_user,
+                to_email=replace_email,
+                lang=lang,
+            )
+        else:
+            remove_team_member(subscription=subscription, service_item=service_item, user=user, email=email, lang=lang)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     extensions = APIViewExtensions(sort="-id")
@@ -2949,7 +2978,12 @@ class AcademyTeamMemberBulkView(APIView):
             )
 
         consumable = (
-            Consumable.objects.filter(id=seat_consumable_id, subscription=subscription)
+            Consumable.objects.filter(
+                id=seat_consumable_id,
+                subscription=subscription,
+                user_id=subscription.user_id,
+                service_item__is_team_allowed=True,
+            )
             .select_related("service_item")
             .first()
         )
@@ -3022,7 +3056,12 @@ class TeamMemberInviteStatusView(APIView):
                 )
 
         consumable = (
-            Consumable.objects.filter(id=seat_consumable_id, subscription=subscription)
+            Consumable.objects.filter(
+                id=seat_consumable_id,
+                subscription=subscription,
+                user_id=subscription.user_id,
+                service_item__is_team_allowed=True,
+            )
             .select_related("service_item")
             .first()
         )
@@ -3037,16 +3076,13 @@ class TeamMemberInviteStatusView(APIView):
                 code=404,
             )
 
-        invite = (
-            SubscriptionSeatInvite.objects.select_related("invite")
-            .filter(subscription=subscription, service_item=consumable.service_item, invite__email=email)
-            .order_by("-id")
-            .first()
-        )
+        from breathecode.authenticate.models import UserInvite
+
+        invite = UserInvite.objects.filter(email=email, academy=subscription.academy).order_by("-id").first()
 
         if not invite:
             return Response({"status": "NOT_FOUND"}, status=status.HTTP_200_OK)
 
-        return Response({"status": invite.invite.status, "token": invite.invite.token}, status=status.HTTP_200_OK)
+        return Response({"status": invite.status, "token": invite.token}, status=status.HTTP_200_OK)
 
     extensions = APIViewExtensions(sort="-id")

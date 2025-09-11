@@ -7,13 +7,11 @@ from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
-    AcademyService,
     Currency,
     FinancingOption,
-    BillingTeamMembership,
     Subscription,
     SubscriptionSeat,
-    SubscriptionSeatInvite,
+    AcademyService,
     PaymentMethod,
     Plan,
     PlanOfferTranslation,
@@ -781,19 +779,19 @@ class TeamMemberSerializer(serpy.Serializer):
     user = GetUserSmallSerializer()
     seat_consumable_id = serpy.MethodField()
 
-    def get_email(self, obj: BillingTeamMembership):
+    def get_email(self, obj: SubscriptionSeat):
         email = obj.email or (obj.user.email if obj.user else None)
         return (email or "").strip().lower()
 
-    def get_seat_consumable_id(self, obj: BillingTeamMembership):
-        return obj.seat_consumable_id
+    def get_seat_consumable_id(self, obj: SubscriptionSeat):
+        return getattr(obj, "seat_consumable_id", None)
 
 
 class TeamMemberDetailSerializer(TeamMemberSerializer):
     # optional detailed policy summary per service slug
     policy_summary = serpy.MethodField()
 
-    def get_policy_summary(self, obj: BillingTeamMembership):
+    def get_policy_summary(self, obj: SubscriptionSeat):
         ctx = getattr(self, "context", {}) or {}
         service_item: ServiceItem | None = ctx.get("service_item")
         subscription: Subscription | None = ctx.get("subscription")
@@ -837,13 +835,13 @@ class SubscriptionTeamEnabledServiceSerializer(serpy.Serializer):
         sub: Subscription = self.context.get("subscription")
         if not sub:
             return 0
-        return SubscriptionSeat.objects.filter(subscription=sub, service_item=obj).count()
+        return SubscriptionSeat.objects.filter(subscription=sub).exclude(user__isnull=True).count()
 
     def get_invites_count(self, obj: ServiceItem):
         sub: Subscription = self.context.get("subscription")
         if not sub:
             return 0
-        return SubscriptionSeatInvite.objects.filter(subscription=sub, service_item=obj).count()
+        return SubscriptionSeat.objects.filter(subscription=sub, user__isnull=True).count()
 
     def get_available_slots(self, obj: ServiceItem):
         sub: Subscription = self.context.get("subscription")

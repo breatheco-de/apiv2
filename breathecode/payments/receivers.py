@@ -13,7 +13,7 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments import tasks
 
-from .models import Consumable, Plan, PlanFinancing, Subscription, SubscriptionSeat, SubscriptionSeatInvite
+from .models import Consumable, Plan, PlanFinancing, ServiceItem, Subscription, SubscriptionSeat
 from . import actions as payments_actions
 from .signals import (
     consume_service,
@@ -134,37 +134,39 @@ def revoke_plan_permissions_receiver(sender, instance, **kwargs):
 
 @receiver(invite_status_updated, sender=UserInvite)
 def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **kwargs):
-    """When a seat invite is accepted and binded to a user, convert it into a SubscriptionSeat."""
+    """When an invite is accepted, bind pending SubscriptionSeat by email and issue consumables."""
     if instance.status != "ACCEPTED" or not instance.user_id:
         return
 
-    for seat_invite in SubscriptionSeatInvite.objects.filter(invite=instance).select_related(
-        "subscription", "service_item"
-    ):
-        # Capacity enforcement at acceptance time
-        item = seat_invite.service_item
-        subscription = seat_invite.subscription
-        if not item.can_add_team_member_for_subscription(subscription, additional=1):
+    # Find pending seats by email across subscriptions with team-enabled items
+    seats = SubscriptionSeat.objects.filter(email=instance.email.lower().strip(), user__isnull=True)
+    for seat in seats.select_related("subscription"):
+        subscription = seat.subscription
+
+        # Find any team-enabled policy item for capacity and issuance
+        item = ServiceItem.objects.filter(plan__subscription=subscription, is_team_allowed=True).first()
+        if not item:
             continue
 
-        seat, created = SubscriptionSeat.objects.get_or_create(
-            subscription=subscription,
-            service_item=item,
-            user=instance.user,
-            defaults={"seats": seat_invite.seats},
-        )
+        if not item.can_add_team_member_for_subscription(subscription, additional=0):
+            continue
 
-        if created:
-            logger.info(
-                "Activated team seat via invite: subscription=%s service_item=%s user=%s",
-                subscription.id,
-                item.id,
-                instance.user_id,
-            )
+        # Bind seat to user and normalize email
+        seat.user = instance.user
+        seat.email = instance.user.email.lower()
+        seat.save()
+
+        logger.info(
+            "Activated team seat via invite: subscription=%s user=%s",
+            subscription.id,
+            instance.user_id,
+        )
 
         # Issue per-member consumables immediately (idempotent)
         try:
-            payments_actions.create_team_member_consumables(seat)
+            payments_actions.create_team_member_consumables(
+                subscription=subscription, user=instance.user, policy_item=item
+            )
         except Exception as e:
             logger.error(
                 "Error creating team member consumables on invite acceptance: subscription=%s user=%s: %s",
