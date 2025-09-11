@@ -20,6 +20,7 @@ from django.utils import timezone
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser
+from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.services.github import Github
 
 from .models import (
@@ -530,6 +531,56 @@ def remove_from_organization(cohort_id, user_id, force=False):
         return False
 
 
+def save_discord_credentials(user_id, discord_user_id, guild_id, cohort_slug):
+    try:
+        user = User.objects.get(id=user_id)
+        credentials, created = CredentialsDiscord.objects.get_or_create(
+            user=user,
+            defaults={
+                "discord_id": discord_user_id,
+                "joined_servers": [guild_id],
+            },
+        )
+        if not created:
+            import breathecode.authenticate.tasks as auth_tasks
+            from breathecode.authenticate.models import Cohort
+
+            cohort_academy = Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").first()
+            cohorts = Cohort.objects.filter(cohortuser__user=user, academy=cohort_academy.academy.id).all()
+
+            for cohort in cohorts:
+                for shortcut in cohort.shortcuts:
+                    if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
+                        auth_tasks.remove_discord_role_task.delay(
+                            guild_id=guild_id,
+                            discord_user_id=int(credentials.discord_id),
+                            role_id=shortcut.get("role_id", None),
+                            academy_id=cohort_academy.academy.id,
+                        )
+
+            credentials.discord_id = discord_user_id
+
+            server_exists = False
+            for server in credentials.joined_servers:
+                if server == guild_id:
+                    server_exists = True
+                    break
+
+            if not server_exists:
+                credentials.joined_servers.append(server_id)
+
+            credentials.save()
+            logger.info(f"Discord credentials saved for user {user_id} (Discord ID: {discord_user_id})")
+
+        return True
+    except User.DoesNotExist:
+        logger.error(f"User {user_id} not found when saving Discord credentials")
+        raise ValidationException(f"User {user_id} not found", slug="user-not-found")
+    except Exception as e:
+        logger.error(f"Error saving Discord credentials for user {user_id}: {str(e)}")
+        raise ValidationException(str(e))
+
+
 def delete_from_github(github_user: GithubAcademyUser):
     try:
         settings = AcademyAuthSettings.objects.filter(academy__id=github_user.academy.id).first()
@@ -1013,16 +1064,17 @@ def replace_user_email(requesting_user, target_user_id, new_email):
     Update user email across all models in the database that store email addresses.
     Only superusers can call this action. Users cannot change their own email.
     """
-    from breathecode.events.models import EventCheckin
-    from breathecode.marketing.models import Contact, FormEntry
-    from breathecode.assessment.models import UserAssessment
-    from breathecode.mentorship.models import SupportAgent, MentorProfile
-    from breathecode.notify.models import SlackUser
-    from breathecode.authenticate.models import User, UserInvite, ProfileAcademy, CredentialsGithub
     from capyc.core.i18n import translation
     from capyc.rest_framework.exceptions import ValidationException
-    from django.core.validators import validate_email
     from django.core.exceptions import ValidationError as DjangoValidationError
+    from django.core.validators import validate_email
+
+    from breathecode.assessment.models import UserAssessment
+    from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, User, UserInvite
+    from breathecode.events.models import EventCheckin
+    from breathecode.marketing.models import Contact, FormEntry
+    from breathecode.mentorship.models import MentorProfile, SupportAgent
+    from breathecode.notify.models import SlackUser
 
     lang = getattr(requesting_user, "lang", "en")
     if not requesting_user.is_superuser:
@@ -1153,3 +1205,47 @@ def replace_user_email(requesting_user, target_user_id, new_email):
             ),
             code=500,
         )
+
+
+def revoke_user_discord_permissions(user, academy):
+    import breathecode.authenticate.tasks as auth_tasks
+    from breathecode.authenticate.models import Cohort, CredentialsDiscord
+    from breathecode.services.discord import Discord
+
+    cohort_academy = Cohort.objects.filter(academy=academy).prefetch_related("academy").first()
+    cohorts = Cohort.objects.filter(cohortuser__user=user, academy=cohort_academy.academy.id).all()
+
+    discord_creds = CredentialsDiscord.objects.filter(user=user).first()
+    if not discord_creds:
+        logger.debug(f"User {user.id} has no Discord credentials, skipping revoke")
+        return False
+
+    user_had_roles = False
+    for cohort in cohorts:
+        if cohort.shortcuts != None:
+            for shortcut in cohort.shortcuts:
+                if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
+                    try:
+                        response = Discord(academy_id=academy.id).get_member_in_server(
+                            int(discord_creds.discord_id), shortcut.get("server_id", None)
+                        )
+                        if response.status_code == 200:
+                            for role in response.json().get("roles", None):
+                                if role == shortcut.get("role_id", None):
+                                    user_had_roles = True
+
+                        auth_tasks.remove_discord_role_task.delay(
+                            shortcut.get("server_id", None),
+                            int(discord_creds.discord_id),
+                            shortcut.get("role_id", None),
+                            academy_id=cohort_academy.academy.id,
+                        )
+                    except Exception as e:
+                        logger.error(f"Error removing Discord role: {e}")
+
+    if user_had_roles:
+        auth_tasks.send_discord_dm_task.delay(
+            int(discord_creds.discord_id), "Your subscription has ended. Role removed.", cohort_academy.academy.id
+        )
+
+    return user_had_roles

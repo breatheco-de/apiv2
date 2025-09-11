@@ -1690,3 +1690,25 @@ def user_has_active_paid_plans(user: User) -> bool:
             return True
 
     return False
+
+
+def user_has_active_4geeks_plus_plans(user: User) -> bool:
+    """
+    Check if a user has any active paid subscriptions or plan financings for 4Geeks Plus.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if the user has active paid plans, False otherwise
+    """
+    # Check for active subscriptions with 4Geeks Plus
+    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
+        if subscription.plans.filter(slug="4geeks-plus-subscription").exists():
+            return True
+    # Check for active plan financings with 4Geeks Plus
+    for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
+        if plan_financing.plans.filter(slug="4geeks-plus-planfinancing").exists():
+            return True
+
+    return False
