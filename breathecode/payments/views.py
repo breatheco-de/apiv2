@@ -2813,7 +2813,7 @@ class AcademyTeamMemberView(APIView):
 
         return subscription, consumable.service_item
 
-    def post(self, request, subscription_id: int):
+    def post(self, request, subscription_id: int, seat_id: int = None):
         # handler = self.extensions(request)
         lang = get_user_language(request)
 
@@ -2860,7 +2860,7 @@ class AcademyTeamMemberView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def delete(self, request, subscription_id: int):
+    def delete(self, request, subscription_id: int, seat_id: int = None):
         # handler = self.extensions(request)
         lang = get_user_language(request)
 

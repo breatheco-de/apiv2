@@ -9,8 +9,6 @@ from ..views import (
     AcademyPlanView,
     AcademyServiceView,
     AcademySubscriptionView,
-    AcademyTeamMemberView,
-    TeamMemberInviteStatusView,
     AppCancelConsumptionView,
     AppConsumableView,
     AppConsumeView,
@@ -139,32 +137,6 @@ urlpatterns = [
         "app/service/<str:service_slug>/consumptionsession/<str:hash>",
         AppConsumeView.as_view(),
         name="app_service_slug_consumptionsession_hash",
-    ),
-    # Team member endpoints
-    path(
-        "academy/subscription/<int:subscription_id>/billing-team",
-        AcademyTeamMemberView.as_view(),
-        name="academy_subscription_id_billing_team",
-    ),
-    path(
-        "academy/subscription/<int:subscription_id>/billing-team/invite",
-        AcademyTeamMemberView.as_view(),
-        name="academy_subscription_id_billing_team",
-    ),
-    path(
-        "academy/subscription/<int:subscription_id>/billing-team/seat",
-        AcademyTeamMemberView.as_view(),
-        name="academy_subscription_id_billing_team_seat",
-    ),
-    path(
-        "academy/subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>",
-        AcademyTeamMemberView.as_view(),
-        name="academy_subscription_id_billing_team_seat_id",
-    ),
-    path(
-        "academy/subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>/invite",
-        TeamMemberInviteStatusView.as_view(),
-        name="academy_subscription_id_billing_team_seat_id",
     ),
     # payments endpoints
     path("card", CardView.as_view(), name="card"),
