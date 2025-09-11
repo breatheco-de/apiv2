@@ -2214,150 +2214,20 @@ def activate_team_member(
     return seat
 
 
-def remove_team_member(
-    *,
-    subscription: Subscription,
-    service_item: ServiceItem,
-    user: User | None = None,
-    email: str | None = None,
-    lang: str = "en",
-) -> None:
-    """Remove a team member: drop seat and revoke consumables for that subscription/item."""
-    if not user and not email:
-        raise ValidationException(
-            translation(lang, en="User or email is required", es="Se requiere usuario o email", slug="user-required"),
-            code=400,
-        )
-
-    email = _normalize_email(email) if email else None
-
-    if not user and email:
-        user = User.objects.filter(email=email).first()
-
-    # Remove seat
-    if user:
-        # Log and delete seat assignment
-        if seat := SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=user).first():
-            _append_seat_log(seat, "REMOVED")
-        SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=user).delete()
-
-        # Revoke per-member consumables using policy-aware helper
-        try:
-            revoke_team_member_consumables(subscription=subscription, user=user, policy_item=service_item)
-        except Exception:
-            # Fallback to direct consumable zeroing scoped by team policy
-            entries = _get_team_policy_entries(service_item)
-            slugs = {e.get("service_slug") for e in entries if isinstance(e, dict) and e.get("service_slug")}
-            qs = Consumable.objects.filter(user=user, subscription=subscription)
-            if slugs:
-                qs = qs.filter(service_item__service__slug__in=slugs)
-            for c in qs.exclude(how_many=0):
-                c.how_many = 0
-                c.save()
-                from breathecode.payments import signals as payment_signals
-
-                payment_signals.lose_service_permissions.send_robust(instance=c, sender=Consumable)
+type SeatLogAction = Literal["ADDED", "REMOVED", "REPLACED"]
 
 
-# TODO: use or move to receivers
-def replace_team_member(
-    *,
-    subscription: Subscription,
-    service_item: ServiceItem,
-    from_user: User | None = None,
-    from_email: str | None = None,
-    to_user: User | None = None,
-    to_email: str | None = None,
-    lang: str = "en",
-) -> None:
-    """Replace an existing member, transferring credits within the same billing period.
+class SeatLogEntry(TypedDict):
+    email: str
+    action: SeatLogAction
+    created_at: str
 
-    If the replacement target is an email without a user, an invite will be created and the credits
-    will be held until acceptance (no revoke of owner capacity is needed).
-    """
-    _validate_team_item_or_raise(service_item, lang)
 
-    if not from_user and from_email:
-        from_user = User.objects.filter(email=_normalize_email(from_email)).first()
-
-    if not from_user:
-        raise ValidationException(
-            translation(
-                lang, en="Source member not found", es="Miembro origen no encontrado", slug="from-user-not-found"
-            ),
-            code=404,
-        )
-
-    # Resolve target
-    if not to_user and to_email:
-        to_email = _normalize_email(to_email)
-        to_user = User.objects.filter(email=to_email).first()
-
-    # If target user exists: transfer consumables and rebind seat
-    if to_user:
-        if SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=to_user).exists():
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Target user already has a seat",
-                    es="El usuario destino ya tiene un asiento",
-                    slug="target-has-seat",
-                ),
-                code=400,
-            )
-
-        # Transfer consumables: move team-policy consumables to the new user
-        entries = _get_team_policy_entries(service_item)
-        slugs = {e.get("service_slug") for e in entries if isinstance(e, dict) and e.get("service_slug")}
-        qs = Consumable.objects.filter(user=from_user, subscription=subscription)
-        if slugs:
-            qs = qs.filter(service_item__service__slug__in=slugs)
-
-        for c in qs:
-            c.user = to_user
-            c.save()
-
-        # Rebind seat
-        if s := SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=from_user).first():
-            _append_seat_log(s, "REMOVED")
-        SubscriptionSeat.objects.filter(billing_team__subscription=subscription, user=from_user).delete()
-        team, _ = SubscriptionBillingTeam.objects.get_or_create(
-            subscription=subscription, defaults={"name": f"Team {subscription.id}"}
-        )
-        new_seat, created = SubscriptionSeat.objects.get_or_create(
-            billing_team=team, user=to_user, defaults={"seat_multiplier": 1, "email": to_user.email}
-        )
-        if created:
-            _append_seat_log(new_seat, "ADDED")
-        return
-
-    # Otherwise: create an invite for the target email and revoke the old member's access
-    if to_email:
-        create_team_member_with_invite(
-            subscription=subscription,
-            service_item=service_item,
-            email=to_email,
-            seats=1,
-            author=None,
-            lang=lang,
-        )
-
-        # Revoke the old member's consumables and seat
-        remove_team_member(
-            subscription=subscription,
-            service_item=service_item,
-            user=from_user,
-            email=None,
-            lang=lang,
-        )
-        return
-
-    raise ValidationException(
-        translation(
-            lang,
-            en="Replacement target (user or email) is required",
-            es="Se requiere un destino de reemplazo (usuario o email)",
-            slug="replacement-required",
-        ),
-        code=400,
-    )
+def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> SeatLogEntry:
+    utc_now = timezone.now()
+    entry = {
+        "email": (seat.email or "").strip().lower(),
+        "action": action,
+        "created_at": utc_now.isoformat().replace("+00:00", "Z"),
+    }
+    return entry

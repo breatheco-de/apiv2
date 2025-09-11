@@ -228,13 +228,13 @@ class UserInvite(models.Model):
     email_status = models.JSONField(default=None, blank=True, null=True)
 
     # link to team membership (optional)
-    team_member = models.ForeignKey(
+    subscription_seat = models.ForeignKey(
         "payments.SubscriptionSeat",
         on_delete=models.SET_NULL,
         null=True,
         default=None,
         blank=True,
-        help_text="Related team membership for team invitations",
+        help_text="Related subscription seat for team invitations",
         db_index=True,
     )
 

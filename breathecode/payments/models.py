@@ -1714,6 +1714,7 @@ class SubscriptionSeat(models.Model):
         User, on_delete=models.CASCADE, help_text="Assigned user", null=True, blank=True, default=None
     )
     email = models.CharField(max_length=150, help_text="Email of the member (normalized)", db_index=True, default="")
+    is_active = models.BooleanField(default=True, help_text="if true, this user is able to access the subscription")
 
     # number multiplier applied to per-member issuance from policy items
     seat_multiplier = models.PositiveIntegerField(

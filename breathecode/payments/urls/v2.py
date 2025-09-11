@@ -1,7 +1,12 @@
 from django.urls import path
 from .v1 import urlpatterns as urlpatterns_v1
 
-from ..views import V2CardView, AcademyTeamMemberView, TeamMemberInviteStatusView, AcademySubscriptionSeatView
+from ..views import (
+    V2CardView,
+    AcademySubscriptionBillingTeamView,
+    TeamMemberInviteStatusView,
+    AcademySubscriptionSeatView,
+)
 
 deprecation_list = [
     "card",
@@ -13,12 +18,12 @@ urlpatterns = [
     # Team member endpoints (moved from v1)
     path(
         "academy/subscription/<int:subscription_id>/billing-team",
-        AcademyTeamMemberView.as_view(),
+        AcademySubscriptionBillingTeamView.as_view(),
         name="academy_subscription_id_billing_team",
     ),
     path(
         "academy/subscription/<int:subscription_id>/billing-team/invite",
-        AcademyTeamMemberView.as_view(),
+        AcademySubscriptionBillingTeamView.as_view(),
         name="academy_subscription_id_billing_team",
     ),
     path(

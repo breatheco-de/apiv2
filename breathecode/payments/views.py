@@ -1,12 +1,14 @@
 from datetime import timedelta
+from typing import Any, TypedDict
 
 from adrf.views import APIView
 from capyc.core.i18n import translation
 from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
+from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import CharField, Count, F, Q, Value
+from django.db.models import CharField, Count, F, Q, QuerySet, Value
 from django.utils import timezone
 from django_redis import get_redis_connection
 from linked_services.rest_framework.decorators import scope
@@ -19,6 +21,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
+from breathecode.authenticate.models import UserInvite
 from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
@@ -28,6 +31,7 @@ from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
     apply_pricing_ratio,
+    create_seat_log_entry,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -36,7 +40,6 @@ from breathecode.payments.actions import (
     get_balance_by_resource,
     get_discounted_price,
     max_coupons_allowed,
-    remove_team_member,
 )
 from breathecode.payments.caches import PlanOfferCache
 from breathecode.payments.models import (
@@ -55,7 +58,6 @@ from breathecode.payments.models import (
     Plan,
     PlanFinancing,
     PlanOffer,
-    PlanTranslation,
     Seller,
     Service,
     ServiceItem,
@@ -2770,10 +2772,11 @@ class AcademyPaymentMethodView(APIView):
 # ------------------------------
 
 
-class AcademyTeamMemberView(APIView):
+class AcademySubscriptionBillingTeamView(APIView):
     """Manage Subscription's billing team (create/update/show)."""
 
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
+    extensions = APIViewExtensions(sort="-id")
 
     def get(self, request, subscription_id: int):
         lang = get_user_language(request)
@@ -2815,120 +2818,22 @@ class AcademyTeamMemberView(APIView):
             "subscription": subscription.id,
             "name": team.name,
             "seats_limit": team.seats_limit,
+            "seats_count": sum(seat.seat_multiplier for seat in team.seats.filter(is_active=True)),
+            "seats_log": team.seats_log,
             "consumption_strategy": team.consumption_strategy,
         }
         return Response(data, status=status.HTTP_200_OK)
 
-    def post(self, request, subscription_id: int):
-        lang = get_user_language(request)
-        subscription = Subscription.objects.filter(id=subscription_id).first()
-        if not subscription:
-            raise ValidationException(
-                translation(
-                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
-                ),
-                code=404,
-            )
 
-        if request.user.id != subscription.user_id:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Only the owner can manage team",
-                    es="Solo el dueño puede gestionar el equipo",
-                    slug="only-owner-allowed",
-                ),
-                code=403,
-            )
+class ReplaceSeat(TypedDict):
+    from_email: str
+    to_email: str
+    seat_multiplier: int
 
-        plan = subscription.plans.first()
-        if not plan:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Subscription has no plan",
-                    es="La suscripción no tiene un plan",
-                    slug="subscription-has-no-plan",
-                ),
-                code=404,
-            )
 
-        if not plan.supports_billing_team:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Plan does not support billing team",
-                    es="El plan no soporta equipo de facturación",
-                    slug="plan-does-not-support-billing-team",
-                ),
-                code=400,
-            )
-
-        plan_title = request.data.get("name", None)
-        if not plan_title:
-            translations = PlanTranslation.objects.filter(plan=plan).only("title", "lang")
-            # Get the best translation for the plan title
-            if translations:
-                # Try to find translation matching user's language
-                for translation_obj in translations:
-                    if translation_obj.lang == lang:
-                        plan_title = translation_obj.title
-                        break
-
-                # try to match a similar locale
-                for translation_obj in translations:
-                    if translation_obj.lang.startswith(lang):
-                        plan_title = translation_obj.title
-                        break
-
-                # If no exact match, use English as fallback
-                if not plan_title:
-                    for translation_obj in translations:
-                        if translation_obj.lang.startswith("en"):
-                            plan_title = translation_obj.title
-                            break
-
-                # If no English translation, use the first available
-                if not plan_title and translations:
-                    plan_title = translations[0].title
-
-            # Use plan slug as final fallback
-            if not plan_title:
-                plan_title = translation(
-                    lang, en=f"Subscription {subscription.id}", es=f"Suscripción {subscription.id}"
-                )
-
-        name = plan_title
-        seats_limit = int(request.data.get("seats_limit") or 1)
-        strategy = request.data.get("consumption_strategy")
-
-        team, created = SubscriptionBillingTeam.objects.get_or_create(
-            subscription=subscription,
-            defaults={"name": name, "seats_limit": seats_limit, "consumption_strategy": strategy},
-        )
-
-        if not created:
-            team.name = name
-            team.seats_limit = seats_limit
-            team.consumption_strategy = strategy
-            team.save()
-
-            subscription.has_billing_team = True
-            subscription.save()
-
-        data = {
-            "id": team.id,
-            "subscription": subscription.id,
-            "name": team.name,
-            "seats_limit": team.seats_limit,
-            "consumption_strategy": team.consumption_strategy,
-        }
-        return Response(data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-
-    def put(self, request, subscription_id: int):
-        return self.post(request, subscription_id)
-
-    extensions = APIViewExtensions(sort="-id")
+class AddSeat(TypedDict):
+    email: str
+    seat_multiplier: int
 
 
 class AcademySubscriptionSeatView(APIView):
@@ -2936,7 +2841,7 @@ class AcademySubscriptionSeatView(APIView):
 
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
 
-    def _get_subscription_and_item(self, subscription_id: int, seat_consumable_id: int, lang: str):
+    def _get_subscription(self, subscription_id: int, lang: str):
         subscription = Subscription.objects.filter(id=subscription_id).first()
         if not subscription:
             raise ValidationException(
@@ -2946,52 +2851,59 @@ class AcademySubscriptionSeatView(APIView):
                 code=404,
             )
 
-        consumable = (
-            Consumable.objects.filter(
-                id=seat_consumable_id,
-                subscription=subscription,
-                user_id=subscription.user_id,
-                service_item__is_team_allowed=True,
-            )
-            .select_related("service_item")
-            .first()
-        )
-        if not consumable:
+        return subscription
+
+    def _get_plan(self, subscription: Subscription, lang: str):
+        plan = subscription.plans.first()
+        if not plan:
             raise ValidationException(
-                translation(
-                    lang,
-                    en="Seat consumable not found",
-                    es="Consumible de asiento no encontrado",
-                    slug="seat-consumable-not-found",
-                ),
+                translation(lang, en="Plan not found", es="Plan no encontrado", slug="plan-not-found"),
                 code=404,
             )
 
-        return subscription, consumable.service_item
+        if not plan.seat_service_price:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan does not support team",
+                    es="Plan no soporta equipo",
+                    slug="plan-does-not-support-team-seats",
+                ),
+                code=400,
+            )
+
+        return plan
+
+    def _get_team(self, subscription: Subscription, lang: str):
+        team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+        if not team:
+            raise ValidationException(
+                translation(lang, en="Team not found", es="Equipo no encontrado", slug="team-not-found"),
+                code=404,
+            )
+        return team
+
+    def _get_seats(
+        self, team: SubscriptionBillingTeam, lang: str
+    ) -> QuerySet[SubscriptionSeat] | list[SubscriptionSeat]:
+        return SubscriptionSeat.objects.filter(billing_team=team)
+
+    def _serialize_seat(self, seat: SubscriptionSeat) -> dict[str, Any]:
+        return {
+            "id": seat.id,
+            "email": seat.email,
+            "user": seat.user_id,
+            "seat_multiplier": seat.seat_multiplier,
+            "is_active": seat.is_active,
+            "seat_log": seat.seat_log,
+        }
 
     def get(self, request, subscription_id: int, seat_id: int = None):
         lang = get_user_language(request)
 
-        subscription = Subscription.objects.filter(id=subscription_id).first()
-        if not subscription:
-            raise ValidationException(
-                translation(
-                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
-                ),
-                code=404,
-            )
-        if request.user.id != subscription.user_id:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Only the owner can manage team members",
-                    es="Solo el dueño puede gestionar miembros del equipo",
-                    slug="only-owner-allowed",
-                ),
-                code=403,
-            )
-
-        qs = SubscriptionSeat.objects.filter(billing_team__subscription=subscription)
+        subscription = self._get_subscription(subscription_id, lang)
+        team = self._get_team(subscription, lang)
+        qs = self._get_seats(team, lang)
         if seat_id:
             seat = qs.filter(id=seat_id).first()
             if not seat:
@@ -2999,132 +2911,151 @@ class AcademySubscriptionSeatView(APIView):
                     translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"),
                     code=404,
                 )
-            data = {"id": seat.id, "email": seat.email, "user": seat.user_id, "seat_multiplier": seat.seat_multiplier}
+            data = self._serialize_seat(seat)
             return Response(data, status=status.HTTP_200_OK)
 
-        items = [{"id": s.id, "email": s.email, "user": s.user_id, "seat_multiplier": s.seat_multiplier} for s in qs]
+        items = [self._serialize_seat(s) for s in qs]
         return Response(items, status=status.HTTP_200_OK)
 
-    def post(self, request, subscription_id: int, seat_id: int = None):
-        lang = get_user_language(request)
-        data = request.data or {}
-        email = (data.get("email") or "").strip().lower()
-        seat_multiplier = int(data.get("seat_multiplier") or 1)
-        seat_consumable_id = data.get("seat_consumable_id")
+    def _get_user(self, email: str):
+        user = User.objects.filter(email_iexact=email).first()
+        return user
 
-        if not email:
-            raise ValidationException(
-                translation(lang, en="Email is required", es="Email es requerido", slug="email-required"), code=400
-            )
-        if not seat_consumable_id:
+    # def _invite_user(self, email: str, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str):
+    #     invite = UserInvite.objects.filter(
+    #         email=email,
+    #         academy=subscription.academy,
+    #         status="PENDING",
+    #         author=subscription.user,
+    #     ).first()
+    #     user = self._get_user(email, lang)
+    #     if not user:
+    #         raise ValidationException(
+    #             translation(lang, en="User not found", es="Usuario no encontrado", slug="user-not-found"),
+    #             code=404,
+    #         )
+
+    def _create_seat(self, email: str, user: User, subscription_seat: SubscriptionSeat, lang: str):
+        if SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=email).exists():
             raise ValidationException(
                 translation(
                     lang,
-                    en="seat_consumable_id is required",
-                    es="seat_consumable_id es requerido",
-                    slug="seat-consumable-id-required",
-                ),
-                code=400,
-            )
-
-        subscription, service_item = self._get_subscription_and_item(subscription_id, int(seat_consumable_id), lang)
-        if request.user.id != subscription.user_id:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Only the owner can manage team members",
-                    es="Solo el dueño puede gestionar miembros del equipo",
-                    slug="only-owner-allowed",
-                ),
-                code=403,
-            )
-
-        if not service_item.can_add_team_member_for_subscription(subscription, additional=1):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="No capacity left to add more team members",
-                    es="No hay capacidad para agregar más miembros del equipo",
-                    slug="no-team-capacity",
-                ),
-                code=400,
-            )
-
-        team, _ = SubscriptionBillingTeam.objects.get_or_create(
-            subscription=subscription, defaults={"name": f"Team {subscription.id}"}
-        )
-        if SubscriptionSeat.objects.filter(billing_team=team).filter(Q(email=email) | Q(user__email=email)).exists():
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="A team seat for this email already exists",
-                    es="Ya existe un asiento para este email",
+                    en="User already has a seat for this subscription",
+                    es="El usuario ya tiene un asiento para esta suscripción",
                     slug="duplicate-team-seat",
                 ),
                 code=400,
             )
 
-        seat = SubscriptionSeat.objects.create(billing_team=team, email=email, seat_multiplier=seat_multiplier)
-        return Response(
-            {"id": seat.id, "email": seat.email, "user": seat.user_id, "seat_multiplier": seat.seat_multiplier},
-            status=status.HTTP_201_CREATED,
+        seat = SubscriptionSeat(
+            billing_team=subscription_seat.billing_team,
+            user=user,
+            email=email,
+            seat_multiplier=subscription_seat.seat_multiplier,
         )
+        seat_log_entry = create_seat_log_entry(seat, "ADDED")
+        seat.seat_log.append(seat_log_entry)
+        seat.save(update_fields=["seat_log"])
+        return seat
 
-    def put(self, request, subscription_id: int, seat_id: int):
-        lang = get_user_language(request)
-        data = request.data or {}
-
-        subscription = Subscription.objects.filter(id=subscription_id).first()
-        if not subscription:
-            raise ValidationException(
-                translation(
-                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
-                ),
-                code=404,
-            )
-        if request.user.id != subscription.user_id:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Only the owner can manage team members",
-                    es="Solo el dueño puede gestionar miembros del equipo",
-                    slug="only-owner-allowed",
-                ),
-                code=403,
-            )
-
-        seat = SubscriptionSeat.objects.filter(billing_team__subscription=subscription, id=seat_id).first()
+    def _replace_seat(
+        self,
+        from_email: str,
+        to_email: str,
+        to_user: User,
+        subscription_seat: SubscriptionSeat,
+        lang: str,
+    ):
+        seat = SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=from_email).first()
         if not seat:
             raise ValidationException(
-                translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"), code=404
-            )
-
-        email = (data.get("email") or seat.email or "").strip().lower()
-        seat_multiplier = int(data.get("seat_multiplier") or seat.seat_multiplier)
-
-        seat.email = email
-        seat.seat_multiplier = seat_multiplier
-        seat.save()
-        return Response(
-            {"id": seat.id, "email": seat.email, "user": seat.user_id, "seat_multiplier": seat.seat_multiplier},
-            status=status.HTTP_200_OK,
-        )
-
-    def delete(self, request, subscription_id: int, seat_id: int):
-        lang = get_user_language(request)
-        seat_consumable_id = request.GET.get("seat_consumable_id")
-        if not seat_consumable_id:
-            raise ValidationException(
                 translation(
                     lang,
-                    en="seat_consumable_id is required",
-                    es="seat_consumable_id es requerido",
-                    slug="seat-consumable-id-required",
+                    en=f"There is no seat with this email {from_email}",
+                    es=f"No hay un asiento con este email {from_email}",
+                    slug="no-seat-with-this-email",
                 ),
                 code=400,
             )
 
-        subscription, service_item = self._get_subscription_and_item(subscription_id, int(seat_consumable_id), lang)
+        if SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=to_email).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"There is already a seat with this email {to_email}",
+                    es=f"Ya hay un asiento con este email {to_email}",
+                    slug="seat-with-this-email-already-exists",
+                ),
+                code=400,
+            )
+
+        seat.email = to_email
+        seat.user = to_user
+        seat.is_active = True
+        seat_log_entry = create_seat_log_entry(seat, "REPLACED")
+        seat.seat_log.append(seat_log_entry)
+        seat.save(update_fields=["seat_log", "is_active"])
+        seat.save()
+        return seat
+
+    def _normalize_email(self, email: str):
+        return email.strip().lower()
+
+    def _normalize_add_seats(self, add_seats: list[dict[str, Any]]) -> list[AddSeat]:
+        l: list[AddSeat] = []
+        for seat in add_seats:
+            serialized = {
+                "email": self._normalize_email(seat["email"]),
+                "seat_multiplier": seat.get("seat_multiplier", 1),
+            }
+            l.append(serialized)
+        return l
+
+    def _normalize_replace_seat(self, replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
+        l: list[AddSeat] = []
+        for seat in replace_seats:
+            serialized = {
+                "from_email": self._normalize_email(seat["from_email"]),
+                "to_email": self._normalize_email(seat["to_email"]),
+            }
+            l.append(serialized)
+        return l
+
+    def _validate_seats_limit(
+        self, team: SubscriptionBillingTeam, add_seats: list[AddSeat], replace_seats: list[ReplaceSeat], lang: str
+    ):
+        seats = {}
+        for seat in self._get_seats(team, lang):
+            seats[seat.email] = seat.seat_multiplier
+
+        for seat in add_seats:
+            seats[seat.email] = seat.seat_multiplier
+
+        for seat in replace_seats:
+            del seats[seat.from_email]
+            seats[seat.to_email] = seat.seat_multiplier
+
+        value = 0
+        for seat in seats.values():
+            value += seat
+
+        if team.seats_limit and value > team.seats_limit:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Seats limit exceeded: {value} > {team.seats_limit}",
+                    es=f"Límite de asientos excedido: {value} > {team.seats_limit}",
+                    slug="seats-limit-exceeded",
+                ),
+                code=400,
+            )
+
+    def put(self, request, subscription_id: int):
+        lang = get_user_language(request)
+        data = request.data or {}
+
+        subscription = self._get_subscription(subscription_id, lang)
+
         if request.user.id != subscription.user_id:
             raise ValidationException(
                 translation(
@@ -3136,15 +3067,75 @@ class AcademySubscriptionSeatView(APIView):
                 code=403,
             )
 
-        seat = SubscriptionSeat.objects.filter(billing_team__subscription=subscription, id=seat_id).first()
+        add_seats = self._normalize_add_seats(data.get("add_seats", []))
+        replace_seats = self._normalize_replace_seat(data.get("replace_seats", []))
+
+        if not add_seats and not replace_seats:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Add seats or replace seats are required",
+                    es="Agregar asientos o reemplazar asientos son requeridos",
+                    slug="add-or-replace-seats-required",
+                ),
+                code=400,
+            )
+
+        subscription = self._get_subscription(subscription_id, lang)
+        team = self._get_team(subscription, lang)
+
+        self._validate_seats_limit(team, add_seats, replace_seats, lang)
+
+        result: list[SubscriptionSeat] = []
+        errors: list[ValidationException] = []
+
+        for seat in add_seats:
+            try:
+                result.append(self._create_seat(seat.email, seat.user, seat.seat_multiplier, lang))
+            except ValidationException as e:
+                errors.append(e)
+
+        for seat in replace_seats:
+            try:
+                result.append(
+                    self._replace_seat(seat.from_email, seat.to_email, seat.to_user, seat.seat_multiplier, lang)
+                )
+            except ValidationException as e:
+                errors.append(e)
+
+        return Response(
+            {
+                "data": [self._serialize_seat(seat) for seat in result],
+                "errors": [{"message": e.message, "code": e.code} for e in errors],
+            },
+            status=status.HTTP_207_MULTI_STATUS,
+        )
+
+    def delete(self, request, subscription_id: int, seat_id: int):
+        lang = get_user_language(request)
+        subscription = self._get_subscription(subscription_id, lang)
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team members",
+                    es="Solo el dueño puede gestionar miembros del equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        seat = SubscriptionSeat.objects.filter(
+            billing_team__subscription=subscription, id=seat_id, is_active=True
+        ).first()
         if not seat:
             raise ValidationException(
                 translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"), code=404
             )
+        seat.is_active = False
+        seat.save(update_fields=["is_active"])
 
-        remove_team_member(
-            subscription=subscription, service_item=service_item, user=seat.user, email=seat.email, lang=lang
-        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -3187,8 +3178,6 @@ class TeamMemberInviteStatusView(APIView):
                 raise ValidationException(
                     translation(lang, en="Not allowed", es="No permitido", slug="not-allowed"), code=403
                 )
-
-        from breathecode.authenticate.models import UserInvite
 
         invite = UserInvite.objects.filter(email=email, academy=subscription.academy).order_by("-id").first()
 
@@ -3245,8 +3234,6 @@ class TeamMemberInviteStatusView(APIView):
             seat = SubscriptionSeat.objects.create(billing_team=team, email=email, seat_multiplier=1)
 
         # create or update invite
-        from breathecode.authenticate.models import UserInvite
-
         invite, created = UserInvite.objects.get_or_create(
             email=email,
             academy=subscription.academy,
@@ -3285,8 +3272,6 @@ class TeamMemberInviteStatusView(APIView):
                 ),
                 code=403,
             )
-
-        from breathecode.authenticate.models import UserInvite
 
         invite = UserInvite.objects.filter(email=email, academy=subscription.academy).order_by("-id").first()
         if not invite:
