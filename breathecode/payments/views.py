@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import Any, TypedDict
+import uuid
 
 from adrf.views import APIView
 from capyc.core.i18n import translation
@@ -25,7 +26,8 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_academy_from_body, get_user_language
+import breathecode.notify.actions as notify_actions
+from breathecode.authenticate.actions import get_academy_from_body, get_app_url, get_user_language
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
@@ -2829,11 +2831,22 @@ class ReplaceSeat(TypedDict):
     from_email: str
     to_email: str
     seat_multiplier: int
+    first_name: str | None
+    last_name: str | None
 
 
 class AddSeat(TypedDict):
     email: str
     seat_multiplier: int
+    first_name: str | None
+    last_name: str | None
+
+
+class SeatDict(TypedDict):
+    email: str
+    seat_multiplier: int
+    first_name: str | None
+    last_name: str | None
 
 
 class AcademySubscriptionSeatView(APIView):
@@ -2921,21 +2934,40 @@ class AcademySubscriptionSeatView(APIView):
         user = User.objects.filter(email_iexact=email).first()
         return user
 
-    # def _invite_user(self, email: str, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str):
-    #     invite = UserInvite.objects.filter(
-    #         email=email,
-    #         academy=subscription.academy,
-    #         status="PENDING",
-    #         author=subscription.user,
-    #     ).first()
-    #     user = self._get_user(email, lang)
-    #     if not user:
-    #         raise ValidationException(
-    #             translation(lang, en="User not found", es="Usuario no encontrado", slug="user-not-found"),
-    #             code=404,
-    #         )
+    def _invite_user(self, obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str):
+        invite, created = UserInvite.objects.get_or_create(
+            email=obj.get("email", ""),
+            academy=subscription.academy,
+            subscription_seat=subscription_seat,
+            role="STUDENT",
+            defaults={
+                "status": "PENDING",
+                "author": subscription.user,
+                "role_id": "student",
+                "token": str(uuid.uuid4()),
+                "sent_at": timezone.now(),
+                "first_name": obj.get("first_name", ""),
+                "last_name": obj.get("last_name", ""),
+            },
+        )
+        if created or invite.status == "PENDING":
+            notify_actions.send_email_message(
+                "welcome_academy",
+                obj.get("email", ""),
+                {
+                    "email": obj.get("email", ""),
+                    "subject": translation(
+                        lang,
+                        en=f"Invitation to join {subscription.academy.name}",
+                        es=f"Invitación para unirse a {subscription.academy.name}",
+                    ),
+                    "LINK": get_app_url() + "/v1/auth/member/invite/" + invite.token,
+                    "FIST_NAME": invite.first_name or "",
+                },
+                academy=subscription.academy,
+            )
 
-    def _create_seat(self, email: str, user: User, subscription_seat: SubscriptionSeat, lang: str):
+    def _create_seat(self, email: str, user: User | None, subscription_seat: SubscriptionSeat, lang: str):
         if SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=email).exists():
             raise ValidationException(
                 translation(
@@ -2956,13 +2988,22 @@ class AcademySubscriptionSeatView(APIView):
         seat_log_entry = create_seat_log_entry(seat, "ADDED")
         seat.seat_log.append(seat_log_entry)
         seat.save(update_fields=["seat_log"])
+
+        if not user:
+            self._invite_user(
+                {"email": email, "first_name": None, "last_name": None},
+                subscription_seat.billing_team.subscription,
+                subscription_seat,
+                lang,
+            )
+
         return seat
 
     def _replace_seat(
         self,
         from_email: str,
         to_email: str,
-        to_user: User,
+        to_user: User | None,
         subscription_seat: SubscriptionSeat,
         lang: str,
     ):
@@ -2996,6 +3037,15 @@ class AcademySubscriptionSeatView(APIView):
         seat.seat_log.append(seat_log_entry)
         seat.save(update_fields=["seat_log", "is_active"])
         seat.save()
+
+        if not to_user:
+            self._invite_user(
+                {"email": to_email, "first_name": None, "last_name": None},
+                subscription_seat.billing_team.subscription,
+                subscription_seat,
+                lang,
+            )
+
         return seat
 
     def _normalize_email(self, email: str):
@@ -3007,6 +3057,8 @@ class AcademySubscriptionSeatView(APIView):
             serialized = {
                 "email": self._normalize_email(seat["email"]),
                 "seat_multiplier": seat.get("seat_multiplier", 1),
+                "first_name": seat.get("first_name", ""),
+                "last_name": seat.get("last_name", ""),
             }
             l.append(serialized)
         return l
@@ -3017,6 +3069,8 @@ class AcademySubscriptionSeatView(APIView):
             serialized = {
                 "from_email": self._normalize_email(seat["from_email"]),
                 "to_email": self._normalize_email(seat["to_email"]),
+                "first_name": seat.get("first_name", ""),
+                "last_name": seat.get("last_name", ""),
             }
             l.append(serialized)
         return l
