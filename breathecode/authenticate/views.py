@@ -2059,11 +2059,9 @@ def pick_password(request, token):
 
                 # Determine app_url from invite's conversion_info if available
                 app_url = os.getenv("APP_URL", "https://4geeks.com")
-                logger.debug(f"app_url: {app_url}")
 
                 if invite and invite.conversion_info and isinstance(invite.conversion_info, dict):
                     landing_url = invite.conversion_info.get("landing_url")
-                    logger.debug(f"landing_url es {landing_url}")
 
                     if landing_url:
                         try:
