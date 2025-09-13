@@ -4,7 +4,6 @@ from .v1 import urlpatterns as urlpatterns_v1
 from ..views import (
     V2CardView,
     AcademySubscriptionBillingTeamView,
-    TeamMemberInviteStatusView,
     AcademySubscriptionSeatView,
 )
 
@@ -34,11 +33,6 @@ urlpatterns = [
     path(
         "academy/subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>",
         AcademySubscriptionSeatView.as_view(),
-        name="academy_subscription_id_billing_team_seat_id",
-    ),
-    path(
-        "academy/subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>/invite",
-        TeamMemberInviteStatusView.as_view(),
         name="academy_subscription_id_billing_team_seat_id",
     ),
     *[r for r in urlpatterns_v1 if r.pattern._route not in deprecation_list],

@@ -833,6 +833,8 @@ class Plan(AbstractPriceByTime):
         return self.slug
 
     def clean(self) -> None:
+        if self.seat_service_price and self.seat_service_price.service.type != Service.Type.SEAT:
+            raise forms.ValidationError("Seat service price must be a seat service")
 
         if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
             raise forms.ValidationError("If the plan is not renewable, you must set time_of_life and time_of_life_unit")
@@ -1193,8 +1195,23 @@ class Bag(AbstractAmountByTime):
     )
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
+    seat_service_item = models.ForeignKey(
+        ServiceItem,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="ServiceItem used as seat pricing for per-seat purchases",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
+            raise forms.ValidationError("Seat service item must be a seat service")
+
+        return super().clean()
 
     def save(self, *args, **kwargs):
         created = self.pk is None
@@ -1456,6 +1473,15 @@ class AbstractIOweYou(models.Model):
         help_text="Country code used for pricing ratio calculations",
     )
 
+    seat_service_item = models.ForeignKey(
+        ServiceItem,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="ServiceItem used as seat pricing for per-seat purchases",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1496,6 +1522,9 @@ class PlanFinancing(AbstractIOweYou):
 
     def clean(self) -> None:
         settings = get_user_settings(self.user.id)
+
+        if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
+            raise forms.ValidationError("Seat service item must be a seat service")
 
         if not self.monthly_price:
             raise forms.ValidationError(
@@ -1597,6 +1626,9 @@ class Subscription(AbstractIOweYou):
         return f"{self.user.email} ({self.valid_until})"
 
     def clean(self) -> None:
+        if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
+            raise forms.ValidationError("Seat service item must be a seat service")
+
         if self.status == "FULLY_PAID":
             raise forms.ValidationError(
                 translation(
@@ -2326,6 +2358,16 @@ class ServiceStockScheduler(models.Model):
         null=True,
         help_text="Subscription service item",
     )
+    # if the scheduler is for a seat, we need to know which seat it is
+    subscription_seat = models.ForeignKey(
+        SubscriptionSeat,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Subscription seat",
+    )
+
     plan_handler = models.ForeignKey(
         PlanServiceItemHandler,
         on_delete=models.CASCADE,

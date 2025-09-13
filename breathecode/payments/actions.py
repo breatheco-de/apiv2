@@ -543,12 +543,20 @@ class BagHandler:
         try:
             seats = int(self.team_seats)
         except Exception:
-            seats = 0
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="Seats must be an integer",
+                    es="Los asientos deben ser un número entero",
+                    slug="seats-must-be-an-integer",
+                ),
+                code=400,
+            )
 
         if seats <= 0:
             return
 
-        plan = self.bag.plans.first()
+        plan: Plan | None = self.bag.plans.first()
         if not plan:
             raise ValidationException(
                 translation(
@@ -560,7 +568,7 @@ class BagHandler:
                 code=400,
             )
 
-        if not plan.supports_teams:
+        if not plan.seat_service_price:
             raise ValidationException(
                 translation(
                     self.lang,
@@ -571,38 +579,23 @@ class BagHandler:
                 code=400,
             )
 
-        if not plan.seat_add_on_service:
-            raise ValidationException(
-                translation(
-                    self.lang,
-                    en="Seat add-on service is not configured",
-                    es="El servicio de asientos no está configurado",
-                    slug="seat-add-on-not-configured",
-                ),
-                code=400,
-            )
-
     # NEW: add seat add-ons as ServiceItems into the bag
     def _add_seat_add_ons(self):
+
         if not self.team_seats:
             return
 
-        try:
-            seats = int(self.team_seats)
-        except Exception:
-            seats = 0
+        seats = int(self.team_seats)
 
         if seats <= 0:
             return
 
-        plan = self.bag.plans.first()
-        if not plan or not plan.seat_add_on_service:
-            return
+        plan: Plan | None = self.bag.plans.first()
+        service_item = ServiceItem.objects.get_or_create(
+            service=plan.seat_service_price.service, how_many=seats, is_renewable=False
+        )
 
-        # create or reuse a ServiceItem for the seat add-on Service with the requested quantity
-        seat_service = plan.seat_add_on_service.service
-        seat_item, _ = ServiceItem.objects.get_or_create(service=seat_service, how_many=seats)
-        self.bag.service_items.add(seat_item)
+        self.bag.seat_service_item = service_item
 
     def _ask_to_add_plan_and_charge_it_in_the_bag(self):
         for plan in self.bag.plans.all():
@@ -2031,187 +2024,6 @@ def create_team_member_consumables(
         )
 
     return created
-
-
-def revoke_team_member_consumables(
-    *, subscription: Subscription, user: User, policy_item: ServiceItem, seat: SubscriptionSeat | None = None
-) -> int:
-    """Revoke all non-zero consumables for this user and policy services under the subscription."""
-    entries = _get_team_policy_entries(policy_item)
-    slugs = {e.get("service_slug") for e in entries if isinstance(e, dict) and e.get("service_slug")}
-    if not slugs:
-        return 0
-
-    qs = Consumable.objects.filter(
-        user=user,
-        subscription=subscription,
-        service_item__service__slug__in=slugs,
-    ).exclude(how_many=0)
-    if seat:
-        qs = qs.filter(subscription_seat=seat)
-
-    revoked = 0
-    for c in qs:
-        c.how_many = 0
-        c.save()
-        from breathecode.payments import signals as payment_signals
-
-        payment_signals.lose_service_permissions.send_robust(instance=c, sender=Consumable)
-        revoked += 1
-
-    return revoked
-
-    # # Check for active PAID plan financings
-    # for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
-    #     if is_plan_financing_paid(plan_financing):
-    #         return True
-
-    # return False
-
-
-def _normalize_email(email: str) -> str:
-    return (email or "").strip().lower()
-
-
-def _validate_team_item_or_raise(service_item: ServiceItem, lang: str) -> None:
-    if not service_item.is_team_allowed:
-        raise ValidationException(
-            translation(
-                lang,
-                en="This service item does not allow team members",
-                es="Este elemento de servicio no permite miembros del equipo",
-                slug="team-not-allowed",
-            ),
-            code=400,
-        )
-
-    if not service_item.team_group:
-        raise ValidationException(
-            translation(
-                lang,
-                en="Team group is required for this team-enabled service item",
-                es="Se requiere un grupo de equipo para este elemento de servicio habilitado para equipos",
-                slug="team-group-required",
-            ),
-            code=400,
-        )
-
-
-# TODO: use or move to receivers
-def create_team_member_with_invite(
-    *,
-    subscription: Subscription,
-    service_item: ServiceItem,
-    email: str,
-    seats: int = 1,
-    author: User | None = None,
-    lang: str = "en",
-) -> UserInvite:
-    """Create a team invite for a member with capacity and duplicate checks."""
-    email = _normalize_email(email)
-
-    _validate_team_item_or_raise(service_item, lang)
-
-    if not email or "@" not in email:
-        raise ValidationException(
-            translation(lang, en="Invalid email", es="Email inválido", slug="invalid-email"), code=400
-        )
-
-    if seats < 1:
-        raise ValidationException(
-            translation(lang, en="Seats must be >= 1", es="Los asientos deben ser >= 1", slug="invalid-seats"),
-            code=400,
-        )
-
-    # Duplicate checks: existing invite or assigned seat for this subscription
-    team, _ = SubscriptionBillingTeam.objects.get_or_create(
-        subscription=subscription, defaults={"name": f"Team {subscription.id}"}
-    )
-    if SubscriptionSeat.objects.filter(billing_team=team).filter(Q(user__email=email) | Q(email=email)).exists():
-        raise ValidationException(
-            translation(
-                lang,
-                en="A team invite or seat for this email already exists",
-                es="Ya existe una invitación o asiento para este email",
-                slug="duplicate-team-invite",
-            ),
-            code=400,
-        )
-
-    # Capacity check
-    if not service_item.can_add_team_member_for_subscription(subscription, additional=1):
-        raise ValidationException(
-            translation(
-                lang,
-                en="No capacity left to invite more team members",
-                es="No hay capacidad para invitar más miembros del equipo",
-                slug="no-team-capacity",
-            ),
-            code=400,
-        )
-
-    # Reuse the existing invitation pipeline
-    invites = create_subscription_seat_invites(
-        subscription=subscription, service_item=service_item, emails=[email], seats=seats, author=author, lang=lang
-    )
-
-    return invites[0]
-
-
-def activate_team_member(
-    *, subscription: Subscription, service_item: ServiceItem, user: User, lang: str = "en"
-) -> SubscriptionSeat:
-    """Activate a team member by assigning a seat and triggering consumable issuance."""
-    _validate_team_item_or_raise(service_item, lang)
-
-    # Group requirement
-    if service_item.team_group and not user.groups.filter(id=service_item.team_group_id).exists():
-        raise ValidationException(
-            translation(
-                lang,
-                en="User is not in the required team group",
-                es="El usuario no está en el grupo requerido del equipo",
-                slug="user-not-in-team-group",
-            ),
-            code=400,
-        )
-
-    team, _ = SubscriptionBillingTeam.objects.get_or_create(
-        subscription=subscription, defaults={"name": f"Team {subscription.id}"}
-    )
-
-    if SubscriptionSeat.objects.filter(billing_team=team, user=user).exists():
-        raise ValidationException(
-            translation(
-                lang,
-                en="User already has a seat for this subscription",
-                es="El usuario ya tiene un asiento para esta suscripción",
-                slug="duplicate-team-seat",
-            ),
-            code=400,
-        )
-
-    # Capacity check
-    if not service_item.can_add_team_member_for_subscription(subscription, additional=1):
-        raise ValidationException(
-            translation(
-                lang,
-                en="No capacity left to add more team members",
-                es="No hay capacidad para agregar más miembros del equipo",
-                slug="no-team-capacity",
-            ),
-            code=400,
-        )
-
-    seat = SubscriptionSeat.objects.create(billing_team=team, user=user, seat_multiplier=1, email=user.email)
-    _append_seat_log(seat, "ADDED")
-
-    # Issue consumables via existing renewal flow (step 7 will add per-member JSON issuance)
-    from . import tasks as payment_tasks
-
-    payment_tasks.renew_subscription_consumables.delay(subscription.id)
-
-    return seat
 
 
 type SeatLogAction = Literal["ADDED", "REMOVED", "REPLACED"]

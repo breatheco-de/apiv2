@@ -13,7 +13,15 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments import tasks
 
-from .models import Consumable, Plan, PlanFinancing, ServiceItem, Subscription, SubscriptionSeat
+from .models import (
+    Consumable,
+    Plan,
+    PlanFinancing,
+    ServiceItem,
+    Subscription,
+    SubscriptionSeat,
+    SubscriptionBillingTeam,
+)
 from . import actions as payments_actions
 from .signals import (
     consume_service,
@@ -140,16 +148,8 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
 
     # Find pending seats by email across subscriptions with team-enabled items
     seats = SubscriptionSeat.objects.filter(email=instance.email.lower().strip(), user__isnull=True)
-    for seat in seats.select_related("subscription"):
+    for seat in seats.select_related("billing_team", "billing_team__subscription"):
         subscription = seat.billing_team.subscription
-
-        # Find any team-enabled policy item for capacity and issuance
-        item = ServiceItem.objects.filter(plan__subscription=subscription, is_team_allowed=True).first()
-        if not item:
-            continue
-
-        if not item.can_add_team_member_for_subscription(subscription, additional=0):
-            continue
 
         # Bind seat to user and normalize email
         seat.user = instance.user
@@ -162,25 +162,41 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
             instance.user_id,
         )
 
-        # Issue per-member consumables immediately (idempotent)
-        try:
-            payments_actions.create_team_member_consumables(
-                subscription=subscription,
-                user=instance.user,
-                policy_item=item,
-                seat=seat,
-                team=seat.billing_team,
-            )
-        except Exception as e:
-            logger.error(
-                "Error creating team member consumables on invite acceptance: subscription=%s user=%s: %s",
-                subscription.id,
-                instance.user_id,
-                str(e),
-                exc_info=True,
-            )
+        # Determine effective strategy
+        team = seat.billing_team
+        plan = subscription.plans.first()
+        plan_strategy = getattr(plan, "consumption_strategy", Plan.ConsumptionStrategy.PER_SEAT)
+        per_seat_enabled = team and (
+            team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT
+            or plan_strategy == Plan.ConsumptionStrategy.BOTH
+        )
 
-        # If subscription is already active and paid, ensure group is granted and consumables are issued now
+        # Issue per-seat consumables only when strategy requires it; otherwise rely on renew task for team-level
+        if per_seat_enabled:
+            try:
+                item = (
+                    ServiceItem.objects.filter(plan__subscription=subscription, is_team_allowed=True)
+                    .select_related("service")
+                    .first()
+                )
+                if item:
+                    payments_actions.create_team_member_consumables(
+                        subscription=subscription,
+                        user=instance.user,
+                        policy_item=item,
+                        seat=seat,
+                        team=team,
+                    )
+            except Exception as e:
+                logger.error(
+                    "Error creating team member consumables on invite acceptance: subscription=%s user=%s: %s",
+                    subscription.id,
+                    instance.user_id,
+                    str(e),
+                    exc_info=True,
+                )
+
+        # If subscription is already active and paid, ensure group is granted then (re)build consumables
         if subscription.status == Subscription.Status.ACTIVE and payments_actions.is_subscription_paid(subscription):
             group = Group.objects.filter(name="Paid Student").first()
             if group and not instance.user.groups.filter(name="Paid Student").exists():
