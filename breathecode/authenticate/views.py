@@ -1983,7 +1983,8 @@ async def process_discord_token(request):
         user = token.user
         cohort = await Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").afirst()
         settings = await AcademyAuthSettings.objects.filter(academy_id=cohort.academy.id).afirst()
-
+        if not settings.discord_settings:
+            raise ValidationError("No Discord settings found")
         params = {
             "client_id": settings.discord_settings.get("discord_client_id", None),
             "client_secret": settings.discord_settings.get("discord_secret", None),
