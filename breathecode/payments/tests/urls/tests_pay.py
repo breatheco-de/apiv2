@@ -71,6 +71,7 @@ def format_coupon(coupon, data={}):
 
 def get_serializer(bc, currency, user, coupons=[], data={}):
     return {
+        "id": 1,
         "amount": 0,
         "currency": {
             "code": currency.code,

@@ -66,12 +66,21 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
         return lookups
 
+    def get_extras(scheduler: ServiceStockScheduler):
+        extras = {}
+        if scheduler.subscription_seat:
+            extras["subscription_seat_id"] = scheduler.subscription_seat.id
+        # if scheduler.plan_financing_seat:
+        #     extras["plan_financing_seat_id"] = scheduler.plan_financing_seat.id
+        return extras
+
     logger.info(f"Starting renew_consumables for service stock scheduler {scheduler_id}")
 
     if not (scheduler := ServiceStockScheduler.objects.filter(id=scheduler_id).first()):
         raise RetryTask(f"ServiceStockScheduler with id {scheduler_id} not found")
 
     utc_now = timezone.now()
+    extras = get_extras(scheduler)
 
     # is over
     if (
@@ -217,6 +226,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         subscription=subscription,
         plan_financing=plan_financing,
         **selected_lookup,
+        **extras,
     )
 
     consumable.save()
@@ -584,6 +594,18 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             bag.was_delivered = True
             bag.save()
+
+            if subscription.seat_service_item and subscription.seat_service_item.how_many > 0:
+                team = SubscriptionBillingTeam.objects.filter(
+                    subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+                ).first()
+                if not team:
+                    raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
+
+                for seat in SubscriptionSeat.objects.filter(billing_team=team):
+                    renew_subscription_consumables.delay(subscription.id, seat_id=seat.id)
+
+                return
 
             renew_subscription_consumables.delay(subscription.id)
 
@@ -1116,11 +1138,11 @@ def build_subscription(
             defaults={
                 "name": f"Team {subscription.id}",
                 "seat_limit": subscription.seat_service_item.how_many,
-                "consumption_strategy": (
-                    Plan.ConsumptionStrategy.PER_SEAT
-                    if plan.consumption_strategy == Plan.ConsumptionStrategy.BOTH
-                    else plan.consumption_strategy
-                ),
+                # "consumption_strategy": (
+                #     Plan.ConsumptionStrategy.PER_SEAT
+                #     if plan.consumption_strategy == Plan.ConsumptionStrategy.BOTH
+                #     else plan.consumption_strategy
+                # ),
             },
         )
 

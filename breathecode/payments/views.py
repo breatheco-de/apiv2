@@ -2822,7 +2822,7 @@ class AcademySubscriptionBillingTeamView(APIView):
             "seats_limit": team.seats_limit,
             "seats_count": sum(seat.seat_multiplier for seat in team.seats.filter(is_active=True)),
             "seats_log": team.seats_log,
-            "consumption_strategy": team.consumption_strategy,
+            # "consumption_strategy": team.consumption_strategy,
         }
         return Response(data, status=status.HTTP_200_OK)
 

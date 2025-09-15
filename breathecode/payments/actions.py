@@ -772,6 +772,30 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
         bag.currency = currency
         bag.save()
 
+    if bag.seat_service_item:
+        academy_service = AcademyService.objects.filter(
+            service=bag.seat_service_item.service, academy=bag.academy
+        ).first()
+        if not academy_service:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Price are not configured for per-seat purchases",
+                    es="Precio no configurado para compras por asiento",
+                    slug="price-not-configured-for-per-seat-purchases",
+                ),
+                code=400,
+            )
+
+        if price_per_month != 0:
+            price_per_month += academy_service.price_per_unit * bag.seat_service_item.how_many
+        if price_per_quarter != 0:
+            price_per_quarter += academy_service.price_per_unit * bag.seat_service_item.how_many
+        if price_per_half != 0:
+            price_per_half += academy_service.price_per_unit * bag.seat_service_item.how_many
+        if price_per_year != 0:
+            price_per_year += academy_service.price_per_unit * bag.seat_service_item.how_many
+
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
 

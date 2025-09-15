@@ -318,9 +318,6 @@ class ServiceItem(AbstractServiceItem):
                     )
                 seen.add(key)
 
-        if self.max_team_members is not None and self.max_team_members < -1:
-            raise forms.ValidationError("max_team_members must be -1 (unlimited) or >= 0")
-
     def save(self, *args, **kwargs):
         self.full_clean()
 
@@ -727,10 +724,10 @@ class Plan(AbstractPriceByTime):
         DELETED = ("DELETED", "Deleted")
         DISCONTINUED = ("DISCONTINUED", "Discontinued")
 
-    class ConsumptionStrategy(models.TextChoices):
-        PER_TEAM = "PER_TEAM", "Per team"
-        PER_SEAT = "PER_SEAT", "Per seat"
-        BOTH = "BOTH", "Both"
+    # class ConsumptionStrategy(models.TextChoices):
+    #     PER_TEAM = "PER_TEAM", "Per team"
+    #     PER_SEAT = "PER_SEAT", "Per seat"
+    #     BOTH = "BOTH", "Both"
 
     slug = models.CharField(
         max_length=60,
@@ -785,12 +782,12 @@ class Plan(AbstractPriceByTime):
         AcademyService, blank=True, help_text="Service item bundles that can be purchased with this plan"
     )
 
-    consumption_strategy = models.CharField(
-        max_length=8,
-        help_text="Consumption strategy",
-        choices=ConsumptionStrategy.choices,
-        default=ConsumptionStrategy.PER_SEAT,
-    )
+    # consumption_strategy = models.CharField(
+    #     max_length=8,
+    #     help_text="Consumption strategy",
+    #     choices=ConsumptionStrategy.choices,
+    #     default=ConsumptionStrategy.PER_SEAT,
+    # )
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     is_onboarding = models.BooleanField(default=False, help_text="Is onboarding plan?", db_index=True)
@@ -874,12 +871,6 @@ class Plan(AbstractPriceByTime):
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
-        # recompute supports_teams
-        try:
-            has_team_items = PlanServiceItem.objects.filter(plan=self, service_item__is_team_allowed=True).exists()
-        except Exception:
-            has_team_items = False
-        self.supports_teams = bool(self.seat_add_on_service_id) or bool(has_team_items)
         return super().save(*args, **kwargs)
 
 
@@ -1712,12 +1703,12 @@ class SubscriptionBillingTeam(models.Model):
     name = models.CharField(max_length=80, help_text="Team name")
     seats_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this billing team")
     seats_limit = models.PositiveIntegerField(default=1, help_text="Limit of seats for this team")
-    consumption_strategy = models.CharField(
-        max_length=8,
-        help_text="Consumption strategy",
-        choices=ConsumptionStrategy.choices,
-        default=ConsumptionStrategy.PER_SEAT,
-    )
+    # consumption_strategy = models.CharField(
+    #     max_length=8,
+    #     help_text="Consumption strategy",
+    #     choices=ConsumptionStrategy.choices,
+    #     default=ConsumptionStrategy.PER_SEAT,
+    # )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -1806,14 +1797,15 @@ class Consumable(AbstractServiceItem):
 
     # if null, this is valid until resources are exhausted
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer", null=True, blank=True, default=None)
-    subscription_billing_team = models.ForeignKey(
-        SubscriptionBillingTeam,
-        on_delete=models.CASCADE,
-        help_text="Subscription billing team",
-        null=True,
-        blank=True,
-        default=None,
-    )
+    # to be able to get consumables and consume them by billing team
+    # subscription_billing_team = models.ForeignKey(
+    #     SubscriptionBillingTeam,
+    #     on_delete=models.CASCADE,
+    #     help_text="Subscription billing team",
+    #     null=True,
+    #     blank=True,
+    #     default=None,
+    # )
 
     subscription = models.ForeignKey(
         Subscription,
@@ -2367,6 +2359,15 @@ class ServiceStockScheduler(models.Model):
         null=True,
         help_text="Subscription seat",
     )
+    # if is required PlanFinancing seats, add that field here like the subscription_seat
+    # plan_financing_seat = models.ForeignKey(
+    #     SubscriptionSeat,
+    #     on_delete=models.CASCADE,
+    #     default=None,
+    #     blank=True,
+    #     null=True,
+    #     help_text="Plan financing seat",
+    # )
 
     plan_handler = models.ForeignKey(
         PlanServiceItemHandler,
