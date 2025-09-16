@@ -2786,7 +2786,7 @@ class AcademyPaymentMethodView(APIView):
 # ------------------------------
 
 
-class AcademySubscriptionBillingTeamView(APIView):
+class SubscriptionBillingTeamView(APIView):
     """Manage Subscription's billing team (create/update/show)."""
 
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
@@ -2861,7 +2861,7 @@ class SeatDict(TypedDict):
     last_name: str | None
 
 
-class AcademySubscriptionSeatView(APIView):
+class SubscriptionSeatView(APIView):
     """CRUD for SubscriptionSeat under a subscription's billing team."""
 
     throttle_classes = [UserRateThrottle, AnonRateThrottle]

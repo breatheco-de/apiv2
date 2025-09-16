@@ -3,8 +3,8 @@ from .v1 import urlpatterns as urlpatterns_v1
 
 from ..views import (
     V2CardView,
-    AcademySubscriptionBillingTeamView,
-    AcademySubscriptionSeatView,
+    SubscriptionBillingTeamView,
+    SubscriptionSeatView,
 )
 
 deprecation_list = [
@@ -17,22 +17,22 @@ urlpatterns = [
     # Team member endpoints (moved from v1)
     path(
         "academy/subscription/<int:subscription_id>/billing-team",
-        AcademySubscriptionBillingTeamView.as_view(),
+        SubscriptionBillingTeamView.as_view(),
         name="academy_subscription_id_billing_team",
     ),
     path(
         "academy/subscription/<int:subscription_id>/billing-team/invite",
-        AcademySubscriptionBillingTeamView.as_view(),
+        SubscriptionBillingTeamView.as_view(),
         name="academy_subscription_id_billing_team",
     ),
     path(
         "academy/subscription/<int:subscription_id>/billing-team/seat",
-        AcademySubscriptionSeatView.as_view(),
+        SubscriptionSeatView.as_view(),
         name="academy_subscription_id_billing_team_seat",
     ),
     path(
         "academy/subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>",
-        AcademySubscriptionSeatView.as_view(),
+        SubscriptionSeatView.as_view(),
         name="academy_subscription_id_billing_team_seat_id",
     ),
     *[r for r in urlpatterns_v1 if r.pattern._route not in deprecation_list],
