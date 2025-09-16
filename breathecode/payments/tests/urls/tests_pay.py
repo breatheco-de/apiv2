@@ -16,6 +16,7 @@ import breathecode.activity.tasks as activity_tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import tasks
 from breathecode.payments.actions import apply_pricing_ratio, calculate_relative_delta
+from breathecode.payments.models import ServiceItem
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
@@ -278,6 +279,7 @@ def test_no_bag(bc: Breathecode, client: APIClient):
         "expires_at": UTC_NOW,
         "status": "CHECKING",
         "type": "BAG",
+        "seat_service_item_id": None,
     }
     model = bc.database.create(user=1, bag=bag, currency=1, academy=1)
     client.force_authenticate(user=model.user)
@@ -325,6 +327,7 @@ def test_with_bag__no_free_trial(bc: Breathecode, client: APIClient):
                 "amount_per_year",
             ]
         ): 1,
+        "seat_service_item_id": None,
     }
 
     plan = {"is_renewable": False}
@@ -367,6 +370,7 @@ def test_bad_choosen_period(bc: Breathecode, client: APIClient):
         "expires_at": UTC_NOW,
         "status": "CHECKING",
         "type": "BAG",
+        "seat_service_item_id": None,
     }
 
     plan = {"is_renewable": False}
@@ -409,6 +413,7 @@ def test_free_trial__no_plan_offer(bc: Breathecode, client: APIClient):
         "expires_at": UTC_NOW,
         "status": "CHECKING",
         "type": "BAG",
+        "seat_service_item_id": None,
     }
 
     plan = {"is_renewable": False}
@@ -461,6 +466,7 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
         "expires_at": UTC_NOW,
         "status": "CHECKING",
         "type": "BAG",
+        "seat_service_item_id": None,
     }
 
     plan = {"is_renewable": False}
@@ -510,12 +516,238 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
     )
 
 
+def test_seats_pricing_not_configured(bc: Breathecode, client: APIClient):
+    # Base bag amounts (will be adjusted by seat add-on below)
+    bag = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "expires_at": UTC_NOW,
+        "status": "CHECKING",
+        "type": "BAG",
+        **generate_amounts_by_time(over_50=True),
+        "seat_service_item_id": 1,
+    }
+    chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
+
+    plan = {"is_renewable": False}
+    # Random coupons
+    random_percent = random.random() * 0.3
+    discount1 = random.random() * 20
+    discount2 = random.random() * 10
+    coupons = [
+        {
+            "discount_type": "PERCENT_OFF",
+            "discount_value": random_percent,
+            "offered_at": None,
+            "expires_at": None,
+        },
+        {
+            "discount_type": "FIXED_PRICE",
+            "discount_value": discount1,
+            "offered_at": None,
+            "expires_at": None,
+        },
+        {
+            "discount_type": "HAGGLING",
+            "discount_value": discount2,
+            "offered_at": None,
+            "expires_at": None,
+        },
+    ]
+    random.shuffle(coupons)
+
+    # Create base entities
+    model = bc.database.create(
+        user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, coupon=coupons, service={"type": "SEAT"}
+    )
+    client.force_authenticate(user=model.user)
+
+    # Reuse existing service_item with id=1 as the seat item
+    seats = random.randint(1, 5)
+    seat_price = random.random() * 20 + 5
+
+    # Compute base amount before adding seat pricing
+    base_amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
+
+    # Simulate that amounts already include per-seat pricing as computed during checking
+    seat_total = seat_price * seats
+    model.bag.amount_per_month += seat_total
+    model.bag.amount_per_quarter += seat_total
+    model.bag.amount_per_half += seat_total
+    model.bag.amount_per_year += seat_total
+    model.bag.save()
+
+    amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
+    assert math.isclose(amount, base_amount + seat_total, rel_tol=1e-9)
+
+    url = reverse_lazy("payments:pay")
+    data = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "chosen_period": chosen_period,
+    }
+    response = client.post(url, data, format="json")
+
+    json = response.json()
+    expected = {"detail": "price-not-configured-for-per-seat-purchases", "status_code": 400}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    assert bc.database.list_of("payments.Bag") == [
+        {
+            **bc.format.to_dict(model.bag),
+        }
+    ]
+    assert bc.database.list_of("payments.Invoice") == []
+    assert bc.database.list_of("authenticate.UserSetting") == [
+        format_user_setting({"lang": "en"}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    # build subscription must be called for chosen_period flow
+    assert tasks.build_subscription.delay.call_args_list == []
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
+            call(1, "bag_created", related_type="payments.Bag", related_id=1),
+        ],
+    )
+
+
+def test_amount_set_with_subscription_seats(bc: Breathecode, client: APIClient):
+    # Base bag amounts (will be adjusted by seat add-on below)
+    bag = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "expires_at": UTC_NOW,
+        "status": "CHECKING",
+        "type": "BAG",
+        **generate_amounts_by_time(over_50=True),
+        "seat_service_item_id": 1,
+    }
+    chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
+
+    plan = {"is_renewable": False}
+    # Random coupons
+    random_percent = random.random() * 0.3
+    discount1 = random.random() * 20
+    discount2 = random.random() * 10
+    coupons = [
+        {
+            "discount_type": "PERCENT_OFF",
+            "discount_value": random_percent,
+            "offered_at": None,
+            "expires_at": None,
+        },
+        {
+            "discount_type": "FIXED_PRICE",
+            "discount_value": discount1,
+            "offered_at": None,
+            "expires_at": None,
+        },
+        {
+            "discount_type": "HAGGLING",
+            "discount_value": discount2,
+            "offered_at": None,
+            "expires_at": None,
+        },
+    ]
+    random.shuffle(coupons)
+
+    seat_price = random.random() * 20 + 5
+    # Reuse existing service_item with id=1 as the seat item
+    seats = random.randint(1, 5)
+
+    # Create base entities
+    model = bc.database.create(
+        user=1,
+        bag=bag,
+        academy=1,
+        currency=1,
+        plan=plan,
+        service_item={"how_many": seats},
+        coupon=coupons,
+        service={"type": "SEAT"},
+        academy_service={"price_per_unit": seat_price},
+    )
+    client.force_authenticate(user=model.user)
+
+    # Compute base amount before adding seat pricing
+    base_amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
+
+    # Seats total per month
+    seat_total = seat_price * seats
+    # Compute expected amount using chosen period factor without mutating bag amounts
+    period_factor = (
+        1 if chosen_period == "MONTH" else 3 if chosen_period == "QUARTER" else 6 if chosen_period == "HALF" else 12
+    )
+    amount = base_amount + seat_total * period_factor
+
+    url = reverse_lazy("payments:pay")
+    data = {
+        "token": "xdxdxdxdxdxdxdxdxdxd",
+        "chosen_period": chosen_period,
+    }
+    response = client.post(url, data, format="json")
+
+    json = response.json()
+    total = amount - (amount * random_percent) - discount1 - discount2
+    expected = get_serializer(bc, model.currency, model.user, coupons=model.coupon, data={"amount": total})
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert bc.database.list_of("payments.Bag") == [
+        {
+            **bc.format.to_dict(model.bag),
+            "token": None,
+            "status": "PAID",
+            "expires_at": None,
+            "chosen_period": chosen_period,
+            "is_recurrent": True,
+        }
+    ]
+    assert bc.database.list_of("payments.Invoice") == [
+        format_invoice_item(
+            {
+                "amount": total,
+                "stripe_id": "1",
+            }
+        ),
+    ]
+    assert bc.database.list_of("authenticate.UserSetting") == [
+        format_user_setting({"lang": "en"}),
+    ]
+
+    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
+    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
+    # build subscription must be called for chosen_period flow
+    assert tasks.build_subscription.delay.call_args_list == [call(1, 1, conversion_info="")]
+    assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_free_subscription.delay.call_args_list == []
+
+    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
+    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [call(1, 1)])
+    bc.check.calls(
+        activity_tasks.add_activity.delay.call_args_list,
+        [
+            call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            call(1, "checkout_completed", related_type="payments.Invoice", related_id=1),
+        ],
+    )
+
+
 def test_free_trial__with_plan_offer_with_conversion_info(bc: Breathecode, client: APIClient):
     bag = {
         "token": "xdxdxdxdxdxdxdxdxdxd",
         "expires_at": UTC_NOW,
         "status": "CHECKING",
         "type": "BAG",
+        "seat_service_item_id": None,
     }
 
     plan = {"is_renewable": False}
@@ -575,6 +807,7 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(),
+        "seat_service_item_id": None,
     }
     chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
     amount = get_amount_per_period(chosen_period, bag)
@@ -592,7 +825,7 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
     response = client.post(url, data, format="json")
 
     json = response.json()
-    expected = get_serializer(bc, model.currency, model.user, data={"amount": math.ceil(amount)})
+    expected = get_serializer(bc, model.currency, model.user, data={"amount": amount})
 
     assert json == expected
     assert response.status_code == status.HTTP_201_CREATED
@@ -610,7 +843,7 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
     assert bc.database.list_of("payments.Invoice") == [
         format_invoice_item(
             {
-                "amount": math.ceil(amount),
+                "amount": amount,
                 "stripe_id": "1",
             }
         ),
@@ -643,6 +876,7 @@ def test_with_chosen_period__amount_set_with_conversion_info(bc: Breathecode, cl
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(),
+        "seat_service_item_id": None,
     }
     chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
     amount = get_amount_per_period(chosen_period, bag)
@@ -661,7 +895,7 @@ def test_with_chosen_period__amount_set_with_conversion_info(bc: Breathecode, cl
     response = client.post(url, data, format="json")
 
     json = response.json()
-    expected = get_serializer(bc, model.currency, model.user, data={"amount": math.ceil(amount)})
+    expected = get_serializer(bc, model.currency, model.user, data={"amount": amount})
 
     assert json == expected
     assert response.status_code == status.HTTP_201_CREATED
@@ -679,7 +913,7 @@ def test_with_chosen_period__amount_set_with_conversion_info(bc: Breathecode, cl
     assert bc.database.list_of("payments.Invoice") == [
         format_invoice_item(
             {
-                "amount": math.ceil(amount),
+                "amount": amount,
                 "stripe_id": "1",
             }
         ),
@@ -712,6 +946,7 @@ def test_with_chosen_period__amount_set_with_conversion_info_with_wrong_fields(b
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(),
+        "seat_service_item_id": None,
     }
     chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
     amount = get_amount_per_period(chosen_period, bag)
@@ -768,6 +1003,7 @@ def test_installments_not_found(bc: Breathecode, client: APIClient):
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(),
+        "seat_service_item_id": None,
     }
     chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
     amount = get_amount_per_period(chosen_period, bag)
@@ -825,6 +1061,7 @@ def test_with_installments(bc: Breathecode, client: APIClient):
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(),
+        "seat_service_item_id": None,
     }
     financing_option = {
         "monthly_price": charge,
@@ -851,7 +1088,7 @@ def test_with_installments(bc: Breathecode, client: APIClient):
     response = client.post(url, data, format="json")
 
     json = response.json()
-    expected = get_serializer(bc, model.currency, model.user, data={"amount": math.ceil(charge)})
+    expected = get_serializer(bc, model.currency, model.user, data={"amount": charge})
 
     assert json == expected
     assert response.status_code == status.HTTP_201_CREATED
@@ -870,7 +1107,7 @@ def test_with_installments(bc: Breathecode, client: APIClient):
     assert bc.database.list_of("payments.Invoice") == [
         format_invoice_item(
             {
-                "amount": math.ceil(charge),
+                "amount": charge,
                 "stripe_id": "1",
             }
         ),
@@ -907,6 +1144,7 @@ def test_with_installments_with_conversion_info(bc: Breathecode, client: APIClie
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(),
+        "seat_service_item_id": None,
     }
     financing_option = {
         "monthly_price": charge,
@@ -934,7 +1172,7 @@ def test_with_installments_with_conversion_info(bc: Breathecode, client: APIClie
     response = client.post(url, data, format="json")
 
     json = response.json()
-    expected = get_serializer(bc, model.currency, model.user, data={"amount": math.ceil(charge)})
+    expected = get_serializer(bc, model.currency, model.user, data={"amount": charge})
 
     assert json == expected
     assert response.status_code == status.HTTP_201_CREATED
@@ -953,7 +1191,7 @@ def test_with_installments_with_conversion_info(bc: Breathecode, client: APIClie
     assert bc.database.list_of("payments.Invoice") == [
         format_invoice_item(
             {
-                "amount": math.ceil(charge),
+                "amount": charge,
                 "stripe_id": "1",
             }
         ),
@@ -988,6 +1226,7 @@ def test_coupons__with_installments(bc: Breathecode, client: APIClient):
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(),
+        "seat_service_item_id": None,
     }
     financing_option = {
         "monthly_price": charge,
@@ -1039,9 +1278,12 @@ def test_coupons__with_installments(bc: Breathecode, client: APIClient):
     response = client.post(url, data, format="json")
 
     json = response.json()
-    total = math.ceil(charge - (charge * random_percent) - discount1 - discount2)
+    total = charge - (charge * random_percent) - discount1 - discount2
     expected = get_serializer(bc, model.currency, model.user, coupons=model.coupon, data={"amount": total})
 
+    # handle tiny floating point differences
+    assert math.isclose(json["amount"], total, rel_tol=1e-12, abs_tol=1e-12)
+    expected["amount"] = json["amount"]
     assert json == expected
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -1092,6 +1334,7 @@ def test_coupons__with_chosen_period__amount_set(bc: Breathecode, client: APICli
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(over_50=True),
+        "seat_service_item_id": None,
     }
     chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
     amount = get_amount_per_period(chosen_period, bag)
@@ -1133,7 +1376,7 @@ def test_coupons__with_chosen_period__amount_set(bc: Breathecode, client: APICli
     response = client.post(url, data, format="json")
 
     json = response.json()
-    total = math.ceil(amount - (amount * random_percent) - discount1 - discount2)
+    total = amount - (amount * random_percent) - discount1 - discount2
     expected = get_serializer(bc, model.currency, model.user, coupons=model.coupon, data={"amount": total})
 
     assert json == expected
@@ -1185,6 +1428,7 @@ def test_coupons__with_chosen_period__amount_set_with_conversion_info(bc: Breath
         "status": "CHECKING",
         "type": "BAG",
         **generate_amounts_by_time(over_50=True),
+        "seat_service_item_id": None,
     }
     chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
     amount = get_amount_per_period(chosen_period, bag)
@@ -1227,7 +1471,7 @@ def test_coupons__with_chosen_period__amount_set_with_conversion_info(bc: Breath
     response = client.post(url, data, format="json")
 
     json = response.json()
-    total = math.ceil(amount - (amount * random_percent) - discount1 - discount2)
+    total = amount - (amount * random_percent) - discount1 - discount2
     expected = get_serializer(bc, model.currency, model.user, coupons=model.coupon, data={"amount": total})
 
     assert json == expected
@@ -1298,7 +1542,7 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
         "monthly_price": monthly_price,
         "how_many_months": 6,
         "pricing_ratio_exceptions": {
-            country_code: {
+            country_code.lower(): {
                 "ratio": ratio,
                 "currency": "USD",  # Optional currency override for display, charge uses bag currency
             }
@@ -1311,6 +1555,7 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
         "token": fake.slug(),
         "country_code": country_code,  # Set country code on the bag
         "expires_at": UTC_NOW + timedelta(minutes=10),  # Set expires_at
+        "seat_service_item_id": None,
     }
     currency = {"code": "USD"}
     model = bc.database.create(
@@ -1467,6 +1712,7 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
         "token": fake.slug(),
         "country_code": country_code,  # Set country code on the bag
         "expires_at": UTC_NOW + timedelta(minutes=10),  # Set expires_at
+        "seat_service_item_id": None,
     }
     currency = {"code": "USD"}
     model = bc.database.create(

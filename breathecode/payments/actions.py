@@ -591,7 +591,7 @@ class BagHandler:
             return
 
         plan: Plan | None = self.bag.plans.first()
-        service_item = ServiceItem.objects.get_or_create(
+        service_item, _ = ServiceItem.objects.get_or_create(
             service=plan.seat_service_price.service, how_many=seats, is_renewable=False
         )
 
@@ -797,18 +797,35 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
 
 def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> float:
     amount = 0
+    seats_price = 0
+
+    if bag.seat_service_item:
+        academy_service = AcademyService.objects.filter(
+            service=bag.seat_service_item.service, academy=bag.academy
+        ).first()
+        if not academy_service or academy_service.price_per_unit == 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Price are not configured for per-seat purchases",
+                    es="Precio no configurado para compras por asiento",
+                    slug="price-not-configured-for-per-seat-purchases",
+                ),
+                code=400,
+            )
+        seats_price = academy_service.price_per_unit * bag.seat_service_item.how_many
 
     if chosen_period == "MONTH" and bag.amount_per_month:
-        amount = bag.amount_per_month
+        amount = bag.amount_per_month + seats_price
 
     elif chosen_period == "QUARTER" and bag.amount_per_quarter:
-        amount = bag.amount_per_quarter
+        amount = bag.amount_per_quarter + (seats_price * 3)
 
     elif chosen_period == "HALF" and bag.amount_per_half:
-        amount = bag.amount_per_half
+        amount = bag.amount_per_half + (seats_price * 6)
 
     elif chosen_period == "YEAR" and bag.amount_per_year:
-        amount = bag.amount_per_year
+        amount = bag.amount_per_year + (seats_price * 12)
 
     # free trial
     if not amount and (bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year):

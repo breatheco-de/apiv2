@@ -339,6 +339,212 @@ class SignalTestSuite(PaymentsTestCase):
         )
 
     """
+    🔽🔽🔽 Team seats for subscriptions (seat add-ons)
+    """
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__with_bag__type_preview__team_seats__must_be_integer(self):
+        bag = {
+            "status": "CHECKING",
+            "type": "PREVIEW",
+            "plans": [],
+            "service_items": [],
+            "seat_service_item_id": None,
+        }
+
+        currency = {"code": "USD", "name": "United States dollar"}
+        plan = {
+            "price_per_month": random.random() * 100,
+            "price_per_quarter": random.random() * 100,
+            "price_per_half": random.random() * 100,
+            "price_per_year": random.random() * 100,
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "seat_service_price_id": None,
+        }
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=currency, plan=plan)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:checking")
+        data = {"academy": 1, "type": "PREVIEW", "plans": [1], "team_seats": "five"}
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+            response = self.client.put(url, data, format="json")
+
+        json = response.json()
+        expected = {"detail": "seats-must-be-an-integer", "status_code": 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Bag unchanged
+        self.assertEqual(self.bc.database.list_of("payments.Bag"), [self.bc.format.to_dict(model.bag)])
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__with_bag__type_preview__team_seats__plan_without_seat_price(self):
+        bag = {
+            "status": "CHECKING",
+            "type": "PREVIEW",
+            "plans": [],
+            "service_items": [],
+            "seat_service_item_id": None,
+        }
+
+        currency = {"code": "USD", "name": "United States dollar"}
+        plan = {
+            "price_per_month": random.random() * 100,
+            "price_per_quarter": random.random() * 100,
+            "price_per_half": random.random() * 100,
+            "price_per_year": random.random() * 100,
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "seat_service_price_id": None,
+        }
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=currency, plan=plan)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:checking")
+        data = {"academy": 1, "type": "PREVIEW", "plans": [1], "team_seats": 3}
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+            response = self.client.put(url, data, format="json")
+
+        json = response.json()
+        expected = {"detail": "plan-not-support-teams", "status_code": 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Bag unchanged
+        self.assertEqual(self.bc.database.list_of("payments.Bag"), [self.bc.format.to_dict(model.bag)])
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__with_bag__type_preview__team_seats__ok(self):
+        bag = {
+            "status": "CHECKING",
+            "type": "PREVIEW",
+            "plans": [],
+            "service_items": [],
+            "seat_service_item_id": None,
+        }
+
+        currency = {"code": "USD", "name": "United States dollar"}
+        # plan with prices so base amounts are > 0 and seat pricing gets added on all periods
+        plan = {
+            "price_per_month": random.random() * 100 + 10,
+            "price_per_quarter": random.random() * 100 + 10,
+            "price_per_half": random.random() * 100 + 10,
+            "price_per_year": random.random() * 100 + 10,
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "trial_duration": 0,
+            "trial_duration_unit": "MONTH",
+        }
+
+        seat_price = random.random() * 10 + 5
+        seats = random.randint(1, 5)
+
+        model = self.bc.database.create(
+            user=1,
+            bag=bag,
+            academy=1,
+            currency=currency,
+            service={"type": "SEAT"},
+            academy_service={"price_per_unit": seat_price},
+            plan=plan,
+        )
+        # Link seat price to plan
+        plan_obj = self.bc.database.get("payments.Plan", 1, dict=False)
+        academy_service = self.bc.database.get("payments.AcademyService", 1, dict=False)
+        plan_obj.seat_service_price = academy_service
+        plan_obj.save()
+
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:checking")
+        data = {"academy": 1, "type": "PREVIEW", "plans": [1], "team_seats": seats}
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+            response = self.client.put(url, data, format="json")
+
+        json = response.json()
+
+        base_month = plan_obj.price_per_month
+        base_quarter = plan_obj.price_per_quarter
+        base_half = plan_obj.price_per_half
+        base_year = plan_obj.price_per_year
+
+        expected = get_serializer(
+            model.bag,
+            [plan_obj],
+            [],
+            [],
+            academy_service.service,
+            [],
+            [],
+            self.bc.database.get("payments.Currency", 1, dict=False),
+            data={
+                "amount_per_month": base_month + seat_price * seats,
+                "amount_per_quarter": base_quarter + seat_price * seats,
+                "amount_per_half": base_half + seat_price * seats,
+                "amount_per_year": base_year + seat_price * seats,
+                "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+                "token": token,
+                "is_recurrent": True,
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # seat service item is created and attached to bag
+        db_bag = self.bc.database.get("payments.Bag", 1, dict=True)
+        self.assertIsNotNone(db_bag["seat_service_item_id"])
+        self.assertEqual(
+            self.bc.database.list_of("payments.Bag"),
+            [
+                {
+                    **self.bc.format.to_dict(model.bag),
+                    "amount_per_month": expected["amount_per_month"],
+                    "amount_per_quarter": expected["amount_per_quarter"],
+                    "amount_per_half": expected["amount_per_half"],
+                    "amount_per_year": expected["amount_per_year"],
+                    "expires_at": UTC_NOW + timedelta(minutes=60),
+                    "token": token,
+                    "is_recurrent": True,
+                    "currency_id": 1,
+                    "seat_service_item_id": 1,
+                }
+            ],
+        )
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+
+    """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview
     """
 
