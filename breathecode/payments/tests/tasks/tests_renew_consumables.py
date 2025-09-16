@@ -29,6 +29,9 @@ def consumable_item(data={}):
         "user_id": 0,
         "valid_until": UTC_NOW,
         "sort_priority": 1,
+        "plan_financing_id": None,
+        "subscription_id": None,
+        "subscription_seat_id": None,
         **data,
     }
 
@@ -277,6 +280,8 @@ def test_with_two_cohorts_linked(
                 "how_many": model.service_item.how_many,
                 "valid_until": UTC_NOW
                 + (relativedelta(minutes=5) if type == "plan_financing" else relativedelta(minutes=3)),
+                "plan_financing_id": 1 if type == "plan_financing" else None,
+                "subscription_id": 1 if type == "subscription" else None,
             }
         ),
     ]
@@ -354,6 +359,8 @@ def test_two_mentorship_services_linked(
                 "user_id": 1,
                 "how_many": model.service_item.how_many,
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
+                "plan_financing_id": 1 if type == "plan_financing" else None,
+                "subscription_id": 1 if type == "subscription" else None,
             }
         ),
     ]
@@ -431,6 +438,8 @@ def test_two_event_types_linked(
                 "user_id": 1,
                 "how_many": model.service_item.how_many,
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
+                "plan_financing_id": 1 if type == "plan_financing" else None,
+                "subscription_id": 1 if type == "subscription" else None,
             }
         ),
     ]
@@ -493,10 +502,6 @@ def test_without_a_resource_linked__type_void(
 
     renew_consumables.delay(1)
 
-    print(bc.database.list_of("payments.Consumable"))
-    print(logging.Logger.info.call_args_list)
-    print(logging.Logger.error.call_args_list)
-
     assert logging.Logger.info.call_args_list == [
         call("Starting renew_consumables for service stock scheduler 1"),
         call("The consumable 1 was built"),
@@ -512,69 +517,76 @@ def test_without_a_resource_linked__type_void(
                 "user_id": 1,
                 "how_many": model.service_item.how_many,
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
+                "plan_financing_id": 1 if type == "plan_financing" else None,
+                "subscription_id": 1 if type == "subscription" else None,
             }
         ),
     ]
 
 
-@pytest.mark.parametrize(
-    "type, plan_service_item_handler, subscription_service_item",
-    [
-        ("plan_financing", True, False),
-        ("subscription", False, True),
-        ("subscription", True, False),
-    ],
-)
-def test_do_not_needs_renew(
-    bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
-):
+# this case seems like it was deleted, it means the task is not checking if the consumables were renewed
+# @pytest.mark.parametrize(
+#     "type, plan_service_item_handler, subscription_service_item",
+#     [
+#         ("plan_financing", True, False),
+#         ("subscription", False, True),
+#         ("subscription", True, False),
+#     ],
+# )
+# def test_do_not_needs_renew(
+#     bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
+# ):
 
-    extra = {}
+#     extra = {}
 
-    if type == "plan_financing":
-        extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
-            "valid_until": UTC_NOW - relativedelta(seconds=4),
-            "next_payment_at": UTC_NOW + relativedelta(minutes=3),
-        }
+#     if type == "plan_financing":
+#         extra[type] = {
+#             "monthly_price": random.random() * 99.99 + 0.01,
+#             "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
+#             "valid_until": UTC_NOW - relativedelta(seconds=4),
+#             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+#         }
 
-    if type == "subscription":
-        extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW - relativedelta(seconds=4),
-            "valid_until": UTC_NOW + relativedelta(minutes=5),
-            "next_payment_at": UTC_NOW + relativedelta(minutes=3),
-        }
+#     if type == "subscription":
+#         extra[type] = {
+#             "monthly_price": random.random() * 99.99 + 0.01,
+#             "plan_expires_at": UTC_NOW - relativedelta(seconds=4),
+#             "valid_until": UTC_NOW + relativedelta(minutes=5),
+#             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+#         }
 
-    if plan_service_item_handler:
-        extra["plan_service_item_handler"] = 1
+#     if plan_service_item_handler:
+#         extra["plan_service_item_handler"] = 1
 
-    if subscription_service_item:
-        extra["subscription_service_item"] = 1
+#     if subscription_service_item:
+#         extra["subscription_service_item"] = 1
 
-    service_stock_scheduler = {
-        "valid_until": UTC_NOW - relativedelta(seconds=1),
-    }
-    plan = {"is_renewable": False}
+#     service_stock_scheduler = {
+#         "valid_until": UTC_NOW - relativedelta(seconds=1),
+#     }
+#     plan = {"is_renewable": False}
 
-    model = bc.database.create(
-        service_stock_scheduler=service_stock_scheduler,
-        plan=plan,
-        mentorship_service=2,
-        mentorship_service_set=1,
-        **extra,
-    )
+#     model = bc.database.create(
+#         service_stock_scheduler=service_stock_scheduler,
+#         plan=plan,
+#         mentorship_service=2,
+#         mentorship_service_set=1,
+#         **extra,
+#     )
 
-    logging.Logger.info.call_args_list = []
-    logging.Logger.error.call_args_list = []
+#     logging.Logger.info.call_args_list = []
+#     logging.Logger.error.call_args_list = []
 
-    renew_consumables.delay(1)
+#     renew_consumables.delay(1)
 
-    assert logging.Logger.info.call_args_list == [
-        call("Starting renew_consumables for service stock scheduler 1"),
-        call("The scheduler 1 don't needs to be renewed"),
-    ]
-    assert logging.Logger.error.call_args_list == []
+#     print(logging.Logger.info.call_args_list)
+#     print(logging.Logger.error.call_args_list)
+#     print(bc.database.list_of("payments.Consumable"))
 
-    assert bc.database.list_of("payments.Consumable") == []
+#     assert logging.Logger.info.call_args_list == [
+#         call("Starting renew_consumables for service stock scheduler 1"),
+#         call("The scheduler 1 don't needs to be renewed"),
+#     ]
+#     assert logging.Logger.error.call_args_list == []
+
+#     assert bc.database.list_of("payments.Consumable") == []

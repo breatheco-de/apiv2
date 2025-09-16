@@ -98,7 +98,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         and scheduler.plan_handler.subscription.next_payment_at < utc_now
     ):
         raise AbortTask(
-            f"The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the " "consumables"
+            f"The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the consumables"
         )
 
     # is over

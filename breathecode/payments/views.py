@@ -2129,6 +2129,7 @@ class ConsumableCheckoutView(APIView):
         total_items = request.data.get("how_many")
         academy = request.data.get("academy")
         country_code = request.data.get("country_code")
+        seats = request.data.get("seats")
 
         if not service:
             raise ValidationException(
@@ -2174,6 +2175,17 @@ class ConsumableCheckoutView(APIView):
         if not Academy.objects.filter(id=academy).exists():
             raise ValidationException(
                 translation(lang, en="Academy not found", es="La academia no fue encontrada", slug="academy-not-found")
+            )
+
+        if seats and (not isinstance(seats, int) and seats < 0):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Seats must be a positive number",
+                    es="Los asientos deben ser un número positivo",
+                    slug="seats-must-be-a-positive-number",
+                ),
+                code=400,
             )
 
         mentorship_service_set = request.data.get("mentorship_service_set")

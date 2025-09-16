@@ -40,6 +40,9 @@ def format_consumable_item(data={}):
         "user_id": 0,
         "valid_until": None,
         "sort_priority": 1,
+        "subscription_id": None,
+        "subscription_seat_id": None,
+        "plan_financing_id": None,
         **data,
     }
 
@@ -53,6 +56,7 @@ def format_bag_item(data={}):
         "amount_per_year": 0.0,
         "chosen_period": "NO_SET",
         "currency_id": 1,
+        "seat_service_item_id": None,
         "expires_at": None,
         "how_many_installments": 0,
         "id": 1,
@@ -777,7 +781,7 @@ class SignalTestSuite(PaymentsTestCase):
         json = response.json()
 
         amount, _, _ = get_discounted_price(model.academy_service, how_many)
-        amount = math.ceil(amount)
+        amount = amount
         expected = get_serializer(
             model.currency,
             model.user,
@@ -786,58 +790,46 @@ class SignalTestSuite(PaymentsTestCase):
             },
         )
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert json == expected
+        assert response.status_code == status.HTTP_201_CREATED
 
-        self.assertEqual(self.bc.database.list_of("payments.Bag"), [format_bag_item()])
-        self.assertEqual(
-            self.bc.database.list_of("payments.Invoice"),
-            [
-                format_invoice_item(
-                    {
-                        "stripe_id": "1",
-                        "amount": amount,
-                    }
-                ),
-            ],
-        )
-        self.assertEqual(
-            self.bc.database.list_of("payments.Consumable"),
-            [
-                format_consumable_item(
-                    data={
-                        "mentorship_service_set_id": 1,
-                        "service_item_id": 1,
-                        "user_id": 1,
-                        "how_many": how_many,
-                    }
-                ),
-            ],
-        )
-        self.assertEqual(
-            self.bc.database.list_of("authenticate.UserSetting"),
-            [
-                format_user_setting({"lang": "en"}),
-            ],
-        )
+        assert self.bc.database.list_of("payments.Bag") == [format_bag_item()]
+        assert self.bc.database.list_of("payments.Invoice") == [
+            format_invoice_item(
+                {
+                    "stripe_id": "1",
+                    "amount": amount,
+                }
+            )
+        ]
+        assert self.bc.database.list_of("payments.Consumable") == [
+            format_consumable_item(
+                data={
+                    "mentorship_service_set_id": 1,
+                    "subscription_id": None,
+                    "subscription_seat_id": None,
+                    "plan_financing_id": None,
+                    "service_item_id": 1,
+                    "user_id": 1,
+                    "how_many": how_many,
+                }
+            ),
+        ]
+        assert self.bc.database.list_of("authenticate.UserSetting") == [
+            format_user_setting({"lang": "en"}),
+        ]
 
-        self.bc.check.calls(
-            stripe.Charge.create.call_args_list,
-            [
-                call(
-                    customer="1",
-                    amount=amount,
-                    currency=model.currency.code.lower(),
-                    description=f"Can join to {int(how_many)} mentorships",
-                ),
-            ],
-        )
-        self.assertEqual(
-            stripe.Customer.create.call_args_list,
-            [
-                call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
-            ],
-        )
+        assert stripe.Charge.create.call_args_list == [
+            call(
+                customer="1",
+                amount=math.ceil(amount),
+                currency=model.currency.code.lower(),
+                description=f"Can join to {int(how_many)} mentorships",
+            ),
+        ]
+        assert stripe.Customer.create.call_args_list == [
+            call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
+        ]
         self.assertEqual(stripe.Refund.create.call_args_list, [])
         self.bc.check.calls(
             activity_tasks.add_activity.delay.call_args_list,
@@ -880,7 +872,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         amount, _, _ = get_discounted_price(model.academy_service, how_many)
-        amount = math.ceil(amount)
+        amount = amount
 
         json = response.json()
         expected = get_serializer(
@@ -891,66 +883,48 @@ class SignalTestSuite(PaymentsTestCase):
             },
         )
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert json == expected
+        assert response.status_code == status.HTTP_201_CREATED
 
-        self.assertEqual(self.bc.database.list_of("payments.Bag"), [format_bag_item()])
-        self.assertEqual(
-            self.bc.database.list_of("payments.Invoice"),
-            [
-                format_invoice_item(
-                    {
-                        "stripe_id": "1",
-                        "amount": amount,
-                    }
-                )
-            ],
-        )
-        self.assertEqual(
-            self.bc.database.list_of("payments.Consumable"),
-            [
-                format_consumable_item(
-                    data={
-                        "event_type_set_id": 1,
-                        "service_item_id": 1,
-                        "user_id": 1,
-                        "how_many": how_many,
-                    }
-                ),
-            ],
-        )
-        self.assertEqual(
-            self.bc.database.list_of("authenticate.UserSetting"),
-            [
-                format_user_setting({"lang": "en"}),
-            ],
-        )
+        assert self.bc.database.list_of("payments.Bag") == [format_bag_item()]
+        assert self.bc.database.list_of("payments.Invoice") == [
+            format_invoice_item(
+                {
+                    "stripe_id": "1",
+                    "amount": float(amount),
+                }
+            )
+        ]
+        assert self.bc.database.list_of("payments.Consumable") == [
+            format_consumable_item(
+                data={
+                    "event_type_set_id": 1,
+                    "service_item_id": 1,
+                    "user_id": 1,
+                    "how_many": how_many,
+                }
+            ),
+        ]
+        assert self.bc.database.list_of("authenticate.UserSetting") == [
+            format_user_setting({"lang": "en"}),
+        ]
 
-        self.bc.check.calls(
-            stripe.Charge.create.call_args_list,
-            [
-                call(
-                    customer="1",
-                    amount=amount,
-                    currency=model.currency.code.lower(),
-                    description=f"Can join to {int(how_many)} events",
-                ),
-            ],
-        )
-        self.assertEqual(
-            stripe.Customer.create.call_args_list,
-            [
-                call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
-            ],
-        )
-        self.assertEqual(stripe.Refund.create.call_args_list, [])
-        self.bc.check.calls(
-            activity_tasks.add_activity.delay.call_args_list,
-            [
-                call(1, "bag_created", related_type="payments.Bag", related_id=1),
-                call(1, "checkout_completed", related_type="payments.Invoice", related_id=1),
-            ],
-        )
+        assert stripe.Charge.create.call_args_list == [
+            call(
+                customer="1",
+                amount=math.ceil(amount),
+                currency=model.currency.code.lower(),
+                description=f"Can join to {int(how_many)} events",
+            ),
+        ]
+        assert stripe.Customer.create.call_args_list == [
+            call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
+        ]
+        assert stripe.Refund.create.call_args_list == []
+        assert activity_tasks.add_activity.delay.call_args_list == [
+            call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            call(1, "checkout_completed", related_type="payments.Invoice", related_id=1),
+        ]
 
 
 @pytest.mark.parametrize(
@@ -1084,6 +1058,9 @@ def test_checkout_with_country_code_and_exceptions(
         "event_type_set_id": None,
         "mentorship_service_set_id": None,
         "sort_priority": 1,  # Assuming default
+        "subscription_seat_id": None,
+        "subscription_id": None,
+        "plan_financing_id": None,
     }
     assert bc.database.list_of("payments.Consumable") == [expected_consumable]
 

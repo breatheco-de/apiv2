@@ -222,6 +222,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "BAG",
+            "seat_service_item_id": None,
         }
 
         cases = [{}, {"type": "BAG"}]
@@ -302,6 +303,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag)
@@ -345,6 +347,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
@@ -416,6 +419,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
@@ -464,6 +468,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
@@ -512,6 +517,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
@@ -563,10 +569,14 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         academy = {"main_currency": None}
-        plan = {"is_renewable": False}
+        plan = {
+            "is_renewable": False,
+            "seat_service_price_id": None,
+        }
 
         model = self.bc.database.create(user=1, bag=bag, service_item=1, plan=plan, academy=academy)
         self.client.force_authenticate(model.user)
@@ -622,6 +632,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -634,6 +645,7 @@ class SignalTestSuite(PaymentsTestCase):
             "is_renewable": True,
             "time_of_life": 0,
             "time_of_life_unit": None,
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -725,6 +737,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -738,6 +751,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": 0,
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -857,6 +871,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -870,6 +885,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -985,6 +1001,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -994,6 +1011,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": 0,
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1103,6 +1121,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1112,6 +1131,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": 0,
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1226,6 +1246,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1239,6 +1260,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1360,6 +1382,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1373,6 +1396,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1467,6 +1491,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1480,6 +1505,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1601,6 +1627,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1614,6 +1641,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1710,6 +1738,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1723,6 +1752,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": 0,
             "time_of_life_unit": None,
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1821,6 +1851,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1834,6 +1865,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": 0,
             "time_of_life_unit": None,
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1927,6 +1959,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1940,6 +1973,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -2056,6 +2090,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -2069,6 +2104,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -2186,6 +2222,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -2199,6 +2236,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -2313,6 +2351,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -2326,6 +2365,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -2442,6 +2482,7 @@ def test_exceding_coupon_limit(bc: Breathecode, client: APIClient):
         "plans": [],
         "service_items": [],
         "coupons": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -2455,6 +2496,7 @@ def test_exceding_coupon_limit(bc: Breathecode, client: APIClient):
         "time_of_life": random.randint(1, 100),
         "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
         "trial_duration": random.randint(1, 10),
+        "seat_service_price_id": None,
     }
 
     service = {
@@ -2569,6 +2611,7 @@ def test_providing_coupons(bc: Breathecode, client: APIClient, how_many_offers, 
         "plans": [],
         "service_items": [],
         "coupons": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -2582,6 +2625,7 @@ def test_providing_coupons(bc: Breathecode, client: APIClient, how_many_offers, 
         "time_of_life": random.randint(1, 100),
         "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
         "trial_duration": random.randint(1, 10),
+        "seat_service_price_id": None,
     }
 
     service = {
@@ -2759,6 +2803,7 @@ def test_getting_coupons(
         "time_of_life": random.randint(1, 100),
         "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
         "trial_duration": random.randint(1, 10),
+        "seat_service_price_id": None,
     }
 
     service = {
@@ -2944,6 +2989,7 @@ def test_exausted_coupons(
         "time_of_life": random.randint(1, 100),
         "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
         "trial_duration": random.randint(1, 10),
+        "seat_service_price_id": None,
     }
 
     service = {
@@ -3090,6 +3136,7 @@ def test_so_much_service_items(
         "type": "PREVIEW",
         "plans": [],
         "service_items": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -3102,6 +3149,7 @@ def test_so_much_service_items(
         "is_renewable": True,
         "time_of_life": 0,
         "time_of_life_unit": None,
+        "seat_service_price_id": None,
     }
 
     how_many1 = random.randint(1, 5)
@@ -3185,6 +3233,7 @@ def test_so_low_service_items(
         "type": "PREVIEW",
         "plans": [],
         "service_items": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -3197,6 +3246,7 @@ def test_so_low_service_items(
         "is_renewable": True,
         "time_of_life": 0,
         "time_of_life_unit": None,
+        "seat_service_price_id": None,
     }
 
     how_many1 = random.randint(1, 5)
@@ -3280,6 +3330,7 @@ def test_price_is_very_high(
         "type": "PREVIEW",
         "plans": [],
         "service_items": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -3292,6 +3343,7 @@ def test_price_is_very_high(
         "is_renewable": True,
         "time_of_life": 0,
         "time_of_life_unit": None,
+        "seat_service_price_id": None,
     }
 
     how_many1 = random.randint(1, 5)
@@ -3375,6 +3427,7 @@ def test_get_a_plan_with_add_ons(
         "type": "PREVIEW",
         "plans": [],
         "service_items": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -3389,6 +3442,7 @@ def test_get_a_plan_with_add_ons(
         "time_of_life_unit": None,
         "trial_duration": 0,
         "trial_duration_unit": "MONTH",
+        "seat_service_price_id": None,
     }
 
     how_many2 = random.choice([x for x in range(5, 6)])
@@ -3546,6 +3600,7 @@ def test_checking_with_country_pricing(
         "expires_at": UTC_NOW + timedelta(days=10),
         "created_at": UTC_NOW,
         "updated_at": UTC_NOW,
+        "seat_service_item_id": None,
     }
 
     model = database.create(

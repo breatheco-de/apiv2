@@ -715,10 +715,6 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
         for add_on in plan.add_ons.filter(currency=currency):
             if add_on.service.id not in add_ons:
                 add_ons[add_on.service.id] = add_on
-        # include seat add-on service if configured and currency matches
-        if plan.seat_add_on_service and plan.seat_add_on_service.currency_id == currency.id:
-            if plan.seat_add_on_service.service.id not in add_ons:
-                add_ons[plan.seat_add_on_service.service.id] = plan.seat_add_on_service
 
     for service_item in bag.service_items.all():
         if service_item.service.id in add_ons:
@@ -1765,10 +1761,10 @@ def is_plan_paid(plan: Plan) -> bool:
 
     # For renewable plans, check if any pricing field is greater than 0
     return (
-        getattr(plan, "price_per_month", 0) > 0
-        or getattr(plan, "price_per_quarter", 0) > 0
-        or getattr(plan, "price_per_half", 0) > 0
-        or getattr(plan, "price_per_year", 0) > 0
+        (getattr(plan, "price_per_month", 0) or 0) > 0
+        or (getattr(plan, "price_per_quarter", 0) or 0) > 0
+        or (getattr(plan, "price_per_half", 0) or 0) > 0
+        or (getattr(plan, "price_per_year", 0) or 0) > 0
     )
 
 

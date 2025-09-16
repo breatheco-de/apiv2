@@ -2001,10 +2001,9 @@ class Consumable(AbstractServiceItem):
         parent_entities = [
             self.subscription,
             self.plan_financing,
-            self.subscription_billing_team,
             self.subscription_seat,
         ]
-        owners = [self.user, self.subscription_billing_team]
+        owners = [self.user]
         settings = get_user_settings(self.user.id)
 
         how_many_resources_are_set = len([r for r in resources if r])
@@ -2051,7 +2050,7 @@ class Consumable(AbstractServiceItem):
             self.how_many = 0
 
         # Team checks using subscription seat / billing team
-        if (self.subscription_seat or self.subscription_billing_team) and self.service_item.is_team_allowed:
+        if (self.subscription_seat) and self.service_item.is_team_allowed:
             # ensure user matches seat user when seat is present
             if (
                 self.subscription_seat
