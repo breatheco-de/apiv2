@@ -212,44 +212,63 @@ def handle_internal_link(request):
 
         github = Github(credentials.token)
 
+        # Sanitize path (strip query like ?raw=true) and build GitHub Contents API URL
+        from urllib.parse import urlparse
+
+        _parsed = urlparse(file_path)
+        _clean_path = _parsed.path
+
         # Construct the API URL for the file
-        api_url = f"/repos/{org_name}/{repo_name}/contents/{file_path}"
+        api_url = f"/repos/{org_name}/{repo_name}/contents/{_clean_path}"
         if branch_name:
             api_url += f"?ref={branch_name}"
 
-        # Fetch the file content
+        # Fetch the file content metadata/content
         response = github.get(api_url)
 
-        if "content" in response:
-            # Decode the base64 content
-            import base64
+        import base64
 
-            content = base64.b64decode(response["content"]).decode("utf-8")
+        file_extension = Path(_clean_path).suffix.lower()
 
-            # Determine content type based on file extension
-            file_extension = Path(file_path).suffix.lower()
-            content_type = "text/plain"
+        ext_map = {
+            ".md": "text/markdown",
+            ".markdown": "text/markdown",
+            ".htm": "text/html",
+            ".html": "text/html",
+            ".json": "application/json",
+            ".py": "text/x-python",
+            ".js": "text/javascript",
+            ".css": "text/css",
+            ".xml": "application/xml",
+            ".yml": "text/yaml",
+            ".yaml": "text/yaml",
+            ".txt": "text/plain",
+            ".csv": "text/csv",
+            ".pdf": "application/pdf",
+        }
 
-            if file_extension in [".md", ".markdown"]:
-                content_type = "text/markdown"
-            elif file_extension in [".html", ".htm"]:
-                content_type = "text/html"
-            elif file_extension in [".json"]:
-                content_type = "application/json"
-            elif file_extension in [".py"]:
-                content_type = "text/x-python"
-            elif file_extension in [".js"]:
-                content_type = "text/javascript"
-            elif file_extension in [".css"]:
-                content_type = "text/css"
-            elif file_extension in [".xml"]:
-                content_type = "application/xml"
-            elif file_extension in [".yml", ".yaml"]:
-                content_type = "text/yaml"
+        if response.get("content"):
+            content_bytes = base64.b64decode(response["content"])
+            content_type = ext_map.get(file_extension, "application/octet-stream")
+            return HttpResponse(content_bytes, content_type=content_type)
 
-            return HttpResponse(content, content_type=content_type)
-        else:
-            return render_message(request, "File content not found", status=404)
+        download_url = response.get("download_url")
+        if download_url:
+            r = requests.get(download_url, timeout=30)
+            content_bytes = r.content
+            content_type = ext_map.get(file_extension, "application/octet-stream")
+            return HttpResponse(content_bytes, content_type=content_type)
+
+        # 3) Fallback: fetch blob by sha via GitHub API
+        sha = response.get("sha")
+        if sha:
+            blob = github.get(f"/repos/{org_name}/{repo_name}/git/blobs/{sha}")
+            if blob and blob.get("content"):
+                content_bytes = base64.b64decode(blob["content"])
+                content_type = ext_map.get(file_extension, "application/octet-stream")
+                return HttpResponse(content_bytes, content_type=content_type)
+
+        return render_message(request, "File content not found", status=404)
 
     except Exception as e:
         logger.error(f"Error fetching file from GitHub: {str(e)}")
