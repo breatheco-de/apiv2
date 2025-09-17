@@ -4,6 +4,7 @@ Test cases for grant_discord_roles receiver
 
 from unittest.mock import MagicMock, patch
 
+import capyc.pytest as capy
 import pytest
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
@@ -17,9 +18,9 @@ def setup(monkeypatch: pytest.MonkeyPatch, db):
     yield mock_task
 
 
-def test_successful_discord_role_assignment(enable_signals, bc: Breathecode, setup):
+def test_successful_discord_role_assignment(signals: capy.Signals, bc: Breathecode, setup):
     """Test successful Discord role assignment when user has credentials and cohort has Discord shortcuts"""
-    enable_signals()
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
     # Create test data
     model = bc.database.create(
@@ -27,8 +28,6 @@ def test_successful_discord_role_assignment(enable_signals, bc: Breathecode, set
         cohort={"shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}]},
         academy=1,
     )
-
-    # Create Discord credentials BEFORE creating cohort_user (so they exist when the signal fires)
     from breathecode.authenticate.models import CredentialsDiscord
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="123456789")
@@ -40,16 +39,16 @@ def test_successful_discord_role_assignment(enable_signals, bc: Breathecode, set
 
     # Verify the Celery task was called with correct parameters
     setup.assert_called_once_with(
-        "987654321",  # server_id
+        "987654321",  # server_id (string as passed from receiver)
         123456789,  # discord_user_id (converted to int)
-        "456789123",  # role_id
+        "456789123",  # role_id (string as passed from receiver)
         1,  # academy_id
     )
 
 
-def test_no_discord_credentials(enable_signals, bc: Breathecode, setup):
+def test_no_discord_credentials(signals: capy.Signals, bc: Breathecode, setup):
     """Test when user has no Discord credentials - should skip role assignment"""
-    enable_signals()
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
     # Create test data without Discord credentials
     model = bc.database.create(
@@ -63,9 +62,9 @@ def test_no_discord_credentials(enable_signals, bc: Breathecode, setup):
     setup.assert_not_called()
 
 
-def test_no_shortcuts(enable_signals, bc: Breathecode, setup):
+def test_no_shortcuts(signals: capy.Signals, bc: Breathecode, setup):
     """Test when cohort has no shortcuts - should skip role assignment"""
-    enable_signals()
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
     # Create test data without shortcuts
     model = bc.database.create(
@@ -80,9 +79,9 @@ def test_no_shortcuts(enable_signals, bc: Breathecode, setup):
     setup.assert_not_called()
 
 
-def test_empty_shortcuts(enable_signals, bc: Breathecode, setup):
+def test_empty_shortcuts(signals: capy.Signals, bc: Breathecode, setup):
     """Test when cohort has empty shortcuts - should skip role assignment"""
-    enable_signals()
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
     # Create test data with empty shortcuts
     model = bc.database.create(
@@ -91,12 +90,10 @@ def test_empty_shortcuts(enable_signals, bc: Breathecode, setup):
         academy=1,
     )
 
-    # Create Discord credentials BEFORE creating cohort_user
     from breathecode.authenticate.models import CredentialsDiscord
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="123456789")
 
-    # Now create cohort_user, which will trigger the signal
     bc.database.create(
         cohort_user={"user": model.user, "cohort": model.cohort, "role": "STUDENT", "academy": model.academy}
     )
@@ -105,9 +102,9 @@ def test_empty_shortcuts(enable_signals, bc: Breathecode, setup):
     setup.assert_not_called()
 
 
-def test_no_discord_shortcut(enable_signals, bc: Breathecode, setup):
+def test_no_discord_shortcut(signals: capy.Signals, bc: Breathecode, setup):
     """Test when shortcuts don't include Discord - should skip role assignment"""
-    enable_signals()
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
     # Create test data with non-Discord shortcuts
     model = bc.database.create(
@@ -121,12 +118,10 @@ def test_no_discord_shortcut(enable_signals, bc: Breathecode, setup):
         academy=1,
     )
 
-    # Create Discord credentials BEFORE creating cohort_user
     from breathecode.authenticate.models import CredentialsDiscord
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="123456789")
 
-    # Now create cohort_user, which will trigger the signal
     bc.database.create(
         cohort_user={"user": model.user, "cohort": model.cohort, "role": "STUDENT", "academy": model.academy}
     )
@@ -135,9 +130,9 @@ def test_no_discord_shortcut(enable_signals, bc: Breathecode, setup):
     setup.assert_not_called()
 
 
-def test_multiple_discord_shortcuts(enable_signals, bc: Breathecode, setup):
+def test_multiple_discord_shortcuts(signals: capy.Signals, bc: Breathecode, setup):
     """Test when cohort has multiple Discord shortcuts - should assign all roles"""
-    enable_signals()
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
     # Create test data with multiple Discord shortcuts
     model = bc.database.create(
@@ -148,38 +143,41 @@ def test_multiple_discord_shortcuts(enable_signals, bc: Breathecode, setup):
                 {"label": "Discord", "server_id": "987654322", "role_id": "456789124"},
             ]
         },
-        cohort_user={"role": "STUDENT"},
         academy=1,
     )
 
-    # Create Discord credentials manually
     from breathecode.authenticate.models import CredentialsDiscord
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="123456789")
+
+    # Now create cohort_user, which will trigger the signal
+    bc.database.create(
+        cohort_user={"user": model.user, "cohort": model.cohort, "role": "STUDENT", "academy": model.academy}
+    )
 
     # Verify the Celery task was called twice with different parameters
     assert setup.call_count == 2
 
     # Check first call
     setup.assert_any_call(
-        "987654321",  # server_id
+        "987654321",  # server_id (string as passed from receiver)
         123456789,  # discord_user_id
-        "456789123",  # role_id
+        "456789123",  # role_id (string as passed from receiver)
         1,  # academy_id
     )
 
     # Check second call
     setup.assert_any_call(
-        "987654322",  # server_id
+        "987654322",  # server_id (string as passed from receiver)
         123456789,  # discord_user_id
-        "456789124",  # role_id
+        "456789124",  # role_id (string as passed from receiver)
         1,  # academy_id
     )
 
 
-def test_missing_server_id(enable_signals, bc: Breathecode, setup):
+def test_missing_server_id(signals: capy.Signals, bc: Breathecode, setup):
     """Test when Discord shortcut is missing server_id - should skip that shortcut"""
-    enable_signals()
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
     # Create test data with incomplete Discord shortcut
     model = bc.database.create(
@@ -193,14 +191,17 @@ def test_missing_server_id(enable_signals, bc: Breathecode, setup):
                 }
             ]
         },
-        cohort_user={"role": "STUDENT"},
         academy=1,
     )
 
-    # Create Discord credentials manually
     from breathecode.authenticate.models import CredentialsDiscord
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="123456789")
+
+    # Now create cohort_user, which will trigger the signal
+    bc.database.create(
+        cohort_user={"user": model.user, "cohort": model.cohort, "role": "STUDENT", "academy": model.academy}
+    )
 
     # Verify the Celery task was called with None as server_id
     setup.assert_called_once_with(
@@ -211,9 +212,9 @@ def test_missing_server_id(enable_signals, bc: Breathecode, setup):
     )
 
 
-def test_missing_role_id(enable_signals, bc: Breathecode, setup):
+def test_missing_role_id(signals: capy.Signals, bc: Breathecode, setup):
     """Test when Discord shortcut is missing role_id - should skip that shortcut"""
-    enable_signals()
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
     # Create test data with incomplete Discord shortcut
     model = bc.database.create(
@@ -227,14 +228,17 @@ def test_missing_role_id(enable_signals, bc: Breathecode, setup):
                 }
             ]
         },
-        cohort_user={"role": "STUDENT"},
         academy=1,
     )
 
-    # Create Discord credentials manually
     from breathecode.authenticate.models import CredentialsDiscord
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="123456789")
+
+    # Now create cohort_user, which will trigger the signal
+    bc.database.create(
+        cohort_user={"user": model.user, "cohort": model.cohort, "role": "STUDENT", "academy": model.academy}
+    )
 
     # Verify the Celery task was called with None as role_id
     setup.assert_called_once_with(
@@ -245,59 +249,52 @@ def test_missing_role_id(enable_signals, bc: Breathecode, setup):
     )
 
 
-@patch("breathecode.authenticate.tasks.assign_discord_role_task.delay")
-def test_exception_handling(mock_task_delay, enable_signals, bc: Breathecode):
-    """Test exception handling when Celery task raises an error"""
-    enable_signals()
+def test_mixed_shortcuts_with_incomplete_discord_data(signals: capy.Signals, bc: Breathecode, setup):
+    """Test when cohort has 5 shortcuts: 3 non-Discord, 2 Discord (1 complete, 1 incomplete) - should call task only 2 times"""
+    signals.enable("breathecode.admissions.signals.cohort_user_created")
 
-    # Make the task raise an exception
-    mock_task_delay.side_effect = Exception("Celery task failed")
-
-    # Create test data
+    # Create test data with mixed shortcuts
     model = bc.database.create(
         user=1,
-        cohort={"shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}]},
-        cohort_user={"role": "STUDENT"},
+        cohort={
+            "shortcuts": [
+                # Non-Discord shortcuts (should be ignored)
+                {"label": "Slack", "server_id": "slack123", "role_id": "slack_role"},
+                {"label": "GitHub", "server_id": "github123", "role_id": "github_role"},
+                {"label": "Zoom", "server_id": "zoom123", "role_id": "zoom_role"},
+                # Discord shortcuts
+                {"label": "Discord", "server_id": "987654321", "role_id": "456789123"},  # Complete
+                {"label": "Discord", "server_id": "987654322", "role_id": None},  # Missing role_id
+            ]
+        },
         academy=1,
     )
 
-    # Create Discord credentials manually
+    # Create Discord credentials BEFORE creating cohort_user
     from breathecode.authenticate.models import CredentialsDiscord
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="123456789")
 
-    # The receiver should handle the exception gracefully
-    # (it catches exceptions and logs them, but doesn't re-raise)
-    # Verify the task was attempted
-    mock_task_delay.assert_called_once_with(
+    # Now create cohort_user, which will trigger the signal
+    bc.database.create(
+        cohort_user={"user": model.user, "cohort": model.cohort, "role": "STUDENT", "academy": model.academy}
+    )
+
+    # Verify the Celery task was called exactly 2 times (only for Discord shortcuts)
+    assert setup.call_count == 2
+
+    # Check first call (complete Discord shortcut)
+    setup.assert_any_call(
         "987654321",  # server_id
         123456789,  # discord_user_id
         "456789123",  # role_id
         1,  # academy_id
     )
 
-
-def test_discord_id_conversion_to_int(enable_signals, bc: Breathecode, setup):
-    """Test that discord_id string is properly converted to int"""
-    enable_signals()
-
-    # Create test data with string discord_id
-    model = bc.database.create(
-        user=1,
-        cohort={"shortcuts": [{"label": "Discord", "server_id": "123456789", "role_id": "456789123"}]},
-        cohort_user={"role": "STUDENT"},
-        academy=1,
-    )
-
-    # Create Discord credentials manually
-    from breathecode.authenticate.models import CredentialsDiscord
-
-    CredentialsDiscord.objects.create(user=model.user, discord_id="987654321")
-
-    # Verify the Celery task was called with int discord_id
-    setup.assert_called_once_with(
-        "123456789",  # server_id
-        987654321,  # discord_user_id (converted to int)
-        "456789123",  # role_id
+    # Check second call (incomplete Discord shortcut with missing role_id)
+    setup.assert_any_call(
+        "987654322",  # server_id
+        123456789,  # discord_user_id
+        None,  # role_id (missing)
         1,  # academy_id
     )

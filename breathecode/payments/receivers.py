@@ -131,12 +131,12 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
 
     def schedule_delayed_revoke(date_field, date_value):
         if date_value and date_value >= timezone.now():
-            days_until = (date_value - timezone.now()).days + 1
+            minutes_until = int((date_value - timezone.now()).total_seconds() / 60) + 1
             entity_type = "subscription" if isinstance(instance, Subscription) else "plan_financing"
 
             unique_task_id = instance.id * 100 + (1 if date_field == "valid_until" else 2)
 
-            manager = schedule_task(auth_tasks.delayed_revoke_discord_permissions, f"{days_until}d")
+            manager = schedule_task(auth_tasks.delayed_revoke_discord_permissions, f"{minutes_until}m")
             if not manager.exists(unique_task_id):
                 entity_type = "subscription" if isinstance(instance, Subscription) else "plan_financing"
                 manager.call(instance.id, entity_type, date_field)
@@ -153,6 +153,7 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
         plan_slug = Plan.objects.filter(subscription=instance).first().slug
     else:
         plan_slug = Plan.objects.filter(planfinancing=instance).first().slug
+    logger.debug(f"plan_slug: {plan_slug}")
     if plan_slug == "4geeks-plus-subscription" or plan_slug == "4geeks-plus-planfinancing":
         if instance.status == "CANCELLED":
             if instance.valid_until:
@@ -178,12 +179,16 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
                     return
 
         else:
+
             if instance.valid_until:
                 if instance.valid_until >= timezone.now():
+
                     logger.debug("The user still has time to pay the subscription, scheduling Discord revoke")
                     schedule_delayed_revoke("valid_until", instance.valid_until)
                     return
                 else:
+                    logger.debug("llega el reveivere aqui")
+
                     revoke_user_discord_permissions(instance.user, instance.academy)
                     return
             else:

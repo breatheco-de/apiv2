@@ -1,324 +1,398 @@
-"""
-Test cases for join_user_to_discord_guild task
-"""
+from unittest.mock import MagicMock, patch
 
-import logging
-from unittest.mock import MagicMock, call, patch
-
-import capyc.pytest as capy
 import pytest
 
-from breathecode.authenticate.tasks import join_user_to_discord_guild
+from breathecode.tests.mixins.breathecode_mixin import Breathecode
 
 
 @pytest.fixture(autouse=True)
-def setup(db, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr("logging.Logger.info", MagicMock())
-    monkeypatch.setattr("logging.Logger.error", MagicMock())
-    monkeypatch.setattr("logging.Logger.debug", MagicMock())
-    yield
+def mock_celery_tasks(monkeypatch: pytest.MonkeyPatch, db):
+    mock_assign_task = MagicMock()
+    monkeypatch.setattr("breathecode.authenticate.tasks.assign_discord_role_task.delay", mock_assign_task)
+    yield mock_assign_task
+
+
+@pytest.fixture(autouse=True)
+def mock_save_credentials(monkeypatch: pytest.MonkeyPatch, db):
+    mock_save = MagicMock(return_value=True)
+    monkeypatch.setattr("breathecode.authenticate.actions.save_discord_credentials", mock_save)
+    yield mock_save
 
 
 @pytest.fixture
 def mock_discord_service():
-    """Mock Discord service with join_user_to_guild method"""
     with patch("breathecode.authenticate.tasks.Discord") as mock_discord_class:
-        mock_instance = MagicMock()
-        mock_discord_class.return_value = mock_instance
-
-        # Mock successful join (201 status)
-        mock_join_response = MagicMock()
-        mock_join_response.status_code = 201
-        mock_instance.join_user_to_guild.return_value = mock_join_response
-
-        yield mock_instance
+        mock_discord_instance = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_discord_instance.join_user_to_guild.return_value = mock_response
+        mock_discord_class.return_value = mock_discord_instance
+        yield mock_discord_instance
 
 
-@pytest.fixture
-def mock_save_discord_credentials():
-    """Mock save_discord_credentials function"""
-    with patch("breathecode.authenticate.actions.save_discord_credentials") as mock_save:
-        mock_save.return_value = True
-        yield mock_save
+def test_successful_join_user_to_discord_guild(
+    mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode
+):
+    """Test successful user join to Discord guild with role assignment"""
+    # Create cohort_user directly (this automatically creates user, cohort, academy)
+    model = bc.database.create(
+        cohort_user=1,
+        cohort={
+            "slug": "test-cohort",
+            "shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}],
+        },
+    )
 
-
-@pytest.fixture
-def mock_assign_role_task():
-    """Mock assign_discord_role_task"""
-    with patch("breathecode.authenticate.tasks.assign_discord_role_task") as mock_assign:
-        mock_assign.delay.return_value = None
-        yield mock_assign
-
-
-@pytest.fixture
-def mock_join_task():
-    """Mock the join_user_to_discord_guild task to avoid calling real Celery task"""
-    with patch("breathecode.authenticate.tasks.join_user_to_discord_guild") as mock_task:
-        mock_task.delay.return_value = None
-        yield mock_task
-
-
-def test_join_user_to_discord_guild_no_cohorts(database: capy.Database, mock_discord_service, mock_join_task):
-    """Test join_user_to_discord_guild when user has no cohorts"""
-    # Create user without cohorts
-    model = database.create(user=1)
-
-    # Call the task function directly (not through Celery)
+    # Import and call the task
     from breathecode.authenticate.tasks import join_user_to_discord_guild
 
-    join_user_to_discord_guild(
-        user_id=model.user.id,
-        access_token="test_token",
-        discord_user_id="123456789",
-        is_suscriber=True,
+    result = join_user_to_discord_guild(
+        user_id=model.cohort_user.user.id,
+        access_token="test_access_token",
+        discord_user_id=123456789,
         cohort_slug="test-cohort",
     )
 
-    # Should not call Discord service since no cohorts found
-    assert mock_discord_service.join_user_to_guild.call_count == 0
-
-
-def test_join_user_to_discord_guild_no_discord_shortcuts(database: capy.Database, mock_discord_service, mock_join_task):
-    """Test join_user_to_discord_guild when cohort has no Discord shortcuts"""
-    # Create user with cohort that has Discord shortcuts
-    model = database.create(
-        user=1,
-        cohort={"shortcuts": [{"label": "GitHub", "server_id": "12345"}]},
-        cohort_user=1,
-        academy=1,
-        city=1,
-        country=1,
-    )
-
-    # Call the task function directly (not through Celery)
-    from breathecode.authenticate.tasks import join_user_to_discord_guild
-
-    join_user_to_discord_guild(
-        user_id=model.user.id,
-        access_token="test_token",
-        discord_user_id="123456789",
-        is_suscriber=True,
-        cohort_slug=model.cohort.slug,
-    )
-
-    # Should not call Discord service since no Discord shortcuts
-    assert mock_discord_service.join_user_to_guild.call_count == 0
-
-
-def test_join_user_to_discord_guild_successful_join_201(
-    database: capy.Database, mock_discord_service, mock_save_discord_credentials, mock_assign_role_task, mock_join_task
-):
-    """Test successful join with 201 status code"""
-    # Create user with cohort that has Discord shortcut
-    model = database.create(
-        user=1,
-        cohort={"shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}]},
-        cohort_user=1,
-        academy=1,
-        city=1,
-        country=1,
-    )
-
-    # Call the task function directly (not through Celery)
-    from breathecode.authenticate.tasks import join_user_to_discord_guild
-
-    join_user_to_discord_guild(
-        user_id=model.user.id,
-        access_token="test_token",
-        discord_user_id="123456789",
-        is_suscriber=True,
-        cohort_slug=model.cohort.slug,
-    )
-
-    # Should call Discord service to join
+    # Verify Discord service was called
     mock_discord_service.join_user_to_guild.assert_called_once_with(
-        user_id=model.user.id,
-        access_token="test_token",
-        guild_id="987654321",
-        discord_user_id="123456789",
-        role_id="456789123",
-        is_suscriber=True,
+        access_token="test_access_token", guild_id="987654321", discord_user_id=123456789
     )
 
-    # Should save credentials
-    mock_save_discord_credentials.assert_called_once_with(
-        user_id=model.user.id,
-        discord_user_id="123456789",
-        guild_id="987654321",
-        role_id="456789123",
-        cohort_slug=model.cohort.slug,
+    # Verify credentials were saved
+    mock_save_credentials.assert_called_once_with(
+        user_id=model.cohort_user.user.id, discord_user_id=123456789, guild_id="987654321", cohort_slug="test-cohort"
     )
 
-    # Should assign role
-    mock_assign_role_task.delay.assert_called_once_with(
-        guild_id="987654321", discord_user_id="123456789", role_id="456789123"
+    # Verify role assignment task was called
+    mock_celery_tasks.assert_called_once_with(
+        guild_id="987654321", discord_user_id=123456789, role_id="456789123", academy_id=1
     )
 
+    # Verify task returns None
+    assert result is None
 
-def test_join_user_to_discord_guild_already_in_server_204(
-    database: capy.Database, mock_discord_service, mock_assign_role_task, mock_join_task
-):
-    """Test when user is already in server (204 status)"""
-    # Mock 204 response (already in server)
-    mock_join_response = MagicMock()
-    mock_join_response.status_code = 204
-    mock_discord_service.join_user_to_guild.return_value = mock_join_response
 
-    # Create user with cohort that has Discord shortcut
-    model = database.create(
-        user=1,
-        cohort={"shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}]},
+def test_join_user_already_in_guild(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
+    """Test user already in Discord guild (status 204) - should assign roles without saving credentials"""
+    # Create cohort_user directly (this automatically creates user, cohort, academy)
+    model = bc.database.create(
         cohort_user=1,
-        academy=1,
-        city=1,
-        country=1,
+        cohort={
+            "slug": "test-cohort",
+            "shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}],
+        },
     )
 
-    # Call the task function directly (not through Celery)
+    # Mock Discord service to return status 204 (user already in guild)
+    mock_response = MagicMock()
+    mock_response.status_code = 204
+    mock_discord_service.join_user_to_guild.return_value = mock_response
+
+    # Import and call the task
     from breathecode.authenticate.tasks import join_user_to_discord_guild
 
-    join_user_to_discord_guild(
-        user_id=model.user.id,
-        access_token="test_token",
-        discord_user_id="123456789",
-        is_suscriber=True,
-        cohort_slug=model.cohort.slug,
+    result = join_user_to_discord_guild(
+        user_id=model.cohort_user.user.id,
+        access_token="test_access_token",
+        discord_user_id=123456789,
+        cohort_slug="test-cohort",
     )
 
-    # Should still assign role even if already in server
-    mock_assign_role_task.delay.assert_called_once_with(
-        guild_id="987654321", discord_user_id="123456789", role_id="456789123"
+    # Verify Discord service was called
+    mock_discord_service.join_user_to_guild.assert_called_once_with(
+        access_token="test_access_token", guild_id="987654321", discord_user_id=123456789
+    )
+
+    # Verify credentials were NOT saved (user already in guild)
+    mock_save_credentials.assert_not_called()
+
+    # Verify role assignment task was called
+    mock_celery_tasks.assert_called_once_with(
+        guild_id="987654321", discord_user_id=123456789, role_id="456789123", academy_id=1
     )
 
 
-def test_join_user_to_discord_guild_join_failed(database: capy.Database, mock_discord_service, mock_join_task):
-    """Test when Discord join fails"""
-    # Mock failed join response
-    mock_join_response = MagicMock()
-    mock_join_response.status_code = 400
-    mock_discord_service.join_user_to_guild.return_value = mock_join_response
-
-    # Create user with cohort that has Discord shortcut
-    model = database.create(
-        user=1,
-        cohort={"shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}]},
-        cohort_user=1,
-        academy=1,
-        city=1,
-        country=1,
-    )
-
-    # Call the task function directly (not through Celery)
+def test_cohort_not_found(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
+    """Test when cohort with given slug is not found"""
+    # Import and call the task
     from breathecode.authenticate.tasks import join_user_to_discord_guild
 
-    join_user_to_discord_guild(
-        user_id=model.user.id,
-        access_token="test_token",
-        discord_user_id="123456789",
-        is_suscriber=True,
-        cohort_slug=model.cohort.slug,
+    result = join_user_to_discord_guild(
+        user_id=1, access_token="test_access_token", discord_user_id=123456789, cohort_slug="non-existent-cohort"
     )
 
-    # Should handle the failed join gracefully
+    # Verify Discord service was NOT called
+    mock_discord_service.join_user_to_guild.assert_not_called()
+
+    # Verify credentials were NOT saved
+    mock_save_credentials.assert_not_called()
+
+    # Verify role assignment task was NOT called
+    mock_celery_tasks.assert_not_called()
+
+    # Verify task returns None
+    assert result is None
 
 
-def test_join_user_to_discord_guild_multiple_cohorts(
-    database: capy.Database, mock_discord_service, mock_save_discord_credentials, mock_assign_role_task, mock_join_task
-):
-    """Test with multiple cohorts having Discord shortcuts"""
-    # Create user with multiple cohorts
-    model = database.create(
+def test_no_discord_shortcuts(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
+    """Test when cohort has no Discord shortcuts"""
+    # Create cohort_user directly (this automatically creates user, cohort, academy)
+    model = bc.database.create(
+        cohort_user=1,
+        cohort={
+            "slug": "test-cohort",
+            "shortcuts": [{"label": "Slack", "server_id": "123456789", "role_id": "987654321"}],
+        },
+    )
+
+    # Import and call the task
+    from breathecode.authenticate.tasks import join_user_to_discord_guild
+
+    result = join_user_to_discord_guild(
+        user_id=model.cohort_user.user.id,
+        access_token="test_access_token",
+        discord_user_id=123456789,
+        cohort_slug="test-cohort",
+    )
+
+    # Verify Discord service was NOT called
+    mock_discord_service.join_user_to_guild.assert_not_called()
+
+    # Verify credentials were NOT saved
+    mock_save_credentials.assert_not_called()
+
+    # Verify role assignment task was NOT called
+    mock_celery_tasks.assert_not_called()
+
+
+def test_multiple_roles_assignment(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
+    """Test assignment of multiple roles from different cohorts"""
+    # Create test data with multiple cohorts having Discord shortcuts
+    model = bc.database.create(
         user=1,
         cohort=[
-            {"shortcuts": [{"label": "Discord", "server_id": "111111111", "role_id": "222222222"}]},
-            {"shortcuts": [{"label": "Discord", "server_id": "333333333", "role_id": "444444444"}]},
+            {
+                "slug": "test-cohort-1",
+                "shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "111111111"}],
+            },
+            {
+                "slug": "test-cohort-2",
+                "shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "222222222"}],
+            },
         ],
-        cohort_user=1,
         academy=1,
-        city=1,
-        country=1,
     )
 
-    # Call the task function directly (not through Celery)
+    # Create cohort_users after model is created
+    bc.database.create(
+        cohort_user=[
+            {"user": model.user, "cohort": model.cohort[0], "role": "STUDENT", "academy": model.academy},
+            {"user": model.user, "cohort": model.cohort[1], "role": "STUDENT", "academy": model.academy},
+        ]
+    )
+
+    # Import and call the task
     from breathecode.authenticate.tasks import join_user_to_discord_guild
 
-    join_user_to_discord_guild(
+    result = join_user_to_discord_guild(
         user_id=model.user.id,
-        access_token="test_token",
-        discord_user_id="123456789",
-        is_suscriber=True,
-        cohort_slug=model.cohort[0].slug,  # Use first cohort slug
+        access_token="test_access_token",
+        discord_user_id=123456789,
+        cohort_slug="test-cohort-1",
     )
 
-    # Should call Discord service once (for the cohort specified by cohort_slug)
-    assert mock_discord_service.join_user_to_guild.call_count == 1
+    # Verify Discord service was called
+    mock_discord_service.join_user_to_guild.assert_called_once_with(
+        access_token="test_access_token", guild_id="987654321", discord_user_id=123456789
+    )
 
-    # Should save credentials once
-    assert mock_save_discord_credentials.call_count == 1
+    # Verify credentials were saved
+    mock_save_credentials.assert_called_once_with(
+        user_id=model.user.id, discord_user_id=123456789, guild_id="987654321", cohort_slug="test-cohort-1"
+    )
 
-    # Should assign role once
-    assert mock_assign_role_task.delay.call_count == 1
+    # Verify both role assignment tasks were called
+    assert mock_celery_tasks.call_count == 2
+    mock_celery_tasks.assert_any_call(
+        guild_id="987654321", discord_user_id=123456789, role_id="111111111", academy_id=1
+    )
+    mock_celery_tasks.assert_any_call(
+        guild_id="987654321", discord_user_id=123456789, role_id="222222222", academy_id=1
+    )
 
 
-def test_join_user_to_discord_guild_exception_handling(database: capy.Database, mock_discord_service, mock_join_task):
-    """Test exception handling in join_user_to_discord_guild"""
-    # Mock Discord service to raise exception
+def test_discord_service_exception(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
+    """Test when Discord service raises an exception"""
+    # Create cohort_user directly (this automatically creates user, cohort, academy)
+    model = bc.database.create(
+        cohort_user=1,
+        cohort={
+            "slug": "test-cohort",
+            "shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}],
+        },
+    )
+
+    # Mock Discord service to raise an exception
     mock_discord_service.join_user_to_guild.side_effect = Exception("Discord API error")
 
-    # Create user with cohort that has Discord shortcut
-    model = database.create(
-        user=1,
-        cohort={"shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}]},
-        cohort_user=1,
-        academy=1,
-        city=1,
-        country=1,
-    )
-
-    # Call the task function directly (not through Celery)
+    # Import and call the task
     from breathecode.authenticate.tasks import join_user_to_discord_guild
 
-    join_user_to_discord_guild(
-        user_id=model.user.id,
-        access_token="test_token",
-        discord_user_id="123456789",
-        is_suscriber=True,
-        cohort_slug=model.cohort.slug,
+    # Verify that the task raises an exception
+    with pytest.raises(Exception, match="Discord API error"):
+        join_user_to_discord_guild(
+            user_id=model.cohort_user.user.id,
+            access_token="test_access_token",
+            discord_user_id=123456789,
+            cohort_slug="test-cohort",
+        )
+
+    # Verify Discord service was called
+    mock_discord_service.join_user_to_guild.assert_called_once_with(
+        access_token="test_access_token", guild_id="987654321", discord_user_id=123456789
     )
 
-    # Should handle the exception gracefully
+    # Verify credentials were NOT saved
+    mock_save_credentials.assert_not_called()
+
+    # Verify role assignment task was NOT called
+    mock_celery_tasks.assert_not_called()
 
 
-def test_join_user_to_discord_guild_no_server_id(database: capy.Database, mock_discord_service, mock_join_task):
-    """Test when Discord shortcut has no server_id"""
-    # Create user with cohort that has Discord shortcut but no server_id
-    model = database.create(
-        user=1,
+def test_unexpected_join_status(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
+    """Test when Discord service returns unexpected status code"""
+    # Create cohort_user directly (this automatically creates user, cohort, academy)
+    model = bc.database.create(
+        cohort_user=1,
         cohort={
-            "shortcuts": [
-                {
-                    "label": "Discord",
-                    "role_id": "456789123",
-                    # Missing server_id
-                }
-            ]
+            "slug": "test-cohort",
+            "shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}],
         },
-        cohort_user=1,
-        academy=1,
-        city=1,
-        country=1,
     )
 
-    # Call the task function directly (not through Celery)
+    # Mock Discord service to return unexpected status code
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_discord_service.join_user_to_guild.return_value = mock_response
+
+    # Import and call the task
     from breathecode.authenticate.tasks import join_user_to_discord_guild
 
-    join_user_to_discord_guild(
-        user_id=model.user.id,
-        access_token="test_token",
-        discord_user_id="123456789",
-        is_suscriber=True,
-        cohort_slug=model.cohort.slug,
+    # Verify that the task raises an exception
+    with pytest.raises(Exception, match="Failed to join Discord guild:"):
+        join_user_to_discord_guild(
+            user_id=model.cohort_user.user.id,
+            access_token="test_access_token",
+            discord_user_id=123456789,
+            cohort_slug="test-cohort",
+        )
+
+    # Verify Discord service was called
+    mock_discord_service.join_user_to_guild.assert_called_once_with(
+        access_token="test_access_token", guild_id="987654321", discord_user_id=123456789
     )
 
-    # Should not call Discord service since server_id is None
-    assert mock_discord_service.join_user_to_guild.call_count == 0
+    # Verify credentials were NOT saved
+    mock_save_credentials.assert_not_called()
+
+    # Verify role assignment task was NOT called
+    mock_celery_tasks.assert_not_called()
+
+
+def test_save_credentials_failure(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
+    """Test when save_discord_credentials returns False"""
+    # Create cohort_user directly (this automatically creates user, cohort, academy)
+    model = bc.database.create(
+        cohort_user=1,
+        cohort={
+            "slug": "test-cohort",
+            "shortcuts": [{"label": "Discord", "server_id": "987654321", "role_id": "456789123"}],
+        },
+    )
+
+    # Mock save_credentials to return False
+    mock_save_credentials.return_value = False
+
+    # Import and call the task
+    from breathecode.authenticate.tasks import join_user_to_discord_guild
+
+    result = join_user_to_discord_guild(
+        user_id=model.cohort_user.user.id,
+        access_token="test_access_token",
+        discord_user_id=123456789,
+        cohort_slug="test-cohort",
+    )
+
+    # Verify Discord service was called
+    mock_discord_service.join_user_to_guild.assert_called_once_with(
+        access_token="test_access_token", guild_id="987654321", discord_user_id=123456789
+    )
+
+    # Verify credentials were saved
+    mock_save_credentials.assert_called_once_with(
+        user_id=model.cohort_user.user.id, discord_user_id=123456789, guild_id="987654321", cohort_slug="test-cohort"
+    )
+
+    # Verify role assignment task was NOT called (because save failed)
+    mock_celery_tasks.assert_not_called()
+
+    # Verify task returns None
+    assert result is None
+
+
+def test_inconsistent_server_ids(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
+    """Test when cohorts have different server_ids (should only use the first one)"""
+    # Create test data with different server_ids
+    model = bc.database.create(
+        user=1,
+        cohort=[
+            {
+                "slug": "test-cohort-1",
+                "shortcuts": [{"label": "Discord", "server_id": "111111111", "role_id": "111111111"}],
+            },
+            {
+                "slug": "test-cohort-2",
+                "shortcuts": [{"label": "Discord", "server_id": "222222222", "role_id": "222222222"}],
+            },
+        ],
+        academy=1,
+    )
+
+    # Create cohort_users after model is created
+    bc.database.create(
+        cohort_user=[
+            {"user": model.user, "cohort": model.cohort[0], "role": "STUDENT", "academy": model.academy},
+            {"user": model.user, "cohort": model.cohort[1], "role": "STUDENT", "academy": model.academy},
+        ]
+    )
+
+    # Import and call the task
+    from breathecode.authenticate.tasks import join_user_to_discord_guild
+
+    result = join_user_to_discord_guild(
+        user_id=model.user.id,
+        access_token="test_access_token",
+        discord_user_id=123456789,
+        cohort_slug="test-cohort-1",
+    )
+
+    # Verify Discord service was called with the first server_id
+    mock_discord_service.join_user_to_guild.assert_called_once_with(
+        access_token="test_access_token", guild_id="111111111", discord_user_id=123456789
+    )
+
+    # Verify credentials were saved with the first server_id
+    mock_save_credentials.assert_called_once_with(
+        user_id=model.user.id,
+        discord_user_id=123456789,
+        guild_id="111111111",
+        cohort_slug="test-cohort-1",
+    )
+
+    # Verify only the role from the first cohort was assigned
+    mock_celery_tasks.assert_called_once_with(
+        guild_id="111111111", discord_user_id=123456789, role_id="111111111", academy_id=1
+    )
+
+    # Verify task returns None
+    assert result is None

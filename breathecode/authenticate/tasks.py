@@ -88,6 +88,10 @@ def join_user_to_discord_guild(
     logger.info("=== JOIN DISCORD TASK STARTED ===")
 
     cohort_academy = Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").first()
+    if not cohort_academy:
+        logger.warning(f"Cohort with slug '{cohort_slug}' not found")
+        return
+
     cohorts = Cohort.objects.filter(cohortuser__user_id=user_id, academy=cohort_academy.academy.id).all()
 
     server_id = None
@@ -146,7 +150,7 @@ def join_user_to_discord_guild(
 
     except Exception as e:
         logger.error(f"Error joining the user to the Discord server: {str(e)}")
-        raise Exception(f"Error joining the user to the Discord server: {str(e)}")
+        raise e
 
 
 @shared_task(priority=TaskPriority.TWO_FACTOR_AUTH.value)
@@ -167,6 +171,8 @@ def assign_discord_role_task(guild_id: int, discord_user_id: int, role_id: int, 
 
 @shared_task(priority=TaskPriority.TWO_FACTOR_AUTH.value)
 def remove_discord_role_task(guild_id: int, discord_user_id: int, role_id: int, academy_id: int):
+    logger.info("DEBUG: remove_discord_role_task STARTED")
+    logger.info(f"Removing role {role_id} from user {discord_user_id} in guild {guild_id} for academy {academy_id}")
     discord_service = Discord(academy_id=academy_id)
     try:
         result = discord_service.remove_role_to_user(guild_id, discord_user_id, role_id)

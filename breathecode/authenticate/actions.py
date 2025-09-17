@@ -1233,13 +1233,17 @@ def revoke_user_discord_permissions(user, academy):
                             for role in response.json().get("roles", None):
                                 if role == shortcut.get("role_id", None):
                                     user_had_roles = True
-
+                        logger.info(
+                            f"Removing role {shortcut.get('role_id', None)} from user {discord_creds.discord_id} in guild {shortcut.get('server_id', None)} for academy {cohort_academy.academy.id}"
+                        )
+                        logger.info("DEBUG: About to call remove_discord_role_task.delay()")
                         auth_tasks.remove_discord_role_task.delay(
                             shortcut.get("server_id", None),
                             int(discord_creds.discord_id),
                             shortcut.get("role_id", None),
                             academy_id=cohort_academy.academy.id,
                         )
+                        logger.info("DEBUG: remove_discord_role_task.delay() called successfully")
                     except Exception as e:
                         logger.error(f"Error removing Discord role: {e}")
 
