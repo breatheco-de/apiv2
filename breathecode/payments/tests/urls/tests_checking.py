@@ -505,9 +505,9 @@ class SignalTestSuite(PaymentsTestCase):
             self.bc.database.get("payments.Currency", 1, dict=False),
             data={
                 "amount_per_month": base_month + seat_price * seats,
-                "amount_per_quarter": base_quarter + seat_price * seats,
-                "amount_per_half": base_half + seat_price * seats,
-                "amount_per_year": base_year + seat_price * seats,
+                "amount_per_quarter": base_quarter + seat_price * seats * 3,
+                "amount_per_half": base_half + seat_price * seats * 6,
+                "amount_per_year": base_year + seat_price * seats * 12,
                 "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
                 "token": token,
                 "is_recurrent": True,

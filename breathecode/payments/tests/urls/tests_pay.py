@@ -516,109 +516,6 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
     )
 
 
-def test_seats_pricing_not_configured(bc: Breathecode, client: APIClient):
-    # Base bag amounts (will be adjusted by seat add-on below)
-    bag = {
-        "token": "xdxdxdxdxdxdxdxdxdxd",
-        "expires_at": UTC_NOW,
-        "status": "CHECKING",
-        "type": "BAG",
-        **generate_amounts_by_time(over_50=True),
-        "seat_service_item_id": 1,
-    }
-    chosen_period = random.choice(["MONTH", "QUARTER", "HALF", "YEAR"])
-
-    plan = {"is_renewable": False}
-    # Random coupons
-    random_percent = random.random() * 0.3
-    discount1 = random.random() * 20
-    discount2 = random.random() * 10
-    coupons = [
-        {
-            "discount_type": "PERCENT_OFF",
-            "discount_value": random_percent,
-            "offered_at": None,
-            "expires_at": None,
-        },
-        {
-            "discount_type": "FIXED_PRICE",
-            "discount_value": discount1,
-            "offered_at": None,
-            "expires_at": None,
-        },
-        {
-            "discount_type": "HAGGLING",
-            "discount_value": discount2,
-            "offered_at": None,
-            "expires_at": None,
-        },
-    ]
-    random.shuffle(coupons)
-
-    # Create base entities
-    model = bc.database.create(
-        user=1, bag=bag, academy=1, currency=1, plan=plan, service_item=1, coupon=coupons, service={"type": "SEAT"}
-    )
-    client.force_authenticate(user=model.user)
-
-    # Reuse existing service_item with id=1 as the seat item
-    seats = random.randint(1, 5)
-    seat_price = random.random() * 20 + 5
-
-    # Compute base amount before adding seat pricing
-    base_amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
-
-    # Simulate that amounts already include per-seat pricing as computed during checking
-    seat_total = seat_price * seats
-    model.bag.amount_per_month += seat_total
-    model.bag.amount_per_quarter += seat_total
-    model.bag.amount_per_half += seat_total
-    model.bag.amount_per_year += seat_total
-    model.bag.save()
-
-    amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
-    assert math.isclose(amount, base_amount + seat_total, rel_tol=1e-9)
-
-    url = reverse_lazy("payments:pay")
-    data = {
-        "token": "xdxdxdxdxdxdxdxdxdxd",
-        "chosen_period": chosen_period,
-    }
-    response = client.post(url, data, format="json")
-
-    json = response.json()
-    expected = {"detail": "price-not-configured-for-per-seat-purchases", "status_code": 400}
-
-    assert json == expected
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    assert bc.database.list_of("payments.Bag") == [
-        {
-            **bc.format.to_dict(model.bag),
-        }
-    ]
-    assert bc.database.list_of("payments.Invoice") == []
-    assert bc.database.list_of("authenticate.UserSetting") == [
-        format_user_setting({"lang": "en"}),
-    ]
-
-    bc.check.queryset_with_pks(model.bag.plans.all(), [1])
-    bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
-    # build subscription must be called for chosen_period flow
-    assert tasks.build_subscription.delay.call_args_list == []
-    assert tasks.build_plan_financing.delay.call_args_list == []
-    assert tasks.build_free_subscription.delay.call_args_list == []
-
-    bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
-    bc.check.calls(admissions_tasks.build_profile_academy.delay.call_args_list, [])
-    bc.check.calls(
-        activity_tasks.add_activity.delay.call_args_list,
-        [
-            call(1, "bag_created", related_type="payments.Bag", related_id=1),
-        ],
-    )
-
-
 def test_amount_set_with_subscription_seats(bc: Breathecode, client: APIClient):
     # Base bag amounts (will be adjusted by seat add-on below)
     bag = {
@@ -676,16 +573,8 @@ def test_amount_set_with_subscription_seats(bc: Breathecode, client: APIClient):
     )
     client.force_authenticate(user=model.user)
 
-    # Compute base amount before adding seat pricing
-    base_amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
-
-    # Seats total per month
-    seat_total = seat_price * seats
-    # Compute expected amount using chosen period factor without mutating bag amounts
-    period_factor = (
-        1 if chosen_period == "MONTH" else 3 if chosen_period == "QUARTER" else 6 if chosen_period == "HALF" else 12
-    )
-    amount = base_amount + seat_total * period_factor
+    # the seat price is already included in the bag amount, it was added during checking
+    amount = get_amount_per_period(chosen_period, bc.format.to_dict(model.bag))
 
     url = reverse_lazy("payments:pay")
     data = {

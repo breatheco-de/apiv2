@@ -786,46 +786,29 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
         if price_per_month != 0:
             price_per_month += academy_service.price_per_unit * bag.seat_service_item.how_many
         if price_per_quarter != 0:
-            price_per_quarter += academy_service.price_per_unit * bag.seat_service_item.how_many
+            price_per_quarter += academy_service.price_per_unit * bag.seat_service_item.how_many * 3
         if price_per_half != 0:
-            price_per_half += academy_service.price_per_unit * bag.seat_service_item.how_many
+            price_per_half += academy_service.price_per_unit * bag.seat_service_item.how_many * 6
         if price_per_year != 0:
-            price_per_year += academy_service.price_per_unit * bag.seat_service_item.how_many
+            price_per_year += academy_service.price_per_unit * bag.seat_service_item.how_many * 12
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
 
 def get_amount_by_chosen_period(bag: Bag, chosen_period: str, lang: str) -> float:
     amount = 0
-    seats_price = 0
-
-    if bag.seat_service_item:
-        academy_service = AcademyService.objects.filter(
-            service=bag.seat_service_item.service, academy=bag.academy
-        ).first()
-        if not academy_service or academy_service.price_per_unit == 0:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Price are not configured for per-seat purchases",
-                    es="Precio no configurado para compras por asiento",
-                    slug="price-not-configured-for-per-seat-purchases",
-                ),
-                code=400,
-            )
-        seats_price = academy_service.price_per_unit * bag.seat_service_item.how_many
 
     if chosen_period == "MONTH" and bag.amount_per_month:
-        amount = bag.amount_per_month + seats_price
+        amount = bag.amount_per_month
 
     elif chosen_period == "QUARTER" and bag.amount_per_quarter:
-        amount = bag.amount_per_quarter + (seats_price * 3)
+        amount = bag.amount_per_quarter
 
     elif chosen_period == "HALF" and bag.amount_per_half:
-        amount = bag.amount_per_half + (seats_price * 6)
+        amount = bag.amount_per_half
 
     elif chosen_period == "YEAR" and bag.amount_per_year:
-        amount = bag.amount_per_year + (seats_price * 12)
+        amount = bag.amount_per_year
 
     # free trial
     if not amount and (bag.amount_per_month or bag.amount_per_quarter or bag.amount_per_half or bag.amount_per_year):
