@@ -2224,7 +2224,7 @@ class ConsumableCheckoutView(APIView):
                 code=400,
             )
 
-        elif service.type not in ["MENTORSHIP_SERVICE_SET", "EVENT_TYPE_SET", "VOID"]:
+        elif service.type not in ["MENTORSHIP_SERVICE_SET", "EVENT_TYPE_SET", "VOID", "SEAT"]:
             raise ValidationException(
                 translation(
                     lang,
