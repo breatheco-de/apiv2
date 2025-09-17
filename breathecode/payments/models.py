@@ -14,9 +14,11 @@ from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.contrib.auth.models import Group, Permission, User
 from django.core.handlers.wsgi import WSGIRequest
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, Country
@@ -254,69 +256,8 @@ class ServiceItem(AbstractServiceItem):
         if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
             raise forms.ValidationError("You cannot update a service item")
 
-        if self.is_team_allowed:
-            # team_group is required when team is enabled
-            if not self.team_group:
-                raise forms.ValidationError("team_group is required when is_team_allowed is True")
-
-            # validate team_consumables shape and referenced services
-            data = self.team_consumables or {}
-            allowed = data.get("allowed")
-            if not isinstance(allowed, list) or not allowed:
-                raise forms.ValidationError("team_consumables.allowed must be a non-empty list")
-
-            valid_unit_types = {x[0] for x in SERVICE_UNITS}
-            valid_renew_units = {x[0] for x in PAY_EVERY_UNIT}
-            seen = set()
-
-            for i, entry in enumerate(allowed):
-                if not isinstance(entry, dict):
-                    raise forms.ValidationError(f"team_consumables.allowed[{i}] must be an object")
-
-                service_slug = entry.get("service_slug")
-                unit_type = entry.get("unit_type")
-                renew_at_unit = entry.get("renew_at_unit")
-                how_many = entry.get("how_many", None)
-                renew_at = entry.get("renew_at", None)
-
-                if not service_slug or not isinstance(service_slug, str):
-                    raise forms.ValidationError(f"team_consumables.allowed[{i}].service_slug must be a string")
-
-                if not Service.objects.filter(slug=service_slug).exists():
-                    raise forms.ValidationError(
-                        f"Unknown service_slug '{service_slug}' in team_consumables.allowed[{i}]"
-                    )
-
-                if unit_type not in valid_unit_types:
-                    raise forms.ValidationError(
-                        f"Invalid unit_type '{unit_type}' in team_consumables.allowed[{i}] (valid: {valid_unit_types})"
-                    )
-
-                if renew_at_unit not in valid_renew_units:
-                    raise forms.ValidationError(
-                        f"Invalid renew_at_unit '{renew_at_unit}' in team_consumables.allowed[{i}] (valid: {valid_renew_units})"
-                    )
-
-                if how_many is not None:
-                    if not isinstance(how_many, int):
-                        raise forms.ValidationError(
-                            f"team_consumables.allowed[{i}].how_many must be an integer (use -1 for unlimited)"
-                        )
-                    if how_many < -1:
-                        raise forms.ValidationError(f"team_consumables.allowed[{i}].how_many must be -1 or >= 0")
-
-                if renew_at is not None:
-                    if not isinstance(renew_at, int) or renew_at <= 0:
-                        raise forms.ValidationError(
-                            f"team_consumables.allowed[{i}].renew_at must be a positive integer when provided"
-                        )
-
-                key = (service_slug, unit_type)
-                if key in seen:
-                    raise forms.ValidationError(
-                        f"Duplicated entry for service_slug '{service_slug}' and unit_type '{unit_type}' in team_consumables.allowed"
-                    )
-                seen.add(key)
+        if self.service.type == "SEAT" and self.how_many > 0:
+            raise ValidationError(_("A service with type SEAT can't have a how_many > 0"))
 
     def save(self, *args, **kwargs):
         self.full_clean()

@@ -260,7 +260,9 @@ def renew_subscription_consumables(self, subscription_id: int, seat_id: Optional
 
     subscription_seat = None
     if seat_id and not (
-        subscription_seat := SubscriptionSeat.objects.filter(subscription=subscription, id=seat_id).first()
+        subscription_seat := SubscriptionSeat.objects.filter(
+            billing_team__subscription=subscription, id=seat_id
+        ).first()
     ):
         raise RetryTask(f"SubscriptionSeat with id {seat_id} not found")
 
@@ -902,7 +904,10 @@ def build_service_stock_scheduler_from_subscription(
 
     subscription_seat = None
     if seat_id:
-        subscription_seat = SubscriptionSeat.objects.filter(subscription__id=subscription_id, id=seat_id).first()
+        # SubscriptionSeat does not link directly to Subscription; it links via billing_team
+        subscription_seat = SubscriptionSeat.objects.filter(
+            billing_team__subscription__id=subscription_id, id=seat_id
+        ).first()
         if not subscription_seat:
             raise RetryTask(f"SubscriptionSeat with id {seat_id} not found")
 
@@ -939,9 +944,8 @@ def build_service_stock_scheduler_from_subscription(
     # - Create owner-level schedulers ONLY for service items that are NOT team-allowed
     # - Schedule per-seat builds for items that ARE team-allowed
     if not seat_id and has_seats:
-        team = SubscriptionBillingTeam.objects.filter(
-            subscription=subscription, defaults={"name": f"Team {subscription.id}"}
-        ).first()
+        # `defaults` is only valid for get_or_create; use a simple filter here
+        team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
         if not team:
             raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
 
