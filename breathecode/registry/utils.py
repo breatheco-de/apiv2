@@ -151,7 +151,7 @@ def get_urls_from_html(html_content):
     # Image tags
     for img in soup.find_all("img"):
         src = img.get("src")
-        if src:
+        if src and "data:" not in src:
             urls.append(src)
 
     # Extract URLs from <code>, <pre>, and full page text

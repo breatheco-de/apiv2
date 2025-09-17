@@ -12,8 +12,8 @@ from breathecode.assignments.signals import revision_status_updated
 from breathecode.certificate.actions import how_many_pending_tasks, get_assets_from_syllabus
 
 from ..activity import tasks as activity_tasks
-from .models import Cohort, CohortUser
-from .signals import cohort_log_saved, cohort_user_created, student_edu_status_updated
+from .models import Cohort, CohortUser, Syllabus, SyllabusVersion
+from .signals import cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
 
 # add your receives here
 logger = logging.getLogger(__name__)
@@ -198,3 +198,16 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
         )
     else:
         logger.info("[graduate] there are still mandatory pending tasks -> do not graduate")
+
+
+@receiver(syllabus_created, sender=Syllabus)
+def create_initial_syllabus_version(sender: Type[Syllabus], instance: Syllabus, **kwargs: Any):
+    """Create an initial SyllabusVersion when a new Syllabus is created."""
+    logger.info(f"Creating initial SyllabusVersion for Syllabus: {instance.id}")
+    
+    # Create the first version (version 1) with default JSON
+    SyllabusVersion.objects.create(
+        syllabus=instance,
+        version=1,
+        status="PUBLISHED"
+    )
