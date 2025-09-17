@@ -932,21 +932,81 @@ def build_service_stock_scheduler_from_subscription(
     if not (subscription := Subscription.objects.filter(id=subscription_id, **additional_args["subscription"]).first()):
         raise RetryTask(f"Subscription with id {subscription_id} not found")
 
-    if not seat_id and (subscription.seat_service_item and subscription.seat_service_item.how_many > 0):
+    # Determine if subscription has seats configured
+    has_seats = bool(subscription.seat_service_item and subscription.seat_service_item.how_many > 0)
+
+    # When seats exist and we are building for the owner (no seat_id), we must:
+    # - Create owner-level schedulers ONLY for service items that are NOT team-allowed
+    # - Schedule per-seat builds for items that ARE team-allowed
+    if not seat_id and has_seats:
         team = SubscriptionBillingTeam.objects.filter(
             subscription=subscription, defaults={"name": f"Team {subscription.id}"}
         ).first()
         if not team:
             raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
 
+        utc_now = timezone.now()
+        created_owner_schedulers = False
+
+        # Build owner-level schedulers for subscription service items not allowed for team
+        for handler in SubscriptionServiceItem.objects.filter(subscription=subscription).select_related("service_item"):
+            if handler.service_item.is_team_allowed:
+                continue
+
+            unit = handler.service_item.renew_at
+            unit_type = handler.service_item.renew_at_unit
+            delta = actions.calculate_relative_delta(unit, unit_type)
+            valid_until = utc_now + delta
+
+            if subscription.next_payment_at and valid_until > subscription.next_payment_at:
+                valid_until = subscription.next_payment_at
+
+            if subscription.valid_until and valid_until > subscription.valid_until:
+                valid_until = subscription.valid_until
+
+            ServiceStockScheduler.objects.get_or_create(subscription_handler=handler, subscription_seat=None)
+            created_owner_schedulers = True
+
+        # Build owner-level schedulers for plan service items not allowed for team
+        for plan in subscription.plans.all():
+            for plan_handler in PlanServiceItem.objects.filter(plan=plan).select_related("service_item"):
+                if plan_handler.service_item.is_team_allowed:
+                    continue
+
+                unit = plan_handler.service_item.renew_at
+                unit_type = plan_handler.service_item.renew_at_unit
+                delta = actions.calculate_relative_delta(unit, unit_type)
+                valid_until = utc_now + delta
+
+                if valid_until > subscription.next_payment_at:
+                    valid_until = subscription.next_payment_at
+
+                if subscription.valid_until and valid_until > subscription.valid_until:
+                    valid_until = subscription.valid_until
+
+                owner_plan_handler, _ = PlanServiceItemHandler.objects.get_or_create(
+                    subscription=subscription, handler=plan_handler
+                )
+
+                ServiceStockScheduler.objects.get_or_create(plan_handler=owner_plan_handler, subscription_seat=None)
+                created_owner_schedulers = True
+
+        # Schedule per-seat builds (these runs will create schedulers only for team-allowed items)
         for seat in SubscriptionSeat.objects.filter(billing_team=team):
             build_service_stock_scheduler_from_subscription.delay(subscription_id, seat_id=seat.id)
+
+        # Trigger renew for owner-level items just created
+        if created_owner_schedulers and not update_mode:
+            renew_subscription_consumables.delay(subscription.id)
 
         return
 
     utc_now = timezone.now()
 
-    for handler in SubscriptionServiceItem.objects.filter(subscription=subscription):
+    for handler in SubscriptionServiceItem.objects.filter(subscription=subscription).select_related("service_item"):
+        # If building for a seat, skip items that are not team-allowed
+        if subscription_seat and handler.service_item.is_team_allowed is False:
+            continue
         unit = handler.service_item.renew_at
         unit_type = handler.service_item.renew_at_unit
         delta = actions.calculate_relative_delta(unit, unit_type)
@@ -961,7 +1021,10 @@ def build_service_stock_scheduler_from_subscription(
         ServiceStockScheduler.objects.get_or_create(subscription_handler=handler, subscription_seat=subscription_seat)
 
     for plan in subscription.plans.all():
-        for handler in PlanServiceItem.objects.filter(plan=plan):
+        for handler in PlanServiceItem.objects.filter(plan=plan).select_related("service_item"):
+            # If building for a seat, skip items that are not team-allowed
+            if subscription_seat and handler.service_item.is_team_allowed is False:
+                continue
             unit = handler.service_item.renew_at
             unit_type = handler.service_item.renew_at_unit
             delta = actions.calculate_relative_delta(unit, unit_type)
