@@ -1885,7 +1885,7 @@ def check_discord_server(request, server_id):
 
     for server in discord_creds.joined_servers:
         if int(server) == server_id:
-            response = Discord().get_member_in_server(discord_creds.discord_id, server_id)
+            response = Discord(47).get_member_in_server(discord_creds.discord_id, server_id)
             if response.status_code == 200:
                 redirect = f"https://discord.com/channels/{server_id}"
                 return Response({"server_url": redirect})
@@ -1966,6 +1966,7 @@ async def process_discord_token(request):
 
     code = request.query_params.get("code", None)
     if not code:
+        # No code specified, the user probably cancelled the authorization
         return HttpResponseRedirect(url)
 
     temporal_token = state_dict.get("token")
