@@ -2177,7 +2177,7 @@ class ConsumableCheckoutView(APIView):
                 translation(lang, en="Academy not found", es="La academia no fue encontrada", slug="academy-not-found")
             )
 
-        if seats and (not isinstance(seats, int) and seats < 0):
+        if seats is not None and (not isinstance(seats, int) or seats < 0):
             raise ValidationException(
                 translation(
                     lang,
@@ -2243,7 +2243,7 @@ class ConsumableCheckoutView(APIView):
             kwargs["available_event_type_sets"] = event_type_set
 
         academy_service = AcademyService.objects.filter(academy_id=academy, service=service, **kwargs).first()
-        if not academy_service:
+        if not academy_service and service.type != "SEAT":
             raise ValidationException(
                 translation(
                     lang,
@@ -2254,6 +2254,196 @@ class ConsumableCheckoutView(APIView):
                 code=404,
             )
 
+        # Seats purchase flow: increase team seats for an existing subscription
+        if service.type == "SEAT":
+            subscription_id = request.data.get("subscription")
+            if not subscription_id or not isinstance(subscription_id, int):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Subscription is required",
+                        es="La suscripción es requerida",
+                        slug="subscription-is-required",
+                    ),
+                    code=400,
+                )
+
+            subscription = Subscription.objects.filter(id=subscription_id).first()
+            if not subscription:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Subscription not found",
+                        es="Suscripción no encontrada",
+                        slug="subscription-not-found",
+                    ),
+                    code=404,
+                )
+
+            if subscription.user_id != request.user.id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Only the owner can manage seats",
+                        es="Solo el dueño puede gestionar asientos",
+                        slug="only-owner-allowed",
+                    ),
+                    code=403,
+                )
+
+            plan = subscription.plans.first()
+            if not plan or not plan.seat_service_price:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan does not support team seats",
+                        es="Plan no soporta asientos de equipo",
+                        slug="plan-does-not-support-team-seats",
+                    ),
+                    code=400,
+                )
+
+            if seats is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Seats is required to update team capacity",
+                        es="Se requieren asientos para actualizar la capacidad del equipo",
+                        slug="seats-required",
+                    ),
+                    code=400,
+                )
+
+            team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+            current_limit = team.seats_limit if team else 0
+            desired_limit = seats
+            delta = desired_limit - current_limit
+
+            if delta <= 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Desired seats must be greater than current seats",
+                        es="Los asientos deseados deben ser mayores que los asientos actuales",
+                        slug="desired-seats-must-be-greater",
+                    ),
+                    code=400,
+                )
+
+            # use seat service pricing set on plan
+            academy_service = plan.seat_service_price
+
+            # price seats delta with pricing ratios
+            amount, currency, pricing_ratio_explanation = academy_service.get_discounted_price(delta, country_code)
+
+            if amount <= 0.5:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="The amount is too low",
+                        es="El monto es muy bajo",
+                        slug="the-amount-is-too-low",
+                    ),
+                    code=400,
+                )
+
+            academy = subscription.academy
+            s = Stripe(academy=academy)
+
+            invoice = None
+            with transaction.atomic():
+                sid = transaction.savepoint()
+                try:
+                    s.set_language(lang)
+                    s.add_contact(request.user)
+
+                    # keeps this inside a transaction
+                    bag = Bag(
+                        type="CHARGE",
+                        status="PAID",
+                        was_delivered=True,
+                        user=request.user,
+                        currency=currency,
+                        academy=academy,
+                        is_recurrent=False,
+                        country_code=country_code,
+                        pricing_ratio_explanation=pricing_ratio_explanation,
+                    )
+                    if pricing_ratio_explanation and pricing_ratio_explanation.get("service_items"):
+                        bag.pricing_ratio_explanation = pricing_ratio_explanation
+
+                    bag.save()
+
+                    description = f"Increase team seats by {int(delta)} (to {int(desired_limit)})"
+                    invoice = s.pay(
+                        request.user,
+                        bag,
+                        amount,
+                        currency=bag.currency.code.lower(),
+                        description=description,
+                    )
+
+                    # Ensure billing team exists and update seats limit
+                    if not team:
+                        team = SubscriptionBillingTeam.objects.create(
+                            subscription=subscription,
+                            name=f"Team {subscription.id}",
+                            seats_limit=desired_limit,
+                        )
+
+                        # mark subscription has billing team
+                        subscription.has_billing_team = True
+                        subscription.save(update_fields=["has_billing_team"])
+
+                        # add owner as first seat
+                        SubscriptionSeat.objects.get_or_create(
+                            billing_team=team,
+                            user=subscription.user,
+                            email=(subscription.user.email or "").strip().lower(),
+                            defaults={"is_active": True, "seat_multiplier": 1},
+                        )
+                    else:
+                        # update seats limit and log
+                        try:
+                            seats_log = team.seats_log or []
+                        except Exception:
+                            seats_log = []
+                        seats_log.append(
+                            {
+                                "action": "LIMIT_UPDATED",
+                                "from": int(current_limit),
+                                "to": int(desired_limit),
+                                "created_at": timezone.now().isoformat().replace("+00:00", "Z"),
+                            }
+                        )
+                        team.seats_log = seats_log
+                        team.seats_limit = desired_limit
+                        team.save(update_fields=["seats_log", "seats_limit"])
+
+                    # trigger scheduler to refresh consumables (no-op until seats are assigned)
+                    tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id)
+
+                    tasks_activity.add_activity.delay(
+                        request.user.id,
+                        "checkout_completed",
+                        related_type="payments.Invoice",
+                        related_id=invoice.id,
+                    )
+
+                except Exception as e:
+                    if invoice:
+                        s.set_language(lang)
+                        s.refund_payment(invoice)
+
+                    transaction.savepoint_rollback(sid)
+                    raise e
+
+                transaction.savepoint_commit(sid)
+
+            serializer = GetInvoiceSerializer(invoice, many=False)
+            return Response(serializer.data, status=201)
+
+        # Default flow: buy consumables for mentorship/events
         academy_service.validate_transaction(total_items, lang)
         amount, currency, pricing_ratio_explanation = academy_service.get_discounted_price(total_items, country_code)
 
