@@ -124,7 +124,10 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if (
         scheduler.subscription_handler
         and scheduler.subscription_handler.subscription
-        and scheduler.subscription_handler.subscription.valid_until < utc_now
+        and (
+            scheduler.subscription_handler.subscription.valid_until == None
+            or scheduler.subscription_handler.subscription.valid_until < utc_now
+        )
     ):
         raise AbortTask(f"The subscription {scheduler.subscription_handler.subscription.id} is over")
 

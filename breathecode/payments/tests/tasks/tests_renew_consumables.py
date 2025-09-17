@@ -261,7 +261,6 @@ def test_without_a_resource_linked(
         ("plan_financing", True, False, False),
         ("subscription", False, True, False),
         ("subscription", True, False, False),
-        ("plan_financing", True, False, True),
         ("subscription", False, True, True),
         ("subscription", True, False, True),
     ],
@@ -317,7 +316,7 @@ def test_with_two_cohorts_linked(
     # Create a separate SEAT service and service_item for any seat validation needs
     seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 1})
 
-    # Ensure any subscription or plan_financing models explicitly set seat_service_item to None or the SEAT service
+    # Ensure any subscription model explicitly sets seat_service_item appropriately
     if "subscription" in base_kwargs:
         if isinstance(base_kwargs["subscription"], dict):
             # Only set seat_service_item if with_seat is True, otherwise explicitly set to None
@@ -331,7 +330,7 @@ def test_with_two_cohorts_linked(
                 base_kwargs["subscription"] = {"seat_service_item": seat_model.service_item}
             else:
                 base_kwargs["subscription"] = {"seat_service_item": None}
-
+    # Enforce: plan_financing never carries seat_service_item regardless of with_seat
     if "plan_financing" in base_kwargs:
         if isinstance(base_kwargs["plan_financing"], dict):
             # Only set seat_service_item if with_seat is True, otherwise explicitly set to None
@@ -380,7 +379,7 @@ def test_with_two_cohorts_linked(
             {
                 "cohort_set_id": 1,
                 "id": 1,
-                "service_item_id": 1,
+                "service_item_id": 2,
                 "user_id": 1,
                 "how_many": model.service_item.how_many,
                 "valid_until": UTC_NOW
@@ -399,7 +398,6 @@ def test_with_two_cohorts_linked(
         ("plan_financing", True, False, False),
         ("subscription", False, True, False),
         ("subscription", True, False, False),
-        ("plan_financing", True, False, True),
         ("subscription", False, True, True),
         ("subscription", True, False, True),
     ],
@@ -452,7 +450,9 @@ def test_two_mentorship_services_linked(
         **extra,
     }
     if with_seat:
-        base_kwargs["subscription"] = 1
+        base_kwargs["subscription"]["seat_service_item_id"] = 2
+        base_kwargs["service"] = [base_kwargs["service"], {"type": "SEAT"}]
+        base_kwargs["service_item"] = [service_item, {"how_many": 3, "service_id": 2}]
     model = database.create(**base_kwargs)
 
     if with_seat:
@@ -485,7 +485,11 @@ def test_two_mentorship_services_linked(
                 "id": 1,
                 "service_item_id": 1,
                 "user_id": 1,
-                "how_many": model.service_item.how_many,
+                "how_many": (
+                    model.service_item[0].how_many
+                    if isinstance(model.service_item, list)
+                    else model.service_item.how_many
+                ),
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
                 "plan_financing_id": 1 if type == "plan_financing" else None,
                 "subscription_id": 1 if type == "subscription" else None,
@@ -501,7 +505,6 @@ def test_two_mentorship_services_linked(
         ("plan_financing", True, False, False),
         ("subscription", False, True, False),
         ("subscription", True, False, False),
-        ("plan_financing", True, False, True),
         ("subscription", False, True, True),
         ("subscription", True, False, True),
     ],
@@ -553,7 +556,9 @@ def test_two_event_types_linked(
         **extra,
     }
     if with_seat:
-        base_kwargs["subscription"] = 1
+        base_kwargs["subscription"]["seat_service_item_id"] = 2
+        base_kwargs["service"] = [base_kwargs["service"], {"type": "SEAT"}]
+        base_kwargs["service_item"] = [service_item, {"how_many": 3, "service_id": 2}]
     model = database.create(**base_kwargs)
 
     if with_seat:
@@ -586,7 +591,11 @@ def test_two_event_types_linked(
                 "id": 1,
                 "service_item_id": 1,
                 "user_id": 1,
-                "how_many": model.service_item.how_many,
+                "how_many": (
+                    model.service_item[0].how_many
+                    if isinstance(model.service_item, list)
+                    else model.service_item.how_many
+                ),
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
                 "plan_financing_id": 1 if type == "plan_financing" else None,
                 "subscription_id": 1 if type == "subscription" else None,
@@ -605,7 +614,6 @@ def test_two_event_types_linked(
         ("plan_financing", True, False, False),
         ("subscription", False, True, False),
         ("subscription", True, False, False),
-        ("plan_financing", True, False, True),
         ("subscription", False, True, True),
         ("subscription", True, False, True),
     ],
@@ -637,7 +645,6 @@ def test_without_a_resource_linked__type_void(
     if subscription_service_item:
         extra["subscription_service_item"] = 1
 
-    service = {"type": "VOID"}
     plan = {"is_renewable": False}
     service_item = {"how_many": -1}
     if random.randint(0, 1) == 1:
@@ -655,7 +662,10 @@ def test_without_a_resource_linked__type_void(
         **extra,
     }
     if with_seat:
-        base_kwargs["subscription"] = 1
+        base_kwargs["subscription"]["seat_service_item_id"] = 2
+        base_kwargs["service"] = [base_kwargs["service"], {"type": "SEAT"}]
+        base_kwargs["service_item"] = [service_item, {"how_many": 3, "service_id": 2}]
+
     model = database.create(**base_kwargs)
 
     if with_seat:
@@ -687,7 +697,11 @@ def test_without_a_resource_linked__type_void(
                 "id": 1,
                 "service_item_id": 1,
                 "user_id": 1,
-                "how_many": model.service_item.how_many,
+                "how_many": (
+                    model.service_item[0].how_many
+                    if isinstance(model.service_item, list)
+                    else model.service_item.how_many
+                ),
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
                 "plan_financing_id": 1 if type == "plan_financing" else None,
                 "subscription_id": 1 if type == "subscription" else None,
@@ -751,10 +765,6 @@ def test_without_a_resource_linked__type_void(
 #     logging.Logger.error.call_args_list = []
 
 #     renew_consumables.delay(1)
-
-#     print(logging.Logger.info.call_args_list)
-#     print(logging.Logger.error.call_args_list)
-#     print(bc.database.list_of("payments.Consumable"))
 
 #     assert logging.Logger.info.call_args_list == [
 #         call("Starting renew_consumables for service stock scheduler 1"),

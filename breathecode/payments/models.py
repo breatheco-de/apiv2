@@ -1998,11 +1998,7 @@ class Consumable(AbstractServiceItem):
 
     def clean(self) -> None:
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
-        parent_entities = [
-            self.subscription,
-            self.plan_financing,
-            self.subscription_seat,
-        ]
+        parent_entities = [self.subscription, self.plan_financing]
         owners = [self.user]
         settings = get_user_settings(self.user.id)
 
