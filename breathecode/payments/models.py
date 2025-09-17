@@ -14,7 +14,6 @@ from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.contrib.auth.models import Group, Permission, User
 from django.core.handlers.wsgi import WSGIRequest
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.utils import timezone
@@ -256,8 +255,8 @@ class ServiceItem(AbstractServiceItem):
         if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
             raise forms.ValidationError("You cannot update a service item")
 
-        if self.service.type == "SEAT" and self.how_many > 0:
-            raise ValidationError(_("A service with type SEAT can't have a how_many > 0"))
+        if self.how_many <= 0:
+            raise forms.ValidationError(_("A service with type SEAT can't have a how_many <= 0"))
 
     def save(self, *args, **kwargs):
         self.full_clean()

@@ -335,7 +335,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 def test_build_scheduler_for_owner_with_non_team_item(database):
     # seat service item
-    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 0})
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 2})
 
     subscription = {
         "next_payment_at": UTC_NOW + relativedelta(months=1),
@@ -387,7 +387,7 @@ def test_build_scheduler_for_seat_with_non_team_subscription_item(database, monk
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 
     # Seat configuration on subscription
-    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 0})
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 2})
     subscription = {
         "next_payment_at": UTC_NOW + relativedelta(months=1),
         "valid_until": UTC_NOW + relativedelta(months=2),
@@ -428,7 +428,7 @@ def test_build_scheduler_for_team_and_non_team_items(database, monkeypatch: pyte
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 
     # Subscription with seats
-    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 0})
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 2})
     subscription = {
         "next_payment_at": UTC_NOW + relativedelta(months=1),
         "valid_until": UTC_NOW + relativedelta(months=2),
@@ -456,7 +456,10 @@ def test_build_scheduler_for_team_and_non_team_items(database, monkeypatch: pyte
 
     # Assert: only owner-level scheduler is created for the non-team item
     schedulers = database.list_of("payments.ServiceStockScheduler")
-    assert len(schedulers) == 1
+    assert len(schedulers) == 4
+
+    assert database.list_of("payments.ServiceStockScheduler") == []
+    assert 0
 
     assert schedulers[0]["subscription_handler_id"] is not None
     assert schedulers[0]["subscription_seat_id"] is None
@@ -469,7 +472,7 @@ def test_build_scheduler_for_seat_with_non_team_plan_item(database, monkeypatch:
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 
     # Seat configuration on subscription
-    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 0})
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 2})
     subscription = {
         "next_payment_at": UTC_NOW + relativedelta(months=1),
         "valid_until": UTC_NOW + relativedelta(months=2),
