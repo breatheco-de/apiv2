@@ -140,7 +140,11 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
         return
 
     pending_tasks = how_many_pending_tasks(
-        cohort.syllabus_version, instance.user, task_types=["PROJECT"], only_mandatory=True
+        cohort.syllabus_version,
+        instance.user,
+        task_types=["PROJECT"],
+        only_mandatory=True,
+        cohort_id=cohort.id,
     )
 
     if pending_tasks == 0:
@@ -153,10 +157,6 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
 def create_initial_syllabus_version(sender: Type[Syllabus], instance: Syllabus, **kwargs: Any):
     """Create an initial SyllabusVersion when a new Syllabus is created."""
     logger.info(f"Creating initial SyllabusVersion for Syllabus: {instance.id}")
-    
+
     # Create the first version (version 1) with default JSON
-    SyllabusVersion.objects.create(
-        syllabus=instance,
-        version=1,
-        status="PUBLISHED"
-    )
+    SyllabusVersion.objects.create(syllabus=instance, version=1, status="PUBLISHED")
