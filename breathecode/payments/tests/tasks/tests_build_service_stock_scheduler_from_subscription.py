@@ -124,7 +124,12 @@ class PaymentsTestSuite(PaymentsTestCase):
             "next_payment_at": UTC_NOW + relativedelta(months=1),
             "valid_until": UTC_NOW + relativedelta(months=2),
         }
-        model = self.bc.database.create(subscription=subscription, service_item=1, subscription_service_item=1)
+        model = self.bc.database.create(
+            subscription=subscription,
+            service={"type": "COHORT_SET"},
+            service_item={"how_many": 1},
+            subscription_service_item={"service_item_id": 1},
+        )
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -180,7 +185,13 @@ class PaymentsTestSuite(PaymentsTestCase):
 
         plan = {"is_renewable": False}
 
-        model = self.bc.database.create(subscription=subscription, plan=plan, plan_service_item=1)
+        model = self.bc.database.create(
+            subscription=subscription,
+            plan=plan,
+            service_item={"how_many": 1},
+            plan_service_item={"service_item_id": 1},
+            service={"type": "COHORT_SET"},
+        )
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -243,7 +254,8 @@ class PaymentsTestSuite(PaymentsTestCase):
             subscription_service_item=subscription_service_items,
             plan=(2, plan),
             plan_service_item=plan_service_items,
-            service_item=6,
+            service=[{"type": "COHORT_SET"} for _ in range(6)],
+            service_item=[{"how_many": 1} for _ in range(6)],
         )
 
         # remove prints from mixer
@@ -335,7 +347,7 @@ class PaymentsTestSuite(PaymentsTestCase):
 @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 def test_build_scheduler_for_owner_with_non_team_item(database):
     # seat service item
-    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 2})
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 1})
 
     subscription = {
         "next_payment_at": UTC_NOW + relativedelta(months=1),
@@ -344,7 +356,9 @@ def test_build_scheduler_for_owner_with_non_team_item(database):
     }
 
     # Non-team service item linked to subscription
-    non_team_service = database.create(service=1, service_item={"is_team_allowed": False})
+    non_team_service = database.create(
+        service={"type": "COHORT_SET"}, service_item={"is_team_allowed": False, "how_many": 1}
+    )
 
     # Create the subscription
     model = database.create(
@@ -367,8 +381,11 @@ def test_build_scheduler_for_owner_with_non_team_item(database):
     # Act
     build_service_stock_scheduler_from_subscription.delay(1)
 
-    # Assert: owner renew called (owner-level path does not pass seat_id)
-    assert tasks.renew_subscription_consumables.delay.call_args_list == [call(1, seat_id=None)]
+    # Assert: both per-seat renew and owner-level renew are triggered
+    calls = tasks.renew_subscription_consumables.delay.call_args_list
+    assert call(1) in calls
+    assert call(1, seat_id=1) in calls
+    assert len(calls) == 2
 
     # We don't assert nested scheduling calls here to allow the task to run
 
@@ -387,7 +404,7 @@ def test_build_scheduler_for_seat_with_non_team_subscription_item(database, monk
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 
     # Seat configuration on subscription
-    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 2})
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 1})
     subscription = {
         "next_payment_at": UTC_NOW + relativedelta(months=1),
         "valid_until": UTC_NOW + relativedelta(months=2),
@@ -395,7 +412,9 @@ def test_build_scheduler_for_seat_with_non_team_subscription_item(database, monk
     }
 
     # Non-team subscription item
-    non_team_service = database.create(service=1, service_item={"is_team_allowed": False})
+    non_team_service = database.create(
+        service={"type": "COHORT_SET"}, service_item={"is_team_allowed": False, "how_many": 1}
+    )
 
     model = database.create(
         subscription=subscription,
@@ -428,7 +447,7 @@ def test_build_scheduler_for_team_and_non_team_items(database, monkeypatch: pyte
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 
     # Subscription with seats
-    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 2})
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 1})
     subscription = {
         "next_payment_at": UTC_NOW + relativedelta(months=1),
         "valid_until": UTC_NOW + relativedelta(months=2),
@@ -437,8 +456,11 @@ def test_build_scheduler_for_team_and_non_team_items(database, monkeypatch: pyte
 
     model = database.create(
         subscription=subscription,
-        service=2,
-        service_item=[{"service_id": 1, "is_team_allowed": False}, {"service_id": 2, "is_team_allowed": True}],
+        service=[{"type": "COHORT_SET"}, {"type": "EVENT_TYPE_SET"}],
+        service_item=[
+            {"service_id": 1, "is_team_allowed": False, "how_many": 1},
+            {"service_id": 2, "is_team_allowed": True, "how_many": 1},
+        ],
         subscription_service_item=2,
         academy={"available_as_saas": True},
         country=1,
@@ -455,14 +477,36 @@ def test_build_scheduler_for_team_and_non_team_items(database, monkeypatch: pyte
     tasks.build_service_stock_scheduler_from_subscription.delay(model.subscription.id)
 
     # Assert: only owner-level scheduler is created for the non-team item
-    schedulers = database.list_of("payments.ServiceStockScheduler")
-    assert len(schedulers) == 4
-
-    assert database.list_of("payments.ServiceStockScheduler") == []
-    assert 0
-
-    assert schedulers[0]["subscription_handler_id"] is not None
-    assert schedulers[0]["subscription_seat_id"] is None
+    assert database.list_of("payments.ServiceStockScheduler") == [
+        {
+            "id": 1,
+            "plan_handler_id": None,
+            "subscription_handler_id": 1,
+            "subscription_seat_id": None,
+            "valid_until": None,
+        },
+        {
+            "id": 2,
+            "plan_handler_id": None,
+            "subscription_handler_id": 3,
+            "subscription_seat_id": None,
+            "valid_until": None,
+        },
+        {
+            "id": 3,
+            "plan_handler_id": None,
+            "subscription_handler_id": 4,
+            "subscription_seat_id": None,
+            "valid_until": None,
+        },
+        {
+            "id": 4,
+            "plan_handler_id": None,
+            "subscription_handler_id": 2,
+            "subscription_seat_id": 1,
+            "valid_until": None,
+        },
+    ]
 
 
 @pytest.mark.django_db
@@ -472,7 +516,7 @@ def test_build_scheduler_for_seat_with_non_team_plan_item(database, monkeypatch:
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
 
     # Seat configuration on subscription
-    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 2})
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 1})
     subscription = {
         "next_payment_at": UTC_NOW + relativedelta(months=1),
         "valid_until": UTC_NOW + relativedelta(months=2),
@@ -480,7 +524,9 @@ def test_build_scheduler_for_seat_with_non_team_plan_item(database, monkeypatch:
     }
 
     # Non-team plan item
-    non_team_service = database.create(service=1, service_item={"is_team_allowed": False})
+    non_team_service = database.create(
+        service={"type": "COHORT_SET"}, service_item={"is_team_allowed": False, "how_many": 1}
+    )
 
     model = database.create(
         subscription=subscription,
