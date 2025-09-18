@@ -383,7 +383,7 @@ def test_build_scheduler_for_owner_with_non_team_item(database):
 
     # Assert: both per-seat renew and owner-level renew are triggered
     calls = tasks.renew_subscription_consumables.delay.call_args_list
-    assert call(1) in calls
+    assert call(1, seat_id=None) in calls
     assert call(1, seat_id=1) in calls
     assert len(calls) == 2
 
@@ -418,11 +418,12 @@ def test_build_scheduler_for_seat_with_non_team_subscription_item(database, monk
 
     model = database.create(
         subscription=subscription,
-        subscription_service_item={"service_item": non_team_service.service_item},
+        # subscription_service_item={"service_item_id": non_team_service.service_item.id},
         academy={"available_as_saas": True},
         country=1,
         city=1,
     )
+    model.subscription.service_items.add(non_team_service.service_item)
 
     # Team and seat
     team = SubscriptionBillingTeam.objects.create(subscription=model.subscription, name=f"Team {model.subscription.id}")
@@ -488,19 +489,26 @@ def test_build_scheduler_for_team_and_non_team_items(database, monkeypatch: pyte
         {
             "id": 2,
             "plan_handler_id": None,
-            "subscription_handler_id": 3,
+            "subscription_handler_id": 2,
             "subscription_seat_id": None,
             "valid_until": None,
         },
         {
             "id": 3,
             "plan_handler_id": None,
-            "subscription_handler_id": 4,
+            "subscription_handler_id": 3,
             "subscription_seat_id": None,
             "valid_until": None,
         },
         {
             "id": 4,
+            "plan_handler_id": None,
+            "subscription_handler_id": 4,
+            "subscription_seat_id": None,
+            "valid_until": None,
+        },
+        {
+            "id": 5,
             "plan_handler_id": None,
             "subscription_handler_id": 2,
             "subscription_seat_id": 1,
