@@ -138,6 +138,7 @@ urlpatterns = [
         AppConsumeView.as_view(),
         name="app_service_slug_consumptionsession_hash",
     ),
+    # payments endpoints
     path("card", CardView.as_view(), name="card"),
     path("bag", BagView.as_view(), name="bag"),
     path("bag/<int:bag_id>/coupon", BagCouponView.as_view(), name="bag_id_coupon"),

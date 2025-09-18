@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 import re
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -17,7 +18,9 @@ from pytz import UTC
 from rest_framework.request import Request
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings
+from breathecode.authenticate.actions import get_user_settings, get_app_url
+from breathecode.authenticate.models import UserInvite
+from breathecode.notify import actions as notify_actions
 from breathecode.authenticate.models import UserSetting
 from breathecode.media.models import File
 from breathecode.payments import tasks
@@ -44,6 +47,8 @@ from .models import (
     Service,
     ServiceItem,
     Subscription,
+    SubscriptionSeat,
+    SubscriptionBillingTeam,
 )
 
 logger = getLogger(__name__)
@@ -64,6 +69,33 @@ def calculate_relative_delta(unit: float, unit_type: str):
         delta_args["years"] = unit
 
     return relativedelta(**delta_args)
+
+
+# ------------------------------
+# Seat logs utilities
+# ------------------------------
+
+
+def _append_seat_log(seat: SubscriptionSeat, action: str) -> None:
+    """Append a log entry to both seat.seat_log and billing_team.seats_log."""
+    utc_now = timezone.now()
+    entry = {
+        "email": (seat.email or "").strip().lower(),
+        "user": seat.user_id,
+        "action": action,
+        "created_at": utc_now.isoformat(),
+    }
+
+    logs = list(seat.seat_log or [])
+    logs.append(entry)
+    seat.seat_log = logs
+    seat.save(update_fields=["seat_log", "updated_at"])
+
+    team = seat.billing_team
+    team_logs = list(team.seats_log or [])
+    team_logs.append(entry)
+    team.seats_log = team_logs
+    team.save(update_fields=["seats_log", "updated_at"])
 
 
 class PlanFinder:
@@ -289,6 +321,8 @@ class BagHandler:
         self.selected_event_type_set = request.data.get("event_type_set")
         self.selected_mentorship_service_set = request.data.get("mentorship_service_set")
         self.country_code = request.data.get("country_code")
+        # NEW: team seats for seat add-ons
+        self.team_seats = request.data.get("team_seats")
 
         self.plans_not_found = set()
         self.service_items_not_found = set()
@@ -500,6 +534,69 @@ class BagHandler:
 
             raise ValidationException(self._more_than_one_generator(en="plan", es="plan"), code=400)
 
+    # NEW: validate team seat add-ons for selected plan
+    def _validate_seat_add_ons(self):
+        if not self.team_seats:
+            return
+
+        # normalize
+        try:
+            seats = int(self.team_seats)
+        except Exception:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="Seats must be an integer",
+                    es="Los asientos deben ser un número entero",
+                    slug="seats-must-be-an-integer",
+                ),
+                code=400,
+            )
+
+        if seats <= 0:
+            return
+
+        plan: Plan | None = self.bag.plans.first()
+        if not plan:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="You must select a plan to add seats",
+                    es="Debes seleccionar un plan para agregar asientos",
+                    slug="plan-required-for-seats",
+                ),
+                code=400,
+            )
+
+        if not plan.seat_service_price:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="This plan does not support teams",
+                    es="Este plan no soporta equipos",
+                    slug="plan-not-support-teams",
+                ),
+                code=400,
+            )
+
+    # NEW: add seat add-ons as ServiceItems into the bag
+    def _add_seat_add_ons(self):
+
+        if not self.team_seats:
+            return
+
+        seats = int(self.team_seats)
+
+        if seats <= 0:
+            return
+
+        plan: Plan | None = self.bag.plans.first()
+        service_item, _ = ServiceItem.objects.get_or_create(
+            service=plan.seat_service_price.service, how_many=seats, is_renewable=False
+        )
+
+        self.bag.seat_service_item = service_item
+
     def _ask_to_add_plan_and_charge_it_in_the_bag(self):
         for plan in self.bag.plans.all():
             ask_to_add_plan_and_charge_it_in_the_bag(plan, self.bag.user, self.lang)
@@ -514,6 +611,10 @@ class BagHandler:
         self._get_plans_that_not_found()
         self._report_items_not_found()
         self._add_plans_to_bag()
+        # validate and add seat add-ons if requested
+        self._validate_just_one_plan()
+        self._validate_seat_add_ons()
+        self._add_seat_add_ons()
         self._add_service_items_to_bag()
         self._validate_just_one_plan()
 
@@ -667,6 +768,30 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
         bag.currency = currency
         bag.save()
 
+    if bag.seat_service_item:
+        academy_service = AcademyService.objects.filter(
+            service=bag.seat_service_item.service, academy=bag.academy
+        ).first()
+        if not academy_service:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Price are not configured for per-seat purchases",
+                    es="Precio no configurado para compras por asiento",
+                    slug="price-not-configured-for-per-seat-purchases",
+                ),
+                code=400,
+            )
+
+        if price_per_month != 0:
+            price_per_month += academy_service.price_per_unit * bag.seat_service_item.how_many
+        if price_per_quarter != 0:
+            price_per_quarter += academy_service.price_per_unit * bag.seat_service_item.how_many * 3
+        if price_per_half != 0:
+            price_per_half += academy_service.price_per_unit * bag.seat_service_item.how_many * 6
+        if price_per_year != 0:
+            price_per_year += academy_service.price_per_unit * bag.seat_service_item.how_many * 12
+
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
 
@@ -737,6 +862,12 @@ def get_bag_from_subscription(
 
     for plan in subscription.plans.all():
         bag.plans.add(plan)
+
+    # Include persisted subscription add-ons (SubscriptionServiceItem) in the bag so they are billed monthly
+    for handler in subscription.subscriptionserviceitem_set.select_related("service_item").all():
+        service_item = handler.service_item
+        # Attach the same service_item reference into bag so pricing logic picks it up via plan.add_ons mapping
+        bag.service_items.add(service_item)
 
     # Add only valid (non-expired) coupons from the subscription to the bag
     # Also exclude coupons where the user is the seller
@@ -1630,10 +1761,10 @@ def is_plan_paid(plan: Plan) -> bool:
 
     # For renewable plans, check if any pricing field is greater than 0
     return (
-        getattr(plan, "price_per_month", 0) > 0
-        or getattr(plan, "price_per_quarter", 0) > 0
-        or getattr(plan, "price_per_half", 0) > 0
-        or getattr(plan, "price_per_year", 0) > 0
+        (getattr(plan, "price_per_month", 0) or 0) > 0
+        or (getattr(plan, "price_per_quarter", 0) or 0) > 0
+        or (getattr(plan, "price_per_half", 0) or 0) > 0
+        or (getattr(plan, "price_per_year", 0) or 0) > 0
     )
 
 
@@ -1725,14 +1856,256 @@ def user_has_active_paid_plans(user: User) -> bool:
     Returns:
         bool: True if the user has active paid plans, False otherwise
     """
-    # Check for active PAID subscriptions
-    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
+    # Check for active PAID subscriptions owned by the user or where the user has a seat
+    owned_subscriptions = Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE)
+    seated_subscription_ids = SubscriptionSeat.objects.filter(user=user).values_list(
+        "billing_team__subscription_id", flat=True
+    )
+    seat_subscriptions = Subscription.objects.filter(id__in=seated_subscription_ids, status=Subscription.Status.ACTIVE)
+
+    for subscription in owned_subscriptions.union(seat_subscriptions):
         if is_subscription_paid(subscription):
             return True
 
-    # Check for active PAID plan financings
-    for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
-        if is_plan_financing_paid(plan_financing):
-            return True
-
     return False
+
+
+def _generate_unique_invite_token() -> str:
+    import hashlib
+    import os
+
+    token = hashlib.sha512(os.urandom(64)).hexdigest()
+    while UserInvite.objects.filter(token=token).exists():
+        token = hashlib.sha512(os.urandom(64)).hexdigest()
+    return token
+
+
+def create_subscription_seat_invites(
+    *,
+    subscription: Subscription,
+    service_item: ServiceItem,
+    emails: list[str],
+    seats: int = 1,
+    author: User | None = None,
+    lang: str = "en",
+) -> list[UserInvite]:
+    """Create UserInvite rows and create pending SubscriptionSeat for each email.
+
+    This replaces SubscriptionSeatInvite: we now reserve a seat directly in SubscriptionSeat (user=None, email set)
+    and send a UserInvite. On acceptance, the receiver binds the seat to the user and issues consumables.
+    """
+
+    if seats < 1:
+        raise ValidationException(
+            translation(lang, en="Seats must be >= 1", es="Los asientos deben ser >= 1", slug="invalid-seats")
+        )
+
+    # Capacity enforcement
+    additional = len({e.strip().lower() for e in emails if e and e.strip()})
+    if not service_item.can_add_team_member_for_subscription(subscription, additional=additional):
+        raise ValidationException(
+            translation(
+                lang,
+                en="No capacity left to invite more team members",
+                es="No hay capacidad para invitar más miembros del equipo",
+                slug="no-team-capacity",
+            ),
+            code=400,
+        )
+
+    academy = subscription.academy
+    created_invites: list[UserInvite] = []
+
+    # Ensure billing team exists for this subscription
+    team, _ = SubscriptionBillingTeam.objects.get_or_create(
+        subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+    )
+    if not subscription.supports_billing_team:
+        subscription.supports_billing_team = True
+        subscription.save(update_fields=["supports_billing_team"])
+
+    for email in {e.strip().lower() for e in emails if e and e.strip()}:
+        # Create or reuse an existing pending invite for this email+academy
+        invite = UserInvite.objects.filter(email=email, academy=academy, status="PENDING").first()
+        if not invite:
+            token = _generate_unique_invite_token()
+            expires_at = timezone.now() + relativedelta(months=6)
+
+            invite = UserInvite(
+                email=email,
+                academy=academy,
+                author=author,
+                token=token,
+                expires_at=expires_at,
+                status="PENDING",
+            )
+            invite.save()
+
+            # Send invite email using existing template/flow
+            query = urllib.parse.urlencode({"callback": get_app_url()})
+            url = os.getenv("API_URL", "") + f"/v1/auth/member/invite/{invite.token}?{query}"
+            subject = translation(
+                lang, en=f"You are invited to {academy.name}", es=f"Has sido invitado a {academy.name}"
+            )
+
+            notify_actions.send_email_message(
+                "welcome_academy",
+                email,
+                {
+                    "email": email,
+                    "subject": subject,
+                    "LINK": url,
+                    "FIST_NAME": invite.first_name or "",
+                },
+                academy=academy,
+            )
+
+        # Reserve seat directly in SubscriptionSeat (pending seat)
+        seat, created = SubscriptionSeat.objects.get_or_create(
+            billing_team=team,
+            email=email,
+            defaults={
+                "user": None,
+                "seat_multiplier": seats,
+            },
+        )
+
+        if created:
+            _append_seat_log(seat, "ADDED")
+
+        created_invites.append(invite)
+
+    return created_invites
+
+
+# ------------------------------
+# Team member consumables (per-member issuance from JSON)
+# ------------------------------
+
+
+def _get_team_policy_entries(service_item: ServiceItem) -> list[dict]:
+    policy = service_item.team_consumables or {}
+    entries = policy.get("allowed")
+    if isinstance(entries, list):
+        return [e for e in entries if isinstance(e, dict)]
+    return []
+
+
+def _get_target_service_item_for_entry(entry: dict) -> ServiceItem | None:
+    slug = entry.get("service_slug")
+    unit_type = entry.get("unit_type")
+    if not slug:
+        return None
+
+    qs = ServiceItem.objects.filter(service__slug=slug)
+    if unit_type:
+        qs = qs.filter(unit_type=unit_type)
+    return qs.order_by("id").first()
+
+
+def create_team_member_consumables(
+    *,
+    subscription: Subscription,
+    user: User,
+    policy_item: ServiceItem,
+    seat: SubscriptionSeat | None = None,
+    team: SubscriptionBillingTeam | None = None,
+    lang: str = "en",
+) -> list[Consumable]:
+    """Create per-member consumables for a seat user, based on policy_item.team_consumables.
+
+    - Skips entries with missing service_slug
+    - Idempotent: if an active consumable already exists for the entry, it won't duplicate
+    """
+    created: list[Consumable] = []
+
+    if not policy_item.is_team_allowed:
+        return created
+
+    entries = _get_team_policy_entries(policy_item)
+    utc_now = timezone.now()
+
+    for entry in entries:
+        service_slug = entry.get("service_slug")
+        if not service_slug:
+            logger.warning(
+                "Skipping team consumable entry without service_slug for subscription=%s user=%s",
+                subscription.id,
+                user.id,
+            )
+            continue
+
+        target_item = _get_target_service_item_for_entry(entry)
+        if not target_item:
+            logger.warning(
+                "No matching ServiceItem for service_slug=%s (unit_type=%s)", service_slug, entry.get("unit_type")
+            )
+            continue
+
+        # Check if there's already an active consumable for this target
+        existing = (
+            Consumable.objects.filter(user=user, subscription=subscription, service_item=target_item)
+            .filter(Q(valid_until__gte=utc_now) | Q(valid_until=None))
+            .exclude(how_many=0)
+            .order_by("-id")
+            .first()
+        )
+        if existing:
+            continue
+
+        how_many = entry.get("how_many", target_item.how_many)
+        unit_type = entry.get("unit_type", target_item.unit_type)
+        renew_at = entry.get("renew_at", policy_item.renew_at)
+        renew_at_unit = entry.get("renew_at_unit", policy_item.renew_at_unit)
+
+        # Compute valid_until bounded by subscription
+        delta = calculate_relative_delta(renew_at, renew_at_unit)
+        valid_until = utc_now + delta
+
+        if subscription.next_payment_at and valid_until > subscription.next_payment_at:
+            valid_until = subscription.next_payment_at
+
+        if subscription.valid_until and valid_until and valid_until > subscription.valid_until:
+            valid_until = subscription.valid_until
+
+        c = Consumable(
+            service_item=target_item,
+            user=user,
+            unit_type=unit_type,
+            how_many=how_many,
+            valid_until=valid_until,
+            subscription=subscription,
+            subscription_billing_team=team,
+            subscription_seat=seat,
+        )
+        c.save()
+        created.append(c)
+
+        logger.info(
+            "Created team consumable id=%s for user=%s subscription=%s service=%s",
+            c.id,
+            user.id,
+            subscription.id,
+            target_item.service.slug,
+        )
+
+    return created
+
+
+type SeatLogAction = Literal["ADDED", "REMOVED", "REPLACED"]
+
+
+class SeatLogEntry(TypedDict):
+    email: str
+    action: SeatLogAction
+    created_at: str
+
+
+def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> SeatLogEntry:
+    utc_now = timezone.now()
+    entry = {
+        "email": (seat.email or "").strip().lower(),
+        "action": action,
+        "created_at": utc_now.isoformat().replace("+00:00", "Z"),
+    }
+    return entry

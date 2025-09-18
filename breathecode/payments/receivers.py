@@ -7,13 +7,22 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import Group
 
-from breathecode.authenticate.models import GoogleWebhook
-from breathecode.authenticate.signals import google_webhook_saved
+from breathecode.authenticate.models import GoogleWebhook, UserInvite
+from breathecode.authenticate.signals import google_webhook_saved, invite_status_updated
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments import tasks
 
-from .models import Consumable, Plan, PlanFinancing, Subscription
+from .models import (
+    Consumable,
+    Plan,
+    PlanFinancing,
+    ServiceItem,
+    Subscription,
+    SubscriptionSeat,
+    SubscriptionBillingTeam,
+)
+from . import actions as payments_actions
 from .signals import (
     consume_service,
     grant_service_permissions,
@@ -98,6 +107,12 @@ def grant_plan_permissions_receiver(
     if group and not instance.user.groups.filter(name="Paid Student").exists():
         instance.user.groups.add(group)
 
+    # Propagate group access to seat assignees for this subscription
+    if isinstance(instance, Subscription) and group:
+        for seat in SubscriptionSeat.objects.filter(billing_team__subscription=instance).select_related("user"):
+            if not seat.user.groups.filter(name="Paid Student").exists():
+                seat.user.groups.add(group)
+
 
 @receiver(revoke_plan_permissions, sender=Subscription)
 @receiver(revoke_plan_permissions, sender=PlanFinancing)
@@ -117,6 +132,80 @@ def revoke_plan_permissions_receiver(sender, instance, **kwargs):
     if not user_has_active_paid_plans(user):
         user.groups.remove(group)
 
+    # Revoke for seat assignees of this subscription if they have no other paid access
+    if isinstance(instance, Subscription) and group:
+        for seat in SubscriptionSeat.objects.filter(billing_team__subscription=instance).select_related("user"):
+            seat_user = seat.user
+            if not user_has_active_paid_plans(seat_user):
+                seat_user.groups.remove(group)
+
+
+@receiver(invite_status_updated, sender=UserInvite)
+def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **kwargs):
+    """When an invite is accepted, bind pending SubscriptionSeat by email and issue consumables."""
+    if instance.status != "ACCEPTED" or not instance.user_id:
+        return
+
+    # Find pending seats by email across subscriptions with team-enabled items
+    seats = SubscriptionSeat.objects.filter(email=instance.email.lower().strip(), user__isnull=True)
+    for seat in seats.select_related("billing_team", "billing_team__subscription"):
+        subscription = seat.billing_team.subscription
+
+        # Bind seat to user and normalize email
+        seat.user = instance.user
+        seat.email = instance.user.email.lower()
+        seat.save()
+
+        logger.info(
+            "Activated team seat via invite: subscription=%s user=%s",
+            subscription.id,
+            instance.user_id,
+        )
+
+        # Determine effective strategy
+        team = seat.billing_team
+        plan = subscription.plans.first()
+        plan_strategy = getattr(plan, "consumption_strategy", Plan.ConsumptionStrategy.PER_SEAT)
+        per_seat_enabled = team and (
+            team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT
+            or plan_strategy == Plan.ConsumptionStrategy.BOTH
+        )
+
+        # Issue per-seat consumables only when strategy requires it; otherwise rely on renew task for team-level
+        if per_seat_enabled:
+            try:
+                item = (
+                    ServiceItem.objects.filter(plan__subscription=subscription, is_team_allowed=True)
+                    .select_related("service")
+                    .first()
+                )
+                if item:
+                    payments_actions.create_team_member_consumables(
+                        subscription=subscription,
+                        user=instance.user,
+                        policy_item=item,
+                        seat=seat,
+                        team=team,
+                    )
+            except Exception as e:
+                logger.error(
+                    "Error creating team member consumables on invite acceptance: subscription=%s user=%s: %s",
+                    subscription.id,
+                    instance.user_id,
+                    str(e),
+                    exc_info=True,
+                )
+
+        # If subscription is already active and paid, ensure group is granted then (re)build consumables
+        if subscription.status == Subscription.Status.ACTIVE and payments_actions.is_subscription_paid(subscription):
+            group = Group.objects.filter(name="Paid Student").first()
+            if group and not instance.user.groups.filter(name="Paid Student").exists():
+                instance.user.groups.add(group)
+
+            # Schedule broader renewals (owner + team) to ensure consistency
+            tasks.renew_subscription_consumables.delay(subscription.id)
+            tasks.renew_team_member_consumables.delay(subscription.id)
+
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
 def post_mentoring_session_ended(sender: Type[MentorshipSession], instance: MentorshipSession, **kwargs):
@@ -135,6 +224,19 @@ def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, *
 @receiver(update_plan_m2m_service_items, sender=Plan.service_items.through)
 def plan_m2m_changed(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
     tasks.update_service_stock_schedulers.delay(instance.id)
+
+    # Recompute supports_teams when service items change
+    try:
+        from .models import PlanServiceItem
+
+        has_team_items = PlanServiceItem.objects.filter(plan=instance, service_item__is_team_allowed=True).exists()
+        supports = bool(instance.seat_add_on_service_id) or bool(has_team_items)
+        if instance.supports_teams != supports:
+            instance.supports_teams = supports
+            instance.save(update_fields=["supports_teams"])
+    except Exception:
+        # avoid side effects in receiver
+        pass
 
 
 @receiver(google_webhook_saved, sender=GoogleWebhook)

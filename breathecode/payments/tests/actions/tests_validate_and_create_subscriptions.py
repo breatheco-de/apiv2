@@ -56,6 +56,7 @@ def serialize_bag(data={}):
         "amount_per_month": 0.0,
         "amount_per_quarter": 0.0,
         "amount_per_year": 0.0,
+        "seat_service_item_id": None,
         "chosen_period": "NO_SET",
         "currency_id": 1,
         "expires_at": None,

@@ -21,7 +21,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         groups = [{"permissions": [1, 2]}, {"permissions": [3, 4]}]
         groups = [{"permissions": [1, 2]}, {"permissions": [3, 4]}]
         services = [{"groups": [1]}, {"groups": [2]}]
-        service_items = [{"service_id": n + 1} for n in range(2)]
+        service_items = [{"service_id": n + 1, "how_many": 1} for n in range(2)]
         model = self.bc.database.create(
             user=1, group=groups, permission=4, service_item=service_items, service=services
         )
@@ -36,7 +36,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         groups = [{"permissions": [1, 2]}, {"permissions": [3, 4]}]
         services = [{"groups": [1]}, {"groups": [2]}]
         consumables = [{"service_item_id": 1}, {"service_item_id": 2}]
-        service_items = [{"service_id": n + 1} for n in range(2)]
+        service_items = [{"service_id": n + 1, "how_many": 1} for n in range(2)]
         model = self.bc.database.create(
             user=1, group=groups, permission=4, consumable=consumables, service_item=service_items, service=services
         )

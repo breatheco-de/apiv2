@@ -73,6 +73,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "price_per_quarter": event.price_per_quarter,
         "price_per_year": event.price_per_year,
         "service_items": service_items,
+        "title": event.title,
         "slug": event.slug,
         "status": event.status,
         "time_of_life": event.time_of_life,

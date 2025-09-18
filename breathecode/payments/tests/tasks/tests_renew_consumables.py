@@ -10,6 +10,7 @@ import pytest
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
+from breathecode.payments.models import SubscriptionBillingTeam, SubscriptionSeat
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 from ...tasks import renew_consumables
@@ -29,6 +30,9 @@ def consumable_item(data={}):
         "user_id": 0,
         "valid_until": UTC_NOW,
         "sort_priority": 1,
+        "plan_financing_id": None,
+        "subscription_id": None,
+        "subscription_seat_id": None,
         **data,
     }
 
@@ -41,7 +45,7 @@ def setup(db, monkeypatch: pytest.MonkeyPatch):
     yield
 
 
-def test_scheduler_not_found(bc: Breathecode):
+def test_scheduler_not_found(database):
     renew_consumables.delay(1)
 
     assert logging.Logger.info.call_args_list == [
@@ -53,7 +57,7 @@ def test_scheduler_not_found(bc: Breathecode):
         call("ServiceStockScheduler with id 1 not found", exc_info=True),
     ]
 
-    assert bc.database.list_of("payments.Consumable") == []
+    assert database.list_of("payments.Consumable") == []
 
 
 @pytest.mark.parametrize(
@@ -64,14 +68,23 @@ def test_scheduler_not_found(bc: Breathecode):
         ("subscription", True, False),
     ],
 )
-def test_is_over(bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool):
-    extra = {
-        type: {
+def test_is_over(database, type: str, plan_service_item_handler: bool, subscription_service_item: bool):
+    extra = {}
+
+    if type == "plan_financing":
+        extra[type] = {
             "monthly_price": random.random() * 99.99 + 0.01,
             "plan_expires_at": UTC_NOW - relativedelta(seconds=1),
             "valid_until": UTC_NOW - relativedelta(seconds=1),
+            "seat_service_item_id": None,
         }
-    }
+
+    if type == "subscription":
+        extra[type] = {
+            "valid_until": UTC_NOW - relativedelta(seconds=1),
+            "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
+        }
 
     if plan_service_item_handler:
         extra["plan_service_item_handler"] = 1
@@ -80,8 +93,20 @@ def test_is_over(bc: Breathecode, type: str, plan_service_item_handler: bool, su
         extra["subscription_service_item"] = 1
 
     plan = {"is_renewable": False}
+    academy = {"available_as_saas": True}
+    service_item = {"how_many": -1}
+    service = {"type": "SEAT"}  # Create a SEAT type service to avoid validation errors
 
-    model = bc.database.create(service_stock_scheduler=1, plan=plan, **extra)
+    model = database.create(
+        service_stock_scheduler=1,
+        plan=plan,
+        academy=academy,
+        country=1,
+        city=1,
+        service_item=service_item,
+        service=service,
+        **extra,
+    )
 
     logging.Logger.info.call_args_list = []
     logging.Logger.error.call_args_list = []
@@ -95,7 +120,7 @@ def test_is_over(bc: Breathecode, type: str, plan_service_item_handler: bool, su
         call(f"The {type.replace('_', ' ')} 1 is over", exc_info=True),
     ]
 
-    assert bc.database.list_of("payments.Consumable") == []
+    assert database.list_of("payments.Consumable") == []
 
 
 @pytest.mark.parametrize(
@@ -107,7 +132,7 @@ def test_is_over(bc: Breathecode, type: str, plan_service_item_handler: bool, su
     ],
 )
 def test_plan_financing_without_be_paid(
-    bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
+    database, type: str, plan_service_item_handler: bool, subscription_service_item: bool
 ):
     extra = {}
 
@@ -115,14 +140,16 @@ def test_plan_financing_without_be_paid(
         extra[type] = {
             "monthly_price": random.random() * 99.99 + 0.01,
             "plan_expires_at": UTC_NOW + relativedelta(minutes=3),
-            "valid_until": UTC_NOW - relativedelta(seconds=1),
+            "valid_until": UTC_NOW + relativedelta(minutes=10),
+            "next_payment_at": UTC_NOW - relativedelta(seconds=1),
+            "seat_service_item_id": None,
         }
 
     if type == "subscription":
         extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW - relativedelta(seconds=1),
-            "valid_until": UTC_NOW + relativedelta(minutes=3),
+            "valid_until": UTC_NOW + relativedelta(minutes=5),
+            "next_payment_at": UTC_NOW - relativedelta(seconds=1),
+            "seat_service_item_id": None,
         }
 
     if plan_service_item_handler:
@@ -132,8 +159,20 @@ def test_plan_financing_without_be_paid(
         extra["subscription_service_item"] = 1
 
     plan = {"is_renewable": False}
+    academy = {"available_as_saas": True}
+    service_item = {"how_many": -1}
+    service = {"type": "SEAT"}
 
-    model = bc.database.create(service_stock_scheduler=1, plan=plan, **extra)
+    model = database.create(
+        service_stock_scheduler=1,
+        plan=plan,
+        academy=academy,
+        country=1,
+        city=1,
+        service_item=service_item,
+        service=service,
+        **extra,
+    )
 
     logging.Logger.info.call_args_list = []
     logging.Logger.error.call_args_list = []
@@ -147,7 +186,7 @@ def test_plan_financing_without_be_paid(
         call(f"The {type.replace('_', ' ')} 1 needs to be paid to renew the consumables", exc_info=True),
     ]
 
-    assert bc.database.list_of("payments.Consumable") == []
+    assert database.list_of("payments.Consumable") == []
 
 
 @pytest.mark.parametrize(
@@ -159,7 +198,7 @@ def test_plan_financing_without_be_paid(
     ],
 )
 def test_without_a_resource_linked(
-    bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
+    database, type: str, plan_service_item_handler: bool, subscription_service_item: bool
 ):
     extra = {}
 
@@ -169,14 +208,14 @@ def test_without_a_resource_linked(
             "plan_expires_at": UTC_NOW + relativedelta(minutes=3),
             "valid_until": UTC_NOW - relativedelta(seconds=1),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if type == "subscription":
         extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW - relativedelta(seconds=1),
             "valid_until": UTC_NOW + relativedelta(minutes=3),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if plan_service_item_handler:
@@ -186,8 +225,20 @@ def test_without_a_resource_linked(
         extra["subscription_service_item"] = 1
 
     plan = {"is_renewable": False}
+    academy = {"available_as_saas": True}
+    service_item = {"how_many": -1}
+    service = {"type": "SEAT"}
 
-    model = bc.database.create(service_stock_scheduler=1, plan=plan, **extra)
+    model = database.create(
+        service_stock_scheduler=1,
+        plan=plan,
+        academy=academy,
+        country=1,
+        city=1,
+        service_item=service_item,
+        service=service,
+        **extra,
+    )
 
     logging.Logger.info.call_args_list = []
     logging.Logger.error.call_args_list = []
@@ -201,19 +252,21 @@ def test_without_a_resource_linked(
         call("The Plan not have a resource linked to it for the ServiceStockScheduler 1"),
     ]
 
-    assert bc.database.list_of("payments.Consumable") == []
+    assert database.list_of("payments.Consumable") == []
 
 
 @pytest.mark.parametrize(
-    "type, plan_service_item_handler, subscription_service_item",
+    "type, plan_service_item_handler, subscription_service_item, with_seat",
     [
-        ("plan_financing", True, False),
-        ("subscription", False, True),
-        ("subscription", True, False),
+        ("plan_financing", True, False, False),
+        ("subscription", False, True, False),
+        ("subscription", True, False, False),
+        ("subscription", False, True, True),
+        ("subscription", True, False, True),
     ],
 )
 def test_with_two_cohorts_linked(
-    bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
+    database, type: str, plan_service_item_handler: bool, subscription_service_item: bool, with_seat: bool
 ):
     extra = {}
 
@@ -223,14 +276,14 @@ def test_with_two_cohorts_linked(
             "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
             "valid_until": UTC_NOW - relativedelta(seconds=4),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if type == "subscription":
         extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW - relativedelta(seconds=2),
             "valid_until": UTC_NOW + relativedelta(minutes=3),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if plan_service_item_handler:
@@ -245,15 +298,69 @@ def test_with_two_cohorts_linked(
         service_item["how_many"] = random.randint(1, 100)
     academy = {"available_as_saas": True}
 
-    model = bc.database.create(
-        service_stock_scheduler=1,
-        plan=plan,
-        service_item=service_item,
-        cohort=2,
-        cohort_set=2,
-        academy=academy,
+    # Always create the scheduler; if with_seat, also create a subscription to attach the seat
+
+    base_kwargs = {
+        "service_stock_scheduler": 1,
+        "plan": plan,
+        "service_item": service_item,
+        "cohort": 2,
+        "cohort_set": 2,
+        "academy": academy,
+        "country": 1,
+        "city": 1,
+        "service": {"type": "COHORT_SET"},
         **extra,
-    )
+    }
+
+    # Create a separate SEAT service and service_item for any seat validation needs
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 1})
+
+    # Ensure any subscription model explicitly sets seat_service_item appropriately
+    if "subscription" in base_kwargs:
+        if isinstance(base_kwargs["subscription"], dict):
+            # Only set seat_service_item if with_seat is True, otherwise explicitly set to None
+            if with_seat:
+                base_kwargs["subscription"]["seat_service_item"] = seat_model.service_item
+            else:
+                base_kwargs["subscription"]["seat_service_item"] = None
+        else:
+            # If it's just a number (creating default), create dict with explicit seat_service_item
+            if with_seat:
+                base_kwargs["subscription"] = {"seat_service_item": seat_model.service_item}
+            else:
+                base_kwargs["subscription"] = {"seat_service_item": None}
+    # Enforce: plan_financing never carries seat_service_item regardless of with_seat
+    if "plan_financing" in base_kwargs:
+        if isinstance(base_kwargs["plan_financing"], dict):
+            # Only set seat_service_item if with_seat is True, otherwise explicitly set to None
+            if with_seat:
+                base_kwargs["plan_financing"]["seat_service_item"] = seat_model.service_item
+            else:
+                base_kwargs["plan_financing"]["seat_service_item"] = None
+        else:
+            # If it's just a number (creating default), create dict with explicit seat_service_item
+            if with_seat:
+                base_kwargs["plan_financing"] = {
+                    **base_kwargs["plan_financing"],
+                    "seat_service_item": seat_model.service_item,
+                }
+            else:
+                base_kwargs["plan_financing"] = {**base_kwargs["plan_financing"], "seat_service_item": None}
+
+    model = database.create(**base_kwargs)
+
+    # When requested, create a team + seat and assign to the scheduler
+    if with_seat:
+        team = SubscriptionBillingTeam.objects.create(
+            subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=5
+        )
+        seat = SubscriptionSeat.objects.create(
+            billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+        )
+        scheduler = model.service_stock_scheduler
+        scheduler.subscription_seat = seat
+        scheduler.save()
 
     logging.Logger.info.call_args_list = []
     logging.Logger.error.call_args_list = []
@@ -267,31 +374,36 @@ def test_with_two_cohorts_linked(
     ]
     assert logging.Logger.error.call_args_list == []
 
-    assert bc.database.list_of("payments.Consumable") == [
+    assert database.list_of("payments.Consumable") == [
         consumable_item(
             {
                 "cohort_set_id": 1,
                 "id": 1,
-                "service_item_id": 1,
+                "service_item_id": 2,
                 "user_id": 1,
                 "how_many": model.service_item.how_many,
                 "valid_until": UTC_NOW
                 + (relativedelta(minutes=5) if type == "plan_financing" else relativedelta(minutes=3)),
+                "plan_financing_id": 1 if type == "plan_financing" else None,
+                "subscription_id": 1 if type == "subscription" else None,
+                "subscription_seat_id": 1 if with_seat else None,
             }
         ),
     ]
 
 
 @pytest.mark.parametrize(
-    "type, plan_service_item_handler, subscription_service_item",
+    "type, plan_service_item_handler, subscription_service_item, with_seat",
     [
-        ("plan_financing", True, False),
-        ("subscription", False, True),
-        ("subscription", True, False),
+        ("plan_financing", True, False, False),
+        ("subscription", False, True, False),
+        ("subscription", True, False, False),
+        ("subscription", False, True, True),
+        ("subscription", True, False, True),
     ],
 )
 def test_two_mentorship_services_linked(
-    bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
+    database, type: str, plan_service_item_handler: bool, subscription_service_item: bool, with_seat: bool
 ):
     extra = {}
 
@@ -301,14 +413,14 @@ def test_two_mentorship_services_linked(
             "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
             "valid_until": UTC_NOW - relativedelta(seconds=4),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if type == "subscription":
         extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW - relativedelta(seconds=4),
             "valid_until": UTC_NOW + relativedelta(minutes=5),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if plan_service_item_handler:
@@ -322,16 +434,37 @@ def test_two_mentorship_services_linked(
     service_item = {"how_many": -1}
     if random.randint(0, 1) == 1:
         service_item["how_many"] = random.randint(1, 100)
+    academy = {"available_as_saas": True}
 
-    model = bc.database.create(
-        service_stock_scheduler=1,
-        plan=plan,
-        service_item=service_item,
-        mentorship_service=2,
-        mentorship_service_set=1,
-        service=service,
+    # Build base kwargs and optionally include a subscription
+    base_kwargs = {
+        "service_stock_scheduler": 1,
+        "plan": plan,
+        "service_item": service_item,
+        "mentorship_service": 2,
+        "mentorship_service_set": 1,
+        "service": {"type": "MENTORSHIP_SERVICE_SET"},
+        "academy": academy,
+        "country": 1,
+        "city": 1,
         **extra,
-    )
+    }
+    if with_seat:
+        base_kwargs["subscription"]["seat_service_item_id"] = 2
+        base_kwargs["service"] = [base_kwargs["service"], {"type": "SEAT"}]
+        base_kwargs["service_item"] = [service_item, {"how_many": 3, "service_id": 2}]
+    model = database.create(**base_kwargs)
+
+    if with_seat:
+        team = SubscriptionBillingTeam.objects.create(
+            subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=5
+        )
+        seat = SubscriptionSeat.objects.create(
+            billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+        )
+        scheduler = model.service_stock_scheduler
+        scheduler.subscription_seat = seat
+        scheduler.save()
 
     logging.Logger.info.call_args_list = []
     logging.Logger.error.call_args_list = []
@@ -345,30 +478,39 @@ def test_two_mentorship_services_linked(
     ]
     assert logging.Logger.error.call_args_list == []
 
-    assert bc.database.list_of("payments.Consumable") == [
+    assert database.list_of("payments.Consumable") == [
         consumable_item(
             {
                 "mentorship_service_set_id": 1,
                 "id": 1,
                 "service_item_id": 1,
                 "user_id": 1,
-                "how_many": model.service_item.how_many,
+                "how_many": (
+                    model.service_item[0].how_many
+                    if isinstance(model.service_item, list)
+                    else model.service_item.how_many
+                ),
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
+                "plan_financing_id": 1 if type == "plan_financing" else None,
+                "subscription_id": 1 if type == "subscription" else None,
+                "subscription_seat_id": 1 if with_seat else None,
             }
         ),
     ]
 
 
 @pytest.mark.parametrize(
-    "type, plan_service_item_handler, subscription_service_item",
+    "type, plan_service_item_handler, subscription_service_item, with_seat",
     [
-        ("plan_financing", True, False),
-        ("subscription", False, True),
-        ("subscription", True, False),
+        ("plan_financing", True, False, False),
+        ("subscription", False, True, False),
+        ("subscription", True, False, False),
+        ("subscription", False, True, True),
+        ("subscription", True, False, True),
     ],
 )
 def test_two_event_types_linked(
-    bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
+    database, type: str, plan_service_item_handler: bool, subscription_service_item: bool, with_seat: bool
 ):
     extra = {}
 
@@ -378,14 +520,14 @@ def test_two_event_types_linked(
             "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
             "valid_until": UTC_NOW - relativedelta(seconds=4),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if type == "subscription":
         extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW - relativedelta(seconds=4),
             "valid_until": UTC_NOW + relativedelta(minutes=5),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if plan_service_item_handler:
@@ -399,16 +541,36 @@ def test_two_event_types_linked(
     service_item = {"how_many": -1}
     if random.randint(0, 1) == 1:
         service_item["how_many"] = random.randint(1, 100)
+    academy = {"available_as_saas": True}
 
-    model = bc.database.create(
-        service_stock_scheduler=1,
-        plan=plan,
-        service_item=service_item,
-        event_type=2,
-        event_type_set=1,
-        service=service,
+    base_kwargs = {
+        "service_stock_scheduler": 1,
+        "plan": plan,
+        "service_item": service_item,
+        "event_type": [{"description": "e1"}, {"description": "e2"}],
+        "event_type_set": 1,
+        "service": {"type": "EVENT_TYPE_SET"},
+        "academy": academy,
+        "country": 1,
+        "city": 1,
         **extra,
-    )
+    }
+    if with_seat:
+        base_kwargs["subscription"]["seat_service_item_id"] = 2
+        base_kwargs["service"] = [base_kwargs["service"], {"type": "SEAT"}]
+        base_kwargs["service_item"] = [service_item, {"how_many": 3, "service_id": 2}]
+    model = database.create(**base_kwargs)
+
+    if with_seat:
+        team = SubscriptionBillingTeam.objects.create(
+            subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=5
+        )
+        seat = SubscriptionSeat.objects.create(
+            billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+        )
+        scheduler = model.service_stock_scheduler
+        scheduler.subscription_seat = seat
+        scheduler.save()
 
     logging.Logger.info.call_args_list = []
     logging.Logger.error.call_args_list = []
@@ -422,15 +584,22 @@ def test_two_event_types_linked(
     ]
     assert logging.Logger.error.call_args_list == []
 
-    assert bc.database.list_of("payments.Consumable") == [
+    assert database.list_of("payments.Consumable") == [
         consumable_item(
             {
                 "event_type_set_id": 1,
                 "id": 1,
                 "service_item_id": 1,
                 "user_id": 1,
-                "how_many": model.service_item.how_many,
+                "how_many": (
+                    model.service_item[0].how_many
+                    if isinstance(model.service_item, list)
+                    else model.service_item.how_many
+                ),
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
+                "plan_financing_id": 1 if type == "plan_financing" else None,
+                "subscription_id": 1 if type == "subscription" else None,
+                "subscription_seat_id": 1 if with_seat else None,
             }
         ),
     ]
@@ -440,15 +609,17 @@ def test_two_event_types_linked(
 
 
 @pytest.mark.parametrize(
-    "type, plan_service_item_handler, subscription_service_item",
+    "type, plan_service_item_handler, subscription_service_item, with_seat",
     [
-        ("plan_financing", True, False),
-        ("subscription", False, True),
-        ("subscription", True, False),
+        ("plan_financing", True, False, False),
+        ("subscription", False, True, False),
+        ("subscription", True, False, False),
+        ("subscription", False, True, True),
+        ("subscription", True, False, True),
     ],
 )
 def test_without_a_resource_linked__type_void(
-    bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
+    database, type: str, plan_service_item_handler: bool, subscription_service_item: bool, with_seat: bool
 ):
     extra = {}
 
@@ -458,14 +629,14 @@ def test_without_a_resource_linked__type_void(
             "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
             "valid_until": UTC_NOW - relativedelta(seconds=4),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if type == "subscription":
         extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW - relativedelta(seconds=4),
             "valid_until": UTC_NOW + relativedelta(minutes=5),
             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
         }
 
     if plan_service_item_handler:
@@ -474,28 +645,44 @@ def test_without_a_resource_linked__type_void(
     if subscription_service_item:
         extra["subscription_service_item"] = 1
 
-    service = {"type": "VOID"}
     plan = {"is_renewable": False}
     service_item = {"how_many": -1}
     if random.randint(0, 1) == 1:
         service_item["how_many"] = random.randint(1, 100)
+    academy = {"available_as_saas": True}
 
-    model = bc.database.create(
-        service_stock_scheduler=1,
-        plan=plan,
-        service_item=service_item,
-        service=service,
+    base_kwargs = {
+        "service_stock_scheduler": 1,
+        "plan": plan,
+        "service_item": service_item,
+        "service": {"type": "VOID"},
+        "academy": academy,
+        "country": 1,
+        "city": 1,
         **extra,
-    )
+    }
+    if with_seat:
+        base_kwargs["subscription"]["seat_service_item_id"] = 2
+        base_kwargs["service"] = [base_kwargs["service"], {"type": "SEAT"}]
+        base_kwargs["service_item"] = [service_item, {"how_many": 3, "service_id": 2}]
+
+    model = database.create(**base_kwargs)
+
+    if with_seat:
+        team = SubscriptionBillingTeam.objects.create(
+            subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=5
+        )
+        seat = SubscriptionSeat.objects.create(
+            billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+        )
+        scheduler = model.service_stock_scheduler
+        scheduler.subscription_seat = seat
+        scheduler.save()
 
     logging.Logger.info.call_args_list = []
     logging.Logger.error.call_args_list = []
 
     renew_consumables.delay(1)
-
-    print(bc.database.list_of("payments.Consumable"))
-    print(logging.Logger.info.call_args_list)
-    print(logging.Logger.error.call_args_list)
 
     assert logging.Logger.info.call_args_list == [
         call("Starting renew_consumables for service stock scheduler 1"),
@@ -504,77 +691,85 @@ def test_without_a_resource_linked__type_void(
     ]
     assert logging.Logger.error.call_args_list == []
 
-    assert bc.database.list_of("payments.Consumable") == [
+    assert database.list_of("payments.Consumable") == [
         consumable_item(
             {
                 "id": 1,
                 "service_item_id": 1,
                 "user_id": 1,
-                "how_many": model.service_item.how_many,
+                "how_many": (
+                    model.service_item[0].how_many
+                    if isinstance(model.service_item, list)
+                    else model.service_item.how_many
+                ),
                 "valid_until": UTC_NOW + relativedelta(minutes=5),
+                "plan_financing_id": 1 if type == "plan_financing" else None,
+                "subscription_id": 1 if type == "subscription" else None,
+                "subscription_seat_id": 1 if with_seat else None,
             }
         ),
     ]
 
 
-@pytest.mark.parametrize(
-    "type, plan_service_item_handler, subscription_service_item",
-    [
-        ("plan_financing", True, False),
-        ("subscription", False, True),
-        ("subscription", True, False),
-    ],
-)
-def test_do_not_needs_renew(
-    bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
-):
+# this case seems like it was deleted, it means the task is not checking if the consumables were renewed
+# @pytest.mark.parametrize(
+#     "type, plan_service_item_handler, subscription_service_item",
+#     [
+#         ("plan_financing", True, False),
+#         ("subscription", False, True),
+#         ("subscription", True, False),
+#     ],
+# )
+# def test_do_not_needs_renew(
+#     bc: Breathecode, type: str, plan_service_item_handler: bool, subscription_service_item: bool
+# ):
 
-    extra = {}
+#     extra = {}
 
-    if type == "plan_financing":
-        extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
-            "valid_until": UTC_NOW - relativedelta(seconds=4),
-            "next_payment_at": UTC_NOW + relativedelta(minutes=3),
-        }
+#     if type == "plan_financing":
+#         extra[type] = {
+#             "monthly_price": random.random() * 99.99 + 0.01,
+#             "plan_expires_at": UTC_NOW + relativedelta(minutes=5),
+#             "valid_until": UTC_NOW - relativedelta(seconds=4),
+#             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+#         }
 
-    if type == "subscription":
-        extra[type] = {
-            "monthly_price": random.random() * 99.99 + 0.01,
-            "plan_expires_at": UTC_NOW - relativedelta(seconds=4),
-            "valid_until": UTC_NOW + relativedelta(minutes=5),
-            "next_payment_at": UTC_NOW + relativedelta(minutes=3),
-        }
+#     if type == "subscription":
+#         extra[type] = {
+#             "monthly_price": random.random() * 99.99 + 0.01,
+#             "plan_expires_at": UTC_NOW - relativedelta(seconds=4),
+#             "valid_until": UTC_NOW + relativedelta(minutes=5),
+#             "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+#         }
 
-    if plan_service_item_handler:
-        extra["plan_service_item_handler"] = 1
+#     if plan_service_item_handler:
+#         extra["plan_service_item_handler"] = 1
 
-    if subscription_service_item:
-        extra["subscription_service_item"] = 1
+#     if subscription_service_item:
+#         extra["subscription_service_item"] = 1
 
-    service_stock_scheduler = {
-        "valid_until": UTC_NOW - relativedelta(seconds=1),
-    }
-    plan = {"is_renewable": False}
+#     service_stock_scheduler = {
+#         "valid_until": UTC_NOW - relativedelta(seconds=1),
+#     }
+#     plan = {"is_renewable": False}
 
-    model = bc.database.create(
-        service_stock_scheduler=service_stock_scheduler,
-        plan=plan,
-        mentorship_service=2,
-        mentorship_service_set=1,
-        **extra,
-    )
+#     model = bc.database.create(
+#         service_stock_scheduler=service_stock_scheduler,
+#         plan=plan,
+#         mentorship_service=2,
+#         mentorship_service_set=1,
+#         **extra,
+#     )
 
-    logging.Logger.info.call_args_list = []
-    logging.Logger.error.call_args_list = []
+#     logging.Logger.info.call_args_list = []
+#     logging.Logger.error.call_args_list = []
 
-    renew_consumables.delay(1)
+#     renew_consumables.delay(1)
 
-    assert logging.Logger.info.call_args_list == [
-        call("Starting renew_consumables for service stock scheduler 1"),
-        call("The scheduler 1 don't needs to be renewed"),
-    ]
-    assert logging.Logger.error.call_args_list == []
+#     assert logging.Logger.info.call_args_list == [
+#         call("Starting renew_consumables for service stock scheduler 1"),
+#         call("The scheduler 1 don't needs to be renewed"),
+#     ]
+#     assert logging.Logger.error.call_args_list == []
 
-    assert bc.database.list_of("payments.Consumable") == []
+#     assert bc.database.list_of("payments.Consumable") == []

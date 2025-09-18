@@ -89,6 +89,7 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
     return {
         "id": 0,
         "add_ons": [],
+        "seat_service_price": None,
         "slug": "",
         "currency": currency.id,
         "financing_options": [x.id for x in financing_options],
@@ -110,6 +111,7 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
         "event_type_set": None,
         "invites": [],
         "pricing_ratio_exceptions": {},
+        "title": None,
         **data,
     }
 
@@ -119,6 +121,8 @@ def row(currency, academy=None, data={}):
     return {
         "id": 0,
         "slug": "",
+        "title": None,
+        "seat_service_price_id": None,
         "currency_id": currency.id,
         "is_renewable": False,
         "owner_id": academy.id,

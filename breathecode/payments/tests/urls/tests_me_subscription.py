@@ -40,6 +40,7 @@ def user_serializer(user):
 
 def invoice_serializer(self, invoice, currency, user):
     return {
+        "id": invoice.id,
         "amount": invoice.amount,
         "currency": currency_serializer(currency),
         "paid_at": self.bc.datetime.to_iso_string(invoice.paid_at),
