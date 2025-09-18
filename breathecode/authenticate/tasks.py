@@ -149,7 +149,7 @@ def join_user_to_discord_guild(
             raise Exception(f"Failed to join Discord guild: {join_status}")
 
     except Exception as e:
-        logger.error(f"Error joining the user to the Discord server: {str(e)}")
+        logger.error({str(e)})
         raise e
 
 
@@ -165,13 +165,11 @@ def assign_discord_role_task(guild_id: int, discord_user_id: int, role_id: int, 
             logger.error(f"Role assignment failed: {result}")
             return result
     except Exception as e:
-        logger.error(f"Error assigning role to user: {str(e)}")
         raise Exception(f"Error assigning role to user: {str(e)}")
 
 
 @shared_task(priority=TaskPriority.TWO_FACTOR_AUTH.value)
 def remove_discord_role_task(guild_id: int, discord_user_id: int, role_id: int, academy_id: int):
-    logger.info("DEBUG: remove_discord_role_task STARTED")
     logger.info(f"Removing role {role_id} from user {discord_user_id} in guild {guild_id} for academy {academy_id}")
     discord_service = Discord(academy_id=academy_id)
     try:
@@ -180,17 +178,14 @@ def remove_discord_role_task(guild_id: int, discord_user_id: int, role_id: int, 
         if result == 204:
             return result
         else:
-            print(role_id)
-            logger.error(f"Role removal failed: {result}")
-            raise AbortTask("Error removing role to user")
+            raise AbortTask(f"Error removing role to user: {result}")
 
     except Exception as e:
-        logger.error(f"Error removing role to user: {str(e)}")
-        raise AbortTask(f"Error removing role to user: {str(e)}")
+        raise AbortTask(str(e))
 
 
-@task(bind=True, priority=TaskPriority.TWO_FACTOR_AUTH.value)
-def delayed_revoke_discord_permissions(self, entity_id: int, entity_type: str, date_field: str, **_: Any):
+@shared_task(priority=TaskPriority.TWO_FACTOR_AUTH.value)
+def delayed_revoke_discord_permissions(entity_id: int, entity_type: str, date_field: str, **_: Any):
     """
     Revoke ONLY Discord permissions when subscription/plan financing dates expire.
     """
@@ -211,7 +206,7 @@ def delayed_revoke_discord_permissions(self, entity_id: int, entity_type: str, d
     if target_date and target_date > utc_now:
         raise AbortTask(f"{entity_type} {entity_id} {date_field} has not expired yet ({target_date})")
 
-    if instance.status not in ["CANCELLED", "DEPRECATED", "EXPIRED", "ERROR"]:
+    if instance.status not in ["CANCELLED", "DEPRECATED", "PAYMENT_ISSUE", "EXPIRED", "ERROR"]:
         logger.info(f"{entity_type} {entity_id} is now {instance.status}, skipping Discord revoke")
         return
 
@@ -224,8 +219,7 @@ def delayed_revoke_discord_permissions(self, entity_id: int, entity_type: str, d
     discord_creds = CredentialsDiscord.objects.filter(user=instance.user).first()
 
     if not discord_creds:
-        logger.debug(f"User {instance.user.id} has no Discord credentials, skipping revoke")
-        return
+        raise AbortTask(f"User {instance.user.id} has no Discord credentials, skipping revoke")
 
     revoke_user_discord_permissions(instance.user, instance.academy)
 

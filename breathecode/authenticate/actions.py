@@ -1213,6 +1213,10 @@ def revoke_user_discord_permissions(user, academy):
     from breathecode.services.discord import Discord
 
     cohort_academy = Cohort.objects.filter(academy=academy).prefetch_related("academy").first()
+    if not cohort_academy:
+        logger.debug(f"No cohorts found for academy {academy.id}, skipping Discord revoke")
+        return False
+
     cohorts = Cohort.objects.filter(cohortuser__user=user, academy=cohort_academy.academy.id).all()
 
     discord_creds = CredentialsDiscord.objects.filter(user=user).first()
@@ -1220,36 +1224,72 @@ def revoke_user_discord_permissions(user, academy):
         logger.debug(f"User {user.id} has no Discord credentials, skipping revoke")
         return False
 
-    user_had_roles = False
+    # Collect all Discord shortcuts grouped by server_id to minimize API calls
+    discord_shortcuts = {}
     for cohort in cohorts:
-        if cohort.shortcuts != None:
+        if cohort.shortcuts:
             for shortcut in cohort.shortcuts:
-                if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
-                    try:
-                        response = Discord(academy_id=academy.id).get_member_in_server(
-                            int(discord_creds.discord_id), shortcut.get("server_id", None)
-                        )
-                        if response.status_code == 200:
-                            for role in response.json().get("roles", None):
-                                if role == shortcut.get("role_id", None):
-                                    user_had_roles = True
+                if (
+                    shortcut.get("label") == "Discord"
+                    and shortcut.get("server_id") is not None
+                    and shortcut.get("role_id") is not None
+                ):
+
+                    server_id = shortcut.get("server_id")
+                    role_id = shortcut.get("role_id")
+
+                    if server_id not in discord_shortcuts:
+                        discord_shortcuts[server_id] = []
+                    discord_shortcuts[server_id].append(role_id)
+
+    if not discord_shortcuts:
+        logger.debug(f"User {user.id} has no valid Discord shortcuts, skipping revoke")
+        return False
+
+    discord_service = Discord(academy_id=academy.id)
+    discord_user_id = int(discord_creds.discord_id)
+    user_had_roles = False
+
+    for server_id, role_ids in discord_shortcuts.items():
+        try:
+            response = discord_service.get_member_in_server(discord_user_id, server_id)
+
+            if response.status_code == 200:
+                user_roles = response.json().get("roles", [])
+                for role_id in role_ids:
+                    if role_id in user_roles:
+                        user_had_roles = True
                         logger.info(
-                            f"Removing role {shortcut.get('role_id', None)} from user {discord_creds.discord_id} in guild {shortcut.get('server_id', None)} for academy {cohort_academy.academy.id}"
+                            f"Removing role {role_id} from user {discord_user_id} in guild {server_id} for academy {cohort_academy.academy.id}"
                         )
-                        logger.info("DEBUG: About to call remove_discord_role_task.delay()")
                         auth_tasks.remove_discord_role_task.delay(
-                            shortcut.get("server_id", None),
-                            int(discord_creds.discord_id),
-                            shortcut.get("role_id", None),
+                            server_id,
+                            discord_user_id,
+                            role_id,
                             academy_id=cohort_academy.academy.id,
                         )
-                        logger.info("DEBUG: remove_discord_role_task.delay() called successfully")
-                    except Exception as e:
-                        logger.error(f"Error removing Discord role: {e}")
+            else:
+                logger.warning(
+                    f"Could not get user {discord_user_id} info from server {server_id}: {response.status_code}"
+                )
+                # If we can't verify for the Discord user, schedule removal for all roles as safety measure
+                for role_id in role_ids:
+                    logger.info(
+                        f"Removing role {role_id} from user {discord_user_id} in guild {server_id} for academy {cohort_academy.academy.id} (API verification failed)"
+                    )
+                    auth_tasks.remove_discord_role_task.delay(
+                        server_id,
+                        discord_user_id,
+                        role_id,
+                        academy_id=cohort_academy.academy.id,
+                    )
+
+        except Exception as e:
+            logger.error(f"Error checking/removing Discord roles for server {server_id}: {e}")
 
     if user_had_roles:
         auth_tasks.send_discord_dm_task.delay(
-            int(discord_creds.discord_id), "Your subscription has ended. Role removed.", cohort_academy.academy.id
+            discord_user_id, "Your subscription has ended. Role removed.", cohort_academy.academy.id
         )
 
     return user_had_roles

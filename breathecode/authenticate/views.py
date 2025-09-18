@@ -1873,24 +1873,27 @@ def save_facebook_token(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def check_discord_server(request, server_id):
+def check_discord_server(request, server_id, cohort_slug):
     if not server_id:
-        return
+        return Response(status=status.HTTP_404_NOT_FOUND)
     if not user_has_active_4geeks_plus_plans(request.user):
         logger.debug("User does not have an active 4Geeks Plus subscription")
-        return Response(403)
+        return Response(status=status.HTTP_403_FORBIDDEN)
     discord_creds = CredentialsDiscord.objects.filter(user=request.user).first()
     if not discord_creds:
-        return
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
     for server in discord_creds.joined_servers:
         if int(server) == server_id:
-            response = Discord(47).get_member_in_server(discord_creds.discord_id, server_id)
+            cohort = Cohort.objects.filter(slug=cohort_slug).first()
+            if not cohort:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            response = Discord(cohort.academy.id).get_member_in_server(discord_creds.discord_id, server_id)
             if response.status_code == 200:
                 redirect = f"https://discord.com/channels/{server_id}"
                 return Response({"server_url": redirect})
             if response.status_code == 404:
-                return Response(response.status_code)
+                return Response(status=response.status_code)
 
 
 @api_view(["GET"])

@@ -124,19 +124,8 @@ def test_successful_discord_oauth(bc: Breathecode, client: APIClient, patch_disc
     # Setup mocks
     call_order = patch_discord_calls(oauth_response, user_response)
 
-    # Make the request
     response = client.get(url, format="json")
 
-    # Debug: Print response details
-    print(f"Response status: {response.status_code}")
-    print(f"Response content: {response.content}")
-    if hasattr(response, "json"):
-        try:
-            print(f"Response JSON: {response.json()}")
-        except:
-            pass
-
-    # Assertions
     assert response.status_code == status.HTTP_302_FOUND
     assert response.url == "https://4geeks.com"
 

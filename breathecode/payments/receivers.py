@@ -134,11 +134,10 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
             minutes_until = int((date_value - timezone.now()).total_seconds() / 60) + 1
             entity_type = "subscription" if isinstance(instance, Subscription) else "plan_financing"
 
-            unique_task_id = instance.id * 100 + (1 if date_field == "valid_until" else 2)
-
+            logger.debug(f"minutes_until: {minutes_until}")
             manager = schedule_task(auth_tasks.delayed_revoke_discord_permissions, f"{minutes_until}m")
-            if not manager.exists(unique_task_id):
-                entity_type = "subscription" if isinstance(instance, Subscription) else "plan_financing"
+            if not manager.exists(instance.id, entity_type, date_field):
+                logger.debug(f"calling manager.call({instance.id}, {entity_type}, {date_field})")
                 manager.call(instance.id, entity_type, date_field)
             return True
         return False
@@ -156,7 +155,7 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
     logger.debug(f"plan_slug: {plan_slug}")
     if plan_slug == "4geeks-plus-subscription" or plan_slug == "4geeks-plus-planfinancing":
         if instance.status == "CANCELLED":
-            if instance.valid_until:
+            if instance.valid_until and instance.valid_until >= timezone.now():
                 if instance.valid_until >= timezone.now():
                     logger.debug(
                         "The user still has time to pay the subscription after being cancelled, scheduling Discord revoke"
@@ -202,8 +201,10 @@ def grant_discord_permissions_receiver(sender, instance, **kwargs):
     discord_creds = CredentialsDiscord.objects.filter(user=instance.user).first()
     if not discord_creds:
         logger.debug(f"User {instance.user.id} has no Discord credentials, skipping grant")
-        return
+        return False
     cohort_academy = Cohort.objects.filter(academy=instance.academy).prefetch_related("academy").first()
+    if not cohort_academy:
+        return False
     cohorts = Cohort.objects.filter(cohortuser__user=instance.user, academy=cohort_academy.academy.id).all()
 
     plan_slug = Plan.objects.filter(subscription=instance).first().slug
@@ -222,7 +223,7 @@ def grant_discord_permissions_receiver(sender, instance, **kwargs):
                             cohort_academy.academy.id,
                         )
                     except Exception as e:
-                        logger.error(f"Error assigning Discord role: {e}")
+                        logger.error(str(e))
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)

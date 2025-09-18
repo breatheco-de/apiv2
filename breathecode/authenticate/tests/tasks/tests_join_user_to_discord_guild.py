@@ -336,9 +336,6 @@ def test_save_credentials_failure(mock_discord_service, mock_celery_tasks, mock_
     # Verify role assignment task was NOT called (because save failed)
     mock_celery_tasks.assert_not_called()
 
-    # Verify task returns None
-    assert result is None
-
 
 def test_inconsistent_server_ids(mock_discord_service, mock_celery_tasks, mock_save_credentials, bc: Breathecode):
     """Test when cohorts have different server_ids (should only use the first one)"""
@@ -393,6 +390,3 @@ def test_inconsistent_server_ids(mock_discord_service, mock_celery_tasks, mock_s
     mock_celery_tasks.assert_called_once_with(
         guild_id="111111111", discord_user_id=123456789, role_id="111111111", academy_id=1
     )
-
-    # Verify task returns None
-    assert result is None

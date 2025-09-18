@@ -68,8 +68,7 @@ class Discord:
                 return response
 
         except Exception as e:
-            logger.error(f"Error joining user {discord_user_id} to guild {guild_id}, {e}")
-            return response
+            return ValidationException(str(e))
 
     def assign_role_to_user(self, guild_id: int, discord_user_id: int, role_id: int):
         headers = {"Authorization": f"Bot {self.bot_token}"}
@@ -85,8 +84,7 @@ class Discord:
                 return response.status_code
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error assigning role to user {discord_user_id}: {str(e)}")
-            return False
+            return ValidationException(str(e))
 
     def remove_role_to_user(self, guild_id: int, discord_user_id: int, role_id: int):
         headers = {"Authorization": f"Bot {self.bot_token}"}
@@ -100,8 +98,7 @@ class Discord:
                 return response.status_code
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error assigning role to user {discord_user_id}: {str(e)}")
-            return False
+            return ValidationException(str(e))
 
     async def send_dm_to_user(self, discord_user_id: int, message: str):
         headers = {"Authorization": f"Bot {self.bot_token}", "Content-Type": "application/json"}
@@ -131,7 +128,6 @@ class Discord:
                             logger.error(f"Not found error: {error_msg}")
                             return response_msg.status
         except Exception as e:
-            logger.error(f"Error sending DM: {str(e)}")
             raise ValidationException(str(e))
 
     def get_member_in_server(self, discord_user_id: int, guild_id: int):
