@@ -224,12 +224,14 @@ def handle_internal_link(request):
             # Decode the base64 content
             import base64
 
-            content = base64.b64decode(response["content"]).decode("utf-8")
+            content = base64.b64decode(response["content"])
 
             # Determine content type based on file extension
             file_extension = Path(file_path).suffix.lower()
             content_type = "text/plain"
+            is_binary = False
 
+            # Text file types
             if file_extension in [".md", ".markdown"]:
                 content_type = "text/markdown"
             elif file_extension in [".html", ".htm"]:
@@ -246,8 +248,28 @@ def handle_internal_link(request):
                 content_type = "application/xml"
             elif file_extension in [".yml", ".yaml"]:
                 content_type = "text/yaml"
+            
+            # Binary file types
+            elif file_extension in [".png"]:
+                content_type = "image/png"
+                is_binary = True
+            elif file_extension in [".jpg", ".jpeg"]:
+                content_type = "image/jpeg"
+                is_binary = True
+            elif file_extension in [".gif"]:
+                content_type = "image/gif"
+                is_binary = True
+            elif file_extension in [".pdf"]:
+                content_type = "application/pdf"
+                is_binary = True
 
-            return HttpResponse(content, content_type=content_type)
+            # Return content based on file type
+            if is_binary:
+                return HttpResponse(content, content_type=content_type)
+            else:
+                # Decode text content as UTF-8
+                content = content.decode("utf-8")
+                return HttpResponse(content, content_type=content_type)
         else:
             return render_message(request, "File content not found", status=404)
 
