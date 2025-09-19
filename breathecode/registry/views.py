@@ -7,6 +7,7 @@ from typing import Any
 from urllib.parse import urlparse, parse_qs, urlencode
 import aiohttp
 import requests
+import base64
 from breathecode.services.github import Github
 from adrf.decorators import api_view
 from adrf.views import APIView
