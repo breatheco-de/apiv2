@@ -278,7 +278,7 @@ def handle_internal_link(request):
             return render_message(request, "GitHub authentication failed", status=401)
         else:
             # Avoid leaking large/binary content in error messages
-            return render_message(request, f"Error accessing {file_extension} file {binary_str}: {str(e)}", status=500)
+            return render_message(request, f"Error accessing '{file_extension}' file {binary_str}: {str(e)}", status=500)
 
 
 @api_view(["GET"])
