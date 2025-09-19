@@ -219,6 +219,8 @@ def handle_internal_link(request):
 
         # Fetch the file content
         response = github.get(api_url)
+        is_binary = False
+        content = None
 
         if "content" in response:
             # Decode the base64 content
@@ -231,7 +233,6 @@ def handle_internal_link(request):
             # Determine content type based on file extension
             file_extension = Path(file_path).suffix.lower()
             content_type = "text/plain"
-            is_binary = False
 
             # Text file types
             if file_extension in [".md", ".markdown"]:
@@ -278,6 +279,7 @@ def handle_internal_link(request):
     except Exception as e:
         logger.error(f"Error fetching file from GitHub: {str(e)}")
         error_str = str(e).lower()
+        binary_str = 'as binary' if is_binary else 'as non-binary/text'
 
         if "404" in error_str or "not found" in error_str:
             return render_message(request, f"File not found: {file_path}", status=404)
@@ -286,7 +288,7 @@ def handle_internal_link(request):
         elif "401" in error_str or "unauthorized" in error_str:
             return render_message(request, "GitHub authentication failed", status=401)
         else:
-            return render_message(request, f"Error accessing file: {str(e)} \n {content}", status=500)
+            return render_message(request, f"Error accessing {file_extension} file {binary_str}: {str(e)} \n {content}", status=500)
 
 
 @api_view(["GET"])
