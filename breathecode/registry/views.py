@@ -225,6 +225,8 @@ def handle_internal_link(request):
             import base64
 
             content = base64.b64decode(response["content"])
+            if not content:
+                raise Exception("File is empty")
 
             # Determine content type based on file extension
             file_extension = Path(file_path).suffix.lower()
@@ -284,7 +286,7 @@ def handle_internal_link(request):
         elif "401" in error_str or "unauthorized" in error_str:
             return render_message(request, "GitHub authentication failed", status=401)
         else:
-            return render_message(request, f"Error accessing file: {str(e)}", status=500)
+            return render_message(request, f"Error accessing file: {str(e)} \n {content}", status=500)
 
 
 @api_view(["GET"])
