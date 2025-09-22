@@ -12,7 +12,7 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect, QueryDict
 from django.shortcuts import render
 from django.utils import timezone
-from linked_services.django.service import Service
+from breathecode.utils.robust_service import Service
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
