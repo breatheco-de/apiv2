@@ -739,7 +739,7 @@ def replace_private_github_urls(asset: Asset):
             url_info = github_service.parse_github_url(url)
 
             # Only replace URLs that point to files (blob, raw)
-            if url_info and url_info["url_type"] in ["blob", "raw"] and url_info.get("path"):
+            if url_info and not url_info["is_image"] and url_info["url_type"] in ["blob", "raw"] and url_info.get("path"):
                 # Create the internal link URL
                 # Token can be added as a query parameter when accessing the link
                 internal_url = f"{os.getenv('API_URL')}/asset/internal-link?id={asset.id}&path={url_info['path']}"
@@ -1278,7 +1278,8 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
                 solution_repo = github.get_repo(f"{solution_owner}/{solution_repo}")
                 solution_blob = get_blob_content(solution_repo, solution_path, branch=solution_branch)
                 if solution_blob is not None:
-                    asset.solution_readme = base64.b64decode(solution_blob.content).decode("utf-8")
+                    raw_content = base64.b64decode(solution_blob.content).decode("utf-8")
+                    asset.solution_readme = process_solution_content(raw_content)
                     logger.debug(
                         f"Successfully retrieved solution README from {asset.solution_url} for asset {asset.slug}"
                     )
@@ -1303,7 +1304,9 @@ def pull_learnpack_asset(github, asset: Asset, override_meta):
             try:
                 response = requests.get(asset.solution_url)
                 if response.status_code == 200:
-                    asset.solution_readme = response.text
+                    asset.solution_readme = process_solution_content(
+                        response.text, response.headers.get("content-type")
+                    )
                     logger.debug(
                         f"Successfully retrieved solution README via direct GET from {asset.solution_url} for asset {asset.slug}"
                     )
@@ -2153,3 +2156,92 @@ def push_project_or_exercise_to_github(asset_slug, create_or_update=False, organ
 @sync_to_async
 def apush_project_or_exercise_to_github(asset_slug, create_or_update=False, organization_github_username=None):
     return push_project_or_exercise_to_github(asset_slug, create_or_update, organization_github_username)
+
+
+def convert_jupyter_notebook_to_markdown(notebook_content: str) -> str:
+    """
+    Convert Jupyter notebook content to markdown format.
+
+    Args:
+        notebook_content: The raw content of the Jupyter notebook (JSON string)
+
+    Returns:
+        str: The converted markdown content
+
+    Raises:
+        Exception: If the notebook content is invalid or conversion fails
+    """
+    try:
+        import nbformat
+        from nbconvert import MarkdownExporter
+
+        notebook = nbformat.reads(notebook_content, as_version=4)
+
+        markdown_exporter = MarkdownExporter()
+
+        markdown_content, _ = markdown_exporter.from_notebook_node(notebook)
+
+        return markdown_content
+
+    except Exception as e:
+        logger.error(f"Error converting Jupyter notebook to markdown: {str(e)}")
+        raise Exception(f"Failed to convert Jupyter notebook to markdown: {str(e)}")
+
+
+def is_jupyter_notebook(content: str) -> bool:
+    """
+    Check if the given content is a Jupyter notebook.
+
+    Args:
+        content: The content to check
+
+    Returns:
+        bool: True if the content appears to be a Jupyter notebook
+    """
+    try:
+        import json
+
+        data = json.loads(content)
+
+        return isinstance(data, dict) and "cells" in data and "metadata" in data and "nbformat" in data
+    except (json.JSONDecodeError, TypeError):
+        return False
+
+
+def process_solution_content(content: str, content_type: str = None) -> str:
+    """
+    Process solution content, converting Jupyter notebooks to markdown if needed.
+
+    This function automatically detects Jupyter notebook content (either by content-type
+    header or by analyzing the JSON structure) and converts it to markdown format using
+    nbconvert. This ensures that solution content is always in a readable markdown format
+    regardless of whether it was originally a Jupyter notebook or markdown file.
+
+    Args:
+        content: The raw solution content
+        content_type: Optional content type hint (e.g., 'application/x-ipynb+json' for notebooks)
+
+    Returns:
+        str: The processed content (markdown if converted from notebook, original otherwise)
+
+    Example:
+        # Jupyter notebook content will be converted to markdown
+        notebook_json = '{"cells": [{"cell_type": "markdown", "source": ["# Test"]}]}'
+        result = process_solution_content(notebook_json)  # Auto-detection by content
+        # result will be "# Test" (markdown format)
+
+        # Regular markdown content will be left unchanged
+        markdown_content = "# Test\nThis is markdown."
+        result = process_solution_content(markdown_content)
+        # result will be "# Test\nThis is markdown." (unchanged)
+    """
+    if not content:
+        return content
+
+    is_notebook = content_type == "application/x-ipynb+json" or is_jupyter_notebook(content)
+
+    if is_notebook:
+        logger.debug("Detected Jupyter notebook in solution content, converting to markdown")
+        return convert_jupyter_notebook_to_markdown(content)
+
+    return content

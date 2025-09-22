@@ -182,7 +182,7 @@ class AcademyTeacherView(APIView, GenerateLookupsMixin):
             return cache
 
         items = ProfileAcademy.objects.filter(
-            academy__id=academy_id, role__slug__in=["teacher", "assistant", "teacher_influencer"]
+            academy__id=academy_id, role__slug__in=["teacher", "assistant", "geek_creator"]
         ).exclude(user__email__contains="@token.com")
 
         roles = request.GET.get("roles", None)
@@ -1000,7 +1000,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
 
 class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
 
-    @capable_of("crud_certificate")
+    @capable_of("crud_cohort")
     def post(self, request, academy_id=None):
         cohort_ids = request.GET.get("cohort", "")
         if not cohort_ids:
@@ -1072,7 +1072,7 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
         serializer = GETSyllabusScheduleTimeSlotSerializer(items, many=True)
         return Response(serializer.data)
 
-    @capable_of("crud_certificate")
+    @capable_of("crud_cohort")
     def post(self, request, certificate_id=None, academy_id=None):
         if "certificate" in request.data or "certificate_id" in request.data:
             raise ValidationException("Certificate can't be passed is the body", 400, slug="certificate-in-body")
@@ -1105,7 +1105,7 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of("crud_certificate")
+    @capable_of("crud_cohort")
     def put(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
         if "certificate" in request.data or "certificate_id" in request.data:
             raise ValidationException("Certificate can't be passed is the body", 400)
@@ -1144,7 +1144,7 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of("crud_certificate")
+    @capable_of("crud_cohort")
     def delete(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
         item = SyllabusScheduleTimeSlot.objects.filter(
             schedule__academy__id=academy_id, schedule__id=certificate_id, id=timeslot_id

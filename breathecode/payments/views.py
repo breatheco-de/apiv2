@@ -18,6 +18,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 import breathecode.activity.tasks as tasks_activity
+from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language
@@ -2481,6 +2482,11 @@ class PayView(APIView):
                             bag.currency = c
                             bag.save()
 
+                        if request.data.get("add_ons"):
+                            add_ons_amount = actions.manage_plan_financing_add_ons(request, bag, lang)
+
+                        adjusted_price += add_ons_amount
+
                         # Then apply coupons
                         coupons = bag.coupons.all()
                         amount = get_discounted_price(adjusted_price, coupons)
@@ -2616,6 +2622,13 @@ class PayView(APIView):
                         if plan.owner != cohort.academy:
                             admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
 
+                has_referral_coupons = False
+                if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
+                    has_referral_coupons = coupons.exclude(referral_type="NO_REFERRAL").exists()
+
+                if has_referral_coupons:
+                    transaction.on_commit(lambda inv_id=invoice.id: register_referral_from_invoice.delay(inv_id))
+
                 serializer = GetInvoiceSerializer(invoice, many=False)
 
                 tasks_activity.add_activity.delay(
@@ -2684,6 +2697,7 @@ class PaymentMethodView(APIView):
                     "currency_code",
                     "lang",
                     "academy_id",
+                    "visibility",
                 ],
             },
             # Use the custom field handler

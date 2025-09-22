@@ -21,6 +21,11 @@ def get_user_label(self):
     return f"{self.first_name} {self.last_name} ({self.email})"
 
 
+def default_syllabus_version_json():
+    """Default value for `SyllabusVersion.json` field."""
+    return {"days": []}
+
+
 User.add_to_class("__str__", get_user_label)
 
 __all__ = ["UserAdmissions", "Country", "City", "Academy", "Syllabus", "Cohort", "CohortUser", "CohortTimeSlot"]
@@ -198,6 +203,14 @@ class Syllabus(models.Model):
     def __str__(self):
         return self.slug if self.slug else "unknown"
 
+    def save(self, *args, **kwargs):
+        created = not self.id
+        super().save(*args, **kwargs)
+        
+        if created:
+            from .signals import syllabus_created
+            syllabus_created.send_robust(instance=self, sender=self.__class__)
+
 
 PUBLISHED = "PUBLISHED"
 DRAFT = "DRAFT"
@@ -219,7 +232,7 @@ INTEGRITY_STATUS = (
 
 
 class SyllabusVersion(models.Model):
-    json = models.JSONField()
+    json = models.JSONField(default=default_syllabus_version_json)
 
     version = models.PositiveSmallIntegerField(db_index=True)
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)

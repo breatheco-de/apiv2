@@ -1129,14 +1129,13 @@ class AssetMeView(APIView, GenerateLookupsMixin):
                 found_technology_slugs = list(
                     AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list("slug", flat=True)
                 )
-                not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+                # not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+                # if not_found_technologies:
+                #     raise ValidationException(
+                #         f"The following technologies were not found: {', '.join(not_found_technologies)}"
+                #     )
 
-                if not_found_technologies:
-                    raise ValidationException(
-                        f"The following technologies were not found: {', '.join(not_found_technologies)}"
-                    )
-
-                technology_ids = AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list(
+                technology_ids = AssetTechnology.objects.filter(slug__in=found_technology_slugs).values_list(
                     "pk", flat=True
                 )
                 data["technologies"] = technology_ids
@@ -1212,15 +1211,16 @@ class AssetMeView(APIView, GenerateLookupsMixin):
             found_technology_slugs = list(
                 AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list("slug", flat=True)
             )
-            not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
 
-            if not_found_technologies:
-                raise ValidationException(
-                    f"The following technologies were not found: {', '.join(not_found_technologies)}"
-                )
+            # We are going to ignore the technologies that are not found, because we are not going to create them
+            # not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+            # if not_found_technologies:
+            #     raise ValidationException(
+            #         f"The following technologies were not found: {', '.join(not_found_technologies)}"
+            #     )
 
             technology_ids = (
-                AssetTechnology.objects.filter(slug__in=data["technologies"])
+                AssetTechnology.objects.filter(slug__in=found_technology_slugs)
                 .values_list("pk", flat=True)
                 .order_by("sort_priority")
             )

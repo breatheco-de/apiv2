@@ -185,6 +185,14 @@ CAPABILITIES = [
         "slug": "crud_flag",
         "description": "Create flags for the assets and assignments",
     },
+    {
+        "slug": "read_commission",
+        "description": "Read commission reports and data for geek creators",
+    },
+    {
+        "slug": "crud_commission",
+        "description": "Create, update or delete commission data and reports",
+    },
 ]
 
 ROLES = [
@@ -552,6 +560,7 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "get_github_user",
                 "read_provisioning_bill",
                 "crud_provisioning_bill",
+                "read_commission",
             ],
         }
     )
@@ -563,7 +572,17 @@ def extend_roles(roles: list[RoleType]) -> None:
         }
     )
     roles.append({"slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) + ["crud_cohort"]})
-    roles.append({"slug": "teacher_influencer", "name": "Teacher Influencer", "caps": extend(roles, ["teacher"])})
+    roles.append(
+        {
+            "slug": "geek_creator",
+            "name": "Geek Creator",
+            "caps": extend(roles, ["teacher"])
+            + [
+                "read_commission",
+                "crud_commission",
+            ],
+        }
+    )
     roles.append(
         {
             "slug": "academy_coordinator",
@@ -610,6 +629,8 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "get_academy_auth_settings",
                 "read_subscription",
                 "crud_subscription",
+                "read_commission",
+                "crud_commission",
             ],
         }
     )
