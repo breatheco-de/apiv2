@@ -67,9 +67,26 @@ def lose_service_permissions_receiver(sender: Type[Consumable], instance: Consum
         return
 
     user = instance.subscription_seat.user if instance.subscription_seat else instance.user
+    subscription_team = instance.subscription_seat.billing_team if instance.subscription_seat else None
+
+    # Build base filter: user and seat consumables
+    base_filter = Q(user=user) | Q(subscription_seat__user=user)
+
+    # Include team-shared consumables only if strategy is PER_TEAM
+    team_shared_filter = Q()
+    if (
+        subscription_team
+        and subscription_team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM
+    ):
+        team_shared_filter = Q(
+            user__isnull=True,
+            subscription_billing_team__isnull=False,
+            subscription_billing_team=subscription_team,
+        )
 
     consumables = Consumable.objects.filter(
-        Q(valid_until__lte=now) | Q(valid_until=None), Q(user=user) | Q(subscription_seat__user=user)
+        Q(valid_until__lte=now) | Q(valid_until=None),
+        base_filter | team_shared_filter,
     ).exclude(how_many=0)
 
     # for group in instance.user.groups.all():
