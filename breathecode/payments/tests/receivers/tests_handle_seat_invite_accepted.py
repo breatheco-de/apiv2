@@ -1,135 +1,153 @@
-import pytest
+import types
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from django.utils import timezone
-from breathecode.authenticate.models import UserInvite
-from breathecode.authenticate.signals import invite_status_updated
+import pytest
+
+# Unit under test
+from breathecode.payments.receivers import handle_seat_invite_accepted as uut
+import breathecode.payments.receivers as receivers
+
+
+class DummyPlans:
+    def __init__(self, plan):
+        self._plan = plan
+
+    def first(self):
+        return self._plan
+
+
+class DummySubscription:
+    def __init__(self, _id: int, plan):
+        self.id = _id
+        self.plans = DummyPlans(plan)
+
+
+class DummyBillingTeam:
+    def __init__(self, subscription, consumption_strategy):
+        self.subscription = subscription
+        self.consumption_strategy = consumption_strategy
+
+
+class DummySeat:
+    def __init__(self, _id: int, email: str, billing_team: DummyBillingTeam):
+        self.id = _id
+        self.email = email
+        self.user = None
+        self.billing_team = billing_team
+        self._saved = False
+
+    def save(self):
+        self._saved = True
+
+
+class DummyQS(list):
+    def select_related(self, *args, **kwargs):
+        return self
+
+
+class DummyManager:
+    def __init__(self, seats):
+        self.seats = seats
+
+    def filter(self, *args, **kwargs):
+        return DummyQS(self.seats)
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_signals(enable_signals):
-    enable_signals()
-    yield
+def patch_strategies(monkeypatch):
+    """Patch consumption strategy enums on Plan and SubscriptionBillingTeam so tests don't import real models."""
+    # Patch strategy enums used in logic
+    monkeypatch.setattr(
+        receivers.Plan,
+        "ConsumptionStrategy",
+        SimpleNamespace(PER_SEAT="PER_SEAT", PER_TEAM="PER_TEAM", BOTH="BOTH"),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        receivers.SubscriptionBillingTeam,
+        "ConsumptionStrategy",
+        SimpleNamespace(PER_SEAT="PER_SEAT", PER_TEAM="PER_TEAM"),
+        raising=False,
+    )
 
 
-def _create_subscription_with_team(database):
-    # minimal academy/currency to satisfy FKs (Academy requires city/country)
-    model = database.create(country=1, city=1, academy=1, currency=1, subscription=1)
-    subscription = model.subscription
-
-    # create a billing team for this subscription
-    team = database.create(
-        subscription_billing_team={"subscription_id": subscription.id}, country=1, city=1
-    ).subscription_billing_team
-
-    return subscription, team
+def make_invite(email: str, user_id: int = 1, status: str = "ACCEPTED"):
+    """Create a minimal invite-like object with the attributes the handler reads (email, user, user_id, status)."""
+    user = SimpleNamespace(email=email)
+    invite = SimpleNamespace(email=email, user=user, user_id=user_id, status=status)
+    return invite
 
 
-def test_invite_accept_binds_seat_and_triggers_scheduler(database, monkeypatch):
-    subscription, team = _create_subscription_with_team(database)
-
-    # pending seat by email
-    seat = database.create(
-        subscription_seat={
-            "billing_team_id": team.id,
-            "email": "Member@Example.com",
-            "user": None,
-            "is_active": True,
-            "seat_multiplier": 1,
-        }
-    ).subscription_seat
-
-    # invite accepted with same email (different case)
-    user = database.create(user={"email": "member@example.com"}).user
-    invite = database.create(user_invite={"email": user.email, "status": "ACCEPTED", "user_id": user.id}).user_invite
-
+def test_noop_when_status_not_accepted(monkeypatch):
+    """Ensure the handler performs no operation if invite.status is not ACCEPTED (e.g., PENDING)."""
+    # Arrange
     called = MagicMock()
-    # avoid external email validation side-effects on invite signal
-    monkeypatch.setattr(
-        "breathecode.authenticate.tasks.async_validate_email_invite",
-        lambda *args, **kwargs: None,
+    dummy_task = types.SimpleNamespace(build_service_stock_scheduler_from_subscription=SimpleNamespace(delay=called))
+    monkeypatch.setattr(receivers, "tasks", dummy_task)
+
+    # No DB lookups should happen; ensure objects not present causes no crash
+    monkeypatch.setattr(receivers.SubscriptionSeat, "objects", DummyManager([]), raising=False)
+
+    invite = make_invite("member@example.com", user_id=2, status="PENDING")
+
+    # Act
+    uut(None, invite)
+
+    # Assert
+    called.assert_not_called()
+
+
+def test_triggers_scheduler_and_binds_when_per_seat(monkeypatch):
+    """Bind seat to user, normalize email, and call per-seat scheduler when strategy enables per-seat issuance."""
+    # Arrange
+    called = MagicMock()
+    dummy_task = types.SimpleNamespace(build_service_stock_scheduler_from_subscription=SimpleNamespace(delay=called))
+    monkeypatch.setattr(receivers, "tasks", dummy_task)
+
+    plan = SimpleNamespace(consumption_strategy=receivers.Plan.ConsumptionStrategy.BOTH)
+    subscription = DummySubscription(1, plan)
+    team = DummyBillingTeam(
+        subscription, consumption_strategy=receivers.SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM
     )
+    seat = DummySeat(99, "Member@Example.com", team)
 
-    class DummyTask:
-        def delay(self, *args, **kwargs):
-            called(*args, **kwargs)
+    monkeypatch.setattr(receivers.SubscriptionSeat, "objects", DummyManager([seat]), raising=False)
 
-    monkeypatch.setattr(
-        "breathecode.payments.tasks.build_service_stock_scheduler_from_subscription",
-        DummyTask(),
-    )
-    # also patch the tasks alias inside receivers
-    import types
+    invite = make_invite("member@example.com", user_id=7, status="ACCEPTED")
 
-    receivers_tasks = types.SimpleNamespace(build_service_stock_scheduler_from_subscription=DummyTask())
-    monkeypatch.setattr("breathecode.payments.receivers.tasks", receivers_tasks)
+    # Act
+    uut(None, invite)
 
-    # make plan consumption_strategy BOTH so per-seat path is enabled even if team has no strategy
-    plan = database.create(
-        plan={"owner_id": subscription.academy_id, "time_of_life": None, "time_of_life_unit": None}
-    ).plan
-    subscription.plans.add(plan)
-    # attach attribute dynamically in runtime
-    try:
-        from breathecode.payments.models import Plan
-
-        plan.consumption_strategy = Plan.ConsumptionStrategy.BOTH
-    except Exception:
-        plan.consumption_strategy = "BOTH"  # fallback if enum is not available in this environment
-
-    invite_status_updated.send(sender=UserInvite, instance=invite)
-
-    seat.refresh_from_db()
-
-    assert seat.user_id == user.id
-    assert seat.email == user.email
-
-    # called with seat id
+    # Assert
+    assert seat.user is invite.user
+    assert seat.email == invite.user.email.lower()
+    assert seat._saved is True
     called.assert_called_once_with(subscription.id, seat_id=seat.id)
 
 
-def test_invite_accept_binds_seat_no_scheduler_when_not_per_seat(database, monkeypatch):
-    subscription, team = _create_subscription_with_team(database)
-
-    # pending seat by email
-    seat = database.create(
-        subscription_seat={
-            "billing_team_id": team.id,
-            "email": "member@example.com",
-            "user": None,
-            "is_active": True,
-            "seat_multiplier": 1,
-        }
-    ).subscription_seat
-
-    # invite accepted with same email
-    user = database.create(user={"email": "member@example.com"}).user
-    invite = database.create(user_invite={"email": user.email, "status": "ACCEPTED", "user_id": user.id}).user_invite
-
+def test_does_not_trigger_when_per_team_only(monkeypatch):
+    """Bind seat to user but do not call scheduler when only PER_TEAM strategy is effective."""
+    # Arrange
     called = MagicMock()
-    # avoid external email validation side-effects on invite signal
-    monkeypatch.setattr(
-        "breathecode.authenticate.tasks.async_validate_email_invite",
-        lambda *args, **kwargs: None,
+    dummy_task = types.SimpleNamespace(build_service_stock_scheduler_from_subscription=SimpleNamespace(delay=called))
+    monkeypatch.setattr(receivers, "tasks", dummy_task)
+
+    plan = SimpleNamespace(consumption_strategy=receivers.Plan.ConsumptionStrategy.PER_SEAT)
+    subscription = DummySubscription(2, plan)
+    team = DummyBillingTeam(
+        subscription, consumption_strategy=receivers.SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM
     )
-    monkeypatch.setattr("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", called)
+    seat = DummySeat(100, "member@example.com", team)
 
-    # Set plan consumption strategy to PER_TEAM so per-seat path is disabled
-    plan = database.create(
-        plan={"owner_id": subscription.academy_id, "time_of_life": None, "time_of_life_unit": None}
-    ).plan
-    subscription.plans.add(plan)
-    try:
-        from breathecode.payments.models import Plan
+    monkeypatch.setattr(receivers.SubscriptionSeat, "objects", DummyManager([seat]), raising=False)
 
-        plan.consumption_strategy = Plan.ConsumptionStrategy.PER_TEAM
-    except Exception:
-        plan.consumption_strategy = "PER_TEAM"
+    invite = make_invite("member@example.com", user_id=10, status="ACCEPTED")
 
-    invite_status_updated.send(sender=UserInvite, instance=invite)
+    # Act
+    uut(None, invite)
 
-    seat.refresh_from_db()
-
-    assert seat.user_id == user.id
-    # current receiver always schedules per-seat consumables on invite acceptance
-    called.assert_called_once_with(subscription.id, seat_id=seat.id)
+    # Assert
+    assert seat.user is invite.user
+    assert seat._saved is True
+    called.assert_not_called()

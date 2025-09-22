@@ -90,7 +90,6 @@ def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consu
             user.groups.add(group)
 
 
-@receiver(invite_status_updated, sender=UserInvite)
 def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **kwargs):
     """When an invite is accepted, bind pending SubscriptionSeat by email and issue consumables."""
     if instance.status != "ACCEPTED" or not instance.user_id:
@@ -124,6 +123,10 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
         # Issue per-seat consumables only when strategy requires it; otherwise rely on renew task for team-level
         if per_seat_enabled:
             tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id, seat_id=seat.id)
+
+
+# to be able to use unittest instead of integration test
+invite_status_updated.connect(handle_seat_invite_accepted, sender=UserInvite)
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
