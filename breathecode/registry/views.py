@@ -4,8 +4,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+from urllib.parse import urlparse, parse_qs, urlencode
 import aiohttp
 import requests
+import base64
 from breathecode.services.github import Github
 from adrf.decorators import api_view
 from adrf.views import APIView
@@ -157,40 +159,39 @@ def forward_asset_url(request, asset_slug=None):
 def handle_internal_link(request):
     """
     Handle internal GitHub links by proxying the content through the asset owner's credentials.
-
     This view receives requests for internal GitHub files and uses the asset owner's GitHub
     credentials to fetch the content, allowing access to private repository files.
-
     Query parameters:
     - asset: The asset ID
     - path: The relative path to the file in the repository
     - token: Bearer session token for authentication (optional for public repos)
     """
-
     asset_id = request.GET.get("id")
     file_path = request.GET.get("path")
     token = request.GET.get("token")
-
     if not asset_id:
         return render_message(request, "Missing asset parameter", status=400)
-
     if not file_path:
         return render_message(request, "Missing path parameter", status=400)
-
+    
+    # Strip query string from file_path to get the correct file extension
+    parsed_path = urlparse(file_path)
+    clean_file_path = parsed_path.path  # Get the path without query string
+    file_extension = Path(clean_file_path).suffix.lower()  # Extract extension from clean path
+    
     # Get the asset
     try:
         asset = Asset.objects.get(id=asset_id)
     except Asset.DoesNotExist:
         return render_message(request, f"Asset with id {asset_id} not found", status=404)
-
+    
     # Check if asset has an owner with GitHub credentials
     if not asset.owner:
         return render_message(request, "Asset has no owner configured", status=400)
-
     credentials = CredentialsGithub.objects.filter(user=asset.owner).first()
     if not credentials:
         return render_message(request, "No GitHub credentials found for asset owner", status=400)
-
+    
     # Optional token validation for private access
     if token:
         try:
@@ -199,37 +200,33 @@ def handle_internal_link(request):
                 return render_message(request, "Invalid or expired token", status=401)
         except Exception:
             return render_message(request, "Invalid token", status=401)
-
+    
     # Get repository information from asset
     try:
         org_name, repo_name, branch_name = asset.get_repo_meta()
     except Exception as e:
         logger.error(f"Error parsing repository metadata for asset {asset_id}: {str(e)}")
         return render_message(request, "Invalid repository URL in asset", status=400)
-
+    
     # Use GitHub API to fetch the file content
     try:
-
         github = Github(credentials.token)
-
-        # Construct the API URL for the file
-        api_url = f"/repos/{org_name}/{repo_name}/contents/{file_path}"
+        # Construct the API URL for the file (use clean_file_path to avoid query string)
+        api_url = f"/repos/{org_name}/{repo_name}/contents/{clean_file_path}"
         if branch_name:
             api_url += f"?ref={branch_name}"
-
         # Fetch the file content
         response = github.get(api_url)
-
+        is_binary = False
+        content = None
         if "content" in response:
             # Decode the base64 content
-            import base64
-
-            content = base64.b64decode(response["content"]).decode("utf-8")
-
+            content = base64.b64decode(response["content"])
+            if not content:
+                raise Exception("File is empty")
             # Determine content type based on file extension
-            file_extension = Path(file_path).suffix.lower()
             content_type = "text/plain"
-
+            # Text file types
             if file_extension in [".md", ".markdown"]:
                 content_type = "text/markdown"
             elif file_extension in [".html", ".htm"]:
@@ -246,15 +243,34 @@ def handle_internal_link(request):
                 content_type = "application/xml"
             elif file_extension in [".yml", ".yaml"]:
                 content_type = "text/yaml"
-
-            return HttpResponse(content, content_type=content_type)
+           
+            # Binary file types
+            elif file_extension in [".png"]:
+                content_type = "image/png"
+                is_binary = True
+            elif file_extension in [".jpg", ".jpeg"]:
+                content_type = "image/jpeg"
+                is_binary = True
+            elif file_extension in [".gif"]:
+                content_type = "image/gif"
+                is_binary = True
+            elif file_extension in [".pdf"]:
+                content_type = "application/pdf"
+                is_binary = True
+            
+            # Return content based on file type
+            if is_binary:
+                return HttpResponse(content, content_type=content_type)
+            else:
+                # Decode text content as UTF-8
+                content = content.decode("utf-8")
+                return HttpResponse(content, content_type=content_type)
         else:
             return render_message(request, "File content not found", status=404)
-
     except Exception as e:
         logger.error(f"Error fetching file from GitHub: {str(e)}")
         error_str = str(e).lower()
-
+        binary_str = 'as binary' if is_binary else 'as non-binary/text'
         if "404" in error_str or "not found" in error_str:
             return render_message(request, f"File not found: {file_path}", status=404)
         elif "403" in error_str or "forbidden" in error_str:
@@ -262,7 +278,8 @@ def handle_internal_link(request):
         elif "401" in error_str or "unauthorized" in error_str:
             return render_message(request, "GitHub authentication failed", status=401)
         else:
-            return render_message(request, f"Error accessing file: {str(e)}", status=500)
+            # Avoid leaking large/binary content in error messages
+            return render_message(request, f"Error accessing '{file_extension}' file {binary_str}: {str(e)}", status=500)
 
 
 @api_view(["GET"])

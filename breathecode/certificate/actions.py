@@ -99,7 +99,11 @@ def get_assets_from_syllabus(
 
 
 def how_many_pending_tasks(
-    syllabus_version: SyllabusVersion | int, user: User | int, task_types: list[str], only_mandatory: bool
+    syllabus_version: SyllabusVersion | int,
+    user: User | int,
+    task_types: list[str],
+    only_mandatory: bool,
+    cohort_id: int | None = None,
 ) -> int:
 
     extra = {}
@@ -115,6 +119,10 @@ def how_many_pending_tasks(
 
     else:
         extra["user"] = user
+
+    # Add cohort filter if provided
+    if cohort_id is not None:
+        extra["cohort_id"] = cohort_id
 
     slugs = get_assets_from_syllabus(syllabus_version, task_types=task_types, only_mandatory=only_mandatory)
     how_many_approved_tasks = Task.objects.filter(
@@ -205,7 +213,7 @@ def generate_certificate(user, cohort=None, layout=None):
     try:
         uspe.academy = cohort.academy
         pending_tasks = how_many_pending_tasks(
-            cohort.syllabus_version, user, task_types=["PROJECT"], only_mandatory=True
+            cohort.syllabus_version, user, task_types=["PROJECT"], only_mandatory=True, cohort_id=cohort.id
         )
 
         if pending_tasks and pending_tasks > 0:
