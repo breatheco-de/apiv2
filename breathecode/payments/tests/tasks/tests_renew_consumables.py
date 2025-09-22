@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, call
 import pytest
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 from breathecode.payments.models import SubscriptionBillingTeam, SubscriptionSeat
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
@@ -95,7 +96,7 @@ def test_is_over(database, type: str, plan_service_item_handler: bool, subscript
     plan = {"is_renewable": False}
     academy = {"available_as_saas": True}
     service_item = {"how_many": -1}
-    service = {"type": "SEAT"}  # Create a SEAT type service to avoid validation errors
+    service = {"type": "SEAT"}  # SEAT services require how_many > 0
 
     model = database.create(
         service_stock_scheduler=1,
@@ -355,8 +356,12 @@ def test_with_two_cohorts_linked(
         team = SubscriptionBillingTeam.objects.create(
             subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=5
         )
+        # Create a distinct user for the seat to verify consumable ownership is the seat user
+        member_user = User.objects.create(
+            username=f"member{model.subscription.id}", email=f"member{model.subscription.id}@example.com"
+        )
         seat = SubscriptionSeat.objects.create(
-            billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+            billing_team=team, user=member_user, email=member_user.email, is_active=True, seat_multiplier=1
         )
         scheduler = model.service_stock_scheduler
         scheduler.subscription_seat = seat
@@ -374,13 +379,15 @@ def test_with_two_cohorts_linked(
     ]
     assert logging.Logger.error.call_args_list == []
 
+    expected_user_id = seat.user.id if (with_seat and type == "subscription") else 1
+
     assert database.list_of("payments.Consumable") == [
         consumable_item(
             {
                 "cohort_set_id": 1,
                 "id": 1,
                 "service_item_id": 2,
-                "user_id": 1,
+                "user_id": expected_user_id,
                 "how_many": model.service_item.how_many,
                 "valid_until": UTC_NOW
                 + (relativedelta(minutes=5) if type == "plan_financing" else relativedelta(minutes=3)),
@@ -459,8 +466,11 @@ def test_two_mentorship_services_linked(
         team = SubscriptionBillingTeam.objects.create(
             subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=5
         )
+        member_user = User.objects.create(
+            username=f"member{model.subscription.id}", email=f"member{model.subscription.id}@example.com"
+        )
         seat = SubscriptionSeat.objects.create(
-            billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+            billing_team=team, user=member_user, email=member_user.email, is_active=True, seat_multiplier=1
         )
         scheduler = model.service_stock_scheduler
         scheduler.subscription_seat = seat
@@ -478,13 +488,15 @@ def test_two_mentorship_services_linked(
     ]
     assert logging.Logger.error.call_args_list == []
 
+    expected_user_id = seat.user.id if (with_seat and type == "subscription") else 1
+
     assert database.list_of("payments.Consumable") == [
         consumable_item(
             {
                 "mentorship_service_set_id": 1,
                 "id": 1,
                 "service_item_id": 1,
-                "user_id": 1,
+                "user_id": expected_user_id,
                 "how_many": (
                     model.service_item[0].how_many
                     if isinstance(model.service_item, list)
@@ -565,8 +577,11 @@ def test_two_event_types_linked(
         team = SubscriptionBillingTeam.objects.create(
             subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=5
         )
+        member_user = User.objects.create(
+            username=f"member{model.subscription.id}", email=f"member{model.subscription.id}@example.com"
+        )
         seat = SubscriptionSeat.objects.create(
-            billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+            billing_team=team, user=member_user, email=member_user.email, is_active=True, seat_multiplier=1
         )
         scheduler = model.service_stock_scheduler
         scheduler.subscription_seat = seat
@@ -584,13 +599,15 @@ def test_two_event_types_linked(
     ]
     assert logging.Logger.error.call_args_list == []
 
+    expected_user_id = seat.user.id if (with_seat and type == "subscription") else 1
+
     assert database.list_of("payments.Consumable") == [
         consumable_item(
             {
                 "event_type_set_id": 1,
                 "id": 1,
                 "service_item_id": 1,
-                "user_id": 1,
+                "user_id": expected_user_id,
                 "how_many": (
                     model.service_item[0].how_many
                     if isinstance(model.service_item, list)
@@ -672,8 +689,11 @@ def test_without_a_resource_linked__type_void(
         team = SubscriptionBillingTeam.objects.create(
             subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=5
         )
+        member_user = User.objects.create(
+            username=f"member{model.subscription.id}", email=f"member{model.subscription.id}@example.com"
+        )
         seat = SubscriptionSeat.objects.create(
-            billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+            billing_team=team, user=member_user, email=member_user.email, is_active=True, seat_multiplier=1
         )
         scheduler = model.service_stock_scheduler
         scheduler.subscription_seat = seat
@@ -691,12 +711,14 @@ def test_without_a_resource_linked__type_void(
     ]
     assert logging.Logger.error.call_args_list == []
 
+    expected_user_id = seat.user.id if (with_seat and type == "subscription") else 1
+
     assert database.list_of("payments.Consumable") == [
         consumable_item(
             {
                 "id": 1,
                 "service_item_id": 1,
-                "user_id": 1,
+                "user_id": expected_user_id,
                 "how_many": (
                     model.service_item[0].how_many
                     if isinstance(model.service_item, list)

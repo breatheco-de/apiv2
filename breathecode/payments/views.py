@@ -3136,7 +3136,9 @@ class SubscriptionSeatView(APIView):
         user = User.objects.filter(email_iexact=email).first()
         return user
 
-    def _invite_user(self, obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str):
+    def _invite_user_to_subscription_team(
+        self, obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
+    ):
         invite, created = UserInvite.objects.get_or_create(
             email=obj.get("email", ""),
             academy=subscription.academy,
@@ -3192,7 +3194,7 @@ class SubscriptionSeatView(APIView):
         seat.save(update_fields=["seat_log"])
 
         if not user:
-            self._invite_user(
+            self._invite_user_to_subscription_team(
                 {"email": email, "first_name": None, "last_name": None},
                 subscription_seat.billing_team.subscription,
                 subscription_seat,
@@ -3246,7 +3248,7 @@ class SubscriptionSeatView(APIView):
         seat.save()
 
         if not to_user:
-            self._invite_user(
+            self._invite_user_to_subscription_team(
                 {"email": to_email, "first_name": None, "last_name": None},
                 subscription_seat.billing_team.subscription,
                 subscription_seat,

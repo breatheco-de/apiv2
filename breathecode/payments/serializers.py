@@ -9,8 +9,6 @@ from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
     Currency,
     FinancingOption,
-    Subscription,
-    SubscriptionSeat,
     AcademyService,
     PaymentMethod,
     Plan,
@@ -769,98 +767,3 @@ class GetConsumptionSessionSerializer(serpy.Serializer):
     related_id = serpy.Field()
     related_slug = serpy.Field()
     user = GetUserSmallSerializer(required=False)
-
-
-class TeamMemberSerializer(serpy.Serializer):
-    id = serpy.Field()
-    email = serpy.MethodField()
-    status = serpy.Field()
-    is_admin = serpy.Field()
-    user = GetUserSmallSerializer()
-    seat_consumable_id = serpy.MethodField()
-
-    def get_email(self, obj: SubscriptionSeat):
-        email = obj.email or (obj.user.email if obj.user else None)
-        return (email or "").strip().lower()
-
-    def get_seat_consumable_id(self, obj: SubscriptionSeat):
-        return getattr(obj, "seat_consumable_id", None)
-
-
-class TeamMemberDetailSerializer(TeamMemberSerializer):
-    # optional detailed policy summary per service slug
-    policy_summary = serpy.MethodField()
-
-    def get_policy_summary(self, obj: SubscriptionSeat):
-        ctx = getattr(self, "context", {}) or {}
-        service_item: ServiceItem | None = ctx.get("service_item")
-        subscription: Subscription | None = ctx.get("subscription")
-        if not service_item or not subscription:
-            return {}
-
-        allowed = (service_item.team_consumables or {}).get("allowed") or []
-        summary = {}
-        for entry in allowed:
-            if not isinstance(entry, dict):
-                continue
-            slug = entry.get("service_slug")
-            if not slug:
-                continue
-            # count active consumables for this member and slug
-            count = 0
-            # not querying deeply to keep scaffold simple
-            summary[slug] = {
-                "service_slug": slug,
-                "unit_type": entry.get("unit_type"),
-                "renew_at": entry.get("renew_at"),
-                "renew_at_unit": entry.get("renew_at_unit"),
-                "count": count,
-            }
-        return summary
-
-
-class SubscriptionTeamEnabledServiceSerializer(serpy.Serializer):
-    service_item_id = serpy.Field(attr="id")
-    service_slug = serpy.Field(attr="service.slug")
-    team_group = serpy.MethodField()
-    max_team_members = serpy.Field()
-    members_count = serpy.MethodField()
-    invites_count = serpy.MethodField()
-    available_slots = serpy.MethodField()
-
-    def get_team_group(self, obj: ServiceItem):
-        return obj.team_group.name if obj.team_group else None
-
-    def get_members_count(self, obj: ServiceItem):
-        sub: Subscription = self.context.get("subscription")
-        if not sub:
-            return 0
-        return SubscriptionSeat.objects.filter(billing_team__subscription=sub).exclude(user__isnull=True).count()
-
-    def get_invites_count(self, obj: ServiceItem):
-        sub: Subscription = self.context.get("subscription")
-        if not sub:
-            return 0
-        return SubscriptionSeat.objects.filter(billing_team__subscription=sub, user__isnull=True).count()
-
-    def get_available_slots(self, obj: ServiceItem):
-        sub: Subscription = self.context.get("subscription")
-        if not sub:
-            return None
-        if obj.max_team_members is None or obj.max_team_members < 0:
-            return None
-        members = self.get_members_count(obj)
-        invites = self.get_invites_count(obj)
-        return max(obj.max_team_members - (members + invites), 0)
-
-
-class SubscriptionWithTeamSerializer(serpy.Serializer):
-    id = serpy.Field()
-    user = GetUserSmallSerializer()
-    team_enabled_services = serpy.MethodField()
-
-    def get_team_enabled_services(self, obj: Subscription):
-        items = ServiceItem.objects.filter(plan__subscription=obj, is_team_allowed=True).distinct()
-        # context subscription for counts
-        serializer = SubscriptionTeamEnabledServiceSerializer(items, many=True, context={"subscription": obj})
-        return serializer.data

@@ -255,8 +255,9 @@ class ServiceItem(AbstractServiceItem):
         if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
             raise forms.ValidationError("You cannot update a service item")
 
-        if self.how_many <= 0:
-            raise forms.ValidationError(_("A service with type SEAT can't have a how_many <= 0"))
+        # Universal rule: allow -1 (infinite), otherwise must be >= 0
+        if self.how_many < -1 or self.how_many == 0:
+            raise forms.ValidationError(_("how_many must be -1 (infinite) or greater than 0"))
 
     def save(self, *args, **kwargs):
         self.full_clean()

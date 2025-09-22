@@ -1,5 +1,4 @@
 import os
-import urllib.parse
 import re
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -18,9 +17,7 @@ from pytz import UTC
 from rest_framework.request import Request
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings, get_app_url
-from breathecode.authenticate.models import UserInvite
-from breathecode.notify import actions as notify_actions
+from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserSetting
 from breathecode.media.models import File
 from breathecode.payments import tasks
@@ -74,28 +71,6 @@ def calculate_relative_delta(unit: float, unit_type: str):
 # ------------------------------
 # Seat logs utilities
 # ------------------------------
-
-
-def _append_seat_log(seat: SubscriptionSeat, action: str) -> None:
-    """Append a log entry to both seat.seat_log and billing_team.seats_log."""
-    utc_now = timezone.now()
-    entry = {
-        "email": (seat.email or "").strip().lower(),
-        "user": seat.user_id,
-        "action": action,
-        "created_at": utc_now.isoformat(),
-    }
-
-    logs = list(seat.seat_log or [])
-    logs.append(entry)
-    seat.seat_log = logs
-    seat.save(update_fields=["seat_log", "updated_at"])
-
-    team = seat.billing_team
-    team_logs = list(team.seats_log or [])
-    team_logs.append(entry)
-    team.seats_log = team_logs
-    team.save(update_fields=["seats_log", "updated_at"])
 
 
 class PlanFinder:
@@ -1822,114 +1797,6 @@ def user_has_active_paid_plans(user: User) -> bool:
             return True
 
     return False
-
-
-def _generate_unique_invite_token() -> str:
-    import hashlib
-    import os
-
-    token = hashlib.sha512(os.urandom(64)).hexdigest()
-    while UserInvite.objects.filter(token=token).exists():
-        token = hashlib.sha512(os.urandom(64)).hexdigest()
-    return token
-
-
-def create_subscription_seat_invites(
-    *,
-    subscription: Subscription,
-    service_item: ServiceItem,
-    emails: list[str],
-    seats: int = 1,
-    author: User | None = None,
-    lang: str = "en",
-) -> list[UserInvite]:
-    """Create UserInvite rows and create pending SubscriptionSeat for each email.
-
-    This replaces SubscriptionSeatInvite: we now reserve a seat directly in SubscriptionSeat (user=None, email set)
-    and send a UserInvite. On acceptance, the receiver binds the seat to the user and issues consumables.
-    """
-
-    if seats < 1:
-        raise ValidationException(
-            translation(lang, en="Seats must be >= 1", es="Los asientos deben ser >= 1", slug="invalid-seats")
-        )
-
-    # Capacity enforcement
-    additional = len({e.strip().lower() for e in emails if e and e.strip()})
-    if not service_item.can_add_team_member_for_subscription(subscription, additional=additional):
-        raise ValidationException(
-            translation(
-                lang,
-                en="No capacity left to invite more team members",
-                es="No hay capacidad para invitar más miembros del equipo",
-                slug="no-team-capacity",
-            ),
-            code=400,
-        )
-
-    academy = subscription.academy
-    created_invites: list[UserInvite] = []
-
-    # Ensure billing team exists for this subscription
-    team, _ = SubscriptionBillingTeam.objects.get_or_create(
-        subscription=subscription, defaults={"name": f"Team {subscription.id}"}
-    )
-    if not subscription.supports_billing_team:
-        subscription.supports_billing_team = True
-        subscription.save(update_fields=["supports_billing_team"])
-
-    for email in {e.strip().lower() for e in emails if e and e.strip()}:
-        # Create or reuse an existing pending invite for this email+academy
-        invite = UserInvite.objects.filter(email=email, academy=academy, status="PENDING").first()
-        if not invite:
-            token = _generate_unique_invite_token()
-            expires_at = timezone.now() + relativedelta(months=6)
-
-            invite = UserInvite(
-                email=email,
-                academy=academy,
-                author=author,
-                token=token,
-                expires_at=expires_at,
-                status="PENDING",
-            )
-            invite.save()
-
-            # Send invite email using existing template/flow
-            query = urllib.parse.urlencode({"callback": get_app_url()})
-            url = os.getenv("API_URL", "") + f"/v1/auth/member/invite/{invite.token}?{query}"
-            subject = translation(
-                lang, en=f"You are invited to {academy.name}", es=f"Has sido invitado a {academy.name}"
-            )
-
-            notify_actions.send_email_message(
-                "welcome_academy",
-                email,
-                {
-                    "email": email,
-                    "subject": subject,
-                    "LINK": url,
-                    "FIST_NAME": invite.first_name or "",
-                },
-                academy=academy,
-            )
-
-        # Reserve seat directly in SubscriptionSeat (pending seat)
-        seat, created = SubscriptionSeat.objects.get_or_create(
-            billing_team=team,
-            email=email,
-            defaults={
-                "user": None,
-                "seat_multiplier": seats,
-            },
-        )
-
-        if created:
-            _append_seat_log(seat, "ADDED")
-
-        created_invites.append(invite)
-
-    return created_invites
 
 
 # ------------------------------
