@@ -67,10 +67,18 @@ def lose_service_permissions_receiver(sender: Type[Consumable], instance: Consum
         return
 
     user = instance.subscription_seat.user if instance.subscription_seat else instance.user
-    subscription_team = instance.subscription_seat.billing_team if instance.subscription_seat else None
+    subscription_team = instance.subscription_billing_team or (
+        instance.subscription_seat.billing_team if instance.subscription_seat else None
+    )
 
     # Build base filter: user and seat consumables
-    base_filter = Q(user=user) | Q(subscription_seat__user=user)
+    if subscription_team:
+        # limit to consumables linked to the same billing team
+        base_filter = Q(user=user, subscription_billing_team=subscription_team) | Q(
+            subscription_seat__user=user, subscription_seat__billing_team=subscription_team
+        )
+    else:
+        base_filter = Q(user=user) | Q(subscription_seat__user=user)
 
     # Include team-shared consumables only if strategy is PER_TEAM
     team_shared_filter = Q()
@@ -97,14 +105,39 @@ def lose_service_permissions_receiver(sender: Type[Consumable], instance: Consum
             user.groups.remove(group)
 
 
-@receiver(grant_service_permissions, sender=Consumable)
 def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consumable, **kwargs):
-    groups = instance.service_item.service.groups.all()
-    user = instance.subscription_seat.user if instance.subscription_seat else instance.user
+    # Only grant when this consumable has units available now (> 0). Infinite (-1) is handled elsewhere.
+    if instance.how_many <= 0:
+        return
 
-    for group in groups:
-        if not user.groups.filter(name=group.name).exists():
-            user.groups.add(group)
+    # Determine the affected user and billing team context
+    user = instance.subscription_seat.user if instance.subscription_seat else instance.user
+    subscription_team = instance.subscription_billing_team or (
+        instance.subscription_seat.billing_team if instance.subscription_seat else None
+    )
+
+    groups = instance.service_item.service.groups.all()
+
+    def grant_for_user(target_user):
+        for group in groups:
+            if not target_user.groups.filter(name=group.name).exists():
+                target_user.groups.add(group)
+
+    if not user and subscription_team:
+        # Grant to all users in the team only if the consumption strategy is PER_TEAM
+        if subscription_team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+            seats = SubscriptionSeat.objects.filter(billing_team=subscription_team, user__isnull=False).select_related(
+                "user"
+            )
+            for seat in seats:
+                grant_for_user(seat.user)
+        return
+
+    if user:
+        grant_for_user(user)
+
+
+grant_service_permissions.connect(grant_service_permissions_receiver, sender=Consumable)
 
 
 def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **kwargs):

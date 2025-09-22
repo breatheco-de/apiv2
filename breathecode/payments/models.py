@@ -1986,6 +1986,21 @@ class Consumable(AbstractServiceItem):
         if self.how_many < 0 and self.service_item.how_many >= 0:
             self.how_many = 0
 
+        # Align subscription_billing_team with seat if present
+        if self.subscription_seat:
+            seat_team = self.subscription_seat.billing_team
+            if self.subscription_billing_team is None:
+                # default to the seat billing team
+                self.subscription_billing_team = seat_team
+            elif self.subscription_billing_team_id != seat_team.id:
+                raise forms.ValidationError(
+                    translation(
+                        settings.lang,
+                        en="Subscription billing team does not match seat billing team",
+                        es="El equipo de facturación de la suscripción no coincide con el equipo del asiento",
+                    )
+                )
+
         # Team checks using subscription seat / billing team
         if (self.subscription_seat) and self.service_item.is_team_allowed:
             # ensure user matches seat user when seat is present
