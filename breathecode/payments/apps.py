@@ -11,3 +11,4 @@ class PaymentsConfig(AppConfig):
 
         # register non-team receivers always
         from . import receivers  # noqa: F401
+        from . import supervisors  # noqa: F401

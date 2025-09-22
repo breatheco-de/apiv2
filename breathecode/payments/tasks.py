@@ -1143,7 +1143,7 @@ def build_subscription(
         seat_service_item=bag.seat_service_item,
     )
 
-    if bag.seat_service_item or bag.seat_service_item.how_many > 0:
+    if bag.seat_service_item and bag.seat_service_item.how_many > 0:
 
         subscription.seat_service_item = bag.seat_service_item
         subscription.save()
@@ -1168,17 +1168,17 @@ def build_subscription(
 
     plan = bag.plans.first()
 
-    if plan and subscription.seat_service_item or subscription.seat_service_item.how_many > 0:
+    if plan and subscription.seat_service_item and subscription.seat_service_item.how_many > 0:
         team, _ = SubscriptionBillingTeam.objects.get_or_create(
             subscription=subscription,
             defaults={
                 "name": f"Team {subscription.id}",
                 "seat_limit": subscription.seat_service_item.how_many,
-                # "consumption_strategy": (
-                #     Plan.ConsumptionStrategy.PER_SEAT
-                #     if plan.consumption_strategy == Plan.ConsumptionStrategy.BOTH
-                #     else plan.consumption_strategy
-                # ),
+                "consumption_strategy": (
+                    Plan.ConsumptionStrategy.PER_SEAT
+                    if plan.consumption_strategy == Plan.ConsumptionStrategy.BOTH
+                    else plan.consumption_strategy
+                ),
             },
         )
 
