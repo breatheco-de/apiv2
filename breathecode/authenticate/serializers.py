@@ -283,6 +283,13 @@ class GithubUserSerializer(serpy.Serializer):
         return GithubSmallSerializer(github).data
 
 
+class DiscordUsersSerializer(serpy.Serializer):
+    discord_id = serpy.Field()
+    username = serpy.Field()
+    created_at = serpy.Field()
+    user = UserTinySerializer()
+
+
 class GetProfileSmallSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
 

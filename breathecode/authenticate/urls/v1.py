@@ -50,9 +50,12 @@ from ..views import (
     StudentView,
     TemporalTokenView,
     TokenTemporalView,
+    UpdateEmailEverywhereView,
     UserMeView,
     UserSettingsView,
     WaitingListView,
+    check_discord_server,
+    get_discord_token,
     get_facebook_token,
     get_github_token,
     get_google_token,
@@ -63,6 +66,7 @@ from ..views import (
     get_users,
     login_html_view,
     pick_password,
+    process_discord_token,
     receive_google_webhook,
     render_academy_invite,
     render_google_connect,
@@ -74,7 +78,6 @@ from ..views import (
     save_google_token,
     save_slack_token,
     sync_gitpod_users_view,
-    UpdateEmailEverywhereView,
 )
 
 # avoiding issues on test environment due that the fixture are loaded after this app
@@ -94,7 +97,6 @@ app_name = "authenticate"
 urlpatterns = [
     # The following are endpoitns user by sistem admins
     path("admin/user/<int:user_id>/email", UpdateEmailEverywhereView.as_view(), name="email_update_user"),
-
     path("emailverification/<str:email>", EmailVerification.as_view(), name="email_verification"),
     path("confirmation/<str:token>", ConfirmEmailView.as_view(), name="confirmation_token"),
     path("invite/resend/<str:invite_id>", ResendInviteView.as_view(), name="invite_resend_id"),
@@ -156,6 +158,9 @@ urlpatterns = [
     path("slack/callback/", save_slack_token, name="slack_callback"),
     path("facebook/", get_facebook_token, name="facebook"),
     path("facebook/callback/", save_facebook_token, name="facebook_callback"),
+    path("discord", get_discord_token, name="discord"),
+    path("discord/callback", process_discord_token, name="discord_callback"),
+    path("discord/server/<int:server_id>/<str:cohort_slug>", check_discord_server, name="discord_server_check"),
     path("user/me", UserMeView.as_view(), name="user_me"),
     path("user/me/invite", MeInviteView.as_view(), name="user_me_invite"),
     path("user/me/invite/<slug:new_status>", MeInviteView.as_view(), name="user_me_invite_status"),

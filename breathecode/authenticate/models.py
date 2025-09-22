@@ -42,6 +42,7 @@ __all__ = [
     "CredentialsFacebook",
     "CredentialsQuickBooks",
     "CredentialsGoogle",
+    "CredentialsDiscord",
     "DeviceId",
     "Token",
 ]
@@ -400,6 +401,9 @@ class AcademyAuthSettings(models.Model):
         related_name="github_whitelist_exemptions",
         help_text="Users that will never be removed from GitHub organization regardless of their cohort status",
     )
+    discord_settings = models.JSONField(
+        default=None, blank=True, null=True, help_text="Discord variables for this academy"
+    )
 
     def add_error(self, msg):
         if self.github_error_log is None:
@@ -597,6 +601,18 @@ class NotFoundAnonGoogleUser(models.Model):
     email = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class CredentialsDiscord(models.Model):
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    discord_id = models.CharField(max_length=64, unique=True)
+    joined_servers = models.JSONField(default=None, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.user.email} ({self.discord_id})"
 
 
 class TokenGetOrCreateArgs(TypedDict, total=False):
