@@ -5,6 +5,8 @@ from typing import Any, Optional, TypedDict
 
 from django.core.cache import cache
 from task_manager.core.exceptions import AbortTask, RetryTask
+from breathecode.assignments.models import Task
+
 
 ALLOWED_TYPES = {
     "auth.UserInvite": [
@@ -49,11 +51,17 @@ ALLOWED_TYPES = {
     ],
 }
 
-ENGAGEMENT_POINTS: dict[tuple[str, str], float] = {
-    ("assignments.Task", "open_syllabus_module"): 0.5,
-    ("assignments.Task", "read_assignment"): 1.0,
-    ("assignments.Task", "assignment_status_updated"): 4.0,
-    ("assignments.Task", "assignment_review_status_updated"): 2.0,
+ENGAGEMENT_POINTS: dict[tuple[str, str], dict[str, float]] = {
+    ("assignments.Task", "open_syllabus_module"): {"base": 0.5},
+    ("assignments.Task", "read_assignment"): {"base": 0.5},
+    ("assignments.Task", "assignment_status_updated"): {"base": 1.0},
+    ("assignments.Task", "assignment_review_status_updated"): {
+        "base": 0.0,
+        "PROJECT": 4.0,
+        "EXERCISE": 6.0,
+        "QUIZ": 1.0,
+        "LESSON": 1.0,
+    },
 }
 
 
@@ -671,5 +679,31 @@ def get_current_worker_number() -> int:
     return 0
 
 
-def get_engagement_points(related_type: str, kind: str) -> float:
-    return ENGAGEMENT_POINTS.get((related_type, kind), 0.0)
+def get_engagement_points(related_type: str, kind: str, related_id: Optional[int] = None) -> float:
+    """
+    Get engagement points for a specific activity.
+
+    The ENGAGEMENT_POINTS structure now supports:
+    - Simple points: {"base": value}
+    - Task-type specific points: {"base": value, "PROJECT": value, "EXERCISE": value, ...}
+    """
+    points_config = ENGAGEMENT_POINTS.get((related_type, kind))
+    if not points_config:
+        return 0.0
+
+    # If only has "base", return that value
+    if len(points_config) == 1:
+        return points_config["base"]
+
+    if related_id and "base" in points_config:
+        try:
+            task = Task.objects.get(id=related_id)
+
+            if task.revision_status == Task.RevisionStatus.APPROVED:
+                return points_config.get(task.task_type, points_config["base"])
+            else:
+                return 0.0
+        except Task.DoesNotExist:
+            return points_config["base"]
+
+    return points_config.get("base", 0.0)

@@ -10,7 +10,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         student = Group.objects.filter(name="Student").first()
         teacher = Group.objects.filter(name="Teacher").first()
-        teacher_influencer = Group.objects.filter(name="Teacher Influencer").first()
+        geek_creator = Group.objects.filter(name="Geek Creator").first()
         default = Group.objects.filter(name="Default").first()
         mentor = Group.objects.filter(name="Mentor").first()
 
@@ -30,9 +30,9 @@ class Command(BaseCommand):
             teacher = Group(name="Teacher")
             teacher.save()
 
-        if not teacher_influencer:
-            teacher_influencer = Group(name="Teacher Influencer")
-            teacher_influencer.save()
+        if not geek_creator:
+            geek_creator = Group(name="Geek Creator")
+            geek_creator.save()
 
         users = User.objects.filter()
         default.user_set.set(users)
@@ -53,8 +53,8 @@ class Command(BaseCommand):
         teachers = User.objects.filter(id__in=profile_ids)
         teacher.user_set.set(teachers)
 
-        profile_ids = ProfileAcademy.objects.filter(user__isnull=False, role__slug="teacher_influencer").values_list(
+        profile_ids = ProfileAcademy.objects.filter(user__isnull=False, role__slug="geek_creator").values_list(
             "user__id", flat=True
         )
-        teacher_influencers = User.objects.filter(id__in=profile_ids)
-        teacher_influencer.user_set.set(teacher_influencers)
+        geek_creators = User.objects.filter(id__in=profile_ids)
+        geek_creator.user_set.set(geek_creators)

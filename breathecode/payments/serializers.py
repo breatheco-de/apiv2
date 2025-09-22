@@ -70,6 +70,7 @@ class GetGroupSerializer(serpy.Serializer):
 
 
 class GetServiceSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
@@ -241,6 +242,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     id = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
+    add_ons = serpy.MethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -327,6 +329,13 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         )
 
         return price
+
+    def get_add_ons(self, obj: Plan):
+        context = {}
+        if hasattr(self, "context") and self.context:
+            context["country_code"] = self.context.get("country_code")
+
+        return GetAcademyServiceSmallReverseSerializer(obj.add_ons.all(), many=True, context=context).data
 
 
 class GetPlanOfferTranslationSerializer(serpy.Serializer):
@@ -458,7 +467,7 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
         if not country_code:
             return obj.price_per_unit
 
-        price, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
+        price, _, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
         return price
 
 
@@ -723,6 +732,8 @@ class GetPaymentMethod(serpy.Serializer):
     academy = GetAcademySmallSerializer(required=False, many=False)
     currency = GetCurrencySmallSerializer(required=False, many=False)
     included_country_codes = serpy.Field()
+    visibility = serpy.Field()
+    deprecated = serpy.Field()
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
@@ -747,6 +758,8 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "currency",
             "academy",
             "included_country_codes",
+            "visibility",
+            "deprecated",
         )
 
 

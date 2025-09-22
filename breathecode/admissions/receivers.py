@@ -14,8 +14,8 @@ from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.certificate.actions import get_assets_from_syllabus, how_many_pending_tasks
 
 from ..activity import tasks as activity_tasks
-from .models import Cohort, CohortUser
-from .signals import cohort_log_saved, cohort_user_created, student_edu_status_updated
+from .models import Cohort, CohortUser, Syllabus, SyllabusVersion
+from .signals import cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
 
 # add your receives here
 logger = logging.getLogger(__name__)
@@ -146,27 +146,91 @@ def post_save_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
 
 @receiver(revision_status_updated, sender=Task, weak=False)
 def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs: Any):
-    logger.info("Processing available as saas student's tasks and marking as GRADUATED if it is")
+    logger.info(
+        "[graduate] start | task_id=%s user_id=%s cohort_id=%s",
+        getattr(instance, "id", None),
+        getattr(instance.user, "id", None),
+        getattr(instance.cohort, "id", None),
+    )
 
     if instance.cohort is None:
+        logger.info("[graduate] task has no cohort -> return")
         return
 
     cohort = Cohort.objects.filter(id=instance.cohort.id).first()
+    if cohort is None:
+        logger.info("[graduate] cohort not found (id=%s) -> return", getattr(instance.cohort, "id", None))
+        return
+
+    logger.info(
+        "[graduate] cohort id=%s available_as_saas=%s syllabus_version=%s",
+        cohort.id,
+        cohort.available_as_saas,
+        getattr(cohort, "syllabus_version_id", None),
+    )
 
     if not cohort.available_as_saas:
+        logger.info("[graduate] cohort is not SaaS -> return")
         return
 
     mandatory_projects = get_assets_from_syllabus(cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True)
+    logger.info(
+        "[graduate] mandatory_projects_count=%s mandatory_projects=%s",
+        len(mandatory_projects),
+        mandatory_projects,
+    )
 
     # Only graduate students if the syllabus has mandatory projects
     if len(mandatory_projects) == 0:
+        logger.info("[graduate] no mandatory projects in syllabus -> return")
         return
 
     pending_tasks = how_many_pending_tasks(
-        cohort.syllabus_version, instance.user, task_types=["PROJECT"], only_mandatory=True
+        cohort.syllabus_version,
+        instance.user,
+        task_types=["PROJECT"],
+        only_mandatory=True,
+        cohort_id=cohort.id,
     )
+    logger.info("[graduate] pending_tasks=%s", pending_tasks)
+
+    try:
+        user_tasks = list(
+            Task.objects.filter(user=instance.user, associated_slug__in=mandatory_projects).values(
+                "associated_slug", "revision_status", "task_status"
+            )
+        )
+        logger.info("[graduate] user_tasks_snapshot=%s", user_tasks)
+    except Exception as e:
+        logger.warning("[graduate] unable to fetch user tasks snapshot: %s", str(e))
 
     if pending_tasks == 0:
         cohort_user = CohortUser.objects.filter(user=instance.user.id, cohort=cohort.id).first()
+        if cohort_user is None:
+            logger.info(
+                "[graduate] CohortUser not found for user_id=%s cohort_id=%s -> return",
+                instance.user.id,
+                cohort.id,
+            )
+            return
+
+        before_status = cohort_user.educational_status
         cohort_user.educational_status = "GRADUATED"
         cohort_user.save()
+        logger.info(
+            "[graduate] educational_status changed %s -> %s for cohort_user_id=%s",
+            before_status,
+            cohort_user.educational_status,
+            cohort_user.id,
+        )
+    else:
+        logger.info("[graduate] there are still mandatory pending tasks -> do not graduate")
+
+
+@receiver(syllabus_created, sender=Syllabus)
+def create_initial_syllabus_version(sender: Type[Syllabus], instance: Syllabus, **kwargs: Any):
+    """Create an initial SyllabusVersion when a new Syllabus is created."""
+    logger.info(f"Creating initial SyllabusVersion for Syllabus: {instance.id}")
+
+    # Create the first version (version 1) with default JSON
+    SyllabusVersion.objects.create(syllabus=instance, version=1, status="PUBLISHED")

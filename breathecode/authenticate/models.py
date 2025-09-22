@@ -579,10 +579,10 @@ class CredentialsQuickBooks(models.Model):
 
 class CredentialsGoogle(models.Model):
 
-    token = models.CharField(max_length=255)
-    refresh_token = models.CharField(max_length=255)
+    token = models.CharField(max_length=500)
+    refresh_token = models.CharField(max_length=500)
     id_token = models.CharField(max_length=1400, default="")
-    google_id = models.CharField(max_length=24, default="")
+    google_id = models.CharField(max_length=34, default="")
     expires_at = models.DateTimeField()
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
