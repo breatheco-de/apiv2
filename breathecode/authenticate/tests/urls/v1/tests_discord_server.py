@@ -8,7 +8,7 @@ import pytest
 from rest_framework import status
 
 from breathecode.authenticate.models import CredentialsDiscord
-from breathecode.tests.mixins.breathecode_mixin import Breathecode
+from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 
 @pytest.fixture(autouse=True)
@@ -18,14 +18,13 @@ def setup(db, monkeypatch: pytest.MonkeyPatch):
     yield
 
 
-def test_check_discord_server_success(database, client):
+def test_check_discord_server_success(bc: Breathecode, client):
     """Test successful Discord server check with valid user and server"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="111222333", joined_servers=[12345, 67890])
@@ -48,18 +47,17 @@ def test_check_discord_server_success(database, client):
         assert response.status_code == 200
         assert response.data == {"server_url": "https://discord.com/channels/12345"}
 
-        mock_discord_class.assert_called_once_with(model.academy.id)
+        mock_discord_class.assert_called_once_with(model.academy[0].id)
         mock_discord_service.get_member_in_server.assert_called_once_with("111222333", 12345)
 
 
-def test_check_discord_server_user_not_in_server(database, client):
+def test_check_discord_server_user_not_in_server(bc: Breathecode, client):
     """Test when Discord API returns 404 (user not in server)"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="111222333", joined_servers=[12345])
@@ -87,14 +85,13 @@ def test_check_discord_server_user_not_in_server(database, client):
         # Note: Discord API might not be called if view returns early
 
 
-def test_check_discord_server_no_4geeks_plus_plan(database, client):
+def test_check_discord_server_no_4geeks_plus_plan(bc: Breathecode, client):
     """Test when user doesn't have active 4Geeks Plus subscription"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="111222333", joined_servers=[12345])
@@ -109,13 +106,14 @@ def test_check_discord_server_no_4geeks_plus_plan(database, client):
         mock_has_plans.assert_called_once_with(model.user)
 
 
-def test_check_discord_server_unauthenticated(database, client):
+def test_check_discord_server_unauthenticated(bc: Breathecode, client):
     """Test when user is not authenticated"""
-    database.create(
+    bc.database.create(
         city=1,
         country=1,
         academy=1,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     response = client.get("/v1/auth/discord/server/12345/test-cohort")
@@ -123,14 +121,13 @@ def test_check_discord_server_unauthenticated(database, client):
     assert response.status_code == 401
 
 
-def test_check_discord_server_no_discord_credentials(database, client):
+def test_check_discord_server_no_discord_credentials(bc: Breathecode, client):
     """Test when user has no Discord credentials"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     with patch("breathecode.payments.actions.user_has_active_4geeks_plus_plans") as mock_has_plans:
@@ -143,13 +140,11 @@ def test_check_discord_server_no_discord_credentials(database, client):
         assert response.status_code == 404
 
 
-def test_check_discord_server_cohort_not_found(database, client):
+def test_check_discord_server_cohort_not_found(bc: Breathecode, client):
     """Test when cohort doesn't exist"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         # No cohort created with slug "nonexistent-cohort"
     )
 
@@ -164,14 +159,13 @@ def test_check_discord_server_cohort_not_found(database, client):
         assert response.status_code == 404
 
 
-def test_check_discord_server_invalid_server_id(database, client):
+def test_check_discord_server_invalid_server_id(bc: Breathecode, client):
     """Test when server_id is 0 or invalid"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="111222333", joined_servers=[12345])
@@ -186,14 +180,13 @@ def test_check_discord_server_invalid_server_id(database, client):
         assert response.status_code == 404
 
 
-def test_check_discord_server_user_not_in_joined_servers(database, client):
+def test_check_discord_server_user_not_in_joined_servers(bc: Breathecode, client):
     """Test when user is not in the requested server (not in joined_servers list)"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     # User is in servers 11111 and 22222, but requesting 12345
@@ -211,14 +204,13 @@ def test_check_discord_server_user_not_in_joined_servers(database, client):
         assert response.status_code == 500
 
 
-def test_check_discord_server_discord_api_other_error(database, client):
+def test_check_discord_server_discord_api_other_error(bc: Breathecode, client):
     """Test when Discord API returns other error codes (not 200 or 404)"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     CredentialsDiscord.objects.create(user=model.user, discord_id="111222333", joined_servers=[12345])
@@ -244,14 +236,13 @@ def test_check_discord_server_discord_api_other_error(database, client):
         assert response.data == {"server_url": "https://discord.com/channels/12345"}
 
 
-def test_check_discord_server_multiple_servers_in_joined_list(database, client):
+def test_check_discord_server_multiple_servers_in_joined_list(bc: Breathecode, client):
     """Test when user is in multiple servers and requests one of them"""
-    model = database.create(
+    model = bc.database.create(
         user=1,
-        city=1,
-        country=1,
-        academy=1,
+        academy=2,
         cohort={"slug": "test-cohort"},
+        academy_auth_settings={"discord_settings": {"discord_client_id": "test-client-id"}},
     )
 
     CredentialsDiscord.objects.create(

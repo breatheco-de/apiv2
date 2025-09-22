@@ -1290,7 +1290,9 @@ def revoke_user_discord_permissions(user, academy):
 
     if user_had_roles:
         auth_tasks.send_discord_dm_task.delay(
-            discord_user_id, "Your subscription has ended. Role removed.", cohort_academy.academy.id
+            discord_user_id,
+            "Your 4Geeks Plus subscription has ended, your roles have been removed. Renew your subscription to get them back: https://4geeks.com/checkout?plan=4geeks-plus-subscription",
+            cohort_academy.academy.id,
         )
 
     return user_had_roles

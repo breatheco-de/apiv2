@@ -53,7 +53,11 @@ def test_revoke_user_discord_permissions_user_had_roles(bc: Breathecode, db):
         mock_remove_task.assert_called_once_with("12345", 111222333, "67890", academy_id=model.academy.id)
 
         # Verify DM task was scheduled (user had roles)
-        mock_dm_task.assert_called_once_with(111222333, "Your subscription has ended. Role removed.", model.academy.id)
+        mock_dm_task.assert_called_once_with(
+            111222333,
+            "Your 4Geeks Plus subscription has ended, your roles have been removed. Renew your subscription to get them back: https://4geeks.com/checkout?plan=4geeks-plus-subscription",
+            model.academy.id,
+        )
 
         # Verify function returns True (user had roles)
         assert result is True
@@ -300,7 +304,11 @@ def test_revoke_user_discord_permissions_multiple_cohorts_with_roles(bc: Breathe
         assert mock_remove_task.call_count == 2
 
         # Verify DM task was scheduled (user had roles)
-        mock_dm_task.assert_called_once_with(111222333, "Your subscription has ended. Role removed.", model.academy.id)
+        mock_dm_task.assert_called_once_with(
+            111222333,
+            "Your 4Geeks Plus subscription has ended, your roles have been removed. Renew your subscription to get them back: https://4geeks.com/checkout?plan=4geeks-plus-subscription",
+            model.academy.id,
+        )
 
         assert result is True
 
@@ -412,7 +420,11 @@ def test_revoke_user_discord_permissions_same_server_multiple_roles(bc: Breathec
         assert "role1" in role_ids_called
         assert "role2" in role_ids_called
 
-        mock_dm_task.assert_called_once_with(111222333, "Your subscription has ended. Role removed.", model.academy.id)
+        mock_dm_task.assert_called_once_with(
+            111222333,
+            "Your 4Geeks Plus subscription has ended, your roles have been removed. Renew your subscription to get them back: https://4geeks.com/checkout?plan=4geeks-plus-subscription",
+            model.academy.id,
+        )
 
         assert result is True
 
@@ -463,7 +475,11 @@ def test_revoke_user_discord_permissions_partial_roles_optimization(bc: Breathec
         assert "role2" not in role_ids_called  # This is the optimization!
 
         # Verify DM task was scheduled (user had some roles)
-        mock_dm_task.assert_called_once_with(111222333, "Your subscription has ended. Role removed.", model.academy.id)
+        mock_dm_task.assert_called_once_with(
+            111222333,
+            "Your 4Geeks Plus subscription has ended, your roles have been removed. Renew your subscription to get them back: https://4geeks.com/checkout?plan=4geeks-plus-subscription",
+            model.academy.id,
+        )
 
         # Verify function returns True (user had some roles)
         assert result is True

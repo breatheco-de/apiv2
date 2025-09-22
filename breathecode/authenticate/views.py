@@ -1930,6 +1930,15 @@ def get_discord_token(request):
     query_string = f"token={token}|cohort_slug={cohort_slug}|url={url}".encode("utf-8")
 
     cohort = Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").first()
+    if not cohort:
+        raise ValidationException(
+            translation(
+                en=f"Cohort with slug '{cohort_slug}' not found",
+                es=f"Cohort con slug '{cohort_slug}' no encontrado",
+            ),
+            slug="cohort-not-found",
+        )
+
     settings = AcademyAuthSettings.objects.filter(academy_id=cohort.academy.id).first()
 
     scopes = {"identify", "guilds", "guilds.join", "role_connections.write"}
@@ -2226,21 +2235,16 @@ def pick_password(request, token):
 
                 # Determine app_url from invite's conversion_info if available
                 app_url = os.getenv("APP_URL", "https://4geeks.com")
-
                 if invite and invite.conversion_info and isinstance(invite.conversion_info, dict):
                     landing_url = invite.conversion_info.get("landing_url")
-
                     if landing_url:
                         try:
                             parsed_url = urlparse(landing_url)
-                            if parsed_url.scheme and parsed_url.netloc:
-                                app_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-                            elif landing_url.startswith("/es"):
-                                app_url.rstrip("/")
-                                app_url += "/es"
+                            app_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
                         except Exception:
                             # If any error parsing URL, fallback to default app_url
                             pass
+
                 return shortcuts.render(
                     request,
                     "message.html",

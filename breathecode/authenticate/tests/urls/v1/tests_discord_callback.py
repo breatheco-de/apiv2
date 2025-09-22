@@ -14,6 +14,11 @@ from rest_framework.test import APIClient
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 
+@pytest.fixture(autouse=True)
+def setup(db):
+    pass
+
+
 class StreamReaderMock:
     def __init__(self, data):
         self.data = data

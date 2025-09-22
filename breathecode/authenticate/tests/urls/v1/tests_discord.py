@@ -98,6 +98,11 @@ def test_discord_with_subscription(bc: Breathecode, client: APIClient):
             "is_renewable": False,
         }
     )
+    academy = bc.database.create(academy=1)
+    cohort = bc.database.create(cohort={"academy": academy.academy, "slug": "test-cohort"})
+    academy_auth_settings = bc.database.create(
+        academy_auth_settings={"academy": academy.academy, "discord_settings": {"discord_client_id": "test-client-id"}}
+    )
     model = bc.database.create(user=1, subscription={"plans": [plan.plan.id]})
     client.force_authenticate(model.user)
 
@@ -126,6 +131,11 @@ def test_discord_with_plan_financing(bc: Breathecode, client: APIClient):
             "slug": "4geeks-plus-planfinancing",
             "is_renewable": False,
         }
+    )
+    academy = bc.database.create(academy=1)
+    cohort = bc.database.create(cohort={"academy": academy.academy, "slug": "test-cohort"})
+    academy_auth_settings = bc.database.create(
+        academy_auth_settings={"academy": academy.academy, "discord_settings": {"discord_client_id": "test-client-id"}}
     )
     model = bc.database.create(
         user=1,
@@ -164,6 +174,11 @@ def test_discord_creates_temporal_token(bc: Breathecode, client: APIClient):
             "slug": "4geeks-plus-subscription",
             "is_renewable": False,
         }
+    )
+    academy = bc.database.create(academy=1)
+    cohort = bc.database.create(cohort={"academy": academy.academy, "slug": "test-cohort"})
+    academy_auth_settings = bc.database.create(
+        academy_auth_settings={"academy": academy.academy, "discord_settings": {"discord_client_id": "test-client-id"}}
     )
     model = bc.database.create(user=1, subscription={"plans": [plan.plan.id]})
     client.force_authenticate(model.user)
