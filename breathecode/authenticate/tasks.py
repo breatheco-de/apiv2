@@ -86,25 +86,23 @@ def join_user_to_discord_guild(
     cohort_slug: str,
 ):
     logger.info("=== JOIN DISCORD TASK STARTED ===")
-
     cohort_academy = Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").first()
     if not cohort_academy:
         logger.warning(f"Cohort with slug '{cohort_slug}' not found")
         return
-
     cohorts = Cohort.objects.filter(cohortuser__user_id=user_id, academy=cohort_academy.academy.id).all()
-
     server_id = None
     role_ids = set()
     for cohort in cohorts:
-        for shortcut in cohort.shortcuts:
-            if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
-                if server_id is None:
-                    server_id = shortcut.get("server_id")
-                if shortcut.get("server_id") == server_id:  # Verificar consistencia
-                    role_id = shortcut.get("role_id")
-                    if role_id:
-                        role_ids.add(role_id)
+        if cohort.shortcuts:
+            for shortcut in cohort.shortcuts:
+                if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
+                    if server_id is None:
+                        server_id = shortcut.get("server_id")
+                    if shortcut.get("server_id") == server_id:
+                        role_id = shortcut.get("role_id")
+                        if role_id:
+                            role_ids.add(role_id)
 
     if server_id is None:
         return

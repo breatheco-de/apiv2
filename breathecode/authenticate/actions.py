@@ -542,21 +542,22 @@ def save_discord_credentials(user_id, discord_user_id, guild_id, cohort_slug):
             },
         )
         if not created:
+
             import breathecode.authenticate.tasks as auth_tasks
             from breathecode.authenticate.models import Cohort
 
             cohort_academy = Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").first()
             cohorts = Cohort.objects.filter(cohortuser__user=user, academy=cohort_academy.academy.id).all()
-
             for cohort in cohorts:
-                for shortcut in cohort.shortcuts:
-                    if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
-                        auth_tasks.remove_discord_role_task.delay(
-                            guild_id=guild_id,
-                            discord_user_id=int(credentials.discord_id),
-                            role_id=shortcut.get("role_id", None),
-                            academy_id=cohort_academy.academy.id,
-                        )
+                if cohort.shortcuts:
+                    for shortcut in cohort.shortcuts:
+                        if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
+                            auth_tasks.remove_discord_role_task.delay(
+                                guild_id=guild_id,
+                                discord_user_id=int(credentials.discord_id),
+                                role_id=shortcut.get("role_id", None),
+                                academy_id=cohort_academy.academy.id,
+                            )
 
             credentials.discord_id = discord_user_id
 

@@ -131,13 +131,10 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
 
     def schedule_delayed_revoke(date_field, date_value):
         if date_value and date_value >= timezone.now():
-            minutes_until = int((date_value - timezone.now()).total_seconds() / 60) + 1
+            days_until = int((date_value - timezone.now()).total_seconds() / (24 * 60 * 60)) + 1
             entity_type = "subscription" if isinstance(instance, Subscription) else "plan_financing"
-
-            logger.debug(f"minutes_until: {minutes_until}")
-            manager = schedule_task(auth_tasks.delayed_revoke_discord_permissions, f"{minutes_until}m")
+            manager = schedule_task(auth_tasks.delayed_revoke_discord_permissions, f"{days_until}d")
             if not manager.exists(instance.id, entity_type, date_field):
-                logger.debug(f"calling manager.call({instance.id}, {entity_type}, {date_field})")
                 manager.call(instance.id, entity_type, date_field)
             return True
         return False
@@ -152,10 +149,9 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
         plan_slug = Plan.objects.filter(subscription=instance).first().slug
     else:
         plan_slug = Plan.objects.filter(planfinancing=instance).first().slug
-    logger.debug(f"plan_slug: {plan_slug}")
     if plan_slug == "4geeks-plus-subscription" or plan_slug == "4geeks-plus-planfinancing":
         if instance.status == "CANCELLED":
-            if instance.valid_until and instance.valid_until >= timezone.now():
+            if instance.valid_until:
                 if instance.valid_until >= timezone.now():
                     logger.debug(
                         "The user still has time to pay the subscription after being cancelled, scheduling Discord revoke"
@@ -176,7 +172,6 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
                 else:
                     revoke_user_discord_permissions(instance.user, instance.academy)
                     return
-
         else:
 
             if instance.valid_until:
@@ -186,7 +181,6 @@ def revoke_discord_permissions_receiver(sender, instance, **kwargs):
                     schedule_delayed_revoke("valid_until", instance.valid_until)
                     return
                 else:
-                    logger.debug("llega el reveivere aqui")
 
                     revoke_user_discord_permissions(instance.user, instance.academy)
                     return
@@ -210,7 +204,7 @@ def grant_discord_permissions_receiver(sender, instance, **kwargs):
     plan_slug = Plan.objects.filter(subscription=instance).first().slug
     if plan_slug == "4geeks-plus-subscription" or plan_slug == "4geeks-plus-planfinancing":
         for cohort in cohorts:
-            if cohort.shortcuts != None:
+            if cohort.shortcuts:
                 for shortcut in cohort.shortcuts:
                     if shortcut.get("label", None) != "Discord":
                         continue
