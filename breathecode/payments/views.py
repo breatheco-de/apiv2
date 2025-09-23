@@ -3187,7 +3187,13 @@ class SubscriptionSeatView(APIView):
         return Response(
             {
                 "data": [self._serialize_seat(seat) for seat in result],
-                "errors": [{"message": e.message, "code": e.code} for e in errors],
+                "errors": [
+                    {
+                        "message": getattr(e, "detail", str(e)),
+                        "code": getattr(e, "code", 400),
+                    }
+                    for e in errors
+                ],
             },
             status=status.HTTP_207_MULTI_STATUS,
         )
@@ -3214,7 +3220,8 @@ class SubscriptionSeatView(APIView):
             raise ValidationException(
                 translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"), code=404
             )
+        seat.user = None
         seat.is_active = False
-        seat.save(update_fields=["is_active"])
+        seat.save(update_fields=["is_active", "user"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
