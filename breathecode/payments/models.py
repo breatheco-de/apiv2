@@ -717,10 +717,14 @@ class Plan(AbstractPriceByTime):
         blank=True,
         default=None,
         help_text="AcademyService used as seat pricing for per-seat purchases",
+        related_name="plans_as_seat_service_price",
     )
 
     add_ons = models.ManyToManyField(
-        AcademyService, blank=True, help_text="Service item bundles that can be purchased with this plan"
+        AcademyService,
+        blank=True,
+        help_text="Service item bundles that can be purchased with this plan",
+        related_name="plans_with_add_ons",
     )
 
     consumption_strategy = models.CharField(
@@ -1134,6 +1138,7 @@ class Bag(AbstractAmountByTime):
         blank=True,
         default=None,
         help_text="ServiceItem used as seat pricing for per-seat purchases",
+        related_name="%(class)s_as_seat_service_item",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -1412,6 +1417,7 @@ class AbstractIOweYou(models.Model):
         blank=True,
         default=None,
         help_text="ServiceItem used as seat pricing for per-seat purchases",
+        related_name="%(class)s_as_seat_service_item",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

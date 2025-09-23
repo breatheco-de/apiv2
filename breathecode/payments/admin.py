@@ -70,7 +70,7 @@ class ServiceTranslationAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceItem)
 class ServiceItemAdmin(admin.ModelAdmin):
-    list_display = ("id", "unit_type", "how_many", "is_team_allowed", "max_team_members", "service")
+    list_display = ("id", "unit_type", "how_many", "is_team_allowed", "service")
     list_filter = ["service__owner", "is_team_allowed"]
     search_fields = [
         "service__slug",
