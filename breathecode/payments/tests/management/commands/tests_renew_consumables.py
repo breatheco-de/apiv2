@@ -207,6 +207,7 @@ def test_this_resource_requires_a_renovation(bc: Breathecode, entity, entity_att
 
     model = bc.database.create(
         **extra,
+        invoice={"amount": 10},
         consumable=(2, consumable),
         service_stock_scheduler=service_stock_schedulers,
         plan_service_item_handler=plan_service_item_handlers,
