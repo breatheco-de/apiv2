@@ -1825,6 +1825,7 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
 
 class SeatDict(TypedDict, total=False):
     email: str
+    seat_multiplier: int
     first_name: str | None
     last_name: str | None
 
@@ -1839,6 +1840,7 @@ class AddSeat(TypedDict):
 class ReplaceSeat(TypedDict):
     from_email: str
     to_email: str
+    seat_multiplier: int
     first_name: str
     last_name: str
 

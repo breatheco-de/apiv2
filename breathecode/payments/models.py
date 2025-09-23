@@ -1673,6 +1673,7 @@ class SubscriptionSeat(models.Model):
         null=True,
         blank=True,
         default=None,
+        related_name="seats",
     )
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, help_text="Assigned user", null=True, blank=True, default=None

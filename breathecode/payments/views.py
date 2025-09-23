@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Any, TypedDict
+from typing import Any
 
 from adrf.views import APIView
 from capyc.core.i18n import translation
@@ -3023,28 +3023,6 @@ class SubscriptionBillingTeamView(APIView):
             # "consumption_strategy": team.consumption_strategy,
         }
         return Response(data, status=status.HTTP_200_OK)
-
-
-class ReplaceSeat(TypedDict):
-    from_email: str
-    to_email: str
-    seat_multiplier: int
-    first_name: str | None
-    last_name: str | None
-
-
-class AddSeat(TypedDict):
-    email: str
-    seat_multiplier: int
-    first_name: str | None
-    last_name: str | None
-
-
-class SeatDict(TypedDict):
-    email: str
-    seat_multiplier: int
-    first_name: str | None
-    last_name: str | None
 
 
 class SubscriptionSeatView(APIView):
