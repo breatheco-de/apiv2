@@ -2,7 +2,8 @@ import os
 import re
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Literal, Optional, Tuple, Type, TypedDict, Union
+from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
+import uuid
 
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
@@ -18,10 +19,12 @@ from rest_framework.request import Request
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import UserSetting
+from breathecode.authenticate.models import UserSetting, UserInvite
 from breathecode.media.models import File
 from breathecode.payments import tasks
 from breathecode.utils import getLogger
+from breathecode.authenticate.actions import get_app_url
+from breathecode.notify import actions as notify_actions
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
 
@@ -66,11 +69,6 @@ def calculate_relative_delta(unit: float, unit_type: str):
         delta_args["years"] = unit
 
     return relativedelta(**delta_args)
-
-
-# ------------------------------
-# Seat logs utilities
-# ------------------------------
 
 
 class PlanFinder:
@@ -1803,116 +1801,6 @@ def user_has_active_paid_plans(user: User) -> bool:
 # Team member consumables (per-member issuance from JSON)
 # ------------------------------
 
-
-def _get_team_policy_entries(service_item: ServiceItem) -> list[dict]:
-    policy = service_item.team_consumables or {}
-    entries = policy.get("allowed")
-    if isinstance(entries, list):
-        return [e for e in entries if isinstance(e, dict)]
-    return []
-
-
-def _get_target_service_item_for_entry(entry: dict) -> ServiceItem | None:
-    slug = entry.get("service_slug")
-    unit_type = entry.get("unit_type")
-    if not slug:
-        return None
-
-    qs = ServiceItem.objects.filter(service__slug=slug)
-    if unit_type:
-        qs = qs.filter(unit_type=unit_type)
-    return qs.order_by("id").first()
-
-
-def create_team_member_consumables(
-    *,
-    subscription: Subscription,
-    user: User,
-    policy_item: ServiceItem,
-    seat: SubscriptionSeat | None = None,
-    team: SubscriptionBillingTeam | None = None,
-    lang: str = "en",
-) -> list[Consumable]:
-    """Create per-member consumables for a seat user, based on policy_item.team_consumables.
-
-    - Skips entries with missing service_slug
-    - Idempotent: if an active consumable already exists for the entry, it won't duplicate
-    """
-    created: list[Consumable] = []
-
-    if not policy_item.is_team_allowed:
-        return created
-
-    entries = _get_team_policy_entries(policy_item)
-    utc_now = timezone.now()
-
-    for entry in entries:
-        service_slug = entry.get("service_slug")
-        if not service_slug:
-            logger.warning(
-                "Skipping team consumable entry without service_slug for subscription=%s user=%s",
-                subscription.id,
-                user.id,
-            )
-            continue
-
-        target_item = _get_target_service_item_for_entry(entry)
-        if not target_item:
-            logger.warning(
-                "No matching ServiceItem for service_slug=%s (unit_type=%s)", service_slug, entry.get("unit_type")
-            )
-            continue
-
-        # Check if there's already an active consumable for this target
-        existing = (
-            Consumable.objects.filter(user=user, subscription=subscription, service_item=target_item)
-            .filter(Q(valid_until__gte=utc_now) | Q(valid_until=None))
-            .exclude(how_many=0)
-            .order_by("-id")
-            .first()
-        )
-        if existing:
-            continue
-
-        how_many = entry.get("how_many", target_item.how_many)
-        unit_type = entry.get("unit_type", target_item.unit_type)
-        renew_at = entry.get("renew_at", policy_item.renew_at)
-        renew_at_unit = entry.get("renew_at_unit", policy_item.renew_at_unit)
-
-        # Compute valid_until bounded by subscription
-        delta = calculate_relative_delta(renew_at, renew_at_unit)
-        valid_until = utc_now + delta
-
-        if subscription.next_payment_at and valid_until > subscription.next_payment_at:
-            valid_until = subscription.next_payment_at
-
-        if subscription.valid_until and valid_until and valid_until > subscription.valid_until:
-            valid_until = subscription.valid_until
-
-        c = Consumable(
-            service_item=target_item,
-            user=user,
-            unit_type=unit_type,
-            how_many=how_many,
-            valid_until=valid_until,
-            subscription=subscription,
-            subscription_billing_team=team,
-            subscription_seat=seat,
-        )
-        c.save()
-        created.append(c)
-
-        logger.info(
-            "Created team consumable id=%s for user=%s subscription=%s service=%s",
-            c.id,
-            user.id,
-            subscription.id,
-            target_item.service.slug,
-        )
-
-    return created
-
-
 type SeatLogAction = Literal["ADDED", "REMOVED", "REPLACED"]
 
 
@@ -1930,3 +1818,229 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
         "created_at": utc_now.isoformat().replace("+00:00", "Z"),
     }
     return entry
+
+
+# seats management
+
+
+class SeatDict(TypedDict, total=False):
+    email: str
+    first_name: str | None
+    last_name: str | None
+
+
+class AddSeat(TypedDict):
+    email: str
+    seat_multiplier: int
+    first_name: str
+    last_name: str
+
+
+class ReplaceSeat(TypedDict):
+    from_email: str
+    to_email: str
+    first_name: str
+    last_name: str
+
+
+def invite_user_to_subscription_team(
+    obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
+):
+    invite, created = UserInvite.objects.get_or_create(
+        email=obj.get("email", ""),
+        academy=subscription.academy,
+        subscription_seat=subscription_seat,
+        role="STUDENT",
+        defaults={
+            "status": "PENDING",
+            "author": subscription.user,
+            "role_id": "student",
+            "token": str(uuid.uuid4()),
+            "sent_at": timezone.now(),
+            "first_name": obj.get("first_name", ""),
+            "last_name": obj.get("last_name", ""),
+        },
+    )
+    if created or invite.status == "PENDING":
+        notify_actions.send_email_message(
+            "welcome_academy",
+            obj.get("email", ""),
+            {
+                "email": obj.get("email", ""),
+                "subject": translation(
+                    lang,
+                    en=f"Invitation to join {subscription.academy.name}",
+                    es=f"Invitación para unirse a {subscription.academy.name}",
+                ),
+                "LINK": get_app_url() + "/v1/auth/member/invite/" + invite.token,
+                "FIST_NAME": invite.first_name or "",
+            },
+            academy=subscription.academy,
+        )
+
+
+def create_seat(email: str, user: User | None, seat_multiplier: int, billing_team: SubscriptionBillingTeam, lang: str):
+    if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="User already has a seat for this team",
+                es="El usuario ya tiene un asiento para esta equipo",
+                slug="duplicate-team-seat",
+            ),
+            code=400,
+        )
+
+    seat = SubscriptionSeat(
+        billing_team=billing_team,
+        user=user,
+        email=email,
+        seat_multiplier=seat_multiplier,
+    )
+    seat_log_entry = create_seat_log_entry(seat, "ADDED")
+    seat.seat_log.append(seat_log_entry)
+    seat.save()
+
+    if not user:
+        invite_user_to_subscription_team(
+            {"email": email, "first_name": None, "last_name": None},
+            billing_team.subscription,
+            billing_team,
+            lang,
+        )
+
+    # create consumables unless shared per team
+    strategy = getattr(
+        billing_team,
+        "consumption_strategy",
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT,
+    )
+
+    # if strategy is not per team, create the individual consumables
+    if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+        tasks.build_service_stock_scheduler_from_subscription.delay(billing_team.subscription.id, seat_id=seat.id)
+
+    return seat
+
+
+def replace_seat(
+    from_email: str,
+    to_email: str,
+    to_user: User | None,
+    subscription_seat: SubscriptionSeat,
+    lang: str,
+):
+    seat = SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=from_email).first()
+    if not seat:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is no seat with this email {from_email}",
+                es=f"No hay un asiento con este email {from_email}",
+                slug="no-seat-with-this-email",
+            ),
+            code=400,
+        )
+
+    if SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=to_email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is already a seat with this email {to_email}",
+                es=f"Ya hay un asiento con este email {to_email}",
+                slug="seat-with-this-email-already-exists",
+            ),
+            code=400,
+        )
+
+    seat.email = to_email
+    seat.user = to_user
+    seat.is_active = True
+    seat_log_entry = create_seat_log_entry(seat, "REPLACED")
+    seat.seat_log.append(seat_log_entry)
+    seat.save(update_fields=["seat_log", "is_active"])
+    seat.save()
+
+    if not to_user:
+        invite_user_to_subscription_team(
+            {"email": to_email, "first_name": None, "last_name": None},
+            subscription_seat.billing_team.subscription,
+            subscription_seat,
+            lang,
+        )
+
+    # create consumables unless shared per team
+    strategy = getattr(
+        subscription_seat.billing_team,
+        "consumption_strategy",
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT,
+    )
+
+    # if strategy is not per team and there is a user, reassign consumables from the seat to the new user
+    if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM and to_user:
+        Consumable.objects.filter(subscription_seat=seat).update(user=to_user)
+
+    return seat
+
+
+def normalize_email(email: str):
+    return email.strip().lower()
+
+
+def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
+    l: list[AddSeat] = []
+    for seat in add_seats:
+        serialized = {
+            "email": normalize_email(seat["email"]),
+            "seat_multiplier": seat.get("seat_multiplier", 1),
+            "first_name": seat.get("first_name", ""),
+            "last_name": seat.get("last_name", ""),
+        }
+        l.append(serialized)
+    return l
+
+
+def normalize_replace_seat(replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
+    l: list[AddSeat] = []
+    for seat in replace_seats:
+        serialized = {
+            "from_email": normalize_email(seat["from_email"]),
+            "to_email": normalize_email(seat["to_email"]),
+            "first_name": seat.get("first_name", ""),
+            "last_name": seat.get("last_name", ""),
+        }
+        l.append(serialized)
+    return l
+
+
+def validate_seats_limit(
+    team: SubscriptionBillingTeam, add_seats: list[AddSeat], replace_seats: list[ReplaceSeat], lang: str
+):
+    seats = {}
+    for seat in SubscriptionSeat.objects.filter(billing_team=team):
+        seats[seat.email] = seat.seat_multiplier
+
+    for seat in add_seats:
+        # seat is a dict-like (TypedDict)
+        seats[seat["email"]] = seat.get("seat_multiplier", 1)
+
+    for seat in replace_seats:
+        # carry forward the existing multiplier when replacing an email
+        prev = seats.pop(seat["from_email"], None)
+        if prev is not None:
+            seats[seat["to_email"]] = prev
+
+    value = 0
+    for seat in seats.values():
+        value += seat
+
+    if team.seats_limit and value > team.seats_limit:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Seats limit exceeded: {value} > {team.seats_limit}",
+                es=f"Límite de asientos excedido: {value} > {team.seats_limit}",
+                slug="seats-limit-exceeded",
+            ),
+            code=400,
+        )

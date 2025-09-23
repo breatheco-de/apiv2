@@ -1,6 +1,5 @@
 from datetime import timedelta
 from typing import Any, TypedDict
-import uuid
 
 from adrf.views import APIView
 from capyc.core.i18n import translation
@@ -22,18 +21,15 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.authenticate.models import UserInvite
 from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
-import breathecode.notify.actions as notify_actions
-from breathecode.authenticate.actions import get_academy_from_body, get_app_url, get_user_language
+from breathecode.authenticate.actions import get_academy_from_body, get_user_language
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
     apply_pricing_ratio,
-    create_seat_log_entry,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -3098,11 +3094,10 @@ class SubscriptionSeatView(APIView):
             )
         return team
 
-    def _get_seats(
-        self, team: SubscriptionBillingTeam, lang: str
-    ) -> QuerySet[SubscriptionSeat] | list[SubscriptionSeat]:
+    def _get_seats(self, team: SubscriptionBillingTeam) -> QuerySet[SubscriptionSeat] | list[SubscriptionSeat]:
         return SubscriptionSeat.objects.filter(billing_team=team)
 
+    # it's using a serializer like this because serpy doesn't support async code
     def _serialize_seat(self, seat: SubscriptionSeat) -> dict[str, Any]:
         return {
             "id": seat.id,
@@ -3118,7 +3113,7 @@ class SubscriptionSeatView(APIView):
 
         subscription = self._get_subscription(subscription_id, lang)
         team = self._get_team(subscription, lang)
-        qs = self._get_seats(team, lang)
+        qs = self._get_seats(team)
         if seat_id:
             seat = qs.filter(id=seat_id).first()
             if not seat:
@@ -3135,183 +3130,6 @@ class SubscriptionSeatView(APIView):
     def _get_user(self, email: str):
         user = User.objects.filter(email_iexact=email).first()
         return user
-
-    def _invite_user_to_subscription_team(
-        self, obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
-    ):
-        invite, created = UserInvite.objects.get_or_create(
-            email=obj.get("email", ""),
-            academy=subscription.academy,
-            subscription_seat=subscription_seat,
-            role="STUDENT",
-            defaults={
-                "status": "PENDING",
-                "author": subscription.user,
-                "role_id": "student",
-                "token": str(uuid.uuid4()),
-                "sent_at": timezone.now(),
-                "first_name": obj.get("first_name", ""),
-                "last_name": obj.get("last_name", ""),
-            },
-        )
-        if created or invite.status == "PENDING":
-            notify_actions.send_email_message(
-                "welcome_academy",
-                obj.get("email", ""),
-                {
-                    "email": obj.get("email", ""),
-                    "subject": translation(
-                        lang,
-                        en=f"Invitation to join {subscription.academy.name}",
-                        es=f"Invitación para unirse a {subscription.academy.name}",
-                    ),
-                    "LINK": get_app_url() + "/v1/auth/member/invite/" + invite.token,
-                    "FIST_NAME": invite.first_name or "",
-                },
-                academy=subscription.academy,
-            )
-
-    def _create_seat(self, email: str, user: User | None, subscription_seat: SubscriptionSeat, lang: str):
-        if SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=email).exists():
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="User already has a seat for this subscription",
-                    es="El usuario ya tiene un asiento para esta suscripción",
-                    slug="duplicate-team-seat",
-                ),
-                code=400,
-            )
-
-        seat = SubscriptionSeat(
-            billing_team=subscription_seat.billing_team,
-            user=user,
-            email=email,
-            seat_multiplier=subscription_seat.seat_multiplier,
-        )
-        seat_log_entry = create_seat_log_entry(seat, "ADDED")
-        seat.seat_log.append(seat_log_entry)
-        seat.save(update_fields=["seat_log"])
-
-        if not user:
-            self._invite_user_to_subscription_team(
-                {"email": email, "first_name": None, "last_name": None},
-                subscription_seat.billing_team.subscription,
-                subscription_seat,
-                lang,
-            )
-
-        # create consumables
-        tasks.build_service_stock_scheduler_from_subscription.delay(
-            subscription_seat.billing_team.subscription.id, seat_id=subscription_seat.id
-        )
-
-        return seat
-
-    def _replace_seat(
-        self,
-        from_email: str,
-        to_email: str,
-        to_user: User | None,
-        subscription_seat: SubscriptionSeat,
-        lang: str,
-    ):
-        seat = SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=from_email).first()
-        if not seat:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"There is no seat with this email {from_email}",
-                    es=f"No hay un asiento con este email {from_email}",
-                    slug="no-seat-with-this-email",
-                ),
-                code=400,
-            )
-
-        if SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=to_email).exists():
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"There is already a seat with this email {to_email}",
-                    es=f"Ya hay un asiento con este email {to_email}",
-                    slug="seat-with-this-email-already-exists",
-                ),
-                code=400,
-            )
-
-        seat.email = to_email
-        seat.user = to_user
-        seat.is_active = True
-        seat_log_entry = create_seat_log_entry(seat, "REPLACED")
-        seat.seat_log.append(seat_log_entry)
-        seat.save(update_fields=["seat_log", "is_active"])
-        seat.save()
-
-        if not to_user:
-            self._invite_user_to_subscription_team(
-                {"email": to_email, "first_name": None, "last_name": None},
-                subscription_seat.billing_team.subscription,
-                subscription_seat,
-                lang,
-            )
-
-        return seat
-
-    def _normalize_email(self, email: str):
-        return email.strip().lower()
-
-    def _normalize_add_seats(self, add_seats: list[dict[str, Any]]) -> list[AddSeat]:
-        l: list[AddSeat] = []
-        for seat in add_seats:
-            serialized = {
-                "email": self._normalize_email(seat["email"]),
-                "seat_multiplier": seat.get("seat_multiplier", 1),
-                "first_name": seat.get("first_name", ""),
-                "last_name": seat.get("last_name", ""),
-            }
-            l.append(serialized)
-        return l
-
-    def _normalize_replace_seat(self, replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
-        l: list[AddSeat] = []
-        for seat in replace_seats:
-            serialized = {
-                "from_email": self._normalize_email(seat["from_email"]),
-                "to_email": self._normalize_email(seat["to_email"]),
-                "first_name": seat.get("first_name", ""),
-                "last_name": seat.get("last_name", ""),
-            }
-            l.append(serialized)
-        return l
-
-    def _validate_seats_limit(
-        self, team: SubscriptionBillingTeam, add_seats: list[AddSeat], replace_seats: list[ReplaceSeat], lang: str
-    ):
-        seats = {}
-        for seat in self._get_seats(team, lang):
-            seats[seat.email] = seat.seat_multiplier
-
-        for seat in add_seats:
-            seats[seat.email] = seat.seat_multiplier
-
-        for seat in replace_seats:
-            del seats[seat.from_email]
-            seats[seat.to_email] = seat.seat_multiplier
-
-        value = 0
-        for seat in seats.values():
-            value += seat
-
-        if team.seats_limit and value > team.seats_limit:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Seats limit exceeded: {value} > {team.seats_limit}",
-                    es=f"Límite de asientos excedido: {value} > {team.seats_limit}",
-                    slug="seats-limit-exceeded",
-                ),
-                code=400,
-            )
 
     def put(self, request, subscription_id: int):
         lang = get_user_language(request)
@@ -3330,8 +3148,8 @@ class SubscriptionSeatView(APIView):
                 code=403,
             )
 
-        add_seats = self._normalize_add_seats(data.get("add_seats", []))
-        replace_seats = self._normalize_replace_seat(data.get("replace_seats", []))
+        add_seats = actions.normalize_add_seats(data.get("add_seats", []))
+        replace_seats = actions.normalize_replace_seat(data.get("replace_seats", []))
 
         if not add_seats and not replace_seats:
             raise ValidationException(
@@ -3347,21 +3165,21 @@ class SubscriptionSeatView(APIView):
         subscription = self._get_subscription(subscription_id, lang)
         team = self._get_team(subscription, lang)
 
-        self._validate_seats_limit(team, add_seats, replace_seats, lang)
+        actions.validate_seats_limit(team, add_seats, replace_seats, lang)
 
         result: list[SubscriptionSeat] = []
         errors: list[ValidationException] = []
 
         for seat in add_seats:
             try:
-                result.append(self._create_seat(seat.email, seat.user, seat.seat_multiplier, lang))
+                result.append(actions.create_seat(seat.email, seat.user, seat.seat_multiplier, team, lang))
             except ValidationException as e:
                 errors.append(e)
 
         for seat in replace_seats:
             try:
                 result.append(
-                    self._replace_seat(seat.from_email, seat.to_email, seat.to_user, seat.seat_multiplier, lang)
+                    actions.replace_seat(seat.from_email, seat.to_email, seat.to_user, seat.seat_multiplier, lang)
                 )
             except ValidationException as e:
                 errors.append(e)
