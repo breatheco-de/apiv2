@@ -70,8 +70,14 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         extras = {}
         if scheduler.subscription_seat:
             extras["subscription_seat_id"] = scheduler.subscription_seat.id
+            extras["subscription_billing_team_id"] = scheduler.subscription_seat.billing_team.id
+
         # if scheduler.plan_financing_seat:
         #     extras["plan_financing_seat_id"] = scheduler.plan_financing_seat.id
+
+        if scheduler.subscription_billing_team:
+            extras["user"] = None
+            extras["subscription_billing_team_id"] = scheduler.subscription_billing_team.id
         return extras
 
     logger.info(f"Starting renew_consumables for service stock scheduler {scheduler_id}")
@@ -224,10 +230,12 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         logger.error(f"The Plan not have a resource linked to it for the ServiceStockScheduler {scheduler.id}")
         return
 
+    if "user" not in extras:
+        extras["user"] = user
+
     # Issue owner consumable; per-seat issuance is handled by renew_team_member_consumables
     consumable = Consumable(
         service_item=service_item,
-        user=user,
         unit_type=service_item.unit_type,
         how_many=service_item.how_many,
         valid_until=scheduler.valid_until,
@@ -908,6 +916,10 @@ def build_service_stock_scheduler_from_subscription(
     logger.info(f"Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}")
 
     def build_schedulers(allow_team=None):
+        billing_team = None
+        if subscription_seat:
+            billing_team = team
+
         for handler in SubscriptionServiceItem.objects.filter(subscription=subscription).select_related("service_item"):
             # If building for a seat, skip items that are not team-allowed
             if subscription_seat and allow_team != None and handler.service_item.is_team_allowed is not allow_team:
@@ -924,7 +936,9 @@ def build_service_stock_scheduler_from_subscription(
                 valid_until = subscription.valid_until
 
             ServiceStockScheduler.objects.get_or_create(
-                subscription_handler=handler, subscription_seat=subscription_seat
+                subscription_handler=handler,
+                subscription_seat=subscription_seat,
+                subscription_billing_team=billing_team,
             )
 
         for plan in subscription.plans.all():
@@ -945,11 +959,14 @@ def build_service_stock_scheduler_from_subscription(
 
                 handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription, handler=handler)
 
-                ServiceStockScheduler.objects.get_or_create(plan_handler=handler, subscription_seat=subscription_seat)
+                ServiceStockScheduler.objects.get_or_create(
+                    plan_handler=handler, subscription_seat=subscription_seat, subscription_billing_team=billing_team
+                )
 
         if not update_mode:
             renew_subscription_consumables.delay(subscription.id, seat_id=seat_id)
 
+    team = None
     subscription_seat = None
     if seat_id:
         # SubscriptionSeat does not link directly to Subscription; it links via billing_team
@@ -997,6 +1014,13 @@ def build_service_stock_scheduler_from_subscription(
         team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
         if not team:
             raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
+
+        if team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+            update_mode = True
+            build_schedulers(True)
+            update_mode = False
+            build_schedulers(False)
+            return
 
         utc_now = timezone.now()
         created_owner_schedulers = False

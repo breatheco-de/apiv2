@@ -4,7 +4,7 @@ import logging
 import math
 import os
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING, Protocol, TypeVar, Awaitable
 import random
 
 from asgiref.sync import sync_to_async
@@ -36,9 +36,68 @@ from breathecode.utils.validators.language import validate_language_code
 
 logger = logging.getLogger(__name__)
 
+# Type-only helpers for better Pyright inference of Django managers
+if TYPE_CHECKING:
+    _M = TypeVar("_M", bound=models.Model, covariant=True)
+
+    class TypedQuerySet(Protocol[_M]):
+        # Chainable queryset methods
+        def filter(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
+        def exclude(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
+        def only(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def prefetch_related(self, *lookups: str) -> "TypedQuerySet[_M]": ...
+        def select_related(self, *lookups: str) -> "TypedQuerySet[_M]": ...
+        def order_by(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def all(self) -> "TypedQuerySet[_M]": ...
+
+        # Evaluation / retrieval
+        def exists(self) -> bool: ...
+        def count(self) -> int: ...
+        def first(self) -> _M | None: ...
+        def last(self) -> _M | None: ...
+
+        # Async evaluation / retrieval
+        def aexists(self) -> Awaitable[bool]: ...
+        def acount(self) -> Awaitable[int]: ...
+        def afirst(self) -> Awaitable[_M | None]: ...
+        def alast(self) -> Awaitable[_M | None]: ...
+
+        # Creation / singular retrieval
+        def get(self, *args, **kwargs) -> _M: ...
+        def create(self, *args, **kwargs) -> _M: ...
+        def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+        def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+
+        # Async creation / singular retrieval
+        def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+        def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+
+        # Values APIs (coarse types, sufficient for our usages)
+        def values(self, *fields: str) -> list[dict[str, Any]]: ...
+        def values_list(self, *fields: str, flat: bool = ...) -> list[Any]: ...
+
+    class TypedManager(Protocol[_M]):
+        def filter(self, *args, **kwargs) -> TypedQuerySet[_M]: ...
+        def all(self) -> TypedQuerySet[_M]: ...
+        def get(self, *args, **kwargs) -> _M: ...
+        def create(self, *args, **kwargs) -> _M: ...
+        def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+        def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+
+        # Async counterparts
+        def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+        def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+
 
 class Currency(models.Model):
     """Represents a currency."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["Currency"]
 
     code = models.CharField(
         max_length=3, unique=True, db_index=True, help_text="ISO 4217 currency code (e.g. USD, EUR, MXN)"
@@ -66,6 +125,9 @@ class Currency(models.Model):
 class AbstractPriceByUnit(models.Model):
     """This model is used to store the price of a Product or a Service."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractPriceByUnit"]
+
     price_per_unit = models.FloatField(default=0, help_text="Price per unit")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
 
@@ -78,6 +140,9 @@ class AbstractPriceByUnit(models.Model):
 
 class AbstractPriceByTime(models.Model):
     """This model is used to store the price of a Product or a Service."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractPriceByTime"]
 
     price_per_month = models.FloatField(default=None, blank=True, null=True, help_text="Price per month")
     price_per_quarter = models.FloatField(default=None, blank=True, null=True, help_text="Price per quarter")
@@ -94,6 +159,9 @@ class AbstractPriceByTime(models.Model):
 
 class AbstractAmountByTime(models.Model):
     """This model is used to store the price of a Product or a Service."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractAmountByTime"]
 
     amount_per_month = models.FloatField(default=0, help_text="Amount per month")
     amount_per_quarter = models.FloatField(default=0, help_text="Amount per quarter")
@@ -122,6 +190,9 @@ PAY_EVERY_UNIT = [
 
 class AbstractAsset(models.Model):
     """This model represents a product or a service that can be sold."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractAsset"]
 
     slug = models.CharField(
         max_length=60,
@@ -156,6 +227,9 @@ class AbstractAsset(models.Model):
 
 class Service(AbstractAsset):
     """Represents the service that can be purchased by the customer."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["Service"]
 
     class Type(models.TextChoices):
         COHORT_SET = ("COHORT_SET", "Cohort set")
@@ -199,6 +273,10 @@ class ServiceTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+
+    if TYPE_CHECKING:
+        objects: TypedManager["ServiceTranslation"]
+
     title = models.CharField(max_length=60, help_text="Title of the service")
     description = models.CharField(max_length=255, help_text="Description of the service")
 
@@ -214,6 +292,9 @@ SERVICE_UNITS = [
 
 class AbstractServiceItem(models.Model):
     """Common fields for ServiceItem and Consumable."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractServiceItem"]
 
     # the unit between a service and a product are different
     unit_type = models.CharField(
@@ -231,6 +312,9 @@ class AbstractServiceItem(models.Model):
 # this class is used as referenced of units of a service can be used
 class ServiceItem(AbstractServiceItem):
     """This model is used as referenced of units of a service can be used."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["ServiceItem"]
 
     service = models.ForeignKey(Service, on_delete=models.CASCADE, help_text="Service")
     is_renewable = models.BooleanField(
@@ -302,6 +386,9 @@ class ServiceItem(AbstractServiceItem):
 class ServiceItemFeature(models.Model):
     """This model is used as referenced of units of a service can be used."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["ServiceItemFeature"]
+
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text="Service item")
     lang = models.CharField(
         max_length=5,
@@ -320,6 +407,9 @@ class FinancingOption(models.Model):
     """This model is used as referenced of units of a service can be used."""
 
     _lang = "en"
+
+    if TYPE_CHECKING:
+        objects: TypedManager["FinancingOption"]
 
     monthly_price = models.FloatField(default=1, help_text="Monthly price (e.g. 1, 2, 3, ...)")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
@@ -358,6 +448,9 @@ class CohortSet(models.Model):
 
     _lang = "en"
 
+    if TYPE_CHECKING:
+        objects: TypedManager["CohortSet"]
+
     slug = models.SlugField(
         max_length=100,
         unique=True,
@@ -385,6 +478,10 @@ class CohortSetTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+
+    if TYPE_CHECKING:
+        objects: TypedManager["CohortSetTranslation"]
+
     title = models.CharField(max_length=60, help_text="Title of the cohort set")
     description = models.CharField(max_length=255, help_text="Description of the cohort set")
     short_description = models.CharField(max_length=255, help_text="Short description of the cohort set")
@@ -394,6 +491,9 @@ class CohortSetCohort(models.Model):
     """M2M between CohortSet and Cohort."""
 
     _lang = "en"
+
+    if TYPE_CHECKING:
+        objects: TypedManager["CohortSetCohort"]
 
     cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text="Cohort set")
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, help_text="Cohort")
@@ -434,6 +534,9 @@ class CohortSetCohort(models.Model):
 class MentorshipServiceSet(models.Model):
     """M2M between plan and ServiceItem."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["MentorshipServiceSet"]
+
     slug = models.SlugField(
         max_length=100,
         unique=True,
@@ -457,6 +560,10 @@ class MentorshipServiceSetTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+
+    if TYPE_CHECKING:
+        objects: TypedManager["MentorshipServiceSetTranslation"]
+
     title = models.CharField(max_length=60, help_text="Title of the mentorship service set")
     description = models.CharField(max_length=255, help_text="Description of the mentorship service set")
     short_description = models.CharField(max_length=255, help_text="Short description of the mentorship service set")
@@ -464,6 +571,9 @@ class MentorshipServiceSetTranslation(models.Model):
 
 class EventTypeSet(models.Model):
     """M2M between plan and ServiceItem."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["EventTypeSet"]
 
     slug = models.SlugField(
         max_length=100,
@@ -486,6 +596,10 @@ class EventTypeSetTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+
+    if TYPE_CHECKING:
+        objects: TypedManager["EventTypeSetTranslation"]
+
     title = models.CharField(max_length=60, help_text="Title of the event type set")
     description = models.CharField(max_length=255, help_text="Description of the event type set")
     short_description = models.CharField(max_length=255, help_text="Short description of the event type set")
@@ -496,6 +610,8 @@ class AcademyService(models.Model):
     _max_amount: float | None = None
     _currency: Currency | None = None
     _pricing_ratio_explanation: dict | None = None
+    if TYPE_CHECKING:
+        objects: TypedManager["AcademyService"]
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
     service = models.OneToOneField(Service, on_delete=models.CASCADE, help_text="Service")
@@ -657,6 +773,9 @@ class AcademyService(models.Model):
 
 class Plan(AbstractPriceByTime):
     """A plan is a group of services that can be purchased by a user."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["Plan"]
 
     class Status(models.TextChoices):
         DRAFT = ("DRAFT", "Draft")
@@ -829,6 +948,8 @@ class PlanTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanTranslation"]
     title = models.CharField(max_length=60, help_text="Title of the plan")
     description = models.CharField(max_length=255, help_text="Description of the plan")
 
@@ -842,6 +963,8 @@ class PlanTranslation(models.Model):
 
 
 class PlanOffer(models.Model):
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanOffer"]
     original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name="plan_offer_from")
     suggested_plan = models.ForeignKey(
         Plan,
@@ -881,12 +1004,16 @@ class PlanOfferTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanOfferTranslation"]
     title = models.CharField(max_length=60, help_text="Title of the plan offer")
     description = models.CharField(max_length=255, help_text="Description of the plan offer")
     short_description = models.CharField(max_length=255, help_text="Short description of the plan offer")
 
 
 class Seller(models.Model):
+    if TYPE_CHECKING:
+        objects: TypedManager["Seller"]
 
     class Partner(models.TextChoices):
         INDIVIDUAL = ("INDIVIDUAL", "Individual")
@@ -921,6 +1048,8 @@ class Seller(models.Model):
 
 
 class Coupon(models.Model):
+    if TYPE_CHECKING:
+        objects: TypedManager["Coupon"]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -1064,6 +1193,9 @@ def _default_pricing_ratio_explanation():
 class Bag(AbstractAmountByTime):
     """Represents a credit that can be used by a user to use a service."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["Bag"]
+
     class Status(models.TextChoices):
         RENEWAL = ("RENEWAL", "Renewal")
         CHECKING = ("CHECKING", "Checking")
@@ -1172,6 +1304,9 @@ class PaymentMethod(models.Model):
     Different payment methods of each academy have.
     """
 
+    if TYPE_CHECKING:
+        objects: TypedManager["PaymentMethod"]
+
     class Visibility(models.TextChoices):
         PUBLIC = "PUBLIC", "Public"
         INTERNAL = "INTERNAL", "Internal"
@@ -1222,6 +1357,9 @@ class PaymentMethod(models.Model):
 class ProofOfPayment(models.Model):
     """Represents a payment made by a user."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["ProofOfPayment"]
+
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         DONE = "DONE", "Done"
@@ -1265,6 +1403,9 @@ class ProofOfPayment(models.Model):
 
 class Invoice(models.Model):
     """Represents a payment made by a user."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["Invoice"]
 
     class Status(models.TextChoices):
         FULFILLED = "FULFILLED", "Fulfilled"
@@ -1344,6 +1485,9 @@ class Invoice(models.Model):
 
 class AbstractIOweYou(models.Model):
     """Common fields for all I owe you."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractIOweYou"]
 
     class Status(models.TextChoices):
         FREE_TRIAL = "FREE_TRIAL", "Free trial"
@@ -1432,6 +1576,9 @@ class AbstractIOweYou(models.Model):
 
 class PlanFinancing(AbstractIOweYou):
     """Allows to financing a plan."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanFinancing"]
 
     # in this day the financing needs being paid again
     next_payment_at = models.DateTimeField(help_text="Next payment date")
@@ -1524,6 +1671,9 @@ class Subscription(AbstractIOweYou):
 
     _lang = "en"
 
+    if TYPE_CHECKING:
+        objects: TypedManager["Subscription"]
+
     # last time the subscription was paid
     paid_at = models.DateTimeField(help_text="Last time the subscription was paid")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
@@ -1615,6 +1765,8 @@ class Subscription(AbstractIOweYou):
 
 
 class SubscriptionServiceItem(models.Model):
+    if TYPE_CHECKING:
+        objects: TypedManager["SubscriptionServiceItem"]
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text="Subscription")
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text="Service item")
 
@@ -1645,6 +1797,9 @@ class SubscriptionServiceItem(models.Model):
 class SubscriptionBillingTeam(models.Model):
     """Team entity per subscription."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["SubscriptionBillingTeam"]
+
     class ConsumptionStrategy(models.TextChoices):
         PER_TEAM = "PER_TEAM", "Per team"
         PER_SEAT = "PER_SEAT", "Per seat"
@@ -1674,6 +1829,9 @@ class SubscriptionSeat(models.Model):
     for a given seat-bearing service item. Billing remains on the subscription owner;
     this is used to distribute access/consumables to members.
     """
+
+    if TYPE_CHECKING:
+        objects: TypedManager["SubscriptionSeat"]
 
     billing_team = models.ForeignKey(
         SubscriptionBillingTeam,
@@ -1739,6 +1897,9 @@ class SubscriptionSeat(models.Model):
 
 class Consumable(AbstractServiceItem):
     """This model is used to represent the units of a service that can be consumed."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["Consumable"]
 
     service_item = models.ForeignKey(
         ServiceItem,
@@ -2074,6 +2235,9 @@ class ConsumptionSession(models.Model):
         DONE = "DONE", "Done"
         CANCELLED = "CANCELLED", "Cancelled"
 
+    if TYPE_CHECKING:
+        objects: TypedManager["ConsumptionSession"]
+
     operation_code = models.SlugField(
         default="default", help_text="Code that identifies the operation, it could be repeated"
     )
@@ -2258,6 +2422,9 @@ class ConsumptionSession(models.Model):
 class PlanServiceItem(models.Model):
     """M2M between plan and ServiceItem."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanServiceItem"]
+
     _lang = "en"
 
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, help_text="Plan")
@@ -2266,6 +2433,9 @@ class PlanServiceItem(models.Model):
 
 class PlanServiceItemHandler(models.Model):
     """M2M between plan and ServiceItem."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanServiceItemHandler"]
 
     handler = models.ForeignKey(PlanServiceItem, on_delete=models.CASCADE, help_text="Plan service item")
 
@@ -2301,6 +2471,9 @@ class PlanServiceItemHandler(models.Model):
 class ServiceStockScheduler(models.Model):
     """This model is used to represent the units of a service that can be consumed."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["ServiceStockScheduler"]
+
     # all this section are M2M service items, in the first case we have a query with subscription and service
     # item for schedule the renovations
     subscription_handler = models.ForeignKey(
@@ -2319,6 +2492,15 @@ class ServiceStockScheduler(models.Model):
         blank=True,
         null=True,
         help_text="Subscription seat",
+    )
+    # it adds support to PER_TEAM consumables
+    subscription_billing_team = models.ForeignKey(
+        SubscriptionBillingTeam,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Subscription billing team",
     )
     # if is required PlanFinancing seats, add that field here like the subscription_seat
     # plan_financing_seat = models.ForeignKey(
@@ -2355,6 +2537,9 @@ class ServiceStockScheduler(models.Model):
         if how_many_resources_are_set != 1:
             raise forms.ValidationError("A ServiceStockScheduler can only be associated with one resource")
 
+        if self.subscription_seat and self.subscription_billing_team:
+            raise forms.ValidationError("A ServiceStockScheduler can only be associated with a seat or a billing team")
+
         return super().clean()
 
     def save(self, *args, **kwargs):
@@ -2386,6 +2571,9 @@ class PaymentContact(models.Model):
     null, it typically means the customer is managed under a default or
     central Stripe account.
     """
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PaymentContact"]
 
     user = models.ForeignKey(
         User,
@@ -2434,6 +2622,9 @@ class FinancialReputation(models.Model):
     If the user has a bad reputation, the user will not be able to buy services.
     """
 
+    if TYPE_CHECKING:
+        objects: TypedManager["FinancialReputation"]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="reputation", help_text="Customer")
 
     in_4geeks = models.CharField(max_length=17, choices=REPUTATION_STATUS, default=GOOD, help_text="4Geeks reputation")
@@ -2464,6 +2655,9 @@ class AcademyPaymentSettings(models.Model):
     """
     Store payment settings for an academy.
     """
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AcademyPaymentSettings"]
 
     class POSVendor(models.TextChoices):
         STRIPE = "STRIPE", "Stripe"
