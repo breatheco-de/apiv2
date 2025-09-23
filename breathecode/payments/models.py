@@ -812,6 +812,9 @@ class Plan(AbstractPriceByTime):
                 "and time_of_life_unit"
             )
 
+        if self.consumption_strategy == Plan.ConsumptionStrategy.BOTH:
+            raise forms.ValidationError("Consumption strategy BOTH is not implemented yet")
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:

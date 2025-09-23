@@ -53,8 +53,8 @@ def test_ignore_when_how_many_not_positive(mock_seat):
     grant_service_permissions_receiver(sender=type(inst), instance=inst)
 
     # No grants and no seat queries
-    assert not inst.user.groups.add.called
-    assert not mock_seat.objects.filter.called
+    assert inst.user.groups.add.called is False
+    assert mock_seat.objects.filter.called is False
 
 
 def test_grant_user_when_how_many_positive():
@@ -118,7 +118,7 @@ def test_team_shared_per_seat_ignored(mock_seat):
     grant_service_permissions_receiver(sender=type(inst), instance=inst)
 
     # No seat lookup performed and no grants
-    assert not mock_seat.objects.filter.called
+    assert mock_seat.objects.filter.called is False
 
 
 @patch("breathecode.payments.receivers.SubscriptionSeat")

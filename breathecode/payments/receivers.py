@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 
 from breathecode.authenticate.models import GoogleWebhook, UserInvite
 from breathecode.authenticate.signals import google_webhook_saved, invite_status_updated
@@ -145,8 +145,6 @@ def grant_service_permissions_receiver(sender: Type[Consumable], instance: Consu
 grant_service_permissions.connect(grant_service_permissions_receiver, sender=Consumable)
 
 
-@receiver(grant_plan_permissions, sender=Subscription)
-@receiver(grant_plan_permissions, sender=PlanFinancing)
 def grant_plan_permissions_receiver(
     sender: Type[Subscription] | Type[PlanFinancing], instance: Subscription | PlanFinancing, **kwargs
 ):
@@ -154,28 +152,57 @@ def grant_plan_permissions_receiver(
     Add the user to the Paid Student group when a subscription/plan financing is created
     or when its status changes to ACTIVE. The signal is only emitted for paid plans.
     """
+
+    def grant(user: User):
+        nonlocal group
+        if group and not user.groups.filter(name="Paid Student").exists():
+            user.groups.add(group)
+
     group = Group.objects.filter(name="Paid Student").first()
-    if group and not instance.user.groups.filter(name="Paid Student").exists():
-        instance.user.groups.add(group)
+    if isinstance(instance, Subscription) and (
+        team := SubscriptionBillingTeam.objects.filter(subscription=instance).first()
+    ):
+        for seat in team.subscription_seat_set.all():
+            grant(seat.user)
+    else:
+        grant(instance.user)
 
 
-@receiver(revoke_plan_permissions, sender=Subscription)
-@receiver(revoke_plan_permissions, sender=PlanFinancing)
+grant_plan_permissions.connect(grant_plan_permissions_receiver, sender=Subscription)
+grant_plan_permissions.connect(grant_plan_permissions_receiver, sender=PlanFinancing)
+
+
 def revoke_plan_permissions_receiver(sender, instance, **kwargs):
     """
     Remove the user from the Paid Student group only if the user has
     NO other active PAID subscriptions or plan financings.
     """
-    group = Group.objects.filter(name="Paid Student").first()
-    user = instance.user
-
-    if not group or not user.groups.filter(name="Paid Student").exists():
-        return
 
     from .actions import user_has_active_paid_plans
 
-    if not user_has_active_paid_plans(user):
-        user.groups.remove(group)
+    group = Group.objects.filter(name="Paid Student").first()
+
+    def revoke(user: User):
+        nonlocal group
+        user = instance.user
+
+        if not group or not user.groups.filter(name="Paid Student").exists():
+            return
+
+        if not user_has_active_paid_plans(user):
+            user.groups.remove(group)
+
+    if isinstance(instance, Subscription) and (
+        team := SubscriptionBillingTeam.objects.filter(subscription=instance).first()
+    ):
+        for seat in team.subscription_seat_set.all():
+            revoke(seat.user)
+    else:
+        revoke(instance.user)
+
+
+revoke_plan_permissions.connect(revoke_plan_permissions_receiver, sender=Subscription)
+revoke_plan_permissions.connect(revoke_plan_permissions_receiver, sender=PlanFinancing)
 
 
 def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, **kwargs):
