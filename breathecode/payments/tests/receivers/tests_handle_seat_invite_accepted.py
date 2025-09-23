@@ -98,6 +98,72 @@ def test_noop_when_status_not_accepted(monkeypatch):
     called.assert_not_called()
 
 
+@pytest.mark.django_db
+def test_integration_binds_seat_and_calls_scheduler_when_per_seat(monkeypatch, database):
+    """
+    Integration test
+    Given a real Subscription, BillingTeam with PER_SEAT strategy, and a pending SubscriptionSeat (user=None)
+    When handle_seat_invite_accepted is invoked for an ACCEPTED invite matching the seat email
+    Then the seat is bound to the real user (email lowercased) and the per-seat scheduler is called.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from django.contrib.auth.models import User
+    from breathecode.admissions.models import Academy, Country, City
+    from breathecode.payments.models import Subscription, SubscriptionBillingTeam, SubscriptionSeat
+
+    # Patch task delay
+    called = MagicMock()
+    dummy_task = types.SimpleNamespace(build_service_stock_scheduler_from_subscription=SimpleNamespace(delay=called))
+    monkeypatch.setattr(receivers, "tasks", dummy_task)
+
+    # Real owner and subscription
+    owner = User.objects.create(username="owner", email="owner@example.com")
+    now = timezone.now()
+
+    # Minimal academy required by Subscription model
+    country = Country.objects.create(code="US", name="United States")
+    city = City.objects.create(name="Miami", country=country)
+
+    academy = Academy.objects.create(
+        slug="academy-x",
+        name="Academy X",
+        logo_url="https://example.com/logo.png",
+        street_address="123 Main St",
+        country=country,
+        city=city,
+    )
+
+    subscription = Subscription.objects.create(
+        user=owner,
+        academy=academy,
+        paid_at=now,
+        next_payment_at=now + timedelta(days=30),
+    )
+
+    team = SubscriptionBillingTeam.objects.create(
+        subscription=subscription,
+        name="Team X",
+        consumption_strategy=receivers.SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT,
+    )
+
+    seat = SubscriptionSeat.objects.create(billing_team=team, email="Member@Example.com")
+
+    # Invite with matching email: use a real Django User for FK assignment
+    member = User.objects.create(username="member", email="member@example.com")
+    invite = SimpleNamespace(email=member.email, user=member, user_id=member.id, status="ACCEPTED")
+
+    # Act
+    uut(None, invite)
+
+    # Assert: seat bound and normalized email
+    seat.refresh_from_db()
+    assert seat.user == invite.user
+    assert seat.email == invite.user.email.lower()
+    # Scheduler fired for this subscription and seat
+    called.assert_called_once_with(subscription.id, seat_id=seat.id)
+
+
 def test_triggers_scheduler_and_binds_when_per_seat(monkeypatch):
     """Bind seat to user, normalize email, and call per-seat scheduler when strategy enables per-seat issuance."""
     # Arrange

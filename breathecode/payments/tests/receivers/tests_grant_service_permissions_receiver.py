@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import MagicMock, patch
 
 
@@ -143,3 +144,38 @@ def test_prefers_subscription_billing_team_over_seat_team(mock_seat):
     kwargs = mock_seat.objects.filter.call_args.kwargs
     assert "billing_team" in kwargs
     assert kwargs["billing_team"] is team_preferred
+
+
+@pytest.mark.django_db
+def test_grant_integration_adds_service_groups_to_real_user(database):
+    """
+    Integration test
+    Given a real User and a Service with a Group
+    When grant_service_permissions_receiver is invoked for a consumable with how_many > 0
+    Then the user becomes a member of the service group via ORM.
+    """
+    from django.contrib.auth.models import Group, User
+    from breathecode.payments.models import Service, ServiceItem, Consumable
+    from breathecode.payments.receivers import grant_service_permissions_receiver
+
+    # Arrange real models
+    user = User.objects.create(username="bob", email="bob@example.com")
+    g = Group.objects.create(name="g-int")
+
+    service = Service.objects.create(slug="svc-int-grant")
+    service.groups.add(g)
+
+    service_item = ServiceItem.objects.create(service=service, how_many=1)
+
+    inst = Consumable.objects.create(
+        service_item=service_item,
+        user=user,
+        unit_type=service_item.unit_type,
+        how_many=1,
+    )
+
+    # Act
+    grant_service_permissions_receiver(sender=type(inst), instance=inst)
+
+    # Assert (real DB membership)
+    assert user.groups.filter(name=g.name).exists()
