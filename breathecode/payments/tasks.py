@@ -1205,6 +1205,7 @@ def build_subscription(
                 "name": f"Team {subscription.id}",
                 "seat_limit": subscription.seat_service_item.how_many,
                 "consumption_strategy": (
+                    # if BOTH is implemented should be required to get the strategy from the bag
                     Plan.ConsumptionStrategy.PER_SEAT
                     if plan.consumption_strategy == Plan.ConsumptionStrategy.BOTH
                     else plan.consumption_strategy
