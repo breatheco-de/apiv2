@@ -17,6 +17,10 @@ import pkgutil
 import sys
 from types import ModuleType
 
+# ANSI colors
+RED = "\033[31m"
+RESET = "\033[0m"
+
 
 PKG_NAME = __package__ or "scripts.fttests"
 
@@ -43,7 +47,7 @@ def _load_feature(name: str) -> ModuleType:
     try:
         return importlib.import_module(f"{PKG_NAME}.{name}")
     except ModuleNotFoundError as exc:
-        print(f"Unknown feature '{name}'. Use 'list' to see available features.", file=sys.stderr)
+        print(f"{RED}Unknown feature '{name}'. Use 'list' to see available features.{RESET}", file=sys.stderr)
         raise SystemExit(1) from exc
 
 
@@ -51,7 +55,7 @@ def _ensure_contract(mod: ModuleType) -> None:
     missing = [attr for attr in ("check_dependencies", "run") if not hasattr(mod, attr)]
     if missing:
         print(
-            f"Feature module '{mod.__name__}' is missing required symbols: {', '.join(missing)}",
+            f"{RED}Feature module '{mod.__name__}' is missing required symbols: {', '.join(missing)}{RESET}",
             file=sys.stderr,
         )
         raise SystemExit(1)
@@ -79,13 +83,13 @@ def main(argv: list[str]) -> int:
         print(f"[fttests] Dependencies OK. Running tests for '{feature_name}'...\n")
         mod.run()
     except AssertionError as exc:
-        print(f"Assertion failed: {exc}", file=sys.stderr)
+        print(f"{RED}Assertion failed: {exc}{RESET}", file=sys.stderr)
         return 1
     except SystemExit as exc:
         # Allow feature to control exit code when explicitly exiting
         return int(exc.code) if isinstance(exc.code, int) else 1
     except Exception as exc:  # noqa: BLE001 - surface any unexpected failure
-        print(f"Unexpected error: {exc}", file=sys.stderr)
+        print(f"{RED}Unexpected error: {exc}{RESET}", file=sys.stderr)
         return 1
 
     print(f"\n[fttests] Feature '{feature_name}' finished successfully.")

@@ -2010,13 +2010,25 @@ class Consumable(AbstractServiceItem):
             )
 
         if isinstance(user, str):
-            args.append(Q(user__id=int(user)) | Q(subscription_seat__user__id=int(user)))
+            args.append(
+                Q(user__id=int(user))
+                | Q(subscription_seat__user__id=int(user))
+                | Q(user__isnull=True, subscription_billing_team__seats__user__id=int(user))
+            )
 
         elif isinstance(user, int):
-            args.append(Q(user__id=user) | Q(subscription_seat__user__id=user))
+            args.append(
+                Q(user__id=user)
+                | Q(subscription_seat__user__id=user)
+                | Q(user__isnull=True, subscription_billing_team__seats__user__id=user)
+            )
 
         elif isinstance(user, User):
-            args.append(Q(user=user) | Q(subscription_seat__user=user))
+            args.append(
+                Q(user=user)
+                | Q(subscription_seat__user=user)
+                | Q(user__isnull=True, subscription_billing_team__seats__user=user)
+            )
 
         # Service
         if service and isinstance(service, str) and not service.isdigit():

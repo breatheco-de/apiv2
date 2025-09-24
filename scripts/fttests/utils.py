@@ -11,6 +11,10 @@ import sys
 import urllib.request
 from typing import Dict, Iterable, Optional, Tuple
 
+# ANSI colors (basic) for visibility in CI/terminal
+RED = "\033[31m"
+RESET = "\033[0m"
+
 
 def assert_env_vars(names: Iterable[str]) -> None:
     """Assert that all environment variables in `names` are set and non-empty.
@@ -72,5 +76,10 @@ def print_section(title: str) -> None:
 
 
 def exit_with_error(message: str) -> None:
-    print(f"ERROR: {message}", file=sys.stderr)
+    print(f"{RED}ERROR: {message}{RESET}", file=sys.stderr)
     sys.exit(1)
+
+
+def print_error(message: str) -> None:
+    """Print an error message in red to stderr without exiting."""
+    print(f"{RED}{message}{RESET}", file=sys.stderr)
