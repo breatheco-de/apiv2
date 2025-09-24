@@ -1168,7 +1168,6 @@ def build_subscription(
     )
 
     if bag.seat_service_item and bag.seat_service_item.how_many > 0:
-
         subscription.seat_service_item = bag.seat_service_item
         subscription.save()
 
@@ -1298,8 +1297,7 @@ def build_plan_financing(
         seat_service_item=bag.seat_service_item,
     )
 
-    if bag.seat_service_item or bag.seat_service_item.how_many > 0:
-
+    if bag.seat_service_item and bag.seat_service_item.how_many > 0:
         financing.seat_service_item = bag.seat_service_item
         financing.save()
 
