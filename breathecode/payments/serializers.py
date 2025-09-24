@@ -7,9 +7,9 @@ from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
-    AcademyService,
     Currency,
     FinancingOption,
+    AcademyService,
     PaymentMethod,
     Plan,
     PlanOfferTranslation,

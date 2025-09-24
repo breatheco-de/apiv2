@@ -47,12 +47,16 @@ def test_all_schedulers_must_be_created(bc: Breathecode):
         {
             "id": 1,
             "plan_handler_id": 1,
+            "subscription_billing_team_id": None,
+            "subscription_seat_id": None,
             "subscription_handler_id": None,
             "valid_until": None,
         },
         {
             "id": 2,
             "plan_handler_id": 2,
+            "subscription_billing_team_id": None,
+            "subscription_seat_id": None,
             "subscription_handler_id": None,
             "valid_until": None,
         },
@@ -126,6 +130,8 @@ def test_half_schedulers_must_be_created(bc: Breathecode):
         {
             "id": n,
             "plan_handler_id": n,
+            "subscription_billing_team_id": None,
+            "subscription_seat_id": None,
             "subscription_handler_id": None,
             "valid_until": None,
         }

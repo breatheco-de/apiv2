@@ -1,3 +1,15 @@
 {
-    "disable": true
+  "typeCheckingMode": "off",
+  "useLibraryCodeForTypes": true,
+  "reportAttributeAccessIssue": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportMissingTypeStubs": "none",
+  "reportGeneralTypeIssues": "none",
+  "reportCallIssue": "none",
+  "reportUntypedFunctionDecorator": "none",
+  "reportUntypedClassDecorator": "none"
 }

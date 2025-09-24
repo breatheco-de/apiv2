@@ -131,7 +131,7 @@ def validate_email(modeladmin, request, queryset: QuerySet[UserInvite]):
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ["email", "first_name", "last_name", "user__email"]
-    raw_id_fields = ["user", "author", "cohort", "course"]
+    raw_id_fields = ["user", "author", "cohort", "course", "subscription_seat"]
     list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country"]
     list_display = (
         "email",
@@ -144,6 +144,7 @@ class UserInviteAdmin(admin.ModelAdmin):
         "created_at",
         "invite_url",
         "country",
+        "subscription_seat",
     )
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list, validate_email]
 

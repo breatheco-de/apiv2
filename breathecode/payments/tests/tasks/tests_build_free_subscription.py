@@ -26,6 +26,8 @@ def subscription_item(data={}):
         "academy_id": 1,
         "is_refundable": True,
         "paid_at": UTC_NOW,
+        "seat_service_item_id": None,
+        "has_billing_team": False,
         "pay_every": 1,
         "pay_every_unit": "MONTH",
         "selected_cohort_set_id": None,

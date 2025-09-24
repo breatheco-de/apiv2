@@ -15,11 +15,9 @@ UTC_NOW = timezone.now()
 
 @pytest.fixture(autouse=True)
 def apply_patch(db, monkeypatch):
-    m1 = MagicMock()
-    m2 = MagicMock()
-    monkeypatch.setattr(tasks.renew_subscription_consumables, "delay", m1)
-    monkeypatch.setattr(tasks.renew_plan_financing_consumables, "delay", m2)
-    yield m1, m2
+    m = MagicMock()
+    monkeypatch.setattr(tasks.renew_consumables, "delay", m)
+    yield m
 
 
 def test_no_related_entities(bc: Breathecode):
@@ -31,8 +29,7 @@ def test_no_related_entities(bc: Breathecode):
     assert bc.database.list_of("payments.Subscription") == []
     assert bc.database.list_of("payments.PlanFinancing") == []
 
-    assert tasks.renew_subscription_consumables.delay.call_args_list == []
-    assert tasks.renew_plan_financing_consumables.delay.call_args_list == []
+    assert tasks.renew_consumables.delay.call_args_list == []
 
 
 def invalid_statuses_params():
@@ -71,8 +68,7 @@ def test_no_schedulers__invalid_statuses(bc: Breathecode, entity, entity_attrs):
         assert bc.database.list_of("payments.Subscription") == []
         assert bc.database.list_of("payments.PlanFinancing") == bc.format.to_dict(model.plan_financing)
 
-    assert tasks.renew_subscription_consumables.delay.call_args_list == []
-    assert tasks.renew_plan_financing_consumables.delay.call_args_list == []
+    assert tasks.renew_consumables.delay.call_args_list == []
 
 
 def valid_statuses_params():
@@ -94,6 +90,10 @@ def test_no_schedulers__valid_statuses(bc: Breathecode, entity, entity_attrs):
     if entity == "plan_financing":
         entity_attrs["monthly_price"] = 10
         entity_attrs["plan_expires_at"] = bc.datetime.now()
+        entity_attrs["next_payment_at"] = bc.datetime.now() + relativedelta(minutes=2)
+    else:
+        # subscription path
+        entity_attrs["next_payment_at"] = bc.datetime.now() + relativedelta(minutes=2)
 
     extra = {entity: (2, entity_attrs)}
 
@@ -107,16 +107,11 @@ def test_no_schedulers__valid_statuses(bc: Breathecode, entity, entity_attrs):
     if entity == "subscription":
         assert bc.database.list_of("payments.Subscription") == bc.format.to_dict(model.subscription)
         assert bc.database.list_of("payments.PlanFinancing") == []
-
-        assert tasks.renew_subscription_consumables.delay.call_args_list == [call(1), call(2)]
-        assert tasks.renew_plan_financing_consumables.delay.call_args_list == []
-
     elif entity == "plan_financing":
         assert bc.database.list_of("payments.Subscription") == []
         assert bc.database.list_of("payments.PlanFinancing") == bc.format.to_dict(model.plan_financing)
 
-        assert tasks.renew_subscription_consumables.delay.call_args_list == []
-        assert tasks.renew_plan_financing_consumables.delay.call_args_list == [call(1), call(2)]
+    assert tasks.renew_consumables.delay.call_args_list == []
 
 
 def valid_statuses_params():
@@ -179,8 +174,7 @@ def test_this_resource_does_not_requires_a_renovation(bc: Breathecode, entity, e
         assert bc.database.list_of("payments.Subscription") == []
         assert bc.database.list_of("payments.PlanFinancing") == bc.format.to_dict(model.plan_financing)
 
-    assert tasks.renew_subscription_consumables.delay.call_args_list == []
-    assert tasks.renew_plan_financing_consumables.delay.call_args_list == []
+    assert tasks.renew_consumables.delay.call_args_list == []
 
 
 @pytest.mark.parametrize("entity,entity_attrs", valid_statuses_params())
@@ -188,6 +182,9 @@ def test_this_resource_requires_a_renovation(bc: Breathecode, entity, entity_att
     if entity == "plan_financing":
         entity_attrs["monthly_price"] = 10
         entity_attrs["plan_expires_at"] = bc.datetime.now()
+        entity_attrs["next_payment_at"] = bc.datetime.now() + relativedelta(minutes=2)
+    else:
+        entity_attrs["next_payment_at"] = bc.datetime.now() + relativedelta(minutes=2)
 
     extra = {entity: (2, entity_attrs)}
 
@@ -210,6 +207,7 @@ def test_this_resource_requires_a_renovation(bc: Breathecode, entity, entity_att
 
     model = bc.database.create(
         **extra,
+        invoice={"amount": 10},
         consumable=(2, consumable),
         service_stock_scheduler=service_stock_schedulers,
         plan_service_item_handler=plan_service_item_handlers,
@@ -225,12 +223,9 @@ def test_this_resource_requires_a_renovation(bc: Breathecode, entity, entity_att
         assert bc.database.list_of("payments.Subscription") == bc.format.to_dict(model.subscription)
         assert bc.database.list_of("payments.PlanFinancing") == []
 
-        assert tasks.renew_subscription_consumables.delay.call_args_list == [call(1), call(2)]
-        assert tasks.renew_plan_financing_consumables.delay.call_args_list == []
-
     elif entity == "plan_financing":
         assert bc.database.list_of("payments.Subscription") == []
         assert bc.database.list_of("payments.PlanFinancing") == bc.format.to_dict(model.plan_financing)
 
-        assert tasks.renew_subscription_consumables.delay.call_args_list == []
-        assert tasks.renew_plan_financing_consumables.delay.call_args_list == [call(1), call(2)]
+    # two schedulers were created with expired consumables, expect one task per scheduler
+    assert tasks.renew_consumables.delay.call_args_list == [call(1), call(2)]

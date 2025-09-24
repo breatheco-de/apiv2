@@ -41,6 +41,8 @@ from breathecode.payments.models import (
     ServiceTranslation,
     Subscription,
     SubscriptionServiceItem,
+    SubscriptionSeat,
+    SubscriptionBillingTeam,
 )
 
 # Register your models here.
@@ -68,8 +70,8 @@ class ServiceTranslationAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceItem)
 class ServiceItemAdmin(admin.ModelAdmin):
-    list_display = ("id", "unit_type", "how_many", "service")
-    list_filter = ["service__owner"]
+    list_display = ("id", "unit_type", "how_many", "is_team_allowed", "service")
+    list_filter = ["service__owner", "is_team_allowed"]
     search_fields = [
         "service__slug",
         "service__title",
@@ -140,6 +142,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "cohort_set",
         "event_type_set",
         "mentorship_service_set",
+        "subscription_billing_team",
+        "subscription_seat",
     ]
     actions = [grant_service_permissions]
 
@@ -194,6 +198,34 @@ class SubscriptionAdmin(admin.ModelAdmin):
 class SubscriptionServiceItemAdmin(admin.ModelAdmin):
     list_display = ("id", "subscription", "service_item")
     list_filter = ["subscription__user__email", "subscription__user__first_name", "subscription__user__last_name"]
+
+
+@admin.register(SubscriptionSeat)
+class SubscriptionSeatAdmin(admin.ModelAdmin):
+    list_display = ("id", "billing_team", "email", "user", "seat_multiplier")
+    list_filter = [
+        "billing_team__subscription__user__email",
+        "billing_team__subscription__user__first_name",
+        "billing_team__subscription__user__last_name",
+    ]
+    search_fields = [
+        "billing_team__subscription__id",
+        "email",
+        "user__email",
+    ]
+    raw_id_fields = ["billing_team", "user"]
+
+
+# SubscriptionSeatInvite is deprecated in favor of pending SubscriptionSeat (email-only)
+
+
+@admin.register(SubscriptionBillingTeam)
+class SubscriptionBillingTeamAdmin(admin.ModelAdmin):
+    list_display = ("id", "subscription", "name")
+    search_fields = ["subscription__id", "name"]
+
+
+# BillingTeamMembership removed; managed via SubscriptionSeat
 
 
 def renew_plan_financing_consumables(modeladmin, request, queryset):
