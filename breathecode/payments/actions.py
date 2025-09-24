@@ -847,12 +847,30 @@ def get_bag_from_subscription(
     # Also exclude coupons where the user is the seller
     utc_now = timezone.now()
 
+    # Add valid (non-expired and with remaining uses) coupons from the subscription and from auto applied user restricted coupons
     subscription_coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now)).exclude(
         seller__user=subscription.user
     )
-
+    user_coupons = Coupon.objects.filter(
+        Q(offered_at=None) | Q(offered_at__lte=utc_now),
+        Q(expires_at=None) | Q(expires_at__gte=utc_now),
+        allowed_user=subscription.user,
+        auto=True,
+    ).exclude(how_many_offers=0)
+    coupon_slugs = list(
+        set(
+            list(subscription_coupons.values_list("slug", flat=True))
+            + list(user_coupons.values_list("slug", flat=True))
+        )
+    )
     if subscription_coupons.exists():
-        bag.coupons.set(subscription_coupons)
+        valid_coupons = get_available_coupons(
+            subscription.plans.first(),
+            coupon_slugs,
+            subscription.user,
+            only_sent_coupons=True,
+        )
+        bag.coupons.set(valid_coupons)
 
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
         bag, subscription.currency or last_invoice.currency, lang
@@ -1046,14 +1064,14 @@ def max_coupons_allowed():
 
 
 def get_available_coupons(
-    plan: Plan, coupons: Optional[list[str]] = None, user: Optional[User] = None, ignore_limit: bool = False
+    plan: Plan,
+    coupons: Optional[list[str]] = None,
+    user: Optional[User] = None,
+    only_sent_coupons: bool = False,
 ) -> list[Coupon]:
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
         sub_kwargs = {"invoices__bag__coupons": coupon}
-        if coupon.offered_at:
-            sub_kwargs["created_at__gte"] = coupon.offered_at
-
         if coupon.expires_at:
             sub_kwargs["created_at__lte"] = coupon.expires_at
 
@@ -1085,7 +1103,7 @@ def get_available_coupons(
                 return
 
             total_spent_coupons = get_total_spent_coupons(coupon)
-            if coupon.how_many_offers >= total_spent_coupons:
+            if coupon.how_many_offers > total_spent_coupons:
                 founded_coupons.append(coupon)
 
             founded_coupon_slugs.append(coupon.slug)
@@ -1100,15 +1118,16 @@ def get_available_coupons(
     )
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
 
-    special_offers = (
-        Coupon.objects.filter(*cou_args, auto=True)
-        .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
-        .select_related("seller__user", "allowed_user")
-        .only(*cou_fields)
-    )
+    if not only_sent_coupons:
+        special_offers = (
+            Coupon.objects.filter(*cou_args, auto=True)
+            .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
+            .select_related("seller__user", "allowed_user")
+            .only(*cou_fields)
+        )
 
-    for coupon in special_offers:
-        manage_coupon(coupon)
+        for coupon in special_offers:
+            manage_coupon(coupon)
 
     valid_coupons = (
         Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
@@ -1119,8 +1138,9 @@ def get_available_coupons(
 
     max = max_coupons_allowed()
 
-    if ignore_limit:
-        for coupon in valid_coupons:
+    if only_sent_coupons:
+        sent_coupons = Coupon.objects.filter(*cou_args, slug__in=coupons).only(*cou_fields)
+        for coupon in sent_coupons:
             manage_coupon(coupon)
     else:
         for coupon in valid_coupons[0:max]:

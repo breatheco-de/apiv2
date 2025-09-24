@@ -1363,7 +1363,7 @@ class MeUserCouponsView(APIView):
         plan = Plan.objects.first()
         slugs = list(user_restricted_coupons.values_list("slug", flat=True))
 
-        valid_coupons = get_available_coupons(plan=plan, coupons=slugs, user=user, ignore_limit=True)
+        valid_coupons = get_available_coupons(plan=plan, coupons=slugs, user=user, only_sent_coupons=True)
         valid_coupon_ids = {coupon.id for coupon in valid_coupons}
 
         coupons = handler.queryset(user_restricted_coupons)
