@@ -269,6 +269,13 @@ def renew_subscription_consumables(self, subscription_id: int, seat_id: Optional
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         raise RetryTask(f"Subscription with id {subscription_id} not found")
 
+    if subscription.status in [
+        Subscription.Status.DEPRECATED,
+        Subscription.Status.EXPIRED,
+        Subscription.Status.PAYMENT_ISSUE,
+    ]:
+        raise AbortTask(f"The subscription {subscription.id} is deprecated, expired or has a payment issue")
+
     subscription_seat = None
     if seat_id and not (
         subscription_seat := SubscriptionSeat.objects.filter(
@@ -303,6 +310,13 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
 
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
         raise RetryTask(f"PlanFinancing with id {plan_financing_id} not found")
+
+    if plan_financing.status in [
+        PlanFinancing.Status.CANCELLED,
+        PlanFinancing.Status.DEPRECATED,
+        PlanFinancing.Status.EXPIRED,
+    ]:
+        raise AbortTask(f"The plan financing {plan_financing.id} is cancelled, deprecated or expired")
 
     utc_now = timezone.now()
     if plan_financing.next_payment_at < utc_now:
