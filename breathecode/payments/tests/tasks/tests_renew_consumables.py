@@ -738,6 +738,83 @@ def test_without_a_resource_linked__type_void(
     ]
 
 
+def test_subscription_billing_team_per_team__type_void(database):
+    """
+    When the ServiceStockScheduler is linked to a SubscriptionBillingTeam and the team strategy is PER_TEAM,
+    renew_consumables must:
+    - Set consumable.subscription_billing_team to the team
+    - NOT set consumable.user (shared within team)
+    - NOT set consumable.subscription_seat
+    """
+
+    plan = {"is_renewable": False}
+    service_item = {"how_many": -1}
+    academy = {"available_as_saas": True}
+
+    base_kwargs = {
+        "service_stock_scheduler": 1,
+        "plan": plan,
+        "service_item": service_item,
+        "service": {"type": "VOID"},
+        "academy": academy,
+        "country": 1,
+        "city": 1,
+        # ensure scheduler is bound to subscription via subscription_handler
+        "subscription_service_item": 1,
+        "subscription": {
+            "valid_until": UTC_NOW + relativedelta(minutes=5),
+            "next_payment_at": UTC_NOW + relativedelta(minutes=3),
+            "seat_service_item_id": None,
+        },
+    }
+
+    model = database.create(**base_kwargs)
+
+    # Create billing team with PER_TEAM strategy and attach to scheduler
+    team = SubscriptionBillingTeam.objects.create(
+        subscription=model.subscription,
+        name=f"Team {model.subscription.id}",
+        seats_limit=5,
+        consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+    )
+
+    scheduler = model.service_stock_scheduler
+    scheduler.subscription_billing_team = team
+    scheduler.save()
+
+    logging.Logger.info.call_args_list = []
+    logging.Logger.error.call_args_list = []
+
+    renew_consumables.delay(1)
+
+    assert logging.Logger.info.call_args_list == [
+        call("Starting renew_consumables for service stock scheduler 1"),
+        call("The consumable 1 was built"),
+        call("The scheduler 1 was renewed"),
+    ]
+    assert logging.Logger.error.call_args_list == []
+
+    assert database.list_of("payments.Consumable") == [
+        consumable_item(
+            {
+                "id": 1,
+                "service_item_id": 1,
+                "user_id": None,  # shared by team
+                "how_many": (
+                    model.service_item[0].how_many
+                    if isinstance(model.service_item, list)
+                    else model.service_item.how_many
+                ),
+                "valid_until": UTC_NOW + relativedelta(minutes=5),
+                "plan_financing_id": None,
+                "subscription_id": 1,
+                "subscription_seat_id": None,
+                "subscription_billing_team_id": team.id,
+            }
+        ),
+    ]
+
+
 # this case seems like it was deleted, it means the task is not checking if the consumables were renewed
 # @pytest.mark.parametrize(
 #     "type, plan_service_item_handler, subscription_service_item",

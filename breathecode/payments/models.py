@@ -2111,8 +2111,19 @@ class Consumable(AbstractServiceItem):
     def clean(self) -> None:
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
         parent_entities = [self.subscription, self.plan_financing]
-        owners = [self.user]
-        settings = get_user_settings(self.user.id)
+        # support user-owned and team-owned consumables
+        owners = [self.user, self.subscription_billing_team]
+        # derive settings lang safely even if user is None (team-owned)
+        if self.user_id:
+            settings = get_user_settings(self.user.id)
+        elif self.subscription_id and getattr(self.subscription, "user_id", None):
+            settings = get_user_settings(self.subscription.user.id)
+        else:
+
+            class _Settings:
+                lang = "en"
+
+            settings = _Settings()
 
         how_many_resources_are_set = len([r for r in resources if r])
         how_many_parent_entities_are_set = len([p for p in parent_entities if p])
