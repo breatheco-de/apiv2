@@ -31,6 +31,7 @@ def event_type_serializer(event_type, academy):
 
 def service_serializer(service):
     return {
+        "id": service.id,
         "groups": [],
         "private": service.private,
         "slug": service.slug,
