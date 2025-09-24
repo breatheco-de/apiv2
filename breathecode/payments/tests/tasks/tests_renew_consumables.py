@@ -34,6 +34,7 @@ def consumable_item(data={}):
         "plan_financing_id": None,
         "subscription_id": None,
         "subscription_seat_id": None,
+        "subscription_billing_team_id": None,
         **data,
     }
 
