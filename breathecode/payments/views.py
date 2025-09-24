@@ -2310,6 +2310,7 @@ class ConsumableCheckoutView(APIView):
                     code=400,
                 )
 
+            created_team = False
             team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
             current_limit = team.seats_limit if team else 0
             desired_limit = seats
@@ -2381,10 +2382,16 @@ class ConsumableCheckoutView(APIView):
 
                     # Ensure billing team exists and update seats limit
                     if not team:
+                        created_team = True
                         team = SubscriptionBillingTeam.objects.create(
                             subscription=subscription,
                             name=f"Team {subscription.id}",
                             seats_limit=desired_limit,
+                            consumption_strategy=(
+                                plan.consumption_strategy
+                                if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
+                                else Plan.ConsumptionStrategy.PER_SEAT
+                            ),
                         )
 
                         # mark subscription has billing team
@@ -2414,10 +2421,15 @@ class ConsumableCheckoutView(APIView):
                         )
                         team.seats_log = seats_log
                         team.seats_limit = desired_limit
-                        team.save(update_fields=["seats_log", "seats_limit"])
+                        team.consumption_strategy = (
+                            plan.consumption_strategy
+                            if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
+                            else Plan.ConsumptionStrategy.PER_SEAT
+                        )
+                        team.save(update_fields=["seats_log", "seats_limit", "consumption_strategy"])
 
-                    # trigger scheduler to refresh consumables (no-op until seats are assigned)
-                    tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id)
+                    if created_team:
+                        tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id)
 
                     tasks_activity.add_activity.delay(
                         request.user.id,

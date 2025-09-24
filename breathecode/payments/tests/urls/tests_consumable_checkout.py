@@ -1256,6 +1256,135 @@ def test_seats__purchase_creates_team_and_owner_seat(database, client: APIClient
 @patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
 @patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
 @patch("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", MagicMock())
+def test_seats__purchase_creates_team_sets_strategy_from_plan(database, client: APIClient):
+    """
+    When purchasing seats and creating a billing team, the team's consumption_strategy
+    must be set from the plan's consumption_strategy.
+    """
+    # Setup SEAT service, plan with seat_service_price and explicit strategy
+    service = {"type": "SEAT"}
+    plan = {"is_renewable": False, "trial_duration": 0, "consumption_strategy": "PER_TEAM"}
+    seat_price = random.random() * 10 + 5
+
+    academy_service = {"price_per_unit": seat_price, "max_items": 100, "bundle_size": 1, "discount_ratio": 0}
+    model = database.create(
+        user=1,
+        service=service,
+        academy=1,
+        currency=1,
+        plan=plan,
+        subscription=1,
+        academy_service=academy_service,
+        city=1,
+        country=1,
+    )
+
+    # Link plan to seat pricing
+    plan_obj = model.plan
+    plan_obj.seat_service_price = model.academy_service
+    plan_obj.save()
+
+    client.force_authenticate(model.user)
+
+    desired_seats = random.randint(2, 6)
+    delta = desired_seats
+
+    url = reverse_lazy("payments:consumable_checkout")
+    data = {
+        "service": model.service.id,
+        "how_many": 1,
+        "academy": model.academy.id,
+        "subscription": model.subscription.id,
+        "seats": desired_seats,
+    }
+    response = client.post(url, data, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Team should be created with desired seats and strategy from plan
+    team = SubscriptionBillingTeam.objects.get(subscription=model.subscription)
+    assert team.seats_limit == desired_seats
+    assert team.consumption_strategy == "PER_TEAM"
+
+    # Scheduler should be triggered only when team is created
+    from breathecode.payments.tasks import build_service_stock_scheduler_from_subscription
+
+    assert build_service_stock_scheduler_from_subscription.delay.call_args_list == [call(model.subscription.id)]
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
+@patch("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", MagicMock())
+def test_seats__existing_team_updates_strategy_from_plan(database, client: APIClient):
+    """
+    When purchasing additional seats with an existing billing team, the team's
+    consumption_strategy must be updated from the plan's consumption_strategy.
+    """
+    service = {"type": "SEAT"}
+    # Plan strategy PER_SEAT should be propagated to existing team after purchase
+    plan = {"is_renewable": False, "trial_duration": 0, "consumption_strategy": "PER_SEAT"}
+    seat_price = random.random() * 10 + 5
+
+    academy_service = {"price_per_unit": seat_price, "max_items": 100, "bundle_size": 1, "discount_ratio": 0}
+    model = database.create(
+        user=1,
+        service=service,
+        academy=1,
+        currency=1,
+        plan=plan,
+        subscription=1,
+        academy_service=academy_service,
+        city=1,
+        country=1,
+    )
+
+    # Link plan to seat pricing
+    plan_obj = model.plan
+    plan_obj.seat_service_price = model.academy_service
+    plan_obj.save()
+
+    # Existing team with a different initial strategy
+    current_limit = random.randint(1, 3)
+    team = SubscriptionBillingTeam.objects.create(
+        subscription=model.subscription,
+        name=f"Team {model.subscription.id}",
+        seats_limit=current_limit,
+        consumption_strategy="PER_TEAM",
+    )
+
+    client.force_authenticate(model.user)
+
+    desired_seats = current_limit + random.randint(1, 5)
+    url = reverse_lazy("payments:consumable_checkout")
+    data = {
+        "service": model.service.id,
+        "how_many": 1,
+        "academy": model.academy.id,
+        "subscription": model.subscription.id,
+        "seats": desired_seats,
+    }
+    response = client.post(url, data, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Team should be updated to desired seats and strategy PER_SEAT
+    team.refresh_from_db()
+    assert team.seats_limit == desired_seats
+    assert team.consumption_strategy == "PER_SEAT"
+
+    # Scheduler should NOT be triggered when team already exists
+    from breathecode.payments.tasks import build_service_stock_scheduler_from_subscription
+
+    assert build_service_stock_scheduler_from_subscription.delay.call_args_list == []
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
+@patch("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", MagicMock())
 def test_seats__increase_existing_team_delta_only(database, client: APIClient):
     # Existing billing team with some seats; purchasing more should charge only the delta
     service = {"type": "SEAT"}
