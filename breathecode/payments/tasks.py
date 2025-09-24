@@ -915,14 +915,18 @@ def build_service_stock_scheduler_from_subscription(
 
     logger.info(f"Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}")
 
-    def build_schedulers(allow_team=None):
+    def build_schedulers(allow_team=None, team_for_billing=None):
+        # Determine billing team for schedulers
         billing_team = None
-        if subscription_seat:
-            billing_team = team
+        if team_for_billing is not None:
+            billing_team = team_for_billing
+        elif subscription_seat:
+            # when building per-seat, derive team from the seat
+            billing_team = subscription_seat.billing_team
 
         for handler in SubscriptionServiceItem.objects.filter(subscription=subscription).select_related("service_item"):
-            # If building for a seat, skip items that are not team-allowed
-            if subscription_seat and allow_team != None and handler.service_item.is_team_allowed is not allow_team:
+            # Filter by team-allowed depending on context; applies to owner, team-owned, or seat
+            if allow_team is not None and handler.service_item.is_team_allowed is not allow_team:
                 continue
             unit = handler.service_item.renew_at
             unit_type = handler.service_item.renew_at_unit
@@ -935,16 +939,17 @@ def build_service_stock_scheduler_from_subscription(
             if subscription.valid_until and valid_until > subscription.valid_until:
                 valid_until = subscription.valid_until
 
+            # Do not set both seat and billing team simultaneously
             ServiceStockScheduler.objects.get_or_create(
                 subscription_handler=handler,
                 subscription_seat=subscription_seat,
-                subscription_billing_team=billing_team,
+                subscription_billing_team=(billing_team if subscription_seat is None else None),
             )
 
         for plan in subscription.plans.all():
             for handler in PlanServiceItem.objects.filter(plan=plan).select_related("service_item"):
-                # If building for a seat, skip items that are not team-allowed
-                if subscription_seat and allow_team != None and handler.service_item.is_team_allowed is not allow_team:
+                # Filter by team-allowed depending on context; applies to owner, team-owned, or seat
+                if allow_team is not None and handler.service_item.is_team_allowed is not allow_team:
                     continue
                 unit = handler.service_item.renew_at
                 unit_type = handler.service_item.renew_at_unit
@@ -959,8 +964,11 @@ def build_service_stock_scheduler_from_subscription(
 
                 handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription, handler=handler)
 
+                # Do not set both seat and billing team simultaneously
                 ServiceStockScheduler.objects.get_or_create(
-                    plan_handler=handler, subscription_seat=subscription_seat, subscription_billing_team=billing_team
+                    plan_handler=handler,
+                    subscription_seat=subscription_seat,
+                    subscription_billing_team=(billing_team if subscription_seat is None else None),
                 )
 
         if not update_mode:
@@ -1006,8 +1014,8 @@ def build_service_stock_scheduler_from_subscription(
     has_seats = bool(subscription.seat_service_item and subscription.seat_service_item.how_many > 0)
 
     # When seats exist and we are building for the owner (no seat_id), we must:
-    # - Create owner-level schedulers ONLY for service items that are NOT team-allowed
-    # - Schedule per-seat builds for items that ARE team-allowed
+    # - If PER_TEAM: create team-owned schedulers for team-allowed items and owner schedulers for non-team items
+    # - If PER_SEAT: create owner schedulers ONLY for non-team items, then schedule per-seat builds for team items
     utc_now = timezone.now()
     if not seat_id and has_seats:
         # `defaults` is only valid for get_or_create; use a simple filter here
@@ -1016,26 +1024,25 @@ def build_service_stock_scheduler_from_subscription(
             raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
 
         if team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+            # Build team-owned schedulers for team-allowed items
             update_mode = True
-            build_schedulers(True)
+            build_schedulers(True, team_for_billing=team)
+            # Build owner schedulers for non-team items
             update_mode = False
-            build_schedulers(False)
+            build_schedulers(False, team_for_billing=None)
             return
 
         utc_now = timezone.now()
-        created_owner_schedulers = False
-        build_schedulers(False)
+        # Build owner schedulers for all items (team and non-team)
+        build_schedulers(None, team_for_billing=None)
         # Schedule per-seat builds (these runs will create schedulers only for team-allowed items)
         for seat in SubscriptionSeat.objects.filter(billing_team=team):
             build_service_stock_scheduler_from_subscription.delay(subscription_id, seat_id=seat.id)
 
-        # Trigger renew for owner-level items just created
-        if created_owner_schedulers and not update_mode:
-            renew_subscription_consumables.delay(subscription.id)
-
         return
 
-    build_schedulers(seat_id != None)
+    # If building for a seat, only build team-allowed items; for owner without seats, build all
+    build_schedulers(True if seat_id is not None else None)
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)

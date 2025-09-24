@@ -443,6 +443,149 @@ def test_build_scheduler_for_seat_with_non_team_subscription_item(database, monk
 
 
 @pytest.mark.django_db
+def test_per_team_builds_team_owned_for_subscription_items(database, monkeypatch: pytest.MonkeyPatch):
+    """
+    PER_TEAM strategy for subscription items:
+    - Team-allowed subscription items must create team-owned schedulers (subscription_billing_team set).
+    - Non-team subscription items must create owner-level schedulers (no seat, no billing_team).
+    - No seat schedulers should be created and only one owner renew should be triggered.
+    """
+    # Patch renew to capture calls and time to be deterministic
+    monkeypatch.setattr("breathecode.payments.tasks.renew_subscription_consumables.delay", MagicMock())
+    monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+
+    # Subscription with seats
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 1})
+    subscription = {
+        "next_payment_at": UTC_NOW + relativedelta(months=1),
+        "valid_until": UTC_NOW + relativedelta(months=2),
+        "seat_service_item": seat_model.service_item,
+    }
+
+    # Two subscription service items: one non-team, one team-allowed
+    model = database.create(
+        subscription=subscription,
+        service=[{"type": "COHORT_SET"}, {"type": "EVENT_TYPE_SET"}],
+        service_item=[
+            {"service_id": 1, "is_team_allowed": False, "how_many": 1},
+            {"service_id": 2, "is_team_allowed": True, "how_many": 1},
+        ],
+        subscription_service_item=2,
+        academy={"available_as_saas": True},
+        country=1,
+        city=1,
+    )
+
+    # Team with PER_TEAM strategy
+    team = SubscriptionBillingTeam.objects.create(
+        subscription=model.subscription,
+        name=f"Team {model.subscription.id}",
+        consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+    )
+    SubscriptionSeat.objects.create(
+        billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+    )
+
+    # Act
+    tasks.build_service_stock_scheduler_from_subscription.delay(model.subscription.id)
+
+    # Assert: owner-level for non-team item; team-owned for team-allowed item
+    assert database.list_of("payments.ServiceStockScheduler") == [
+        {
+            "id": 1,
+            "plan_handler_id": None,
+            "subscription_handler_id": 1,  # non-team
+            "subscription_seat_id": None,
+            "subscription_billing_team_id": None,
+            "valid_until": None,
+        },
+        {
+            "id": 2,
+            "plan_handler_id": None,
+            "subscription_handler_id": 2,  # team-allowed
+            "subscription_seat_id": None,
+            "subscription_billing_team_id": team.id,
+            "valid_until": None,
+        },
+    ]
+
+    # Only one renew call for owner-level build
+    assert tasks.renew_subscription_consumables.delay.call_args_list == [call(model.subscription.id, seat_id=None)]
+
+
+@pytest.mark.django_db
+def test_per_team_builds_team_owned_for_plan_items(database, monkeypatch: pytest.MonkeyPatch):
+    """
+    PER_TEAM strategy for plan items:
+    - Team-allowed plan items must create team-owned schedulers (subscription_billing_team set).
+    - Non-team plan items must create owner-level schedulers (no seat, no billing_team).
+    - No seat schedulers should be created and only one owner renew should be triggered.
+    """
+    # Patch renew to capture calls and time to be deterministic
+    monkeypatch.setattr("breathecode.payments.tasks.renew_subscription_consumables.delay", MagicMock())
+    monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+
+    # Subscription with seats
+    seat_model = database.create(service={"type": "SEAT"}, service_item={"how_many": 1})
+    subscription = {
+        "next_payment_at": UTC_NOW + relativedelta(months=1),
+        "valid_until": UTC_NOW + relativedelta(months=2),
+        "seat_service_item": seat_model.service_item,
+    }
+
+    # Two plan items: one non-team, one team-allowed
+    model = database.create(
+        subscription=subscription,
+        plan={"is_renewable": False},
+        service=[{"type": "COHORT_SET"}, {"type": "EVENT_TYPE_SET"}],
+        service_item=[
+            {"service_id": 1, "is_team_allowed": False, "how_many": 1},
+            {"service_id": 2, "is_team_allowed": True, "how_many": 1},
+        ],
+        plan_service_item=[{"plan_id": 1, "service_item_id": 1}, {"plan_id": 1, "service_item_id": 2}],
+        academy={"available_as_saas": True},
+        country=1,
+        city=1,
+    )
+
+    # Team with PER_TEAM strategy
+    team = SubscriptionBillingTeam.objects.create(
+        subscription=model.subscription,
+        name=f"Team {model.subscription.id}",
+        consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+    )
+    SubscriptionSeat.objects.create(
+        billing_team=team, user=model.user, email=model.user.email, is_active=True, seat_multiplier=1
+    )
+
+    # Act
+    tasks.build_service_stock_scheduler_from_subscription.delay(model.subscription.id)
+
+    # Assert: owner-level for non-team plan item; team-owned for team-allowed plan item
+    assert database.list_of("payments.ServiceStockScheduler") == [
+        {
+            "id": 1,
+            "plan_handler_id": 1,  # non-team
+            "subscription_handler_id": None,
+            "subscription_seat_id": None,
+            "subscription_billing_team_id": None,
+            "valid_until": None,
+        },
+        {
+            "id": 2,
+            "plan_handler_id": 2,  # team-allowed
+            "subscription_handler_id": None,
+            "subscription_seat_id": None,
+            "subscription_billing_team_id": team.id,
+            "valid_until": None,
+        },
+    ]
+
+    # Only one renew call for owner-level build
+    assert tasks.renew_subscription_consumables.delay.call_args_list == [call(model.subscription.id, seat_id=None)]
+
+
+@pytest.mark.django_db
 def test_build_scheduler_for_team_and_non_team_items(database, monkeypatch: pytest.MonkeyPatch):
     # Capture renew calls
     monkeypatch.setattr("breathecode.payments.tasks.renew_consumables.delay", MagicMock())
