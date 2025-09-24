@@ -395,6 +395,7 @@ def test_with_two_cohorts_linked(
                 "plan_financing_id": 1 if type == "plan_financing" else None,
                 "subscription_id": 1 if type == "subscription" else None,
                 "subscription_seat_id": 1 if with_seat else None,
+                "subscription_billing_team_id": 1 if with_seat and type == "subscription" else None,
             }
         ),
     ]
@@ -507,6 +508,7 @@ def test_two_mentorship_services_linked(
                 "plan_financing_id": 1 if type == "plan_financing" else None,
                 "subscription_id": 1 if type == "subscription" else None,
                 "subscription_seat_id": 1 if with_seat else None,
+                "subscription_billing_team_id": 1 if with_seat and type == "subscription" else None,
             }
         ),
     ]
@@ -618,6 +620,7 @@ def test_two_event_types_linked(
                 "plan_financing_id": 1 if type == "plan_financing" else None,
                 "subscription_id": 1 if type == "subscription" else None,
                 "subscription_seat_id": 1 if with_seat else None,
+                "subscription_billing_team_id": 1 if with_seat and type == "subscription" else None,
             }
         ),
     ]
@@ -729,6 +732,7 @@ def test_without_a_resource_linked__type_void(
                 "plan_financing_id": 1 if type == "plan_financing" else None,
                 "subscription_id": 1 if type == "subscription" else None,
                 "subscription_seat_id": 1 if with_seat else None,
+                "subscription_billing_team_id": 1 if with_seat and type == "subscription" else None,
             }
         ),
     ]

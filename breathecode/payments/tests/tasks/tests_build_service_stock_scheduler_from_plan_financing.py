@@ -23,6 +23,8 @@ def service_stock_scheduler_item(data={}):
         "id": 1,
         "plan_handler_id": None,
         "subscription_handler_id": None,
+        "subscription_seat_id": None,
+        "subscription_billing_team_id": None,
         "valid_until": None,
         **data,
     }
