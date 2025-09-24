@@ -2689,6 +2689,8 @@ class PayView(APIView):
                             bag.currency = c
                             bag.save()
 
+                        # Initialize add-ons to zero by default
+                        add_ons_amount = 0
                         if request.data.get("add_ons"):
                             add_ons_amount = actions.manage_plan_financing_add_ons(request, bag, lang)
 
