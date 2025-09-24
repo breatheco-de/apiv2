@@ -44,6 +44,7 @@ def format_consumable_item(data={}):
         "subscription_id": None,
         "subscription_seat_id": None,
         "plan_financing_id": None,
+        "subscription_billing_team_id": None,
         **data,
     }
 
@@ -946,7 +947,7 @@ class SignalTestSuite(PaymentsTestCase):
     ],
 )
 def test_checkout_with_country_code_and_exceptions(
-    db, bc: Breathecode, client: APIClient, exception_details, country_code, monkeypatch, set_datetime
+    db, database, client: APIClient, exception_details, country_code, monkeypatch, set_datetime
 ):
     """
     Test the consumable checkout endpoint with country_code and various
@@ -983,7 +984,15 @@ def test_checkout_with_country_code_and_exceptions(
     service = {"type": "VOID"}  # Use VOID type for consumable checkout
     currency_code = exception_details.get("currency", "USD")  # Default to USD if no override
     currency = {"code": currency_code, "name": f"{currency_code} Name"}
-    model = bc.database.create(user=1, academy_service=academy_service, service=service, currency=currency, academy=1)
+    model = database.create(
+        user=1,
+        academy_service=academy_service,
+        service=service,
+        currency=currency,
+        academy=1,
+        city=1,
+        country=1,
+    )
 
     client.force_authenticate(model.user)
     url = reverse_lazy("payments:consumable_checkout")
@@ -1024,7 +1033,7 @@ def test_checkout_with_country_code_and_exceptions(
     assert json == expected_json
     assert response.status_code == status.HTTP_201_CREATED
 
-    assert bc.database.list_of("payments.Bag") == [
+    assert database.list_of("payments.Bag") == [
         format_bag_item({"currency_id": final_currency_obj.id, "country_code": country_code})
     ]
 
@@ -1045,7 +1054,7 @@ def test_checkout_with_country_code_and_exceptions(
         "payment_method_id": None,
         "proof_id": None,
     }
-    assert bc.database.list_of("payments.Invoice") == [expected_invoice_data]
+    assert database.list_of("payments.Invoice") == [expected_invoice_data]
 
     # Verify Consumable creation
     expected_consumable = {
@@ -1062,8 +1071,9 @@ def test_checkout_with_country_code_and_exceptions(
         "subscription_seat_id": None,
         "subscription_id": None,
         "plan_financing_id": None,
+        "subscription_billing_team_id": None,
     }
-    assert bc.database.list_of("payments.Consumable") == [expected_consumable]
+    assert database.list_of("payments.Consumable") == [expected_consumable]
 
     # Verify stripe calls: find the call with the expected parameters
     assert charge_create_calls == [
@@ -1076,13 +1086,10 @@ def test_checkout_with_country_code_and_exceptions(
     ]
 
     # Verify activity call
-    bc.check.calls(
-        activity_tasks.add_activity.delay.call_args_list,
-        [
-            call(model.user.id, "bag_created", related_type="payments.Bag", related_id=1),
-            call(model.user.id, "checkout_completed", related_type="payments.Invoice", related_id=1),
-        ],
-    )
+    assert activity_tasks.add_activity.delay.call_args_list == [
+        call(model.user.id, "bag_created", related_type="payments.Bag", related_id=1),
+        call(model.user.id, "checkout_completed", related_type="payments.Invoice", related_id=1),
+    ]
 
 
 @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
