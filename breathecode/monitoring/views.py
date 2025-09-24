@@ -209,26 +209,54 @@ def process_github_webhook(request, subscription_token):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def process_stripe_webhook(request):
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     event = None
     payload = request.data
     sig_header = request.headers.get("Stripe-Signature", None)
     endpoint_secret = get_stripe_webhook_secret()
 
+    # 🔥 LOGS DE DEBUG
+    logger.info("=== STRIPE WEBHOOK DEBUG ===")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Request headers: {dict(request.headers)}")
+    logger.info(f"Stripe-Signature header: {sig_header}")
+    logger.info(f"Endpoint secret configured: {bool(endpoint_secret)}")
+    logger.info(f"Endpoint secret length: {len(endpoint_secret) if endpoint_secret else 0}")
+    logger.info(
+        f"Endpoint secret starts with 'whsec_': {endpoint_secret.startswith('whsec_') if endpoint_secret else False}"
+    )
+    logger.info(f"Payload type: {type(payload)}")
+    logger.info(f"Payload length: {len(str(payload)) if payload else 0}")
+    logger.info("=============================")
+
     try:
         if not sig_header:
+            logger.error("No Stripe-Signature header found")
             raise stripe.error.SignatureVerificationError(None, None)
 
+        logger.info("Attempting to construct event with Stripe...")
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        logger.info(f"Successfully constructed event: {event.get('type', 'unknown')}")
 
-    except ValueError:
+    except ValueError as e:
+        logger.error(f"ValueError during webhook construction: {str(e)}")
         raise ValidationException("Invalid payload", code=400, slug="invalid-payload")
 
-    except stripe.error.SignatureVerificationError:
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"SignatureVerificationError: {str(e)}")
+        logger.error(f"Expected secret: {endpoint_secret}")
+        logger.error(f"Received signature: {sig_header}")
         raise ValidationException("Not allowed", code=403, slug="not-allowed")
 
     if event := add_stripe_webhook(event):
+        logger.info(f"Created StripeEvent with ID: {event.id}")
         signals.stripe_webhook.send_robust(event=event, sender=event.__class__)
+        logger.info("Sent stripe_webhook signal")
 
+    logger.info("Webhook processed successfully")
     return Response({"success": True})
 
 
