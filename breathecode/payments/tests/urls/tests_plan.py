@@ -83,6 +83,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "trial_duration": event.trial_duration,
         "trial_duration_unit": event.trial_duration_unit,
         "seat_service_price": None,
+        "consumption_strategy": event.consumption_strategy,
     }
 
 

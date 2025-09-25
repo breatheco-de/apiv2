@@ -975,6 +975,8 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
                     consumable.subscription_billing_team.id if consumable.subscription_billing_team else None
                 ),
                 "user": consumable.user.id if consumable.user else None,
+                "subscription": consumable.subscription.id if consumable.subscription else None,
+                "plan_financing": consumable.plan_financing.id if consumable.plan_financing else None,
             }
         )
 
@@ -1018,6 +1020,8 @@ def get_balance_by_resource(
                         x.subscription_billing_team.id if x.subscription_billing_team else None
                     ),
                     "user": x.user.id if x.user else None,
+                    "subscription": x.subscription.id if x.subscription else None,
+                    "plan_financing": x.plan_financing.id if x.plan_financing else None,
                 }
             )
 
@@ -1515,6 +1519,8 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
                 "subscription_seat": None,
                 "subscription_billing_team": None,
                 "user": user.id,
+                "subscription": None,
+                "plan_financing": None,
             }
         )
 
