@@ -308,6 +308,8 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
 
             if invoice.status == "REFUNDED":
                 logger.info(f"Invoice {invoice.id} already refunded")
+                invoice.amount_refunded += refund_amount
+                invoice.save()
                 instance.status = "DONE"
                 instance.save()
                 return
