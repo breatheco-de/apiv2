@@ -284,10 +284,22 @@ def handle_stripe_refund(sender: Type[StripeEvent], instance: StripeEvent, **kwa
 
     if instance.type == "charge.refunded":
         try:
-            refund_data = instance.data["object"]
-            charge_id = refund_data["charge"]
+            charge_data = instance.data["object"]
+            charge_id = charge_data["id"]
 
-            logger.info(f"Processing refund for charge {charge_id}")
+            # Obtener el refund más reciente de la lista de refunds
+            refunds = charge_data.get("refunds", {}).get("data", [])
+            if not refunds:
+                logger.warning(f"No refunds found in charge {charge_id}")
+                instance.status = "ERROR"
+                instance.save()
+                return
+
+            refund_data = refunds[-1]
+            refund_id = refund_data["id"]
+            refund_amount = refund_data.get("amount", 0) / 100  # Convertir de centavos a dólares
+
+            logger.info(f"Processing refund {refund_id} for charge {charge_id}, amount: {refund_amount}")
 
             invoice = Invoice.objects.filter(stripe_id=charge_id).first()
 
@@ -303,18 +315,15 @@ def handle_stripe_refund(sender: Type[StripeEvent], instance: StripeEvent, **kwa
                 instance.save()
                 return
 
-            refund_amount = refund_data.get("amount", 0) / 100
-            refund_id = refund_data.get("id")
-
             invoice.refund_stripe_id = refund_id
-            logger.info(f"Processing refund {refund_id} for amount {refund_amount}")
-
             invoice.status = "REFUNDED"
             invoice.refunded_at = timezone.now()
             invoice.amount_refunded = refund_amount
 
             invoice.save()
-            logger.info(f"Updated invoice {invoice.id} to REFUNDED status with amount {refund_amount}")
+            logger.info(
+                f"Updated invoice {invoice.id} to REFUNDED status with refund {refund_id} for amount {refund_amount}"
+            )
 
             bag = invoice.bag
             if bag and bag.plans.exists():
