@@ -3,20 +3,57 @@ from __future__ import annotations
 import os
 from typing import Dict
 import requests
+import time
 
-from ..utils import assert_env_vars, build_headers, print_section
+from ..utils import assert_env_vars, build_headers
+
+
+def subscription_request() -> requests.Response:
+    base_url = os.environ["FTT_API_URL"].rstrip("/")
+    owner_token = os.getenv("FTT_OWNER_TOKEN", "")
+    academy = os.getenv("FTT_ACADEMY", "")
+    path = "/v1/payments/me/subscription"
+    url = f"{base_url}{path}"
+    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
+    res = requests.get(url, headers=headers)
+    return res
+
+
+def get_subscription_id(slug: str) -> int | None:
+    res = subscription_request()
+    assert_response(res)
+    x = res.json()
+    for subs in x["subscriptions"]:
+        for plan in subs["plans"]:
+            if plan["slug"] == slug:
+                return subs["id"]
 
 
 def setup() -> None:
     print("[fttests] Setting up smoke test...")
-    assert_env_vars(["FTT_API_URL", "FTT_OWNER_TOKEN", "FTT_ACADEMY"])  # required
+    assert_env_vars(["FTT_API_URL", "FTT_OWNER_TOKEN", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"])  # required
+    base = os.environ["FTT_API_URL"].rstrip("/")
+
+    sub_id = get_subscription_id("4geeks-premium")
+    assert (
+        sub_id is None
+    ), f"Subscription `4geeks-premium` found, delete it on {base}/admin/payments/subscription/{sub_id}/change/"
 
 
-def plan_request() -> requests.Response:
+def assert_response(res: requests.Response) -> None:
+    assert "application/json" in (
+        res.headers.get("Content-Type") or ""
+    ), f"{res.request.method} {res.request.url} Content-Type is not application/json"
+    assert (
+        200 <= res.status_code < 400
+    ), f"{res.request.method} {res.request.url} request failed at {res.request.url} with status {res.status_code}, {res.text[:40]}"
+
+
+def plan_request(slug) -> requests.Response:
     base_url = os.environ["FTT_API_URL"].rstrip("/")
     owner_token = os.getenv("FTT_OWNER_TOKEN", "")
     academy = os.getenv("FTT_ACADEMY", "")
-    path = "/v1/payments/plan/prework-usa"
+    path = f"/v1/payments/plan/{slug}"
     url = f"{base_url}{path}"
     headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
     res = requests.get(url, headers=headers)
@@ -35,66 +72,83 @@ def checking_request(data: Dict[str, str]) -> requests.Response:
     return res
 
 
-def test_smoke_health() -> None:
-    """Basic reachability smoke test for the API health endpoint."""
+def card_request(data: Dict[str, str]) -> requests.Response:
+    base_url = os.environ["FTT_API_URL"].rstrip("/")
+    owner_token = os.getenv("FTT_OWNER_TOKEN", "")
+    academy = os.getenv("FTT_ACADEMY", "")
+    academy_slug = os.getenv("FTT_ACADEMY_SLUG", "")
+    path = "/v1/payments/card"
+    url = f"{base_url}{path}"
+    data["academy"] = academy_slug
+    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
+    res = requests.post(url, headers=headers, json=data)
+    return res
 
-    print_section("subscription_seats: smoke test")
 
-    res = plan_request()
-    assert "application/json" in (res.headers.get("Content-Type") or ""), "Content-Type is not application/json"
-    assert 200 <= res.status_code < 400, f"Plan request failed at {res.request.url} with status {res.status_code}"
+def pay_request(data: Dict[str, str]) -> requests.Response:
+    base_url = os.environ["FTT_API_URL"].rstrip("/")
+    owner_token = os.getenv("FTT_OWNER_TOKEN", "")
+    academy = os.getenv("FTT_ACADEMY", "")
+    path = "/v1/payments/pay"
+    url = f"{base_url}{path}"
+    data["academy"] = academy
+    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json")
+    res = requests.post(url, headers=headers, json=data)
+    return res
+
+
+def test_plan_setup_with_seat_price() -> None:
+    """Buy a plan with seats."""
+
+    res = plan_request("4geeks-premium")
+    assert_response(res)
 
     json_res = res.json()
 
     assert "seat_service_price" in json_res, "seat_service_price not found in response"
     assert json_res.get("seat_service_price") is not None, "seat_service_price is None"
+    return {"plan_id": json_res.get("id")}
 
-    print()
-    print()
-    print()
-    print()
-    print()
-    print(res.status_code, res.text)
 
-    data = {"seats": 3, "type": "PREVIEW"}
+def test_checking_works_properly_with_team_seats(plan_id: int) -> None:
+    """Buy a plan with seats."""
+
+    data = {"team_seats": 3, "type": "PREVIEW", "plans": [plan_id]}
     res = checking_request(data)
+    assert_response(res)
 
-    print()
-    print()
-    print()
-    print()
-    print()
-    print()
-    print(res.status_code, res.text)
+    json_res = res.json()
 
-    assert 200 <= res.status_code < 400, f"Health check failed at {res.request.url} with status {res.status_code}"
+    assert "seat_service_item" in json_res, "seat_service_item not found in response"
+    assert json_res.get("seat_service_item") is not None, "seat_service_item is None"
+
+    bag_token = json_res.get("token")
+    return {"bag_token": bag_token}
 
 
-# def test_list_seats_if_configured() -> None:
-#     """If FTT_SEATS_LIST_PATH is set, perform a GET and assert reachability and basic JSON shape."""
-#     assert_env_vars(["FTT_BASE_URL"])  # required for building the URL
+def test_set_the_payment_card(**ctx) -> None:
+    data = {"card_number": "4242424242424242", "cvc": "123", "exp_month": "12", "exp_year": "2035"}
 
-#     path = os.getenv("FTT_SEATS_LIST_PATH")
-#     if not path:
-#         # not a failure: test is a no-op when not configured
-#         return
+    res = card_request(data)
+    assert_response(res)
 
-#     print_section("subscription_seats: list seats")
 
-#     base_url = os.environ["FTT_BASE_URL"].rstrip("/")
-#     url = f"{base_url}{path if path.startswith('/') else '/' + path}"
-#     headers = build_headers(token_env="FTT_API_TOKEN")
-#     status, resp_headers, body = http_request("GET", url, headers=headers)
+def test_pay_a_plan_with_seats(bag_token: str, **ctx) -> None:
+    data = {"token": bag_token, "chosen_period": "MONTH"}
+    res = pay_request(data)
+    assert_response(res)
 
-#     assert 200 <= status < 400, f"List seats failed at {url} with status {status}"
+    json_res = res.json()
 
-#     # If JSON, try to parse for debug purposes (no schema enforced here)
-#     content_type = (resp_headers.get("Content-Type") or "").lower()
-#     if "application/json" in content_type:
-#         try:
-#             payload = json.loads(body.decode("utf-8")) if body else None
-#             # Non-failing lightweight sanity: payload should be dict or list
-#             assert isinstance(payload, (dict, list)), "Expected JSON object or array"
-#         except Exception as exc:  # noqa: BLE001
-#             # Treat invalid JSON as a failure for this test
-#             raise AssertionError(f"Invalid JSON response from {url}: {exc}") from exc
+    assert "amount" in json_res, "amount not found in response"
+    assert json_res.get("amount") is not None, "amount is None"
+    assert json_res.get("amount") > 0, "amount is not greater than 0"
+
+    attempts = 0
+    while attempts < 10:
+        time.sleep(10)
+        if get_subscription_id("4geeks-premium"):
+            return
+        attempts += 1
+
+    assert 0, "Subscription was not created"

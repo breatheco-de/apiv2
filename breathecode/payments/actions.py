@@ -569,6 +569,7 @@ class BagHandler:
         )
 
         self.bag.seat_service_item = service_item
+        self.bag.save()
 
     def _ask_to_add_plan_and_charge_it_in_the_bag(self):
         for plan in self.bag.plans.all():
