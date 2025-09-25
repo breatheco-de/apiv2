@@ -288,6 +288,7 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
             if not refunds:
                 logger.warning(f"No refunds found in charge {charge_id}")
                 instance.status = "ERROR"
+                instance.status_text = f"No refunds found in charge {charge_id}"
                 instance.save()
                 return
 
@@ -303,6 +304,7 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
             if not invoice:
                 logger.warning(f"Invoice not found for charge {charge_id}")
                 instance.status = "ERROR"
+                instance.status_text = f"Invoice not found for charge {charge_id}"
                 instance.save()
                 return
 
@@ -311,6 +313,7 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
                 invoice.amount_refunded += refund_amount
                 invoice.save()
                 instance.status = "DONE"
+                instance.status_text = f"Additional refund processed for invoice {invoice.id}, amount: {refund_amount}"
                 instance.save()
                 return
 
@@ -350,6 +353,7 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
                         logger.info(f"Expired plan financing {plan_financing.id} due to refund")
 
             instance.status = "DONE"
+            instance.status_text = f"Successfully processed refund for invoice {invoice.id}, amount: {refund_amount}"
             instance.save()
 
             logger.info(f"Successfully processed refund for invoice {invoice.id}")
@@ -357,6 +361,7 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
         except Exception as e:
             logger.error(f"Error processing refund webhook: {str(e)}")
             instance.status = "ERROR"
+            instance.status_text = f"Error processing refund webhook: {str(e)}"
             instance.save()
             return
 
