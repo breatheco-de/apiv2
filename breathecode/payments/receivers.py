@@ -330,7 +330,7 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
                 user = invoice.user
 
                 subscription = Subscription.objects.filter(
-                    user=user, plan=plan, status__in=[Subscription.Status.ACTIVE, Subscription.Status.FREE_TRIAL]
+                    user=user, plans=plan, status__in=[Subscription.Status.ACTIVE]
                 ).first()
 
                 if subscription:
@@ -340,7 +340,7 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
                     logger.info(f"Expired subscription {subscription.id} due to refund")
                 else:
                     plan_financing = PlanFinancing.objects.filter(
-                        user=user, plan=plan, status__in=[PlanFinancing.Status.ACTIVE, PlanFinancing.Status.FREE_TRIAL]
+                        user=user, plans=plan, status__in=[PlanFinancing.Status.ACTIVE]
                     ).first()
 
                     if plan_financing:
