@@ -23,6 +23,7 @@ import os
 import pkgutil
 import sys
 from types import ModuleType
+import traceback
 
 # ANSI colors
 RED = "\033[31m"
@@ -255,6 +256,7 @@ def main(argv: list[str]) -> int:
                         continue
                     except Exception as exc:  # noqa: BLE001
                         print(f"{RED}[fttests] ERROR {label} -> {exc}{RESET}")
+                        traceback.print_exc()
                         failures.append(f"{label}: unexpected error: {exc}")
                         continue
 
@@ -273,6 +275,7 @@ def main(argv: list[str]) -> int:
                         failures.append(f"{pretty}: {exc}")
                     except Exception as exc:  # noqa: BLE001
                         print(f"{RED}[fttests] ERROR -> {exc}{RESET}")
+                        traceback.print_exc()
                         failures.append(f"{pretty}: unexpected error: {exc}")
 
                 # Optional teardown()
@@ -288,6 +291,7 @@ def main(argv: list[str]) -> int:
                         failures.append(f"{label}: {exc}")
                     except Exception as exc:  # noqa: BLE001
                         print(f"{RED}[fttests] ERROR    {label} -> {exc}{RESET}")
+                        traceback.print_exc()
                         failures.append(f"{label}: unexpected error: {exc}")
 
             print(f"\n[fttests] Ran {total} test(s).")
@@ -312,6 +316,7 @@ def main(argv: list[str]) -> int:
         return int(exc.code) if isinstance(exc.code, int) else 1
     except Exception as exc:  # noqa: BLE001 - surface any unexpected failure
         print(f"{RED}Unexpected error: {exc}{RESET}", file=sys.stderr)
+        traceback.print_exc()
         return 1
 
     print(f"\n[fttests] Feature '{feature_name}' finished successfully.")

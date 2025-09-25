@@ -41,7 +41,7 @@ def setup() -> None:
     sub_id = get_subscription_id(PER_SEAT_PLAN)
     assert (
         sub_id is None
-    ), f"Subscription `4geeks-premium` found, delete it on {base}/admin/payments/subscription/{sub_id}/change/"
+    ), f"Subscription to `{PER_SEAT_PLAN}` found, delete it on {base}/admin/payments/subscription/{sub_id}/delete/"
 
 
 def assert_response(res: requests.Response) -> None:
@@ -127,7 +127,7 @@ def test_checking_works_properly_with_team_seats(plan_id: int) -> None:
     assert json_res.get("seat_service_item") is not None, "seat_service_item is None"
 
     bag_token = json_res.get("token")
-    return {"bag_token": bag_token}
+    return {"bag_token": bag_token, "team_seats": 3}
 
 
 def test_set_the_payment_card(**ctx) -> None:
@@ -175,9 +175,10 @@ def get_consumables(subscription_id: int) -> requests.Response:
     json_res = res.json()
     consumables = []
     for x in json_res.values():
-        for item in x["items"]:
-            if item["subscription_seat"] == subscription_id:
-                consumables.append(item)
+        for y in x:
+            for item in y["items"]:
+                if item["subscription"] == subscription_id:
+                    consumables.append(item)
     return consumables
 
 
@@ -189,8 +190,8 @@ def test_all_consumables(subscription_id: int, **ctx):
         if consumables:
             assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
             assert all(
-                [x["subscription_seat"] is not None for x in consumables]
-            ), "Consumables were issued without subscription seat"
+                [x["subscription_seat"] is None for x in consumables]
+            ), "Consumables related to ownerwere issued with subscription seat"
             # assert all(
             #     [x["plan_financing"] is not None for x in consumables]
             # ), "Consumables were issued without plan financing"
@@ -198,3 +199,21 @@ def test_all_consumables(subscription_id: int, **ctx):
         attempts += 1
 
     assert 0, "Consumables were not created"
+
+
+def billing_team_request(subscription_id: int) -> requests.Response:
+    base_url = os.environ["FTT_API_URL"].rstrip("/")
+    owner_token = os.getenv("FTT_USER1", "")
+    academy = os.getenv("FTT_ACADEMY", "")
+    path = f"/v2/payments/subscription/{subscription_id}/billing-team"
+    url = f"{base_url}{path}"
+    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
+    res = requests.get(url, headers=headers)
+    return res
+
+
+def test_billing_team_exists(subscription_id: int, team_seats: int, **ctx):
+    res = billing_team_request(subscription_id)
+    assert_response(res)
+    json_res = res.json()
+    assert json_res.get("seats_limit") == team_seats, "billing_team seats_limit is not equal to team_seats"

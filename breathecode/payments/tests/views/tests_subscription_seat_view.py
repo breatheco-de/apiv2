@@ -139,7 +139,7 @@ def test_get_list_ok_integration_db(client):
 
     # Act: call real endpoint
     client.force_authenticate(user=owner)
-    url = f"/v2/payments/academy/subscription/{sub.id}/billing-team/seat"
+    url = f"/v2/payments/subscription/{sub.id}/billing-team/seat"
     resp = client.get(url)
 
     # Assert
@@ -437,7 +437,7 @@ def test_put_add_seats_integration_db(client):
 
         with patch("breathecode.payments.views.actions.create_seat", side_effect=create_seat_side_effect):
             client.force_authenticate(user=owner)
-            url = f"/v2/payments/academy/subscription/{sub.id}/billing-team/seat"
+            url = f"/v2/payments/subscription/{sub.id}/billing-team/seat"
             resp = client.put(url, data=payload, content_type="application/json")
 
     # Assert
@@ -474,7 +474,7 @@ def test_delete_happy_path_integration_db(client):
     seat = SubscriptionSeat.objects.create(billing_team=team, email="bye@x.com", user=None, seat_multiplier=1)
 
     client.force_authenticate(user=owner)
-    url = f"/v2/payments/academy/subscription/{sub.id}/billing-team/seat/{seat.id}"
+    url = f"/v2/payments/subscription/{sub.id}/billing-team/seat/{seat.id}"
     resp = client.delete(url)
 
     assert resp.status_code == status.HTTP_204_NO_CONTENT
