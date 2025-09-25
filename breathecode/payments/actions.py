@@ -569,6 +569,7 @@ class BagHandler:
         )
 
         self.bag.seat_service_item = service_item
+        self.bag.save()
 
     def _ask_to_add_plan_and_charge_it_in_the_bag(self):
         for plan in self.bag.plans.all():
@@ -969,6 +970,11 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
                 "how_many": consumable.how_many,
                 "unit_type": consumable.unit_type,
                 "valid_until": consumable.valid_until,
+                "subscription_seat": consumable.subscription_seat.id if consumable.subscription_seat else None,
+                "subscription_billing_team": (
+                    consumable.subscription_billing_team.id if consumable.subscription_billing_team else None
+                ),
+                "user": consumable.user.id if consumable.user else None,
             }
         )
 
@@ -1006,6 +1012,12 @@ def get_balance_by_resource(
                     "how_many": x.how_many,
                     "unit_type": x.unit_type,
                     "valid_until": x.valid_until,
+                    # identity info
+                    "subscription_seat": x.subscription_seat.id if x.subscription_seat else None,
+                    "subscription_billing_team": (
+                        x.subscription_billing_team.id if x.subscription_billing_team else None
+                    ),
+                    "user": x.user.id if x.user else None,
                 }
             )
 
@@ -1500,6 +1512,9 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
                 "how_many": how_many,
                 "unit_type": unit_type.upper(),
                 "valid_until": valid_until,
+                "subscription_seat": None,
+                "subscription_billing_team": None,
+                "user": user.id,
             }
         )
 

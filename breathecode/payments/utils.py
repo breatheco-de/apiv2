@@ -200,4 +200,7 @@ def consumable(
         "cohort_set": cohort_set,
         "event_type_set": event_type_set,
         "mentorship_service_set": mentorship_service_set,
+        "user": 1,
+        "subscription_seat": None,
+        "subscription_billing_team": None,
     }

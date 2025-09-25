@@ -995,9 +995,9 @@ def get_academy_from_body(body: dict[str, Any], lang: str = "en", raise_exceptio
     academy = None
 
     if isinstance(academy_slug, int):
-        academy = Academy.objects.get(id=academy_slug)
+        academy = Academy.objects.filter(id=academy_slug).first()
     elif isinstance(academy_slug, str):
-        academy = Academy.objects.get(slug=academy_slug)
+        academy = Academy.objects.filter(slug=academy_slug).first()
 
     if raise_exception and academy is None:
         raise ValidationException(

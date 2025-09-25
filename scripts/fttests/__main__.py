@@ -81,9 +81,19 @@ def _discover_tests_for_feature(feature_mod: ModuleType) -> list[tuple[str, call
 
 
 def _discover_module_tests(mod: ModuleType) -> list[tuple[str, callable]]:
+    """Discover test_* in definition order.
+
+    inspect.getmembers sorts by name; instead iterate mod.__dict__ to preserve
+    definition order (insertion-ordered in modern Python).
+    """
     found: list[tuple[str, callable]] = []
-    for name, obj in inspect.getmembers(mod, inspect.isfunction):
-        if name.startswith("test_") and obj.__module__ == mod.__name__:
+    for name, obj in mod.__dict__.items():
+        if (
+            isinstance(name, str)
+            and name.startswith("test_")
+            and inspect.isfunction(obj)
+            and getattr(obj, "__module__", None) == mod.__name__
+        ):
             found.append((f"{mod.__name__}.{name}", obj))
     return found
 
@@ -164,6 +174,34 @@ def _discover_tests_grouped(feature_mod: ModuleType) -> list[tuple[ModuleType, l
     return groups
 
 
+def _build_call_kwargs(func: callable, context: dict) -> dict:
+    """Build kwargs for calling a function from a shared context.
+
+    - If function accepts **kwargs, pass the entire context.
+    - Else, pass only the keys that match the function's named parameters.
+    """
+    try:
+        sig = inspect.signature(func)
+    except (TypeError, ValueError):
+        return {}
+
+    params = sig.parameters
+    # Has **kwargs
+    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()):
+        return dict(context)
+
+    allowed = {
+        name
+        for name, p in params.items()
+        if p.kind
+        in (
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        )
+    }
+    return {k: v for k, v in context.items() if k in allowed}
+
+
 def main(argv: list[str]) -> int:
     features = _discover_features()
 
@@ -198,6 +236,7 @@ def main(argv: list[str]) -> int:
 
             for module_obj, tests in groups:
                 module_pretty = _format_module_name(module_obj.__name__, feature_name)
+                context: dict = {}
 
                 # Optional setup()
                 setup_fn = getattr(module_obj, "setup", None)
@@ -205,7 +244,9 @@ def main(argv: list[str]) -> int:
                     label = f"{module_pretty} -> setup"
                     print(f"[fttests] SETUP {label}")
                     try:
-                        setup_fn()
+                        ret = setup_fn(**_build_call_kwargs(setup_fn, context))
+                        if isinstance(ret, dict):
+                            context.update(ret)
                         print(f"[fttests] OK    {label}")
                     except AssertionError as exc:
                         print(f"{RED}[fttests] FAIL  {label} -> {exc}{RESET}")
@@ -223,7 +264,9 @@ def main(argv: list[str]) -> int:
                     pretty = _format_test_name(fullname, feature_name)
                     print(f"[fttests] RUN   {pretty}")
                     try:
-                        func()
+                        ret = func(**_build_call_kwargs(func, context))
+                        if isinstance(ret, dict):
+                            context.update(ret)
                         print("[fttests] OK")
                     except AssertionError as exc:
                         print(f"{RED}[fttests] FAIL    -> {exc}{RESET}")
@@ -238,7 +281,7 @@ def main(argv: list[str]) -> int:
                     label = f"{module_pretty} -> teardown"
                     print(f"[fttests] TEARDOWN {label}")
                     try:
-                        teardown_fn()
+                        teardown_fn(**_build_call_kwargs(teardown_fn, context))
                         print(f"[fttests] OK       {label}")
                     except AssertionError as exc:
                         print(f"{RED}[fttests] FAIL     {label} -> {exc}{RESET}")
