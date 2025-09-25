@@ -277,6 +277,11 @@ def handle_stripe_refund(sender: Type[StripeEvent], instance: StripeEvent, **kwa
     """
     Maneja eventos de devolución de Stripe
     """
+    logger.info("=== HANDLE STRIPE REFUND RECEIVER ===")
+    logger.info(f"Event type: {instance.type}")
+    logger.info(f"Event ID: {instance.id}")
+    logger.info(f"Event status: {instance.status}")
+
     if instance.type == "charge.refunded":
         try:
             refund_data = instance.data["object"]
@@ -346,3 +351,5 @@ def handle_stripe_refund(sender: Type[StripeEvent], instance: StripeEvent, **kwa
             instance.status = "ERROR"
             instance.save()
             return
+
+    logger.info("=== END HANDLE STRIPE REFUND RECEIVER ===")

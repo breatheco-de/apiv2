@@ -237,7 +237,14 @@ def process_stripe_webhook(request):
 
     if event := add_stripe_webhook(event):
         logger.info(f"Created StripeEvent with ID: {event.id}")
-        signals.stripe_webhook.send_robust(event=event, sender=event.__class__)
+        logger.info("About to call send_robust...")
+        try:
+            signals.stripe_webhook.send_robust(event=event, sender=event.__class__)
+            logger.info("Successfully sent stripe_webhook signal")
+        except Exception as e:
+            logger.error(f"Error in send_robust: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+
         logger.info("Sent stripe_webhook signal")
 
     logger.info("Webhook processed successfully")
