@@ -9,8 +9,11 @@ from django.contrib.auth.models import Group, User
 
 from breathecode.authenticate.models import GoogleWebhook, UserInvite
 from breathecode.authenticate.signals import google_webhook_saved, invite_status_updated
+from breathecode.monitoring.models import StripeEvent
+from breathecode.monitoring import signals as monitoring_signals
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.payments.models import Invoice
 from breathecode.payments import tasks
 
 from .models import (
@@ -267,3 +270,99 @@ def plan_m2m_changed(sender: Type[Plan.service_items.through], instance: Plan, *
 def process_google_webhook_on_created(sender: Type[GoogleWebhook], instance: GoogleWebhook, created: bool, **kwargs):
     if created:
         tasks.process_google_webhook.delay(instance.id)
+
+
+@receiver(monitoring_signals.stripe_webhook, sender=StripeEvent)
+def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
+    """
+    Maneja eventos de devolución de Stripe
+    """
+    instance = StripeEvent.objects.get(id=event_id)
+
+    if instance.type == "charge.refunded":
+        try:
+            charge_data = instance.data["object"]
+            charge_id = charge_data["id"]
+
+            refunds = charge_data.get("refunds", {}).get("data", [])
+            if not refunds:
+                logger.warning(f"No refunds found in charge {charge_id}")
+                instance.status = "ERROR"
+                instance.status_text = f"No refunds found in charge {charge_id}"
+                instance.save()
+                return
+
+            refunds_sorted = sorted(refunds, key=lambda x: x.get("created", 0), reverse=True)
+            refund_data = refunds_sorted[0]
+            refund_id = refund_data["id"]
+            refund_amount = refund_data.get("amount", 0) / 100  # Convertir de centavos a dólares
+
+            logger.info(f"Processing refund {refund_id} for charge {charge_id}, amount: {refund_amount}")
+
+            invoice = Invoice.objects.filter(stripe_id=charge_id).first()
+
+            if not invoice:
+                logger.warning(f"Invoice not found for charge {charge_id}")
+                instance.status = "ERROR"
+                instance.status_text = f"Invoice not found for charge {charge_id}"
+                instance.save()
+                return
+
+            if invoice.status == "REFUNDED":
+                logger.info(f"Invoice {invoice.id} already refunded")
+                invoice.amount_refunded += refund_amount
+                invoice.save()
+                instance.status = "DONE"
+                instance.status_text = f"Additional refund processed for invoice {invoice.id}, amount: {refund_amount}"
+                instance.save()
+                return
+
+            invoice.refund_stripe_id = refund_id
+            invoice.status = "REFUNDED"
+            invoice.refunded_at = timezone.now()
+            invoice.amount_refunded = refund_amount
+
+            invoice.save()
+            logger.info(
+                f"Updated invoice {invoice.id} to REFUNDED status with refund {refund_id} for amount {refund_amount}"
+            )
+
+            bag = invoice.bag
+            if bag and bag.plans.exists():
+                plan = bag.plans.first()
+                user = invoice.user
+
+                subscription = Subscription.objects.filter(
+                    user=user, plans=plan, status__in=[Subscription.Status.ACTIVE]
+                ).first()
+
+                if subscription:
+                    subscription.status = Subscription.Status.EXPIRED
+                    subscription.status_message = f"Subscription expired due to refund of invoice {invoice.id}"
+                    subscription.save()
+                    logger.info(f"Expired subscription {subscription.id} due to refund")
+                else:
+                    plan_financing = PlanFinancing.objects.filter(
+                        user=user, plans=plan, status__in=[PlanFinancing.Status.ACTIVE]
+                    ).first()
+
+                    if plan_financing:
+                        plan_financing.status = PlanFinancing.Status.EXPIRED
+                        plan_financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"
+                        plan_financing.save()
+                        logger.info(f"Expired plan financing {plan_financing.id} due to refund")
+
+            instance.status = "DONE"
+            instance.status_text = f"Successfully processed refund for invoice {invoice.id}, amount: {refund_amount}"
+            instance.save()
+
+            logger.info(f"Successfully processed refund for invoice {invoice.id}")
+
+        except Exception as e:
+            logger.error(f"Error processing refund webhook: {str(e)}")
+            instance.status = "ERROR"
+            instance.status_text = f"Error processing refund webhook: {str(e)}"
+            instance.save()
+            return
+
+    logger.info("=== END HANDLE STRIPE REFUND RECEIVER ===")

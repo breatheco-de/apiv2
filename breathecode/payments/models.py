@@ -1454,6 +1454,10 @@ class Invoice(models.Model):
         max_length=32, null=True, default=None, blank=True, help_text="Stripe id for refunding"
     )
 
+    amount_refunded = models.FloatField(
+        default=0, help_text="Amount refunded, this field will only be set when the invoice is refunded"
+    )
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
 

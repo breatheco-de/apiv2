@@ -209,26 +209,45 @@ def process_github_webhook(request, subscription_token):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def process_stripe_webhook(request):
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     event = None
-    payload = request.data
+    payload = request.body
     sig_header = request.headers.get("Stripe-Signature", None)
     endpoint_secret = get_stripe_webhook_secret()
 
     try:
         if not sig_header:
+            logger.error("No Stripe-Signature header found")
             raise stripe.error.SignatureVerificationError(None, None)
 
+        logger.info("Processing Stripe webhook...")
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        logger.info(f"Successfully processed event: {event.get('type', 'unknown')}")
 
-    except ValueError:
+    except ValueError as e:
+        logger.error(f"Invalid payload: {str(e)}")
         raise ValidationException("Invalid payload", code=400, slug="invalid-payload")
 
-    except stripe.error.SignatureVerificationError:
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"Webhook signature verification failed: {str(e)}")
         raise ValidationException("Not allowed", code=403, slug="not-allowed")
 
     if event := add_stripe_webhook(event):
-        signals.stripe_webhook.send_robust(event=event, sender=event.__class__)
+        logger.info(f"Created StripeEvent with ID: {event.id}")
+        logger.info("About to call send_robust...")
+        try:
+            signals.stripe_webhook.send_robust(event_id=event.id, sender=event.__class__)
+            logger.info("Successfully sent stripe_webhook signal")
+        except Exception as e:
+            logger.error(f"Error in send_robust: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
 
+        logger.info("Sent stripe_webhook signal")
+
+    logger.info("Webhook processed successfully")
     return Response({"success": True})
 
 
