@@ -20,6 +20,7 @@ lint = "scripts.cmd:lint"
 update-sql-keywords = "scripts.update_sql_keywords_json:write_json"
 "precommit:install" = "scripts.cmd:install_precommit"
 "docker:build" = "scripts.docker_build:run"
+"fttests" = "scripts.cmd:fttests"
 # flake8 = "scripts.cmd:flake8"
 
 [tool.poetry.requires-plugins]
