@@ -288,14 +288,12 @@ def handle_stripe_refund(sender: Type[StripeEvent], instance: StripeEvent, **kwa
 
             if not invoice:
                 logger.warning(f"Invoice not found for charge {charge_id}")
-                instance.status_texts["payments.handle_stripe_refund"] = f"Invoice not found for charge {charge_id}"
                 instance.status = "ERROR"
                 instance.save()
                 return
 
             if invoice.status == "REFUNDED":
                 logger.info(f"Invoice {invoice.id} already refunded")
-                instance.status_texts["payments.handle_stripe_refund"] = f"Invoice {invoice.id} already refunded"
                 instance.status = "DONE"
                 instance.save()
                 return
@@ -338,17 +336,13 @@ def handle_stripe_refund(sender: Type[StripeEvent], instance: StripeEvent, **kwa
                         plan_financing.save()
                         logger.info(f"Expired plan financing {plan_financing.id} due to refund")
 
-            if "payments.handle_stripe_refund" in instance.status_texts:
-                instance.status_texts.pop("payments.handle_stripe_refund")
-
-            instance.status = "DONE" if len(instance.status_texts) == 0 else "ERROR"
+            instance.status = "DONE"
             instance.save()
 
             logger.info(f"Successfully processed refund for invoice {invoice.id}")
 
         except Exception as e:
             logger.error(f"Error processing refund webhook: {str(e)}")
-            instance.status_texts["payments.handle_stripe_refund"] = f"Error: {str(e)}"
             instance.status = "ERROR"
             instance.save()
             return
