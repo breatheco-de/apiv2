@@ -59,6 +59,7 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
         "id": event.id,
         "slug": event.slug,
         "title": event.title,
+        "seat_service_price": None,
         "add_ons": [],
         "pricing_ratio_exceptions": event.pricing_ratio_exceptions,
         "currency": {

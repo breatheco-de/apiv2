@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 import breathecode.activity.tasks as activity_tasks
+from breathecode.payments.models import ServiceItem
 from breathecode.payments.tests.mixins.payments_test_case import PaymentsTestCase
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
@@ -137,6 +138,7 @@ def get_serializer(
     financing_options=[],
     currency=None,
     coupons=[],
+    seat_service_item=None,
     data={},
 ):
     return {
@@ -147,6 +149,9 @@ def get_serializer(
         "amount_per_year": bag.amount_per_year,
         "expires_at": bag.expires_at,
         "is_recurrent": bag.is_recurrent,
+        "seat_service_item": (
+            service_item_serializer(seat_service_item, service, cohorts) if seat_service_item else None
+        ),
         "plans": [
             plan_serializer(plan, plan_service_items, service, cohorts, financing_options, currency) for plan in plans
         ],
@@ -494,6 +499,7 @@ class SignalTestSuite(PaymentsTestCase):
         base_quarter = plan_obj.price_per_quarter
         base_half = plan_obj.price_per_half
         base_year = plan_obj.price_per_year
+        seat_service_item = ServiceItem.objects.get(service=model.service)
 
         expected = get_serializer(
             model.bag,
@@ -504,6 +510,7 @@ class SignalTestSuite(PaymentsTestCase):
             [],
             [],
             self.bc.database.get("payments.Currency", 1, dict=False),
+            seat_service_item=seat_service_item,
             data={
                 "amount_per_month": base_month + seat_price * seats,
                 "amount_per_quarter": base_quarter + seat_price * seats * 3,

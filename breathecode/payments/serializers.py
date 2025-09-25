@@ -16,6 +16,7 @@ from breathecode.payments.models import (
     Service,
     ServiceItem,
     ServiceItemFeature,
+    Bag,
 )
 from breathecode.utils import serializers, serpy
 
@@ -243,6 +244,13 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
     add_ons = serpy.MethodField()
+    seat_service_price = serpy.MethodField()
+
+    def get_seat_service_price(self, obj: Plan):
+        if not obj.seat_service_price or obj.seat_service_price.service.type != "SEAT":
+            return None
+
+        return GetAcademyServiceSmallSerializer(obj.seat_service_price, many=False).data
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -646,10 +654,17 @@ class GetBagSerializer(serpy.Serializer):
     amount_per_half = serpy.Field()
     amount_per_year = serpy.Field()
     token = serpy.Field()
+    seat_service_item = serpy.MethodField()
     expires_at = serpy.Field()
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
+
+    def get_seat_service_item(self, obj: Bag):
+        if not obj.seat_service_item or obj.seat_service_item.service.type != "SEAT":
+            return None
+
+        return GetServiceItemSerializer(obj.seat_service_item, many=False).data
 
     def get_plans(self, obj):
         return GetPlanSmallSerializer(obj.plans.filter(), many=True).data

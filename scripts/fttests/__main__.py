@@ -4,14 +4,21 @@ Usage:
     python -m scripts.fttests list
     python -m scripts.fttests <feature>
 
-Each feature is a subpackage under `scripts/fttests/` exporting:
-    - check_dependencies() -> None  # raises AssertionError or exits on failure
-    - run() -> None                 # raises AssertionError or exits on failure
+Features are subpackages under `scripts/fttests/`.
+Optionally they can export:
+    - check_dependencies() -> None  # if present, it will be called before tests
+
+Test collection is handled by this runner:
+    - Any function named ``test_*`` within the feature package (its __init__.py and
+      direct submodules) will be discovered and executed.
+    - If no tests are found and the feature defines ``run()``, the runner will
+      delegate to it as a fallback for legacy features.
 """
 
 from __future__ import annotations
 
 import importlib
+import inspect
 import os
 import pkgutil
 import sys
@@ -52,13 +59,109 @@ def _load_feature(name: str) -> ModuleType:
 
 
 def _ensure_contract(mod: ModuleType) -> None:
-    missing = [attr for attr in ("check_dependencies", "run") if not hasattr(mod, attr)]
-    if missing:
-        print(
-            f"{RED}Feature module '{mod.__name__}' is missing required symbols: {', '.join(missing)}{RESET}",
-            file=sys.stderr,
-        )
-        raise SystemExit(1)
+    # No hard requirements: discovery is centralized and check_dependencies is optional.
+    return None
+
+
+def _discover_tests_for_feature(feature_mod: ModuleType) -> list[tuple[str, callable]]:
+    """Discover all test_* functions within the given feature package.
+
+    Returns a list of (fullname, function) tuples.
+    """
+    tests: list[tuple[str, callable]] = []
+
+    # include the package's own module
+    tests.extend(_discover_module_tests(feature_mod))
+
+    # include direct submodules (non-underscore files)
+    for mod in _iter_feature_modules(feature_mod):
+        tests.extend(_discover_module_tests(mod))
+
+    return tests
+
+
+def _discover_module_tests(mod: ModuleType) -> list[tuple[str, callable]]:
+    found: list[tuple[str, callable]] = []
+    for name, obj in inspect.getmembers(mod, inspect.isfunction):
+        if name.startswith("test_") and obj.__module__ == mod.__name__:
+            found.append((f"{mod.__name__}.{name}", obj))
+    return found
+
+
+def _iter_feature_modules(feature_mod: ModuleType):
+    pkg = feature_mod.__name__
+    try:
+        pkg_path = feature_mod.__path__  # type: ignore[attr-defined]
+    except AttributeError:
+        return []  # not a package
+
+    modules = []
+    for m in pkgutil.iter_modules(list(pkg_path)):
+        if m.ispkg or m.name.startswith("_"):
+            continue
+        modules.append(importlib.import_module(f"{pkg}.{m.name}"))
+    return modules
+
+
+def _format_test_name(fullname: str, feature: str) -> str:
+    """Format a fully-qualified test name into 'feature -> module -> test'.
+
+    Example:
+      'scripts.fttests.subscription_seats.smoke.test_x' ->
+      'subscription_seats -> smoke -> test_x'
+    """
+    parts = fullname.split(".")
+    try:
+        idx = parts.index(feature)
+    except ValueError:
+        # Fallback: try to strip the package prefix if present
+        prefix = f"{PKG_NAME}."
+        if fullname.startswith(prefix):
+            trimmed = fullname[len(prefix) :]
+            parts = trimmed.split(".")
+            # Recompute feature index (should be 0 now)
+            feature = parts[0] if parts else feature
+            module_parts = parts[1:-1]
+            func = parts[-1] if parts else fullname
+            return feature + (" -> " + " -> ".join(module_parts) if module_parts else "") + f" -> {func}"
+
+    module_parts = parts[idx + 1 : -1]
+    func = parts[-1]
+    return feature + (" -> " + " -> ".join(module_parts) if module_parts else "") + f" -> {func}"
+
+
+def _format_module_name(module_fullname: str, feature: str) -> str:
+    """Format a fully-qualified module name into 'feature -> module'."""
+    parts = module_fullname.split(".")
+    try:
+        idx = parts.index(feature)
+    except ValueError:
+        prefix = f"{PKG_NAME}."
+        if module_fullname.startswith(prefix):
+            trimmed = module_fullname[len(prefix) :]
+            parts = trimmed.split(".")
+            feature = parts[0] if parts else feature
+            module_parts = parts[1:]
+            return feature + (" -> " + " -> ".join(module_parts) if module_parts else "")
+        return module_fullname
+
+    module_parts = parts[idx + 1 :]
+    return feature + (" -> " + " -> ".join(module_parts) if module_parts else "")
+
+
+def _discover_tests_grouped(feature_mod: ModuleType) -> list[tuple[ModuleType, list[tuple[str, callable]]]]:
+    """Discover tests grouped by module.
+
+    Returns a list of tuples: (module, [(fullname, func), ...]). Includes modules
+    that define a setup()/teardown() even if they have no test_* functions.
+    """
+    groups: list[tuple[ModuleType, list[tuple[str, callable]]]] = []
+    modules = [feature_mod] + _iter_feature_modules(feature_mod)
+    for mod in modules:
+        tests = _discover_module_tests(mod)
+        if tests or hasattr(mod, "setup") or hasattr(mod, "teardown"):
+            groups.append((mod, tests))
+    return groups
 
 
 def main(argv: list[str]) -> int:
@@ -78,10 +181,86 @@ def main(argv: list[str]) -> int:
     _ensure_contract(mod)
 
     try:
-        print(f"[fttests] Running dependencies check for '{feature_name}'...")
-        mod.check_dependencies()
-        print(f"[fttests] Dependencies OK. Running tests for '{feature_name}'...\n")
-        mod.run()
+        if hasattr(mod, "check_dependencies"):
+            print(f"[fttests] Running dependencies check for '{feature_name}'...")
+            mod.check_dependencies()
+            print("[fttests] Dependencies OK.\n")
+        else:
+            print(f"[fttests] No check_dependencies() found for '{feature_name}'. Skipping.\n")
+
+        # Discover tests (grouped by module) in the feature package
+        groups = _discover_tests_grouped(mod)
+        test_count = sum(len(tests) for _, tests in groups)
+        if groups:
+            print(f"[fttests] Discovered {test_count} test(s) for '{feature_name}'. Running...\n")
+            total = 0
+            failures: list[str] = []
+
+            for module_obj, tests in groups:
+                module_pretty = _format_module_name(module_obj.__name__, feature_name)
+
+                # Optional setup()
+                setup_fn = getattr(module_obj, "setup", None)
+                if callable(setup_fn):
+                    label = f"{module_pretty} -> setup"
+                    print(f"[fttests] SETUP {label}")
+                    try:
+                        setup_fn()
+                        print(f"[fttests] OK    {label}")
+                    except AssertionError as exc:
+                        print(f"{RED}[fttests] FAIL  {label} -> {exc}{RESET}")
+                        failures.append(f"{label}: {exc}")
+                        # Skip this module's tests and teardown
+                        continue
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"{RED}[fttests] ERROR {label} -> {exc}{RESET}")
+                        failures.append(f"{label}: unexpected error: {exc}")
+                        continue
+
+                # Run tests in module
+                for fullname, func in tests:
+                    total += 1
+                    pretty = _format_test_name(fullname, feature_name)
+                    print(f"[fttests] RUN   {pretty}")
+                    try:
+                        func()
+                        print("[fttests] OK")
+                    except AssertionError as exc:
+                        print(f"{RED}[fttests] FAIL    -> {exc}{RESET}")
+                        failures.append(f"{pretty}: {exc}")
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"{RED}[fttests] ERROR -> {exc}{RESET}")
+                        failures.append(f"{pretty}: unexpected error: {exc}")
+
+                # Optional teardown()
+                teardown_fn = getattr(module_obj, "teardown", None)
+                if callable(teardown_fn):
+                    label = f"{module_pretty} -> teardown"
+                    print(f"[fttests] TEARDOWN {label}")
+                    try:
+                        teardown_fn()
+                        print(f"[fttests] OK       {label}")
+                    except AssertionError as exc:
+                        print(f"{RED}[fttests] FAIL     {label} -> {exc}{RESET}")
+                        failures.append(f"{label}: {exc}")
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"{RED}[fttests] ERROR    {label} -> {exc}{RESET}")
+                        failures.append(f"{label}: unexpected error: {exc}")
+
+            print(f"\n[fttests] Ran {total} test(s).")
+            if failures:
+                print("[fttests] Failures:")
+                for msg in failures:
+                    print(f" - {msg}")
+                return 1
+        else:
+            # Fallback to legacy feature runner if provided
+            if hasattr(mod, "run"):
+                print(f"[fttests] No tests found for '{feature_name}'; delegating to feature's run()...\n")
+                mod.run()
+            else:
+                print(f"{RED}Feature '{feature_name}' has no tests and no run() fallback{RESET}", file=sys.stderr)
+                return 1
     except AssertionError as exc:
         print(f"{RED}Assertion failed: {exc}{RESET}", file=sys.stderr)
         return 1

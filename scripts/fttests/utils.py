@@ -26,15 +26,8 @@ def assert_env_vars(names: Iterable[str]) -> None:
         raise AssertionError("Missing required environment variables: " + ", ".join(missing))
 
 
-def build_headers(token_env: str | None = None, extra: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    headers: Dict[str, str] = {"User-Agent": "fttests/1.0 (+https://4geeks.com)"}
-    if token_env:
-        token = os.getenv(token_env)
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-    if extra:
-        headers.update(extra)
-    return headers
+def build_headers(**extra: Optional[Dict[str, str]]) -> Dict[str, str]:
+    return extra
 
 
 def http_request(
