@@ -1909,6 +1909,18 @@ class CheckingView(APIView):
 
         lang = get_user_language(request)
 
+        # Validate supported bag types early to avoid using an uninitialized 'bag'
+        if bag_type not in {"BAG", "PREVIEW"}:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid type. Allowed values are 'BAG' or 'PREVIEW'",
+                    es="Tipo inválido. Los valores permitidos son 'BAG' o 'PREVIEW'",
+                    slug="invalid-bag-type",
+                ),
+                code=400,
+            )
+
         client = None
         if IS_DJANGO_REDIS:
             client = get_redis_connection("default")

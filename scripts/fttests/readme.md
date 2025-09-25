@@ -27,17 +27,52 @@ Features may define additional required variables; check each feature's docs.
 
 ## Features
 
-Features are subpackages under `scripts/fttests/` with this contract:
+Features are subpackages under `scripts/fttests/`.
 
-- `check_dependencies() -> None`: Validate required env vars or preconditions. Must raise `AssertionError` (or call `sys.exit(1)`) on failure.
-- `run() -> None`: Execute the functional test flow. Must raise `AssertionError` (or call `sys.exit(1)`) on failure.
+- `check_dependencies() -> None` (optional): if present, the runner will call it first.
+- `run() -> None` (optional): legacy fallback if no `test_*` functions are found.
 
-Example skeleton: see `scripts/fttests/subscription_seats/`.
+Test discovery and execution are handled by the CLI runner.
+
+Example feature structure: see `scripts/fttests/subscription_seats/`.
+
+### Writing tests with auto-discovery
+
+The CLI runner auto-discovers and executes test functions. For `subscription_seats`, any function named `test_*` defined in:
+
+- any module under `scripts/fttests/subscription_seats/` like `scripts/fttests/subscription_seats/<name>.py` (files not starting with underscore), and
+- optionally in `scripts/fttests/subscription_seats/__init__.py` if you choose to place tests there.
+
+will be collected and run by the feature's `run()` implementation.
+
+Conventions:
+
+- Test functions must be named `test_*` and take no parameters.
+- Raise `AssertionError` on failure; return `None` (or do nothing) on success.
+- Use helpers from `scripts/fttests/utils.py` for HTTP calls and output.
+
+Minimal example (`scripts/fttests/subscription_seats/create_and_list.py`):
+
+```python
+from __future__ import annotations
+import os
+from ..utils import http_request, build_headers, print_section
+
+def test_list_seats():
+    print_section("subscription_seats: list seats (example)")
+    base = os.environ["FTT_BASE_URL"].rstrip("/")
+    path = os.getenv("FTT_SEATS_LIST_PATH", "/v1/subscriptions/seats")
+    url = f"{base}{path if path.startswith('/') else '/' + path}"
+    status, headers, body = http_request("GET", url, headers=build_headers("FTT_API_TOKEN"))
+    assert 200 <= status < 400, f"list seats failed with status {status}"
+```
+
+Note: The package `__init__.py` can be empty. You can keep all tests in submodules.
 
 ## Add a new feature
 
 1. Create a new directory: `scripts/fttests/<feature_name>/__init__.py`
-2. Implement `check_dependencies()` and `run()`.
+2. Optionally implement `check_dependencies()`; create one or more modules with `test_*` functions.
 3. Use helpers from `scripts/fttests/utils.py`:
    - `assert_env_vars([...])`
    - `build_headers(token_env="FTT_API_TOKEN")`
@@ -85,3 +120,9 @@ FTT_SEATS_LIST_PATH=/v1/subscriptions/seats \
 FTT_API_TOKEN=<token-if-needed> \
 python3 -m scripts.fttests subscription_seats
 ```
+
+This will:
+
+- Check dependencies via `check_dependencies()`.
+- Auto-discover and run all `test_*` functions inside `scripts/fttests/subscription_seats/`.
+- Continue after failures and summarize results at the end.
