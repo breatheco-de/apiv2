@@ -1294,17 +1294,16 @@ class UserCouponView(APIView):
 
             # If no coupons exist, create one
             if not coupons.exists():
-                # Look for the plan by slug - this could be made configurable
-                plan_slug = request.GET.get("plan_slug", "4geeks-plus-subscription")
-                plan = Plan.objects.filter(slug=plan_slug).first()
+                # Look for all plans from 4geeks.com academy
+                plans = Plan.objects.filter(owner__slug="4geeks-com")
 
-                if not plan:
+                if not plans.exists():
                     raise ValidationException(
                         translation(
                             lang,
-                            en=f"Required plan '{plan_slug}' not found",
-                            es=f"Plan requerido '{plan_slug}' no encontrado",
-                            slug="plan-not-found",
+                            en="No plans found for academy 4geeks-com",
+                            es="No se encontraron planes para la academia 4geeks-com",
+                            slug="plans-not-found",
                         ),
                         code=404,
                     )
@@ -1323,8 +1322,8 @@ class UserCouponView(APIView):
                     seller=seller,
                 )
                 coupon.save()
-                # Add the plan to the coupon
-                coupon.plans.add(plan)
+                # Add all plans to the coupon
+                coupon.plans.set(plans)
 
                 # Reload the coupons
                 coupons = Coupon.objects.filter(seller=seller)
@@ -1787,7 +1786,7 @@ class CouponBaseView(APIView):
             coupon_codes = coupon_codes.split(",")
         else:
             coupon_codes = []
-
+        logger.debug("coupon_codes", coupon_codes)
         return get_available_coupons(plan, coupons=coupon_codes, user=self.request.user)
 
 
