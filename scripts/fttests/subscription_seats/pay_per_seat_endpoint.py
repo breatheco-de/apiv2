@@ -8,9 +8,13 @@ import time
 from ..utils import assert_env_vars, build_headers
 
 
+PER_SEAT_PLAN = "4geeks-premium"
+PER_TEAM_PLAN = "hack-30-machines-in-30-days"
+
+
 def subscription_request() -> requests.Response:
     base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_OWNER_TOKEN", "")
+    owner_token = os.getenv("FTT_USER1", "")
     academy = os.getenv("FTT_ACADEMY", "")
     path = "/v1/payments/me/subscription"
     url = f"{base_url}{path}"
@@ -31,10 +35,10 @@ def get_subscription_id(slug: str) -> int | None:
 
 def setup() -> None:
     print("[fttests] Setting up smoke test...")
-    assert_env_vars(["FTT_API_URL", "FTT_OWNER_TOKEN", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"])  # required
+    assert_env_vars(["FTT_API_URL", "FTT_USER1", "FTT_USER2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"])  # required
     base = os.environ["FTT_API_URL"].rstrip("/")
 
-    sub_id = get_subscription_id("4geeks-premium")
+    sub_id = get_subscription_id(PER_SEAT_PLAN)
     assert (
         sub_id is None
     ), f"Subscription `4geeks-premium` found, delete it on {base}/admin/payments/subscription/{sub_id}/change/"
@@ -51,7 +55,7 @@ def assert_response(res: requests.Response) -> None:
 
 def plan_request(slug) -> requests.Response:
     base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_OWNER_TOKEN", "")
+    owner_token = os.getenv("FTT_USER1", "")
     academy = os.getenv("FTT_ACADEMY", "")
     path = f"/v1/payments/plan/{slug}"
     url = f"{base_url}{path}"
@@ -62,7 +66,7 @@ def plan_request(slug) -> requests.Response:
 
 def checking_request(data: Dict[str, str]) -> requests.Response:
     base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_OWNER_TOKEN", "")
+    owner_token = os.getenv("FTT_USER1", "")
     academy = os.getenv("FTT_ACADEMY", "")
     path = "/v1/payments/checking"
     url = f"{base_url}{path}"
@@ -74,7 +78,7 @@ def checking_request(data: Dict[str, str]) -> requests.Response:
 
 def card_request(data: Dict[str, str]) -> requests.Response:
     base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_OWNER_TOKEN", "")
+    owner_token = os.getenv("FTT_USER1", "")
     academy = os.getenv("FTT_ACADEMY", "")
     academy_slug = os.getenv("FTT_ACADEMY_SLUG", "")
     path = "/v1/payments/card"
@@ -87,7 +91,7 @@ def card_request(data: Dict[str, str]) -> requests.Response:
 
 def pay_request(data: Dict[str, str]) -> requests.Response:
     base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_OWNER_TOKEN", "")
+    owner_token = os.getenv("FTT_USER1", "")
     academy = os.getenv("FTT_ACADEMY", "")
     path = "/v1/payments/pay"
     url = f"{base_url}{path}"
@@ -100,7 +104,7 @@ def pay_request(data: Dict[str, str]) -> requests.Response:
 def test_plan_setup_with_seat_price() -> None:
     """Buy a plan with seats."""
 
-    res = plan_request("4geeks-premium")
+    res = plan_request(PER_SEAT_PLAN)
     assert_response(res)
 
     json_res = res.json()
@@ -147,8 +151,30 @@ def test_pay_a_plan_with_seats(bag_token: str, **ctx) -> None:
     attempts = 0
     while attempts < 10:
         time.sleep(10)
-        if get_subscription_id("4geeks-premium"):
+        if get_subscription_id(PER_SEAT_PLAN):
             return
         attempts += 1
 
     assert 0, "Subscription was not created"
+
+
+# def consumables_request() -> requests.Response:
+#     base_url = os.environ["FTT_API_URL"].rstrip("/")
+#     owner_token = os.getenv("FTT_USER1", "")
+#     academy = os.getenv("FTT_ACADEMY", "")
+#     path = f"/v1/payments/me/service/consumable"
+#     url = f"{base_url}{path}"
+#     headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
+#     res = requests.get(url, headers=headers)
+#     return res
+
+
+# def test_all_consumables():
+#     attempts = 0
+#     while attempts < 10:
+#         time.sleep(10)
+#         if consumables_request():
+#             return
+#         attempts += 1
+
+#     assert 0, "Consumables were not created"
