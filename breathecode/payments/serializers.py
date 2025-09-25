@@ -245,6 +245,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     currency = serpy.MethodField()
     add_ons = serpy.MethodField()
     seat_service_price = serpy.MethodField()
+    consumption_strategy = serpy.Field()
 
     def get_seat_service_price(self, obj: Plan):
         if not obj.seat_service_price or obj.seat_service_price.service.type != "SEAT":
