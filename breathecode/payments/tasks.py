@@ -1226,7 +1226,6 @@ def build_subscription(
         )
 
         SubscriptionSeat.objects.get_or_create(
-            subscription=subscription,
             billing_team=team,
             user=bag.user,
             defaults={"email": subscription.user.email, "is_active": True, "seat_multiplier": 1},

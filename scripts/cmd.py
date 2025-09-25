@@ -125,3 +125,7 @@ def flake8():
 
 def docker_build():
     sys.exit(os.system(f"docker build . {get_arguments()}"))
+
+
+def fttests():
+    sys.exit(os.system(f"python -m scripts.fttests {get_arguments()}"))

@@ -151,30 +151,50 @@ def test_pay_a_plan_with_seats(bag_token: str, **ctx) -> None:
     attempts = 0
     while attempts < 10:
         time.sleep(10)
-        if get_subscription_id(PER_SEAT_PLAN):
-            return
+        if subscription_id := get_subscription_id(PER_SEAT_PLAN):
+            return {"subscription_id": subscription_id}
         attempts += 1
 
     assert 0, "Subscription was not created"
 
 
-# def consumables_request() -> requests.Response:
-#     base_url = os.environ["FTT_API_URL"].rstrip("/")
-#     owner_token = os.getenv("FTT_USER1", "")
-#     academy = os.getenv("FTT_ACADEMY", "")
-#     path = f"/v1/payments/me/service/consumable"
-#     url = f"{base_url}{path}"
-#     headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
-#     res = requests.get(url, headers=headers)
-#     return res
+def consumables_request() -> requests.Response:
+    base_url = os.environ["FTT_API_URL"].rstrip("/")
+    owner_token = os.getenv("FTT_USER1", "")
+    academy = os.getenv("FTT_ACADEMY", "")
+    path = "/v1/payments/me/service/consumable"
+    url = f"{base_url}{path}"
+    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
+    res = requests.get(url, headers=headers)
+    return res
 
 
-# def test_all_consumables():
-#     attempts = 0
-#     while attempts < 10:
-#         time.sleep(10)
-#         if consumables_request():
-#             return
-#         attempts += 1
+def get_consumables(subscription_id: int) -> requests.Response:
+    res = consumables_request()
+    assert_response(res)
+    json_res = res.json()
+    consumables = []
+    for x in json_res.values():
+        for item in x["items"]:
+            if item["subscription_seat"] == subscription_id:
+                consumables.append(item)
+    return consumables
 
-#     assert 0, "Consumables were not created"
+
+def test_all_consumables(subscription_id: int, **ctx):
+    attempts = 0
+    while attempts < 10:
+        time.sleep(10)
+        consumables = get_consumables(subscription_id)
+        if consumables:
+            assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
+            assert all(
+                [x["subscription_seat"] is not None for x in consumables]
+            ), "Consumables were issued without subscription seat"
+            # assert all(
+            #     [x["plan_financing"] is not None for x in consumables]
+            # ), "Consumables were issued without plan financing"
+            return consumables
+        attempts += 1
+
+    assert 0, "Consumables were not created"
