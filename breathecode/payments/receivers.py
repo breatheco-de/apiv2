@@ -284,7 +284,6 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
             charge_data = instance.data["object"]
             charge_id = charge_data["id"]
 
-            # Obtener el refund más reciente de la lista de refunds
             refunds = charge_data.get("refunds", {}).get("data", [])
             if not refunds:
                 logger.warning(f"No refunds found in charge {charge_id}")
@@ -292,7 +291,8 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
                 instance.save()
                 return
 
-            refund_data = refunds[-1]
+            refunds_sorted = sorted(refunds, key=lambda x: x.get("created", 0), reverse=True)
+            refund_data = refunds_sorted[0]
             refund_id = refund_data["id"]
             refund_amount = refund_data.get("amount", 0) / 100  # Convertir de centavos a dólares
 
