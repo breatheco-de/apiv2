@@ -54,8 +54,8 @@ def set_user_group(sender, instance, created: bool, **_):
             group = Group.objects.filter(name="Teacher").first()
             groups = instance.user.groups
 
-        if is_valid_profile_academy and instance.role.slug == "teacher_influencer":
-            group = Group.objects.filter(name="Teacher Influencer").first()
+        if is_valid_profile_academy and instance.role.slug == "geek_creator":
+            group = Group.objects.filter(name="Geek Creator").first()
             groups = instance.user.groups
 
         if sender == MentorProfile:
@@ -99,12 +99,12 @@ def unset_user_group(sender, instance, **_):
         group = Group.objects.filter(name="Teacher").first()
         groups = instance.user.groups
 
-    if is_valid_profile_academy and instance.role.slug == "teacher_influencer":
+    if is_valid_profile_academy and instance.role.slug == "geek_creator":
         should_be_deleted = not ProfileAcademy.objects.filter(
-            user=instance.user, role__slug="teacher_influencer", status="ACTIVE"
+            user=instance.user, role__slug="geek_creator", status="ACTIVE"
         ).exists()
 
-        group = Group.objects.filter(name="Teacher Influencer").first()
+        group = Group.objects.filter(name="Geek Creator").first()
         groups = instance.user.groups
 
     if sender == MentorProfile:
@@ -175,7 +175,7 @@ def handle_profile_academy_role_change(instance, old_role, new_role, **kwargs):
     if not instance.user:
         return
 
-    main_roles = ["student", "teacher", "teacher_influencer"]
+    main_roles = ["student", "teacher", "geek_creator"]
 
     if not (old_role and new_role and (old_role.slug in main_roles or new_role.slug in main_roles)):
         return
@@ -183,7 +183,7 @@ def handle_profile_academy_role_change(instance, old_role, new_role, **kwargs):
     role_group_mapping = {
         "student": "Student",
         "teacher": "Teacher",
-        "teacher_influencer": "Teacher Influencer",
+        "geek_creator": "Geek Creator",
     }
 
     old_group_name = role_group_mapping.get(old_role.slug)

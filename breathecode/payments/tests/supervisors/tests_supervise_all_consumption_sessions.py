@@ -1,3 +1,12 @@
+"""Tests for the supervisor that monitors consumption sessions health.
+
+This suite verifies that:
+- The supervisor registers itself and does not log when there are no sessions.
+- A warning message is logged when the pending-to-done ratio exceeds a threshold.
+- No message is logged when cancelled sessions exist but do not match unsafe patterns.
+- A warning is logged indicating potential cheating when unsafe cancelled sessions are high.
+"""
+
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
@@ -86,6 +95,7 @@ def db(data={}):
 
 
 def tests_no_sessions(supervisor: Supervisor):
+    """When there are no sessions, supervisor should register and log nothing."""
     supervise_all_consumption_sessions()
 
     assert supervisor.list() == [
@@ -100,6 +110,7 @@ def tests_no_sessions(supervisor: Supervisor):
 def tests_so_much_pending_sessions(
     database: dfx.Database, supervisor: Supervisor, utc_now: datetime, random: cfx.Random
 ):
+    """When pending/done ratio is high, a warning should be logged with counts and rate."""
     eta = utc_now - timedelta(seconds=(3600 * random.int(1, 24)) - 1)
     x = {"eta": eta}
     consumption_sessions = [{"status": "PENDING", **x} for _ in range(3)] + [{"status": "DONE", **x} for _ in range(7)]
@@ -121,6 +132,7 @@ def tests_so_much_pending_sessions(
 def tests_so_much_cancelled_sessions__no_unsafe_sessions(
     database: dfx.Database, supervisor: Supervisor, utc_now: datetime, random: cfx.Random
 ):
+    """Cancelled sessions without unsafe code should not trigger a warning."""
     eta = utc_now - timedelta(seconds=(3600 * random.int(1, 24)) - 1)
     x = {"eta": eta}
     consumption_sessions = [{"status": "CANCELLED", **x} for _ in range(2)] + [
@@ -142,6 +154,7 @@ def tests_so_much_cancelled_sessions__no_unsafe_sessions(
 def tests_so_much_cancelled_sessions__unsafe_sessions(
     database: dfx.Database, supervisor: Supervisor, utc_now: datetime, random: cfx.Random
 ):
+    """Unsafe cancelled sessions ratio high should log a potential cheating warning."""
     eta = utc_now - timedelta(seconds=(3600 * random.int(1, 24)) - 1)
     x = {"eta": eta, "operation_code": "unsafe-consume-service-set", "user_id": 1}
     consumption_sessions = [{"status": "CANCELLED", **x} for _ in range(4)] + [

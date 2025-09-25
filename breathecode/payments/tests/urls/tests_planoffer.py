@@ -31,6 +31,7 @@ def group_serializer(group, permissions=[]):
 
 def service_serializer(service, groups=[], permissions=[]):
     return {
+        "id": service.id,
         "private": service.private,
         "slug": service.slug,
         "title": service.title,
@@ -79,6 +80,7 @@ def plan_serializer(self, plan, service, currency, groups=[], permissions=[], se
         "price_per_quarter": plan.price_per_quarter,
         "price_per_year": plan.price_per_year,
         "has_available_cohorts": bool(plan.cohort_set),
+        "add_ons": [],
     }
 
 

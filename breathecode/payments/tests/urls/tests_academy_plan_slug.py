@@ -22,6 +22,7 @@ def service_item_serializer(service_item, service):
     return {
         "how_many": service_item.how_many,
         "service": {
+            "id": service.id,
             "groups": [],
             "private": service.private,
             "slug": service.slug,
@@ -57,6 +58,8 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
     return {
         "id": event.id,
         "slug": event.slug,
+        "title": event.title,
+        "add_ons": [],
         "pricing_ratio_exceptions": event.pricing_ratio_exceptions,
         "currency": {
             "code": currency.code,

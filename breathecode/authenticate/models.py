@@ -227,6 +227,17 @@ class UserInvite(models.Model):
     email_quality = models.FloatField(default=None, blank=True, null=True)
     email_status = models.JSONField(default=None, blank=True, null=True)
 
+    # link to team membership (optional)
+    subscription_seat = models.ForeignKey(
+        "payments.SubscriptionSeat",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Related subscription seat for team invitations",
+        db_index=True,
+    )
+
     def __str__(self):
         return f"Invite for {self.email}"
 
@@ -575,10 +586,10 @@ class CredentialsQuickBooks(models.Model):
 
 class CredentialsGoogle(models.Model):
 
-    token = models.CharField(max_length=255)
-    refresh_token = models.CharField(max_length=255)
+    token = models.CharField(max_length=500)
+    refresh_token = models.CharField(max_length=500)
     id_token = models.CharField(max_length=1400, default="")
-    google_id = models.CharField(max_length=24, default="")
+    google_id = models.CharField(max_length=34, default="")
     expires_at = models.DateTimeField()
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)

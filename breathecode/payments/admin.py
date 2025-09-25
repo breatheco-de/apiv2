@@ -41,6 +41,8 @@ from breathecode.payments.models import (
     ServiceTranslation,
     Subscription,
     SubscriptionServiceItem,
+    SubscriptionSeat,
+    SubscriptionBillingTeam,
 )
 
 # Register your models here.
@@ -68,14 +70,12 @@ class ServiceTranslationAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceItem)
 class ServiceItemAdmin(admin.ModelAdmin):
-    list_display = ("id", "unit_type", "how_many", "service")
-    list_filter = ["service__owner"]
+    list_display = ("id", "unit_type", "how_many", "is_team_allowed", "service")
+    list_filter = ["service__owner", "is_team_allowed"]
     search_fields = [
         "service__slug",
         "service__title",
         "service__groups__name",
-        "service__cohorts__slug",
-        "service__mentorship_services__slug",
     ]
 
 
@@ -142,6 +142,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "cohort_set",
         "event_type_set",
         "mentorship_service_set",
+        "subscription_billing_team",
+        "subscription_seat",
     ]
     actions = [grant_service_permissions]
 
@@ -187,7 +189,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         "joined_cohorts",
         "plans",
         "invoices",
-        "coupons"
+        "coupons",
     ]
     actions = [renew_subscription_consumables, charge_subscription]
 
@@ -198,6 +200,34 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
     list_filter = ["subscription__user__email", "subscription__user__first_name", "subscription__user__last_name"]
 
 
+@admin.register(SubscriptionSeat)
+class SubscriptionSeatAdmin(admin.ModelAdmin):
+    list_display = ("id", "billing_team", "email", "user", "seat_multiplier")
+    list_filter = [
+        "billing_team__subscription__user__email",
+        "billing_team__subscription__user__first_name",
+        "billing_team__subscription__user__last_name",
+    ]
+    search_fields = [
+        "billing_team__subscription__id",
+        "email",
+        "user__email",
+    ]
+    raw_id_fields = ["billing_team", "user"]
+
+
+# SubscriptionSeatInvite is deprecated in favor of pending SubscriptionSeat (email-only)
+
+
+@admin.register(SubscriptionBillingTeam)
+class SubscriptionBillingTeamAdmin(admin.ModelAdmin):
+    list_display = ("id", "subscription", "name")
+    search_fields = ["subscription__id", "name"]
+
+
+# BillingTeamMembership removed; managed via SubscriptionSeat
+
+
 def renew_plan_financing_consumables(modeladmin, request, queryset):
     for item in queryset.all():
         tasks.renew_plan_financing_consumables.delay(item.id)
@@ -206,6 +236,11 @@ def renew_plan_financing_consumables(modeladmin, request, queryset):
 def charge_plan_financing(modeladmin, request, queryset):
     for item in queryset.all():
         tasks.charge_plan_financing.delay(item.id)
+
+
+def regenerate_service_stock_schedulers(modeladmin, request, queryset):
+    for item in queryset.all():
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(item.id)
 
 
 @admin.register(PlanFinancing)
@@ -220,7 +255,7 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "selected_mentorship_service_set",
         "selected_event_type_set",
     ]
-    actions = [renew_plan_financing_consumables, charge_plan_financing]
+    actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
 
 
 def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):
@@ -256,7 +291,7 @@ class CohortSetAdmin(admin.ModelAdmin):
 class CohortSetTranslationAdmin(admin.ModelAdmin):
     list_display = ("id", "cohort_set", "lang", "title", "description", "short_description")
     list_filter = ["lang"]
-    search_fields = ["slug", "academy__slug", "academy__name"]
+    search_fields = ["cohort_set__slug", "cohort_set__academy__slug", "cohort_set__academy__name"]
 
 
 @admin.register(MentorshipServiceSet)
@@ -270,7 +305,7 @@ class MentorshipServiceSetAdmin(admin.ModelAdmin):
 class CohortSetCohortAdmin(admin.ModelAdmin):
     list_display = ("id", "cohort_set", "cohort")
     list_filter = ["cohort_set__academy__slug"]
-    search_fields = ["cohort_set__slug", "cohort_set__name", "cohort__slug", "cohort__name"]
+    search_fields = ["cohort_set__slug", "cohort__slug", "cohort__name"]
     raw_id_fields = ["cohort"]
 
 
@@ -278,7 +313,11 @@ class CohortSetCohortAdmin(admin.ModelAdmin):
 class MentorshipServiceSetTranslationAdmin(admin.ModelAdmin):
     list_display = ("id", "mentorship_service_set", "lang", "title", "description", "short_description")
     list_filter = ["lang"]
-    search_fields = ["slug", "academy__slug", "academy__name"]
+    search_fields = [
+        "mentorship_service_set__slug",
+        "mentorship_service_set__academy__slug",
+        "mentorship_service_set__academy__name",
+    ]
 
 
 @admin.register(EventTypeSet)
@@ -293,7 +332,7 @@ class EventTypeSetAdmin(admin.ModelAdmin):
 class EventTypeSetTranslationAdmin(admin.ModelAdmin):
     list_display = ("id", "event_type_set", "lang", "title", "description", "short_description")
     list_filter = ["lang"]
-    search_fields = ["slug", "academy__slug", "academy__name"]
+    search_fields = ["event_type_set__slug", "event_type_set__academy__slug", "event_type_set__academy__name"]
     raw_id_fields = ["event_type_set"]
 
 
@@ -302,7 +341,7 @@ class PlanServiceItemAdmin(admin.ModelAdmin):
     list_display = ("id", "plan", "service_item")
     list_filter = ["plan__slug", "plan__owner__slug"]
     raw_id_fields = ["service_item"]
-    search_fields = ["plan__slug", "plan__translations__title", "service_item__service__slug"]
+    search_fields = ["plan__slug", "service_item__service__slug"]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "plan":
@@ -461,8 +500,8 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentMethod)
 class PaymentMethodAdmin(admin.ModelAdmin):
-    list_display = ("title", "description", "academy", "third_party_link", "lang")
-    list_filter = ["academy__name", "lang"]
+    list_display = ("title", "description", "academy", "third_party_link", "lang", "visibility", "deprecated")
+    list_filter = ["academy__name", "lang", "visibility", "deprecated"]
     raw_id_fields = ["academy"]
     search_fields = ["title", "academy__name"]
 

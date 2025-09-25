@@ -25,6 +25,7 @@ UTC_NOW = timezone.now()
 def plan_financing_item(data={}):
     return {
         "id": 1,
+        "seat_service_item_id": None,
         "academy_id": 1,
         "monthly_price": 0,
         "plan_expires_at": UTC_NOW,

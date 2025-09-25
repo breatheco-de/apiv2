@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from urllib.parse import urlparse
 import aiohttp
 import requests
 from breathecode.services.github import Github
@@ -157,25 +158,24 @@ def forward_asset_url(request, asset_slug=None):
 def handle_internal_link(request):
     """
     Handle internal GitHub links by proxying the content through the asset owner's credentials.
-
     This view receives requests for internal GitHub files and uses the asset owner's GitHub
     credentials to fetch the content, allowing access to private repository files.
-
     Query parameters:
     - asset: The asset ID
     - path: The relative path to the file in the repository
     - token: Bearer session token for authentication (optional for public repos)
     """
-
     asset_id = request.GET.get("id")
     file_path = request.GET.get("path")
     token = request.GET.get("token")
-
     if not asset_id:
         return render_message(request, "Missing asset parameter", status=400)
-
     if not file_path:
         return render_message(request, "Missing path parameter", status=400)
+
+    parsed_path = urlparse(file_path)
+    clean_file_path = parsed_path.path
+    file_extension = Path(clean_file_path).suffix.lower()
 
     # Get the asset
     try:
@@ -186,7 +186,6 @@ def handle_internal_link(request):
     # Check if asset has an owner with GitHub credentials
     if not asset.owner:
         return render_message(request, "Asset has no owner configured", status=400)
-
     credentials = CredentialsGithub.objects.filter(user=asset.owner).first()
     if not credentials:
         return render_message(request, "No GitHub credentials found for asset owner", status=400)
@@ -209,7 +208,6 @@ def handle_internal_link(request):
 
     # Use GitHub API to fetch the file content
     try:
-
         github = Github(credentials.token)
 
         # Sanitize path (strip query like ?raw=true) and build GitHub Contents API URL
@@ -273,7 +271,6 @@ def handle_internal_link(request):
     except Exception as e:
         logger.error(f"Error fetching file from GitHub: {str(e)}")
         error_str = str(e).lower()
-
         if "404" in error_str or "not found" in error_str:
             return render_message(request, f"File not found: {file_path}", status=404)
         elif "403" in error_str or "forbidden" in error_str:
@@ -1129,14 +1126,13 @@ class AssetMeView(APIView, GenerateLookupsMixin):
                 found_technology_slugs = list(
                     AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list("slug", flat=True)
                 )
-                not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+                # not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+                # if not_found_technologies:
+                #     raise ValidationException(
+                #         f"The following technologies were not found: {', '.join(not_found_technologies)}"
+                #     )
 
-                if not_found_technologies:
-                    raise ValidationException(
-                        f"The following technologies were not found: {', '.join(not_found_technologies)}"
-                    )
-
-                technology_ids = AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list(
+                technology_ids = AssetTechnology.objects.filter(slug__in=found_technology_slugs).values_list(
                     "pk", flat=True
                 )
                 data["technologies"] = technology_ids
@@ -1212,15 +1208,16 @@ class AssetMeView(APIView, GenerateLookupsMixin):
             found_technology_slugs = list(
                 AssetTechnology.objects.filter(slug__in=data["technologies"]).values_list("slug", flat=True)
             )
-            not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
 
-            if not_found_technologies:
-                raise ValidationException(
-                    f"The following technologies were not found: {', '.join(not_found_technologies)}"
-                )
+            # We are going to ignore the technologies that are not found, because we are not going to create them
+            # not_found_technologies = [slug for slug in data["technologies"] if slug not in found_technology_slugs]
+            # if not_found_technologies:
+            #     raise ValidationException(
+            #         f"The following technologies were not found: {', '.join(not_found_technologies)}"
+            #     )
 
             technology_ids = (
-                AssetTechnology.objects.filter(slug__in=data["technologies"])
+                AssetTechnology.objects.filter(slug__in=found_technology_slugs)
                 .values_list("pk", flat=True)
                 .order_by("sort_priority")
             )

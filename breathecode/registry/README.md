@@ -59,3 +59,23 @@ When breathecode finally syncs the asset with tis main repository it ads new pro
 ### Replacing the original learn.json
 
 If a breathecode user contains Github credentials inside the database, it is also possible to validate and sanitize the original project learn.json file and add or fix more properties into it, we don't like to do this a lot because it will make contents dependand of this feature but it makes sense in jsut a few cases like the `translations` property.
+
+## Management Commands
+
+The registry app provides several management commands for managing assets:
+
+### `pull_and_clean_assets`
+Pulls assets from GitHub and cleans them asynchronously with rate limiting.
+
+```bash
+python manage.py pull_and_clean_assets [options]
+```
+
+### `clean_assets`
+Cleans assets asynchronously without pulling from GitHub. Useful when you only need to regenerate README content and clean formatting.
+
+```bash
+python manage.py clean_assets [options]
+```
+
+For detailed usage information and options, see the [management commands documentation](management/commands/README_pull_and_clean_assets.md).

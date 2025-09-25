@@ -16,4 +16,7 @@ syllabus_asset_slug_updated = emisor.signal("syllabus_asset_slug_updated")
 
 syllabus_version_json_updated = emisor.signal("syllabus_version_json_updated")
 
+# happens when a new syllabus is created
+syllabus_created = emisor.signal("syllabus_created")
+
 timeslot_saved = emisor.signal("timeslot_saved")
