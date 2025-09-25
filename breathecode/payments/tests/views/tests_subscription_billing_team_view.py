@@ -47,7 +47,7 @@ def test_get_ok_integration_db(client):
 
     # Act
     client.force_authenticate(user=owner)
-    url = f"/v2/payments/academy/subscription/{subscription.id}/billing-team"
+    url = f"/v2/payments/subscription/{subscription.id}/billing-team"
     resp = client.get(url)
 
     # Assert
@@ -82,7 +82,7 @@ def test_get_subscription_not_found_returns_404(mock_sub_objects, mock_lang, fac
     mock_qs.filter.return_value = MagicMock(first=lambda: None)
     mock_sub_objects.filter.return_value = mock_qs.filter()
 
-    request = factory.get("/v2/payments/academy/subscription/999/billing-team")
+    request = factory.get("/v2/payments/subscription/999/billing-team")
     force_authenticate(request, user=MagicMock(id=1))
 
     resp = SubscriptionBillingTeamView.as_view()(request, subscription_id=999)
@@ -99,7 +99,7 @@ def test_get_not_owner_returns_403(mock_sub_objects, mock_lang, factory):
     subscription = MagicMock(id=1, user_id=2)
     mock_sub_objects.filter.return_value = MagicMock(first=lambda: subscription)
 
-    request = factory.get("/v2/payments/academy/subscription/1/billing-team")
+    request = factory.get("/v2/payments/subscription/1/billing-team")
     force_authenticate(request, user=MagicMock(id=1))
 
     resp = SubscriptionBillingTeamView.as_view()(request, subscription_id=1)
@@ -118,7 +118,7 @@ def test_get_team_not_found_returns_404(mock_sub_objects, mock_team_objects, moc
     mock_sub_objects.filter.return_value = MagicMock(first=lambda: subscription)
     mock_team_objects.filter.return_value = MagicMock(first=lambda: None)
 
-    request = factory.get("/v2/payments/academy/subscription/1/billing-team")
+    request = factory.get("/v2/payments/subscription/1/billing-team")
     force_authenticate(request, user=MagicMock(id=1))
 
     resp = SubscriptionBillingTeamView.as_view()(request, subscription_id=1)
@@ -143,7 +143,7 @@ def test_get_ok_mocked_returns_payload(mock_sub_objects, mock_team_objects, mock
     team.name = "Team"
     mock_team_objects.filter.return_value = MagicMock(first=lambda: team)
 
-    request = factory.get("/v2/payments/academy/subscription/1/billing-team")
+    request = factory.get("/v2/payments/subscription/1/billing-team")
     force_authenticate(request, user=MagicMock(id=7))
 
     resp = SubscriptionBillingTeamView.as_view()(request, subscription_id=1)

@@ -16,24 +16,24 @@ urlpatterns = [
     path("card", V2CardView.as_view(), name="card"),
     # Team member endpoints (moved from v1)
     path(
-        "academy/subscription/<int:subscription_id>/billing-team",
+        "subscription/<int:subscription_id>/billing-team",
         SubscriptionBillingTeamView.as_view(),
-        name="academy_subscription_id_billing_team",
+        name="subscription_id_billing_team",
     ),
     path(
-        "academy/subscription/<int:subscription_id>/billing-team/invite",
+        "subscription/<int:subscription_id>/billing-team/invite",
         SubscriptionBillingTeamView.as_view(),
-        name="academy_subscription_id_billing_team",
+        name="subscription_id_billing_team_invite",
     ),
     path(
-        "academy/subscription/<int:subscription_id>/billing-team/seat",
+        "subscription/<int:subscription_id>/billing-team/seat",
         SubscriptionSeatView.as_view(),
-        name="academy_subscription_id_billing_team_seat",
+        name="subscription_id_billing_team_seat",
     ),
     path(
-        "academy/subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>",
+        "subscription/<int:subscription_id>/billing-team/seat/<int:seat_id>",
         SubscriptionSeatView.as_view(),
-        name="academy_subscription_id_billing_team_seat_id",
+        name="subscription_id_billing_team_seat_id",
     ),
     *[r for r in urlpatterns_v1 if r.pattern._route not in deprecation_list],
 ]
