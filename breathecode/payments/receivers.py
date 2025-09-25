@@ -273,14 +273,11 @@ def process_google_webhook_on_created(sender: Type[GoogleWebhook], instance: Goo
 
 
 @receiver(monitoring_signals.stripe_webhook, sender=StripeEvent)
-def handle_stripe_refund(sender: Type[StripeEvent], instance: StripeEvent, **kwargs):
+def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
     """
     Maneja eventos de devolución de Stripe
     """
-    logger.info("=== HANDLE STRIPE REFUND RECEIVER ===")
-    logger.info(f"Event type: {instance.type}")
-    logger.info(f"Event ID: {instance.id}")
-    logger.info(f"Event status: {instance.status}")
+    instance = StripeEvent.objects.get(id=event_id)
 
     if instance.type == "charge.refunded":
         try:
