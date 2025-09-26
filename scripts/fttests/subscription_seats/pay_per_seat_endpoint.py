@@ -55,10 +55,9 @@ def setup() -> None:
     plan = get_plan_request(PER_SEAT_PLAN)
     assert_response(plan)
     json_plan = plan.json()
-    from pprint import pprint
-
-    pprint(json_plan)
-    assert 0
+    assert any(
+        [x for x in json_plan.get("service_items", []) if x.get("is_team_allowed")]
+    ), "No team allowed service item found"
     assert "consumption_strategy" in json_plan, "consumption_strategy not found in response"
     assert json_plan.get("consumption_strategy") == "PER_SEAT", "consumption_strategy is not PER_SEAT"
 
