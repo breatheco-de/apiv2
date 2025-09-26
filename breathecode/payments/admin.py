@@ -363,9 +363,6 @@ def renew_consumables(modeladmin, request, queryset):
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     list_display = (
         "id",
-        "subscription",
-        "service_item",
-        "plan_financing",
         "subscription_billing_team",
         "subscription_seat",
         "consumables_count",
@@ -437,24 +434,6 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
             )
             .prefetch_related("consumables")
         )
-
-    def subscription(self, obj):
-        if obj.subscription_handler:
-            return obj.subscription_handler.subscription
-
-        if obj.plan_handler:
-            return obj.plan_handler.subscription
-
-    def service_item(self, obj):
-        if obj.subscription_handler:
-            return obj.subscription_handler.handler.service_item
-
-        if obj.plan_handler:
-            return obj.plan_handler.handler.service_item
-
-    def plan_financing(self, obj):
-        if obj.plan_handler:
-            return obj.plan_handler.plan_financing
 
     def consumables_count(self, obj):
         # Use annotated value if available to avoid extra queries
