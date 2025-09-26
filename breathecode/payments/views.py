@@ -18,7 +18,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions import tasks as admissions_tasks
@@ -1345,8 +1345,12 @@ class MeUserCouponsView(APIView):
             allowed_user=user,
         ).exclude(how_many_offers=0)
 
-        # NO_REFERRAL coupons doesn't should have any plans because it works for all of them, so use any
-        plan = Plan.objects.first()
+        plan = request.GET.get("plan")
+        if plan:
+            plan = Plan.objects.get(slug=plan)
+        else:
+            # NO_REFERRAL coupons doesn't should have any plans because it works for all of them, so use any
+            plan = Plan.objects.first()
         slugs = list(user_restricted_coupons.values_list("slug", flat=True))
 
         valid_coupons = get_available_coupons(plan=plan, coupons=slugs, user=user, only_sent_coupons=True)

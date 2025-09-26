@@ -1,9 +1,9 @@
 import os
 import re
+import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
-import uuid
 
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
@@ -18,13 +18,12 @@ from pytz import UTC
 from rest_framework.request import Request
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import UserSetting, UserInvite
+from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.authenticate.models import UserInvite, UserSetting
 from breathecode.media.models import File
+from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
 from breathecode.utils import getLogger
-from breathecode.authenticate.actions import get_app_url
-from breathecode.notify import actions as notify_actions
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
 
@@ -47,8 +46,8 @@ from .models import (
     Service,
     ServiceItem,
     Subscription,
-    SubscriptionSeat,
     SubscriptionBillingTeam,
+    SubscriptionSeat,
 )
 
 logger = getLogger(__name__)
@@ -1094,13 +1093,10 @@ def get_available_coupons(
 
         if coupon.referral_type != Coupon.Referral.NO_REFERRAL:
             if coupon.plans.exists():
-                print("gola")
-                # Cupón específico: verificar que sus planes NO estén excluidos
                 if coupon.plans.filter(exclude_from_referral_program=True).exists():
                     founded_coupon_slugs.append(coupon.slug)
                     return
             else:
-                # Cupón universal: verificar que el plan actual NO esté excluido
                 if plan and plan.exclude_from_referral_program:
                     founded_coupon_slugs.append(coupon.slug)
                     return

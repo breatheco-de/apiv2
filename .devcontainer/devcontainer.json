@@ -1,6 +1,6 @@
 {
     "name": "Ubuntu",
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "remoteUser": "vscode",
     "features": {
         "ghcr.io/devcontainers-extra/features/poetry:2": {},
