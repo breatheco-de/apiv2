@@ -1973,8 +1973,8 @@ def create_seat(email: str, user: User | None, seat_multiplier: int, billing_tea
     if not user:
         invite_user_to_subscription_team(
             {"email": email, "first_name": None, "last_name": None},
-            billing_team.subscription,
-            billing_team,
+            seat.billing_team.subscription,
+            seat,
             lang,
         )
 
