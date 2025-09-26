@@ -12,8 +12,10 @@ from .. import api
 PER_SEAT_PLAN = "4geeks-premium"
 PER_TEAM_PLAN = "hack-30-machines-in-30-days"
 
-TOKEN1 = os.getenv("FTT_USER_TOKEN1", "")
-TOKEN2 = os.getenv("FTT_USER_TOKEN2", "")
+# we switch the tokens to do not collide with pay_per_seat_endpoint
+TOKEN1 = os.getenv("FTT_USER_TOKEN2", "")
+TOKEN2 = os.getenv("FTT_USER_TOKEN1", "")
+
 academy = os.getenv("FTT_ACADEMY", "")
 pay_request = api.pay(token=TOKEN1, academy=academy)
 put_card_request = api.card(token=TOKEN1, academy=academy)
@@ -42,25 +44,28 @@ def get_subscription_id(slug: str) -> int | None:
 
 
 def setup() -> None:
-    assert 0
     assert_env_vars(
         ["FTT_API_URL", "FTT_USER_TOKEN1", "FTT_USER_TOKEN2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
     )  # required
     base = os.environ["FTT_API_URL"].rstrip("/")
 
-    sub_id = get_subscription_id(PER_SEAT_PLAN)
+    sub_id = get_subscription_id(PER_TEAM_PLAN)
     assert (
         sub_id is None
-    ), f"Subscription to `{PER_SEAT_PLAN}` found, delete it on {base}/admin/payments/subscription/{sub_id}/delete/"
+    ), f"Subscription to `{PER_TEAM_PLAN}` found, delete it on {base}/admin/payments/subscription/{sub_id}/delete/"
 
-    plan = get_plan_request(PER_SEAT_PLAN)
+    plan = get_plan_request(PER_TEAM_PLAN)
     assert_response(plan)
     json_plan = plan.json()
+    from pprint import pprint
+
+    pprint(json_plan)
+    pprint(json_plan.get("service_items", []))
     assert any(
         [x for x in json_plan.get("service_items", []) if x.get("is_team_allowed")]
     ), "No team allowed service item found"
     assert "consumption_strategy" in json_plan, "consumption_strategy not found in response"
-    assert json_plan.get("consumption_strategy") == "PER_SEAT", "consumption_strategy is not PER_SEAT"
+    assert json_plan.get("consumption_strategy") == "PER_TEAM", "consumption_strategy is not PER_TEAM"
 
     assert "seat_service_price" in json_plan, "seat_service_price not found in response"
     assert json_plan.get("seat_service_price") is not None, "seat_service_price is None"
@@ -113,7 +118,7 @@ def test_pay_a_plan_with_seats(bag_token: str, **ctx) -> None:
     attempts = 0
     while attempts < 10:
         time.sleep(10)
-        if subscription_id := get_subscription_id(PER_SEAT_PLAN):
+        if subscription_id := get_subscription_id(PER_TEAM_PLAN):
             return {"subscription_id": subscription_id}
         attempts += 1
 
