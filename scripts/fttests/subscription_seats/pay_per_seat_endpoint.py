@@ -215,7 +215,6 @@ def test_add_seat(subscription_id: int, **ctx):
             {
                 "from_email": from_email,
                 "to_email": to_email,
-                "to_user": user_id,
                 "seat_multiplier": 1,
                 "first_name": "Lord",
                 "last_name": "Valomero",
@@ -228,11 +227,5 @@ def test_add_seat(subscription_id: int, **ctx):
     res = seats_request(subscription_id)
     assert_response(res)
     json_res = res.json()
-    print(user_id)
-    print(to_email)
-    print(any([x["user"] == user_id for x in json_res]))
-    print(any([x["email"] == to_email for x in json_res]))
-    print(any([x["user"] == user_id and x["email"] == to_email for x in json_res]))
-    print(json_res)
 
     assert any([x["user"] == user_id and x["email"] == to_email for x in json_res]), "Seat replacement failed"
