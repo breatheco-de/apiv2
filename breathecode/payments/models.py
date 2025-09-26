@@ -2258,7 +2258,19 @@ class Consumable(AbstractServiceItem):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.email}: {self.service_item.service.slug} ({self.how_many})"
+        # Be robust: user can be None (team-owned consumable) and relations may be missing in edge cases
+        if self.user_id and getattr(self.user, "email", None):
+            owner = self.user.email
+        elif self.subscription_billing_team_id:
+            owner = f"Team {self.subscription_billing_team_id}"
+        else:
+            owner = "Unassigned"
+
+        service_slug = getattr(getattr(self.service_item, "service", None), "slug", None)
+        if not service_slug:
+            service_slug = f"service_item:{self.service_item_id or 'unknown'}"
+
+        return f"{owner}: {service_slug} ({self.how_many})"
 
 
 class ConsumptionSession(models.Model):

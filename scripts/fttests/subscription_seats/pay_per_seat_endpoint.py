@@ -290,4 +290,5 @@ def test_delete_user2_seat(subscription_id: int, seats: list[Seat], **ctx):
 
 def test_user2_consumables_after_seat_deletion(subscription_id: int, **ctx):
     consumables = get_user2_consumables(subscription_id)
+    print(consumables)
     assert len(consumables) == 0, "Consumables were not deleted"
