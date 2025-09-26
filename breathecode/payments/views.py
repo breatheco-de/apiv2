@@ -3198,7 +3198,18 @@ class SubscriptionSeatView(APIView):
                         ),
                         code=404,
                     )
-                result.append(actions.replace_seat(seat["from_email"], seat["to_email"], seat["to_user"], s, lang))
+                u = User.objects.filter(id=seat["to_user"]).first() if seat["to_user"] else None
+                if not u:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="User not found",
+                            es="Usuario no encontrado",
+                            slug="user-not-found",
+                        ),
+                        code=404,
+                    )
+                result.append(actions.replace_seat(seat["from_email"], seat["to_email"], u, s, lang))
             except ValidationException as e:
                 errors.append(e)
 
