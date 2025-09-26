@@ -337,7 +337,39 @@ class ServiceItem(AbstractServiceItem):
         is_test_env = os.getenv("ENV") == "test"
         inside_mixer = hasattr(self, "__mixer__")
         if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
-            raise forms.ValidationError("You cannot update a service item")
+            # After creation, all fields are read-only except `is_team_allowed`.
+            try:
+                original: "ServiceItem" = type(self).objects.get(pk=self.pk)
+            except type(self).DoesNotExist:  # pragma: no cover - very unlikely
+                original = None
+
+            if original is not None:
+                immutable_diffs: list[str] = []
+
+                # AbstractServiceItem fields
+                if self.unit_type != original.unit_type:
+                    immutable_diffs.append("unit_type")
+                if self.how_many != original.how_many:
+                    immutable_diffs.append("how_many")
+                if self.sort_priority != original.sort_priority:
+                    immutable_diffs.append("sort_priority")
+
+                # ServiceItem fields
+                if self.service_id != original.service_id:
+                    immutable_diffs.append("service")
+                if self.is_renewable != original.is_renewable:
+                    immutable_diffs.append("is_renewable")
+                if self.renew_at != original.renew_at:
+                    immutable_diffs.append("renew_at")
+                if self.renew_at_unit != original.renew_at_unit:
+                    immutable_diffs.append("renew_at_unit")
+
+                # `is_team_allowed` intentionally allowed to change
+
+                if immutable_diffs:
+                    raise forms.ValidationError(
+                        _("You cannot update the following fields: %(fields)s") % {"fields": ", ".join(immutable_diffs)}
+                    )
 
         # Universal rule: allow -1 (infinite), otherwise must be >= 0
         if self.how_many < -1 or self.how_many == 0:
