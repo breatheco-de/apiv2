@@ -3198,7 +3198,11 @@ class SubscriptionSeatView(APIView):
                         ),
                         code=404,
                     )
-                u = User.objects.filter(id=seat["to_user"]).first() if seat["to_user"] else None
+                u = None
+                if seat["to_user"]:
+                    u = User.objects.filter(id=seat["to_user"]).first()
+                elif seat["to_email"]:
+                    u = User.objects.filter(email=seat["to_email"]).first()
                 if not u:
                     raise ValidationException(
                         translation(

@@ -2022,7 +2022,7 @@ def replace_seat(
             code=400,
         )
 
-    seat.email = to_email
+    seat.email = to_user.email if to_user else to_email
     seat.user = to_user
     seat.is_active = True
     seat_log_entry = create_seat_log_entry(seat, "REPLACED")
