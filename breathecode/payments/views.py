@@ -1294,19 +1294,6 @@ class UserCouponView(APIView):
 
             # If no coupons exist, create one
             if not coupons.exists():
-                # Look for all plans from 4geeks.com academy
-                plans = Plan.objects.filter(owner__slug="4geeks-com")
-
-                if not plans.exists():
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="No plans found for academy 4geeks-com",
-                            es="No se encontraron planes para la academia 4geeks-com",
-                            slug="plans-not-found",
-                        ),
-                        code=404,
-                    )
 
                 # Create a unique slug for the coupon
                 slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
@@ -1322,8 +1309,8 @@ class UserCouponView(APIView):
                     seller=seller,
                 )
                 coupon.save()
-                # Add all plans to the coupon
-                coupon.plans.set(plans)
+                # Note: Since we don't specify plans, all plans are available for this
+                # coupon, so, for referrals, we control each plan with the bool "exclude_from_referral_program"
 
                 # Reload the coupons
                 coupons = Coupon.objects.filter(seller=seller)
@@ -1786,7 +1773,7 @@ class CouponBaseView(APIView):
             coupon_codes = coupon_codes.split(",")
         else:
             coupon_codes = []
-        logger.debug("coupon_codes", coupon_codes)
+
         return get_available_coupons(plan, coupons=coupon_codes, user=self.request.user)
 
 

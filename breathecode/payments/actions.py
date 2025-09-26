@@ -1092,6 +1092,19 @@ def get_available_coupons(
             founded_coupon_slugs.append(coupon.slug)
             return
 
+        if coupon.referral_type != Coupon.Referral.NO_REFERRAL:
+            if coupon.plans.exists():
+                print("gola")
+                # Cupón específico: verificar que sus planes NO estén excluidos
+                if coupon.plans.filter(exclude_from_referral_program=True).exists():
+                    founded_coupon_slugs.append(coupon.slug)
+                    return
+            else:
+                # Cupón universal: verificar que el plan actual NO esté excluido
+                if plan and plan.exclude_from_referral_program:
+                    founded_coupon_slugs.append(coupon.slug)
+                    return
+
         if coupon.slug not in founded_coupon_slugs:
             if coupon.how_many_offers == -1:
                 founded_coupons.append(coupon)
@@ -1116,6 +1129,7 @@ def get_available_coupons(
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
         Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
     )
+
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
 
     if not only_sent_coupons:
@@ -1140,6 +1154,7 @@ def get_available_coupons(
 
     if only_sent_coupons:
         sent_coupons = Coupon.objects.filter(*cou_args, slug__in=coupons).only(*cou_fields)
+
         for coupon in sent_coupons:
             manage_coupon(coupon)
     else:

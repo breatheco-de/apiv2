@@ -835,6 +835,10 @@ class Plan(AbstractPriceByTime):
         default=True, help_text="Is if true, it will create a renewable subscription instead of a plan financing"
     )
 
+    exclude_from_referral_program = models.BooleanField(
+        default=True, help_text="If is true, referral coupons will not be allowed"
+    )
+
     status = models.CharField(max_length=12, choices=Status, default=Status.DRAFT, help_text="Status")
 
     time_of_life = models.IntegerField(default=1, blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
