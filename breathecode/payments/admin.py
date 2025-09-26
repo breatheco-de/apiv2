@@ -399,7 +399,8 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "subscription_billing_team",
         "subscription_seat",
     ]
-    filter_horizontal = ("consumables",)
+    # Use autocomplete to avoid loading all consumables in memory and reduce cursor usage
+    autocomplete_fields = ("consumables",)
     list_select_related = (
         "subscription_handler__subscription",
         "subscription_handler__subscription__user",
@@ -418,21 +419,20 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         # Annotate consumables count to avoid N+1 and prefetch M2M for detail views
-        return (
-            qs.annotate(consumables_count=Count("consumables"))
-            .select_related(
-                "subscription_handler__subscription",
-                "subscription_handler__subscription__user",
-                "subscription_handler__service_item__service",
-                "plan_handler__subscription",
-                "plan_handler__subscription__user",
-                "plan_handler__plan_financing",
-                "plan_handler__plan_financing__user",
-                "plan_handler__handler__service_item__service",
-                "subscription_seat__user",
-                "subscription_billing_team",
-            )
-            .prefetch_related("consumables")
+        # NOTE: Avoid prefetch_related("consumables") here to prevent server-side cursor reuse issues
+        # in some deployments. The changelist uses the annotated count; the change form will load
+        # the M2M widget query separately.
+        return qs.annotate(consumables_count=Count("consumables")).select_related(
+            "subscription_handler__subscription",
+            "subscription_handler__subscription__user",
+            "subscription_handler__service_item__service",
+            "plan_handler__subscription",
+            "plan_handler__subscription__user",
+            "plan_handler__plan_financing",
+            "plan_handler__plan_financing__user",
+            "plan_handler__handler__service_item__service",
+            "subscription_seat__user",
+            "subscription_billing_team",
         )
 
     def consumables_count(self, obj):
