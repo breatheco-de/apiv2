@@ -2245,31 +2245,6 @@ class Consumable(AbstractServiceItem):
                     )
                 )
 
-            # ensure required group
-            if (
-                self.service_item.team_group
-                and not self.user.groups.filter(id=self.service_item.team_group_id).exists()
-            ):
-                raise forms.ValidationError(
-                    translation(
-                        settings.lang,
-                        en="User is not in the required team group",
-                        es="El usuario no está en el grupo requerido del equipo",
-                    )
-                )
-
-            # ensure service is allowed in team_consumables
-            policy = (self.service_item.team_consumables or {}).get("allowed") or []
-            allowed_slugs = {x.get("service_slug") for x in policy if isinstance(x, dict)}
-            if self.service_item.service.slug not in allowed_slugs:
-                raise forms.ValidationError(
-                    translation(
-                        settings.lang,
-                        en="Service is not allowed by team_consumables",
-                        es="El servicio no está permitido por team_consumables",
-                    )
-                )
-
         return super().clean()
 
     def save(self, *args, **kwargs):
