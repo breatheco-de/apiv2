@@ -55,6 +55,10 @@ def setup() -> None:
     plan = get_plan_request(PER_SEAT_PLAN)
     assert_response(plan)
     json_plan = plan.json()
+    from pprint import pprint
+
+    pprint(json_plan)
+    assert 0
     assert "consumption_strategy" in json_plan, "consumption_strategy not found in response"
     assert json_plan.get("consumption_strategy") == "PER_SEAT", "consumption_strategy is not PER_SEAT"
 
@@ -284,11 +288,10 @@ class Seat(TypedDict):
 
 
 def test_delete_user2_seat(subscription_id: int, seats: list[Seat], **ctx):
-    res = delete_seat_request(subscription_id, seats[0].get("id"))
+    res = delete_seat_request(subscription_id, seats[1].get("id"))
     assert res.status_code == 204, f"Delete seat failed, {res.text}"
 
 
 def test_user2_consumables_after_seat_deletion(subscription_id: int, **ctx):
     consumables = get_user2_consumables(subscription_id)
-    print(consumables)
     assert len(consumables) == 0, "Consumables were not deleted"
