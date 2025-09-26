@@ -3187,11 +3187,18 @@ class SubscriptionSeatView(APIView):
 
         for seat in replace_seats:
             try:
-                result.append(
-                    actions.replace_seat(
-                        seat["from_email"], seat["to_email"], seat["to_user"], seat["seat_multiplier"], lang
+                s = SubscriptionSeat.objects.filter(billing_team=team, email=seat["from_email"]).first()
+                if not s:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Seat not found",
+                            es="Asiento no encontrado",
+                            slug="seat-not-found",
+                        ),
+                        code=404,
                     )
-                )
+                result.append(actions.replace_seat(seat["from_email"], seat["to_email"], seat["to_user"], s, lang))
             except ValidationException as e:
                 errors.append(e)
 
