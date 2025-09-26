@@ -27,6 +27,12 @@ import traceback
 
 # ANSI colors
 RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+BLUE = "\033[34m"
+CYAN = "\033[36m"
+BOLD = "\033[1m"
+GRAY = "\033[90m"
 RESET = "\033[0m"
 
 
@@ -160,6 +166,11 @@ def _format_module_name(module_fullname: str, feature: str) -> str:
     return feature + (" -> " + " -> ".join(module_parts) if module_parts else "")
 
 
+def _gray_connectors(text: str) -> str:
+    """Colorize ' -> ' connectors in dark gray for readability."""
+    return text.replace(" -> ", f" {GRAY}->{RESET} ")
+
+
 def _discover_tests_grouped(feature_mod: ModuleType) -> list[tuple[ModuleType, list[tuple[str, callable]]]]:
     """Discover tests grouped by module.
 
@@ -221,41 +232,46 @@ def main(argv: list[str]) -> int:
 
     try:
         if hasattr(mod, "check_dependencies"):
-            print(f"[fttests] Running dependencies check for '{feature_name}'...")
+            print(f"{GRAY}[fttests]{RESET} {BOLD}Running dependencies check for '{feature_name}'...{RESET}")
             mod.check_dependencies()
-            print("[fttests] Dependencies OK.\n")
+            print(f"{GRAY}[fttests]{RESET} {BOLD}Dependencies OK.{RESET}\n")
         else:
-            print(f"[fttests] No check_dependencies() found for '{feature_name}'. Skipping.\n")
+            print(
+                f"{GRAY}[fttests]{RESET} {BOLD}No check_dependencies() found for '{feature_name}'. Skipping.{RESET}\n"
+            )
 
         # Discover tests (grouped by module) in the feature package
         groups = _discover_tests_grouped(mod)
         test_count = sum(len(tests) for _, tests in groups)
         if groups:
-            print(f"[fttests] Discovered {test_count} test(s) for '{feature_name}'. Running...\n")
+            print(
+                f"{GRAY}[fttests]{RESET} {BOLD}Discovered {test_count} test(s) for '{feature_name}'. Running...{RESET}\n"
+            )
             total = 0
             failures: list[str] = []
 
             for module_obj, tests in groups:
                 module_pretty = _format_module_name(module_obj.__name__, feature_name)
+                module_pretty_colored = _gray_connectors(module_pretty)
                 context: dict = {}
 
                 # Optional setup()
                 setup_fn = getattr(module_obj, "setup", None)
                 if callable(setup_fn):
-                    label = f"{module_pretty} -> setup"
-                    print(f"[fttests] SETUP {label}")
+                    label = f"{module_pretty_colored} {GRAY}->{RESET} setup"
+                    print(f"{GRAY}[fttests]{RESET} {BOLD}{CYAN}SETUP{RESET} {label}")
                     try:
                         ret = setup_fn(**_build_call_kwargs(setup_fn, context))
                         if isinstance(ret, dict):
                             context.update(ret)
-                        print(f"[fttests] OK    {label}")
+                        print(f"{GRAY}[fttests]{RESET} {GREEN}OK{RESET}    {label}")
                     except AssertionError as exc:
-                        print(f"{RED}[fttests] FAIL  {label} -> {exc}{RESET}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}FAIL{RESET}  {label} {GRAY}->{RESET} {exc}")
                         failures.append(f"{label}: {exc}")
                         # Skip this module's tests and teardown
                         continue
                     except Exception as exc:  # noqa: BLE001
-                        print(f"{RED}[fttests] ERROR {label} -> {exc}{RESET}")
+                        print(f"{GRAY}[fttests]{RESET} {RED}ERROR{RESET} {label} {GRAY}->{RESET} {exc}")
                         traceback.print_exc()
                         failures.append(f"{label}: unexpected error: {exc}")
                         continue
@@ -264,46 +280,49 @@ def main(argv: list[str]) -> int:
                 for fullname, func in tests:
                     total += 1
                     pretty = _format_test_name(fullname, feature_name)
-                    print(f"[fttests] RUN   {pretty}")
+                    colored_pretty = _gray_connectors(pretty)
+                    print(f"{GRAY}[fttests]{RESET} {BOLD}{BLUE}RUN{RESET}   {colored_pretty}")
                     try:
                         ret = func(**_build_call_kwargs(func, context))
                         if isinstance(ret, dict):
                             context.update(ret)
-                        print("[fttests] OK")
+                        print(f"{GRAY}[fttests]{RESET} {GREEN}OK{RESET}")
                     except AssertionError as exc:
-                        print(f"{RED}[fttests] FAIL    -> {exc}{RESET}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}FAIL{RESET}    {GRAY}->{RESET} {exc}")
                         failures.append(f"{pretty}: {exc}")
                     except Exception as exc:  # noqa: BLE001
-                        print(f"{RED}[fttests] ERROR -> {exc}{RESET}")
+                        print(f"{GRAY}[fttests]{RESET} {RED}ERROR{RESET} {GRAY}->{RESET} {exc}")
                         traceback.print_exc()
                         failures.append(f"{pretty}: unexpected error: {exc}")
 
                 # Optional teardown()
                 teardown_fn = getattr(module_obj, "teardown", None)
                 if callable(teardown_fn):
-                    label = f"{module_pretty} -> teardown"
-                    print(f"[fttests] TEARDOWN {label}")
+                    label = f"{module_pretty_colored} {GRAY}->{RESET} teardown"
+                    print(f"{GRAY}[fttests]{RESET} {CYAN}TEARDOWN{RESET} {label}")
                     try:
                         teardown_fn(**_build_call_kwargs(teardown_fn, context))
-                        print(f"[fttests] OK       {label}")
+                        print(f"{GRAY}[fttests]{RESET} {GREEN}OK{RESET}       {label}")
                     except AssertionError as exc:
-                        print(f"{RED}[fttests] FAIL     {label} -> {exc}{RESET}")
+                        print(f"{GRAY}[fttests]{RESET} {RED}FAIL{RESET}     {label} {GRAY}->{RESET} {exc}")
                         failures.append(f"{label}: {exc}")
                     except Exception as exc:  # noqa: BLE001
-                        print(f"{RED}[fttests] ERROR    {label} -> {exc}{RESET}")
+                        print(f"{GRAY}[fttests]{RESET} {RED}ERROR{RESET}    {label} {GRAY}->{RESET} {exc}")
                         traceback.print_exc()
                         failures.append(f"{label}: unexpected error: {exc}")
 
-            print(f"\n[fttests] Ran {total} test(s).")
+            print(f"\n{GRAY}[fttests]{RESET} {BOLD}Ran {total} test(s).{RESET}")
             if failures:
-                print("[fttests] Failures:")
+                print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}Failures:{RESET}")
                 for msg in failures:
                     print(f" - {msg}")
                 return 1
         else:
             # Fallback to legacy feature runner if provided
             if hasattr(mod, "run"):
-                print(f"[fttests] No tests found for '{feature_name}'; delegating to feature's run()...\n")
+                print(
+                    f"{GRAY}[fttests]{RESET} {BOLD}No tests found for '{feature_name}'; delegating to feature's run()...{RESET}\n"
+                )
                 mod.run()
             else:
                 print(f"{RED}Feature '{feature_name}' has no tests and no run() fallback{RESET}", file=sys.stderr)
@@ -319,7 +338,7 @@ def main(argv: list[str]) -> int:
         traceback.print_exc()
         return 1
 
-    print(f"\n[fttests] Feature '{feature_name}' finished successfully.")
+    print(f"\n{GRAY}[fttests]{RESET} {BOLD}{GREEN}Feature '{feature_name}' finished successfully.{RESET}")
     return 0
 
 
