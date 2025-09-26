@@ -153,3 +153,16 @@ def add_seat(token: str) -> Callable[[str, str], requests.Response]:
         return res
 
     return inner
+
+
+def delete_seat(token: str) -> Callable[[str, str], requests.Response]:
+    def inner(subscription_id: int, seat_id: int) -> requests.Response:
+        base_url = os.environ["FTT_API_URL"].rstrip("/")
+        owner_token = token
+        path = f"/v2/payments/subscription/{subscription_id}/billing-team/seat/{seat_id}"
+        url = f"{base_url}{path}"
+        headers = build_headers(authorization=f"Token {owner_token}", accept="application/json")
+        res = requests.delete(url, headers=headers)
+        return res
+
+    return inner
