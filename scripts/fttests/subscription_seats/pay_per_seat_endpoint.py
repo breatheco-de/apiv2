@@ -1,26 +1,31 @@
 from __future__ import annotations
 
 import os
-from typing import Dict
 import requests
 import time
 
-from ..utils import assert_env_vars, build_headers
+from ..utils import assert_env_vars
+from .. import api
 
 
 PER_SEAT_PLAN = "4geeks-premium"
 PER_TEAM_PLAN = "hack-30-machines-in-30-days"
 
-
-def subscription_request() -> requests.Response:
-    base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_USER1", "")
-    academy = os.getenv("FTT_ACADEMY", "")
-    path = "/v1/payments/me/subscription"
-    url = f"{base_url}{path}"
-    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
-    res = requests.get(url, headers=headers)
-    return res
+TOKEN1 = os.getenv("FTT_USER_TOKEN1", "")
+TOKEN2 = os.getenv("FTT_USER_TOKEN2", "")
+academy = os.getenv("FTT_ACADEMY", "")
+pay_request = api.pay(token=TOKEN1, academy=academy)
+card_request = api.card(token=TOKEN1, academy=academy)
+checking_request = api.checking(token=TOKEN1, academy=academy)
+consumables_request = api.consumables(token=TOKEN1)
+billing_team_request = api.billing_team(token=TOKEN1)
+subscription_request = api.subscriptions(token=TOKEN1, academy=academy)
+plan_request = api.plan(token=TOKEN1, academy=academy)
+seats_request = api.seats(token=TOKEN1)
+seat_request = api.seat(token=TOKEN1)
+user1_me_request = api.user_me(token=TOKEN1)
+user2_me_request = api.user_me(token=TOKEN2)
+add_seat_request = api.add_seat(token=TOKEN1)
 
 
 def get_subscription_id(slug: str) -> int | None:
@@ -34,14 +39,21 @@ def get_subscription_id(slug: str) -> int | None:
 
 
 def setup() -> None:
-    print("[fttests] Setting up smoke test...")
-    assert_env_vars(["FTT_API_URL", "FTT_USER1", "FTT_USER2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"])  # required
+    assert_env_vars(
+        ["FTT_API_URL", "FTT_USER_TOKEN1", "FTT_USER_TOKEN2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
+    )  # required
     base = os.environ["FTT_API_URL"].rstrip("/")
 
     sub_id = get_subscription_id(PER_SEAT_PLAN)
     assert (
         sub_id is None
     ), f"Subscription to `{PER_SEAT_PLAN}` found, delete it on {base}/admin/payments/subscription/{sub_id}/delete/"
+
+    plan = plan_request(PER_SEAT_PLAN)
+    assert_response(plan)
+    json_plan = plan.json()
+    assert "consumption_strategy" in json_plan, "consumption_strategy not found in response"
+    assert json_plan.get("consumption_strategy") == "PER_SEAT", "consumption_strategy is not PER_SEAT"
 
 
 def assert_response(res: requests.Response) -> None:
@@ -51,54 +63,6 @@ def assert_response(res: requests.Response) -> None:
     assert (
         200 <= res.status_code < 400
     ), f"{res.request.method} {res.request.url} request failed at {res.request.url} with status {res.status_code}, {res.text[:40]}"
-
-
-def plan_request(slug) -> requests.Response:
-    base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_USER1", "")
-    academy = os.getenv("FTT_ACADEMY", "")
-    path = f"/v1/payments/plan/{slug}"
-    url = f"{base_url}{path}"
-    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
-    res = requests.get(url, headers=headers)
-    return res
-
-
-def checking_request(data: Dict[str, str]) -> requests.Response:
-    base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_USER1", "")
-    academy = os.getenv("FTT_ACADEMY", "")
-    path = "/v1/payments/checking"
-    url = f"{base_url}{path}"
-    data["academy"] = academy
-    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json")
-    res = requests.put(url, headers=headers, json=data)
-    return res
-
-
-def card_request(data: Dict[str, str]) -> requests.Response:
-    base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_USER1", "")
-    academy = os.getenv("FTT_ACADEMY", "")
-    academy_slug = os.getenv("FTT_ACADEMY_SLUG", "")
-    path = "/v1/payments/card"
-    url = f"{base_url}{path}"
-    data["academy"] = academy_slug
-    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
-    res = requests.post(url, headers=headers, json=data)
-    return res
-
-
-def pay_request(data: Dict[str, str]) -> requests.Response:
-    base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_USER1", "")
-    academy = os.getenv("FTT_ACADEMY", "")
-    path = "/v1/payments/pay"
-    url = f"{base_url}{path}"
-    data["academy"] = academy
-    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json")
-    res = requests.post(url, headers=headers, json=data)
-    return res
 
 
 def test_plan_setup_with_seat_price() -> None:
@@ -158,30 +122,6 @@ def test_pay_a_plan_with_seats(bag_token: str, **ctx) -> None:
     assert 0, "Subscription was not created"
 
 
-def consumables_request() -> requests.Response:
-    base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_USER1", "")
-    academy = os.getenv("FTT_ACADEMY", "")
-    path = "/v1/payments/me/service/consumable"
-    url = f"{base_url}{path}"
-    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
-    res = requests.get(url, headers=headers)
-    return res
-
-
-def get_consumables(subscription_id: int) -> requests.Response:
-    res = consumables_request()
-    assert_response(res)
-    json_res = res.json()
-    consumables = []
-    for x in json_res.values():
-        for y in x:
-            for item in y["items"]:
-                if item["subscription"] == subscription_id:
-                    consumables.append(item)
-    return consumables
-
-
 def test_all_consumables(subscription_id: int, **ctx):
     attempts = 0
     while attempts < 10:
@@ -201,15 +141,17 @@ def test_all_consumables(subscription_id: int, **ctx):
     assert 0, "Consumables were not created"
 
 
-def billing_team_request(subscription_id: int) -> requests.Response:
-    base_url = os.environ["FTT_API_URL"].rstrip("/")
-    owner_token = os.getenv("FTT_USER1", "")
-    academy = os.getenv("FTT_ACADEMY", "")
-    path = f"/v2/payments/subscription/{subscription_id}/billing-team"
-    url = f"{base_url}{path}"
-    headers = build_headers(authorization=f"Token {owner_token}", accept="application/json", academy=academy)
-    res = requests.get(url, headers=headers)
-    return res
+def get_consumables(subscription_id: int) -> requests.Response:
+    res = consumables_request()
+    assert_response(res)
+    json_res = res.json()
+    consumables = []
+    for x in json_res.values():
+        for y in x:
+            for item in y["items"]:
+                if item["subscription"] == subscription_id:
+                    consumables.append(item)
+    return consumables
 
 
 def test_billing_team_exists(subscription_id: int, team_seats: int, **ctx):
@@ -217,3 +159,73 @@ def test_billing_team_exists(subscription_id: int, team_seats: int, **ctx):
     assert_response(res)
     json_res = res.json()
     assert json_res.get("seats_limit") == team_seats, "billing_team seats_limit is not equal to team_seats"
+
+
+def test_owner_seat_exists(subscription_id: int, **ctx):
+    res = user1_me_request()
+    assert_response(res)
+    json_res = res.json()
+
+    user_id = json_res.get("id")
+    user_email = json_res.get("email")
+
+    res = seats_request(subscription_id)
+    assert_response(res)
+    json_res = res.json()
+
+    assert any(
+        [x["user"] == user_id and x["email"] == user_email for x in json_res]
+    ), "owner's seat not found in response"
+
+
+def test_add_seat(subscription_id: int, **ctx):
+    user_email = "lord@valomero.com"
+
+    data = {
+        "add_seats": [
+            {
+                "email": user_email,
+                "seat_multiplier": 1,
+                "first_name": "Lord",
+                "last_name": "Valomero",
+            }
+        ]
+    }
+    res = add_seat_request(subscription_id, data)
+    assert_response(res)
+
+    res = seats_request(subscription_id)
+    assert_response(res)
+    json_res = res.json()
+
+    assert any(
+        [x["user"] is None and x["email"] == user_email for x in json_res]
+    ), "Lord valomero's seat not found in response"
+
+    res = user2_me_request()
+    assert_response(res)
+    json_res = res.json()
+
+    from_email = user_email
+    user_id = json_res.get("id")
+    to_email = json_res.get("email")
+
+    data = {
+        "replace_seats": [
+            {
+                "from_email": from_email,
+                "to_email": to_email,
+                "seat_multiplier": 1,
+                "first_name": "Lord",
+                "last_name": "Valomero",
+            }
+        ]
+    }
+    res = add_seat_request(subscription_id, data)
+    assert_response(res)
+
+    res = seats_request(subscription_id)
+    assert_response(res)
+    json_res = res.json()
+
+    assert any([x["user"] == user_id and x["email"] == to_email for x in json_res]), "Seat replacement failed"

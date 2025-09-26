@@ -3181,14 +3181,16 @@ class SubscriptionSeatView(APIView):
 
         for seat in add_seats:
             try:
-                result.append(actions.create_seat(seat.email, seat.user, seat.seat_multiplier, team, lang))
+                result.append(actions.create_seat(seat["email"], seat["user"], seat["seat_multiplier"], team, lang))
             except ValidationException as e:
                 errors.append(e)
 
         for seat in replace_seats:
             try:
                 result.append(
-                    actions.replace_seat(seat.from_email, seat.to_email, seat.to_user, seat.seat_multiplier, lang)
+                    actions.replace_seat(
+                        seat["from_email"], seat["to_email"], seat["to_user"], seat["seat_multiplier"], lang
+                    )
                 )
             except ValidationException as e:
                 errors.append(e)
