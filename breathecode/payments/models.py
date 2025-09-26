@@ -351,8 +351,6 @@ class ServiceItem(AbstractServiceItem):
                     immutable_diffs.append("unit_type")
                 if self.how_many != original.how_many:
                     immutable_diffs.append("how_many")
-                if self.sort_priority != original.sort_priority:
-                    immutable_diffs.append("sort_priority")
 
                 # ServiceItem fields
                 if self.service_id != original.service_id:

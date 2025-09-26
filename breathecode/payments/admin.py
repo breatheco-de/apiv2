@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -361,13 +361,82 @@ def renew_consumables(modeladmin, request, queryset):
 
 @admin.register(ServiceStockScheduler)
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
-    list_display = ("id", "subscription", "service_item", "plan_financing", "valid_until")
-    search_fields = [
-        "subscription_handler__subscription__user__email",
-        "plan_handler__subscription__user__email",
-        "plan_handler__plan_financing__user__email",
+    list_display = (
+        "id",
+        "subscription",
+        "service_item",
+        "plan_financing",
+        "subscription_billing_team",
+        "subscription_seat",
+        "consumables_count",
+        "valid_until",
+    )
+    list_filter = [
+        "valid_until",
+        "subscription_billing_team",
+        "subscription_seat",
+        "subscription_handler__subscription__status",
+        "plan_handler__subscription__status",
+        "plan_handler__plan_financing__status",
     ]
+    search_fields = [
+        "subscription_handler__subscription__id",
+        "subscription_handler__subscription__user__email",
+        "subscription_handler__subscription__user__first_name",
+        "subscription_handler__subscription__user__last_name",
+        "plan_handler__subscription__id",
+        "plan_handler__subscription__user__email",
+        "plan_handler__subscription__user__first_name",
+        "plan_handler__subscription__user__last_name",
+        "plan_handler__plan_financing__id",
+        "plan_handler__plan_financing__user__email",
+        "plan_handler__plan_financing__user__first_name",
+        "plan_handler__plan_financing__user__last_name",
+        "subscription_seat__email",
+        "subscription_seat__user__email",
+        "subscription_billing_team__name",
+    ]
+    raw_id_fields = [
+        "subscription_handler",
+        "plan_handler",
+        "subscription_billing_team",
+        "subscription_seat",
+    ]
+    filter_horizontal = ("consumables",)
+    list_select_related = (
+        "subscription_handler__subscription",
+        "subscription_handler__subscription__user",
+        "subscription_handler__service_item__service",
+        "plan_handler__subscription",
+        "plan_handler__subscription__user",
+        "plan_handler__plan_financing",
+        "plan_handler__plan_financing__user",
+        "plan_handler__handler__service_item__service",
+        "subscription_seat__user",
+        "subscription_billing_team",
+    )
+    date_hierarchy = "valid_until"
     actions = [renew_consumables]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Annotate consumables count to avoid N+1 and prefetch M2M for detail views
+        return (
+            qs.annotate(consumables_count=Count("consumables"))
+            .select_related(
+                "subscription_handler__subscription",
+                "subscription_handler__subscription__user",
+                "subscription_handler__service_item__service",
+                "plan_handler__subscription",
+                "plan_handler__subscription__user",
+                "plan_handler__plan_financing",
+                "plan_handler__plan_financing__user",
+                "plan_handler__handler__service_item__service",
+                "subscription_seat__user",
+                "subscription_billing_team",
+            )
+            .prefetch_related("consumables")
+        )
 
     def subscription(self, obj):
         if obj.subscription_handler:
@@ -386,6 +455,10 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     def plan_financing(self, obj):
         if obj.plan_handler:
             return obj.plan_handler.plan_financing
+
+    def consumables_count(self, obj):
+        # Use annotated value if available to avoid extra queries
+        return getattr(obj, "consumables_count", None) or obj.consumables.count()
 
 
 @admin.register(PaymentContact)
