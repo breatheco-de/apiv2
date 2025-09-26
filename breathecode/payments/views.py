@@ -21,10 +21,10 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language
+from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
@@ -68,6 +68,7 @@ from breathecode.payments.serializers import (
     GetBagSerializer,
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
+    GetCouponWithPlansSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetInvoiceSerializer,
@@ -1271,65 +1272,73 @@ class UserCouponView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     def get(self, request):
-        user = request.user
-        lang = get_user_language(request)
+        try:
+            user = request.user
+            lang = get_user_language(request)
 
-        # Check if the user already has coupons as a seller
-        seller = Seller.objects.filter(user=user).first()
+            # Check if the user already has coupons as a seller
+            seller = Seller.objects.filter(user=user).first()
 
-        if not seller:
-            # Create a new seller for this user
-            seller = Seller(
-                name=f"{user.first_name} {user.last_name}".strip() or f"User {user.id}",
-                user=user,
-                type=Seller.Partner.INDIVIDUAL,
-                is_active=True,
-            )
-            seller.save()
-
-        # Get existing coupons for this seller
-        coupons = Coupon.objects.filter(seller=seller)
-
-        # If no coupons exist, create one
-        if not coupons.exists():
-            # Look for the plan by slug - this could be made configurable
-            plan_slug = request.GET.get("plan_slug", "4geeks-plus-subscription")
-            plan = Plan.objects.filter(slug=plan_slug).first()
-
-            if not plan:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en=f"Required plan '{plan_slug}' not found",
-                        es=f"Plan requerido '{plan_slug}' no encontrado",
-                        slug="plan-not-found",
-                    ),
-                    code=404,
+            if not seller:
+                # Create a new seller for this user
+                seller = Seller(
+                    name=f"{user.first_name}".strip() or f"User {user.id}",
+                    user=user,
+                    type=Seller.Partner.INDIVIDUAL,
+                    is_active=True,
                 )
+                seller.save()
 
-            # Create a unique slug for the coupon
-            slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
-
-            coupon = Coupon(
-                slug=slug,
-                discount_type=Coupon.Discount.PERCENT_OFF,
-                discount_value=0.1,  # 10% discount
-                referral_type=Coupon.Referral.PERCENTAGE,
-                referral_value=0.1,  # 10% commission
-                auto=False,
-                how_many_offers=-1,  # No limit
-                seller=seller,
-            )
-            coupon.save()
-
-            # Add the plan to the coupon
-            coupon.plans.add(plan)
-
-            # Reload the coupons
+            # Get existing coupons for this seller
             coupons = Coupon.objects.filter(seller=seller)
 
-        serializer = GetCouponSerializer(coupons, many=True)
-        return Response(serializer.data)
+            # If no coupons exist, create one
+            if not coupons.exists():
+                # Look for the plan by slug - this could be made configurable
+                plan_slug = request.GET.get("plan_slug", "4geeks-plus-subscription")
+                plan = Plan.objects.filter(slug=plan_slug).first()
+
+                if not plan:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Required plan '{plan_slug}' not found",
+                            es=f"Plan requerido '{plan_slug}' no encontrado",
+                            slug="plan-not-found",
+                        ),
+                        code=404,
+                    )
+
+                # Create a unique slug for the coupon
+                slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
+
+                coupon = Coupon(
+                    slug=slug,
+                    discount_type=Coupon.Discount.PERCENT_OFF,
+                    discount_value=0.1,  # 10% discount
+                    referral_type=Coupon.Referral.PERCENTAGE,
+                    referral_value=0.1,  # 10% commission
+                    auto=False,
+                    how_many_offers=-1,  # No limit
+                    seller=seller,
+                )
+                coupon.save()
+                # Add the plan to the coupon
+                coupon.plans.add(plan)
+
+                # Reload the coupons
+                coupons = Coupon.objects.filter(seller=seller)
+
+            serializer = GetCouponWithPlansSerializer(coupons, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(e)
+            raise ValidationException(
+                translation(
+                    lang, en="Error getting coupons", es="Error al obtener los cupones", slug="error-getting-coupons"
+                ),
+                code=500,
+            )
 
 
 class MeUserCouponsView(APIView):
@@ -1338,7 +1347,7 @@ class MeUserCouponsView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     def get(self, request):
-        """Get all coupons that the current user can use."""
+        """Get all coupons that the current user can use, with validity status."""
         handler = self.extensions(request)
         user = request.user
         utc_now = timezone.now()
@@ -1350,10 +1359,54 @@ class MeUserCouponsView(APIView):
             allowed_user=user,
         ).exclude(how_many_offers=0)
 
+        # NO_REFERRAL coupons doesn't should have any plans because it works for all of them, so use any
+        plan = Plan.objects.first()
+        slugs = list(user_restricted_coupons.values_list("slug", flat=True))
+
+        valid_coupons = get_available_coupons(plan=plan, coupons=slugs, user=user, ignore_limit=True)
+        valid_coupon_ids = {coupon.id for coupon in valid_coupons}
+
         coupons = handler.queryset(user_restricted_coupons)
-        serializer = GetCouponSerializer(coupons, many=True)
+        # Mark each coupon as valid or invalid
+        for coupon in coupons:
+            coupon._is_valid = coupon.id in valid_coupon_ids
+        # Convert to list to ensure evaluation
+        coupons_list = list(coupons)
+        serializer = GetCouponSerializer(coupons_list, many=True)
+
+        # Add is_valid field to each coupon in the response
+        for i, coupon_data in enumerate(serializer.data):
+            coupon_data["is_valid"] = getattr(coupons_list[i], "_is_valid", False)
 
         return handler.response(serializer.data)
+
+    def put(self, request, coupon_slug):
+        """Activate automatic application of a user's coupon."""
+        lang = get_user_language(request)
+        user = request.user
+
+        # Buscar el cupón del usuario
+        coupon = Coupon.objects.filter(slug=coupon_slug, allowed_user=user).first()
+
+        if not coupon:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Coupon {coupon_slug} not found",
+                    es=f"Cupón {coupon_slug} no encontrado",
+                    slug="coupon-not-found",
+                ),
+                code=404,
+            )
+        coupon.auto = not coupon.auto
+        coupon.save()
+
+        return Response(
+            {
+                "coupon_slug": coupon.slug,
+                "auto": coupon.auto,
+            }
+        )
 
 
 class AcademyInvoiceView(APIView):

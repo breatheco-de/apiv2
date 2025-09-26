@@ -1045,7 +1045,9 @@ def max_coupons_allowed():
         return 1
 
 
-def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user: Optional[User] = None) -> list[Coupon]:
+def get_available_coupons(
+    plan: Plan, coupons: Optional[list[str]] = None, user: Optional[User] = None, ignore_limit: bool = False
+) -> list[Coupon]:
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
         sub_kwargs = {"invoices__bag__coupons": coupon}
@@ -1116,8 +1118,13 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
     )
 
     max = max_coupons_allowed()
-    for coupon in valid_coupons[0:max]:
-        manage_coupon(coupon)
+
+    if ignore_limit:
+        for coupon in valid_coupons:
+            manage_coupon(coupon)
+    else:
+        for coupon in valid_coupons[0:max]:
+            manage_coupon(coupon)
 
     return founded_coupons
 

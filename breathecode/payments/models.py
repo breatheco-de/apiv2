@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 import math
 import os
-from datetime import timedelta
-from typing import Any, Optional, TYPE_CHECKING, Protocol, TypeVar, Awaitable
 import random
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any, Awaitable, Optional, Protocol, TypeVar
 
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -1049,7 +1049,7 @@ class Seller(models.Model):
         INDIVIDUAL = ("INDIVIDUAL", "Individual")
         BUSINESS = ("BUSINESS", "Business")
 
-    name = models.CharField(max_length=30, help_text="Company name or person name")
+    name = models.CharField(max_length=50, help_text="Company name or person name")
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, blank=True, null=True, limit_choices_to={"is_active": True}
     )
