@@ -59,10 +59,10 @@ def setup() -> None:
 def assert_response(res: requests.Response) -> None:
     assert "application/json" in (
         res.headers.get("Content-Type") or ""
-    ), f"{res.request.method} {res.request.url} Content-Type is not application/json"
+    ), f"{res.request.method} {res.request.url} {res.request.body} Content-Type is not application/json"
     assert (
         200 <= res.status_code < 400
-    ), f"{res.request.method} {res.request.url} request failed at {res.request.url} with status {res.status_code}, {res.text[:40]}"
+    ), f"{res.request.method} {res.request.url} {res.request.body} request failed at {res.request.url} with status {res.status_code}, {res.text[:40]}"
 
 
 def test_plan_setup_with_seat_price() -> None:
