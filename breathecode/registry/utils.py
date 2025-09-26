@@ -75,7 +75,7 @@ def is_trusted_url(url):
             domain = domain[4:]
         
         # Check if domain is in trusted domains
-        if domain in TRUSTED_DOMAINS:
+        if domain in TRUSTED_DOMAINS or url.startswith('http://localhost'):
             return True
         
         # Check if the normalized URL (without query string) is in trusted URLs
