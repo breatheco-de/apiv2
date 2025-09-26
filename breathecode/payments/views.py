@@ -3300,4 +3300,6 @@ class SubscriptionSeatView(APIView):
         seat.is_active = False
         seat.save(update_fields=["is_active", "user"])
 
+        Consumable.objects.filter(subscription_seat_id=seat.id).update(user=None)
+
         return Response(status=status.HTTP_204_NO_CONTENT)

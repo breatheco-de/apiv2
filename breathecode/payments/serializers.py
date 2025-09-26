@@ -103,6 +103,7 @@ class GetServiceItemSerializer(serpy.Serializer):
     how_many = serpy.Field()
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
+    is_team_allowed = serpy.Field()
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
