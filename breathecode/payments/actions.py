@@ -1919,7 +1919,7 @@ def invite_user_to_subscription_team(
         email=obj.get("email", ""),
         academy=subscription.academy,
         subscription_seat=subscription_seat,
-        role="STUDENT",
+        role_id="student",
         defaults={
             "status": "PENDING",
             "author": subscription.user,

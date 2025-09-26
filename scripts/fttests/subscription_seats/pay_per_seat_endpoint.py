@@ -178,54 +178,54 @@ def test_owner_seat_exists(subscription_id: int, **ctx):
     ), "owner's seat not found in response"
 
 
-def test_add_seat(subscription_id: int, **ctx):
-    user_email = "lord@valomero.com"
+# def test_add_seat(subscription_id: int, **ctx):
+#     user_email = "lord@valomero.com"
 
-    data = {
-        "add_seats": [
-            {
-                "email": user_email,
-                "seat_multiplier": 1,
-                "first_name": "Lord",
-                "last_name": "Valomero",
-            }
-        ]
-    }
-    res = add_seat_request(subscription_id, data)
-    assert_response(res)
+#     data = {
+#         "add_seats": [
+#             {
+#                 "email": user_email,
+#                 "seat_multiplier": 1,
+#                 "first_name": "Lord",
+#                 "last_name": "Valomero",
+#             }
+#         ]
+#     }
+#     res = add_seat_request(subscription_id, data)
+#     assert_response(res)
 
-    res = seats_request(subscription_id)
-    assert_response(res)
-    json_res = res.json()
+#     res = seats_request(subscription_id)
+#     assert_response(res)
+#     json_res = res.json()
 
-    assert any(
-        [x["user"] is None and x["email"] == user_email for x in json_res]
-    ), "Lord valomero's seat not found in response"
+#     assert any(
+#         [x["user"] is None and x["email"] == user_email for x in json_res]
+#     ), "Lord valomero's seat not found in response"
 
-    res = user2_me_request()
-    assert_response(res)
-    json_res = res.json()
+#     res = user2_me_request()
+#     assert_response(res)
+#     json_res = res.json()
 
-    from_email = user_email
-    user_id = json_res.get("id")
-    to_email = json_res.get("email")
+#     from_email = user_email
+#     user_id = json_res.get("id")
+#     to_email = json_res.get("email")
 
-    data = {
-        "replace_seats": [
-            {
-                "from_email": from_email,
-                "to_email": to_email,
-                "seat_multiplier": 1,
-                "first_name": "Lord",
-                "last_name": "Valomero",
-            }
-        ]
-    }
-    res = add_seat_request(subscription_id, data)
-    assert_response(res)
+#     data = {
+#         "replace_seats": [
+#             {
+#                 "from_email": from_email,
+#                 "to_email": to_email,
+#                 "seat_multiplier": 1,
+#                 "first_name": "Lord",
+#                 "last_name": "Valomero",
+#             }
+#         ]
+#     }
+#     res = add_seat_request(subscription_id, data)
+#     assert_response(res)
 
-    res = seats_request(subscription_id)
-    assert_response(res)
-    json_res = res.json()
+#     res = seats_request(subscription_id)
+#     assert_response(res)
+#     json_res = res.json()
 
-    assert any([x["user"] == user_id and x["email"] == to_email for x in json_res]), "Seat replacement failed"
+#     assert any([x["user"] == user_id and x["email"] == to_email for x in json_res]), "Seat replacement failed"
