@@ -2061,6 +2061,7 @@ def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
     for seat in add_seats:
         serialized = {
             "email": normalize_email(seat["email"]),
+            "user": seat.get("user", None),
             "seat_multiplier": seat.get("seat_multiplier", 1),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
@@ -2075,6 +2076,7 @@ def normalize_replace_seat(replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
         serialized = {
             "from_email": normalize_email(seat["from_email"]),
             "to_email": normalize_email(seat["to_email"]),
+            "to_user": seat.get("to_user", None),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
         }
