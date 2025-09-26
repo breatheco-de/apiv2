@@ -748,10 +748,10 @@ def accept_invite(accepting_ids=None, user=None):
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None and (role := role.upper()) in ["TEACHER", "ASSISTANT", "REVIEWER", "STUDENT"]:
-                cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role_id=role, educational_status="ACTIVE")
                 cu.save()
             elif cu is None:
-                cu = CohortUser(user=user, cohort=invite.cohort, role="STUDENT", educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role_id="STUDENT", educational_status="ACTIVE")
                 cu.save()
 
         if user is not None and invite.user is None:
