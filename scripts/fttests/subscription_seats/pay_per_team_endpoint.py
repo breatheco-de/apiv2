@@ -57,13 +57,13 @@ def setup() -> None:
     plan = get_plan_request(PER_TEAM_PLAN)
     assert_response(plan)
     json_plan = plan.json()
-    from pprint import pprint
 
-    pprint(json_plan)
-    pprint(json_plan.get("service_items", []))
     assert any(
         [x for x in json_plan.get("service_items", []) if x.get("is_team_allowed")]
     ), "No team allowed service item found"
+    assert any(
+        [x for x in json_plan.get("service_items", []) if x.get("is_team_allowed") is False]
+    ), "No service item for subscription owner found"
     assert "consumption_strategy" in json_plan, "consumption_strategy not found in response"
     assert json_plan.get("consumption_strategy") == "PER_TEAM", "consumption_strategy is not PER_TEAM"
 
@@ -135,6 +135,9 @@ def get_owner_consumables(subscription_id: int) -> requests.Response:
             for item in y["items"]:
                 if item["subscription"] == subscription_id:
                     consumables.append(item)
+    from pprint import pprint
+
+    pprint(consumables)
     return consumables
 
 
