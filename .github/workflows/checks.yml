@@ -1,388 +1,388 @@
-# # This workflow will install Python dependencies, run tests and lint with a single version of Python
-# # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-# name: Check
-
-# on:
-#   push: {}
-#   pull_request: {}
-
-# env:
-#   PYTHON_VERSION: 3.13.1
-#   PYTHONUNBUFFERED: 1
-#   APP_URL: https://4geeks.com
-
-# # cache ------------------------------------
-# # |                                        |> dependencies
-# # |> undefined-and-unused-variables        |> migrations
-# # |> bad-docstrings                           |
-# # |> code-complexity                          |> tests -------|> dockerhub
-# # |> naming-conventions                       |> linter
-# # |> unexpected-behaviors                     |> pages
-
-# jobs:
-#   cache:
-#     runs-on: ubuntu-latest
-
-#     # outputs:
-#     #   cache-hit: ${{ steps.cache.outputs.cache-hit }}
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Install the project dependencies
-#         run: poetry install
-
-#   migrations:
-#     needs: cache
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Set Environment Variables
-#         run: |
-#           cp .env.example .env
-
-#       - name: Check migrations
-#         run: |
-#           poetry run python ./scripts/pending_migrations.py
-
-#   dependencies:
-#     needs: cache
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Calculate initial MD5 for Pipfile.lock
-#         id: calculate-md5-1
-#         run: poetry run pip freeze -r requirements.txt > requirements.txt
-
-#       - name: Set Environment Variables
-#         run: |
-#           cp .env.example .env
-
-#       - name: Update dependencies
-#         run: |
-#           poetry update --no-cache
-
-#       - name: Calculate updated MD5 for Pipfile.lock
-#         id: calculate-md5-2
-#         run: poetry run pip freeze -r requirements2.txt > requirements2.txt
-
-#       - name: Check Pipfile.lock is up-to-date
-#         run: diff requirements.txt requirements2.txt
-
-#   undefined-and-unused-variables:
-#     needs: cache
-#     runs-on: ubuntu-latest
-#     continue-on-error: true
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Set Environment Variables
-#         run: |
-#           cp .env.example .env
-
-#       - name: Check for undefined variables
-#         run: poetry run flake8 . --select=F
-
-#   naming-conventions:
-#     needs: cache
-#     runs-on: ubuntu-latest
-#     continue-on-error: true
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Set Environment Variables
-#         run: |
-#           cp .env.example .env
-
-#       - name: Check for undefined variables
-#         run: poetry run flake8 . --select=N
-
-#   unexpected-behaviors:
-#     needs: cache
-#     runs-on: ubuntu-latest
-#     continue-on-error: true
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Set Environment Variables
-#         run: |
-#           cp .env.example .env
-
-#       - name: Check for undefined variables
-#         run: poetry run flake8 . --select=B
-
-#   tests:
-#     needs: [migrations]
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Set Environment Variables
-#         run: |
-#           cp .env.example .env
-
-#       - name: Run tests
-#         run: |
-#           poetry run test:ci
-
-#       # - name: Upload coverage data to coveralls.io
-#       #   if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
-#       #   run: |
-#       #     poetry run coveralls --service=github
-#       #   env:
-#       #     GITHUB_TOKEN: ${{ github.token }}
-
-#   linter:
-#     needs: [migrations]
-#     runs-on: ubuntu-latest
-#     continue-on-error: true
-
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Set Environment Variables
-#         run: |
-#           cp .env.example .env
-
-#       - name: Linter
-#         run: |
-#           poetry run format
-
-#   pages:
-#     needs: [migrations]
-#     if: >-
-#       github.repository == 'breatheco-de/apiv2' &&
-#       github.event_name == 'push' &&
-#       github.ref == 'refs/heads/development'
-
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Install poetry
-#         uses: abatilo/actions-poetry@v4
-
-#       - name: Setup a local virtual environment (if no poetry.toml file)
-#         run: |
-#           poetry config virtualenvs.create true --local
-#           poetry config virtualenvs.in-project true --local
-
-#       - uses: actions/cache@v4
-#         name: Define a cache for the virtual environment based on the dependencies lock file
-#         with:
-#           path: ./.venv
-#           key: venv-${{ hashFiles('poetry.lock') }}
-
-#       - name: Set Environment Variables
-#         run: |
-#           cp .env.example .env
-
-#       - name: Deploy docs
-#         run: poetry run mkdocs gh-deploy --force
-
-#   dockerhub:
-#     needs: tests
-#     runs-on: ubuntu-latest
-#     if: >-
-#       github.repository == 'breatheco-de/apiv2' &&
-#       github.event_name == 'push' &&
-#       (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development')
-
-#     steps:
-#       - name: Check out the repo
-#         uses: actions/checkout@v3
-
-#       - name: Log in to Docker Hub
-#         uses: docker/login-action@v2
-#         with:
-#           username: ${{ secrets.DOCKERHUB_USER }}
-#           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-#       - name: Extract metadata (tags, labels) for Docker
-#         id: meta
-#         uses: docker/metadata-action@v4
-#         with:
-#           images: geeksacademy/breathecode
-
-#       - name: Build and push Docker image
-#         uses: docker/build-push-action@v3
-#         with:
-#           context: .
-#           push: true
-#           tags: ${{ steps.meta.outputs.tags }}
-#           labels: ${{ steps.meta.outputs.labels }}
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Check
+
+on:
+  push: {}
+  pull_request: {}
+
+env:
+  PYTHON_VERSION: 3.13.1
+  PYTHONUNBUFFERED: 1
+  APP_URL: https://4geeks.com
+
+# cache ------------------------------------
+# |                                        |> dependencies
+# |> undefined-and-unused-variables        |> migrations
+# |> bad-docstrings                           |
+# |> code-complexity                          |> tests -------|> dockerhub
+# |> naming-conventions                       |> linter
+# |> unexpected-behaviors                     |> pages
+
+jobs:
+  cache:
+    runs-on: ubuntu-latest
+
+    # outputs:
+    #   cache-hit: ${{ steps.cache.outputs.cache-hit }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Install the project dependencies
+        run: poetry install
+
+  migrations:
+    needs: cache
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
+
+      - name: Check migrations
+        run: |
+          poetry run python ./scripts/pending_migrations.py
+
+  dependencies:
+    needs: cache
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Calculate initial MD5 for Pipfile.lock
+        id: calculate-md5-1
+        run: poetry run pip freeze -r requirements.txt > requirements.txt
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
+
+      - name: Update dependencies
+        run: |
+          poetry update --no-cache
+
+      - name: Calculate updated MD5 for Pipfile.lock
+        id: calculate-md5-2
+        run: poetry run pip freeze -r requirements2.txt > requirements2.txt
+
+      - name: Check Pipfile.lock is up-to-date
+        run: diff requirements.txt requirements2.txt
+
+  undefined-and-unused-variables:
+    needs: cache
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
+
+      - name: Check for undefined variables
+        run: poetry run flake8 . --select=F
+
+  naming-conventions:
+    needs: cache
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
+
+      - name: Check for undefined variables
+        run: poetry run flake8 . --select=N
+
+  unexpected-behaviors:
+    needs: cache
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
+
+      - name: Check for undefined variables
+        run: poetry run flake8 . --select=B
+
+  tests:
+    needs: [migrations]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
+
+      - name: Run tests
+        run: |
+          poetry run test:ci
+
+      # - name: Upload coverage data to coveralls.io
+      #   if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
+      #   run: |
+      #     poetry run coveralls --service=github
+      #   env:
+      #     GITHUB_TOKEN: ${{ github.token }}
+
+  linter:
+    needs: [migrations]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
+
+      - name: Linter
+        run: |
+          poetry run format
+
+  pages:
+    needs: [migrations]
+    if: >-
+      github.repository == 'breatheco-de/apiv2' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/development'
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Setup a local virtual environment (if no poetry.toml file)
+        run: |
+          poetry config virtualenvs.create true --local
+          poetry config virtualenvs.in-project true --local
+
+      - uses: actions/cache@v4
+        name: Define a cache for the virtual environment based on the dependencies lock file
+        with:
+          path: ./.venv
+          key: venv-${{ hashFiles('poetry.lock') }}
+
+      - name: Set Environment Variables
+        run: |
+          cp .env.example .env
+
+      - name: Deploy docs
+        run: poetry run mkdocs gh-deploy --force
+
+  dockerhub:
+    needs: tests
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository == 'breatheco-de/apiv2' &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/development')
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: geeksacademy/breathecode
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
