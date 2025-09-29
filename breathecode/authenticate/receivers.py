@@ -34,6 +34,8 @@ def update_user_group(sender, instance, created: bool, **_):
 
 @receiver(user_info_updated, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
 def set_user_group(sender, instance, created: bool, **_):
+    from breathecode.payments import actions as payments_actions
+
     group = None
     groups = None
 
@@ -42,9 +44,12 @@ def set_user_group(sender, instance, created: bool, **_):
 
     # prevent errors with migrations
     try:
-        if sender == SubscriptionSeat:
+        if sender == SubscriptionSeat and instance.user:
             group = Group.objects.filter(name="Student").first()
             groups = instance.user.groups
+
+            for plan in instance.billing_team.plans.all():
+                payments_actions.grant_student_capabilities(instance.user, plan)
 
         if sender == User:
             group = Group.objects.filter(name="Default").first()
