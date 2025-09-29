@@ -38,7 +38,7 @@ def join_to_micro_cohorts(cohort_user):
         micro_cohort_user = CohortUser.objects.filter(user=user, cohort=cohort, role=cohort_user.role).first()
         if micro_cohort_user is None:
             micro_cohort_user = CohortUser(
-                user=user, cohort=cohort, role=cohort_user.role, finantial_status="FULLY_PAID"
+                user=user, cohort=cohort, role_id=cohort_user.role_id, finantial_status="FULLY_PAID"
             )
             micro_cohort_user.save()
 

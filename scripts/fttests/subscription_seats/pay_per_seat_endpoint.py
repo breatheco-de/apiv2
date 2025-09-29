@@ -11,6 +11,7 @@ from .. import api
 
 PER_SEAT_PLAN = "4geeks-premium"
 PER_TEAM_PLAN = "hack-30-machines-in-30-days"
+ASSET = "brute-forcelab-lumi"
 
 TOKEN1 = os.getenv("FTT_USER_TOKEN1", "")
 TOKEN2 = os.getenv("FTT_USER_TOKEN2", "")
@@ -29,6 +30,8 @@ get_user1_me_request = api.user_me(token=TOKEN1)
 get_user2_me_request = api.user_me(token=TOKEN2)
 put_seat_request = api.add_seat(token=TOKEN1)
 delete_seat_request = api.delete_seat(token=TOKEN1)
+get_user1_asset_request = api.get_asset(token=TOKEN1, academy=academy)
+get_user2_asset_request = api.get_asset(token=TOKEN2, academy=academy)
 
 
 def get_subscription_id(slug: str) -> int | None:
@@ -63,6 +66,10 @@ def setup() -> None:
 
     assert "seat_service_price" in json_plan, "seat_service_price not found in response"
     assert json_plan.get("seat_service_price") is not None, "seat_service_price is None"
+    from pprint import pprint
+
+    pprint(json_plan)
+    assert 0
     return {"plan_id": json_plan.get("id")}
 
 

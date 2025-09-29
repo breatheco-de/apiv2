@@ -11,6 +11,7 @@ from .. import api
 
 PER_SEAT_PLAN = "4geeks-premium"
 PER_TEAM_PLAN = "hack-30-machines-in-30-days"
+ASSET = "brute-forcelab-lumi"
 
 # we switch the tokens to do not collide with pay_per_seat_endpoint
 TOKEN1 = os.getenv("FTT_USER_TOKEN2", "")

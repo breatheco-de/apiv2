@@ -79,6 +79,9 @@ class GetServiceSmallSerializer(serpy.Serializer):
     icon_url = serpy.Field()
     private = serpy.Field()
     groups = serpy.MethodField()
+    type = serpy.Field()
+    consumer = serpy.Field()
+    session_duration = serpy.Field()
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
