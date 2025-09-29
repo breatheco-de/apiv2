@@ -11,7 +11,7 @@ from .. import api
 
 PER_SEAT_PLAN = "4geeks-premium"
 PER_TEAM_PLAN = "hack-30-machines-in-30-days"
-ASSET = "brute-forcelab-lumi"
+ASSET_SLUG = "brute-forcelab-lumi"
 
 # we switch the tokens to do not collide with pay_per_seat_endpoint
 TOKEN1 = os.getenv("FTT_USER_TOKEN2", "")
@@ -32,6 +32,8 @@ get_user1_me_request = api.user_me(token=TOKEN1)
 get_user2_me_request = api.user_me(token=TOKEN2)
 put_seat_request = api.add_seat(token=TOKEN1)
 delete_seat_request = api.delete_seat(token=TOKEN1)
+get_user1_asset_request = api.get_asset(token=TOKEN1, academy=academy)
+get_user2_asset_request = api.get_asset(token=TOKEN2, academy=academy)
 
 
 def get_subscription_id(slug: str) -> int | None:
@@ -70,6 +72,9 @@ def setup() -> None:
 
     assert "seat_service_price" in json_plan, "seat_service_price not found in response"
     assert json_plan.get("seat_service_price") is not None, "seat_service_price is None"
+    assert any(
+        [x for x in json_plan.get("service_items", []) if x["service"]["consumer"] == "READ_LESSON"]
+    ), f"No read lesson service item found in this plan {json_plan.get('slug')}"
     return {"plan_id": json_plan.get("id")}
 
 
@@ -79,7 +84,7 @@ def assert_response(res: requests.Response) -> None:
     ), f"{res.request.method} {res.request.url} {res.request.body} Content-Type is not application/json"
     assert (
         200 <= res.status_code < 400
-    ), f"{res.request.method} {res.request.url} {res.request.body} request failed at {res.request.url} with status {res.status_code}, {res.text[:40]}"
+    ), f"{res.request.method} {res.request.url} {res.request.body} request failed at {res.request.url} with status {res.status_code}, {res.text}"
 
 
 def test_checking_works_properly_with_team_seats(plan_id: int) -> None:

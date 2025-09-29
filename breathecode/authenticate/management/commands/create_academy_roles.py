@@ -330,6 +330,7 @@ ROLES = [
             "read_syllabus",
             "read_assignment",
             "read_single_cohort",
+            "read_asset",
             "read_my_academy",
             "read_all_cohort",
             "crud_activity",

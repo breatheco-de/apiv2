@@ -11,7 +11,7 @@ from .. import api
 
 PER_SEAT_PLAN = "4geeks-premium"
 PER_TEAM_PLAN = "hack-30-machines-in-30-days"
-ASSET = "brute-forcelab-lumi"
+ASSET_SLUG = "brute-forcelab-lumi"
 
 TOKEN1 = os.getenv("FTT_USER_TOKEN1", "")
 TOKEN2 = os.getenv("FTT_USER_TOKEN2", "")
@@ -66,10 +66,9 @@ def setup() -> None:
 
     assert "seat_service_price" in json_plan, "seat_service_price not found in response"
     assert json_plan.get("seat_service_price") is not None, "seat_service_price is None"
-    from pprint import pprint
-
-    pprint(json_plan)
-    assert 0
+    assert any(
+        [x for x in json_plan.get("service_items", []) if x["service"]["consumer"] == "READ_LESSON"]
+    ), f"No read lesson service item found in this plan {json_plan.get('slug')}"
     return {"plan_id": json_plan.get("id")}
 
 
@@ -79,7 +78,7 @@ def assert_response(res: requests.Response) -> None:
     ), f"{res.request.method} {res.request.url} {res.request.body} Content-Type is not application/json"
     assert (
         200 <= res.status_code < 400
-    ), f"{res.request.method} {res.request.url} {res.request.body} request failed at {res.request.url} with status {res.status_code}, {res.text[:40]}"
+    ), f"{res.request.method} {res.request.url} {res.request.body} request failed at {res.request.url} with status {res.status_code}, {res.text}"
 
 
 def test_checking_works_properly_with_team_seats(plan_id: int) -> None:
@@ -154,6 +153,11 @@ def test_owner_consumables(subscription_id: int, **ctx):
         attempts += 1
 
     assert 0, "Consumables were not created"
+
+
+def test_owner_can_read_lesson(subscription_id: int, **ctx):
+    res = get_user1_asset_request(ASSET_SLUG)
+    assert_response(res)
 
 
 def test_billing_team_exists(subscription_id: int, team_seats: int, **ctx):
@@ -276,6 +280,11 @@ def test_user2_consumables(subscription_id: int, **ctx):
         attempts += 1
 
     assert 0, "Consumables were not created"
+
+
+def test_user2_can_read_lesson(subscription_id: int, **ctx):
+    res = get_user2_asset_request(ASSET_SLUG)
+    assert_response(res)
 
 
 class Seat(TypedDict):
