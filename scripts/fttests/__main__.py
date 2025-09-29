@@ -306,17 +306,17 @@ def main(argv: list[str]) -> int:
                         skipped_count = len(tests)
                         if skipped_count:
                             print(
-                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
+                                f"{GRAY}[fttests]{RESET} {BOLD}{YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
                             )
                         continue
                     except Exception as exc:  # noqa: BLE001
-                        print(f"{GRAY}[fttests]{RESET} {RED}ERROR{RESET} {label} {GRAY}->{RESET} {exc}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}ERROR{RESET} {label} {GRAY}->{RESET} {exc}")
                         traceback.print_exc()
                         failures.append(f"{label}: unexpected error: {exc}")
                         skipped_count = len(tests)
                         if skipped_count:
                             print(
-                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
+                                f"{GRAY}[fttests]{RESET} {BOLD}{YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
                             )
                         continue
 
@@ -341,18 +341,18 @@ def main(argv: list[str]) -> int:
                         remaining = max(0, len(tests) - idx - 1)
                         if remaining:
                             print(
-                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
+                                f"{GRAY}[fttests]{RESET} {BOLD}{YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
                             )
                         break
                     except Exception as exc:  # noqa: BLE001
-                        print(f"{GRAY}[fttests]{RESET} {RED}ERROR{RESET} {GRAY}->{RESET} {exc}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}ERROR{RESET} {GRAY}->{RESET} {exc}")
                         traceback.print_exc()
                         failures.append(f"{pretty}: unexpected error: {exc}")
                         failed_in_module = True
                         remaining = max(0, len(tests) - idx - 1)
                         if remaining:
                             print(
-                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
+                                f"{GRAY}[fttests]{RESET} {BOLD}{YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
                             )
                         break
 
@@ -360,15 +360,15 @@ def main(argv: list[str]) -> int:
                 teardown_fn = getattr(module_obj, "teardown", None)
                 if callable(teardown_fn):
                     label = f"{module_pretty_colored} {GRAY}->{RESET} teardown"
-                    print(f"{GRAY}[fttests]{RESET} {CYAN}TEARDOWN{RESET} {label}")
+                    print(f"{GRAY}[fttests]{RESET} {BOLD}{CYAN}TEARDOWN{RESET} {label}")
                     try:
                         teardown_fn(**_build_call_kwargs(teardown_fn, context))
                         print(f"{GRAY}[fttests]{RESET} {BOLD}{GREEN}OK{RESET}       {label}")
                     except AssertionError as exc:
-                        print(f"{GRAY}[fttests]{RESET} {RED}FAIL{RESET}     {label} {GRAY}->{RESET} {exc}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}FAIL{RESET}     {label} {GRAY}->{RESET} {exc}")
                         failures.append(f"{label}: {exc}")
                     except Exception as exc:  # noqa: BLE001
-                        print(f"{GRAY}[fttests]{RESET} {RED}ERROR{RESET}    {label} {GRAY}->{RESET} {exc}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}ERROR{RESET}    {label} {GRAY}->{RESET} {exc}")
                         traceback.print_exc()
                         failures.append(f"{label}: unexpected error: {exc}")
 

@@ -19,19 +19,20 @@ from breathecode.authenticate.signals import (
     profile_academy_role_changed,
 )
 from breathecode.mentorship.models import MentorProfile
+from breathecode.payments.models import SubscriptionSeat
 
 from .tasks import async_add_to_organization, async_remove_from_organization
 
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save)
+@receiver(post_save, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
 def update_user_group(sender, instance, created: bool, **_):
     # redirect to other signal to be able to mock it
     user_info_updated.send_robust(sender=sender, instance=instance, created=created)
 
 
-@receiver(user_info_updated)
+@receiver(user_info_updated, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
 def set_user_group(sender, instance, created: bool, **_):
     group = None
     groups = None
@@ -41,6 +42,10 @@ def set_user_group(sender, instance, created: bool, **_):
 
     # prevent errors with migrations
     try:
+        if sender == SubscriptionSeat:
+            group = Group.objects.filter(name="Student").first()
+            groups = instance.user.groups
+
         if sender == User:
             group = Group.objects.filter(name="Default").first()
             groups = instance.groups
