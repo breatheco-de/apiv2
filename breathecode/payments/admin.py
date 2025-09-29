@@ -56,8 +56,8 @@ class CurrencyAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ("id", "slug", "owner", "private")
-    list_filter = ["owner"]
+    list_display = ("id", "slug", "type", "consumer", "owner", "private")
+    list_filter = ["owner", "type", "consumer", "private"]
     search_fields = ["slug", "title", "groups__name"]
 
 

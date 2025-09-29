@@ -1045,8 +1045,9 @@ def build_service_stock_scheduler_from_subscription(
             return
 
         utc_now = timezone.now()
-        # Build owner schedulers for all items (team and non-team)
-        build_schedulers(None, team_for_billing=None)
+        # TODO: it changed the scheduler from None to False, check if this is the correct behavior
+        # Build owner schedulers for non-team items only; team items will be handled per-seat
+        build_schedulers(False, team_for_billing=None)
         # Schedule per-seat builds (these runs will create schedulers only for team-allowed items)
         for seat in SubscriptionSeat.objects.filter(billing_team=team):
             build_service_stock_scheduler_from_subscription.delay(subscription_id, seat_id=seat.id)

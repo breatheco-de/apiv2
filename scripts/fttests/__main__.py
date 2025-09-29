@@ -52,6 +52,7 @@ def _discover_features() -> list[str]:
 def _print_usage(features: list[str]) -> None:
     print(
         "Usage: python -m scripts.fttests <feature>\n"
+        "       python -m scripts.fttests <feature>:<file_name>\n"
         "       python -m scripts.fttests list\n\n"
         "Available features:\n  - " + "\n  - ".join(features)
     )
@@ -118,6 +119,20 @@ def _iter_feature_modules(feature_mod: ModuleType):
             continue
         modules.append(importlib.import_module(f"{pkg}.{m.name}"))
     return modules
+
+
+def _split_feature_selector(arg: str) -> tuple[str, str | None]:
+    """Split '<feature>:<module>' selector. Returns (feature, module|None).
+
+    The module portion may include a '.py' extension, which will be stripped.
+    """
+    if ":" not in arg:
+        return arg, None
+    feature, module = arg.split(":", 1)
+    module = module.strip()
+    if module.endswith(".py"):
+        module = module[:-3]
+    return feature, (module or None)
 
 
 def _format_test_name(fullname: str, feature: str) -> str:
@@ -226,7 +241,7 @@ def main(argv: list[str]) -> int:
             print(name)
         return 0
 
-    feature_name = argv[0]
+    feature_name, module_selector = _split_feature_selector(argv[0])
     mod = _load_feature(feature_name)
     _ensure_contract(mod)
 
@@ -242,6 +257,25 @@ def main(argv: list[str]) -> int:
 
         # Discover tests (grouped by module) in the feature package
         groups = _discover_tests_grouped(mod)
+
+        # If a module selector was provided, filter to that module only
+        if module_selector:
+            filtered: list[tuple[ModuleType, list[tuple[str, callable]]]] = []
+            for module_obj, tests in groups:
+                last = module_obj.__name__.split(".")[-1]
+                if last == module_selector or module_obj.__name__.endswith("." + module_selector):
+                    filtered.append((module_obj, tests))
+
+            if not filtered:
+                available = ", ".join(m.__name__.split(".")[-1] for m, _ in groups)
+                print(
+                    f"{RED}Module '{module_selector}' not found under feature '{feature_name}'. "
+                    f"Available files: {available}{RESET}",
+                    file=sys.stderr,
+                )
+                return 1
+
+            groups = filtered
         test_count = sum(len(tests) for _, tests in groups)
         if groups:
             print(
@@ -264,20 +298,33 @@ def main(argv: list[str]) -> int:
                         ret = setup_fn(**_build_call_kwargs(setup_fn, context))
                         if isinstance(ret, dict):
                             context.update(ret)
-                        print(f"{GRAY}[fttests]{RESET} {GREEN}OK{RESET}    {label}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{GREEN}OK{RESET}    {label}")
                     except AssertionError as exc:
                         print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}FAIL{RESET}  {label} {GRAY}->{RESET} {exc}")
                         failures.append(f"{label}: {exc}")
                         # Skip this module's tests and teardown
+                        skipped_count = len(tests)
+                        if skipped_count:
+                            print(
+                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
+                            )
                         continue
                     except Exception as exc:  # noqa: BLE001
                         print(f"{GRAY}[fttests]{RESET} {RED}ERROR{RESET} {label} {GRAY}->{RESET} {exc}")
                         traceback.print_exc()
                         failures.append(f"{label}: unexpected error: {exc}")
+                        skipped_count = len(tests)
+                        if skipped_count:
+                            print(
+                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
+                            )
                         continue
 
-                # Run tests in module
-                for fullname, func in tests:
+                # Run tests in module (fail-fast within this module)
+                failed_in_module = False
+                for idx, (fullname, func) in enumerate(tests):
+                    if failed_in_module:
+                        break
                     total += 1
                     pretty = _format_test_name(fullname, feature_name)
                     colored_pretty = _gray_connectors(pretty)
@@ -286,14 +333,28 @@ def main(argv: list[str]) -> int:
                         ret = func(**_build_call_kwargs(func, context))
                         if isinstance(ret, dict):
                             context.update(ret)
-                        print(f"{GRAY}[fttests]{RESET} {GREEN}OK{RESET}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{GREEN}OK{RESET}")
                     except AssertionError as exc:
                         print(f"{GRAY}[fttests]{RESET} {BOLD}{RED}FAIL{RESET}    {GRAY}->{RESET} {exc}")
                         failures.append(f"{pretty}: {exc}")
+                        failed_in_module = True
+                        remaining = max(0, len(tests) - idx - 1)
+                        if remaining:
+                            print(
+                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
+                            )
+                        break
                     except Exception as exc:  # noqa: BLE001
                         print(f"{GRAY}[fttests]{RESET} {RED}ERROR{RESET} {GRAY}->{RESET} {exc}")
                         traceback.print_exc()
                         failures.append(f"{pretty}: unexpected error: {exc}")
+                        failed_in_module = True
+                        remaining = max(0, len(tests) - idx - 1)
+                        if remaining:
+                            print(
+                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
+                            )
+                        break
 
                 # Optional teardown()
                 teardown_fn = getattr(module_obj, "teardown", None)
@@ -302,7 +363,7 @@ def main(argv: list[str]) -> int:
                     print(f"{GRAY}[fttests]{RESET} {CYAN}TEARDOWN{RESET} {label}")
                     try:
                         teardown_fn(**_build_call_kwargs(teardown_fn, context))
-                        print(f"{GRAY}[fttests]{RESET} {GREEN}OK{RESET}       {label}")
+                        print(f"{GRAY}[fttests]{RESET} {BOLD}{GREEN}OK{RESET}       {label}")
                     except AssertionError as exc:
                         print(f"{GRAY}[fttests]{RESET} {RED}FAIL{RESET}     {label} {GRAY}->{RESET} {exc}")
                         failures.append(f"{label}: {exc}")
