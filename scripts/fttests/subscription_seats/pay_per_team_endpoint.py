@@ -147,6 +147,11 @@ def get_owner_consumables(subscription_id: int) -> requests.Response:
     return consumables
 
 
+def test_owner_can_read_lesson(**ctx):
+    res = get_user1_asset_request(ASSET_SLUG)
+    assert_response(res)
+
+
 def test_owner_consumables(subscription_id: int, **ctx):
     attempts = 0
     while attempts < 20:
@@ -284,6 +289,11 @@ def test_user2_consumables(subscription_id: int, **ctx):
         attempts += 1
 
     assert 0, "Consumables were not created"
+
+
+def test_user2_can_read_lesson(**ctx):
+    res = get_user2_asset_request(ASSET_SLUG)
+    assert_response(res)
 
 
 class Seat(TypedDict):
