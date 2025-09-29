@@ -42,7 +42,6 @@ def get_subscription_id(slug: str) -> int | None:
 
 
 def setup() -> None:
-    assert 0
     assert_env_vars(
         ["FTT_API_URL", "FTT_USER_TOKEN1", "FTT_USER_TOKEN2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
     )  # required
