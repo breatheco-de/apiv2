@@ -7,6 +7,7 @@ from capyc.rest_framework.exceptions import ValidationException
 from task_manager.core.exceptions import AbortTask
 
 from breathecode.admissions.models import CohortUser
+from breathecode.registry.models import Asset
 
 from .models import Task
 from .utils.indicators import EngagementIndicator, FrustrationIndicator, UserIndicatorCalculator
@@ -148,6 +149,11 @@ def validate_task_for_notifications(task: Task) -> bool:
 
 
 def calculate_telemetry_indicator(telemetry, asset_tasks=None):
+    asset = Asset.objects.filter(slug=telemetry.asset_slug).first()
+    if not asset or not asset.graded:
+        print(f"Asset {telemetry.asset_slug} is not gradable, skipping telemetry processing")
+        return
+
     indicators = [EngagementIndicator(), FrustrationIndicator()]
     if telemetry.telemetry:
         calculator = UserIndicatorCalculator(telemetry.telemetry, indicators)
@@ -161,10 +167,8 @@ def calculate_telemetry_indicator(telemetry, asset_tasks=None):
         telemetry.save()
 
         if asset_tasks is None:
-            asset_tasks = Task.objects.filter(
-                associated_slug=telemetry.asset_slug,
-                user=telemetry.user
-            )
+            asset_tasks = Task.objects.filter(associated_slug=telemetry.asset_slug, user=telemetry.user)
+
         print(f"telemetry.completion_rate: {telemetry.completion_rate}")
         if telemetry.completion_rate >= 99.999:
             for task in asset_tasks:
@@ -176,8 +180,12 @@ def calculate_telemetry_indicator(telemetry, asset_tasks=None):
                 task.save()
         else:
             for task in asset_tasks:
-                task.task_status = Task.TaskStatus.PENDING
-                task.revision_status = Task.RevisionStatus.PENDING
+                task.task_status = (
+                    Task.TaskStatus.PENDING if task.task_type == Task.TaskType.EXERCISE else task.task_status
+                )
+                task.revision_status = (
+                    Task.RevisionStatus.PENDING if task.task_type == Task.TaskType.EXERCISE else task.revision_status
+                )
                 task.description = ""
                 task.delivered_at = None
                 task.reviewed_at = timezone.now()
