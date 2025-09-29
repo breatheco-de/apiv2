@@ -306,7 +306,7 @@ def main(argv: list[str]) -> int:
                         skipped_count = len(tests)
                         if skipped_count:
                             print(
-                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
+                                f"{GRAY}[fttests]{RESET} {BOLD}{YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
                             )
                         continue
                     except Exception as exc:  # noqa: BLE001
@@ -316,7 +316,7 @@ def main(argv: list[str]) -> int:
                         skipped_count = len(tests)
                         if skipped_count:
                             print(
-                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
+                                f"{GRAY}[fttests]{RESET} {BOLD}{YELLOW}SKIPPED{RESET} {skipped_count} test(s) in {module_pretty_colored}"
                             )
                         continue
 
@@ -341,7 +341,7 @@ def main(argv: list[str]) -> int:
                         remaining = max(0, len(tests) - idx - 1)
                         if remaining:
                             print(
-                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
+                                f"{GRAY}[fttests]{RESET} {BOLD}{YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
                             )
                         break
                     except Exception as exc:  # noqa: BLE001
@@ -352,7 +352,7 @@ def main(argv: list[str]) -> int:
                         remaining = max(0, len(tests) - idx - 1)
                         if remaining:
                             print(
-                                f"{GRAY}[fttests]{RESET} {YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
+                                f"{GRAY}[fttests]{RESET} {BOLD}{YELLOW}SKIPPED{RESET} {remaining} test(s) in {module_pretty_colored}"
                             )
                         break
 
