@@ -2782,21 +2782,3 @@ class AcademyPaymentMethodView(APIView):
 
         method.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class ClearCacheView(APIView):
-    """Temporary view to clear cache during development"""
-
-    def post(self, request):
-        from breathecode.payments.caches import SubscriptionCache, PlanFinancingCache, PlanOfferCache
-
-        cache_type = request.data.get("cache_type", "all")
-
-        if cache_type in ["all", "subscriptions"]:
-            SubscriptionCache.clear()
-        if cache_type in ["all", "plan_financing"]:
-            PlanFinancingCache.clear()
-        if cache_type in ["all", "plan_offers"]:
-            PlanOfferCache.clear()
-
-        return Response({"message": f"Cache cleared for: {cache_type}", "timestamp": timezone.now().isoformat()})
