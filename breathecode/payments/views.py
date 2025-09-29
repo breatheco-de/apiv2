@@ -617,9 +617,7 @@ class ServiceItemView(APIView):
 class MeConsumableView(APIView):
 
     def get(self, request):
-        utc_now = timezone.now()
-
-        items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), user=request.user)
+        items = Consumable.list(request.user)
 
         mentorship_services = MentorshipServiceSet.objects.none()
         mentorship_services = filter_consumables(request, items, mentorship_services, "mentorship_service_set")
