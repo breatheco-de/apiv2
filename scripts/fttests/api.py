@@ -179,3 +179,17 @@ def get_asset(token: str, academy: str | int) -> Callable[[str, str], requests.R
         return res
 
     return inner
+
+
+def consumable_checkout(token: str, academy: str | int) -> Callable[[str, str], requests.Response]:
+    def inner(data: Dict[str, str]) -> requests.Response:
+        base_url = os.environ["FTT_API_URL"].rstrip("/")
+        owner_token = token
+        path = "/v1/payments/consumable/checkout"
+        url = f"{base_url}{path}"
+        data["academy"] = int(academy) if isinstance(academy, str) and academy.isnumeric() else academy
+        headers = build_headers(authorization=f"Token {owner_token}", accept="application/json")
+        res = requests.post(url, headers=headers, json=data)
+        return res
+
+    return inner
