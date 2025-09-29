@@ -1090,7 +1090,7 @@ def get_available_coupons(
         if coupon.allowed_user and (not user or coupon.allowed_user != user):
             founded_coupon_slugs.append(coupon.slug)
             return
-
+        # Check if coupon is restricted to a specific plan
         if coupon.referral_type != Coupon.Referral.NO_REFERRAL:
             if coupon.plans.exists():
                 if coupon.plans.filter(exclude_from_referral_program=True).exists():
