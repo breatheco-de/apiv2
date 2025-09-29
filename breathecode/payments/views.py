@@ -22,7 +22,6 @@ from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.commission.tasks import register_referral_from_invoice
-from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language
 from breathecode.payments import actions, tasks
@@ -2840,20 +2839,9 @@ class PayView(APIView):
 
                 if plans := bag.plans.all():
                     for plan in plans:
-                        if plan.owner:
-                            admissions_tasks.build_profile_academy.delay(plan.owner.id, bag.user.id)
-
-                        if not plan.cohort_set or not (cohort := request.GET.get("selected_cohort")):
-                            continue
-
-                        cohort = plan.cohort_set.cohorts.filter(slug=cohort).first()
-                        if not cohort:
-                            continue
-
-                        admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
-
-                        if plan.owner != cohort.academy:
-                            admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
+                        actions.grant_student_capabilities(
+                            request.user, plan, selected_cohort=request.GET.get("selected_cohort")
+                        )
 
                 has_referral_coupons = False
                 if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:

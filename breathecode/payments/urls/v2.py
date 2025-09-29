@@ -21,11 +21,6 @@ urlpatterns = [
         name="subscription_id_billing_team",
     ),
     path(
-        "subscription/<int:subscription_id>/billing-team/invite",
-        SubscriptionBillingTeamView.as_view(),
-        name="subscription_id_billing_team_invite",
-    ),
-    path(
         "subscription/<int:subscription_id>/billing-team/seat",
         SubscriptionSeatView.as_view(),
         name="subscription_id_billing_team_seat",

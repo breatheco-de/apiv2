@@ -16,6 +16,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
 from rest_framework.request import Request
+from breathecode.admissions import tasks as admissions_tasks
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_settings
@@ -1978,6 +1979,10 @@ def create_seat(email: str, user: User | None, seat_multiplier: int, billing_tea
             lang,
         )
 
+    else:
+        for plan in seat.billing_team.subscription.plans.all():
+            grant_student_capabilities(user, plan)
+
     # create consumables unless shared per team
     strategy = getattr(
         billing_team,
@@ -2037,6 +2042,10 @@ def replace_seat(
             subscription_seat,
             lang,
         )
+
+    else:
+        for plan in subscription_seat.billing_team.subscription.plans.all():
+            grant_student_capabilities(to_user, plan)
 
     # create consumables unless shared per team
     strategy = getattr(
@@ -2115,3 +2124,20 @@ def validate_seats_limit(
             ),
             code=400,
         )
+
+
+def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional[str] = None):
+    if plan.owner:
+        admissions_tasks.build_profile_academy.delay(plan.owner.id, user.id)
+
+    if not plan.cohort_set or not selected_cohort:
+        return
+
+    cohort = plan.cohort_set.cohorts.filter(slug=selected_cohort).first()
+    if not cohort:
+        return
+
+    admissions_tasks.build_cohort_user.delay(cohort.id, user.id)
+
+    if plan.owner != cohort.academy:
+        admissions_tasks.build_profile_academy.delay(cohort.academy.id, user.id)
