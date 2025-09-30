@@ -80,6 +80,7 @@ def invoice_item(data={}):
         "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "amount_refunded": 0.0,
         **data,
     }
 

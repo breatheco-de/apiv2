@@ -2410,12 +2410,32 @@ class ConsumableCheckoutView(APIView):
                         subscription.save(update_fields=["has_billing_team"])
 
                         # add owner as first seat
-                        SubscriptionSeat.objects.get_or_create(
+                        seat, _ = SubscriptionSeat.objects.get_or_create(
                             billing_team=team,
                             user=subscription.user,
                             email=(subscription.user.email or "").strip().lower(),
                             defaults={"is_active": True, "seat_multiplier": 1},
                         )
+
+                        # migrate existing consumables with support for team seats
+                        existing_consumables = Consumable.objects.filter(
+                            subscription=subscription,
+                            user=subscription.user,
+                            service_item__is_team_allowed=True,
+                        )
+
+                        if plan.consumption_strategy == Plan.ConsumptionStrategy.PER_TEAM:
+                            existing_consumables.update(
+                                user=None,
+                                subscription_billing_team=team,
+                            )
+
+                        else:
+                            existing_consumables.update(
+                                subscription_seat=seat,
+                                subscription_billing_team=team,
+                            )
+
                     else:
                         # update seats limit and log
                         try:
