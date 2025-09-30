@@ -369,6 +369,9 @@ class ServiceItem(AbstractServiceItem):
                         _("You cannot update the following fields: %(fields)s") % {"fields": ", ".join(immutable_diffs)}
                     )
 
+        if self.service.type == Service.Type.SEAT:
+            self.is_team_allowed = True
+
         # Universal rule: allow -1 (infinite), otherwise must be >= 0
         if self.how_many < -1 or self.how_many == 0:
             raise forms.ValidationError(_("how_many must be -1 (infinite) or greater than 0"))
@@ -382,7 +385,8 @@ class ServiceItem(AbstractServiceItem):
         raise forms.ValidationError("You cannot delete a service item")
 
     def __str__(self) -> str:
-        return f"{self.service.slug} ({self.how_many})"
+        # Include a marker if this service item supports teams
+        return f"{self.service.slug} ({self.how_many}){' [team]' if self.is_team_allowed else ''}"
 
     # Helper methods for team management
     def team_members_qs_for_subscription(self, subscription: "Subscription") -> QuerySet["SubscriptionSeat"]:
