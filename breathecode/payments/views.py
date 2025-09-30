@@ -36,7 +36,7 @@ from breathecode.payments.actions import (
     get_discounted_price,
     max_coupons_allowed,
 )
-from breathecode.payments.caches import PlanOfferCache
+from breathecode.payments.caches import PlanOfferCache, SubscriptionCache, PlanFinancingCache
 from breathecode.payments.models import (
     AcademyService,
     Bag,
@@ -76,6 +76,7 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    GetAbstractIOweYouSmallSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
@@ -1057,13 +1058,17 @@ class MePlanFinancingChargeView(APIView):
 
 class AcademySubscriptionView(APIView):
 
-    extensions = APIViewExtensions(sort="-id", paginate=True)
+    extensions = APIViewExtensions(sort="-id", paginate=True, cache=SubscriptionCache, cache_per_user=True)
 
     @capable_of("read_subscription")
     def get(self, request, subscription_id=None, academy_id=None):
         handler = self.extensions(request)
-        lang = get_user_language(request)
 
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        lang = get_user_language(request)
         now = timezone.now()
 
         if subscription_id:
@@ -1112,7 +1117,8 @@ class AcademySubscriptionView(APIView):
             items = items.filter(user__id=int(user_id))
 
         items = handler.queryset(items)
-        serializer = GetSubscriptionSerializer(items, many=True)
+
+        serializer = GetAbstractIOweYouSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -1156,10 +1162,17 @@ class AcademySubscriptionView(APIView):
 
 class AcademyPlanFinancingView(APIView):
 
-    extensions = APIViewExtensions(sort="-id", paginate=True)
+    extensions = APIViewExtensions(sort="-id", paginate=True, cache=PlanFinancingCache, cache_per_user=True)
 
     def get(self, request, financing_id=None, academy_id=None):
         handler = self.extensions(request)
+
+        # Check cache first to avoid expensive database queries
+        cache = handler.cache.get()
+        if cache is not None:
+            logger.info(f"AcademyPlanFinancingView: Returning cached data for user {request.user.id}")
+            return cache
+
         lang = get_user_language(request)
         now = timezone.now()
 
@@ -1177,15 +1190,21 @@ class AcademyPlanFinancingView(APIView):
             serializer = GetPlanFinancingSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = PlanFinancing.objects.annotate(
-            fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED"))
-        ).filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+        # Optimize query with select_related and prefetch_related
+        items = (
+            PlanFinancing.objects.select_related("user", "plan", "currency")
+            .prefetch_related("invoices")
+            .annotate(fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED")))
+            .filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+        )
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
 
+        # Apply pagination and sorting
         items = handler.queryset(items)
-        serializer = GetPlanFinancingSerializer(items, many=True)
+
+        serializer = GetAbstractIOweYouSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
