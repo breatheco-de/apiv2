@@ -25,8 +25,8 @@ PER_TEAM_PLAN = "hack-30-machines-in-30-days"
 ASSET_SLUG = "brute-forcelab-lumi"
 
 # we switch the tokens to do not collide with pay_per_seat_endpoint
-TOKEN1 = os.getenv("FTT_USER_TOKEN2", "")
-TOKEN2 = os.getenv("FTT_USER_TOKEN1", "")
+TOKEN1 = os.getenv("FTT_USER_TOKEN3", "")
+TOKEN2 = os.getenv("FTT_USER_TOKEN4", "")
 
 academy = os.getenv("FTT_ACADEMY", "")
 pay_request = api.pay(token=TOKEN1, academy=academy)

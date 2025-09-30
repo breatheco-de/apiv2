@@ -25,8 +25,8 @@ PER_SEAT_PLAN = "4geeks-premium"
 PER_TEAM_PLAN = "hack-30-machines-in-30-days"
 ASSET_SLUG = "brute-forcelab-lumi"
 
-TOKEN1 = os.getenv("FTT_USER_TOKEN4", "")
-TOKEN2 = os.getenv("FTT_USER_TOKEN3", "")
+TOKEN1 = os.getenv("FTT_USER_TOKEN7", "")
+TOKEN2 = os.getenv("FTT_USER_TOKEN8", "")
 academy = os.getenv("FTT_ACADEMY", "")
 pay_request = api.pay(token=TOKEN1, academy=academy)
 put_card_request = api.card(token=TOKEN1, academy=academy)
@@ -226,7 +226,7 @@ def test_owner_can_read_lesson(**ctx):
 def test_owner_consumable_checkout(seat_service_slug: str, subscription_id: int, **ctx):
     """Perform consumable checkout for seats under the owner context (team seats)."""
     # TODO: remove how_many
-    data = {"seats": 3, "service": seat_service_slug, "how_many": 1, "subscription": subscription_id}
+    data = {"how_many": 3, "service": seat_service_slug, "subscription": subscription_id}
     res = consumable_checkout_request(data)
     assert_response(res)
     return {"team_seats": 3}
