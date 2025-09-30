@@ -276,7 +276,7 @@ def test_user2_consumables(subscription_id: int, **ctx):
             assert all(
                 [x["subscription_seat"] is not None for x in consumables]
             ), "Consumables related to user2 were issued without subscription seat"
-            return consumables
+            return
         attempts += 1
 
     assert 0, "Consumables were not created"

@@ -140,21 +140,21 @@ def get_owner_consumables(subscription_id: int) -> requests.Response:
     return consumables
 
 
-# def test_owner_consumables(subscription_id: int, **ctx):
-#     attempts = 0
-#     while attempts < 20:
-#         time.sleep(10)
-#         consumables = get_owner_consumables(subscription_id)
-#         if consumables:
-#             assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
-#             assert any([x["subscription_seat"] is None for x in consumables]), "Owner consumables were not issued"
-#             # assert any(
-#             #     [x["subscription_seat"] is not None for x in consumables]
-#             # ), "Owner seat consumables were not issued"
-#             # return
-#         attempts += 1
+def test_owner_consumables(subscription_id: int, **ctx):
+    attempts = 0
+    while attempts < 20:
+        time.sleep(10)
+        consumables = get_owner_consumables(subscription_id)
+        if consumables:
+            assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
+            assert any([x["subscription_seat"] is None for x in consumables]), "Owner consumables were not issued"
+            # assert any(
+            #     [x["subscription_seat"] is not None for x in consumables]
+            # ), "Owner seat consumables were not issued"
+            return
+        attempts += 1
 
-#     assert 0, "Consumables were not created"
+    assert 0, "Consumables were not created"
 
 
 def test_owner_can_read_lesson(**ctx):
@@ -170,21 +170,21 @@ def test_owner_consumable_checkout(seat_service_slug: str, subscription_id: int,
     return {"team_seats": 3}
 
 
-# def test_owner_consumables_after_seat_checkout(subscription_id: int, **ctx):
-#     attempts = 0
-#     while attempts < 20:
-#         time.sleep(10)
-#         consumables = get_owner_consumables(subscription_id)
-#         if consumables:
-#             assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
-#             assert any([x["subscription_seat"] is None for x in consumables]), "Owner consumables were not issued"
-#             # assert any(
-#             #     [x["subscription_seat"] is not None for x in consumables]
-#             # ), "Owner seat consumables were not issued"
-#             # return
-#         attempts += 1
+def test_owner_consumables_after_seat_checkout(subscription_id: int, **ctx):
+    attempts = 0
+    while attempts < 20:
+        time.sleep(10)
+        consumables = get_owner_consumables(subscription_id)
+        if consumables:
+            assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
+            assert any([x["subscription_seat"] is None for x in consumables]), "Owner consumables were not issued"
+            # assert any(
+            #     [x["subscription_seat"] is not None for x in consumables]
+            # ), "Owner seat consumables were not issued"
+            return
+        attempts += 1
 
-#     assert 0, "Consumables were not created"
+    assert 0, "Consumables were not created"
 
 
 def test_billing_team_exists(subscription_id: int, team_seats: int, **ctx):
@@ -293,20 +293,21 @@ def get_user2_consumables(subscription_id: int) -> requests.Response:
     return consumables
 
 
-# def test_user2_consumables(subscription_id: int, **ctx):
-#     attempts = 0
-#     while attempts < 20:
-#         time.sleep(10)
-#         consumables = get_user2_consumables(subscription_id)
-#         if consumables:
-#             assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
-#             assert all(
-#                 [x["subscription_seat"] is not None for x in consumables]
-#             ), "Consumables related to user2 were issued without subscription seat"
-#             return consumables
-#         attempts += 1
+def test_user2_consumables(subscription_id: int, **ctx):
+    attempts = 0
+    while attempts < 20:
+        time.sleep(10)
+        consumables = get_user2_consumables(subscription_id)
+        if consumables:
+            assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
+            # do not use all because the virtual consumables
+            assert any(
+                [x["subscription_seat"] is not None for x in consumables]
+            ), "Consumables related to user2 were issued without subscription seat"
+            return
+        attempts += 1
 
-#     assert 0, "Consumables were not created"
+    assert 0, "Consumables were not created"
 
 
 def test_user2_can_read_lesson(**ctx):
@@ -325,6 +326,6 @@ def test_delete_user2_seat(subscription_id: int, seats: list[Seat], **ctx):
     assert res.status_code == 204, f"Delete seat failed, {res.text}"
 
 
-# def test_user2_consumables_after_seat_deletion(subscription_id: int, **ctx):
-#     consumables = get_user2_consumables(subscription_id)
-#     assert len(consumables) == 0, "Consumables were not deleted"
+def test_user2_consumables_after_seat_deletion(subscription_id: int, **ctx):
+    consumables = get_user2_consumables(subscription_id)
+    assert len(consumables) == 0, "Consumables were not deleted"
