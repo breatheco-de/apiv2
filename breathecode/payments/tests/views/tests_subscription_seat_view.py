@@ -327,6 +327,7 @@ def test_put_add_seats_with_errors(
     assert resp.data["errors"] == [{"message": "invalid-email", "code": 400}]
 
 
+@pytest.mark.django_db
 @patch("breathecode.payments.views.get_user_language", return_value="en")
 @patch("breathecode.payments.views.SubscriptionSeat.objects")
 @patch("breathecode.payments.views.SubscriptionSeatView._get_subscription")
@@ -419,11 +420,10 @@ def test_put_add_seats_integration_db(client):
         patch("breathecode.payments.views.actions.normalize_replace_seat", return_value=[]),
         patch("breathecode.payments.views.actions.validate_seats_limit"),
     ):
-
-        # objects holding attributes
+        # return dicts as normalize_add_seats would in production
         mock_norm.return_value = [
-            type("SeatObj", (), {"email": "a@b.com", "user": u1, "seat_multiplier": 2})(),
-            type("SeatObj", (), {"email": "c@d.com", "user": u2, "seat_multiplier": 1})(),
+            {"email": "a@b.com", "user": u1, "seat_multiplier": 2},
+            {"email": "c@d.com", "user": u2, "seat_multiplier": 1},
         ]
 
         # create_seat to persist into DB

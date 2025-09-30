@@ -90,6 +90,7 @@ def serialize_invoice(data={}):
         "proof_id": 1,
         "refund_stripe_id": None,
         "refunded_at": None,
+        "amount_refunded": 0.0,
         "status": "FULFILLED",
         "stripe_id": None,
         "user_id": 1,

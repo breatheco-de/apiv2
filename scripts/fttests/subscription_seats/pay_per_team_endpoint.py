@@ -46,6 +46,19 @@ def get_subscription_id(slug: str) -> int | None:
                 return subs["id"]
 
 
+def get_subscription_ids_from_consumable_list(res: requests.Response) -> requests.Response:
+    json_res = res.json()
+    consumables = []
+
+    subscription_ids = set()
+    for x in json_res.values():
+        for y in x:
+            for item in y["items"]:
+                if item["subscription"]:
+                    subscription_ids.add(item["subscription"])
+    return consumables
+
+
 def setup() -> None:
     assert_env_vars(
         ["FTT_API_URL", "FTT_USER_TOKEN1", "FTT_USER_TOKEN2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
@@ -75,6 +88,20 @@ def setup() -> None:
     assert any(
         [x for x in json_plan.get("service_items", []) if x["service"]["consumer"] == "READ_LESSON"]
     ), f"No read lesson service item found in this plan {json_plan.get('slug')}"
+
+    res = get_user1_consumables_request()
+    assert_response(res)
+    subscription_ids = get_subscription_ids_from_consumable_list(res)
+    assert (
+        len(subscription_ids) == 0
+    ), f"User 1 has subscriptions, delete them on:\n{'\n'.join([f' -> {base}/admin/payments/subscription/{subscription_id}/delete/' for subscription_id in subscription_ids])}"
+
+    res = get_user2_consumables_request()
+    assert_response(res)
+    subscription_ids = get_subscription_ids_from_consumable_list(res)
+    assert (
+        len(subscription_ids) == 0
+    ), f"User 2 has subscriptions, delete them on:\n{'\n'.join( [f' -> {base}/admin/payments/subscription/{subscription_id}/delete/' for subscription_id in subscription_ids])}"
     return {"plan_id": json_plan.get("id")}
 
 
@@ -151,11 +178,14 @@ def test_owner_consumables(subscription_id: int, **ctx):
         time.sleep(10)
         consumables = get_owner_consumables(subscription_id)
         if consumables:
-            assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
-            assert any([x["subscription_seat"] is None for x in consumables]), "Owner consumables were not issued"
+            assert any([x["user"] is not None for x in consumables]), "There are no consumables issued to the owner"
+            assert any([x["user"] is None for x in consumables]), "There are not consumables issued to the team"
             assert any(
-                [x["subscription_seat"] is not None for x in consumables]
-            ), "Owner seat consumables were not issued"
+                [x["subscription_billing_team"] is None for x in consumables]
+            ), "Owner consumables were not issued"
+            assert any(
+                [x["subscription_billing_team"] is not None for x in consumables]
+            ), "Billing team consumables were not issued"
             return
         attempts += 1
 
@@ -279,10 +309,10 @@ def test_user2_consumables(subscription_id: int, **ctx):
         time.sleep(10)
         consumables = get_user2_consumables(subscription_id)
         if consumables:
-            assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
+            assert all([x["user"] is None for x in consumables]), "Consumables were issued without user"
             assert all(
-                [x["subscription_seat"] is not None for x in consumables]
-            ), "Consumables related to user2 were issued without subscription seat"
+                [x["subscription_billing_team"] is not None for x in consumables]
+            ), "Billing team consumables were not issued"
             return consumables
         attempts += 1
 
