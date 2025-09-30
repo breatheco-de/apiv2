@@ -72,11 +72,14 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
             extras["subscription_seat_id"] = scheduler.subscription_seat.id
             extras["subscription_billing_team_id"] = scheduler.subscription_seat.billing_team.id
 
-        # if scheduler.plan_financing_seat:
-        #     extras["plan_financing_seat_id"] = scheduler.plan_financing_seat.id
-
         if scheduler.subscription_billing_team:
             extras["user"] = None
+            if (
+                scheduler.subscription_billing_team.consumption_strategy
+                == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM
+            ):
+                extras["subscription_seat_id"] = None
+
             extras["subscription_billing_team_id"] = scheduler.subscription_billing_team.id
         return extras
 
@@ -1074,12 +1077,12 @@ def build_service_stock_scheduler_from_subscription(
             raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
 
         if team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
-            # Build owner schedulers for non-team items FIRST (expected id ordering in tests)
-            # update_mode = False
-            build_schedulers(False, team_for_billing=None)
-            # Then build team-owned schedulers for team-allowed items
-            # update_mode = True
+            # Build team-owned schedulers for team-allowed items
+            update_mode = True
             build_schedulers(True, team_for_billing=team)
+            # Build owner schedulers for non-team items
+            update_mode = False
+            build_schedulers(False, team_for_billing=None)
             return
 
         utc_now = timezone.now()
