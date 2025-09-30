@@ -1,3 +1,11 @@
+"""Functional tests for paying a PER_SEAT plan end-to-end.
+
+This script verifies preview, payment, subscription creation, and basic
+consumable behavior for a PER_SEAT plan using the public API.
+It assumes FTT_* environment variables are set and polls while
+asynchronous processes complete.
+"""
+
 from __future__ import annotations
 
 import os
@@ -33,6 +41,7 @@ get_user2_asset_request = api.get_asset(token=TOKEN2, academy=academy)
 
 
 def get_subscription_id(slug: str) -> int | None:
+    """Return the subscription id for the given plan slug or None if not found."""
     res = get_subscription_request()
     assert_response(res)
     x = res.json()
@@ -43,6 +52,7 @@ def get_subscription_id(slug: str) -> int | None:
 
 
 def setup() -> None:
+    """Validate environment and PER_SEAT plan preconditions before tests run."""
     assert_env_vars(
         ["FTT_API_URL", "FTT_USER_TOKEN1", "FTT_USER_TOKEN2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
     )  # required
@@ -71,6 +81,7 @@ def setup() -> None:
 
 
 def assert_response(res: requests.Response) -> None:
+    """Assert JSON content-type and a successful (2xx/3xx) status code."""
     assert "application/json" in (
         res.headers.get("Content-Type") or ""
     ), f"{res.request.method} {res.request.url} {res.request.body} Content-Type is not application/json"
@@ -80,7 +91,7 @@ def assert_response(res: requests.Response) -> None:
 
 
 def test_checking_works_properly(plan_id: int) -> None:
-    """Buy a plan with seats."""
+    """Preview the plan and assert seat_service_item is absent in preview."""
 
     data = {"type": "PREVIEW", "plans": [plan_id]}
     res = checking_request(data)
@@ -96,6 +107,7 @@ def test_checking_works_properly(plan_id: int) -> None:
 
 
 def test_set_the_payment_card(**ctx) -> None:
+    """Attach a valid test payment card to the account."""
     data = {"card_number": "4242424242424242", "cvc": "123", "exp_month": "12", "exp_year": "2035"}
 
     res = put_card_request(data)
@@ -103,6 +115,7 @@ def test_set_the_payment_card(**ctx) -> None:
 
 
 def test_pay_a_plan(bag_token: str, **ctx) -> None:
+    """Pay the plan and wait for the subscription to be created."""
     data = {"token": bag_token, "chosen_period": "MONTH"}
     res = pay_request(data)
     assert_response(res)
@@ -124,6 +137,7 @@ def test_pay_a_plan(bag_token: str, **ctx) -> None:
 
 
 def get_owner_consumables(subscription_id: int) -> requests.Response:
+    """Return consumables issued to the owner for the given subscription id."""
     res = get_user1_consumables_request()
     assert_response(res)
     json_res = res.json()
@@ -137,6 +151,7 @@ def get_owner_consumables(subscription_id: int) -> requests.Response:
 
 
 def test_owner_consumables(subscription_id: int, **ctx):
+    """Assert owner consumables exist and at least one is owner-level (no seat)."""
     attempts = 0
     while attempts < 20:
         time.sleep(10)
@@ -151,5 +166,6 @@ def test_owner_consumables(subscription_id: int, **ctx):
 
 
 def test_owner_can_read_lesson(**ctx):
+    """Verify the owner can access a lesson protected by a consumable."""
     res = get_user1_asset_request(ASSET_SLUG)
     assert_response(res)
