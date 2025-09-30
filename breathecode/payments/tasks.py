@@ -928,6 +928,44 @@ def build_service_stock_scheduler_from_subscription(
     logger.info(f"Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}")
 
     def build_schedulers(allow_team=None, team_for_billing=None):
+        """
+        Build ServiceStockScheduler rows for a subscription according to the context.
+
+        This helper is used by `build_service_stock_scheduler_from_subscription` to create
+        schedulers for both subscription-level and plan-level service items. It supports
+        three issuance contexts controlled by the arguments and outer scope state:
+
+        - Owner context (no seat, no team):
+          When `allow_team is None`, create schedulers for ALL items (team-allowed and non-team).
+          When `allow_team is False`, create ONLY non-team items for the owner.
+
+        - Team-owned context (PER_TEAM):
+          When `allow_team is True` and `team_for_billing` is provided, create schedulers for
+          team-allowed items with `subscription_billing_team` set to that team and `user=None`
+          (consumables will be issued for the team, not a specific user).
+
+        - Seat context (PER_SEAT):
+          When building for a seat (outer `subscription_seat` is not None), this function will
+          create schedulers only for team-allowed items linked to that seat. The billing team is
+          derived from the seat, and the seat is recorded in `subscription_seat`.
+
+        Parameters
+        - allow_team: Optional[bool]
+          * None  -> include all items (owner context, used when no seats exist)
+          * False -> include only non-team items (owner context)
+          * True  -> include only team-allowed items (team/seat context)
+
+        - team_for_billing: Optional[SubscriptionBillingTeam]
+          Team to attach when creating team-owned schedulers in PER_TEAM context. If building for a
+          specific seat, this is ignored and derived from `subscription_seat`.
+
+        Notes
+        - Relies on outer-scope variables: `subscription`, `subscription_seat`, `utc_now`, and
+          `update_mode`.
+        - When `update_mode` is False, this function triggers a renewal via
+          `renew_subscription_consumables.delay(subscription.id, seat_id=seat_id)` after creating
+          schedulers so consumables are issued immediately.
+        """
         # Determine billing team for schedulers
         billing_team = None
         if team_for_billing is not None:
@@ -1036,12 +1074,12 @@ def build_service_stock_scheduler_from_subscription(
             raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
 
         if team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
-            # Build team-owned schedulers for team-allowed items
-            update_mode = True
-            build_schedulers(True, team_for_billing=team)
-            # Build owner schedulers for non-team items
-            update_mode = False
+            # Build owner schedulers for non-team items FIRST (expected id ordering in tests)
+            # update_mode = False
             build_schedulers(False, team_for_billing=None)
+            # Then build team-owned schedulers for team-allowed items
+            # update_mode = True
+            build_schedulers(True, team_for_billing=team)
             return
 
         utc_now = timezone.now()

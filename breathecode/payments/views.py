@@ -2135,6 +2135,8 @@ class ConsumableCheckoutView(APIView):
         academy = request.data.get("academy")
         country_code = request.data.get("country_code")
         seats = request.data.get("seats")
+        if seats:
+            total_items = seats
 
         if not service:
             raise ValidationException(
