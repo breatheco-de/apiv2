@@ -2134,9 +2134,9 @@ class ConsumableCheckoutView(APIView):
         total_items = request.data.get("how_many")
         academy = request.data.get("academy")
         country_code = request.data.get("country_code")
-        seats = request.data.get("seats")
-        if seats:
-            total_items = seats
+        is_team_allowed = request.data.get("is_team_allowed")
+        if is_team_allowed is None:
+            is_team_allowed = True
 
         if not service:
             raise ValidationException(
@@ -2182,17 +2182,6 @@ class ConsumableCheckoutView(APIView):
         if not Academy.objects.filter(id=academy).exists():
             raise ValidationException(
                 translation(lang, en="Academy not found", es="La academia no fue encontrada", slug="academy-not-found")
-            )
-
-        if seats is not None and (not isinstance(seats, int) or seats < 0):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Seats must be a positive number",
-                    es="Los asientos deben ser un número positivo",
-                    slug="seats-must-be-a-positive-number",
-                ),
-                code=400,
             )
 
         mentorship_service_set = request.data.get("mentorship_service_set")
@@ -2261,8 +2250,21 @@ class ConsumableCheckoutView(APIView):
                 code=404,
             )
 
+        if is_team_allowed not in [True, False]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="is_team_allowed must be a boolean",
+                    es="is_team_allowed debe ser un booleano",
+                    slug="is_team_allowed-must-be-a-boolean",
+                ),
+                code=400,
+            )
+
         # Seats purchase flow: increase team seats for an existing subscription
         if service.type == "SEAT":
+            seats = total_items
+
             subscription_id = request.data.get("subscription")
             if not subscription_id or not isinstance(subscription_id, int):
                 raise ValidationException(
@@ -2405,9 +2407,16 @@ class ConsumableCheckoutView(APIView):
                             ),
                         )
 
+                        service_item, _ = ServiceItem.objects.get_or_create(
+                            service=service,
+                            how_many=desired_limit,
+                            is_team_allowed=True,
+                        )
+
                         # mark subscription has billing team
                         subscription.has_billing_team = True
-                        subscription.save(update_fields=["has_billing_team"])
+                        subscription.seat_service_item = service_item
+                        subscription.save(update_fields=["has_billing_team", "seat_service_item"])
 
                         # add owner as first seat
                         seat, _ = SubscriptionSeat.objects.get_or_create(
@@ -2501,7 +2510,9 @@ class ConsumableCheckoutView(APIView):
             try:
                 s.set_language(lang)
                 s.add_contact(request.user)
-                service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=total_items)
+                service_item, _ = ServiceItem.objects.get_or_create(
+                    service=service, how_many=total_items, is_team_allowed=is_team_allowed
+                )
 
                 # keeps this inside a transaction
                 bag = Bag(

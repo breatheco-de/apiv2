@@ -72,9 +72,6 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
             extras["subscription_seat_id"] = scheduler.subscription_seat.id
             extras["subscription_billing_team_id"] = scheduler.subscription_seat.billing_team.id
 
-        # if scheduler.plan_financing_seat:
-        #     extras["plan_financing_seat_id"] = scheduler.plan_financing_seat.id
-
         if scheduler.subscription_billing_team:
             extras["user"] = None
             if (
