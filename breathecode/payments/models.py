@@ -2046,22 +2046,37 @@ class Consumable(AbstractServiceItem):
         if isinstance(user, str):
             args.append(
                 Q(user__id=int(user))
-                | Q(subscription_seat__user__id=int(user))
-                | Q(user__isnull=True, subscription_billing_team__seats__user__id=int(user))
+                | Q(subscription_seat__user__id=int(user), subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=int(user),
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
             )
 
         elif isinstance(user, int):
             args.append(
                 Q(user__id=user)
-                | Q(subscription_seat__user__id=user)
-                | Q(user__isnull=True, subscription_billing_team__seats__user__id=user)
+                | Q(subscription_seat__user__id=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
             )
 
         elif isinstance(user, User):
             args.append(
                 Q(user=user)
-                | Q(subscription_seat__user=user)
-                | Q(user__isnull=True, subscription_billing_team__seats__user=user)
+                | Q(subscription_seat__user=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
             )
 
         # Service
@@ -2097,7 +2112,7 @@ class Consumable(AbstractServiceItem):
             param["service_item__service__groups__permissions"] = permission
 
         return (
-            cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
+            cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
             .exclude(how_many=0)
             .order_by("id")
         )
