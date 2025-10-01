@@ -173,6 +173,7 @@ CAPABILITIES = [
         "slug": "crud_subscription",
         "description": "Create, update or delete subscriptions and plan financings of other users",
     },
+    {"slug": "crud_plan", "description": "Create, update or delete plans and services related to them"},
     {
         "slug": "upload_assignment_telemetry",
         "description": "Allow upload the user's telemetry in a LearnPack assignment",
