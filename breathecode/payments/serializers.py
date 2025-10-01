@@ -796,3 +796,35 @@ class GetConsumptionSessionSerializer(serpy.Serializer):
     related_id = serpy.Field()
     related_slug = serpy.Field()
     user = GetUserSmallSerializer(required=False)
+
+
+class BillingTeamAutoRechargeSerializer(serializers.Serializer):
+    """
+    Input serializer for updating billing team auto-recharge settings.
+
+    Used for PUT /v2/payments/subscription/{id}/billing-team
+    """
+
+    auto_recharge_enabled = serializers.BooleanField(required=False)
+    recharge_threshold_amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        min_value=0,
+        help_text="Balance threshold to trigger recharge (in subscription currency)",
+    )
+    recharge_amount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        min_value=0,
+        help_text="Amount to recharge when threshold is reached",
+    )
+    max_period_spend = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        allow_null=True,
+        min_value=0,
+        help_text="Maximum spending per monthly period (null = unlimited)",
+    )

@@ -21,11 +21,13 @@ from .models import (
     Plan,
     PlanFinancing,
     Subscription,
+    AcademyService,
     SubscriptionSeat,
     SubscriptionBillingTeam,
 )
 from .signals import (
     consume_service,
+    consumable_balance_low,
     grant_service_permissions,
     lose_service_permissions,
     reimburse_service_units,
@@ -366,3 +368,132 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
             return
 
     logger.info("=== END HANDLE STRIPE REFUND RECEIVER ===")
+
+
+def check_consumable_balance_for_auto_recharge(
+    sender: Type[Consumable], instance: Consumable, how_many: float, **kwargs
+):
+    """
+    Monitor consumable consumption and trigger auto-recharge when balance is low.
+
+    This receiver checks if:
+    1. The consumable belongs to a billing team with auto-recharge enabled
+    2. The current balance (in subscription currency) falls below the threshold
+    3. Monthly spending limit hasn't been exceeded
+
+    If all conditions are met, it triggers a recharge via signal.
+    """
+    # Only monitor team consumables (PER_TEAM strategy)
+    if not instance.subscription_billing_team:
+        return
+
+    team: SubscriptionBillingTeam | None = instance.subscription_billing_team
+
+    # Check if auto-recharge is enabled
+    if not team.auto_recharge_enabled:
+        return
+
+    # Check spending limit for this billing period (calculated from invoices)
+    subscription = team.subscription
+
+    if team.max_period_spend:
+        current_spend = team.get_current_period_spend()
+
+        if current_spend >= float(team.max_period_spend):
+            logger.warning(
+                f"Auto-recharge skipped for team {team.id}: billing period spending limit reached "
+                f"({current_spend:.2f}/{team.max_period_spend})"
+            )
+            return
+
+    subscription = team.subscription
+    currency = subscription.currency
+    academy = subscription.academy
+
+    # Get team consumables with their service items
+    team_consumables = Consumable.objects.filter(
+        subscription_billing_team=team,
+        user__isnull=True,  # Team-owned consumables only
+    ).select_related("service_item__service")
+
+    # Calculate balance value based on AcademyService pricing
+    balance_amount = 0
+    for consumable in team_consumables:
+        try:
+            academy_service = AcademyService.objects.get(academy=academy, service=consumable.service_item.service)
+            # Value = units * price_per_unit
+            if consumable.how_many == -1:
+                balance_amount = -1
+                break
+            balance_amount += consumable.how_many * academy_service.price_per_unit
+        except AcademyService.DoesNotExist:
+            # If no AcademyService, skip this consumable
+            logger.warning(
+                f"No AcademyService found for service {consumable.service_item.service.slug} "
+                f"in academy {academy.slug}"
+            )
+            continue
+
+    if balance_amount == -1:
+        return
+
+    # Check if balance is below threshold
+    if balance_amount < float(team.recharge_threshold_amount):
+        logger.info(
+            f"Consumable balance low for team {team.id}: "
+            f"{balance_amount:.2f} {currency.code} < {team.recharge_threshold_amount} {currency.code}"
+        )
+
+        # Check if recharge would exceed period spending limit
+        recharge_amount = float(team.recharge_amount)
+
+        if team.max_period_spend:
+            current_spend = team.get_current_period_spend()
+            potential_spend = current_spend + recharge_amount
+
+            if potential_spend > float(team.max_period_spend):
+                # Partial recharge to stay within limit
+                available_budget = float(team.max_period_spend) - current_spend
+                if available_budget > 0:
+                    logger.info(
+                        f"Partial recharge for team {team.id}: {available_budget:.2f} {currency.code} "
+                        f"(limited by period budget)"
+                    )
+                    consumable_balance_low.send(
+                        sender=sender,
+                        team=team,
+                        balance_amount=balance_amount,
+                        recharge_amount=available_budget,
+                    )
+                else:
+                    logger.warning(f"No budget available for recharge for team {team.id}")
+                return
+
+        # Full recharge
+        consumable_balance_low.send(
+            sender=sender,
+            team=team,
+            balance_amount=balance_amount,
+            recharge_amount=recharge_amount,
+        )
+
+
+consume_service.connect(check_consumable_balance_for_auto_recharge, sender=Consumable)
+
+
+def trigger_auto_recharge_task(
+    sender: Type[Consumable], team: SubscriptionBillingTeam, recharge_amount: float, **kwargs
+):
+    """
+    Trigger the auto-recharge Celery task when consumable balance is low.
+
+    This receiver is called by the consumable_balance_low signal and schedules
+    the actual recharge process as a background task.
+    """
+    logger.info(f"Triggering auto-recharge task for team {team.id}, amount: ${recharge_amount:.2f}")
+
+    # Schedule the recharge task
+    tasks.process_auto_recharge.delay(team_id=team.id, recharge_amount=recharge_amount)
+
+
+consumable_balance_low.connect(trigger_auto_recharge_task, sender=Consumable)

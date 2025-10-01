@@ -23,3 +23,6 @@ planfinancing_created = emisor.signal("planfinancing_created")
 subscription_created = emisor.signal("subscription_created")
 grant_plan_permissions = emisor.signal("grant_plan_permissions")
 revoke_plan_permissions = emisor.signal("revoke_plan_permissions")
+
+# Consumable monitoring for auto-recharge
+consumable_balance_low = emisor.signal("consumable_balance_low")
