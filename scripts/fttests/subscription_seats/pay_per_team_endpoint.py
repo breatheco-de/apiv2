@@ -75,7 +75,7 @@ def get_subscription_ids_from_consumable_list(res: requests.Response) -> request
 def setup() -> None:
     """Validate environment and PER_TEAM plan preconditions before running tests."""
     assert_env_vars(
-        ["FTT_API_URL", "FTT_USER_TOKEN1", "FTT_USER_TOKEN2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
+        ["FTT_API_URL", "FTT_USER_TOKEN3", "FTT_USER_TOKEN4", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
     )  # required
     base = os.environ["FTT_API_URL"].rstrip("/")
 

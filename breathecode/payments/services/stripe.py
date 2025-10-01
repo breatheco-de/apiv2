@@ -17,6 +17,8 @@ from breathecode.payments.models import (
     FinancialReputation,
     Invoice,
     PaymentContact,
+    SubscriptionBillingTeam,
+    SubscriptionSeat,
 )
 from breathecode.utils import getLogger
 
@@ -326,6 +328,8 @@ class Stripe:
         amount: int | float,
         currency: str | Currency = "usd",
         description: str = "",
+        subscription_billing_team: SubscriptionBillingTeam | None = None,
+        subscription_seat: SubscriptionSeat | None = None,
     ) -> Invoice:
         """
         Processes a payment for a given user and bag.
@@ -389,7 +393,13 @@ class Stripe:
 
         utc_now = timezone.now()
         invoice = Invoice(
-            user=user, amount=original_amount, stripe_id=charge["id"], paid_at=utc_now, status="FULFILLED"
+            user=user,
+            amount=original_amount,
+            stripe_id=charge["id"],
+            paid_at=utc_now,
+            status="FULFILLED",
+            subscription_billing_team=subscription_billing_team,
+            subscription_seat=subscription_seat,
         )
         invoice.currency = currency
         invoice.bag = bag

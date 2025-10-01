@@ -89,7 +89,7 @@ def setup() -> None:
     - Validates plan exposes team-allowed service items and PER_TEAM strategy
     """
     assert_env_vars(
-        ["FTT_API_URL", "FTT_USER_TOKEN3", "FTT_USER_TOKEN4", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
+        ["FTT_API_URL", "FTT_USER_TOKEN7", "FTT_USER_TOKEN8", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
     )  # required
     base = os.environ["FTT_API_URL"].rstrip("/")
 

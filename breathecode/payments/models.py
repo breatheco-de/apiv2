@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import math
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, Optional, TYPE_CHECKING, Protocol, TypeVar, Awaitable
 import random
 
@@ -45,39 +45,47 @@ if TYPE_CHECKING:
         def filter(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
         def exclude(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
         def only(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def defer(self, *fields: str) -> "TypedQuerySet[_M]": ...
         def prefetch_related(self, *lookups: str) -> "TypedQuerySet[_M]": ...
         def select_related(self, *lookups: str) -> "TypedQuerySet[_M]": ...
+        def select_for_update(
+            self, nowait: bool = ..., skip_locked: bool = ..., of: tuple = ...
+        ) -> "TypedQuerySet[_M]": ...
         def order_by(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def distinct(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def annotate(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
         def all(self) -> "TypedQuerySet[_M]": ...
+        def none(self) -> "TypedQuerySet[_M]": ...
 
         # Evaluation / retrieval
+        def get(self, *args, **kwargs) -> _M: ...
+        def create(self, *args, **kwargs) -> _M: ...
+        def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+        def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
         def exists(self) -> bool: ...
         def count(self) -> int: ...
         def first(self) -> _M | None: ...
         def last(self) -> _M | None: ...
+        def latest(self, *fields: str) -> _M: ...
+        def earliest(self, *fields: str) -> _M: ...
+
+        # Iteration
+        def __iter__(self) -> Any: ...
+        def __getitem__(self, key: int | slice) -> _M | "TypedQuerySet[_M]": ...
 
         # Async evaluation / retrieval
+        def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+        def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
         def aexists(self) -> Awaitable[bool]: ...
         def acount(self) -> Awaitable[int]: ...
         def afirst(self) -> Awaitable[_M | None]: ...
         def alast(self) -> Awaitable[_M | None]: ...
 
-        # Creation / singular retrieval
-        def get(self, *args, **kwargs) -> _M: ...
-        def create(self, *args, **kwargs) -> _M: ...
-        def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
-        def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
-
-        # Async creation / singular retrieval
-        def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
-        def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
-        def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
-        def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
-
         # Values APIs (coarse types, sufficient for our usages)
         def values(self, *fields: str) -> list[dict[str, Any]]: ...
         def values_list(self, *fields: str, flat: bool = ...) -> list[Any]: ...
-
     class TypedManager(Protocol[_M]):
         def filter(self, *args, **kwargs) -> TypedQuerySet[_M]: ...
         def all(self) -> TypedQuerySet[_M]: ...
@@ -85,12 +93,27 @@ if TYPE_CHECKING:
         def create(self, *args, **kwargs) -> _M: ...
         def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
         def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+        def select_related(self, *fields: str) -> TypedQuerySet[_M]: ...
+        def prefetch_related(self, *lookups: str) -> TypedQuerySet[_M]: ...
+        def exclude(self, *args, **kwargs) -> TypedQuerySet[_M]: ...
+        def order_by(self, *fields: str) -> TypedQuerySet[_M]: ...
+        def distinct(self, *fields: str) -> TypedQuerySet[_M]: ...
+        def values(self, *fields: str) -> list[dict[str, Any]]: ...
+        def values_list(self, *fields: str, flat: bool = ...) -> list[Any]: ...
+        def count(self) -> int: ...
+        def exists(self) -> bool: ...
+        def first(self) -> _M | None: ...
+        def last(self) -> _M | None: ...
 
         # Async counterparts
         def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
         def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
         def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
         def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+        def acount(self) -> Awaitable[int]: ...
+        def aexists(self) -> Awaitable[bool]: ...
+        def afirst(self) -> Awaitable[_M | None]: ...
+        def alast(self) -> Awaitable[_M | None]: ...
 
 
 class Currency(models.Model):
@@ -1464,6 +1487,22 @@ class Invoice(models.Model):
     externally_managed = models.BooleanField(
         default=False, help_text="If the billing is managed externally outside of the system"
     )
+    subscription_billing_team = models.ForeignKey(
+        "SubscriptionBillingTeam",
+        null=True,
+        blank=True,
+        default=None,
+        on_delete=models.CASCADE,
+        help_text="Subscription billing team",
+    )
+    subscription_seat = models.ForeignKey(
+        "SubscriptionSeat",
+        null=True,
+        blank=True,
+        default=None,
+        on_delete=models.CASCADE,
+        help_text="Subscription seat",
+    )
 
     proof = models.OneToOneField(
         ProofOfPayment,
@@ -1853,11 +1892,192 @@ class SubscriptionBillingTeam(models.Model):
         default=ConsumptionStrategy.PER_SEAT,
     )
 
+    # Auto-recharge settings
+    auto_recharge_enabled = models.BooleanField(
+        default=False, help_text="Enable automatic consumable recharge when balance is low"
+    )
+    recharge_threshold_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=10.00,
+        help_text="Trigger recharge when balance falls below this amount (in subscription currency)",
+    )
+    recharge_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=20.00,
+        help_text="Amount to recharge when threshold is reached (in subscription currency)",
+    )
+    max_period_spend = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Maximum spending limit per billing period in subscription currency (null = unlimited)",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self) -> str:
         return f"{self.subscription_id}:{self.name}"
+
+    def get_current_monthly_period_dates(self) -> tuple[datetime, datetime]:
+        """
+        Calculate the current monthly spending period boundaries.
+
+        Spending limits are tracked monthly, starting from subscription.paid_at day.
+        This is independent of individual service regeneration schedules (which can
+        be weekly, monthly, etc. per service).
+
+        Example:
+            - Subscription paid_at: Jan 15
+            - Monthly periods: Jan 15-Feb 15, Feb 15-Mar 15, Mar 15-Apr 15, etc.
+            - Spending limit resets each period regardless of payment frequency
+
+        Returns:
+            (period_start, period_end) tuple for current month
+        """
+        from dateutil.relativedelta import relativedelta
+
+        subscription = self.subscription
+        now = timezone.now()
+
+        if not subscription.paid_at:
+            # Fallback: use calendar month
+            period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            period_end = period_start + relativedelta(months=1)
+            return period_start, period_end
+
+        # Calculate monthly periods from paid_at day
+        # Example: paid_at = Jan 15 → periods are 15th to 15th of each month
+        paid_at = subscription.paid_at
+
+        # Calculate how many complete months have passed since paid_at
+        months_diff = (now.year - paid_at.year) * 12 + (now.month - paid_at.month)
+
+        # Adjust if we haven't reached the day yet this month
+        if now.day < paid_at.day:
+            months_diff -= 1
+
+        # Calculate period boundaries
+        period_start = paid_at + relativedelta(months=months_diff)
+        period_end = period_start + relativedelta(months=1)
+
+        return period_start, period_end
+
+    def get_current_period_spend(self, service: "Service" = None) -> float:
+        """
+        Calculate actual spending in current monthly period from invoices.
+
+        Returns total amount from paid invoices for auto-recharge in the
+        current monthly spending period (based on subscription.paid_at day).
+
+        Args:
+            service: Optional Service to filter spending by specific service.
+                    If provided, only returns spending for that service.
+
+        Example:
+            - Subscription paid_at: Jan 15
+            - Current date: Feb 20
+            - Returns: Spending from Feb 15 to Mar 15
+
+            # Get total spending
+            total_spend = team.get_current_period_spend()
+
+            # Get spending for specific service
+            mentorship_spend = team.get_current_period_spend(service=mentorship_service)
+
+        Note: This is independent of:
+            - Payment frequency (could be quarterly)
+            - Service regeneration schedules (could be weekly per service)
+        """
+        from django.db.models import Sum
+        from breathecode.payments.models import Invoice
+
+        subscription = self.subscription
+        period_start, period_end = self.get_current_monthly_period_dates()
+
+        if not period_start:
+            return 0.0
+
+        # Query invoices for auto-recharge in this monthly period
+        # TODO: Add invoice_type or tag to identify auto-recharge invoices
+        invoices = Invoice.objects.filter(
+            user=subscription.user,
+            status=Invoice.Status.PAID,
+            created_at__gte=period_start,
+        )
+
+        if period_end:
+            invoices = invoices.filter(created_at__lt=period_end)
+
+        # Filter by service if provided
+        # TODO: This requires invoices to have a relation to service/service_item
+        # For now, this is a placeholder for when invoice structure supports it
+        if service:
+            # When implemented, filter invoices by service
+            # invoices = invoices.filter(service_item__service=service)
+            pass
+
+        total = invoices.aggregate(total=Sum("amount"))["total"]
+        return float(total) if total else 0.0
+
+    def can_auto_recharge(self, amount: float, lang: str = "en") -> tuple[bool, str]:
+        """
+        Check if auto-recharge is allowed for the given amount.
+
+        Args:
+            amount: Amount to recharge in subscription currency
+            lang: Language code for error messages (en, es)
+
+        Returns:
+            (allowed, reason) tuple
+        """
+        from capyc.core.i18n import translation
+
+        if not self.auto_recharge_enabled:
+            return False, translation(
+                lang,
+                en="Auto-recharge is disabled",
+                es="La recarga automática está deshabilitada",
+                slug="auto-recharge-disabled",
+            )
+
+        if not self.max_period_spend:
+            return True, translation(
+                lang,
+                en="No spending limit",
+                es="Sin límite de gasto",
+                slug="no-spending-limit",
+            )
+
+        current_spend = self.get_current_period_spend()
+        potential_spend = current_spend + amount
+
+        if potential_spend > float(self.max_period_spend):
+            available = float(self.max_period_spend) - current_spend
+            if available <= 0:
+                return False, translation(
+                    lang,
+                    en=f"Billing period limit reached ({current_spend}/{self.max_period_spend})",
+                    es=f"Límite del período de facturación alcanzado ({current_spend}/{self.max_period_spend})",
+                    slug="billing-period-limit-reached",
+                )
+            return False, translation(
+                lang,
+                en=f"Would exceed limit (available: {available})",
+                es=f"Excedería el límite (disponible: {available})",
+                slug="would-exceed-limit",
+            )
+
+        return True, translation(
+            lang,
+            en="OK",
+            es="OK",
+            slug="ok",
+        )
 
 
 class SubscriptionSeat(models.Model):
