@@ -2770,7 +2770,7 @@ class AcademyPlanServiceItemView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     @capable_of("crud_plan")
-    def post(self, request):
+    def post(self, request, academy_id=None):
         logger.info(f"AcademyPlanServiceItemView.post called by user {request.user.id}")
         lang = get_user_language(request)
         handler = self.extensions(request)
@@ -2868,7 +2868,8 @@ class AcademyPlanServiceItemView(APIView):
             }
         )
 
-    def delete(self, request):
+    @capable_of("crud_plan")
+    def delete(self, request, academy_id=None):
         lang = get_user_language(request)
         handler = self.extensions(request)
 
