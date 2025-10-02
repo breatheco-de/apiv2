@@ -91,12 +91,19 @@ class TeamMember(models.Model):
 
     def clean(self):
         super().clean()
-        
+
         # Validate email format
         import re
         if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', self.email):
             raise ValidationError("Invalid email format")
-        
+
+        if self.user and self.seat_consumable and self.seat_consumable.service_item:
+            team_group = self.seat_consumable.service_item.team_group
+            if team_group and not self.user.groups.filter(id=team_group.id).exists():
+                raise ValidationError(
+                    f"User {self.user.email} is not in the required group {team_group.name}"
+                )
+
         # Normalize email
         self.email = self.email.lower().strip()
         self.first_name = self.first_name.strip()
@@ -119,15 +126,28 @@ class ServiceItem(AbstractServiceItem):
         default=False,
         help_text="If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values.",
     )
-    
-    # New fields for team management
+
     is_team_allowed = models.BooleanField(
-        default=False, 
+        default=False,
         help_text="Whether this service item supports team members"
     )
-    max_team_members = models.IntegerField(
-        default=1, 
+    team_group = models.ForeignKey(
+        Group,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="The Django group for team members using this service item (e.g., teacher, student)"
+    )
+    max_team_members = models.PositiveIntegerField(
+        default=1,
         help_text="Maximum number of team members allowed for this service item"
+    )
+    team_consumables = JSONField(
+        default=list,
+        blank=True,
+        help_text="List of consumable definitions for team members, e.g., "
+                  "[{'service_slug': 'course-creation', 'how_many': 10, 'unit_type': 'UNIT', "
+                  "'renew_at': 1, 'renew_at_unit': 'WEEK'}]"
     )
     
     # the below fields are useless when is_renewable=False
@@ -160,6 +180,29 @@ class ServiceItem(AbstractServiceItem):
         if not self.is_team_allowed:
             return False
         return self.get_team_member_count_for_subscription(subscription) < self.max_team_members
+
+    def clean(self):
+        super().clean()
+        if self.is_team_allowed and not self.team_group:
+            raise ValidationError("Team-enabled service item must have a team group")
+        if self.is_team_allowed and not self.team_consumables:
+            raise ValidationError("Team-enabled service item must define team consumables")
+        for consumable in self.team_consumables:
+            required_keys = ['service_slug', 'how_many', 'unit_type']
+            if not all(key in consumable for key in required_keys):
+                raise ValidationError("Each team consumable must have service_slug, how_many, and unit_type")
+            if not Service.objects.filter(slug=consumable['service_slug']).exists():
+                raise ValidationError(f"Service {consumable['service_slug']} does not exist")
+            if not isinstance(consumable['how_many'], int) or consumable['how_many'] < 0:
+                raise ValidationError("how_many must be a non-negative integer")
+            if consumable['unit_type'] not in [choice[0] for choice in PAY_EVERY_UNIT]:
+                raise ValidationError(f"Invalid unit_type: {consumable['unit_type']}")
+            # Validate optional renew_at and renew_at_unit
+            if 'renew_at' in consumable or 'renew_at_unit' in consumable:
+                if not (isinstance(consumable.get('renew_at'), int) and consumable.get('renew_at', 0) > 0):
+                    raise ValidationError("renew_at must be a positive integer")
+                if consumable.get('renew_at_unit') not in [choice[0] for choice in PAY_EVERY_UNIT]:
+                    raise ValidationError(f"Invalid renew_at_unit: {consumable.get('renew_at_unit')}")
 ```
 
 #### 1.3 Update Consumable Model
@@ -173,24 +216,17 @@ class Consumable(AbstractServiceItem):
     
     def clean(self):
         super().clean()
-        
-        # Validate team member association
-        if hasattr(self, 'team_member') and self.team_member:
-            if self.subscription and self.team_member.seat_consumable.subscription != self.subscription:
+        if self.team_member and self.team_member.user and self.service_item.team_group:
+            if not self.team_member.user.groups.filter(id=self.service_item.team_group.id).exists():
                 raise ValidationError(
-                    "Team member's seat consumable must belong to the same subscription"
+                    f"Team member {self.team_member.email} is not in the required group {self.service_item.team_group.name}"
                 )
-            
-            if self.plan_financing and self.team_member.seat_consumable.plan_financing != self.plan_financing:
-                raise ValidationError(
-                    "Team member's seat consumable must belong to the same plan financing"
-                )
-            
-            # Ensure team member consumables don't exceed limits
-            if not self.service_item.is_team_allowed:
-                raise ValidationError(
-                    "Cannot create consumable for team member on non-team service item"
-                )
+            if self.service_item.is_team_allowed:
+                team_consumables = self.service_item.team_consumables
+                if not any(c['service_slug'] == self.service_item.service.slug for c in team_consumables):
+                    raise ValidationError(
+                        f"Service {self.service_item.service.slug} is not in the team consumables for this service item"
+                    )
 ```
 
 ### Phase 2: Business Logic Implementation
@@ -502,33 +538,54 @@ def validate_service_supports_teams(service_item: ServiceItem, lang: str = "en")
 ```python
 # breathecode/payments/actions.py
 
+def calculate_valid_until(start_date, renew_at, renew_at_unit):
+    """Calculate the valid_until date based on renew_at and renew_at_unit."""
+    if renew_at_unit == 'DAY':
+        return start_date + timedelta(days=renew_at)
+    elif renew_at_unit == 'WEEK':
+        return start_date + timedelta(weeks=renew_at)
+    elif renew_at_unit == 'MONTH':
+        return start_date + timedelta(days=renew_at * 30)  # Approximation
+    elif renew_at_unit == 'YEAR':
+        return start_date + timedelta(days=renew_at * 365)
+    return start_date
+
 def create_team_member_consumables(team_member: TeamMember) -> None:
-    """Create consumables for a team member based on their seat consumable's subscription."""
-    
+    """Create consumables for a team member based on their seat consumable's service item."""
     subscription = team_member.seat_consumable.subscription
+    service_item = team_member.seat_consumable.service_item
+    team_group = service_item.team_group
     
-    # Get all service items from the subscription's plans
-    for plan in subscription.plans.all():
-        for plan_service_item in plan.service_items.all():
-            service_item = plan_service_item.service_item
-            
-            # Create consumable for team member
-            consumable = Consumable.objects.create(
-                service_item=service_item,
-                user=team_member.user or subscription.user,  # Fallback to subscription owner
-                subscription=subscription,
-                how_many=service_item.how_many,
-                unit_type=service_item.unit_type,
-                sort_priority=service_item.sort_priority,
-                team_member=team_member,
-                cohort_set=subscription.selected_cohort_set,
-                event_type_set=subscription.selected_event_type_set,
-                mentorship_service_set=subscription.selected_mentorship_service_set,
-                valid_until=subscription.valid_until
-            )
-            
-            # Create service stock scheduler for team member
-            create_team_member_service_stock_scheduler(consumable, subscription)
+    if not service_item.is_team_allowed or not team_group:
+        return
+    
+    for consumable_def in service_item.team_consumables:
+        service = Service.objects.filter(slug=consumable_def['service_slug']).first()
+        if not service:
+            logger.warning(f"Service {consumable_def['service_slug']} not found for team member {team_member.id}")
+            continue
+        
+        # Use renew_at and renew_at_unit from team_consumables, fall back to ServiceItem's
+        renew_at = consumable_def.get('renew_at', service_item.renew_at)
+        renew_at_unit = consumable_def.get('renew_at_unit', service_item.renew_at_unit)
+        valid_until = calculate_valid_until(timezone.now(), renew_at, renew_at_unit)
+        
+        Consumable.objects.create(
+            service_item=ServiceItem.objects.get_or_create(
+                service=service,
+                defaults={'how_many': consumable_def['how_many'], 'unit_type': consumable_def['unit_type']}
+            )[0],
+            user=team_member.user or subscription.user,
+            subscription=subscription,
+            how_many=consumable_def['how_many'],
+            unit_type=consumable_def['unit_type'],
+            sort_priority=service_item.sort_priority,
+            team_member=team_member,
+            cohort_set=subscription.selected_cohort_set,
+            event_type_set=subscription.selected_event_type_set,
+            mentorship_service_set=subscription.selected_mentorship_service_set,
+            valid_until=valid_until
+        )
 
 def revoke_team_member_consumables(team_member: TeamMember) -> None:
     """Revoke all consumables for a team member."""
@@ -564,6 +621,77 @@ def create_team_member_service_stock_scheduler(consumable: Consumable, subscript
     
     # Add consumable to scheduler
     scheduler.consumables.add(consumable)
+
+def calculate_next_period_date(start_date, renew_at, renew_at_unit):
+    """Calculate the next period date based on renew_at and renew_at_unit."""
+    if renew_at_unit == 'DAY':
+        return start_date + timedelta(days=renew_at)
+    elif renew_at_unit == 'WEEK':
+        return start_date + timedelta(weeks=renew_at)
+    elif renew_at_unit == 'MONTH':
+        return start_date + timedelta(days=renew_at * 30)  # Approximation
+    elif renew_at_unit == 'YEAR':
+        return start_date + timedelta(days=renew_at * 365)
+    return start_date
+
+@task(priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def renew_team_member_consumables(self, subscription_id: int):
+    """Renew consumables for active team members based on team_consumables renewal periods."""
+    subscription = Subscription.objects.get(id=subscription_id)
+    
+    for seat_consumable in Consumable.objects.filter(
+        subscription=subscription,
+        team_member__isnull=False
+    ):
+        service_item = seat_consumable.service_item
+        if not service_item.is_team_allowed or not service_item.is_renewable:
+            continue
+        
+        for team_member in seat_consumable.team_members.filter(status=TeamMember.Status.ACTIVE):
+            # Check each team_consumable for renewal
+            for consumable_def in service_item.team_consumables:
+                # Find the latest consumable for this team member and service
+                latest_consumable = Consumable.objects.filter(
+                    team_member=team_member,
+                    service_item__service__slug=consumable_def['service_slug'],
+                    valid_until__gt=timezone.now()
+                ).order_by('-created_at').first()
+                
+                # Use renew_at and renew_at_unit from team_consumables, fall back to ServiceItem
+                renew_at = consumable_def.get('renew_at', service_item.renew_at)
+                renew_at_unit = consumable_def.get('renew_at_unit', service_item.renew_at_unit)
+                
+                # Determine if renewal is needed
+                last_renewal = latest_consumable.created_at if latest_consumable else team_member.joined_at
+                next_renewal = calculate_next_period_date(last_renewal, renew_at, renew_at_unit)
+                
+                if timezone.now() >= next_renewal:
+                    # Revoke old consumables for this service
+                    Consumable.objects.filter(
+                        team_member=team_member,
+                        service_item__service__slug=consumable_def['service_slug'],
+                        valid_until__gt=timezone.now()
+                    ).update(how_many=0, valid_until=timezone.now())
+                    
+                    # Create new consumable
+                    service = Service.objects.filter(slug=consumable_def['service_slug']).first()
+                    if service:
+                        Consumable.objects.create(
+                            service_item=ServiceItem.objects.get_or_create(
+                                service=service,
+                                defaults={'how_many': consumable_def['how_many'], 'unit_type': consumable_def['unit_type']}
+                            )[0],
+                            user=team_member.user or subscription.user,
+                            subscription=subscription,
+                            how_many=consumable_def['how_many'],
+                            unit_type=consumable_def['unit_type'],
+                            sort_priority=service_item.sort_priority,
+                            team_member=team_member,
+                            cohort_set=subscription.selected_cohort_set,
+                            event_type_set=subscription.selected_event_type_set,
+                            mentorship_service_set=subscription.selected_mentorship_service_set,
+                            valid_until=calculate_valid_until(timezone.now(), renew_at, renew_at_unit)
+                        )
 
 #### 2.3 Integration with Existing accept_invite Function
 
@@ -687,16 +815,13 @@ class PaymentsConfig(AppConfig):
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_service_stock_scheduler_from_subscription(self, subscription_id: int, **kwargs):
-    """Updated to handle team members."""
-    
+    """Updated to handle team members and their consumables."""
     subscription = Subscription.objects.get(id=subscription_id)
     
     # Create consumables for subscription owner
     for plan in subscription.plans.all():
         for plan_service_item in plan.service_items.all():
             service_item = plan_service_item.service_item
-            
-            # Create consumable for subscription owner
             consumable = Consumable.objects.create(
                 service_item=service_item,
                 user=subscription.user,
@@ -709,34 +834,10 @@ def build_service_stock_scheduler_from_subscription(self, subscription_id: int, 
                 mentorship_service_set=subscription.selected_mentorship_service_set,
                 valid_until=subscription.valid_until
             )
-            
-            # Create service stock scheduler
             create_service_stock_scheduler(consumable, subscription)
     
-    # Create consumables for team members for team-enabled service items
-    # Get all seat consumables for this subscription
-    seat_consumables = Consumable.objects.filter(
-        subscription=subscription,
-        team_member__isnull=False
-    )
-    for seat_consumable in seat_consumables:
-        # Check if the service item supports teams
-        if seat_consumable.service_item.is_team_allowed:
-            for team_member in seat_consumable.team_members.filter(status=TeamMember.Status.ACTIVE):
-                create_team_member_consumables(team_member)
-    
-    # Handle add-ons for team members
-    for plan in subscription.plans.all():
-        for add_on in plan.add_ons.all():
-            # Create add-on consumables for each team member
-            seat_consumables = Consumable.objects.filter(
-                subscription=subscription,
-                team_member__isnull=False
-            )
-            for seat_consumable in seat_consumables:
-                if seat_consumable.service_item.is_team_allowed:
-                    for team_member in seat_consumable.team_members.filter(status=TeamMember.Status.ACTIVE):
-                        create_add_on_consumable_for_team_member(add_on, team_member, subscription)
+    # Trigger team member consumable renewals
+    renew_team_member_consumables.apply_async(args=(subscription_id,))
 
 def create_add_on_consumable_for_team_member(
     add_on: AcademyService, 
@@ -1097,7 +1198,7 @@ class Plan(AbstractPriceByTime):
     # New fields for team support
     supports_teams = models.BooleanField(
         default=False, 
-        help_text="Whether this plan supports team members"
+        help_text="Whether this plan supports team members, this field should be read only and set automatically when a service iteam with is_team_allowed is added/removed from the plan"
     )
     seat_add_on_service = models.ForeignKey(
         AcademyService,
@@ -1119,18 +1220,44 @@ class Plan(AbstractPriceByTime):
         return self.get_team_enabled_service_items().exists()
     
     def clean(self):
-        # ... existing validation ...
-        
-        if self.supports_teams and not self.seat_add_on_service:
-            raise forms.ValidationError(
-                "Plans that support teams must have a seat add-on service configured"
-            )
-        
-        # Validate that if supports_teams is True, at least one service item supports teams
-        if self.supports_teams and not self.has_team_enabled_services():
-            raise forms.ValidationError(
-                "Plans that support teams must have at least one service item with is_team_allowed=True"
-            )
+        """Validate the model before saving."""
+        # Ensure supports_teams is not manually set
+        expected_supports_teams = self.has_team_enabled_services()
+        if self.supports_teams != expected_supports_teams:
+            raise ValidationError({
+                'supports_teams': 'This field is read-only and cannot be set manually.'
+            })
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure supports_teams is set correctly."""
+        # Calculate supports_teams before saving
+        self.supports_teams = self.has_team_enabled_services()
+
+        # Use a transaction to ensure atomicity
+        with transaction.atomic():
+            # Validate the model
+            self.clean()
+            # Call the parent save method
+            super().save(*args, **kwargs)
+
+
+# Signal handlers to make sure many to many relations between service iteam and plan also cover the validation for team enabled
+@receiver(m2m_changed, sender=Plan.service_items.through)
+def update_plan_supports_teams_on_m2m(sender, instance, action, **kwargs):
+    """Update supports_teams when PlanServiceItem relationships change."""
+    if action in ['post_add', 'post_remove', 'post_clear']:
+        with transaction.atomic():
+            instance.supports_teams = instance.has_team_enabled_services()
+            instance.save()
+
+@receiver([post_save, post_delete], sender=ServiceItem)
+def update_plan_supports_teams_on_service_item(sender, instance, **kwargs):
+    """Update supports_teams when a ServiceItem is saved or deleted."""
+    plans = Plan.objects.filter(service_items=instance).distinct()
+    with transaction.atomic():
+        for plan in plans:
+            plan.supports_teams = plan.has_team_enabled_services()
+            plan.save()
 ```
 
 #### 6.2 Update Bag Handler for Seat Add-ons
@@ -1200,104 +1327,9 @@ class BagHandler:
         # ... rest of execution ...
 ```
 
-### Phase 7: Frontend Integration
+### Phase 7: Supervisor Implementation
 
-#### 7.1 Team Management Interface
-
-```typescript
-// Frontend components for team management
-
-interface TeamMember {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  status: 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'REMOVED';
-  invited_at: string;
-  joined_at?: string;
-  removed_at?: string;
-}
-
-interface SubscriptionWithTeam {
-  id: number;
-  is_team_subscription: boolean;
-  max_team_members: number;
-  team_member_count: number;
-  team_members: TeamMember[];
-}
-
-// Team member management component
-const TeamMemberManagement: React.FC<{ subscription: SubscriptionWithTeam }> = ({ subscription }) => {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(subscription.team_members);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showBulkImport, setShowBulkImport] = useState(false);
-  
-  const addTeamMember = async (memberData: Partial<TeamMember>) => {
-    const response = await fetch(`/api/payments/subscriptions/${subscription.id}/team-members/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(memberData)
-    });
-    
-    if (response.ok) {
-      const newMember = await response.json();
-      setTeamMembers([...teamMembers, newMember]);
-    }
-  };
-  
-  const bulkImportMembers = async (csvData: string) => {
-    const response = await fetch(`/api/payments/subscriptions/${subscription.id}/team-members/bulk-import/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ csv_data: csvData })
-    });
-    
-    if (response.ok) {
-      const result = await response.json();
-      setTeamMembers([...teamMembers, ...result.team_members]);
-    }
-  };
-  
-  return (
-    <div className="team-management">
-      <h3>Team Members ({teamMembers.length}/{subscription.max_team_members})</h3>
-      
-      <div className="team-actions">
-        <button onClick={() => setShowAddForm(true)}>Add Member</button>
-        <button onClick={() => setShowBulkImport(true)}>Bulk Import</button>
-      </div>
-      
-      <div className="team-members-list">
-        {teamMembers.map(member => (
-          <TeamMemberCard 
-            key={member.id} 
-            member={member} 
-            onRemove={() => removeTeamMember(member.id)}
-          />
-        ))}
-      </div>
-      
-      {showAddForm && (
-        <AddTeamMemberForm 
-          onAdd={addTeamMember}
-          onClose={() => setShowAddForm(false)}
-        />
-      )}
-      
-      {showBulkImport && (
-        <BulkImportForm 
-          onImport={bulkImportMembers}
-          onClose={() => setShowBulkImport(false)}
-        />
-      )}
-    </div>
-  );
-};
-```
-
-### Phase 8: Supervisor Implementation
-
-#### 8.1 Add Team Management Supervisors
+#### 7.1 Add Team Management Supervisors
 
 ```python
 # breathecode/payments/supervisors.py
@@ -1431,150 +1463,6 @@ def fix_team_size_exceeded(subscription_id: int, service_item_id: int, current_c
         return None  # Retry
 ```
 
-### Phase 9: Feature Flags
-
-#### 9.1 Add Feature Flag Support
-
-```python
-# breathecode/payments/flags.py
-
-from breathecode.utils import FeatureFlag
-
-TEAM_MANAGEMENT_ENABLED = FeatureFlag(
-    name="team_management_enabled",
-    default=False,
-    description="Enable team management features for seat-based pricing"
-)
-
-BULK_TEAM_IMPORT_ENABLED = FeatureFlag(
-    name="bulk_team_import_enabled", 
-    default=False,
-    description="Enable bulk CSV import for team members"
-)
-
-TEAM_SUPERVISORS_ENABLED = FeatureFlag(
-    name="team_supervisors_enabled",
-    default=True,
-    description="Enable supervisors for team management monitoring"
-)
-```
-
-#### 9.2 Update Apps Configuration
-
-```python
-# breathecode/payments/apps.py
-
-from django.apps import AppConfig
-
-class PaymentsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'breathecode.payments'
-    
-    def ready(self):
-        from .flags import TEAM_MANAGEMENT_ENABLED, TEAM_SUPERVISORS_ENABLED
-        
-        # Initialize feature flags
-        if TEAM_SUPERVISORS_ENABLED.is_enabled():
-            # Import supervisors to register them
-            try:
-                from . import supervisors
-            except ImportError:
-                pass
-```
-
-### Phase 10: Management Commands
-
-#### 10.1 Add Management Commands
-
-```python
-# breathecode/payments/management/commands/migrate_team_members.py
-
-from django.core.management.base import BaseCommand
-from breathecode.payments.models import TeamMember, Consumable, Subscription
-
-class Command(BaseCommand):
-    help = 'Migrate existing team data to new team member structure'
-    
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--dry-run', 
-            action='store_true', 
-            help='Show what would be migrated without making changes'
-        )
-        parser.add_argument(
-            '--subscription-id',
-            type=int,
-            help='Migrate specific subscription only'
-        )
-    
-    def handle(self, *args, **options):
-        dry_run = options['dry_run']
-        subscription_id = options.get('subscription_id')
-        
-        if subscription_id:
-            subscriptions = Subscription.objects.filter(id=subscription_id)
-        else:
-            subscriptions = Subscription.objects.all()
-        
-        self.stdout.write(f"Found {subscriptions.count()} subscriptions to check")
-        
-        for subscription in subscriptions:
-            self.migrate_subscription(subscription, dry_run)
-    
-    def migrate_subscription(self, subscription, dry_run):
-        # Migration logic for existing team data
-        self.stdout.write(f"Processing subscription {subscription.id}")
-        
-        if dry_run:
-            self.stdout.write(self.style.WARNING("DRY RUN - No changes will be made"))
-```
-
-```python
-# breathecode/payments/management/commands/fix_team_consumables.py
-
-from django.core.management.base import BaseCommand
-from breathecode.payments.models import TeamMember, Consumable
-from breathecode.payments.actions import create_team_member_consumables
-
-class Command(BaseCommand):
-    help = 'Fix missing consumables for team members'
-    
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--team-member-id',
-            type=int,
-            help='Fix specific team member only'
-        )
-    
-    def handle(self, *args, **options):
-        team_member_id = options.get('team_member_id')
-        
-        if team_member_id:
-            team_members = TeamMember.objects.filter(id=team_member_id)
-        else:
-            # Find all active team members without consumables
-            team_members = TeamMember.objects.filter(
-                status=TeamMember.Status.ACTIVE
-            ).exclude(
-                id__in=Consumable.objects.filter(
-                    team_member__isnull=False
-                ).values_list('team_member_id', flat=True)
-            )
-        
-        self.stdout.write(f"Found {team_members.count()} team members needing consumables")
-        
-        for team_member in team_members:
-            try:
-                create_team_member_consumables(team_member)
-                self.stdout.write(
-                    self.style.SUCCESS(f"Fixed consumables for team member {team_member.id}")
-                )
-            except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"Failed to fix team member {team_member.id}: {e}")
-                )
-```
-
 ### Phase 11: Testing
 
 #### 11.1 Unit Tests
@@ -1706,185 +1594,6 @@ class TeamManagementTestCase(TestCase):
             )
 ```
 
-#### 8.2 Integration Tests
-
-```python
-# breathecode/payments/tests/test_team_api.py
-
-class TeamManagementAPITestCase(APITestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(email='owner@test.com')
-        self.academy = Academy.objects.create(slug='test-academy')
-        self.service = Service.objects.create(slug='seat-service')
-        self.service_item = ServiceItem.objects.create(
-            service=self.service,
-            is_team_allowed=True,
-            max_team_members=10,
-            how_many=1
-        )
-        self.subscription = Subscription.objects.create(
-            user=self.user,
-            academy=self.academy
-        )
-        self.subscription.service_items.add(self.service_item)
-        # Create a seat consumable for testing
-        self.seat_consumable = Consumable.objects.create(
-            service_item=self.service_item,
-            user=self.user,
-            subscription=self.subscription,
-            how_many=1
-        )
-        self.client.force_authenticate(user=self.user)
-    
-    def test_create_team_member_api(self):
-        """Test creating team member via API."""
-        data = {
-            'email': 'member@test.com',
-            'first_name': 'John',
-            'last_name': 'Doe',
-            'seat_consumable_id': self.seat_consumable.id
-        }
-        
-        response = self.client.post(
-            f'/api/payments/subscriptions/{self.subscription.id}/team-members/',
-            data
-        )
-        
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(TeamMember.objects.count(), 1)
-    
-    def test_bulk_import_team_members_api(self):
-        """Test bulk importing team members via API."""
-        csv_data = "email,first_name,last_name\nmember1@test.com,John,Doe\nmember2@test.com,Jane,Smith"
-        
-        response = self.client.post(
-            f'/api/payments/subscriptions/{self.subscription.id}/team-members/bulk-import/',
-            {
-                'csv_data': csv_data,
-                'seat_consumable_id': self.seat_consumable.id
-            }
-        )
-        
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(TeamMember.objects.count(), 2)
-    
-    def test_team_member_activation_api(self):
-        """Test team member activation via API."""
-        team_member = TeamMember.objects.create(
-            seat_consumable=self.seat_consumable,
-            email='member@test.com',
-            first_name='John',
-            last_name='Doe'
-        )
-        
-        # Create user with matching email
-        member_user = User.objects.create_user(email='member@test.com')
-        self.client.force_authenticate(user=member_user)
-        
-        response = self.client.post(
-            f'/api/payments/subscriptions/{self.subscription.id}/team-members/{team_member.id}/activate/'
-        )
-        
-        self.assertEqual(response.status_code, 200)
-        team_member.refresh_from_db()
-        self.assertEqual(team_member.status, TeamMember.Status.ACTIVE)
-```
-
-### Phase 9: Migration Strategy
-
-#### 9.1 Database Migrations
-
-```python
-# breathecode/payments/migrations/XXXX_add_team_management.py
-
-from django.db import migrations, models
-import django.db.models.deletion
-
-class Migration(migrations.Migration):
-    dependencies = [
-        ('payments', 'XXXX_previous_migration'),
-        ('authenticate', 'XXXX_user_invite_model'),
-        ('auth', 'XXXX_user_model'),
-    ]
-
-    operations = [
-        # First, add team_member field to UserInvite
-        migrations.AddField(
-            model_name='userinvite',
-            name='team_member',
-            field=models.ForeignKey(
-                blank=True,
-                help_text='Team member this invite is for (if it\'s a team invitation)',
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name='invites',
-                to='payments.teammember'
-            ),
-        ),
-        
-        # Create TeamMember model
-        migrations.CreateModel(
-            name='TeamMember',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('email', models.EmailField(help_text='The email used to invite the member', max_length=254)),
-                ('first_name', models.CharField(help_text='The first name used to invite the user', max_length=150)),
-                ('last_name', models.CharField(help_text='The last name used to invite the user', max_length=150)),
-                ('status', models.CharField(choices=[('INVITED', 'Invited'), ('ACTIVE', 'Active'), ('REMOVED', 'Removed')], default='INVITED', help_text='Team member status', max_length=10)),
-                ('invited_at', models.DateTimeField(auto_now_add=True, help_text='When the team member was invited')),
-                ('joined_at', models.DateTimeField(blank=True, help_text='When the team member joined', null=True)),
-                ('removed_at', models.DateTimeField(blank=True, help_text='When the team member was removed', null=True)),
-                ('seat_consumable', models.ForeignKey(help_text='Consumable user to add the teams, links the member with the owner original subscription', on_delete=django.db.models.deletion.CASCADE, related_name='team_members', to='payments.consumable')),
-                ('user', models.ForeignKey(blank=True, help_text='User account if team member has registered', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='team_memberships', to='auth.user')),
-            ],
-            options={
-                'unique_together': {('subscription', 'email')},
-            },
-        ),
-        
-        # Add team fields to ServiceItem
-        migrations.AddField(
-            model_name='serviceitem',
-            name='is_team_allowed',
-            field=models.BooleanField(default=False, help_text='Whether this service item supports team members'),
-        ),
-        migrations.AddField(
-            model_name='serviceitem',
-            name='max_team_members',
-            field=models.IntegerField(default=1, help_text='Maximum number of team members allowed for this service item'),
-        ),
-        
-        # Add team field to Consumable
-        migrations.AddField(
-            model_name='consumable',
-            name='team_member',
-            field=models.ForeignKey(blank=True, help_text='Team member this consumable belongs to', null=True, on_delete=django.db.models.deletion.CASCADE, to='payments.teammember'),
-        ),
-        
-        # Add team fields to Plan
-        migrations.AddField(
-            model_name='plan',
-            name='supports_teams',
-            field=models.BooleanField(default=False, help_text='Whether this plan supports team members'),
-        ),
-        migrations.AddField(
-            model_name='plan',
-            name='seat_add_on_service',
-            field=models.ForeignKey(blank=True, help_text='Service used for additional seat add-ons', null=True, on_delete=django.db.models.deletion.SET_NULL, to='payments.academyservice'),
-        ),
-        
-        # Create indexes
-        migrations.AddIndex(
-            model_name='teammember',
-            index=models.Index(fields=['subscription', 'status'], name='payments_teammember_subscription_status_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='teammember',
-            index=models.Index(fields=['email'], name='payments_teammember_email_idx'),
-        ),
-    ]
-```
-
 ### Phase 10: Documentation and Deployment
 
 #### 10.1 API Documentation
@@ -1971,9 +1680,7 @@ This implementation plan provides a comprehensive solution for seat-based pricin
 - **Enhanced Validation**: Robust input validation with proper error messages and email format checking
 - **Database Constraints**: Unique constraints and indexes to prevent data inconsistencies
 - **Supervisor System**: Automated monitoring for orphaned team members and team size violations
-- **Feature Flags**: Safe deployment with feature toggles for team management components
 - **Async Support**: Async versions of key functions for better performance
-- **Management Commands**: Administrative tools for data migration and fixing issues
 - **Enhanced Serializers**: Detailed serializers with consumable summaries and owner information
 - **Security Improvements**: Rate limiting, input sanitization, and proper authentication checks
 - **Signal Integration**: Automatic team member activation when invites are accepted through existing BreatheCode flows

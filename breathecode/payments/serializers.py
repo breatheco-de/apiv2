@@ -7,15 +7,16 @@ from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
-    AcademyService,
     Currency,
     FinancingOption,
+    AcademyService,
     PaymentMethod,
     Plan,
     PlanOfferTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
+    Bag,
 )
 from breathecode.utils import serializers, serpy
 
@@ -70,6 +71,7 @@ class GetGroupSerializer(serpy.Serializer):
 
 
 class GetServiceSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
@@ -77,6 +79,9 @@ class GetServiceSmallSerializer(serpy.Serializer):
     icon_url = serpy.Field()
     private = serpy.Field()
     groups = serpy.MethodField()
+    type = serpy.Field()
+    consumer = serpy.Field()
+    session_duration = serpy.Field()
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
@@ -101,6 +106,7 @@ class GetServiceItemSerializer(serpy.Serializer):
     how_many = serpy.Field()
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
+    is_team_allowed = serpy.Field()
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
@@ -198,15 +204,17 @@ class GetFinancingOptionSerializer(serpy.Serializer):
         return price
 
 
-class GetPlanSmallSerializer(serpy.Serializer):
+class GetPlanSmallTinySerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
-    # description = serpy.Field()
     status = serpy.Field()
     time_of_life = serpy.Field()
     time_of_life_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
+
+
+class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
@@ -241,6 +249,15 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     id = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
+    add_ons = serpy.MethodField()
+    seat_service_price = serpy.MethodField()
+    consumption_strategy = serpy.Field()
+
+    def get_seat_service_price(self, obj: Plan):
+        if not obj.seat_service_price or obj.seat_service_price.service.type != "SEAT":
+            return None
+
+        return GetAcademyServiceSmallSerializer(obj.seat_service_price, many=False).data
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -327,6 +344,13 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         )
 
         return price
+
+    def get_add_ons(self, obj: Plan):
+        context = {}
+        if hasattr(self, "context") and self.context:
+            context["country_code"] = self.context.get("country_code")
+
+        return GetAcademyServiceSmallReverseSerializer(obj.add_ons.all(), many=True, context=context).data
 
 
 class GetPlanOfferTranslationSerializer(serpy.Serializer):
@@ -458,7 +482,7 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
         if not country_code:
             return obj.price_per_unit
 
-        price, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
+        price, _, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
         return price
 
 
@@ -595,6 +619,14 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     valid_until = serpy.Field()
 
 
+class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    status = serpy.Field()
+    user = GetUserSmallSerializer(many=False)
+    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
+    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
+
+
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     plan_expires_at = serpy.Field()
     monthly_price = serpy.Field()
@@ -637,10 +669,17 @@ class GetBagSerializer(serpy.Serializer):
     amount_per_half = serpy.Field()
     amount_per_year = serpy.Field()
     token = serpy.Field()
+    seat_service_item = serpy.MethodField()
     expires_at = serpy.Field()
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
+
+    def get_seat_service_item(self, obj: Bag):
+        if not obj.seat_service_item or obj.seat_service_item.service.type != "SEAT":
+            return None
+
+        return GetServiceItemSerializer(obj.seat_service_item, many=False).data
 
     def get_plans(self, obj):
         return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
@@ -723,6 +762,8 @@ class GetPaymentMethod(serpy.Serializer):
     academy = GetAcademySmallSerializer(required=False, many=False)
     currency = GetCurrencySmallSerializer(required=False, many=False)
     included_country_codes = serpy.Field()
+    visibility = serpy.Field()
+    deprecated = serpy.Field()
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
@@ -747,6 +788,8 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             "currency",
             "academy",
             "included_country_codes",
+            "visibility",
+            "deprecated",
         )
 
 

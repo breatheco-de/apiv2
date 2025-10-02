@@ -40,6 +40,7 @@ def user_serializer(user):
 
 def invoice_serializer(self, invoice, currency, user):
     return {
+        "id": invoice.id,
         "amount": invoice.amount,
         "currency": currency_serializer(currency),
         "paid_at": self.bc.datetime.to_iso_string(invoice.paid_at),
@@ -64,6 +65,7 @@ def group_serializer(group, permissions=[]):
 
 def service_serializer(service, groups=[], permissions=[]):
     return {
+        "id": service.id,
         "private": service.private,
         "slug": service.slug,
         "title": service.title,

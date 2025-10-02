@@ -4,7 +4,7 @@ import logging
 import math
 import os
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING, Protocol, TypeVar, Awaitable
 import random
 
 from asgiref.sync import sync_to_async
@@ -17,6 +17,7 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, Country
@@ -35,9 +36,68 @@ from breathecode.utils.validators.language import validate_language_code
 
 logger = logging.getLogger(__name__)
 
+# Type-only helpers for better Pyright inference of Django managers
+if TYPE_CHECKING:
+    _M = TypeVar("_M", bound=models.Model, covariant=True)
+
+    class TypedQuerySet(Protocol[_M]):
+        # Chainable queryset methods
+        def filter(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
+        def exclude(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
+        def only(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def prefetch_related(self, *lookups: str) -> "TypedQuerySet[_M]": ...
+        def select_related(self, *lookups: str) -> "TypedQuerySet[_M]": ...
+        def order_by(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def all(self) -> "TypedQuerySet[_M]": ...
+
+        # Evaluation / retrieval
+        def exists(self) -> bool: ...
+        def count(self) -> int: ...
+        def first(self) -> _M | None: ...
+        def last(self) -> _M | None: ...
+
+        # Async evaluation / retrieval
+        def aexists(self) -> Awaitable[bool]: ...
+        def acount(self) -> Awaitable[int]: ...
+        def afirst(self) -> Awaitable[_M | None]: ...
+        def alast(self) -> Awaitable[_M | None]: ...
+
+        # Creation / singular retrieval
+        def get(self, *args, **kwargs) -> _M: ...
+        def create(self, *args, **kwargs) -> _M: ...
+        def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+        def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+
+        # Async creation / singular retrieval
+        def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+        def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+
+        # Values APIs (coarse types, sufficient for our usages)
+        def values(self, *fields: str) -> list[dict[str, Any]]: ...
+        def values_list(self, *fields: str, flat: bool = ...) -> list[Any]: ...
+
+    class TypedManager(Protocol[_M]):
+        def filter(self, *args, **kwargs) -> TypedQuerySet[_M]: ...
+        def all(self) -> TypedQuerySet[_M]: ...
+        def get(self, *args, **kwargs) -> _M: ...
+        def create(self, *args, **kwargs) -> _M: ...
+        def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+        def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+
+        # Async counterparts
+        def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+        def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+
 
 class Currency(models.Model):
     """Represents a currency."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["Currency"]
 
     code = models.CharField(
         max_length=3, unique=True, db_index=True, help_text="ISO 4217 currency code (e.g. USD, EUR, MXN)"
@@ -65,6 +125,9 @@ class Currency(models.Model):
 class AbstractPriceByUnit(models.Model):
     """This model is used to store the price of a Product or a Service."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractPriceByUnit"]
+
     price_per_unit = models.FloatField(default=0, help_text="Price per unit")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
 
@@ -77,6 +140,9 @@ class AbstractPriceByUnit(models.Model):
 
 class AbstractPriceByTime(models.Model):
     """This model is used to store the price of a Product or a Service."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractPriceByTime"]
 
     price_per_month = models.FloatField(default=None, blank=True, null=True, help_text="Price per month")
     price_per_quarter = models.FloatField(default=None, blank=True, null=True, help_text="Price per quarter")
@@ -93,6 +159,9 @@ class AbstractPriceByTime(models.Model):
 
 class AbstractAmountByTime(models.Model):
     """This model is used to store the price of a Product or a Service."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractAmountByTime"]
 
     amount_per_month = models.FloatField(default=0, help_text="Amount per month")
     amount_per_quarter = models.FloatField(default=0, help_text="Amount per quarter")
@@ -121,6 +190,9 @@ PAY_EVERY_UNIT = [
 
 class AbstractAsset(models.Model):
     """This model represents a product or a service that can be sold."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractAsset"]
 
     slug = models.CharField(
         max_length=60,
@@ -156,11 +228,15 @@ class AbstractAsset(models.Model):
 class Service(AbstractAsset):
     """Represents the service that can be purchased by the customer."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["Service"]
+
     class Type(models.TextChoices):
         COHORT_SET = ("COHORT_SET", "Cohort set")
         MENTORSHIP_SERVICE_SET = ("MENTORSHIP_SERVICE_SET", "Mentorship service set")
         EVENT_TYPE_SET = ("EVENT_TYPE_SET", "Event type set")
         VOID = ("VOID", "Void")
+        SEAT = ("SEAT", "Seat")
 
     class Consumer(models.TextChoices):
         ADD_CODE_REVIEW = ("ADD_CODE_REVIEW", "Add code review")
@@ -197,6 +273,10 @@ class ServiceTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+
+    if TYPE_CHECKING:
+        objects: TypedManager["ServiceTranslation"]
+
     title = models.CharField(max_length=60, help_text="Title of the service")
     description = models.CharField(max_length=255, help_text="Description of the service")
 
@@ -212,6 +292,9 @@ SERVICE_UNITS = [
 
 class AbstractServiceItem(models.Model):
     """Common fields for ServiceItem and Consumable."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractServiceItem"]
 
     # the unit between a service and a product are different
     unit_type = models.CharField(
@@ -230,11 +313,17 @@ class AbstractServiceItem(models.Model):
 class ServiceItem(AbstractServiceItem):
     """This model is used as referenced of units of a service can be used."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["ServiceItem"]
+
     service = models.ForeignKey(Service, on_delete=models.CASCADE, help_text="Service")
     is_renewable = models.BooleanField(
         default=False,
         help_text="If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values.",
     )
+
+    # NEW: team settings
+    is_team_allowed = models.BooleanField(default=False, db_index=True, help_text="Allow team seats for this item")
 
     # the below fields are useless when is_renewable=False
     renew_at = models.IntegerField(
@@ -248,7 +337,44 @@ class ServiceItem(AbstractServiceItem):
         is_test_env = os.getenv("ENV") == "test"
         inside_mixer = hasattr(self, "__mixer__")
         if self.id and (not inside_mixer or (inside_mixer and not is_test_env)):
-            raise forms.ValidationError("You cannot update a service item")
+            # After creation, all fields are read-only except `is_team_allowed`.
+            try:
+                original: "ServiceItem" = type(self).objects.get(pk=self.pk)
+            except type(self).DoesNotExist:  # pragma: no cover - very unlikely
+                original = None
+
+            if original is not None:
+                immutable_diffs: list[str] = []
+
+                # AbstractServiceItem fields
+                if self.unit_type != original.unit_type:
+                    immutable_diffs.append("unit_type")
+                if self.how_many != original.how_many:
+                    immutable_diffs.append("how_many")
+
+                # ServiceItem fields
+                if self.service_id != original.service_id:
+                    immutable_diffs.append("service")
+                if self.is_renewable != original.is_renewable:
+                    immutable_diffs.append("is_renewable")
+                if self.renew_at != original.renew_at:
+                    immutable_diffs.append("renew_at")
+                if self.renew_at_unit != original.renew_at_unit:
+                    immutable_diffs.append("renew_at_unit")
+
+                # `is_team_allowed` intentionally allowed to change
+
+                if immutable_diffs:
+                    raise forms.ValidationError(
+                        _("You cannot update the following fields: %(fields)s") % {"fields": ", ".join(immutable_diffs)}
+                    )
+
+        if self.service.type == Service.Type.SEAT:
+            self.is_team_allowed = True
+
+        # Universal rule: allow -1 (infinite), otherwise must be >= 0
+        if self.how_many < -1 or self.how_many == 0:
+            raise forms.ValidationError(_("how_many must be -1 (infinite) or greater than 0"))
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -259,11 +385,43 @@ class ServiceItem(AbstractServiceItem):
         raise forms.ValidationError("You cannot delete a service item")
 
     def __str__(self) -> str:
-        return f"{self.service.slug} ({self.how_many})"
+        # Include a marker if this service item supports teams
+        return f"{self.service.slug} ({self.how_many}){' [team]' if self.is_team_allowed else ''}"
+
+    # Helper methods for team management
+    def team_members_qs_for_subscription(self, subscription: "Subscription") -> QuerySet["SubscriptionSeat"]:
+        from .models import SubscriptionSeat  # local import to avoid circular
+
+        # Seats are bound via billing team for the subscription (plan-level policy)
+        return SubscriptionSeat.objects.filter(billing_team__subscription=subscription)
+
+    def count_team_members_for_subscription(self, subscription: "Subscription") -> int:
+        return self.team_members_qs_for_subscription(subscription).count()
+
+    def can_add_team_member_for_subscription(self, subscription: "Subscription", additional: int = 1) -> bool:
+        if not self.is_team_allowed:
+            return False
+
+        if self.max_team_members is None or self.max_team_members < 0:
+            return True
+
+        current = self.count_team_members_for_subscription(subscription)
+
+        # also count pending seats (email reserved without user)
+        from .models import SubscriptionSeat
+
+        pending_invites = SubscriptionSeat.objects.filter(
+            billing_team__subscription=subscription, user__isnull=True
+        ).count()
+
+        return (current + pending_invites + additional) <= self.max_team_members
 
 
 class ServiceItemFeature(models.Model):
     """This model is used as referenced of units of a service can be used."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["ServiceItemFeature"]
 
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text="Service item")
     lang = models.CharField(
@@ -283,6 +441,9 @@ class FinancingOption(models.Model):
     """This model is used as referenced of units of a service can be used."""
 
     _lang = "en"
+
+    if TYPE_CHECKING:
+        objects: TypedManager["FinancingOption"]
 
     monthly_price = models.FloatField(default=1, help_text="Monthly price (e.g. 1, 2, 3, ...)")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
@@ -321,6 +482,9 @@ class CohortSet(models.Model):
 
     _lang = "en"
 
+    if TYPE_CHECKING:
+        objects: TypedManager["CohortSet"]
+
     slug = models.SlugField(
         max_length=100,
         unique=True,
@@ -348,6 +512,10 @@ class CohortSetTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+
+    if TYPE_CHECKING:
+        objects: TypedManager["CohortSetTranslation"]
+
     title = models.CharField(max_length=60, help_text="Title of the cohort set")
     description = models.CharField(max_length=255, help_text="Description of the cohort set")
     short_description = models.CharField(max_length=255, help_text="Short description of the cohort set")
@@ -357,6 +525,9 @@ class CohortSetCohort(models.Model):
     """M2M between CohortSet and Cohort."""
 
     _lang = "en"
+
+    if TYPE_CHECKING:
+        objects: TypedManager["CohortSetCohort"]
 
     cohort_set = models.ForeignKey(CohortSet, on_delete=models.CASCADE, help_text="Cohort set")
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, help_text="Cohort")
@@ -397,6 +568,9 @@ class CohortSetCohort(models.Model):
 class MentorshipServiceSet(models.Model):
     """M2M between plan and ServiceItem."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["MentorshipServiceSet"]
+
     slug = models.SlugField(
         max_length=100,
         unique=True,
@@ -420,6 +594,10 @@ class MentorshipServiceSetTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+
+    if TYPE_CHECKING:
+        objects: TypedManager["MentorshipServiceSetTranslation"]
+
     title = models.CharField(max_length=60, help_text="Title of the mentorship service set")
     description = models.CharField(max_length=255, help_text="Description of the mentorship service set")
     short_description = models.CharField(max_length=255, help_text="Short description of the mentorship service set")
@@ -427,6 +605,9 @@ class MentorshipServiceSetTranslation(models.Model):
 
 class EventTypeSet(models.Model):
     """M2M between plan and ServiceItem."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["EventTypeSet"]
 
     slug = models.SlugField(
         max_length=100,
@@ -449,6 +630,10 @@ class EventTypeSetTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+
+    if TYPE_CHECKING:
+        objects: TypedManager["EventTypeSetTranslation"]
+
     title = models.CharField(max_length=60, help_text="Title of the event type set")
     description = models.CharField(max_length=255, help_text="Description of the event type set")
     short_description = models.CharField(max_length=255, help_text="Short description of the event type set")
@@ -459,6 +644,8 @@ class AcademyService(models.Model):
     _max_amount: float | None = None
     _currency: Currency | None = None
     _pricing_ratio_explanation: dict | None = None
+    if TYPE_CHECKING:
+        objects: TypedManager["AcademyService"]
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
     service = models.OneToOneField(Service, on_delete=models.CASCADE, help_text="Service")
@@ -621,12 +808,20 @@ class AcademyService(models.Model):
 class Plan(AbstractPriceByTime):
     """A plan is a group of services that can be purchased by a user."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["Plan"]
+
     class Status(models.TextChoices):
         DRAFT = ("DRAFT", "Draft")
         ACTIVE = ("ACTIVE", "Active")
         UNLISTED = ("UNLISTED", "Unlisted")
         DELETED = ("DELETED", "Deleted")
         DISCONTINUED = ("DISCONTINUED", "Discontinued")
+
+    class ConsumptionStrategy(models.TextChoices):
+        PER_TEAM = "PER_TEAM", "Per team"
+        PER_SEAT = "PER_SEAT", "Per seat"
+        BOTH = "BOTH", "Both"
 
     slug = models.CharField(
         max_length=60,
@@ -668,8 +863,28 @@ class Plan(AbstractPriceByTime):
         ServiceItem, blank=True, through="PlanServiceItem", through_fields=("plan", "service_item")
     )
 
+    seat_service_price = models.ForeignKey(
+        AcademyService,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="AcademyService used as seat pricing for per-seat purchases",
+        related_name="plans_as_seat_service_price",
+    )
+
     add_ons = models.ManyToManyField(
-        AcademyService, blank=True, help_text="Service item bundles that can be purchased with this plan"
+        AcademyService,
+        blank=True,
+        help_text="Service item bundles that can be purchased with this plan",
+        related_name="plans_with_add_ons",
+    )
+
+    consumption_strategy = models.CharField(
+        max_length=8,
+        help_text="Consumption strategy",
+        choices=ConsumptionStrategy.choices,
+        default=ConsumptionStrategy.PER_SEAT,
     )
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
@@ -713,6 +928,8 @@ class Plan(AbstractPriceByTime):
         return self.slug
 
     def clean(self) -> None:
+        if self.seat_service_price and self.seat_service_price.service.type != Service.Type.SEAT:
+            raise forms.ValidationError("Seat service price must be a seat service")
 
         if not self.is_renewable and (not self.time_of_life or not self.time_of_life_unit):
             raise forms.ValidationError("If the plan is not renewable, you must set time_of_life and time_of_life_unit")
@@ -748,12 +965,14 @@ class Plan(AbstractPriceByTime):
                 "and time_of_life_unit"
             )
 
+        if self.consumption_strategy == Plan.ConsumptionStrategy.BOTH:
+            raise forms.ValidationError("Consumption strategy BOTH is not implemented yet")
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
-
-        super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class PlanTranslation(models.Model):
@@ -763,6 +982,8 @@ class PlanTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanTranslation"]
     title = models.CharField(max_length=60, help_text="Title of the plan")
     description = models.CharField(max_length=255, help_text="Description of the plan")
 
@@ -776,6 +997,8 @@ class PlanTranslation(models.Model):
 
 
 class PlanOffer(models.Model):
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanOffer"]
     original_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name="plan_offer_from")
     suggested_plan = models.ForeignKey(
         Plan,
@@ -815,12 +1038,16 @@ class PlanOfferTranslation(models.Model):
         validators=[validate_language_code],
         help_text="ISO 639-1 language code + ISO 3166-1 alpha-2 country code, e.g. en-US",
     )
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanOfferTranslation"]
     title = models.CharField(max_length=60, help_text="Title of the plan offer")
     description = models.CharField(max_length=255, help_text="Description of the plan offer")
     short_description = models.CharField(max_length=255, help_text="Short description of the plan offer")
 
 
 class Seller(models.Model):
+    if TYPE_CHECKING:
+        objects: TypedManager["Seller"]
 
     class Partner(models.TextChoices):
         INDIVIDUAL = ("INDIVIDUAL", "Individual")
@@ -855,6 +1082,8 @@ class Seller(models.Model):
 
 
 class Coupon(models.Model):
+    if TYPE_CHECKING:
+        objects: TypedManager["Coupon"]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -998,6 +1227,9 @@ def _default_pricing_ratio_explanation():
 class Bag(AbstractAmountByTime):
     """Represents a credit that can be used by a user to use a service."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["Bag"]
+
     class Status(models.TextChoices):
         RENEWAL = ("RENEWAL", "Renewal")
         CHECKING = ("CHECKING", "Checking")
@@ -1068,8 +1300,24 @@ class Bag(AbstractAmountByTime):
     )
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
 
+    seat_service_item = models.ForeignKey(
+        ServiceItem,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="ServiceItem used as seat pricing for per-seat purchases",
+        related_name="%(class)s_as_seat_service_item",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self) -> None:
+        if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
+            raise forms.ValidationError("Seat service item must be a seat service")
+
+        return super().clean()
 
     def save(self, *args, **kwargs):
         created = self.pk is None
@@ -1090,12 +1338,21 @@ class PaymentMethod(models.Model):
     Different payment methods of each academy have.
     """
 
+    if TYPE_CHECKING:
+        objects: TypedManager["PaymentMethod"]
+
+    class Visibility(models.TextChoices):
+        PUBLIC = "PUBLIC", "Public"
+        INTERNAL = "INTERNAL", "Internal"
+        HIDDEN = "HIDDEN", "Hidden"
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
     title = models.CharField(max_length=120, null=False, blank=False)
     is_backed = models.BooleanField(
         default=False,
         help_text="if this payment method is backed by real life transaction, usually backed payments are considered real income",
     )
+
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
@@ -1114,6 +1371,18 @@ class PaymentMethod(models.Model):
         default="",
         help_text="A list of country codes that represent countries that can use this payment method, comma separated",
     )
+    visibility = models.CharField(
+        max_length=10,
+        choices=Visibility,
+        default=Visibility.PUBLIC,
+        help_text="Visibility level of the payment method",
+        db_index=True,
+    )
+    deprecated = models.BooleanField(
+        default=False,
+        help_text="If true, this payment method is deprecated and cannot be used for new purchases",
+        db_index=True,
+    )
 
     def __str__(self) -> str:
         return f"{self.title} ({'Credit Card' if self.is_credit_card else 'No Credit Card'})"
@@ -1121,6 +1390,9 @@ class PaymentMethod(models.Model):
 
 class ProofOfPayment(models.Model):
     """Represents a payment made by a user."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["ProofOfPayment"]
 
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -1165,6 +1437,9 @@ class ProofOfPayment(models.Model):
 
 class Invoice(models.Model):
     """Represents a payment made by a user."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["Invoice"]
 
     class Status(models.TextChoices):
         FULFILLED = "FULFILLED", "Fulfilled"
@@ -1213,6 +1488,10 @@ class Invoice(models.Model):
         max_length=32, null=True, default=None, blank=True, help_text="Stripe id for refunding"
     )
 
+    amount_refunded = models.FloatField(
+        default=0, help_text="Amount refunded, this field will only be set when the invoice is refunded"
+    )
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
 
@@ -1244,6 +1523,9 @@ class Invoice(models.Model):
 
 class AbstractIOweYou(models.Model):
     """Common fields for all I owe you."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AbstractIOweYou"]
 
     class Status(models.TextChoices):
         FREE_TRIAL = "FREE_TRIAL", "Free trial"
@@ -1313,6 +1595,16 @@ class AbstractIOweYou(models.Model):
         help_text="Country code used for pricing ratio calculations",
     )
 
+    seat_service_item = models.ForeignKey(
+        ServiceItem,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="ServiceItem used as seat pricing for per-seat purchases",
+        related_name="%(class)s_as_seat_service_item",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1322,6 +1614,9 @@ class AbstractIOweYou(models.Model):
 
 class PlanFinancing(AbstractIOweYou):
     """Allows to financing a plan."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanFinancing"]
 
     # in this day the financing needs being paid again
     next_payment_at = models.DateTimeField(help_text="Next payment date")
@@ -1353,6 +1648,9 @@ class PlanFinancing(AbstractIOweYou):
 
     def clean(self) -> None:
         settings = get_user_settings(self.user.id)
+
+        if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
+            raise forms.ValidationError("Seat service item must be a seat service")
 
         if not self.monthly_price:
             raise forms.ValidationError(
@@ -1411,6 +1709,9 @@ class Subscription(AbstractIOweYou):
 
     _lang = "en"
 
+    if TYPE_CHECKING:
+        objects: TypedManager["Subscription"]
+
     # last time the subscription was paid
     paid_at = models.DateTimeField(help_text="Last time the subscription was paid")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
@@ -1445,10 +1746,18 @@ class Subscription(AbstractIOweYou):
         max_length=10, choices=PAY_EVERY_UNIT, default=MONTH, help_text="Pay every unit (e.g. DAY, WEEK, MONTH or YEAR)"
     )
 
+    # flag to indicate this subscription has team management/billing team
+    has_billing_team = models.BooleanField(
+        default=False, db_index=True, help_text="If true, this subscription has a billing team"
+    )
+
     def __str__(self) -> str:
         return f"{self.user.email} ({self.valid_until})"
 
     def clean(self) -> None:
+        if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
+            raise forms.ValidationError("Seat service item must be a seat service")
+
         if self.status == "FULLY_PAID":
             raise forms.ValidationError(
                 translation(
@@ -1494,6 +1803,8 @@ class Subscription(AbstractIOweYou):
 
 
 class SubscriptionServiceItem(models.Model):
+    if TYPE_CHECKING:
+        objects: TypedManager["SubscriptionServiceItem"]
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, help_text="Subscription")
     service_item = models.ForeignKey(ServiceItem, on_delete=models.CASCADE, help_text="Service item")
 
@@ -1521,8 +1832,112 @@ class SubscriptionServiceItem(models.Model):
         return str(self.service_item)
 
 
+class SubscriptionBillingTeam(models.Model):
+    """Team entity per subscription."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["SubscriptionBillingTeam"]
+
+    class ConsumptionStrategy(models.TextChoices):
+        PER_TEAM = "PER_TEAM", "Per team"
+        PER_SEAT = "PER_SEAT", "Per seat"
+
+    subscription = models.OneToOneField(Subscription, on_delete=models.CASCADE, help_text="Subscription")
+    name = models.CharField(max_length=80, help_text="Team name")
+    seats_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this billing team")
+    seats_limit = models.PositiveIntegerField(default=1, help_text="Limit of seats for this team")
+    consumption_strategy = models.CharField(
+        max_length=8,
+        help_text="Consumption strategy",
+        choices=ConsumptionStrategy.choices,
+        default=ConsumptionStrategy.PER_SEAT,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self) -> str:
+        return f"{self.subscription_id}:{self.name}"
+
+
+class SubscriptionSeat(models.Model):
+    """Seat assignment per subscription and service item (add-on).
+
+    This model maps users to the number of seats consumed within a subscription
+    for a given seat-bearing service item. Billing remains on the subscription owner;
+    this is used to distribute access/consumables to members.
+    """
+
+    if TYPE_CHECKING:
+        objects: TypedManager["SubscriptionSeat"]
+
+    billing_team = models.ForeignKey(
+        SubscriptionBillingTeam,
+        on_delete=models.CASCADE,
+        help_text="Subscription billing team",
+        null=True,
+        blank=True,
+        default=None,
+        related_name="seats",
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, help_text="Assigned user", null=True, blank=True, default=None
+    )
+    email = models.CharField(max_length=150, help_text="Email of the member (normalized)", db_index=True, default="")
+    is_active = models.BooleanField(default=True, help_text="if true, this user is able to access the subscription")
+
+    # number multiplier applied to per-member issuance from policy items
+    seat_multiplier = models.PositiveIntegerField(
+        default=1, help_text="Multiplier applied to per-member consumables issuance (>= 1)"
+    )
+
+    seat_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this seat")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["billing_team", "user"],
+                name="uniq_subscription_seat_per_user",
+                condition=Q(user__isnull=False),
+            ),
+            models.UniqueConstraint(fields=["billing_team", "email"], name="uniq_subscription_seat_per_email"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.billing_team_id}:{self.user_id}({self.seat_multiplier})"
+
+    def clean(self):
+        # normalize email
+        if self.email:
+            self.email = self.email.strip().lower()
+
+        # email is mandatory
+        if not self.email:
+            raise forms.ValidationError("Email is required for a subscription seat")
+
+        # if user is provided, ensure it matches the email
+        if self.user_id and getattr(self.user, "email", None):
+            if (self.user.email or "").strip().lower() != self.email:
+                raise forms.ValidationError("User email does not match seat email")
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+# SubscriptionSeatInvite has been removed; pending seats are managed via SubscriptionSeat with user=None and email set
+
+
 class Consumable(AbstractServiceItem):
     """This model is used to represent the units of a service that can be consumed."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["Consumable"]
 
     service_item = models.ForeignKey(
         ServiceItem,
@@ -1531,8 +1946,16 @@ class Consumable(AbstractServiceItem):
     )
 
     # if null, this is valid until resources are exhausted
-    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
-
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer", null=True, blank=True, default=None)
+    # to be able to get consumables and consume them by billing team
+    subscription_billing_team = models.ForeignKey(
+        SubscriptionBillingTeam,
+        on_delete=models.CASCADE,
+        help_text="Subscription billing team",
+        null=True,
+        blank=True,
+        default=None,
+    )
     subscription = models.ForeignKey(
         Subscription,
         on_delete=models.CASCADE,
@@ -1548,6 +1971,17 @@ class Consumable(AbstractServiceItem):
         blank=True,
         null=True,
         help_text="PlanFinancing that generated this consumable",
+    )
+
+    # link to team membership (optional)
+    subscription_seat = models.ForeignKey(
+        SubscriptionSeat,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Subscription seat associated to this consumable (if any)",
+        db_index=True,
     )
 
     # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
@@ -1593,11 +2027,12 @@ class Consumable(AbstractServiceItem):
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: Optional[dict] = None,
-    ) -> QuerySet[Consumable]:
+    ) -> QuerySet["Consumable"]:
 
         if extra is None:
             extra = {}
 
+        args = []
         param = {}
         utc_now = timezone.now()
 
@@ -1613,13 +2048,40 @@ class Consumable(AbstractServiceItem):
             )
 
         if isinstance(user, str):
-            param["user__id"] = int(user)
+            args.append(
+                Q(user__id=int(user))
+                | Q(subscription_seat__user__id=int(user), subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=int(user),
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
 
         elif isinstance(user, int):
-            param["user__id"] = user
+            args.append(
+                Q(user__id=user)
+                | Q(subscription_seat__user__id=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
 
         elif isinstance(user, User):
-            param["user"] = user
+            args.append(
+                Q(user=user)
+                | Q(subscription_seat__user=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
 
         # Service
         if service and isinstance(service, str) and not service.isdigit():
@@ -1654,7 +2116,7 @@ class Consumable(AbstractServiceItem):
             param["service_item__service__groups__permissions"] = permission
 
         return (
-            cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
+            cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
             .exclude(how_many=0)
             .order_by("id")
         )
@@ -1670,7 +2132,7 @@ class Consumable(AbstractServiceItem):
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
         extra: dict = None,
-    ) -> QuerySet[Consumable]:
+    ) -> QuerySet["Consumable"]:
 
         return cls.list(
             user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
@@ -1714,11 +2176,32 @@ class Consumable(AbstractServiceItem):
     def clean(self) -> None:
         resources = [self.event_type_set, self.mentorship_service_set, self.cohort_set]
         parent_entities = [self.subscription, self.plan_financing]
+        # support user-owned and team-owned consumables
+        owners = [self.user, self.subscription_billing_team]
+        # derive settings lang safely even if user is None (team-owned)
+        if self.user_id:
+            settings = get_user_settings(self.user.id)
+        elif self.subscription_id and getattr(self.subscription, "user_id", None):
+            settings = get_user_settings(self.subscription.user.id)
+        else:
+
+            class _Settings:
+                lang = "en"
+
+            settings = _Settings()
 
         how_many_resources_are_set = len([r for r in resources if r])
         how_many_parent_entities_are_set = len([p for p in parent_entities if p])
+        how_many_owners_are_set = len([o for o in owners if o])
 
-        settings = get_user_settings(self.user.id)
+        if how_many_owners_are_set == 0:
+            raise forms.ValidationError(
+                translation(
+                    settings.lang,
+                    en="A consumable must be associated with one owner (user or subscription billing team)",
+                    es="Un consumible debe estar asociado con un propietario (usuario o suscripción con equipo de facturación)",
+                )
+            )
 
         if how_many_resources_are_set > 1:
             raise forms.ValidationError(
@@ -1750,6 +2233,37 @@ class Consumable(AbstractServiceItem):
         if self.how_many < 0 and self.service_item.how_many >= 0:
             self.how_many = 0
 
+        # Align subscription_billing_team with seat if present
+        if self.subscription_seat:
+            seat_team = self.subscription_seat.billing_team
+            if self.subscription_billing_team is None:
+                # default to the seat billing team
+                self.subscription_billing_team = seat_team
+            elif self.subscription_billing_team_id != seat_team.id:
+                raise forms.ValidationError(
+                    translation(
+                        settings.lang,
+                        en="Subscription billing team does not match seat billing team",
+                        es="El equipo de facturación de la suscripción no coincide con el equipo del asiento",
+                    )
+                )
+
+        # Team checks using subscription seat / billing team
+        if (self.subscription_seat) and self.service_item.is_team_allowed:
+            # ensure user matches seat user when seat is present
+            if (
+                self.subscription_seat
+                and self.subscription_seat.user_id
+                and self.subscription_seat.user_id != self.user_id
+            ):
+                raise forms.ValidationError(
+                    translation(
+                        settings.lang,
+                        en="Subscription seat does not match consumable user",
+                        es="El asiento de la suscripción no coincide con el usuario del consumible",
+                    )
+                )
+
         return super().clean()
 
     def save(self, *args, **kwargs):
@@ -1763,7 +2277,19 @@ class Consumable(AbstractServiceItem):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.email}: {self.service_item.service.slug} ({self.how_many})"
+        # Be robust: user can be None (team-owned consumable) and relations may be missing in edge cases
+        if self.user_id and getattr(self.user, "email", None):
+            owner = self.user.email
+        elif self.subscription_billing_team_id:
+            owner = f"Team {self.subscription_billing_team_id}"
+        else:
+            owner = "Unassigned"
+
+        service_slug = getattr(getattr(self.service_item, "service", None), "slug", None)
+        if not service_slug:
+            service_slug = f"service_item:{self.service_item_id or 'unknown'}"
+
+        return f"{owner}: {service_slug} ({self.how_many})"
 
 
 class ConsumptionSession(models.Model):
@@ -1771,6 +2297,9 @@ class ConsumptionSession(models.Model):
         PENDING = "PENDING", "Pending"
         DONE = "DONE", "Done"
         CANCELLED = "CANCELLED", "Cancelled"
+
+    if TYPE_CHECKING:
+        objects: TypedManager["ConsumptionSession"]
 
     operation_code = models.SlugField(
         default="default", help_text="Code that identifies the operation, it could be repeated"
@@ -1956,6 +2485,9 @@ class ConsumptionSession(models.Model):
 class PlanServiceItem(models.Model):
     """M2M between plan and ServiceItem."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanServiceItem"]
+
     _lang = "en"
 
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, help_text="Plan")
@@ -1964,6 +2496,9 @@ class PlanServiceItem(models.Model):
 
 class PlanServiceItemHandler(models.Model):
     """M2M between plan and ServiceItem."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanServiceItemHandler"]
 
     handler = models.ForeignKey(PlanServiceItem, on_delete=models.CASCADE, help_text="Plan service item")
 
@@ -1999,6 +2534,9 @@ class PlanServiceItemHandler(models.Model):
 class ServiceStockScheduler(models.Model):
     """This model is used to represent the units of a service that can be consumed."""
 
+    if TYPE_CHECKING:
+        objects: TypedManager["ServiceStockScheduler"]
+
     # all this section are M2M service items, in the first case we have a query with subscription and service
     # item for schedule the renovations
     subscription_handler = models.ForeignKey(
@@ -2009,6 +2547,34 @@ class ServiceStockScheduler(models.Model):
         null=True,
         help_text="Subscription service item",
     )
+    # if the scheduler is for a seat, we need to know which seat it is
+    subscription_seat = models.ForeignKey(
+        SubscriptionSeat,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Subscription seat",
+    )
+    # it adds support to PER_TEAM consumables
+    subscription_billing_team = models.ForeignKey(
+        SubscriptionBillingTeam,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Subscription billing team",
+    )
+    # if is required PlanFinancing seats, add that field here like the subscription_seat
+    # plan_financing_seat = models.ForeignKey(
+    #     SubscriptionSeat,
+    #     on_delete=models.CASCADE,
+    #     default=None,
+    #     blank=True,
+    #     null=True,
+    #     help_text="Plan financing seat",
+    # )
+
     plan_handler = models.ForeignKey(
         PlanServiceItemHandler,
         on_delete=models.CASCADE,
@@ -2033,6 +2599,9 @@ class ServiceStockScheduler(models.Model):
 
         if how_many_resources_are_set != 1:
             raise forms.ValidationError("A ServiceStockScheduler can only be associated with one resource")
+
+        if self.subscription_seat and self.subscription_billing_team:
+            raise forms.ValidationError("A ServiceStockScheduler can only be associated with a seat or a billing team")
 
         return super().clean()
 
@@ -2065,6 +2634,9 @@ class PaymentContact(models.Model):
     null, it typically means the customer is managed under a default or
     central Stripe account.
     """
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PaymentContact"]
 
     user = models.ForeignKey(
         User,
@@ -2113,6 +2685,9 @@ class FinancialReputation(models.Model):
     If the user has a bad reputation, the user will not be able to buy services.
     """
 
+    if TYPE_CHECKING:
+        objects: TypedManager["FinancialReputation"]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="reputation", help_text="Customer")
 
     in_4geeks = models.CharField(max_length=17, choices=REPUTATION_STATUS, default=GOOD, help_text="4Geeks reputation")
@@ -2143,6 +2718,9 @@ class AcademyPaymentSettings(models.Model):
     """
     Store payment settings for an academy.
     """
+
+    if TYPE_CHECKING:
+        objects: TypedManager["AcademyPaymentSettings"]
 
     class POSVendor(models.TextChoices):
         STRIPE = "STRIPE", "Stripe"

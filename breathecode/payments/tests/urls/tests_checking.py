@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 import breathecode.activity.tasks as activity_tasks
+from breathecode.payments.models import ServiceItem
 from breathecode.payments.tests.mixins.payments_test_case import PaymentsTestCase
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
@@ -89,6 +90,7 @@ def plan_serializer(plan, service_items, service, cohorts=[], financing_options=
 
 def service_serializer(service, cohorts=[], data={}):
     return {
+        "id": service.id,
         "groups": [],
         "private": service.private,
         "slug": service.slug,
@@ -136,6 +138,7 @@ def get_serializer(
     financing_options=[],
     currency=None,
     coupons=[],
+    seat_service_item=None,
     data={},
 ):
     return {
@@ -146,6 +149,9 @@ def get_serializer(
         "amount_per_year": bag.amount_per_year,
         "expires_at": bag.expires_at,
         "is_recurrent": bag.is_recurrent,
+        "seat_service_item": (
+            service_item_serializer(seat_service_item, service, cohorts) if seat_service_item else None
+        ),
         "plans": [
             plan_serializer(plan, plan_service_items, service, cohorts, financing_options, currency) for plan in plans
         ],
@@ -222,6 +228,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "BAG",
+            "seat_service_item_id": None,
         }
 
         cases = [{}, {"type": "BAG"}]
@@ -302,6 +309,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag)
@@ -337,6 +345,214 @@ class SignalTestSuite(PaymentsTestCase):
         )
 
     """
+    🔽🔽🔽 Team seats for subscriptions (seat add-ons)
+    """
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__with_bag__type_preview__team_seats__must_be_integer(self):
+        bag = {
+            "status": "CHECKING",
+            "type": "PREVIEW",
+            "plans": [],
+            "service_items": [],
+            "seat_service_item_id": None,
+        }
+
+        currency = {"code": "USD", "name": "United States dollar"}
+        plan = {
+            "price_per_month": random.random() * 100,
+            "price_per_quarter": random.random() * 100,
+            "price_per_half": random.random() * 100,
+            "price_per_year": random.random() * 100,
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "seat_service_price_id": None,
+        }
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=currency, plan=plan)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:checking")
+        data = {"academy": 1, "type": "PREVIEW", "plans": [1], "team_seats": "five"}
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+            response = self.client.put(url, data, format="json")
+
+        json = response.json()
+        expected = {"detail": "seats-must-be-an-integer", "status_code": 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Bag unchanged
+        self.assertEqual(self.bc.database.list_of("payments.Bag"), [self.bc.format.to_dict(model.bag)])
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__with_bag__type_preview__team_seats__plan_without_seat_price(self):
+        bag = {
+            "status": "CHECKING",
+            "type": "PREVIEW",
+            "plans": [],
+            "service_items": [],
+            "seat_service_item_id": None,
+        }
+
+        currency = {"code": "USD", "name": "United States dollar"}
+        plan = {
+            "price_per_month": random.random() * 100,
+            "price_per_quarter": random.random() * 100,
+            "price_per_half": random.random() * 100,
+            "price_per_year": random.random() * 100,
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "seat_service_price_id": None,
+        }
+
+        model = self.bc.database.create(user=1, bag=bag, academy=1, currency=currency, plan=plan)
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:checking")
+        data = {"academy": 1, "type": "PREVIEW", "plans": [1], "team_seats": 3}
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+            response = self.client.put(url, data, format="json")
+
+        json = response.json()
+        expected = {"detail": "plan-not-support-teams", "status_code": 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Bag unchanged
+        self.assertEqual(self.bc.database.list_of("payments.Bag"), [self.bc.format.to_dict(model.bag)])
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test__with_bag__type_preview__team_seats__ok(self):
+        bag = {
+            "status": "CHECKING",
+            "type": "PREVIEW",
+            "plans": [],
+            "service_items": [],
+            "seat_service_item_id": None,
+        }
+
+        currency = {"code": "USD", "name": "United States dollar"}
+        # plan with prices so base amounts are > 0 and seat pricing gets added on all periods
+        plan = {
+            "price_per_month": random.random() * 100 + 10,
+            "price_per_quarter": random.random() * 100 + 10,
+            "price_per_half": random.random() * 100 + 10,
+            "price_per_year": random.random() * 100 + 10,
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "trial_duration": 0,
+            "trial_duration_unit": "MONTH",
+        }
+
+        seat_price = random.random() * 10 + 5
+        seats = random.randint(1, 5)
+
+        model = self.bc.database.create(
+            user=1,
+            bag=bag,
+            academy=1,
+            currency=currency,
+            service={"type": "SEAT"},
+            academy_service={"price_per_unit": seat_price},
+            plan=plan,
+        )
+        # Link seat price to plan
+        plan_obj = self.bc.database.get("payments.Plan", 1, dict=False)
+        academy_service = self.bc.database.get("payments.AcademyService", 1, dict=False)
+        plan_obj.seat_service_price = academy_service
+        plan_obj.save()
+
+        self.client.force_authenticate(model.user)
+
+        url = reverse_lazy("payments:checking")
+        data = {"academy": 1, "type": "PREVIEW", "plans": [1], "team_seats": seats}
+
+        token = self.bc.random.string(lower=True, upper=True, number=True, size=40)
+        with patch("rest_framework.authtoken.models.Token.generate_key", MagicMock(return_value=token)):
+            response = self.client.put(url, data, format="json")
+
+        json = response.json()
+
+        base_month = plan_obj.price_per_month
+        base_quarter = plan_obj.price_per_quarter
+        base_half = plan_obj.price_per_half
+        base_year = plan_obj.price_per_year
+        seat_service_item = ServiceItem.objects.get(service=model.service)
+
+        expected = get_serializer(
+            model.bag,
+            [plan_obj],
+            [],
+            [],
+            academy_service.service,
+            [],
+            [],
+            self.bc.database.get("payments.Currency", 1, dict=False),
+            seat_service_item=seat_service_item,
+            data={
+                "amount_per_month": base_month + seat_price * seats,
+                "amount_per_quarter": base_quarter + seat_price * seats * 3,
+                "amount_per_half": base_half + seat_price * seats * 6,
+                "amount_per_year": base_year + seat_price * seats * 12,
+                "expires_at": self.bc.datetime.to_iso_string(UTC_NOW + timedelta(minutes=60)),
+                "token": token,
+                "is_recurrent": True,
+            },
+        )
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # seat service item is created and attached to bag
+        db_bag = self.bc.database.get("payments.Bag", 1, dict=True)
+        self.assertIsNotNone(db_bag["seat_service_item_id"])
+        self.assertEqual(
+            self.bc.database.list_of("payments.Bag"),
+            [
+                {
+                    **self.bc.format.to_dict(model.bag),
+                    "amount_per_month": expected["amount_per_month"],
+                    "amount_per_quarter": expected["amount_per_quarter"],
+                    "amount_per_half": expected["amount_per_half"],
+                    "amount_per_year": expected["amount_per_year"],
+                    "expires_at": UTC_NOW + timedelta(minutes=60),
+                    "token": token,
+                    "is_recurrent": True,
+                    "currency_id": 1,
+                    "seat_service_item_id": 1,
+                }
+            ],
+        )
+        self.bc.check.calls(
+            activity_tasks.add_activity.delay.call_args_list,
+            [
+                call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            ],
+        )
+
+    """
     🔽🔽🔽 Get with one Bag, type is PREVIEW, passing type preview
     """
 
@@ -345,6 +561,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
@@ -416,6 +633,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
@@ -464,6 +682,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
@@ -512,6 +731,7 @@ class SignalTestSuite(PaymentsTestCase):
         bag = {
             "status": "CHECKING",
             "type": "PREVIEW",
+            "seat_service_item_id": None,
         }
 
         model = self.bc.database.create(user=1, bag=bag, academy=1, currency=1)
@@ -563,10 +783,14 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         academy = {"main_currency": None}
-        plan = {"is_renewable": False}
+        plan = {
+            "is_renewable": False,
+            "seat_service_price_id": None,
+        }
 
         model = self.bc.database.create(user=1, bag=bag, service_item=1, plan=plan, academy=academy)
         self.client.force_authenticate(model.user)
@@ -622,6 +846,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -634,6 +859,7 @@ class SignalTestSuite(PaymentsTestCase):
             "is_renewable": True,
             "time_of_life": 0,
             "time_of_life_unit": None,
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -725,6 +951,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -738,6 +965,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": 0,
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -857,6 +1085,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -870,6 +1099,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -985,6 +1215,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -994,6 +1225,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": 0,
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1103,6 +1335,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1112,6 +1345,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": 0,
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1226,6 +1460,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1239,6 +1474,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1360,6 +1596,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1373,6 +1610,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1467,6 +1705,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1480,6 +1719,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1601,6 +1841,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1614,6 +1855,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1710,6 +1952,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1723,6 +1966,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": 0,
             "time_of_life_unit": None,
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1821,6 +2065,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1834,6 +2079,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": 0,
             "time_of_life_unit": None,
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -1927,6 +2173,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -1940,6 +2187,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -2056,6 +2304,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -2069,6 +2318,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -2186,6 +2436,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -2199,6 +2450,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -2313,6 +2565,7 @@ class SignalTestSuite(PaymentsTestCase):
             "type": "PREVIEW",
             "plans": [],
             "service_items": [],
+            "seat_service_item_id": None,
         }
 
         currency = {"code": "USD", "name": "United States dollar"}
@@ -2326,6 +2579,7 @@ class SignalTestSuite(PaymentsTestCase):
             "time_of_life": random.randint(1, 100),
             "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
             "trial_duration": random.randint(1, 10),
+            "seat_service_price_id": None,
         }
 
         service = {
@@ -2442,6 +2696,7 @@ def test_exceding_coupon_limit(bc: Breathecode, client: APIClient):
         "plans": [],
         "service_items": [],
         "coupons": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -2455,6 +2710,7 @@ def test_exceding_coupon_limit(bc: Breathecode, client: APIClient):
         "time_of_life": random.randint(1, 100),
         "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
         "trial_duration": random.randint(1, 10),
+        "seat_service_price_id": None,
     }
 
     service = {
@@ -2569,6 +2825,7 @@ def test_providing_coupons(bc: Breathecode, client: APIClient, how_many_offers, 
         "plans": [],
         "service_items": [],
         "coupons": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -2582,6 +2839,7 @@ def test_providing_coupons(bc: Breathecode, client: APIClient, how_many_offers, 
         "time_of_life": random.randint(1, 100),
         "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
         "trial_duration": random.randint(1, 10),
+        "seat_service_price_id": None,
     }
 
     service = {
@@ -2759,6 +3017,7 @@ def test_getting_coupons(
         "time_of_life": random.randint(1, 100),
         "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
         "trial_duration": random.randint(1, 10),
+        "seat_service_price_id": None,
     }
 
     service = {
@@ -2944,6 +3203,7 @@ def test_exausted_coupons(
         "time_of_life": random.randint(1, 100),
         "time_of_life_unit": random.choice(["DAY", "WEEK", "MONTH", "YEAR"]),
         "trial_duration": random.randint(1, 10),
+        "seat_service_price_id": None,
     }
 
     service = {
@@ -3090,6 +3350,7 @@ def test_so_much_service_items(
         "type": "PREVIEW",
         "plans": [],
         "service_items": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -3102,6 +3363,7 @@ def test_so_much_service_items(
         "is_renewable": True,
         "time_of_life": 0,
         "time_of_life_unit": None,
+        "seat_service_price_id": None,
     }
 
     how_many1 = random.randint(1, 5)
@@ -3185,6 +3447,7 @@ def test_so_low_service_items(
         "type": "PREVIEW",
         "plans": [],
         "service_items": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -3197,6 +3460,7 @@ def test_so_low_service_items(
         "is_renewable": True,
         "time_of_life": 0,
         "time_of_life_unit": None,
+        "seat_service_price_id": None,
     }
 
     how_many1 = random.randint(1, 5)
@@ -3280,6 +3544,7 @@ def test_price_is_very_high(
         "type": "PREVIEW",
         "plans": [],
         "service_items": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -3292,6 +3557,7 @@ def test_price_is_very_high(
         "is_renewable": True,
         "time_of_life": 0,
         "time_of_life_unit": None,
+        "seat_service_price_id": None,
     }
 
     how_many1 = random.randint(1, 5)
@@ -3375,6 +3641,7 @@ def test_get_a_plan_with_add_ons(
         "type": "PREVIEW",
         "plans": [],
         "service_items": [],
+        "seat_service_item_id": None,
     }
 
     currency = {"code": "USD", "name": "United States dollar"}
@@ -3389,6 +3656,7 @@ def test_get_a_plan_with_add_ons(
         "time_of_life_unit": None,
         "trial_duration": 0,
         "trial_duration_unit": "MONTH",
+        "seat_service_price_id": None,
     }
 
     how_many2 = random.choice([x for x in range(5, 6)])
@@ -3546,6 +3814,7 @@ def test_checking_with_country_pricing(
         "expires_at": UTC_NOW + timedelta(days=10),
         "created_at": UTC_NOW,
         "updated_at": UTC_NOW,
+        "seat_service_item_id": None,
     }
 
     model = database.create(

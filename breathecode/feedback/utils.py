@@ -19,7 +19,7 @@ strings = {
             "survey_subject": "Una pregunta sobre tu cohort",
         },
         "academy": {
-            "title": "¿Qué tan probable es que recomiendes {} a tus amigos y familiares?",
+            "title": "Según tu experiencia hasta ahora, ¿qué tan probable es que recomiendes {} a otras personas?",
             "highest": "muy probable",
             "lowest": "poco probable",
             "survey_subject": "Una pregunta sobre la academia",
@@ -84,7 +84,7 @@ strings = {
             "survey_subject": "One question about your cohort",
         },
         "academy": {
-            "title": "How likely are you to recommend {} to your friends and family?",
+            "title": "Based on your experience so far, how likely are you to recommend {} to others?",
             "highest": "very likely",
             "lowest": "not likely",
             "survey_subject": "One question about the academy",

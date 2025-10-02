@@ -34,6 +34,7 @@ from ..views import (
     PayView,
     PlanOfferView,
     PlanView,
+    AcademyPlanServiceItemView,
     ServiceBlocked,
     ServiceItemView,
     ServiceView,
@@ -45,6 +46,11 @@ urlpatterns = [
     path("planoffer", PlanOfferView.as_view(), name="planoffer"),
     path("plan", PlanView.as_view(), name="plan"),
     path("plan/<slug:plan_slug>", PlanView.as_view(), name="plan_slug"),
+    path(
+        "academy/plan/serviceitem",
+        AcademyPlanServiceItemView.as_view(),
+        name="academy_plan_slug_serviceitem",
+    ),
     path("academy/plan", AcademyPlanView.as_view(), name="academy_plan"),
     path("academy/plan/<int:plan_id>", AcademyPlanView.as_view(), name="academy_plan_id"),
     path("academy/plan/<slug:plan_slug>", AcademyPlanView.as_view(), name="academy_plan_slug"),
@@ -138,6 +144,7 @@ urlpatterns = [
         AppConsumeView.as_view(),
         name="app_service_slug_consumptionsession_hash",
     ),
+    # payments endpoints
     path("card", CardView.as_view(), name="card"),
     path("bag", BagView.as_view(), name="bag"),
     path("bag/<int:bag_id>/coupon", BagCouponView.as_view(), name="bag_id_coupon"),
