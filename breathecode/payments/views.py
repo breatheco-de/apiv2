@@ -39,7 +39,7 @@ from breathecode.payments.actions import (
     get_discounted_price,
     max_coupons_allowed,
 )
-from breathecode.payments.caches import PlanOfferCache
+from breathecode.payments.caches import PlanOfferCache, SubscriptionCache, PlanFinancingCache
 from breathecode.payments.models import (
     AcademyService,
     Bag,
@@ -59,6 +59,7 @@ from breathecode.payments.models import (
     Seller,
     Service,
     ServiceItem,
+    PlanServiceItem,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -82,6 +83,7 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    GetAbstractIOweYouSmallSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
@@ -619,9 +621,7 @@ class ServiceItemView(APIView):
 class MeConsumableView(APIView):
 
     def get(self, request):
-        utc_now = timezone.now()
-
-        items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), user=request.user)
+        items = Consumable.list(user=request.user)
 
         mentorship_services = MentorshipServiceSet.objects.none()
         mentorship_services = filter_consumables(request, items, mentorship_services, "mentorship_service_set")
@@ -1063,13 +1063,17 @@ class MePlanFinancingChargeView(APIView):
 
 class AcademySubscriptionView(APIView):
 
-    extensions = APIViewExtensions(sort="-id", paginate=True)
+    extensions = APIViewExtensions(sort="-id", paginate=True, cache=SubscriptionCache, cache_per_user=True)
 
     @capable_of("read_subscription")
     def get(self, request, subscription_id=None, academy_id=None):
         handler = self.extensions(request)
-        lang = get_user_language(request)
 
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        lang = get_user_language(request)
         now = timezone.now()
 
         if subscription_id:
@@ -1118,7 +1122,8 @@ class AcademySubscriptionView(APIView):
             items = items.filter(user__id=int(user_id))
 
         items = handler.queryset(items)
-        serializer = GetSubscriptionSerializer(items, many=True)
+
+        serializer = GetAbstractIOweYouSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -1162,10 +1167,17 @@ class AcademySubscriptionView(APIView):
 
 class AcademyPlanFinancingView(APIView):
 
-    extensions = APIViewExtensions(sort="-id", paginate=True)
+    extensions = APIViewExtensions(sort="-id", paginate=True, cache=PlanFinancingCache, cache_per_user=True)
 
     def get(self, request, financing_id=None, academy_id=None):
         handler = self.extensions(request)
+
+        # Check cache first to avoid expensive database queries
+        cache = handler.cache.get()
+        if cache is not None:
+            logger.info(f"AcademyPlanFinancingView: Returning cached data for user {request.user.id}")
+            return cache
+
         lang = get_user_language(request)
         now = timezone.now()
 
@@ -1183,15 +1195,21 @@ class AcademyPlanFinancingView(APIView):
             serializer = GetPlanFinancingSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = PlanFinancing.objects.annotate(
-            fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED"))
-        ).filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+        # Optimize query with select_related and prefetch_related
+        items = (
+            PlanFinancing.objects.select_related("user", "plan", "currency")
+            .prefetch_related("invoices")
+            .annotate(fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED")))
+            .filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+        )
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
 
+        # Apply pagination and sorting
         items = handler.queryset(items)
-        serializer = GetPlanFinancingSerializer(items, many=True)
+
+        serializer = GetAbstractIOweYouSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -2180,7 +2198,9 @@ class ConsumableCheckoutView(APIView):
         total_items = request.data.get("how_many")
         academy = request.data.get("academy")
         country_code = request.data.get("country_code")
-        seats = request.data.get("seats")
+        is_team_allowed = request.data.get("is_team_allowed")
+        if is_team_allowed is None:
+            is_team_allowed = True
 
         if not service:
             raise ValidationException(
@@ -2226,17 +2246,6 @@ class ConsumableCheckoutView(APIView):
         if not Academy.objects.filter(id=academy).exists():
             raise ValidationException(
                 translation(lang, en="Academy not found", es="La academia no fue encontrada", slug="academy-not-found")
-            )
-
-        if seats is not None and (not isinstance(seats, int) or seats < 0):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Seats must be a positive number",
-                    es="Los asientos deben ser un número positivo",
-                    slug="seats-must-be-a-positive-number",
-                ),
-                code=400,
             )
 
         mentorship_service_set = request.data.get("mentorship_service_set")
@@ -2305,8 +2314,21 @@ class ConsumableCheckoutView(APIView):
                 code=404,
             )
 
+        if is_team_allowed not in [True, False]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="is_team_allowed must be a boolean",
+                    es="is_team_allowed debe ser un booleano",
+                    slug="is_team_allowed-must-be-a-boolean",
+                ),
+                code=400,
+            )
+
         # Seats purchase flow: increase team seats for an existing subscription
         if service.type == "SEAT":
+            seats = total_items
+
             subscription_id = request.data.get("subscription")
             if not subscription_id or not isinstance(subscription_id, int):
                 raise ValidationException(
@@ -2449,17 +2471,44 @@ class ConsumableCheckoutView(APIView):
                             ),
                         )
 
+                        service_item, _ = ServiceItem.objects.get_or_create(
+                            service=service,
+                            how_many=desired_limit,
+                            is_team_allowed=True,
+                        )
+
                         # mark subscription has billing team
                         subscription.has_billing_team = True
-                        subscription.save(update_fields=["has_billing_team"])
+                        subscription.seat_service_item = service_item
+                        subscription.save(update_fields=["has_billing_team", "seat_service_item"])
 
                         # add owner as first seat
-                        SubscriptionSeat.objects.get_or_create(
+                        seat, _ = SubscriptionSeat.objects.get_or_create(
                             billing_team=team,
                             user=subscription.user,
                             email=(subscription.user.email or "").strip().lower(),
                             defaults={"is_active": True, "seat_multiplier": 1},
                         )
+
+                        # migrate existing consumables with support for team seats
+                        existing_consumables = Consumable.objects.filter(
+                            subscription=subscription,
+                            user=subscription.user,
+                            service_item__is_team_allowed=True,
+                        )
+
+                        if plan.consumption_strategy == Plan.ConsumptionStrategy.PER_TEAM:
+                            existing_consumables.update(
+                                user=None,
+                                subscription_billing_team=team,
+                            )
+
+                        else:
+                            existing_consumables.update(
+                                subscription_seat=seat,
+                                subscription_billing_team=team,
+                            )
+
                     else:
                         # update seats limit and log
                         try:
@@ -2525,7 +2574,9 @@ class ConsumableCheckoutView(APIView):
             try:
                 s.set_language(lang)
                 s.add_contact(request.user)
-                service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=total_items)
+                service_item, _ = ServiceItem.objects.get_or_create(
+                    service=service, how_many=total_items, is_team_allowed=is_team_allowed
+                )
 
                 # keeps this inside a transaction
                 bag = Bag(
@@ -2883,20 +2934,9 @@ class PayView(APIView):
 
                 if plans := bag.plans.all():
                     for plan in plans:
-                        if plan.owner:
-                            admissions_tasks.build_profile_academy.delay(plan.owner.id, bag.user.id)
-
-                        if not plan.cohort_set or not (cohort := request.GET.get("selected_cohort")):
-                            continue
-
-                        cohort = plan.cohort_set.cohorts.filter(slug=cohort).first()
-                        if not cohort:
-                            continue
-
-                        admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
-
-                        if plan.owner != cohort.academy:
-                            admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
+                        actions.grant_student_capabilities(
+                            request.user, plan, selected_cohort=request.GET.get("selected_cohort")
+                        )
 
                 has_referral_coupons = False
                 if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
@@ -3039,6 +3079,168 @@ class AcademyPaymentMethodView(APIView):
 
         method.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanServiceItemView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        logger.info(f"AcademyPlanServiceItemView.post called by user {request.user.id}")
+        lang = get_user_language(request)
+        handler = self.extensions(request)
+
+        try:
+            request_data = request.data
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid JSON format: {str(e)}",
+                    es=f"Formato JSON inválido: {str(e)}",
+                    slug="invalid-json-format",
+                ),
+                code=400,
+            )
+
+        plan = request_data.get("plan")
+        if not plan:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="plan is required",
+                    es="plan es requerido",
+                    slug="plan-required",
+                ),
+                code=400,
+            )
+
+        plan_kwargs = {}
+        if plan and isinstance(plan, int):
+            plan_kwargs["id"] = plan
+        elif plan and isinstance(plan, str):
+            plan_kwargs["slug"] = plan
+
+        plan = Plan.objects.filter(**plan_kwargs).first()
+
+        if not plan:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan not found",
+                    es="Plan no encontrado",
+                    slug="plan-not-found",
+                ),
+                code=404,
+            )
+
+        service_item = request_data.get("service_item")
+        if not service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_item_id(s) is required",
+                    es="service_item_id(s) es requerido",
+                    slug="service-item-required",
+                ),
+                code=400,
+            )
+
+        if isinstance(service_item, int):
+            service_item_ids = [service_item]
+        elif isinstance(service_item, str):
+            if "," in service_item:
+                service_item_ids = [int(x.strip()) for x in service_item.split(",") if x.strip().isdigit()]
+            else:
+                service_item_ids = [int(service_item)]
+
+        service_items = ServiceItem.objects.filter(id__in=service_item_ids)
+        if len(service_items) != len(service_item_ids):
+            found_ids = [item.id for item in service_items]
+            missing_ids = [id for id in service_item_ids if id not in found_ids]
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Service items not found: {missing_ids}",
+                    es=f"Service items no encontrados: {missing_ids}",
+                    slug="service-item-not-found",
+                ),
+                code=404,
+            )
+
+        created_items = []
+        for service_item in service_items:
+            psi, created = PlanServiceItem.objects.get_or_create(plan=plan, service_item=service_item)
+            created_items.append(
+                {"plan_service_item_id": psi.id, "service_item_id": service_item.id, "created": created}
+            )
+
+        return handler.response(
+            {
+                "status": "ok",
+                "created_items": created_items,
+                "total_created": len([item for item in created_items if item["created"]]),
+            }
+        )
+
+    @capable_of("crud_plan")
+    def delete(self, request, academy_id=None):
+        lang = get_user_language(request)
+        handler = self.extensions(request)
+
+        try:
+            request_data = request.data
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid JSON format: {str(e)}",
+                    es=f"Formato JSON inválido: {str(e)}",
+                    slug="invalid-json-format",
+                ),
+                code=400,
+            )
+
+        plan_service_item = request_data.get("plan_service_item")
+        if not plan_service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="plan_service_item_id(s) is required",
+                    es="plan_service_item_id(s) es requerido",
+                    slug="plan-service-item-id-required",
+                ),
+                code=400,
+            )
+
+        if isinstance(plan_service_item, int):
+            plan_service_item_ids = [plan_service_item]
+        elif isinstance(plan_service_item, str):
+            if "," in plan_service_item:
+                plan_service_item_ids = [int(x.strip()) for x in plan_service_item.split(",") if x.strip().isdigit()]
+            else:
+                plan_service_item_ids = [int(plan_service_item)]
+
+        plan_service_items = PlanServiceItem.objects.filter(id__in=plan_service_item_ids)
+        if len(plan_service_items) != len(plan_service_item_ids):
+            found_ids = [item.id for item in plan_service_items]
+            missing_ids = [id for id in plan_service_item_ids if id not in found_ids]
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan service items not found: {missing_ids}",
+                    es=f"Plan service items no encontrados: {missing_ids}",
+                    slug="plan-service-item-not-found",
+                ),
+                code=404,
+            )
+
+        deleted_count = plan_service_items.count()
+        plan_service_items.delete()
+
+        return handler.response(
+            {"status": "ok", "deleted": True, "deleted_count": deleted_count, "deleted_ids": plan_service_item_ids}
+        )
 
 
 # ------------------------------

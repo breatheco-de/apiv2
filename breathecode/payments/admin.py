@@ -56,8 +56,8 @@ class CurrencyAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ("id", "slug", "owner", "private")
-    list_filter = ["owner"]
+    list_display = ("id", "slug", "type", "consumer", "owner", "private")
+    list_filter = ["owner", "type", "consumer", "private"]
     search_fields = ["slug", "title", "groups__name"]
 
 
@@ -96,13 +96,131 @@ class FinancingOptionAdmin(admin.ModelAdmin):
     list_filter = ["currency__code"]
 
 
+class PlanServiceItemInline(admin.TabularInline):
+    model = PlanServiceItem
+    extra = 0
+    autocomplete_fields = ("service_item",)
+
+
+class PlanTranslationInline(admin.StackedInline):
+    model = PlanTranslation
+    extra = 0
+
+
+class PlanOfferInline(admin.StackedInline):
+    model = PlanOffer
+    fk_name = "original_plan"
+    extra = 0
+
+
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ("id", "slug", "status", "trial_duration", "trial_duration_unit", "owner")
-    list_filter = ["trial_duration_unit", "owner", "status", "is_renewable"]
-    search_fields = ["slug"]
-    raw_id_fields = ["owner", "invites"]
-    # filter_horizontal = ("invites",)
+    list_display = (
+        "id",
+        "slug",
+        "status",
+        "is_renewable",
+        "consumption_strategy",
+        "is_onboarding",
+        "has_waiting_list",
+        "trial_duration",
+        "trial_duration_unit",
+        "owner",
+    )
+    list_filter = [
+        "status",
+        "is_renewable",
+        "consumption_strategy",
+        "is_onboarding",
+        "has_waiting_list",
+        "trial_duration_unit",
+        "time_of_life_unit",
+        "owner",
+    ]
+    search_fields = ["slug", "title"]
+    raw_id_fields = [
+        "owner",
+        "invites",
+        "seat_service_price",
+        "cohort_set",
+        "mentorship_service_set",
+        "event_type_set",
+    ]
+    filter_horizontal = ("financing_options", "add_ons")
+    list_select_related = ("owner",)
+
+    fieldsets = (
+        (
+            "Basic",
+            {
+                "fields": (
+                    "slug",
+                    "title",
+                    "status",
+                    "owner",
+                    "is_onboarding",
+                    "has_waiting_list",
+                )
+            },
+        ),
+        (
+            "Renewal & Lifetime",
+            {
+                "fields": (
+                    "is_renewable",
+                    "trial_duration",
+                    "trial_duration_unit",
+                    "time_of_life",
+                    "time_of_life_unit",
+                )
+            },
+        ),
+        (
+            "Pricing",
+            {
+                "fields": (
+                    "price_per_month",
+                    "price_per_quarter",
+                    "price_per_half",
+                    "price_per_year",
+                    "seat_service_price",
+                )
+            },
+        ),
+        (
+            "Consumption",
+            {"fields": ("consumption_strategy",)},
+        ),
+        (
+            "Bundles & Sets",
+            {
+                "fields": (
+                    "cohort_set",
+                    "mentorship_service_set",
+                    "event_type_set",
+                )
+            },
+        ),
+        (
+            "Relations",
+            {
+                "fields": (
+                    "financing_options",
+                    "add_ons",
+                    "invites",
+                )
+            },
+        ),
+        (
+            "Advanced",
+            {
+                "classes": ("collapse",),
+                "fields": ("pricing_ratio_exceptions",),
+            },
+        ),
+    )
+
+    inlines = [PlanServiceItemInline, PlanTranslationInline, PlanOfferInline]
 
 
 @admin.register(PlanTranslation)

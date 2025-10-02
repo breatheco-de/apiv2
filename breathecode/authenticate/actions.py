@@ -748,10 +748,10 @@ def accept_invite(accepting_ids=None, user=None):
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None and (role := role.upper()) in ["TEACHER", "ASSISTANT", "REVIEWER", "STUDENT"]:
-                cu = CohortUser(user=user, cohort=invite.cohort, role_id=role, educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role_id=role.lower(), educational_status="ACTIVE")
                 cu.save()
             elif cu is None:
-                cu = CohortUser(user=user, cohort=invite.cohort, role_id="STUDENT", educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role_id="student", educational_status="ACTIVE")
                 cu.save()
 
         if user is not None and invite.user is None:
@@ -808,6 +808,7 @@ JWT_LIFETIME = 10
 
 def accept_invite_action(data=None, token=None, lang="en"):
     from breathecode.payments import tasks as payments_tasks
+    from breathecode.payments import actions as payments_actions
     from breathecode.payments.models import Bag, Invoice, Plan
 
     if data is None:
@@ -876,14 +877,22 @@ def accept_invite_action(data=None, token=None, lang="en"):
         profile.status = "ACTIVE"
         profile.save()
 
+    if invite.subscription_seat is not None:
+        if invite.subscription_seat.user is None:
+            invite.subscription_seat.user = user
+            invite.subscription_seat.save()
+
+        for plan in invite.subscription_seat.billing_team.plans.all():
+            payments_actions.grant_student_capabilities(user, plan)
+
     if invite.cohort is not None:
         role = "student"
         if invite.role is not None and invite.role.slug != "student":
-            role = invite.role.slug.upper()
+            role = invite.role.slug.lower()
 
         cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
         if cu is None:
-            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
+            cu = CohortUser(user=user, cohort=invite.cohort, role_id=role)
             cu.save()
 
         plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()

@@ -16,6 +16,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
 from rest_framework.request import Request
+from breathecode.admissions import tasks as admissions_tasks
 
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_user_settings
@@ -408,6 +409,16 @@ class BagHandler:
                         slug="service-item-malformed",
                     )
 
+                if "is_team_allowed" in item and not isinstance(item["is_team_allowed"], bool):
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en="The service item only accepts boolean type for is_team_allowed",
+                            es="El service item solo acepta el tipo booleano para is_team_allowed",
+                        ),
+                        slug="service-item-is-team-allowed-malformed",
+                    )
+
     def _get_service_items_that_not_found(self):
         if isinstance(self.service_items, list):
             for service_item in self.service_items:
@@ -484,7 +495,11 @@ class BagHandler:
                 args, kwargs = self._lookups(service_item["service"])
 
                 service = Service.objects.filter(*args, **kwargs).first()
-                service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=service_item["how_many"])
+                service_item, _ = ServiceItem.objects.get_or_create(
+                    service=service,
+                    how_many=service_item["how_many"],
+                    is_team_allowed=service_item.get("is_team_allowed", True),
+                )
                 self.bag.service_items.add(service_item)
 
     def _add_plans_to_bag(self):
@@ -564,7 +579,7 @@ class BagHandler:
 
         plan: Plan | None = self.bag.plans.first()
         service_item, _ = ServiceItem.objects.get_or_create(
-            service=plan.seat_service_price.service, how_many=seats, is_renewable=False
+            service=plan.seat_service_price.service, how_many=seats, is_renewable=False, is_team_allowed=True
         )
 
         self.bag.seat_service_item = service_item
@@ -2016,6 +2031,10 @@ def create_seat(email: str, user: User | None, seat_multiplier: int, billing_tea
             lang,
         )
 
+    else:
+        for plan in seat.billing_team.subscription.plans.all():
+            grant_student_capabilities(user, plan)
+
     # create consumables unless shared per team
     strategy = getattr(
         billing_team,
@@ -2075,6 +2094,10 @@ def replace_seat(
             subscription_seat,
             lang,
         )
+
+    else:
+        for plan in subscription_seat.billing_team.subscription.plans.all():
+            grant_student_capabilities(to_user, plan)
 
     # create consumables unless shared per team
     strategy = getattr(
@@ -2153,3 +2176,20 @@ def validate_seats_limit(
             ),
             code=400,
         )
+
+
+def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional[str] = None):
+    if plan.owner:
+        admissions_tasks.build_profile_academy.delay(plan.owner.id, user.id)
+
+    if not plan.cohort_set or not selected_cohort:
+        return
+
+    cohort = plan.cohort_set.cohorts.filter(slug=selected_cohort).first()
+    if not cohort:
+        return
+
+    admissions_tasks.build_cohort_user.delay(cohort.id, user.id)
+
+    if plan.owner != cohort.academy:
+        admissions_tasks.build_profile_academy.delay(cohort.academy.id, user.id)

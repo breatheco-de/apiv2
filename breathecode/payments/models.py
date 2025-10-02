@@ -369,6 +369,9 @@ class ServiceItem(AbstractServiceItem):
                         _("You cannot update the following fields: %(fields)s") % {"fields": ", ".join(immutable_diffs)}
                     )
 
+        if self.service.type == Service.Type.SEAT:
+            self.is_team_allowed = True
+
         # Universal rule: allow -1 (infinite), otherwise must be >= 0
         if self.how_many < -1 or self.how_many == 0:
             raise forms.ValidationError(_("how_many must be -1 (infinite) or greater than 0"))
@@ -382,7 +385,8 @@ class ServiceItem(AbstractServiceItem):
         raise forms.ValidationError("You cannot delete a service item")
 
     def __str__(self) -> str:
-        return f"{self.service.slug} ({self.how_many})"
+        # Include a marker if this service item supports teams
+        return f"{self.service.slug} ({self.how_many}){' [team]' if self.is_team_allowed else ''}"
 
     # Helper methods for team management
     def team_members_qs_for_subscription(self, subscription: "Subscription") -> QuerySet["SubscriptionSeat"]:
@@ -2050,22 +2054,37 @@ class Consumable(AbstractServiceItem):
         if isinstance(user, str):
             args.append(
                 Q(user__id=int(user))
-                | Q(subscription_seat__user__id=int(user))
-                | Q(user__isnull=True, subscription_billing_team__seats__user__id=int(user))
+                | Q(subscription_seat__user__id=int(user), subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=int(user),
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
             )
 
         elif isinstance(user, int):
             args.append(
                 Q(user__id=user)
-                | Q(subscription_seat__user__id=user)
-                | Q(user__isnull=True, subscription_billing_team__seats__user__id=user)
+                | Q(subscription_seat__user__id=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
             )
 
         elif isinstance(user, User):
             args.append(
                 Q(user=user)
-                | Q(subscription_seat__user=user)
-                | Q(user__isnull=True, subscription_billing_team__seats__user=user)
+                | Q(subscription_seat__user=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
             )
 
         # Service
@@ -2101,7 +2120,7 @@ class Consumable(AbstractServiceItem):
             param["service_item__service__groups__permissions"] = permission
 
         return (
-            cls.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
+            cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
             .exclude(how_many=0)
             .order_by("id")
         )

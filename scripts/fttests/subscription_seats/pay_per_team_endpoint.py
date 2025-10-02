@@ -1,9 +1,9 @@
-"""Functional tests for paying a PER_SEAT plan with team seats.
+"""Functional tests for paying a PER_TEAM plan end-to-end.
 
 This script validates:
 - Plan checks and environment validation
-- Payment and subscription creation including seat configuration
-- Owner consumables and seat-based consumables issuance (PER_SEAT)
+- Payment and subscription creation
+- Owner and team consumable issuance under PER_TEAM
 - Seat lifecycle operations
 
 It relies on FTT_* environment variables and polls for async completion.
@@ -24,8 +24,10 @@ PER_SEAT_PLAN = "4geeks-premium"
 PER_TEAM_PLAN = "hack-30-machines-in-30-days"
 ASSET_SLUG = "brute-forcelab-lumi"
 
-TOKEN1 = os.getenv("FTT_USER_TOKEN1", "")
-TOKEN2 = os.getenv("FTT_USER_TOKEN2", "")
+# we switch the tokens to do not collide with pay_per_seat_endpoint
+TOKEN1 = os.getenv("FTT_USER_TOKEN3", "")
+TOKEN2 = os.getenv("FTT_USER_TOKEN4", "")
+
 academy = os.getenv("FTT_ACADEMY", "")
 pay_request = api.pay(token=TOKEN1, academy=academy)
 put_card_request = api.card(token=TOKEN1, academy=academy)
@@ -57,7 +59,7 @@ def get_subscription_id(slug: str) -> int | None:
 
 
 def get_subscription_ids_from_consumable_list(res: requests.Response) -> requests.Response:
-    """Collect subscription ids present in the consumables response for gating tests."""
+    """Collect subscription ids found within the consumables response for gating tests."""
     json_res = res.json()
     consumables = []
 
@@ -71,25 +73,29 @@ def get_subscription_ids_from_consumable_list(res: requests.Response) -> request
 
 
 def setup() -> None:
-    """Validate environment and PER_SEAT plan preconditions before running tests."""
+    """Validate environment and PER_TEAM plan preconditions before running tests."""
     assert_env_vars(
         ["FTT_API_URL", "FTT_USER_TOKEN1", "FTT_USER_TOKEN2", "FTT_ACADEMY", "FTT_ACADEMY_SLUG"]
     )  # required
     base = os.environ["FTT_API_URL"].rstrip("/")
 
-    sub_id = get_subscription_id(PER_SEAT_PLAN)
+    sub_id = get_subscription_id(PER_TEAM_PLAN)
     assert (
         sub_id is None
-    ), f"Subscription to `{PER_SEAT_PLAN}` found, delete it on {base}/admin/payments/subscription/{sub_id}/delete/"
+    ), f"Subscription to `{PER_TEAM_PLAN}` found, delete it on {base}/admin/payments/subscription/{sub_id}/delete/"
 
-    plan = get_plan_request(PER_SEAT_PLAN)
+    plan = get_plan_request(PER_TEAM_PLAN)
     assert_response(plan)
     json_plan = plan.json()
+
     assert any(
         [x for x in json_plan.get("service_items", []) if x.get("is_team_allowed")]
     ), "No team allowed service item found"
+    assert any(
+        [x for x in json_plan.get("service_items", []) if x.get("is_team_allowed") is False]
+    ), "No service item for subscription owner found"
     assert "consumption_strategy" in json_plan, "consumption_strategy not found in response"
-    assert json_plan.get("consumption_strategy") == "PER_SEAT", "consumption_strategy is not PER_SEAT"
+    assert json_plan.get("consumption_strategy") == "PER_TEAM", "consumption_strategy is not PER_TEAM"
 
     assert "seat_service_price" in json_plan, "seat_service_price not found in response"
     assert json_plan.get("seat_service_price") is not None, "seat_service_price is None"
@@ -124,7 +130,7 @@ def assert_response(res: requests.Response) -> None:
 
 
 def test_checking_works_properly_with_team_seats(plan_id: int) -> None:
-    """Preview a PER_SEAT plan with team seats and assert seat service item is present."""
+    """Preview a PER_TEAM plan with team seats and assert seat service item is present."""
 
     data = {"team_seats": 3, "type": "PREVIEW", "plans": [plan_id]}
     res = checking_request(data)
@@ -148,7 +154,7 @@ def test_set_the_payment_card(**ctx) -> None:
 
 
 def test_pay_a_plan_with_seats(bag_token: str, **ctx) -> None:
-    """Pay the PER_SEAT plan and wait for subscription creation."""
+    """Pay the PER_TEAM plan with seats and wait for subscription creation."""
     data = {"token": bag_token, "chosen_period": "MONTH"}
     res = pay_request(data)
     assert_response(res)
@@ -162,7 +168,7 @@ def test_pay_a_plan_with_seats(bag_token: str, **ctx) -> None:
     attempts = 0
     while attempts < 10:
         time.sleep(10)
-        if subscription_id := get_subscription_id(PER_SEAT_PLAN):
+        if subscription_id := get_subscription_id(PER_TEAM_PLAN):
             return {"subscription_id": subscription_id}
         attempts += 1
 
@@ -180,21 +186,25 @@ def get_owner_consumables(subscription_id: int) -> requests.Response:
             for item in y["items"]:
                 if item["subscription"] == subscription_id:
                     consumables.append(item)
+
     return consumables
 
 
 def test_owner_consumables(subscription_id: int, **ctx):
-    """Assert owner consumables exist; expect both owner- and seat-level entries."""
+    """After creation, assert both owner and team consumables appear for the owner view."""
     attempts = 0
     while attempts < 20:
         time.sleep(10)
         consumables = get_owner_consumables(subscription_id)
         if consumables:
-            assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
-            assert any([x["subscription_seat"] is None for x in consumables]), "Owner consumables were not issued"
+            assert any([x["user"] is not None for x in consumables]), "There are no consumables issued to the owner"
+            assert any([x["user"] is None for x in consumables]), "There are not consumables issued to the team"
             assert any(
-                [x["subscription_seat"] is not None for x in consumables]
-            ), "Owner seat consumables were not issued"
+                [x["subscription_billing_team"] is None for x in consumables]
+            ), "Owner consumables were not issued"
+            assert any(
+                [x["subscription_billing_team"] is not None for x in consumables]
+            ), "Billing team consumables were not issued"
             return
         attempts += 1
 
@@ -208,7 +218,7 @@ def test_owner_can_read_lesson(**ctx):
 
 
 def test_billing_team_exists(subscription_id: int, team_seats: int, **ctx):
-    """Confirm billing team exists and seats_limit matches the expected seats."""
+    """Confirm billing team exists and seats_limit matches the requested seats."""
     res = get_billing_team_request(subscription_id)
     assert_response(res)
     json_res = res.json()
@@ -216,7 +226,7 @@ def test_billing_team_exists(subscription_id: int, team_seats: int, **ctx):
 
 
 def test_owner_seat_exists(subscription_id: int, **ctx):
-    """Ensure the owner's seat exists and is assigned to the owner user."""
+    """Ensure the owner's seat exists and belongs to the owner."""
     res = get_user1_me_request()
     assert_response(res)
     json_res = res.json()
@@ -319,17 +329,17 @@ def get_user2_consumables(subscription_id: int) -> requests.Response:
 
 
 def test_user2_consumables(subscription_id: int, **ctx):
-    """Assert user2 receives seat-based consumables (subscription seat present)."""
+    """Assert user2 receives team-owned consumables (user None, billing team set)."""
     attempts = 0
     while attempts < 20:
         time.sleep(10)
         consumables = get_user2_consumables(subscription_id)
         if consumables:
-            assert all([x["user"] is not None for x in consumables]), "Consumables were issued without user"
+            assert all([x["user"] is None for x in consumables]), "Consumables were issued without user"
             assert all(
-                [x["subscription_seat"] is not None for x in consumables]
-            ), "Consumables related to user2 were issued without subscription seat"
-            return
+                [x["subscription_billing_team"] is not None for x in consumables]
+            ), "Billing team consumables were not issued"
+            return consumables
         attempts += 1
 
     assert 0, "Consumables were not created"
