@@ -331,6 +331,7 @@ ROLES = [
             "read_syllabus",
             "read_assignment",
             "read_single_cohort",
+            "read_asset",
             "read_my_academy",
             "read_all_cohort",
             "crud_activity",
@@ -487,7 +488,14 @@ def extend_roles(roles: list[RoleType]) -> None:
             "slug": "syllabus_coordinator",
             "name": "Syllabus Coordinator",
             "caps": extend(roles, ["staff", "content_writer"])
-            + ["crud_syllabus", "crud_certificate", "crud_media", "crud_technology", "read_freelancer_bill", "crud_freelancer_bill"],
+            + [
+                "crud_syllabus",
+                "crud_certificate",
+                "crud_media",
+                "crud_technology",
+                "read_freelancer_bill",
+                "crud_freelancer_bill",
+            ],
         }
     )
     roles.append(

@@ -46,6 +46,7 @@ def bag_item(data={}):
         "amount_per_quarter": 0.0,
         "amount_per_half": 0.0,
         "amount_per_year": 0.0,
+        "seat_service_item_id": None,
         "currency_id": 0,
         "status": "CHECKING",
         "type": "CHARGE",
@@ -79,6 +80,7 @@ def invoice_item(data={}):
         "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "amount_refunded": 0.0,
         **data,
     }
 

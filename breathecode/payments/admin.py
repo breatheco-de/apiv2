@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -41,6 +41,8 @@ from breathecode.payments.models import (
     ServiceTranslation,
     Subscription,
     SubscriptionServiceItem,
+    SubscriptionSeat,
+    SubscriptionBillingTeam,
 )
 
 # Register your models here.
@@ -54,8 +56,8 @@ class CurrencyAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ("id", "slug", "owner", "private")
-    list_filter = ["owner"]
+    list_display = ("id", "slug", "type", "consumer", "owner", "private")
+    list_filter = ["owner", "type", "consumer", "private"]
     search_fields = ["slug", "title", "groups__name"]
 
 
@@ -68,8 +70,8 @@ class ServiceTranslationAdmin(admin.ModelAdmin):
 
 @admin.register(ServiceItem)
 class ServiceItemAdmin(admin.ModelAdmin):
-    list_display = ("id", "unit_type", "how_many", "service")
-    list_filter = ["service__owner"]
+    list_display = ("id", "unit_type", "how_many", "is_team_allowed", "service")
+    list_filter = ["service__owner", "is_team_allowed"]
     search_fields = [
         "service__slug",
         "service__title",
@@ -94,13 +96,131 @@ class FinancingOptionAdmin(admin.ModelAdmin):
     list_filter = ["currency__code"]
 
 
+class PlanServiceItemInline(admin.TabularInline):
+    model = PlanServiceItem
+    extra = 0
+    autocomplete_fields = ("service_item",)
+
+
+class PlanTranslationInline(admin.StackedInline):
+    model = PlanTranslation
+    extra = 0
+
+
+class PlanOfferInline(admin.StackedInline):
+    model = PlanOffer
+    fk_name = "original_plan"
+    extra = 0
+
+
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ("id", "slug", "status", "trial_duration", "trial_duration_unit", "owner")
-    list_filter = ["trial_duration_unit", "owner", "status", "is_renewable"]
-    search_fields = ["slug"]
-    raw_id_fields = ["owner", "invites"]
-    # filter_horizontal = ("invites",)
+    list_display = (
+        "id",
+        "slug",
+        "status",
+        "is_renewable",
+        "consumption_strategy",
+        "is_onboarding",
+        "has_waiting_list",
+        "trial_duration",
+        "trial_duration_unit",
+        "owner",
+    )
+    list_filter = [
+        "status",
+        "is_renewable",
+        "consumption_strategy",
+        "is_onboarding",
+        "has_waiting_list",
+        "trial_duration_unit",
+        "time_of_life_unit",
+        "owner",
+    ]
+    search_fields = ["slug", "title"]
+    raw_id_fields = [
+        "owner",
+        "invites",
+        "seat_service_price",
+        "cohort_set",
+        "mentorship_service_set",
+        "event_type_set",
+    ]
+    filter_horizontal = ("financing_options", "add_ons")
+    list_select_related = ("owner",)
+
+    fieldsets = (
+        (
+            "Basic",
+            {
+                "fields": (
+                    "slug",
+                    "title",
+                    "status",
+                    "owner",
+                    "is_onboarding",
+                    "has_waiting_list",
+                )
+            },
+        ),
+        (
+            "Renewal & Lifetime",
+            {
+                "fields": (
+                    "is_renewable",
+                    "trial_duration",
+                    "trial_duration_unit",
+                    "time_of_life",
+                    "time_of_life_unit",
+                )
+            },
+        ),
+        (
+            "Pricing",
+            {
+                "fields": (
+                    "price_per_month",
+                    "price_per_quarter",
+                    "price_per_half",
+                    "price_per_year",
+                    "seat_service_price",
+                )
+            },
+        ),
+        (
+            "Consumption",
+            {"fields": ("consumption_strategy",)},
+        ),
+        (
+            "Bundles & Sets",
+            {
+                "fields": (
+                    "cohort_set",
+                    "mentorship_service_set",
+                    "event_type_set",
+                )
+            },
+        ),
+        (
+            "Relations",
+            {
+                "fields": (
+                    "financing_options",
+                    "add_ons",
+                    "invites",
+                )
+            },
+        ),
+        (
+            "Advanced",
+            {
+                "classes": ("collapse",),
+                "fields": ("pricing_ratio_exceptions",),
+            },
+        ),
+    )
+
+    inlines = [PlanServiceItemInline, PlanTranslationInline, PlanOfferInline]
 
 
 @admin.register(PlanTranslation)
@@ -140,6 +260,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "cohort_set",
         "event_type_set",
         "mentorship_service_set",
+        "subscription_billing_team",
+        "subscription_seat",
     ]
     actions = [grant_service_permissions]
 
@@ -194,6 +316,34 @@ class SubscriptionAdmin(admin.ModelAdmin):
 class SubscriptionServiceItemAdmin(admin.ModelAdmin):
     list_display = ("id", "subscription", "service_item")
     list_filter = ["subscription__user__email", "subscription__user__first_name", "subscription__user__last_name"]
+
+
+@admin.register(SubscriptionSeat)
+class SubscriptionSeatAdmin(admin.ModelAdmin):
+    list_display = ("id", "billing_team", "email", "user", "seat_multiplier")
+    list_filter = [
+        "billing_team__subscription__user__email",
+        "billing_team__subscription__user__first_name",
+        "billing_team__subscription__user__last_name",
+    ]
+    search_fields = [
+        "billing_team__subscription__id",
+        "email",
+        "user__email",
+    ]
+    raw_id_fields = ["billing_team", "user"]
+
+
+# SubscriptionSeatInvite is deprecated in favor of pending SubscriptionSeat (email-only)
+
+
+@admin.register(SubscriptionBillingTeam)
+class SubscriptionBillingTeamAdmin(admin.ModelAdmin):
+    list_display = ("id", "subscription", "name")
+    search_fields = ["subscription__id", "name"]
+
+
+# BillingTeamMembership removed; managed via SubscriptionSeat
 
 
 def renew_plan_financing_consumables(modeladmin, request, queryset):
@@ -329,13 +479,81 @@ def renew_consumables(modeladmin, request, queryset):
 
 @admin.register(ServiceStockScheduler)
 class ServiceStockSchedulerAdmin(admin.ModelAdmin):
-    list_display = ("id", "subscription", "service_item", "plan_financing", "valid_until")
-    search_fields = [
-        "subscription_handler__subscription__user__email",
-        "plan_handler__subscription__user__email",
-        "plan_handler__plan_financing__user__email",
+    list_display = (
+        "id",
+        "subscription",
+        "plan_financing",
+        "subscription_billing_team",
+        "subscription_seat",
+        "consumables_count",
+        "valid_until",
+    )
+    list_filter = [
+        "valid_until",
+        "subscription_billing_team",
+        "subscription_seat",
+        "subscription_handler__subscription__status",
+        "plan_handler__subscription__status",
+        "plan_handler__plan_financing__status",
     ]
+    search_fields = [
+        "subscription_handler__subscription__id",
+        "subscription_handler__subscription__user__email",
+        "subscription_handler__subscription__user__first_name",
+        "subscription_handler__subscription__user__last_name",
+        "plan_handler__subscription__id",
+        "plan_handler__subscription__user__email",
+        "plan_handler__subscription__user__first_name",
+        "plan_handler__subscription__user__last_name",
+        "plan_handler__plan_financing__id",
+        "plan_handler__plan_financing__user__email",
+        "plan_handler__plan_financing__user__first_name",
+        "plan_handler__plan_financing__user__last_name",
+        "subscription_seat__email",
+        "subscription_seat__user__email",
+        "subscription_billing_team__name",
+    ]
+    raw_id_fields = [
+        "subscription_handler",
+        "plan_handler",
+        "subscription_billing_team",
+        "subscription_seat",
+    ]
+    # Use autocomplete to avoid loading all consumables in memory and reduce cursor usage
+    autocomplete_fields = ("consumables",)
+    list_select_related = (
+        "subscription_handler__subscription",
+        "subscription_handler__subscription__user",
+        "subscription_handler__service_item__service",
+        "plan_handler__subscription",
+        "plan_handler__subscription__user",
+        "plan_handler__plan_financing",
+        "plan_handler__plan_financing__user",
+        "plan_handler__handler__service_item__service",
+        "subscription_seat__user",
+        "subscription_billing_team",
+    )
+    date_hierarchy = "valid_until"
     actions = [renew_consumables]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Annotate consumables count to avoid N+1 and prefetch M2M for detail views
+        # NOTE: Avoid prefetch_related("consumables") here to prevent server-side cursor reuse issues
+        # in some deployments. The changelist uses the annotated count; the change form will load
+        # the M2M widget query separately.
+        return qs.annotate(consumables_count=Count("consumables")).select_related(
+            "subscription_handler__subscription",
+            "subscription_handler__subscription__user",
+            "subscription_handler__service_item__service",
+            "plan_handler__subscription",
+            "plan_handler__subscription__user",
+            "plan_handler__plan_financing",
+            "plan_handler__plan_financing__user",
+            "plan_handler__handler__service_item__service",
+            "subscription_seat__user",
+            "subscription_billing_team",
+        )
 
     def subscription(self, obj):
         if obj.subscription_handler:
@@ -344,16 +562,13 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         if obj.plan_handler:
             return obj.plan_handler.subscription
 
-    def service_item(self, obj):
-        if obj.subscription_handler:
-            return obj.subscription_handler.handler.service_item
-
-        if obj.plan_handler:
-            return obj.plan_handler.handler.service_item
-
     def plan_financing(self, obj):
         if obj.plan_handler:
             return obj.plan_handler.plan_financing
+
+    def consumables_count(self, obj):
+        # Use annotated value if available to avoid extra queries
+        return getattr(obj, "consumables_count", None) or obj.consumables.count()
 
 
 @admin.register(PaymentContact)

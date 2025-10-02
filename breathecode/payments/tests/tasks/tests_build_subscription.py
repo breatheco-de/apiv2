@@ -41,6 +41,8 @@ def subscription_item(data={}):
         "externally_managed": False,
         "country_code": "",
         "currency_id": 1,
+        "seat_service_item_id": None,
+        "has_billing_team": False,
         "conversion_info": None,
         **data,
     }
@@ -824,7 +826,7 @@ def test_build_subscription_with_different_chosen_periods(
         {
             "conversion_info": None,
             "academy_id": 1,
-            "paid_at": model.invoice.paid_at.replace(tzinfo=dt_timezone.utc),
+            "paid_at": model.invoice.paid_at,
             "valid_until": None,
             "next_payment_at": (utc_now + relativedelta(months=expected_months)).replace(tzinfo=dt_timezone.utc),
             "pay_every": expected_pay_every,
@@ -840,6 +842,8 @@ def test_build_subscription_with_different_chosen_periods(
             "user_id": 1,
             "country_code": "",
             "currency_id": 1,
+            "seat_service_item_id": None,
+            "has_billing_team": False,
         }
     ]
 

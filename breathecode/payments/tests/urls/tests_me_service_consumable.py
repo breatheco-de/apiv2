@@ -107,6 +107,13 @@ def serialize_consumable(consumable, data={}):
         "id": consumable.id,
         "unit_type": consumable.unit_type,
         "valid_until": consumable.valid_until,
+        "subscription_seat": consumable.subscription_seat.id if consumable.subscription_seat else None,
+        "subscription_billing_team": (
+            consumable.subscription_billing_team.id if consumable.subscription_billing_team else None
+        ),
+        "user": consumable.user.id if consumable.user else None,
+        "plan_financing": consumable.plan_financing.id if consumable.plan_financing else None,
+        "subscription": consumable.subscription.id if consumable.subscription else None,
         **data,
     }
 
@@ -1426,6 +1433,11 @@ class TestSignal(LegacyAPITestCase):
                                 "id": None,
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -1445,6 +1457,11 @@ class TestSignal(LegacyAPITestCase):
                                 "id": None,
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -1464,6 +1481,11 @@ class TestSignal(LegacyAPITestCase):
                                 "id": None,
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -1639,6 +1661,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand1 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -1658,6 +1685,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand2 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -1677,6 +1709,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand3 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -1866,6 +1903,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand1 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -1885,6 +1927,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand2 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -1904,6 +1951,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand3 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -2078,6 +2130,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand1 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -2097,6 +2154,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand2 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -2116,6 +2178,11 @@ class TestSignal(LegacyAPITestCase):
                                 "how_many": rand3 * (1 + n),
                                 "unit_type": "UNIT",
                                 "valid_until": None,
+                                "plan_financing": None,
+                                "subscription": None,
+                                "subscription_seat": None,
+                                "subscription_billing_team": None,
+                                "user": model.user.id,
                             }
                             for n in range(3)
                         ],
@@ -2305,6 +2372,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -2321,6 +2393,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -2337,6 +2414,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -2536,6 +2618,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -2552,6 +2639,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -2568,6 +2660,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -2773,6 +2870,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -2789,6 +2891,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -2805,6 +2912,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -3008,6 +3120,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -3024,6 +3141,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],
@@ -3040,6 +3162,11 @@ class TestSignal(LegacyAPITestCase):
                             "id": None,
                             "unit_type": "UNIT",
                             "valid_until": None,
+                            "plan_financing": None,
+                            "subscription": None,
+                            "subscription_seat": None,
+                            "subscription_billing_team": None,
+                            "user": model.user.id,
                         }
                         for n in range(3)
                     ],

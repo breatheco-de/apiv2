@@ -11,6 +11,7 @@ from rest_framework.test import APIClient
 
 import breathecode.activity.tasks as activity_tasks
 from breathecode.payments.actions import apply_pricing_ratio
+from breathecode.payments.models import SubscriptionBillingTeam
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 from ..mixins import PaymentsTestCase
@@ -40,6 +41,10 @@ def format_consumable_item(data={}):
         "user_id": 0,
         "valid_until": None,
         "sort_priority": 1,
+        "subscription_id": None,
+        "subscription_seat_id": None,
+        "plan_financing_id": None,
+        "subscription_billing_team_id": None,
         **data,
     }
 
@@ -53,6 +58,7 @@ def format_bag_item(data={}):
         "amount_per_year": 0.0,
         "chosen_period": "NO_SET",
         "currency_id": 1,
+        "seat_service_item_id": None,
         "expires_at": None,
         "how_many_installments": 0,
         "id": 1,
@@ -157,7 +163,7 @@ def get_discounted_price(academy_service, num_items, country_code=None, currency
 
 
 @pytest.fixture(autouse=True)
-def setup(monkeypatch):
+def setup(db, monkeypatch):
     monkeypatch.setattr(activity_tasks.add_activity, "delay", MagicMock())
     yield
 
@@ -777,7 +783,7 @@ class SignalTestSuite(PaymentsTestCase):
         json = response.json()
 
         amount, _, _ = get_discounted_price(model.academy_service, how_many)
-        amount = math.ceil(amount)
+        amount = amount
         expected = get_serializer(
             model.currency,
             model.user,
@@ -786,58 +792,46 @@ class SignalTestSuite(PaymentsTestCase):
             },
         )
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert json == expected
+        assert response.status_code == status.HTTP_201_CREATED
 
-        self.assertEqual(self.bc.database.list_of("payments.Bag"), [format_bag_item()])
-        self.assertEqual(
-            self.bc.database.list_of("payments.Invoice"),
-            [
-                format_invoice_item(
-                    {
-                        "stripe_id": "1",
-                        "amount": amount,
-                    }
-                ),
-            ],
-        )
-        self.assertEqual(
-            self.bc.database.list_of("payments.Consumable"),
-            [
-                format_consumable_item(
-                    data={
-                        "mentorship_service_set_id": 1,
-                        "service_item_id": 1,
-                        "user_id": 1,
-                        "how_many": how_many,
-                    }
-                ),
-            ],
-        )
-        self.assertEqual(
-            self.bc.database.list_of("authenticate.UserSetting"),
-            [
-                format_user_setting({"lang": "en"}),
-            ],
-        )
+        assert self.bc.database.list_of("payments.Bag") == [format_bag_item()]
+        assert self.bc.database.list_of("payments.Invoice") == [
+            format_invoice_item(
+                {
+                    "stripe_id": "1",
+                    "amount": amount,
+                }
+            )
+        ]
+        assert self.bc.database.list_of("payments.Consumable") == [
+            format_consumable_item(
+                data={
+                    "mentorship_service_set_id": 1,
+                    "subscription_id": None,
+                    "subscription_seat_id": None,
+                    "plan_financing_id": None,
+                    "service_item_id": 1,
+                    "user_id": 1,
+                    "how_many": how_many,
+                }
+            ),
+        ]
+        assert self.bc.database.list_of("authenticate.UserSetting") == [
+            format_user_setting({"lang": "en"}),
+        ]
 
-        self.bc.check.calls(
-            stripe.Charge.create.call_args_list,
-            [
-                call(
-                    customer="1",
-                    amount=amount,
-                    currency=model.currency.code.lower(),
-                    description=f"Can join to {int(how_many)} mentorships",
-                ),
-            ],
-        )
-        self.assertEqual(
-            stripe.Customer.create.call_args_list,
-            [
-                call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
-            ],
-        )
+        assert stripe.Charge.create.call_args_list == [
+            call(
+                customer="1",
+                amount=math.ceil(amount),
+                currency=model.currency.code.lower(),
+                description=f"Can join to {int(how_many)} mentorships",
+            ),
+        ]
+        assert stripe.Customer.create.call_args_list == [
+            call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
+        ]
         self.assertEqual(stripe.Refund.create.call_args_list, [])
         self.bc.check.calls(
             activity_tasks.add_activity.delay.call_args_list,
@@ -880,7 +874,7 @@ class SignalTestSuite(PaymentsTestCase):
         self.client.force_authenticate(model.user)
 
         amount, _, _ = get_discounted_price(model.academy_service, how_many)
-        amount = math.ceil(amount)
+        amount = amount
 
         json = response.json()
         expected = get_serializer(
@@ -891,66 +885,48 @@ class SignalTestSuite(PaymentsTestCase):
             },
         )
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assert json == expected
+        assert response.status_code == status.HTTP_201_CREATED
 
-        self.assertEqual(self.bc.database.list_of("payments.Bag"), [format_bag_item()])
-        self.assertEqual(
-            self.bc.database.list_of("payments.Invoice"),
-            [
-                format_invoice_item(
-                    {
-                        "stripe_id": "1",
-                        "amount": amount,
-                    }
-                )
-            ],
-        )
-        self.assertEqual(
-            self.bc.database.list_of("payments.Consumable"),
-            [
-                format_consumable_item(
-                    data={
-                        "event_type_set_id": 1,
-                        "service_item_id": 1,
-                        "user_id": 1,
-                        "how_many": how_many,
-                    }
-                ),
-            ],
-        )
-        self.assertEqual(
-            self.bc.database.list_of("authenticate.UserSetting"),
-            [
-                format_user_setting({"lang": "en"}),
-            ],
-        )
+        assert self.bc.database.list_of("payments.Bag") == [format_bag_item()]
+        assert self.bc.database.list_of("payments.Invoice") == [
+            format_invoice_item(
+                {
+                    "stripe_id": "1",
+                    "amount": float(amount),
+                }
+            )
+        ]
+        assert self.bc.database.list_of("payments.Consumable") == [
+            format_consumable_item(
+                data={
+                    "event_type_set_id": 1,
+                    "service_item_id": 1,
+                    "user_id": 1,
+                    "how_many": how_many,
+                }
+            ),
+        ]
+        assert self.bc.database.list_of("authenticate.UserSetting") == [
+            format_user_setting({"lang": "en"}),
+        ]
 
-        self.bc.check.calls(
-            stripe.Charge.create.call_args_list,
-            [
-                call(
-                    customer="1",
-                    amount=amount,
-                    currency=model.currency.code.lower(),
-                    description=f"Can join to {int(how_many)} events",
-                ),
-            ],
-        )
-        self.assertEqual(
-            stripe.Customer.create.call_args_list,
-            [
-                call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
-            ],
-        )
-        self.assertEqual(stripe.Refund.create.call_args_list, [])
-        self.bc.check.calls(
-            activity_tasks.add_activity.delay.call_args_list,
-            [
-                call(1, "bag_created", related_type="payments.Bag", related_id=1),
-                call(1, "checkout_completed", related_type="payments.Invoice", related_id=1),
-            ],
-        )
+        assert stripe.Charge.create.call_args_list == [
+            call(
+                customer="1",
+                amount=math.ceil(amount),
+                currency=model.currency.code.lower(),
+                description=f"Can join to {int(how_many)} events",
+            ),
+        ]
+        assert stripe.Customer.create.call_args_list == [
+            call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
+        ]
+        assert stripe.Refund.create.call_args_list == []
+        assert activity_tasks.add_activity.delay.call_args_list == [
+            call(1, "bag_created", related_type="payments.Bag", related_id=1),
+            call(1, "checkout_completed", related_type="payments.Invoice", related_id=1),
+        ]
 
 
 @pytest.mark.parametrize(
@@ -971,7 +947,7 @@ class SignalTestSuite(PaymentsTestCase):
     ],
 )
 def test_checkout_with_country_code_and_exceptions(
-    db, bc: Breathecode, client: APIClient, exception_details, country_code, monkeypatch, set_datetime
+    db, database, client: APIClient, exception_details, country_code, monkeypatch, set_datetime
 ):
     """
     Test the consumable checkout endpoint with country_code and various
@@ -1008,7 +984,15 @@ def test_checkout_with_country_code_and_exceptions(
     service = {"type": "VOID"}  # Use VOID type for consumable checkout
     currency_code = exception_details.get("currency", "USD")  # Default to USD if no override
     currency = {"code": currency_code, "name": f"{currency_code} Name"}
-    model = bc.database.create(user=1, academy_service=academy_service, service=service, currency=currency, academy=1)
+    model = database.create(
+        user=1,
+        academy_service=academy_service,
+        service=service,
+        currency=currency,
+        academy=1,
+        city=1,
+        country=1,
+    )
 
     client.force_authenticate(model.user)
     url = reverse_lazy("payments:consumable_checkout")
@@ -1049,7 +1033,7 @@ def test_checkout_with_country_code_and_exceptions(
     assert json == expected_json
     assert response.status_code == status.HTTP_201_CREATED
 
-    assert bc.database.list_of("payments.Bag") == [
+    assert database.list_of("payments.Bag") == [
         format_bag_item({"currency_id": final_currency_obj.id, "country_code": country_code})
     ]
 
@@ -1070,7 +1054,7 @@ def test_checkout_with_country_code_and_exceptions(
         "payment_method_id": None,
         "proof_id": None,
     }
-    assert bc.database.list_of("payments.Invoice") == [expected_invoice_data]
+    assert database.list_of("payments.Invoice") == [expected_invoice_data]
 
     # Verify Consumable creation
     expected_consumable = {
@@ -1084,8 +1068,12 @@ def test_checkout_with_country_code_and_exceptions(
         "event_type_set_id": None,
         "mentorship_service_set_id": None,
         "sort_priority": 1,  # Assuming default
+        "subscription_seat_id": None,
+        "subscription_id": None,
+        "plan_financing_id": None,
+        "subscription_billing_team_id": None,
     }
-    assert bc.database.list_of("payments.Consumable") == [expected_consumable]
+    assert database.list_of("payments.Consumable") == [expected_consumable]
 
     # Verify stripe calls: find the call with the expected parameters
     assert charge_create_calls == [
@@ -1098,10 +1086,407 @@ def test_checkout_with_country_code_and_exceptions(
     ]
 
     # Verify activity call
-    bc.check.calls(
-        activity_tasks.add_activity.delay.call_args_list,
-        [
-            call(model.user.id, "bag_created", related_type="payments.Bag", related_id=1),
-            call(model.user.id, "checkout_completed", related_type="payments.Invoice", related_id=1),
-        ],
+    assert activity_tasks.add_activity.delay.call_args_list == [
+        call(model.user.id, "bag_created", related_type="payments.Bag", related_id=1),
+        call(model.user.id, "checkout_completed", related_type="payments.Invoice", related_id=1),
+    ]
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+def test_seats__subscription_is_required(database, client: APIClient):
+    # service as SEAT requires subscription and seats
+    model = database.create(user=1, service={"type": "SEAT"}, academy=1, city=1, country=1)
+    client.force_authenticate(model.user)
+
+    url = reverse_lazy("payments:consumable_checkout")
+    # Pass academy and how_many to satisfy base validations
+    data = {
+        "service": model.service.id,
+        "how_many": 1,
+        "academy": model.academy.id,
+        # missing subscription
+        "seats": 5,
+    }
+    response = client.post(url, data, format="json")
+
+    json = response.json()
+    expected = {"detail": "subscription-is-required", "status_code": 400}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+def test_seats__seats_required(database, client: APIClient):
+    # Create plan and subscription without billing team
+    plan = {"is_renewable": False, "trial_duration": 0}
+    service = {"type": "SEAT"}
+    # academy, currency, plan, subscription
+    model = database.create(
+        user=1, academy=1, currency=1, service=service, plan=plan, subscription=1, city=1, country=1
     )
+    client.force_authenticate(model.user)
+
+    # Link seat price to plan (even if not used due to early validation)
+    # Create a fresh SEAT academy_service using primitive specs to avoid object injection issues
+    asm = database.create(service={"type": "SEAT"}, academy=1, currency=1, academy_service=1, city=1, country=1)
+    academy_service = asm.academy_service
+    plan_obj = model.plan
+    plan_obj.seat_service_price = academy_service
+    plan_obj.save()
+
+    url = reverse_lazy("payments:consumable_checkout")
+    data = {
+        "service": model.service.id,
+        "how_many": 1,
+        "academy": model.academy.id,
+        "subscription": model.subscription.id,
+        # missing seats
+    }
+    response = client.post(url, data, format="json")
+
+    json = response.json()
+    expected = {"detail": "seats-required", "status_code": 400}
+
+    assert json == expected
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
+@patch("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", MagicMock())
+def test_seats__purchase_creates_team_and_owner_seat(database, client: APIClient):
+    # Setup SEAT service, plan with seat_service_price, and subscription without existing billing team
+    service = {"type": "SEAT"}
+    plan = {"is_renewable": False, "trial_duration": 0}
+    seat_price = random.random() * 10 + 5
+    academy_service = {
+        "price_per_unit": seat_price,
+        "max_items": 100,
+        "bundle_size": 1,
+        "max_amount": 10000,
+        "discount_ratio": 0,
+    }
+
+    model = database.create(
+        user=1,
+        academy=1,
+        currency=1,
+        service=service,
+        plan=plan,
+        subscription=1,
+        academy_service=academy_service,
+        city=1,
+        country=1,
+    )
+
+    # Link plan to seat pricing
+    plan_obj = model.plan
+    plan_obj.seat_service_price = model.academy_service
+    plan_obj.save()
+
+    client.force_authenticate(model.user)
+
+    desired_seats = random.randint(2, 6)
+    delta = desired_seats  # current team doesn't exist => current_limit = 0
+
+    url = reverse_lazy("payments:consumable_checkout")
+    data = {
+        "service": model.service.id,
+        "how_many": 1,  # base validation requirement
+        "academy": model.academy.id,
+        "subscription": model.subscription.id,
+        "seats": desired_seats,
+    }
+    response = client.post(url, data, format="json")
+
+    # Compute expected amount using local helper
+    amount, _, _ = get_discounted_price(model.academy_service, delta)
+
+    json = response.json()
+    expected = get_serializer(
+        model.currency,
+        model.user,
+        data={
+            "amount": float(amount),
+        },
+    )
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Bag and Invoice assertions
+    assert database.list_of("payments.Bag") == [format_bag_item()]
+    assert database.list_of("payments.Invoice") == [
+        format_invoice_item(
+            {
+                "stripe_id": "1",
+                "amount": float(amount),
+            }
+        )
+    ]
+
+    # No consumables created directly in seat purchase flow
+    assert database.list_of("payments.Consumable") == []
+
+    # Stripe calls
+    assert stripe.Customer.create.call_args_list == [
+        call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
+    ]
+    assert stripe.Charge.create.call_args_list == [
+        call(
+            customer="1",
+            amount=math.ceil(amount),
+            currency=model.currency.code.lower(),
+            description=f"Increase team seats by {int(delta)} (to {int(desired_seats)})",
+        ),
+    ]
+
+    # Activity calls
+    assert activity_tasks.add_activity.delay.call_args_list == [
+        call(1, "bag_created", related_type="payments.Bag", related_id=1),
+        call(1, "checkout_completed", related_type="payments.Invoice", related_id=1),
+    ]
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
+@patch("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", MagicMock())
+def test_seats__purchase_creates_team_sets_strategy_from_plan(database, client: APIClient):
+    """
+    When purchasing seats and creating a billing team, the team's consumption_strategy
+    must be set from the plan's consumption_strategy.
+    """
+    # Setup SEAT service, plan with seat_service_price and explicit strategy
+    service = {"type": "SEAT"}
+    plan = {"is_renewable": False, "trial_duration": 0, "consumption_strategy": "PER_TEAM"}
+    seat_price = random.random() * 10 + 5
+
+    academy_service = {"price_per_unit": seat_price, "max_items": 100, "bundle_size": 1, "discount_ratio": 0}
+    model = database.create(
+        user=1,
+        service=service,
+        academy=1,
+        currency=1,
+        plan=plan,
+        subscription=1,
+        academy_service=academy_service,
+        city=1,
+        country=1,
+    )
+
+    # Link plan to seat pricing
+    plan_obj = model.plan
+    plan_obj.seat_service_price = model.academy_service
+    plan_obj.save()
+
+    client.force_authenticate(model.user)
+
+    desired_seats = random.randint(2, 6)
+    delta = desired_seats
+
+    url = reverse_lazy("payments:consumable_checkout")
+    data = {
+        "service": model.service.id,
+        "how_many": 1,
+        "academy": model.academy.id,
+        "subscription": model.subscription.id,
+        "seats": desired_seats,
+    }
+    response = client.post(url, data, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Team should be created with desired seats and strategy from plan
+    team = SubscriptionBillingTeam.objects.get(subscription=model.subscription)
+    assert team.seats_limit == desired_seats
+    assert team.consumption_strategy == "PER_TEAM"
+
+    # Scheduler should be triggered only when team is created
+    from breathecode.payments.tasks import build_service_stock_scheduler_from_subscription
+
+    assert build_service_stock_scheduler_from_subscription.delay.call_args_list == [call(model.subscription.id)]
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
+@patch("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", MagicMock())
+def test_seats__existing_team_updates_strategy_from_plan(database, client: APIClient):
+    """
+    When purchasing additional seats with an existing billing team, the team's
+    consumption_strategy must be updated from the plan's consumption_strategy.
+    """
+    service = {"type": "SEAT"}
+    # Plan strategy PER_SEAT should be propagated to existing team after purchase
+    plan = {"is_renewable": False, "trial_duration": 0, "consumption_strategy": "PER_SEAT"}
+    seat_price = random.random() * 10 + 5
+
+    academy_service = {"price_per_unit": seat_price, "max_items": 100, "bundle_size": 1, "discount_ratio": 0}
+    model = database.create(
+        user=1,
+        service=service,
+        academy=1,
+        currency=1,
+        plan=plan,
+        subscription=1,
+        academy_service=academy_service,
+        city=1,
+        country=1,
+    )
+
+    # Link plan to seat pricing
+    plan_obj = model.plan
+    plan_obj.seat_service_price = model.academy_service
+    plan_obj.save()
+
+    # Existing team with a different initial strategy
+    current_limit = random.randint(1, 3)
+    team = SubscriptionBillingTeam.objects.create(
+        subscription=model.subscription,
+        name=f"Team {model.subscription.id}",
+        seats_limit=current_limit,
+        consumption_strategy="PER_TEAM",
+    )
+
+    client.force_authenticate(model.user)
+
+    desired_seats = current_limit + random.randint(1, 5)
+    url = reverse_lazy("payments:consumable_checkout")
+    data = {
+        "service": model.service.id,
+        "how_many": 1,
+        "academy": model.academy.id,
+        "subscription": model.subscription.id,
+        "seats": desired_seats,
+    }
+    response = client.post(url, data, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Team should be updated to desired seats and strategy PER_SEAT
+    team.refresh_from_db()
+    assert team.seats_limit == desired_seats
+    assert team.consumption_strategy == "PER_SEAT"
+
+    # Scheduler should NOT be triggered when team already exists
+    from breathecode.payments.tasks import build_service_stock_scheduler_from_subscription
+
+    assert build_service_stock_scheduler_from_subscription.delay.call_args_list == []
+
+
+@patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("stripe.Charge.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Customer.create", MagicMock(return_value={"id": 1}))
+@patch("stripe.Refund.create", MagicMock(return_value={"id": 1}))
+@patch("breathecode.payments.tasks.build_service_stock_scheduler_from_subscription.delay", MagicMock())
+def test_seats__increase_existing_team_delta_only(database, client: APIClient):
+    # Existing billing team with some seats; purchasing more should charge only the delta
+    service = {"type": "SEAT"}
+    plan = {"is_renewable": False, "trial_duration": 0}
+    seat_price = random.random() * 10 + 5
+    academy_service = {
+        "price_per_unit": seat_price,
+        "max_items": 100,
+        "bundle_size": 1,
+        "max_amount": 10000,
+        "discount_ratio": 0,
+    }
+
+    model = database.create(
+        user=1,
+        academy=1,
+        currency=1,
+        service=service,
+        plan=plan,
+        subscription=1,
+        academy_service=academy_service,
+        city=1,
+        country=1,
+    )
+
+    # Link plan to seat pricing
+    plan_obj = model.plan
+    plan_obj.seat_service_price = model.academy_service
+    plan_obj.save()
+
+    # Create existing billing team with current seats
+    current_limit = random.randint(1, 5)
+    SubscriptionBillingTeam.objects.create(
+        subscription=model.subscription, name=f"Team {model.subscription.id}", seats_limit=current_limit
+    )
+
+    client.force_authenticate(model.user)
+
+    desired_seats = current_limit + random.randint(1, 5)
+    delta = desired_seats - current_limit
+
+    url = reverse_lazy("payments:consumable_checkout")
+    data = {
+        "service": model.service.id,
+        "how_many": 1,
+        "academy": model.academy.id,
+        "subscription": model.subscription.id,
+        "seats": desired_seats,
+    }
+    response = client.post(url, data, format="json")
+
+    # Expected amount is computed on the delta only
+    amount, _, _ = get_discounted_price(model.academy_service, delta)
+
+    json = response.json()
+    expected = get_serializer(
+        model.currency,
+        model.user,
+        data={
+            "amount": float(amount),
+        },
+    )
+
+    assert json == expected
+    assert response.status_code == status.HTTP_201_CREATED
+
+    # Bag and Invoice assertions
+    assert database.list_of("payments.Bag") == [format_bag_item()]
+    assert database.list_of("payments.Invoice") == [
+        format_invoice_item(
+            {
+                "stripe_id": "1",
+                "amount": float(amount),
+            }
+        )
+    ]
+
+    # Stripe calls
+    assert stripe.Customer.create.call_args_list == [
+        call(email=model.user.email, name=f"{model.user.first_name} {model.user.last_name}"),
+    ]
+    assert stripe.Charge.create.call_args_list == [
+        call(
+            customer="1",
+            amount=math.ceil(amount),
+            currency=model.currency.code.lower(),
+            description=f"Increase team seats by {int(delta)} (to {int(desired_seats)})",
+        ),
+    ]
+
+    # Team should be updated, not created anew
+    team = SubscriptionBillingTeam.objects.get(subscription=model.subscription)
+    assert team.seats_limit == desired_seats
+    assert isinstance(team.seats_log, list)
+    assert team.seats_log, "seats_log should have at least one entry"
+    last = team.seats_log[-1]
+    assert last.get("action") == "LIMIT_UPDATED"
+    assert last.get("from") == int(current_limit)
+    assert last.get("to") == int(desired_seats)
+
+    # Activity calls
+    assert activity_tasks.add_activity.delay.call_args_list == [
+        call(1, "bag_created", related_type="payments.Bag", related_id=1),
+        call(1, "checkout_completed", related_type="payments.Invoice", related_id=1),
+    ]

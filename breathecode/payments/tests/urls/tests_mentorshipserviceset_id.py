@@ -35,6 +35,7 @@ def mentorship_service_serializer(self, mentorship_service, academy):
 def service_serializer(service):
     return {
         "groups": [],
+        "id": service.id,
         "private": service.private,
         "slug": service.slug,
         "title": service.title,
