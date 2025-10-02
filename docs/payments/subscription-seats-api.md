@@ -112,7 +112,7 @@ export FTT_ACADEMY_SLUG="4geeks"
 
 2. Add Seat
    PUT /v2/payments/subscription/{subscription_id}/billing-team/seat
-   Body: {"add_seats": [{"email": "...", "seat_multiplier": 1}]}
+   Body: {"add_seats": [{"email": "..."}]}
 
 3. Replace Seat
    PUT /v2/payments/subscription/{subscription_id}/billing-team/seat
@@ -196,7 +196,6 @@ Content-Type: application/json
   "add_seats": [
     {
       "email": "lord@valomero.com",
-      "seat_multiplier": 1,
       "first_name": "Lord",
       "last_name": "Valomero"
     }
@@ -211,15 +210,13 @@ Content-Type: application/json
     "id": 1,
     "user": 456,
     "email": "owner@example.com",
-    "is_active": true,
-    "seat_multiplier": 1
+    "is_active": true
   },
   {
     "id": 2,
     "user": null,
     "email": "lord@valomero.com",
-    "is_active": true,
-    "seat_multiplier": 1
+    "is_active": true
   }
 ]
 ```
@@ -341,7 +338,7 @@ curl -X POST "https://breathecode.herokuapp.com/v1/payments/checking" \
 curl -X PUT "https://breathecode.herokuapp.com/v2/payments/subscription/123/billing-team/seat" \
   -H "Authorization: Bearer $FTT_USER_TOKEN1" \
   -H "Content-Type: application/json" \
-  -d '{"add_seats":[{"email":"lord@valomero.com","seat_multiplier":1}]}'
+  -d '{"add_seats":[{"email":"lord@valomero.com"}]}'
 ```
 
 ## Troubleshooting

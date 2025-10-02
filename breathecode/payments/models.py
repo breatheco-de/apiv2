@@ -1644,8 +1644,143 @@ class AbstractIOweYou(models.Model):
         related_name="%(class)s_as_seat_service_item",
     )
 
+    # Auto-recharge settings (applies to subscriptions and plan financing)
+    auto_recharge_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable automatic consumable recharge when balance runs low",
+    )
+    recharge_threshold_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=10.00,
+        help_text="Balance threshold to trigger auto-recharge (in subscription currency)",
+    )
+    recharge_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=10.00,
+        help_text="Amount to recharge when threshold is reached (in subscription currency)",
+    )
+    max_period_spend = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Maximum spending per monthly period (null = unlimited)",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def get_current_monthly_period_dates(self) -> tuple[datetime, datetime]:
+        """
+        Calculate the current monthly spending period boundaries.
+
+        Spending limits are tracked monthly, starting from paid_at day.
+        This is independent of individual service regeneration schedules (which can
+        be weekly, monthly, etc. per service).
+
+        Example:
+            - Subscription paid_at: Jan 15
+            - Monthly periods: Jan 15-Feb 15, Feb 15-Mar 15, Mar 15-Apr 15, etc.
+            - Spending limit resets each period regardless of payment frequency
+
+        Returns:
+            (period_start, period_end) tuple for current month
+        """
+        from dateutil.relativedelta import relativedelta
+
+        now = timezone.now()
+
+        # Get paid_at from the instance (works for both Subscription and PlanFinancing)
+        paid_at = getattr(self, "paid_at", None)
+
+        if not paid_at:
+            # Fallback: use calendar month
+            period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            period_end = period_start + relativedelta(months=1)
+            return period_start, period_end
+
+        # Calculate monthly periods from paid_at day
+        # Example: paid_at = Jan 15 → periods are 15th to 15th of each month
+
+        # Calculate how many complete months have passed since paid_at
+        months_diff = (now.year - paid_at.year) * 12 + (now.month - paid_at.month)
+
+        # Adjust if we haven't reached the day yet this month
+        if now.day < paid_at.day:
+            months_diff -= 1
+
+        # Calculate period boundaries
+        period_start = paid_at + relativedelta(months=months_diff)
+        period_end = period_start + relativedelta(months=1)
+
+        return period_start, period_end
+
+    def get_current_period_spend(self, service: "Service" = None) -> float:
+        """
+        Calculate actual spending in current monthly period from invoices.
+
+        Returns total amount from paid invoices for auto-recharge in the
+        current monthly spending period (based on paid_at day).
+
+        Args:
+            service: Optional Service to filter spending by specific service.
+                    If provided, only returns spending for that service.
+
+        Example:
+            - Subscription paid_at: Jan 15
+            - Current date: Feb 20
+            - Returns: Spending from Feb 15 to Mar 15
+
+            # Get total spending
+            total_spend = subscription.get_current_period_spend()
+
+            # Get spending for specific service
+            mentorship_spend = subscription.get_current_period_spend(service=mentorship_service)
+
+        Note: This is independent of:
+            - Payment frequency (could be quarterly)
+            - Service regeneration schedules (could be weekly per service)
+        """
+        from django.db.models import Sum
+        from breathecode.payments.models import Invoice
+
+        period_start, period_end = self.get_current_monthly_period_dates()
+
+        if not period_start:
+            return 0.0
+
+        # Query invoices for auto-recharge in this monthly period
+        # Filter by subscription or plan_financing
+        filter_kwargs = {
+            "user": self.user,
+            "status": Invoice.Status.PAID,
+            "created_at__gte": period_start,
+        }
+
+        # Add specific filter based on instance type
+        if isinstance(self, Subscription):
+            filter_kwargs["subscription"] = self
+        elif hasattr(self, "__class__") and self.__class__.__name__ == "PlanFinancing":
+            filter_kwargs["plan_financing"] = self
+
+        invoices = Invoice.objects.filter(**filter_kwargs)
+
+        if period_end:
+            invoices = invoices.filter(created_at__lt=period_end)
+
+        # Filter by service if provided
+        # TODO: This requires invoices to have a relation to service/service_item
+        # For now, this is a placeholder for when invoice structure supports it
+        if service:
+            # When implemented, filter invoices by service
+            # invoices = invoices.filter(service_item__service=service)
+            pass
+
+        total = invoices.aggregate(total=Sum("amount"))["total"]
+        return float(total) if total else 0.0
 
     class Meta:
         abstract = True
@@ -1892,31 +2027,6 @@ class SubscriptionBillingTeam(models.Model):
         default=ConsumptionStrategy.PER_SEAT,
     )
 
-    # Auto-recharge settings
-    auto_recharge_enabled = models.BooleanField(
-        default=False, help_text="Enable automatic consumable recharge when balance is low"
-    )
-    recharge_threshold_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=10.00,
-        help_text="Trigger recharge when balance falls below this amount (in subscription currency)",
-    )
-    recharge_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=20.00,
-        help_text="Amount to recharge when threshold is reached (in subscription currency)",
-    )
-    max_period_spend = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        default=None,
-        help_text="Maximum spending limit per billing period in subscription currency (null = unlimited)",
-    )
-
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1925,97 +2035,47 @@ class SubscriptionBillingTeam(models.Model):
 
     def get_current_monthly_period_dates(self) -> tuple[datetime, datetime]:
         """
-        Calculate the current monthly spending period boundaries.
-
-        Spending limits are tracked monthly, starting from subscription.paid_at day.
-        This is independent of individual service regeneration schedules (which can
-        be weekly, monthly, etc. per service).
-
-        Example:
-            - Subscription paid_at: Jan 15
-            - Monthly periods: Jan 15-Feb 15, Feb 15-Mar 15, Mar 15-Apr 15, etc.
-            - Spending limit resets each period regardless of payment frequency
+        Proxy to subscription's get_current_monthly_period_dates.
 
         Returns:
             (period_start, period_end) tuple for current month
         """
-        from dateutil.relativedelta import relativedelta
-
-        subscription = self.subscription
-        now = timezone.now()
-
-        if not subscription.paid_at:
-            # Fallback: use calendar month
-            period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            period_end = period_start + relativedelta(months=1)
-            return period_start, period_end
-
-        # Calculate monthly periods from paid_at day
-        # Example: paid_at = Jan 15 → periods are 15th to 15th of each month
-        paid_at = subscription.paid_at
-
-        # Calculate how many complete months have passed since paid_at
-        months_diff = (now.year - paid_at.year) * 12 + (now.month - paid_at.month)
-
-        # Adjust if we haven't reached the day yet this month
-        if now.day < paid_at.day:
-            months_diff -= 1
-
-        # Calculate period boundaries
-        period_start = paid_at + relativedelta(months=months_diff)
-        period_end = period_start + relativedelta(months=1)
-
-        return period_start, period_end
+        return self.subscription.get_current_monthly_period_dates()
 
     def get_current_period_spend(self, service: "Service" = None) -> float:
         """
-        Calculate actual spending in current monthly period from invoices.
+        Calculate actual spending in current monthly period from invoices for this team.
 
         Returns total amount from paid invoices for auto-recharge in the
-        current monthly spending period (based on subscription.paid_at day).
+        current monthly spending period, filtered by this team.
 
         Args:
             service: Optional Service to filter spending by specific service.
-                    If provided, only returns spending for that service.
 
-        Example:
-            - Subscription paid_at: Jan 15
-            - Current date: Feb 20
-            - Returns: Spending from Feb 15 to Mar 15
-
-            # Get total spending
-            total_spend = team.get_current_period_spend()
-
-            # Get spending for specific service
-            mentorship_spend = team.get_current_period_spend(service=mentorship_service)
-
-        Note: This is independent of:
-            - Payment frequency (could be quarterly)
-            - Service regeneration schedules (could be weekly per service)
+        Returns:
+            Total spending for this team in current period
         """
         from django.db.models import Sum
         from breathecode.payments.models import Invoice
 
-        subscription = self.subscription
         period_start, period_end = self.get_current_monthly_period_dates()
 
         if not period_start:
             return 0.0
 
         # Query invoices for auto-recharge in this monthly period
-        # TODO: Add invoice_type or tag to identify auto-recharge invoices
+        # Filter by team to only count this team's spending
         invoices = Invoice.objects.filter(
-            user=subscription.user,
+            user=self.subscription.user,
             status=Invoice.Status.PAID,
             created_at__gte=period_start,
+            subscription_billing_team=self,  # Filter by this team
         )
 
         if period_end:
             invoices = invoices.filter(created_at__lt=period_end)
 
         # Filter by service if provided
-        # TODO: This requires invoices to have a relation to service/service_item
-        # For now, this is a placeholder for when invoice structure supports it
         if service:
             # When implemented, filter invoices by service
             # invoices = invoices.filter(service_item__service=service)
@@ -2023,6 +2083,26 @@ class SubscriptionBillingTeam(models.Model):
 
         total = invoices.aggregate(total=Sum("amount"))["total"]
         return float(total) if total else 0.0
+
+    @property
+    def auto_recharge_enabled(self) -> bool:
+        """Proxy to subscription's auto_recharge_enabled."""
+        return self.subscription.auto_recharge_enabled
+
+    @property
+    def recharge_threshold_amount(self):
+        """Proxy to subscription's recharge_threshold_amount."""
+        return self.subscription.recharge_threshold_amount
+
+    @property
+    def recharge_amount(self):
+        """Proxy to subscription's recharge_amount."""
+        return self.subscription.recharge_amount
+
+    @property
+    def max_period_spend(self):
+        """Proxy to subscription's max_period_spend."""
+        return self.subscription.max_period_spend
 
     def can_auto_recharge(self, amount: float, lang: str = "en") -> tuple[bool, str]:
         """
@@ -2106,11 +2186,6 @@ class SubscriptionSeat(models.Model):
     email = models.CharField(max_length=150, help_text="Email of the member (normalized)", db_index=True, default="")
     is_active = models.BooleanField(default=True, help_text="if true, this user is able to access the subscription")
 
-    # number multiplier applied to per-member issuance from policy items
-    seat_multiplier = models.PositiveIntegerField(
-        default=1, help_text="Multiplier applied to per-member consumables issuance (>= 1)"
-    )
-
     seat_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this seat")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -2127,7 +2202,7 @@ class SubscriptionSeat(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.billing_team_id}:{self.user_id}({self.seat_multiplier})"
+        return f"{self.billing_team_id}:{self.user_id}"
 
     def clean(self):
         # normalize email
@@ -2246,6 +2321,8 @@ class Consumable(AbstractServiceItem):
         service: Optional[Service | str | int] = None,
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
+        subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
+        subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: Optional[dict] = None,
     ) -> QuerySet["Consumable"]:
 
@@ -2335,6 +2412,18 @@ class Consumable(AbstractServiceItem):
         elif isinstance(permission, Permission):
             param["service_item__service__groups__permissions"] = permission
 
+        # Subscription Billing Team
+        if subscription_billing_team and isinstance(subscription_billing_team, int):
+            param["subscription_billing_team__id"] = subscription_billing_team
+        elif subscription_billing_team:
+            param["subscription_billing_team"] = subscription_billing_team
+
+        # Subscription Seat
+        if subscription_seat and isinstance(subscription_seat, int):
+            param["subscription_seat__id"] = subscription_seat
+        elif subscription_seat:
+            param["subscription_seat"] = subscription_seat
+
         return (
             cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
             .exclude(how_many=0)
@@ -2351,11 +2440,20 @@ class Consumable(AbstractServiceItem):
         service: Optional[Service | str | int] = None,
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
+        subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
+        subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: dict = None,
     ) -> QuerySet["Consumable"]:
 
         return cls.list(
-            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+            user=user,
+            lang=lang,
+            service=service,
+            service_type=service_type,
+            permission=permission,
+            subscription_billing_team=subscription_billing_team,
+            subscription_seat=subscription_seat,
+            extra=extra,
         )
 
     @classmethod
@@ -2367,6 +2465,8 @@ class Consumable(AbstractServiceItem):
         service: Optional[Service | str | int] = None,
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
+        subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
+        subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: Optional[dict] = None,
     ) -> Consumable | None:
 
@@ -2374,7 +2474,14 @@ class Consumable(AbstractServiceItem):
             extra = {}
 
         return cls.list(
-            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+            user=user,
+            lang=lang,
+            service=service,
+            service_type=service_type,
+            permission=permission,
+            subscription_billing_team=subscription_billing_team,
+            subscription_seat=subscription_seat,
+            extra=extra,
         ).first()
 
     @classmethod
@@ -2387,10 +2494,19 @@ class Consumable(AbstractServiceItem):
         service: Optional[Service | str | int] = None,
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
+        subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
+        subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: Optional[dict] = None,
     ) -> Consumable | None:
         return cls.get(
-            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+            user=user,
+            lang=lang,
+            service=service,
+            service_type=service_type,
+            permission=permission,
+            subscription_billing_team=subscription_billing_team,
+            subscription_seat=subscription_seat,
+            extra=extra,
         )
 
     def clean(self) -> None:

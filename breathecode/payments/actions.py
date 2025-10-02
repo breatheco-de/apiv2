@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 import uuid
+from django.db import transaction
+from task_manager.core.exceptions import AbortTask, RetryTask
 
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
@@ -1907,14 +1909,12 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
 
 class SeatDict(TypedDict, total=False):
     email: str
-    seat_multiplier: int
     first_name: str | None
     last_name: str | None
 
 
 class AddSeat(TypedDict):
     email: str
-    seat_multiplier: int
     first_name: str
     last_name: str
 
@@ -1922,7 +1922,6 @@ class AddSeat(TypedDict):
 class ReplaceSeat(TypedDict):
     from_email: str
     to_email: str
-    seat_multiplier: int
     first_name: str
     last_name: str
 
@@ -1963,7 +1962,7 @@ def invite_user_to_subscription_team(
         )
 
 
-def create_seat(email: str, user: User | None, seat_multiplier: int, billing_team: SubscriptionBillingTeam, lang: str):
+def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
     if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
         raise ValidationException(
             translation(
@@ -1979,7 +1978,6 @@ def create_seat(email: str, user: User | None, seat_multiplier: int, billing_tea
         billing_team=billing_team,
         user=user,
         email=email,
-        seat_multiplier=seat_multiplier,
     )
     seat_log_entry = create_seat_log_entry(seat, "ADDED")
     seat.seat_log.append(seat_log_entry)
@@ -2085,7 +2083,6 @@ def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
         serialized = {
             "email": normalize_email(seat["email"]),
             "user": seat.get("user", None),
-            "seat_multiplier": seat.get("seat_multiplier", 1),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
         }
@@ -2112,11 +2109,11 @@ def validate_seats_limit(
 ):
     seats = {}
     for seat in SubscriptionSeat.objects.filter(billing_team=team):
-        seats[seat.email] = seat.seat_multiplier
+        seats[seat.email] = 1
 
     for seat in add_seats:
         # seat is a dict-like (TypedDict)
-        seats[seat["email"]] = seat.get("seat_multiplier", 1)
+        seats[seat["email"]] = 1
 
     for seat in replace_seats:
         # carry forward the existing multiplier when replacing an email
@@ -2155,3 +2152,268 @@ def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional
 
     if plan.owner != cohort.academy:
         admissions_tasks.build_profile_academy.delay(cohort.academy.id, user.id)
+
+
+def process_auto_recharge(
+    team: SubscriptionBillingTeam, recharge_amount: float, seat: Optional[SubscriptionSeat] = None
+):
+    """
+    Process automatic consumable recharge for a billing team.
+
+    This task:
+    1. Acquires Redis lock to prevent concurrent recharges
+    2. Creates consumables for team-allowed services
+    3. Charges the subscription owner via Stripe
+    4. Tracks spending via invoices
+
+    Args:
+        team: SubscriptionBillingTeam
+        recharge_amount: Amount in subscription currency to recharge
+        seat: Optional SubscriptionSeat for per-seat recharge
+
+    Note:
+        Uses Redis lock to prevent race conditions when multiple
+        consumptions trigger recharge simultaneously.
+    """
+    import redis
+    import redis.lock
+    from django.conf import settings
+
+    def get_lock(team: SubscriptionBillingTeam, seat: Optional[SubscriptionSeat] = None) -> Optional[redis.lock.Lock]:
+        """
+        Return a Redis lock for a team with optional seat_id.
+
+        Args:
+            team: SubscriptionBillingTeam
+            seat: Optional SubscriptionSeat for per-seat locking
+
+        Returns:
+            Optional[redis.lock.Lock]: Lock object or None if already locked
+        """
+
+        lock_key = f"auto_recharge:team:{team.id}:seat:{seat.id}" if seat else f"auto_recharge:team:{team.id}"
+        lock_timeout = 300  # 5 minutes max lock time
+
+        # Try to acquire lock
+        lock = redis_client.lock(lock_key, timeout=lock_timeout, blocking_timeout=5)
+        # lock.release()
+        return lock
+
+    # Connect to Redis
+    redis_client = redis.Redis.from_url(settings.REDIS_URL)
+
+    # Try to acquire lock
+    team_lock = get_lock(team.id)
+    seat_lock = None
+    # lock.release()
+
+    if not team_lock.acquire(blocking=False):
+        raise RetryTask(f"Auto-recharge already in progress for team {team.id}")
+
+    if seat:
+        seat_lock = get_lock(team.id, seat.id)
+        if not seat_lock.acquire(blocking=False):
+            team_lock.release()
+            raise RetryTask(f"Auto-recharge already in progress for team {team.id} and seat {seat.id}")
+
+    try:
+        logger.info(
+            f"Processing auto-recharge for team {team.id}, seat {seat.id if seat else None}, amount: {recharge_amount:.2f}"
+        )
+
+        subscription = team.subscription
+        seat = None
+
+        # Verify auto-recharge is still enabled
+        if not team.auto_recharge_enabled:
+            logger.warning(f"Auto-recharge disabled for team {team.id}, aborting")
+            raise AbortTask(f"Auto-recharge disabled for team {team.id}")
+
+        # Get subscription currency and academy
+        currency = subscription.currency
+        academy = subscription.academy
+
+        # Check billing period spending limit (calculated from invoices)
+        if team.max_period_spend:
+            current_spend = team.get_current_period_spend()
+
+            if current_spend >= float(team.max_period_spend):
+                logger.warning(f"Billing period spending limit reached for team {team.id}")
+                raise AbortTask(f"Billing period spending limit reached for team {team.id}")
+
+            # Adjust recharge amount if it would exceed limit
+            available_budget = float(team.max_period_spend) - current_spend
+            if recharge_amount > available_budget:
+                recharge_amount = available_budget
+                logger.info(f"Adjusted recharge amount to {recharge_amount:.2f} {currency.code} (budget limit)")
+
+        team_service_items = (
+            ServiceItem.objects.filter(
+                Q(subscriptionserviceitem__subscription=subscription)
+                | Q(planserviceitem__plan__subscription=subscription),
+                is_team_allowed=True,
+            )
+            .distinct()
+            .select_related("service")
+        )
+
+        if not team_service_items.exists():
+            logger.warning(f"No team-allowed service items found for subscription {subscription.id}")
+            raise AbortTask(f"No team-allowed service items for subscription {subscription.id}")
+
+        # Use atomic transaction to ensure all-or-nothing operation
+        # If payment fails, all consumables will be rolled back
+        try:
+            with transaction.atomic():
+                # Calculate units for each service based on AcademyService pricing
+                # Distribute recharge amount proportionally based on service pricing
+                created_consumables = []
+                total_spent = 0
+
+                for service_item in team_service_items:
+                    try:
+                        academy_service = AcademyService.objects.get(academy=academy, service=service_item.service)
+                    except AcademyService.DoesNotExist:
+                        logger.warning(
+                            f"No AcademyService found for service {service_item.service.slug} "
+                            f"in academy {academy.slug}, skipping"
+                        )
+                        continue
+
+                    # Calculate units based on price_per_unit
+                    # For equal distribution: amount_per_service = recharge_amount / service_count
+                    # units = amount_per_service / price_per_unit
+                    amount_per_service = recharge_amount / team_service_items.count()
+
+                    # Check per-service spending limit if max_period_spend is set
+                    if team.max_period_spend:
+                        current_service_spend = team.get_current_period_spend(service=service_item.service)
+                        available_service_budget = float(team.max_period_spend) - current_service_spend
+
+                        if available_service_budget <= 0:
+                            logger.warning(
+                                f"Service {service_item.service.slug} has reached spending limit "
+                                f"(spent: {current_service_spend:.2f}, limit: {team.max_period_spend}), skipping"
+                            )
+                            continue
+
+                        # Adjust amount_per_service if it would exceed the service budget
+                        if amount_per_service > available_service_budget:
+                            amount_per_service = available_service_budget
+                            logger.info(
+                                f"Adjusted recharge amount for service {service_item.service.slug} to "
+                                f"{amount_per_service:.2f} {currency.code} (service budget limit)"
+                            )
+
+                    units = int(amount_per_service / academy_service.price_per_unit)
+
+                    if units <= 0:
+                        logger.warning(
+                            f"Calculated 0 units for service {service_item.service.slug} "
+                            f"(amount: {amount_per_service:.2f}, price: {academy_service.price_per_unit})"
+                        )
+                        continue
+
+                    # Actual cost for these units
+                    actual_cost = units * academy_service.price_per_unit
+
+                    consumable = Consumable.objects.create(
+                        service_item=service_item,
+                        user=None,  # Team-owned
+                        subscription_billing_team=team,
+                        subscription=subscription,
+                        how_many=units,
+                        unit_type=service_item.unit_type,
+                        valid_until=None,  # Valid until exhausted
+                    )
+                    created_consumables.append(consumable)
+                    total_spent += actual_cost
+
+                    logger.info(
+                        f"Created team consumable: service={service_item.service.slug}, "
+                        f"units={units}, cost={actual_cost:.2f} {currency.code}, consumable_id={consumable.id}"
+                    )
+
+                # Create invoice via Stripe payment
+                from .services.stripe import Stripe
+                from .models import Bag
+
+                # Create a temporary bag for the auto-recharge
+                bag = Bag.objects.create(
+                    user=subscription.user,
+                    academy=academy,
+                    currency=currency,
+                    amount_per_month=total_spent,
+                    amount_per_quarter=total_spent,
+                    amount_per_half=total_spent,
+                    amount_per_year=total_spent,
+                    type="CHARGE",
+                    status="PAID",
+                    was_delivered=True,
+                )
+
+                # Process payment via Stripe
+                # If this fails, the entire transaction will rollback
+                s = Stripe(academy=academy)
+                invoice = s.pay(
+                    subscription.user,
+                    bag,
+                    total_spent,
+                    currency=currency.code,
+                    description=f"Auto-recharge for team {team.name}",
+                    subscription_billing_team=team,
+                    subscription_seat=seat,
+                )
+                logger.info(f"Created invoice {invoice.id} for auto-recharge: {total_spent:.2f} {currency.code}")
+
+        except Exception as e:
+            # Transaction will automatically rollback on any exception
+            logger.error(f"Auto-recharge transaction failed for team {team.id}: {e}")
+            logger.info(f"Rolled back {len(created_consumables)} consumables and payment")
+            raise RetryTask(f"Payment failed for team {team.id}: {e}")
+
+        logger.info(
+            f"Auto-recharge completed for team {team.id}: "
+            f"{total_spent:.2f} {currency.code} charged, {len(created_consumables)} consumables created"
+        )
+
+        # Send notification to subscription owner
+        try:
+            notify_actions.send_email_message(
+                "auto_recharge_completed",
+                subscription.user.email,
+                {
+                    "subject": "Consumables Auto-Recharged",
+                    "team_name": team.name,
+                    "recharge_amount": f"{total_spent:.2f} {currency.code}",
+                    "period_spend": f"{team.get_current_period_spend():.2f} {currency.code}",
+                    "period_limit": (
+                        f"{team.max_period_spend:.2f} {currency.code}" if team.max_period_spend else "Unlimited"
+                    ),
+                    "currency": currency.code,
+                    "next_reset": (
+                        subscription.next_payment_at.strftime("%Y-%m-%d") if subscription.next_payment_at else "N/A"
+                    ),
+                },
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send auto-recharge notification: {e}")
+
+        return {
+            "team_id": team.id,
+            "recharge_amount": float(total_spent),
+            "currency": currency.code,
+            "consumables_created": len(created_consumables),
+            "current_period_spend": team.get_current_period_spend(),
+            "next_reset": subscription.next_payment_at.isoformat() if subscription.next_payment_at else None,
+        }
+
+    finally:
+        # Always release the lock
+        try:
+            team_lock.release()
+            if seat_lock:
+                seat_lock.release()
+            logger.debug(f"Released auto-recharge lock for team {team.id}")
+        except Exception as e:
+            logger.warning(f"Failed to release lock for team {team.id}: {e}")

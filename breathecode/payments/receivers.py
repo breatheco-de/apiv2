@@ -444,32 +444,21 @@ def check_consumable_balance_for_auto_recharge(
             f"{balance_amount:.2f} {currency.code} < {team.recharge_threshold_amount} {currency.code}"
         )
 
-        # Check if recharge would exceed period spending limit
+        # Trigger recharge - the task will handle per-service budget limits
         recharge_amount = float(team.recharge_amount)
 
+        # Quick check: if total budget is already exhausted, don't trigger at all
         if team.max_period_spend:
             current_spend = team.get_current_period_spend()
-            potential_spend = current_spend + recharge_amount
-
-            if potential_spend > float(team.max_period_spend):
-                # Partial recharge to stay within limit
-                available_budget = float(team.max_period_spend) - current_spend
-                if available_budget > 0:
-                    logger.info(
-                        f"Partial recharge for team {team.id}: {available_budget:.2f} {currency.code} "
-                        f"(limited by period budget)"
-                    )
-                    consumable_balance_low.send(
-                        sender=sender,
-                        team=team,
-                        balance_amount=balance_amount,
-                        recharge_amount=available_budget,
-                    )
-                else:
-                    logger.warning(f"No budget available for recharge for team {team.id}")
+            if current_spend >= float(team.max_period_spend):
+                logger.warning(
+                    f"No budget available for recharge for team {team.id} "
+                    f"(spent: {current_spend:.2f}, limit: {team.max_period_spend})"
+                )
                 return
 
-        # Full recharge
+        # Send signal with full recharge amount
+        # The task will adjust per-service based on available budget
         consumable_balance_low.send(
             sender=sender,
             team=team,

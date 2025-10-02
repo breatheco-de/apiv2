@@ -2426,7 +2426,7 @@ class ConsumableCheckoutView(APIView):
                             billing_team=team,
                             user=subscription.user,
                             email=(subscription.user.email or "").strip().lower(),
-                            defaults={"is_active": True, "seat_multiplier": 1},
+                            defaults={"is_active": True},
                         )
 
                         # migrate existing consumables with support for team seats
@@ -3039,7 +3039,7 @@ class SubscriptionBillingTeamView(APIView):
             "subscription": subscription.id,
             "name": team.name,
             "seats_limit": team.seats_limit,
-            "seats_count": sum(seat.seat_multiplier for seat in team.seats.filter(is_active=True)),
+            "seats_count": team.seats.filter(is_active=True).count(),
             "seats_log": team.seats_log,
             # Auto-recharge settings
             "auto_recharge_enabled": team.auto_recharge_enabled,
@@ -3217,7 +3217,6 @@ class SubscriptionSeatView(APIView):
             "id": seat.id,
             "email": seat.email,
             "user": seat.user_id,
-            "seat_multiplier": seat.seat_multiplier,
             "is_active": seat.is_active,
             "seat_log": seat.seat_log,
         }
@@ -3286,7 +3285,7 @@ class SubscriptionSeatView(APIView):
 
         for seat in add_seats:
             try:
-                result.append(actions.create_seat(seat["email"], seat["user"], seat["seat_multiplier"], team, lang))
+                result.append(actions.create_seat(seat["email"], seat["user"], team, lang))
             except ValidationException as e:
                 errors.append(e)
 

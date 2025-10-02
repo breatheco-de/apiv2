@@ -339,7 +339,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"add_seats\": [\n    {\n      \"email\": \"lord@valomero.com\",\n      \"seat_multiplier\": 1,\n      \"first_name\": \"Lord\",\n      \"last_name\": \"Valomero\"\n    }\n  ]\n}"
+              "raw": "{\n  \"add_seats\": [\n    {\n      \"email\": \"lord@valomero.com\",\n      \"first_name\": \"Lord\",\n      \"last_name\": \"Valomero\"\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/v2/payments/subscription/{{subscription_id}}/billing-team/seat",
@@ -367,7 +367,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"replace_seats\": [\n    {\n      \"from_email\": \"lord@valomero.com\",\n      \"to_email\": \"user2@example.com\",\n      \"seat_multiplier\": 1,\n      \"first_name\": \"User\",\n      \"last_name\": \"Two\"\n    }\n  ]\n}"
+              "raw": "{\n  \"replace_seats\": [\n    {\n      \"from_email\": \"lord@valomero.com\",\n      \"to_email\": \"user2@example.com\",\n      \"first_name\": \"User\",\n      \"last_name\": \"Two\"\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/v2/payments/subscription/{{subscription_id}}/billing-team/seat",

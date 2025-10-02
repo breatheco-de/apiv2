@@ -104,7 +104,7 @@ Each team member gets their own allocation of consumables.
 
 **How consumables are allocated:**
 - Services with `is_team_allowed=False` → Owner gets personal consumables
-- Services with `is_team_allowed=True` → Each seat gets individual consumables (multiplied by seat_multiplier)
+- Services with `is_team_allowed=True` → Each seat gets individual consumables
 
 **Example:**
 ```
@@ -184,7 +184,6 @@ PUT /v2/payments/subscription/123/billing-team/seat
   "add_seats": [
     {
       "email": "member@example.com",
-      "seat_multiplier": 1
     }
   ]
 }

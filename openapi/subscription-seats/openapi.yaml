@@ -419,12 +419,10 @@ paths:
                   user: 456
                   email: owner@example.com
                   is_active: true
-                  seat_multiplier: 1
                 - id: 2
                   user: null
                   email: lord@valomero.com
                   is_active: true
-                  seat_multiplier: 1
 
     put:
       tags:
@@ -451,12 +449,9 @@ paths:
                     type: object
                     required:
                       - email
-                      - seat_multiplier
                     properties:
                       email:
                         type: string
-                      seat_multiplier:
-                        type: integer
                       first_name:
                         type: string
                       last_name:
@@ -468,14 +463,11 @@ paths:
                     required:
                       - from_email
                       - to_email
-                      - seat_multiplier
                     properties:
                       from_email:
                         type: string
                       to_email:
                         type: string
-                      seat_multiplier:
-                        type: integer
                       first_name:
                         type: string
                       last_name:
@@ -486,7 +478,6 @@ paths:
                 value:
                   add_seats:
                     - email: lord@valomero.com
-                      seat_multiplier: 1
                       first_name: Lord
                       last_name: Valomero
               replace_seat:
@@ -495,7 +486,6 @@ paths:
                   replace_seats:
                     - from_email: lord@valomero.com
                       to_email: user2@example.com
-                      seat_multiplier: 1
                       first_name: User
                       last_name: Two
       responses:
@@ -847,9 +837,6 @@ components:
           type: string
         is_active:
           type: boolean
-        seat_multiplier:
-          type: integer
-          minimum: 1
 
     Consumable:
       type: object
