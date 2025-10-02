@@ -862,8 +862,10 @@ def get_bag_from_subscription(
     utc_now = timezone.now()
 
     # Add valid (non-expired and with remaining uses) coupons from the subscription and from auto applied user restricted coupons
-    subscription_coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now)).exclude(
-        seller__user=subscription.user
+    subscription_coupons = (
+        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+        .exclude(seller__user=subscription.user)
+        .exclude(~Q(referral_type=Coupon.Referral.NO_REFERRAL))
     )
     user_coupons = Coupon.objects.filter(
         Q(offered_at=None) | Q(offered_at__lte=utc_now),
@@ -877,6 +879,7 @@ def get_bag_from_subscription(
             + list(user_coupons.values_list("slug", flat=True))
         )
     )
+
     if subscription_coupons.exists() or user_coupons.exists():
         valid_coupons = get_available_coupons(
             subscription.plans.first(),
@@ -1160,6 +1163,7 @@ def get_available_coupons(
         .select_related("seller__user", "allowed_user")
         .only(*cou_fields)
     )
+    print("cupones no expirados", valid_coupons)
 
     max = max_coupons_allowed()
 
