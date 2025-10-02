@@ -204,15 +204,17 @@ class GetFinancingOptionSerializer(serpy.Serializer):
         return price
 
 
-class GetPlanSmallSerializer(serpy.Serializer):
+class GetPlanSmallTinySerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
-    # description = serpy.Field()
     status = serpy.Field()
     time_of_life = serpy.Field()
     time_of_life_unit = serpy.Field()
     trial_duration = serpy.Field()
     trial_duration_unit = serpy.Field()
+
+
+class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
@@ -615,6 +617,14 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
+
+
+class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    status = serpy.Field()
+    user = GetUserSmallSerializer(many=False)
+    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
+    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
