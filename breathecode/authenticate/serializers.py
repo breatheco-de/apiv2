@@ -1320,26 +1320,31 @@ class AuthSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get("email")
         password = attrs.get("password")
+        user = None
 
-        if email and password:
-            email = email.lower()
-            user = User.objects.filter(Q(email__iexact=email) | Q(username=email)).first()
-            if not user:
-                msg = "Unable to log in with provided credentials."
+        invite = UserInvite.objects.filter(email__iexact=email).order_by("-id").first()
+
+        if not invite or (invite.status == "ACCEPTED" and invite.is_email_validated):
+            if email and password:
+                email = email.lower()
+                user = User.objects.filter(Q(email__iexact=email) | Q(username=email)).first()
+                if not user:
+                    msg = "Unable to log in with provided credentials."
+                    raise serializers.ValidationError(msg, code=403)
+                if user.check_password(password) != True:
+                    msg = "Unable to log in with provided credentials."
+                    raise serializers.ValidationError(msg, code=403)
+                # The authenticate call simply returns None for is_active=False
+                # users. (Assuming the default ModelBackend authentication
+                # backend.)
+            else:
+                msg = 'Must include "username" and "password".'
                 raise serializers.ValidationError(msg, code=403)
-            if user.check_password(password) != True:
-                msg = "Unable to log in with provided credentials."
-                raise serializers.ValidationError(msg, code=403)
-            # The authenticate call simply returns None for is_active=False
-            # users. (Assuming the default ModelBackend authentication
-            # backend.)
-        else:
-            msg = 'Must include "username" and "password".'
-            raise serializers.ValidationError(msg, code=403)
 
         if (
             user
-            and not UserInvite.objects.filter(email__iexact=email, status="ACCEPTED", is_email_validated=True).exists()
+            and invite
+            and not invite.is_email_validated
         ):
             invites = UserInvite.objects.filter(
                 email__iexact=email, status="ACCEPTED", is_email_validated=False
