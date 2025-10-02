@@ -16,8 +16,8 @@ from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
 from rest_framework.request import Request
-from breathecode.admissions import tasks as admissions_tasks
 
+from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import UserInvite, UserSetting
@@ -877,7 +877,7 @@ def get_bag_from_subscription(
             + list(user_coupons.values_list("slug", flat=True))
         )
     )
-    if subscription_coupons.exists():
+    if subscription_coupons.exists() or user_coupons.exists():
         valid_coupons = get_available_coupons(
             subscription.plans.first(),
             coupon_slugs,
