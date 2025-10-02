@@ -20,8 +20,11 @@ import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 from linked_services.core import settings
+from dotenv import load_dotenv
 
 from breathecode.setup import configure_redis
+
+load_dotenv()
 
 settings.set_settings(app_name="breathecode")
 

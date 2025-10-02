@@ -8,9 +8,14 @@ import pytz
 from django.db.models import QuerySet
 from django.db.models.query_utils import Q
 from django.utils import timezone
+from google.apps.meet_v2.types import Space, SpaceConfig
 
-from breathecode.admissions.models import Cohort, CohortTimeSlot, CohortUser, TimeSlot
+from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, TimeSlot
+from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
+from breathecode.services.google_apps.google_apps import GoogleApps
+
+# from breathecode.services.google_meet.google_meet import GoogleMeet
 from breathecode.utils.datetime_integer import DatetimeInteger
 
 from .models import Event, EventType, Organization, Organizer, Venue
@@ -729,3 +734,119 @@ def is_eventbrite_enabled():
         return True
 
     return os.getenv("EVENTBRITE", "0") == "1"
+
+
+def create_google_meet_for_event(event: Event, academy=None, online_event=True) -> str:
+    """
+    Create a Google Meet room for an event and return the meeting URL.
+
+    Args:
+        event: Event instance to create Google Meet for (can be None if creating before event)
+        academy: Academy instance (required if event is None)
+        online_event: Whether the event is online (default True)
+
+    Returns:
+        str: Google Meet URL
+
+    Raises:
+        Exception: If academy doesn't have proper Google Cloud configuration
+    """
+
+    # Use provided academy or get from event
+    target_academy = academy or (event.academy if event else None)
+    print("ACA ENTRE Y ESTE ES EL ACADEMI", target_academy.id)
+
+    if not target_academy:
+        raise Exception("Academy must be provided to create Google Meet")
+
+    # Check if event is online (use provided value or get from event)
+    is_online = online_event if event is None else event.online_event
+
+    if not is_online:
+        raise Exception("Event must be marked as online to create Google Meet")
+
+    settings = AcademyAuthSettings.objects.filter(academy=target_academy, google_cloud_owner__isnull=False).first()
+    print("ACA ENTRE Y ESTE ES EL SETTINGS", settings.id)
+
+    if not settings:
+        raise Exception(f"Academy {target_academy.id} doesn't have auth settings for google cloud")
+
+    if not hasattr(settings.google_cloud_owner, "credentialsgoogle"):
+        raise Exception(f"Academy {target_academy.id} doesn't have a google cloud owner with credentials")
+
+    # Check if credentials are valid
+    logger.info(f"Academy {target_academy.id} - Google Cloud Owner: {settings.google_cloud_owner.id}")
+    logger.info(f"Academy {target_academy.id} - Credentials ID: {settings.google_cloud_owner.credentialsgoogle.id}")
+    credentials = settings.google_cloud_owner.credentialsgoogle
+    logger.info(f"Academy {target_academy.id} - Credentials ID: {credentials.id}")
+    logger.info(f"Academy {target_academy.id} - Has Token: {bool(credentials.token)}")
+    logger.info(f"Academy {target_academy.id} - Has Refresh Token: {bool(credentials.refresh_token)}")
+    logger.info(f"Academy {target_academy.id} - Has ID Token: {bool(credentials.id_token)}")
+    logger.info(f"Academy {target_academy.id} - Google ID: {credentials.google_id}")
+    logger.info(f"Academy {target_academy.id} - Expires At: {credentials.expires_at}")
+    if not credentials.token or not credentials.refresh_token:
+        raise Exception(f"Academy {target_academy.id} has invalid or expired Google Cloud credentials")
+
+    try:
+        from breathecode.services.google.utils import get_client
+
+        meet = get_client(credentials)
+        logger.info(f"Academy {target_academy.id} - GoogleMeet instance created successfully")
+    except Exception as e:
+        logger.error(f"Error creating GoogleMeet instance for academy {target_academy.id}: {str(e)}")
+        raise Exception(f"Academy {target_academy.id} has invalid or expired Google Cloud credentials. \n {e}")
+    space = Space(
+        config=SpaceConfig(access_type=SpaceConfig.AccessType.OPEN),
+    )
+    logger.info(f"Academy {target_academy.id} - Space configuration created")
+
+    created_space = meet.create_space(space=space)
+
+    google = GoogleApps(
+        id_token=settings.google_cloud_owner.credentialsgoogle.id_token,
+        refresh_token=settings.google_cloud_owner.credentialsgoogle.refresh_token,
+    )
+
+    google.subscribe_meet_webhook(
+        name=created_space.name,
+        event_types=[
+            "google.workspace.meet.conference.v2.started",
+            "google.workspace.meet.conference.v2.ended",
+            "google.workspace.meet.participant.v2.joined",
+            "google.workspace.meet.participant.v2.left",
+            "google.workspace.meet.recording.v2.fileGenerated",
+            "google.workspace.meet.transcript.v2.fileGenerated",
+        ],
+    )
+
+    # Only save to event if event exists
+    if event:
+        event.live_stream_url = created_space.meeting_uri
+        event.save()
+        logger.info(f"Created Google Meet for event {event.id}: {created_space.meeting_uri}")
+    else:
+        logger.info(f"Created Google Meet for academy {target_academy.id}: {created_space.meeting_uri}")
+
+    return created_space.meeting_uri
+
+
+def create_google_meet_for_new_event(academy_id: int) -> str:
+    """
+    Create a Google Meet room for a new event (before the event is created).
+    This is useful when you want to create the event with the Google Meet URL already set.
+
+    Args:
+        academy_id: ID of the academy to create Google Meet for
+
+    Returns:
+        str: Google Meet URL
+
+    Raises:
+        Exception: If academy doesn't have proper Google Cloud configuration
+    """
+    academy = Academy.objects.filter(id=academy_id).first()
+    print("ACA ENTRE", academy)
+    if not academy:
+        raise Exception(f"Academy with id {academy_id} not found")
+
+    return create_google_meet_for_event(event=None, academy=academy, online_event=True)
