@@ -1324,7 +1324,7 @@ class AuthSerializer(serializers.Serializer):
 
         invite = UserInvite.objects.filter(email__iexact=email).order_by("-id").first()
 
-        if not invite or (invite.status == "ACCEPTED" and invite.is_email_validated):
+        if invite is None or (invite.status == "ACCEPTED" and invite.is_email_validated):
             if email and password:
                 email = email.lower()
                 user = User.objects.filter(Q(email__iexact=email) | Q(username=email)).first()
@@ -1342,8 +1342,7 @@ class AuthSerializer(serializers.Serializer):
                 raise serializers.ValidationError(msg, code=403)
 
         if (
-            user
-            and invite
+            invite
             and not invite.is_email_validated
         ):
             invites = UserInvite.objects.filter(
@@ -1354,6 +1353,10 @@ class AuthSerializer(serializers.Serializer):
             raise ValidationException(
                 "You need to validate your email first", slug="email-not-validated", silent=True, code=403, data=data
             )
+
+        if user is None:
+            msg = "Unable to log in with provided credentials."
+            raise serializers.ValidationError(msg, code=403)
 
         attrs["user"] = user
         return attrs
