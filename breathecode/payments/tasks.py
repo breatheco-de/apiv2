@@ -836,10 +836,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     try:
                         s = Stripe(academy=plan_financing.academy)
                         s.set_language(settings.lang)
-                        team = SubscriptionBillingTeam.objects.filter(subscription=plan_financing.subscription).first()
-                        invoice = s.pay(
-                            plan_financing.user, bag, amount, currency=bag.currency, subscription_billing_team=team
-                        )
+                        invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
 
                     except Exception:
                         message = translation(
@@ -1807,6 +1804,7 @@ def process_auto_recharge(
     team_id: int,
     recharge_amount: float,
     seat_id: int = None,
+    owner: bool = False,
     **_: Any,
 ):
     """
@@ -1841,4 +1839,4 @@ def process_auto_recharge(
         except SubscriptionSeat.DoesNotExist:
             raise AbortTask(f"SubscriptionSeat {seat_id} not found")
 
-    actions.process_auto_recharge(team, recharge_amount, seat)
+    actions.process_auto_recharge(team, recharge_amount, seat, owner=owner)

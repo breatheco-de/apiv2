@@ -1718,7 +1718,11 @@ class AbstractIOweYou(models.Model):
 
         return period_start, period_end
 
-    def get_current_period_spend(self, service: "Service" = None) -> float:
+    def get_current_period_spend(
+        self,
+        service: "Service" = None,
+        user: User | None = None,
+    ) -> float:
         """
         Calculate actual spending in current monthly period from invoices.
 
@@ -1748,36 +1752,81 @@ class AbstractIOweYou(models.Model):
         from breathecode.payments.models import Invoice
 
         period_start, period_end = self.get_current_monthly_period_dates()
-
         if not period_start:
             return 0.0
 
+        if user is None:
+            user = self.user
+
+        settings = get_user_settings(user.id)
+        lang = settings.lang
+
         # Query invoices for auto-recharge in this monthly period
-        # Filter by subscription or plan_financing
+        # Build dynamic filters targeting the correct user/context
+        filter_args = []
+
+        # User
+        if isinstance(user, str) and not user.isdigit():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Client user id must be an integer",
+                    es="El id del cliente debe ser un entero",
+                    slug="client-user-id-must-be-an-integer",
+                )
+            )
+
+        is_subscription = isinstance(self, Subscription)
+
+        if is_subscription and isinstance(user, str):
+            filter_args.append(
+                Q(user__id=int(user))
+                | Q(subscription_seat__user__id=int(user), subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=int(user),
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
+
+        elif is_subscription and isinstance(user, int):
+            filter_args.append(
+                Q(user__id=user)
+                | Q(subscription_seat__user__id=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
+
+        elif is_subscription and isinstance(user, User):
+            filter_args.append(
+                Q(user=user)
+                | Q(subscription_seat__user=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
+
+        elif is_subscription is False:
+            filter_args.append(Q(user=user, subscription_billing_team__isnull=True, subscription_seat__isnull=True))
+
         filter_kwargs = {
-            "user": self.user,
             "status": Invoice.Status.PAID,
-            "created_at__gte": period_start,
+            "paid_at__gte": period_start,
+            "paid_at__lt": period_end,
         }
 
-        # Add specific filter based on instance type
-        if isinstance(self, Subscription):
-            filter_kwargs["subscription"] = self
-        elif hasattr(self, "__class__") and self.__class__.__name__ == "PlanFinancing":
-            filter_kwargs["plan_financing"] = self
-
-        invoices = Invoice.objects.filter(**filter_kwargs)
-
-        if period_end:
-            invoices = invoices.filter(created_at__lt=period_end)
-
-        # Filter by service if provided
-        # TODO: This requires invoices to have a relation to service/service_item
-        # For now, this is a placeholder for when invoice structure supports it
         if service:
-            # When implemented, filter invoices by service
-            # invoices = invoices.filter(service_item__service=service)
-            pass
+            filter_kwargs["bag__service_items__service"] = service
+
+        invoices = self.invoices.filter(*filter_args, **filter_kwargs)
 
         total = invoices.aggregate(total=Sum("amount"))["total"]
         return float(total) if total else 0.0
