@@ -7,7 +7,6 @@ from typing import Any, Optional
 from capyc.core.i18n import translation
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
-from django.db.models import Q
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -548,9 +547,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
                 amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
-                # Apply coupon discounts if they exist on the subscription (only non-expired)
+                # Apply coupon discounts if they exist on the subscription or they are restricted to the used (only non-expired and with offers left)
                 utc_now = timezone.now()
-                coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+                coupons = bag.coupons.all()
+
                 if coupons:
                     original_amount = amount
                     amount = actions.get_discounted_price(amount, coupons)
