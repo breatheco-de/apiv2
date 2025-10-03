@@ -1147,15 +1147,18 @@ def get_available_coupons(
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
 
     if not only_sent_coupons:
-        special_offers = (
+        special_offer = (
             Coupon.objects.filter(*cou_args, auto=True)
-            .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
+            .exclude(
+                Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT) | Q(allowed_user__isnull=False)
+            )
             .select_related("seller__user", "allowed_user")
             .only(*cou_fields)
+            .first()
         )
+        print("special_offers", special_offer)
 
-        for coupon in special_offers:
-            manage_coupon(coupon)
+        manage_coupon(special_offer)
 
     valid_coupons = (
         Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
