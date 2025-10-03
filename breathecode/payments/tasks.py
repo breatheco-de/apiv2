@@ -1805,6 +1805,7 @@ def process_auto_recharge(
     recharge_amount: float,
     seat_id: int = None,
     owner: bool = False,
+    service_id: int | None = None,
     **_: Any,
 ):
     """
@@ -1820,6 +1821,7 @@ def process_auto_recharge(
         team_id: SubscriptionBillingTeam ID
         recharge_amount: Amount in subscription currency to recharge
         seat_id: Optional SubscriptionSeat ID for per-seat recharge
+        service_id: Optional Service ID to restrict the recharge to a single service
 
     Note:
         Uses Redis lock to prevent race conditions when multiple
@@ -1839,4 +1841,10 @@ def process_auto_recharge(
         except SubscriptionSeat.DoesNotExist:
             raise AbortTask(f"SubscriptionSeat {seat_id} not found")
 
-    actions.process_auto_recharge(team, recharge_amount, seat, owner=owner)
+    service = None
+    if service_id is not None:
+        service = Service.objects.filter(id=service_id).first()
+        if not service:
+            raise AbortTask(f"Service {service_id} not found")
+
+    actions.process_auto_recharge(team, recharge_amount, seat, owner=owner, service=service)

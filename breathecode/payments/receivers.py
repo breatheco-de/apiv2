@@ -35,6 +35,7 @@ from .signals import (
     grant_plan_permissions,
     revoke_plan_permissions,
 )
+from .actions import evaluate_auto_recharge
 
 logger = logging.getLogger(__name__)
 
@@ -425,24 +426,29 @@ def check_consumable_balance_for_auto_recharge(
                 f"{balance_amount:.2f} {currency.code} < {team.recharge_threshold_amount} {currency.code}"
             )
 
-            recharge_amount = float(team.recharge_amount)
+            # Centralized budget evaluation and amount adjustment
+            allowed, adjusted_amount, reason = evaluate_auto_recharge(
+                subscription,
+                float(team.recharge_amount),
+                team=team,
+                seat=seat,
+                service=instance.service_item.service,
+            )
+            if not allowed:
+                logger.warning(
+                    f"Auto-recharge not allowed for team {team.id}, seat {seat.id}: {reason or 'not-allowed'}"
+                )
+                return
+            recharge_amount = adjusted_amount
 
-            # Quick check: if total team budget is exhausted, don't trigger
-            if team.max_period_spend:
-                current_spend = team.get_current_period_spend()
-                if current_spend >= float(team.max_period_spend):
-                    logger.warning(
-                        f"No budget available for recharge for team {team.id} "
-                        f"(spent: {current_spend:.2f}, limit: {team.max_period_spend})"
-                    )
-                    return
-
+            # Send signal including seat context
             consumable_balance_low.send(
                 sender=sender,
                 team=team,
                 seat=seat,
                 balance_amount=balance_amount,
                 recharge_amount=recharge_amount,
+                service_id=instance.service_item.service.id,
             )
         return
 
@@ -505,18 +511,17 @@ def check_consumable_balance_for_auto_recharge(
                 f"{balance_amount:.2f} {currency.code} < {team.recharge_threshold_amount} {currency.code}"
             )
 
-            # Trigger recharge - the task will handle per-service budget limits
-            recharge_amount = float(team.recharge_amount)
-
-            # Quick check: if total budget is already exhausted, don't trigger at all
-            if team.max_period_spend:
-                current_spend = team.get_current_period_spend()
-                if current_spend >= float(team.max_period_spend):
-                    logger.warning(
-                        f"No budget available for recharge for team {team.id} "
-                        f"(spent: {current_spend:.2f}, limit: {team.max_period_spend})"
-                    )
-                    return
+            # Centralized budget evaluation and amount adjustment
+            allowed, adjusted_amount, reason = evaluate_auto_recharge(
+                subscription,
+                float(team.recharge_amount),
+                team=team,
+                service=instance.service_item.service,
+            )
+            if not allowed:
+                logger.warning(f"Auto-recharge not allowed for team {team.id}: {reason or 'not-allowed'}")
+                return
+            recharge_amount = adjusted_amount
 
             # Send signal with full recharge amount
             # The task will adjust per-service based on available budget
@@ -525,6 +530,7 @@ def check_consumable_balance_for_auto_recharge(
                 team=team,
                 balance_amount=balance_amount,
                 recharge_amount=recharge_amount,
+                service_id=instance.service_item.service.id,
             )
         return
 
@@ -568,17 +574,20 @@ def check_consumable_balance_for_auto_recharge(
                 f"{balance_amount:.2f} {currency.code} < {subscription.recharge_threshold_amount} {currency.code}"
             )
 
-            recharge_amount = float(subscription.recharge_amount)
-
-            # Quick check: if subscription budget exhausted, don't trigger
-            if subscription.max_period_spend:
-                current_spend = subscription.get_current_period_spend()
-                if current_spend >= float(subscription.max_period_spend):
-                    logger.warning(
-                        f"No owner budget available for subscription {subscription.id} "
-                        f"(spent: {current_spend:.2f}, limit: {subscription.max_period_spend})"
-                    )
-                    return
+            # Centralized budget evaluation and amount adjustment
+            allowed, adjusted_amount, reason = evaluate_auto_recharge(
+                subscription,
+                float(subscription.recharge_amount),
+                team=team,
+                user=subscription.user,
+                service=instance.service_item.service,
+            )
+            if not allowed:
+                logger.warning(
+                    f"Owner auto-recharge not allowed for subscription {subscription.id}: {reason or 'not-allowed'}"
+                )
+                return
+            recharge_amount = adjusted_amount
 
             # Route through team for task context (team is one-to-one with subscription)
             team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
@@ -591,6 +600,7 @@ def check_consumable_balance_for_auto_recharge(
                 owner=True,
                 balance_amount=balance_amount,
                 recharge_amount=recharge_amount,
+                service_id=instance.service_item.service.id,
             )
         return
 
@@ -617,8 +627,13 @@ def trigger_auto_recharge_task(
     )
 
     # Schedule the recharge task
+    service_id = kwargs.get("service_id")
     tasks.process_auto_recharge.delay(
-        team_id=team.id, recharge_amount=recharge_amount, seat_id=seat.id if seat else None, owner=owner
+        team_id=team.id,
+        recharge_amount=recharge_amount,
+        seat_id=seat.id if seat else None,
+        owner=owner,
+        service_id=service_id,
     )
 
 

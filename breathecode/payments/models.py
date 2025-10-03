@@ -1724,29 +1724,38 @@ class AbstractIOweYou(models.Model):
         user: User | None = None,
     ) -> float:
         """
-        Calculate actual spending in current monthly period from invoices.
+        Compute the amount spent in the current monthly period from paid invoices.
 
-        Returns total amount from paid invoices for auto-recharge in the
-        current monthly spending period (based on paid_at day).
+        Period boundaries are derived from the owner's `paid_at` day via
+        `get_current_monthly_period_dates()` and invoices are filtered by their
+        `paid_at` timestamp within [period_start, period_end).
 
         Args:
-            service: Optional Service to filter spending by specific service.
-                    If provided, only returns spending for that service.
+            service: Optional `Service` to filter spending by a single service. When set,
+                invoices are filtered using `bag__service_items__service=service`.
+            user: Optional user context for the spending calculation. Accepts a `User`
+                instance, an integer user ID, or a numeric string ID. If omitted, it
+                defaults to `self.user`.
 
-        Example:
-            - Subscription paid_at: Jan 15
-            - Current date: Feb 20
-            - Returns: Spending from Feb 15 to Mar 15
+                - When `self` is a `Subscription`, spending includes invoices where:
+                  - `invoice.user` is the given user, or
+                  - `invoice.subscription_seat.user` is the given user and the seat is active, or
+                  - `invoice.user` is null and the given user holds an active seat in the
+                    `subscription_billing_team` with `PER_TEAM` consumption strategy.
 
-            # Get total spending
-            total_spend = subscription.get_current_period_spend()
+                - When `self` is a `PlanFinancing`, spending includes only invoices for the
+                  given user that are not attributed to any team or seat.
 
-            # Get spending for specific service
-            mentorship_spend = subscription.get_current_period_spend(service=mentorship_service)
+        Returns:
+            float: Total amount spent in the current period.
 
-        Note: This is independent of:
-            - Payment frequency (could be quarterly)
-            - Service regeneration schedules (could be weekly per service)
+        Raises:
+            ValidationException: If `user` is a non-numeric string (slug
+                `client-user-id-must-be-an-integer`).
+
+        Notes:
+            - Uses `paid_at` to filter invoices in the period window.
+            - Independent of payment frequency and service regeneration schedules.
         """
         from django.db.models import Sum
         from breathecode.payments.models import Invoice
