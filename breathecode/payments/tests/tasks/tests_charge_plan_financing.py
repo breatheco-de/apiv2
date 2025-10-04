@@ -86,6 +86,8 @@ def invoice_item(data={}):
         "payment_method_id": None,
         "proof_id": None,
         "amount_refunded": 0.0,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
         **data,
     }
 
@@ -356,7 +358,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(
             self.bc.database.list_of("payments.Invoice"),
             [
-                self.bc.format.to_dict(model.invoice),
+                {**self.bc.format.to_dict(model.invoice), "status": "PENDING"},
                 invoice_item(
                     {
                         "academy_id": 1,

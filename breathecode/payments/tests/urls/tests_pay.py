@@ -1508,6 +1508,9 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
         "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "amount_refunded": 0.0,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
     }
 
     expected_serializer = get_serializer(bc, model.currency, model.user, data={})
@@ -1655,6 +1658,9 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
         "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "amount_refunded": 0.0,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
     }
 
     expected_serializer = get_serializer(bc, model.currency, model.user, data={})
