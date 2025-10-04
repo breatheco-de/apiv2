@@ -41,14 +41,18 @@ def test_get_ok_integration_db(client):
 
     team = SubscriptionBillingTeam.objects.create(subscription=subscription, name="Team", seats_limit=10, seats_log=[])
 
-    # Active seat counts, inactive does not
-    SubscriptionSeat.objects.create(billing_team=team, email="a@b.com", user=None, seat_multiplier=2, is_active=True)
-    SubscriptionSeat.objects.create(billing_team=team, email="c@d.com", user=None, seat_multiplier=3, is_active=False)
+    # Active seat counts; inactive does not
+    SubscriptionSeat.objects.create(billing_team=team, email="a@b.com", user=None, is_active=True)
+    SubscriptionSeat.objects.create(billing_team=team, email="c@d.com", user=None, is_active=False)
 
-    # Act
+    # Act (patch methods at class level so fetched instance uses them)
     client.force_authenticate(user=owner)
     url = f"/v2/payments/subscription/{subscription.id}/billing-team"
-    resp = client.get(url)
+    with (
+        patch.object(SubscriptionBillingTeam, "get_current_monthly_period_dates", return_value=(None, None)),
+        patch.object(SubscriptionBillingTeam, "get_current_period_spend", return_value=0.0),
+    ):
+        resp = client.get(url)
 
     # Assert
     assert resp.status_code == 200
@@ -57,8 +61,20 @@ def test_get_ok_integration_db(client):
         "subscription": subscription.id,
         "name": "Team",
         "seats_limit": 10,
-        "seats_count": 2,  # only active seats multiplier sum
+        "seats_count": 1,  # only active seats counted
         "seats_log": [],
+        # Auto-recharge settings
+        "auto_recharge_enabled": False,
+        "recharge_threshold_amount": "10.00",
+        "recharge_amount": "10.00",
+        "max_period_spend": None,
+        # Current spending (calculated from invoices)
+        "current_period_spend": 0.0,
+        # Virtual attributes for current period
+        "period_start": None,
+        "period_end": None,
+        # Subscription currency
+        "currency": None,
     }
 
 
@@ -134,13 +150,23 @@ def test_get_ok_mocked_returns_payload(mock_sub_objects, mock_team_objects, mock
     from breathecode.payments.views import SubscriptionBillingTeamView
 
     subscription = MagicMock(id=1, user_id=7)
+    subscription.currency = None
     mock_sub_objects.filter.return_value = MagicMock(first=lambda: subscription)
 
-    seats_manager = MagicMock(
-        filter=lambda is_active=True: [MagicMock(seat_multiplier=2), MagicMock(seat_multiplier=3)]
-    )
+    # Provide a manager-like object with filter().count()
+    seats_qs = MagicMock()
+    seats_qs.count.return_value = 2
+    seats_manager = MagicMock()
+    seats_manager.filter.return_value = seats_qs
     team = MagicMock(id=99, seats_limit=10, seats_log=[], seats=seats_manager)
     team.name = "Team"
+    team.subscription = subscription
+    team.get_current_monthly_period_dates.return_value = (None, None)
+    team.get_current_period_spend.return_value = 0.0
+    team.auto_recharge_enabled = False
+    team.recharge_threshold_amount = "10.00"
+    team.recharge_amount = "10.00"
+    team.max_period_spend = None
     mock_team_objects.filter.return_value = MagicMock(first=lambda: team)
 
     request = factory.get("/v2/payments/subscription/1/billing-team")
@@ -153,6 +179,18 @@ def test_get_ok_mocked_returns_payload(mock_sub_objects, mock_team_objects, mock
         "subscription": 1,
         "name": "Team",
         "seats_limit": 10,
-        "seats_count": 5,
+        "seats_count": 2,
         "seats_log": [],
+        # Auto-recharge settings
+        "auto_recharge_enabled": False,
+        "recharge_threshold_amount": "10.00",
+        "recharge_amount": "10.00",
+        "max_period_spend": None,
+        # Current spending (calculated from invoices)
+        "current_period_spend": 0.0,
+        # Virtual attributes for current period
+        "period_start": None,
+        "period_end": None,
+        # Subscription currency
+        "currency": None,
     }
