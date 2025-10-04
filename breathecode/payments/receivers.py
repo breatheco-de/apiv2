@@ -460,18 +460,18 @@ def check_consumable_balance_for_auto_recharge(
         if not team.auto_recharge_enabled:
             return
 
-    # Check spending limit for this billing period (calculated from invoices)
-    subscription = team.subscription
+        # Check spending limit for this billing period (calculated from invoices)
+        subscription = team.subscription
 
-    if team.max_period_spend:
-        current_spend = team.get_current_period_spend()
+        if team.max_period_spend:
+            current_spend = team.get_current_period_spend()
 
-        if current_spend >= float(team.max_period_spend):
-            logger.warning(
-                f"Auto-recharge skipped for team {team.id}: billing period spending limit reached "
-                f"({current_spend:.2f}/{team.max_period_spend})"
-            )
-            return
+            if current_spend >= float(team.max_period_spend):
+                logger.warning(
+                    f"Auto-recharge skipped for team {team.id}: billing period spending limit reached "
+                    f"({current_spend:.2f}/{team.max_period_spend})"
+                )
+                return
 
         subscription = team.subscription
         currency = subscription.currency
