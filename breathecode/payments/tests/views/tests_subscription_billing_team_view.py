@@ -151,6 +151,7 @@ def test_get_ok_mocked_returns_payload(mock_sub_objects, mock_team_objects, mock
 
     subscription = MagicMock(id=1, user_id=7)
     subscription.currency = None
+    subscription.get_current_monthly_period_dates.return_value = (None, None)
     mock_sub_objects.filter.return_value = MagicMock(first=lambda: subscription)
 
     # Provide a manager-like object with filter().count()
