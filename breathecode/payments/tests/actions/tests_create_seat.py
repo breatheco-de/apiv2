@@ -22,11 +22,10 @@ def test_create_seat_happy_path_creates_seat_and_invites_and_schedules(mock_seat
     subscription.id = 99
     team = MagicMock()
     team.subscription = subscription
-    team.seat_multiplier = 2
     # new seat id will be used by scheduler now
     seat_instance.id = 1001
 
-    seat = create_seat("new@example.com", user=None, seat_multiplier=5, billing_team=team, lang="en")
+    seat = create_seat("new@example.com", user=None, billing_team=team, lang="en")
 
     assert seat is seat_instance
     assert len(seat_instance.seat_log) == 1
@@ -37,7 +36,6 @@ def test_create_seat_happy_path_creates_seat_and_invites_and_schedules(mock_seat
         billing_team=team,
         user=None,
         email="new@example.com",
-        seat_multiplier=5,
     )
     # log entry has normalized email and correct action
     assert seat_instance.seat_log[0]["email"] == "new@example.com"
@@ -63,10 +61,9 @@ def test_create_seat_with_per_team_consumption_does_not_schedule(mock_seat_cls, 
     subscription.id = 500
     team = MagicMock()
     team.subscription = subscription
-    team.seat_multiplier = 1
     team.consumption_strategy = "PER_TEAM"
 
-    seat = create_seat("team.member@example.com", user=None, seat_multiplier=1, billing_team=team, lang="en")
+    seat = create_seat("team.member@example.com", user=None, billing_team=team, lang="en")
 
     assert seat is seat_instance
     mock_invite.assert_called_once()  # invite still happens for pending seat
@@ -83,7 +80,7 @@ def test_create_seat_duplicate_raises(mock_seat_cls):
     team = MagicMock()
 
     with pytest.raises(ValidationException):
-        create_seat("dup@example.com", user=None, seat_multiplier=1, billing_team=team, lang="en")
+        create_seat("dup@example.com", user=None, billing_team=team, lang="en")
 
     # ensure filter checked for duplicate with correct args
     mock_seat_cls.objects.filter.assert_called_with(billing_team=team, email="dup@example.com")
@@ -106,12 +103,11 @@ def test_create_seat_with_user_does_not_invite_but_schedules(mock_seat_cls, mock
     subscription.id = 77
     team = MagicMock()
     team.subscription = subscription
-    team.seat_multiplier = 3
     seat_instance.id = 777
 
     user = MagicMock()
 
-    seat = create_seat("Member@Mail.com", user=user, seat_multiplier=3, billing_team=team, lang="en")
+    seat = create_seat("Member@Mail.com", user=user, billing_team=team, lang="en")
 
     assert seat is seat_instance
     mock_invite.assert_not_called()
@@ -122,7 +118,6 @@ def test_create_seat_with_user_does_not_invite_but_schedules(mock_seat_cls, mock
         billing_team=team,
         user=user,
         email="Member@Mail.com",
-        seat_multiplier=3,
     )
     assert len(seat_instance.seat_log) == 1
     assert seat_instance.seat_log[0]["action"] == "ADDED"
