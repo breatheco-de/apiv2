@@ -90,12 +90,15 @@ def plan_serializer(plan, service_items, service, cohorts=[], financing_options=
 
 def service_serializer(service, cohorts=[], data={}):
     return {
-        "id": service.id,
+        "consumer": "NO_SET",
         "groups": [],
+        "icon_url": service.icon_url,
+        "id": service.id,
         "private": service.private,
+        "session_duration": None,
         "slug": service.slug,
         "title": service.title,
-        "icon_url": service.icon_url,
+        "type": "COHORT_SET",
         **data,
     }
 
@@ -103,9 +106,10 @@ def service_serializer(service, cohorts=[], data={}):
 def service_item_serializer(service_item, service, cohorts=[], data={}):
     return {
         "how_many": service_item.how_many,
-        "unit_type": service_item.unit_type,
-        "sort_priority": service_item.sort_priority,
+        "is_team_allowed": False,
         "service": service_serializer(service, cohorts),
+        "sort_priority": service_item.sort_priority,
+        "unit_type": service_item.unit_type,
         **data,
     }
 

@@ -5,6 +5,7 @@ Test /answer
 import logging
 import random
 from datetime import timezone as dt_timezone
+from decimal import Decimal
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -42,6 +43,10 @@ def subscription_item(data={}):
         "country_code": "",
         "currency_id": 1,
         "conversion_info": None,
+        "auto_recharge_enabled": False,
+        "recharge_threshold_amount": Decimal("10.00"),
+        "recharge_amount": Decimal("10.00"),
+        "max_period_spend": None,
         **data,
     }
 

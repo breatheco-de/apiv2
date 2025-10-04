@@ -21,13 +21,17 @@ def academy_serializer(academy):
 def service_item_serializer(service_item, service):
     return {
         "how_many": service_item.how_many,
+        "is_team_allowed": False,
         "service": {
-            "id": service.id,
+            "consumer": "NO_SET",
             "groups": [],
+            "icon_url": service.icon_url,
+            "id": service.id,
             "private": service.private,
+            "session_duration": None,
             "slug": service.slug,
             "title": service.title,
-            "icon_url": service.icon_url,
+            "type": "COHORT_SET",
         },
         "unit_type": service_item.unit_type,
         "sort_priority": service_item.sort_priority,
