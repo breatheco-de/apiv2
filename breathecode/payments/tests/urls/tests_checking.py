@@ -106,7 +106,7 @@ def service_serializer(service, cohorts=[], data={}):
 def service_item_serializer(service_item, service, cohorts=[], data={}):
     return {
         "how_many": service_item.how_many,
-        "is_team_allowed": False,
+        "is_team_allowed": service_item.is_team_allowed,
         "service": service_serializer(service, cohorts),
         "sort_priority": service_item.sort_priority,
         "unit_type": service_item.unit_type,

@@ -1056,6 +1056,9 @@ def test_checkout_with_country_code_and_exceptions(
         "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "amount_refunded": 0.0,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
     }
     assert database.list_of("payments.Invoice") == [expected_invoice_data]
 
@@ -1120,6 +1123,8 @@ def test_seats__subscription_is_required(database, client: APIClient):
 
 
 @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("stripe.Customer.create", MagicMock(return_value={"id": "cus_mock"}))
+@patch("stripe.Charge.create", MagicMock(return_value={"id": "ch_mock"}))
 def test_seats__seats_required(database, client: APIClient):
     # Create plan and subscription without billing team
     plan = {"is_renewable": False, "trial_duration": 0}
@@ -1461,6 +1466,7 @@ def test_seats__increase_existing_team_delta_only(database, client: APIClient):
             {
                 "stripe_id": "1",
                 "amount": float(amount),
+                "subscription_billing_team_id": 1,
             }
         )
     ]

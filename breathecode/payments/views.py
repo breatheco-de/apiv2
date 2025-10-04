@@ -2402,7 +2402,6 @@ class ConsumableCheckoutView(APIView):
                             subscription=subscription,
                             name=f"Team {subscription.id}",
                             seats_limit=desired_limit,
-                            subscription_billing_team=team,
                             consumption_strategy=(
                                 plan.consumption_strategy
                                 if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
