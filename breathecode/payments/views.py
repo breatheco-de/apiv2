@@ -3031,7 +3031,7 @@ class SubscriptionBillingTeamView(APIView):
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
     extensions = APIViewExtensions(sort="-id")
 
-    def _serializer(team: SubscriptionBillingTeam) -> dict[str, Any]:
+    def _serializer(self, team: SubscriptionBillingTeam) -> dict[str, Any]:
         subscription = team.subscription
         period_start, period_end = team.get_current_monthly_period_dates()
         return {
