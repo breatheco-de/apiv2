@@ -2219,7 +2219,7 @@ def get_user_from_consumable_to_be_charged(
     - A `User` instance or `None` when team‑shared without a specific user.
     """
     resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
-    is_team_allowed = instance.service_item.service.is_team_allowed
+    is_team_allowed = instance.service_item.is_team_allowed
 
     user = None
     team: SubscriptionBillingTeam | None = instance.subscription_billing_team or instance.subscription_seat.billing_team
