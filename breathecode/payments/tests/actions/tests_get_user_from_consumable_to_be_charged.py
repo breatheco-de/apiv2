@@ -32,7 +32,8 @@ class DummyTeamStrategy:
 def build_consumable(*, resource=None, team=None, seat_user=None, is_team_allowed=True):
     """Build a minimal consumable stub referencing resource, team/seat, and service flags."""
     service = SimpleNamespace(is_team_allowed=is_team_allowed)
-    service_item = SimpleNamespace(service=service)
+    # actions.get_user_from_consumable_to_be_charged reads from service_item.is_team_allowed
+    service_item = SimpleNamespace(service=service, is_team_allowed=is_team_allowed)
 
     # Create a seat stub when a seat_user is provided OR strategy is PER_SEAT to avoid attribute errors
     seat = None

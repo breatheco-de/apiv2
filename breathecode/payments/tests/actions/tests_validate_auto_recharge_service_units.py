@@ -16,7 +16,7 @@ from dateutil.relativedelta import relativedelta
 
 from breathecode.payments import actions
 from breathecode.payments.models import Currency, Service, ServiceItem, AcademyService, Subscription
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Country, City
 
 
 # -----------------------------------------------------------------------------
@@ -42,7 +42,8 @@ def build_resource(owner_email="owner@example.com"):
 def build_consumable(resource, seat_user=None, team_strategy=None, is_team_allowed=True):
     """Build a minimal consumable pointing to the provided resource and service/team stubs."""
     service = SimpleNamespace(is_team_allowed=is_team_allowed)
-    service_item = SimpleNamespace(service=service)
+    # actions.get_user_from_consumable_to_be_charged now reads from service_item.is_team_allowed
+    service_item = SimpleNamespace(service=service, is_team_allowed=is_team_allowed)
 
     team = SimpleNamespace(consumption_strategy=team_strategy) if team_strategy else None
     seat = SimpleNamespace(user=seat_user, billing_team=team) if seat_user is not None else None
@@ -234,13 +235,16 @@ def test_validate_auto_recharge_service_units__db_happy_path(database, monkeypat
     # Minimal fixtures
     usd = Currency.objects.create(code="USD", name="US Dollar", decimals=2)
     owner = User.objects.create(username="owner", email="owner@example.com")
+    country = Country.objects.create(code="US", name="United States")
+    city = City.objects.create(name="City", country=country)
+
     academy = Academy.objects.create(
         slug="a1",
         name="Academy 1",
         logo_url="https://example.com/logo.png",
         street_address="Addr 1",
-        city="City",
-        country="US",
+        city=city,
+        country=country,
         main_currency=usd,
     )
 
@@ -259,11 +263,16 @@ def test_validate_auto_recharge_service_units__db_happy_path(database, monkeypat
         recharge_amount=25.0,
     )
 
-    # Build a real-ish consumable stub: we don't need to persist it, only fields used by the function
+    # Ensure Python type is float to avoid Decimal/float division in actions logic
+    sub.recharge_amount = 25.0
+
+    # Build a real-ish consumable stub: pass real ServiceItem so `.is_team_allowed` exists
     c = SimpleNamespace(
         subscription=sub,
         plan_financing=None,
-        service_item=SimpleNamespace(service=svc),
+        service_item=si,
+        subscription_seat=None,
+        subscription_billing_team=None,
     )
 
     # Patch get_user_from_consumable_to_be_charged for spend calculation
