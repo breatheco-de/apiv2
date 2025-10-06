@@ -1801,11 +1801,7 @@ def check_and_retry_pending_bags(**_: Any):
 
 @task(bind=False, priority=TaskPriority.NOTIFICATION)
 def process_auto_recharge(
-    team_id: int,
-    recharge_amount: float,
-    seat_id: int = None,
-    owner: bool = False,
-    service_id: int | None = None,
+    consumable_id: int,
     **_: Any,
 ):
     """
@@ -1829,22 +1825,8 @@ def process_auto_recharge(
     """
 
     try:
-        team = SubscriptionBillingTeam.objects.select_related("subscription", "subscription__user").get(id=team_id)
-    except SubscriptionBillingTeam.DoesNotExist:
-        raise AbortTask(f"SubscriptionBillingTeam {team_id} not found")
+        consumable = Consumable.objects.select_related("subscription").get(id=consumable_id)
+    except Consumable.DoesNotExist:
+        raise AbortTask(f"Consumable {consumable_id} not found")
 
-    seat = None
-
-    if seat_id:
-        try:
-            seat = SubscriptionSeat.objects.select_related("subscription").get(id=seat_id)
-        except SubscriptionSeat.DoesNotExist:
-            raise AbortTask(f"SubscriptionSeat {seat_id} not found")
-
-    service = None
-    if service_id is not None:
-        service = Service.objects.filter(id=service_id).first()
-        if not service:
-            raise AbortTask(f"Service {service_id} not found")
-
-    actions.process_auto_recharge(team, recharge_amount, seat, owner=owner, service=service)
+    actions.process_auto_recharge(consumable)

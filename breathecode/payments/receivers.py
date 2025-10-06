@@ -21,13 +21,11 @@ from .models import (
     Plan,
     PlanFinancing,
     Subscription,
-    AcademyService,
     SubscriptionSeat,
     SubscriptionBillingTeam,
 )
 from .signals import (
     consume_service,
-    consumable_balance_low,
     grant_service_permissions,
     lose_service_permissions,
     reimburse_service_units,
@@ -35,7 +33,7 @@ from .signals import (
     grant_plan_permissions,
     revoke_plan_permissions,
 )
-from .actions import evaluate_auto_recharge
+from .actions import validate_auto_recharge_service_units
 
 logger = logging.getLogger(__name__)
 
@@ -384,257 +382,17 @@ def check_consumable_balance_for_auto_recharge(
 
     If all conditions are met, it triggers a recharge via signal.
     """
-    # Seat-owned consumables (PER_SEAT strategy)
-    if instance.subscription_seat:
-        seat = instance.subscription_seat
-        team = seat.billing_team
 
-        if not team or not team.auto_recharge_enabled:
-            return
-
-        subscription = team.subscription
-        currency = subscription.currency
-        academy = subscription.academy
-
-        # Compute the seat's current balance value
-        seat_consumables = (
-            Consumable.objects.filter(subscription_seat=seat)
-            .select_related("service_item__service")
-            .exclude(how_many=0)
-        )
-
-        balance_amount = 0
-        for c in seat_consumables:
-            try:
-                academy_service = AcademyService.objects.get(academy=academy, service=c.service_item.service)
-                if c.how_many == -1:
-                    balance_amount = -1
-                    break
-                balance_amount += c.how_many * academy_service.price_per_unit
-            except AcademyService.DoesNotExist:
-                logger.warning(
-                    f"No AcademyService found for service {c.service_item.service.slug} in academy {academy.slug}"
-                )
-                continue
-
-        if balance_amount == -1:
-            return
-
-        if balance_amount < float(team.recharge_threshold_amount):
-            logger.info(
-                f"Consumable balance low for seat {seat.id} in team {team.id}: "
-                f"{balance_amount:.2f} {currency.code} < {team.recharge_threshold_amount} {currency.code}"
-            )
-
-            # Centralized budget evaluation and amount adjustment
-            allowed, adjusted_amount, reason = evaluate_auto_recharge(
-                subscription,
-                float(team.recharge_amount),
-                team=team,
-                seat=seat,
-                service=instance.service_item.service,
-            )
-            if not allowed:
-                logger.warning(
-                    f"Auto-recharge not allowed for team {team.id}, seat {seat.id}: {reason or 'not-allowed'}"
-                )
-                return
-            recharge_amount = adjusted_amount
-
-            # Send signal including seat context
-            consumable_balance_low.send(
-                sender=sender,
-                team=team,
-                seat=seat,
-                balance_amount=balance_amount,
-                recharge_amount=recharge_amount,
-                service_id=instance.service_item.service.id,
-            )
+    price, amount, error = validate_auto_recharge_service_units(instance)
+    if error:
+        logger.warning(f"Auto-recharge not allowed for consumable {instance.id}: {error}")
         return
 
-    # Team-owned consumables (PER_TEAM strategy)
-    if instance.subscription_billing_team:
-        team: SubscriptionBillingTeam | None = instance.subscription_billing_team
-
-        # Check if auto-recharge is enabled
-        if not team.auto_recharge_enabled:
-            return
-
-        # Check spending limit for this billing period (calculated from invoices)
-        subscription = team.subscription
-
-        if team.max_period_spend:
-            current_spend = team.get_current_period_spend()
-
-            if current_spend >= float(team.max_period_spend):
-                logger.warning(
-                    f"Auto-recharge skipped for team {team.id}: billing period spending limit reached "
-                    f"({current_spend:.2f}/{team.max_period_spend})"
-                )
-                return
-
-        subscription = team.subscription
-        currency = subscription.currency
-        academy = subscription.academy
-
-        # Get team consumables with their service items
-        team_consumables = Consumable.objects.filter(
-            subscription_billing_team=team,
-            user__isnull=True,  # Team-owned consumables only
-        ).select_related("service_item__service")
-
-        # Calculate balance value based on AcademyService pricing
-        balance_amount = 0
-        for consumable in team_consumables:
-            try:
-                academy_service = AcademyService.objects.get(academy=academy, service=consumable.service_item.service)
-                # Value = units * price_per_unit
-                if consumable.how_many == -1:
-                    balance_amount = -1
-                    break
-                balance_amount += consumable.how_many * academy_service.price_per_unit
-            except AcademyService.DoesNotExist:
-                # If no AcademyService, skip this consumable
-                logger.warning(
-                    f"No AcademyService found for service {consumable.service_item.service.slug} "
-                    f"in academy {academy.slug}"
-                )
-                continue
-
-        if balance_amount == -1:
-            return
-
-        # Check if balance is below threshold
-        if balance_amount < float(team.recharge_threshold_amount):
-            logger.info(
-                f"Consumable balance low for team {team.id}: "
-                f"{balance_amount:.2f} {currency.code} < {team.recharge_threshold_amount} {currency.code}"
-            )
-
-            # Centralized budget evaluation and amount adjustment
-            allowed, adjusted_amount, reason = evaluate_auto_recharge(
-                subscription,
-                float(team.recharge_amount),
-                team=team,
-                service=instance.service_item.service,
-            )
-            if not allowed:
-                logger.warning(f"Auto-recharge not allowed for team {team.id}: {reason or 'not-allowed'}")
-                return
-            recharge_amount = adjusted_amount
-
-            # Send signal with full recharge amount
-            # The task will adjust per-service based on available budget
-            consumable_balance_low.send(
-                sender=sender,
-                team=team,
-                balance_amount=balance_amount,
-                recharge_amount=recharge_amount,
-                service_id=instance.service_item.service.id,
-            )
+    if amount <= 0:
+        logger.warning(f"Auto-recharge not allowed for consumable {instance.id}: amount is zero or negative")
         return
 
-    # Owner-owned consumables (is_team_allowed=False)
-    if instance.user and instance.subscription:
-        subscription = instance.subscription
-        if not subscription.auto_recharge_enabled:
-            return
-
-        currency = subscription.currency
-        academy = subscription.academy
-
-        owner_consumables = (
-            Consumable.objects.filter(
-                subscription=subscription, user=subscription.user, subscription_billing_team__isnull=True
-            )
-            .select_related("service_item__service")
-            .exclude(how_many=0)
-        )
-
-        balance_amount = 0
-        for c in owner_consumables:
-            try:
-                academy_service = AcademyService.objects.get(academy=academy, service=c.service_item.service)
-                if c.how_many == -1:
-                    balance_amount = -1
-                    break
-                balance_amount += c.how_many * academy_service.price_per_unit
-            except AcademyService.DoesNotExist:
-                logger.warning(
-                    f"No AcademyService found for service {c.service_item.service.slug} in academy {academy.slug}"
-                )
-                continue
-
-        if balance_amount == -1:
-            return
-
-        if balance_amount < float(subscription.recharge_threshold_amount):
-            logger.info(
-                f"Owner consumable balance low for subscription {subscription.id}: "
-                f"{balance_amount:.2f} {currency.code} < {subscription.recharge_threshold_amount} {currency.code}"
-            )
-
-            # Centralized budget evaluation and amount adjustment
-            allowed, adjusted_amount, reason = evaluate_auto_recharge(
-                subscription,
-                float(subscription.recharge_amount),
-                team=team,
-                user=subscription.user,
-                service=instance.service_item.service,
-            )
-            if not allowed:
-                logger.warning(
-                    f"Owner auto-recharge not allowed for subscription {subscription.id}: {reason or 'not-allowed'}"
-                )
-                return
-            recharge_amount = adjusted_amount
-
-            # Route through team for task context (team is one-to-one with subscription)
-            team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
-            if not team:
-                return
-
-            consumable_balance_low.send(
-                sender=sender,
-                team=team,
-                owner=True,
-                balance_amount=balance_amount,
-                recharge_amount=recharge_amount,
-                service_id=instance.service_item.service.id,
-            )
-        return
+    tasks.process_auto_recharge.delay(instance.id)
 
 
 consume_service.connect(check_consumable_balance_for_auto_recharge, sender=Consumable)
-
-
-def trigger_auto_recharge_task(
-    sender: Type[Consumable],
-    team: SubscriptionBillingTeam,
-    recharge_amount: float,
-    seat: SubscriptionSeat | None = None,
-    owner: bool = False,
-    **kwargs,
-):
-    """
-    Trigger the auto-recharge Celery task when consumable balance is low.
-
-    This receiver is called by the consumable_balance_low signal and schedules
-    the actual recharge process as a background task.
-    """
-    logger.info(
-        f"Triggering auto-recharge task for team {team.id}, seat: {seat.id if seat else None}, owner: {owner}, amount: ${recharge_amount:.2f}"
-    )
-
-    # Schedule the recharge task
-    service_id = kwargs.get("service_id")
-    tasks.process_auto_recharge.delay(
-        team_id=team.id,
-        recharge_amount=recharge_amount,
-        seat_id=seat.id if seat else None,
-        owner=owner,
-        service_id=service_id,
-    )
-
-
-consumable_balance_low.connect(trigger_auto_recharge_task, sender=Consumable)

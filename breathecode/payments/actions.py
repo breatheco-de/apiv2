@@ -1,10 +1,14 @@
 import os
 import re
+import math
+import redis
+import redis.lock
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 import uuid
 from django.db import transaction
+from django.conf import settings
 from task_manager.core.exceptions import AbortTask, RetryTask
 
 from adrf.requests import AsyncRequest
@@ -2154,69 +2158,90 @@ def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional
         admissions_tasks.build_profile_academy.delay(cohort.academy.id, user.id)
 
 
-def evaluate_auto_recharge(
-    resource: Subscription | PlanFinancing,
-    recharge_amount: float,
-    *,
-    team: Optional[SubscriptionBillingTeam] = None,
-    seat: Optional[SubscriptionSeat] = None,
-    user: Optional[User | int | str] = None,
-    service: Optional[Service] = None,
-) -> tuple[bool, float, str | None]:
-    """
-    Centralized evaluation for auto-recharge budget limits and enablement.
+def get_user_from_consumable_to_be_charged(
+    instance: Consumable,
+) -> User | None:
+    resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
+    is_team_allowed = instance.service_item.service.is_team_allowed
 
-    Returns a tuple: (allowed: bool, adjusted_amount: float, reason: str|None)
+    user = None
+    team: SubscriptionBillingTeam | None = instance.subscription_billing_team or instance.subscription_seat.billing_team
+    strategy = team.consumption_strategy if team else None
 
-    - Respects `resource.auto_recharge_enabled`.
-    - Uses current period spend and `max_period_spend` to decide and adjust amount.
-    - Chooses the right spend source based on context:
-      - If `seat` provided and it has a user, use `resource.get_current_period_spend(user=seat.user)`.
-      - Else if `team` provided, use `team.get_current_period_spend()`.
-      - Else, use `resource.get_current_period_spend(user=user)`.
-    """
-    # Check enablement when present
-    if getattr(resource, "auto_recharge_enabled", True) is False:
-        return False, 0.0, "auto-recharge-disabled"
+    if is_team_allowed is False or isinstance(resource, PlanFinancing):
+        user = resource.user
+    elif is_team_allowed and strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT:
+        user = instance.subscription_seat.user or resource.user
 
-    # Compute current spend according to context
-    try:
-        if seat and getattr(seat, "user_id", None):
-            current_spend = resource.get_current_period_spend(service=service, user=seat.user)
-        elif team is not None:
-            # Team-level spend is global (not per-service)
-            current_spend = team.get_current_period_spend()
-        else:
-            current_spend = resource.get_current_period_spend(service=service, user=user)
-    except Exception:
-        # Fail-safe: if spend cannot be computed, disallow
-        return False, 0.0, "cannot-compute-current-spend"
+    return user
 
-    limit = getattr(resource, "max_period_spend", None)
 
-    if limit:
-        try:
-            limit_f = float(limit)
-        except Exception:
-            return False, 0.0, "invalid-max-period-spend"
+def validate_auto_recharge_service_units(
+    instance: Consumable,
+) -> tuple[float, int, str | None]:  # price, amount, error
+    resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
+    if (
+        resource is None
+        or resource.auto_recharge_enabled is False
+        or (instance.subscription_seat and instance.subscription_seat.is_active is False)
+    ):
+        return 0.0, 0, None
 
-        if current_spend >= limit_f:
-            return False, 0.0, "limit-reached"
+    if resource.academy.main_currency is None:
+        return 0.0, 0, "main-currency-not-found"
 
-        remaining = limit_f - current_spend
-        adjusted = recharge_amount if recharge_amount <= remaining else remaining
-        return True, float(adjusted), None
+    user = get_user_from_consumable_to_be_charged(instance)
+    service = instance.service_item.service
 
-    # No limit set, allow full amount
-    return True, float(recharge_amount), None
+    user_spend = resource.get_current_period_spend(service, user)
+
+    team_spend = user_spend
+    if user:
+        team_spend = resource.get_current_period_spend(service)
+
+    if team_spend >= resource.recharge_threshold_amount:
+        return 0.0, 0, "auto-recharge-threshold-reached"
+
+    if resource.max_period_spend and (
+        team_spend >= resource.max_period_spend or team_spend + resource.recharge_amount >= resource.max_period_spend
+    ):
+        return 0.0, 0, "max-period-spend-reached"
+
+    recharge_amount = resource.recharge_amount
+    if resource.max_period_spend and team_spend + recharge_amount > resource.max_period_spend:
+        recharge_amount = resource.max_period_spend - team_spend
+
+    price_qs = AcademyService.objects.filter(service=service, academy=resource.academy)
+    if (price := price_qs.first()) is None:
+        return 0.0, 0, "academy-service-not-found"
+
+    if price.price_per_unit is None or price.price_per_unit <= 0:
+        return 0.0, 0, "price-per-unit-not-found"
+
+    if price.price_per_unit > recharge_amount:
+        return 0.0, 0, "price-per-unit-exceeded"
+
+    consumables = Consumable.list(user=user, service=instance.service_item.service)
+    total = 0
+    available = 0
+    for consumable in consumables:
+        if consumable.how_many == -1:
+            return 0.0, 0, None
+
+        available += consumable.how_many
+        total += consumable.service_item.how_many
+
+    if total / available > 0.2:
+        return 0.0, 0, "more-than-20-percent-left"
+
+    if available * price.price_per_unit > resource.recharge_threshold_amount:
+        return 0.0, 0, None
+
+    return price.price_per_unit, math.floor(recharge_amount / price.price_per_unit), None
 
 
 def process_auto_recharge(
-    team: SubscriptionBillingTeam,
-    recharge_amount: float,
-    seat: Optional[SubscriptionSeat] = None,
-    owner: bool = False,
-    service: Service = None,
+    consumable: Consumable,
 ):
     """
     Process automatic consumable recharge for a billing team.
@@ -2237,219 +2262,56 @@ def process_auto_recharge(
         Uses Redis lock to prevent race conditions when multiple
         consumptions trigger recharge simultaneously.
     """
-    import redis
-    import redis.lock
-    from django.conf import settings
 
-    def get_lock(team: SubscriptionBillingTeam, seat: Optional[SubscriptionSeat] = None) -> Optional[redis.lock.Lock]:
-        """
-        Return a Redis lock for a team with optional seat_id.
+    resource: Subscription | PlanFinancing | None = consumable.subscription or consumable.plan_financing
+    if not resource:
+        return
 
-        Args:
-            team: SubscriptionBillingTeam
-            seat: Optional SubscriptionSeat for per-seat locking
-
-        Returns:
-            Optional[redis.lock.Lock]: Lock object or None if already locked
-        """
-
-        lock_key = f"auto_recharge:team:{team.id}:seat:{seat.id}" if seat else f"auto_recharge:team:{team.id}"
-        lock_timeout = 300  # 5 minutes max lock time
-
-        # Try to acquire lock
-        lock = redis_client.lock(lock_key, timeout=lock_timeout, blocking_timeout=5)
-        # lock.release()
-        return lock
+    currency: Currency | None = resource.academy.main_currency
+    if not currency:
+        return
 
     # Connect to Redis
     redis_client = redis.Redis.from_url(settings.REDIS_URL)
+    team = consumable.subscription_billing_team or (
+        consumable.subscription_seat.billing_team if consumable.subscription_seat else None
+    )
+    seat = consumable.subscription_seat
+
+    lock_key = f"process_auto_recharge:{resource.__class__.__name__}:{resource.id}"
+    lock_timeout = 300  # 5 minutes max lock time
 
     # Try to acquire lock
-    team_lock = get_lock(team)
-    seat_lock = None
+    lock: redis.lock.Lock | None = redis_client.lock(lock_key, timeout=lock_timeout, blocking_timeout=5)
     # lock.release()
 
-    if not team_lock.acquire(blocking=False):
-        raise RetryTask(f"Auto-recharge already in progress for team {team.id}")
-
-    if seat:
-        seat_lock = get_lock(team, seat)
-        if not seat_lock.acquire(blocking=False):
-            team_lock.release()
-            raise RetryTask(f"Auto-recharge already in progress for team {team.id} and seat {seat.id}")
+    if lock.acquire(blocking=False) is False:
+        raise RetryTask(f"Auto-recharge already in progress for {resource.__class__.__name__} {resource.id}")
 
     try:
-        logger.info(
-            f"Processing auto-recharge for team {team.id}, seat {seat.id if seat else None}, amount: {recharge_amount:.2f}"
-        )
+        logger.info(f"Processing auto-recharge for {resource.__class__.__name__} {resource.id}")
 
-        subscription = team.subscription
+        price, amount, error = validate_auto_recharge_service_units(consumable)
+        if error:
+            logger.warning(f"Auto-recharge not allowed for consumable {consumable.id}: {error}")
+            return
 
-        # Verify auto-recharge is still enabled
-        if not team.auto_recharge_enabled:
-            logger.warning(f"Auto-recharge disabled for team {team.id}, aborting")
-            raise AbortTask(f"Auto-recharge disabled for team {team.id}")
+        if amount <= 0:
+            logger.warning(f"Auto-recharge not allowed for consumable {consumable.id}: amount is zero or negative")
+            return
 
-        # Get subscription currency and academy
-        currency = subscription.currency
-        academy = subscription.academy
-
-        if service is None:
-            raise AbortTask("service is required for process_auto_recharge")
-
-        # Pricing for this service in this academy
-        try:
-            academy_service = AcademyService.objects.get(academy=academy, service=service)
-        except AcademyService.DoesNotExist:
-            raise AbortTask(f"No AcademyService found for service {service.slug} in academy {academy.slug}")
-
-        # Compute current balance for this service in currency based on remaining units
-        # Only include non-expired consumables (valid_until is null or in the future)
-        # Abort if infinite (-1)
-        def sum_units(qs):
-            total_units = 0
-            for c in qs.select_related("service_item__service").exclude(how_many=0):
-                if c.how_many == -1:
-                    return -1
-                total_units += c.how_many
-            return total_units
-
-        now = timezone.now()
-        valid_filter = Q(valid_until__isnull=True) | Q(valid_until__gt=now)
-
-        if owner:
-            q = Consumable.objects.filter(
-                valid_filter,
-                subscription=subscription,
-                user=subscription.user,
-                subscription_billing_team__isnull=True,
-                service_item__service=service,
-            )
-        elif seat:
-            q = Consumable.objects.filter(
-                valid_filter,
-                subscription_seat=seat,
-                service_item__service=service,
-            )
-        else:
-            q = Consumable.objects.filter(
-                valid_filter,
-                subscription_billing_team=team,
-                user__isnull=True,
-                service_item__service=service,
-            )
-
-        units_left = sum_units(q)
-        if units_left == -1:
-            raise AbortTask("infinite units for this service; recharge not required")
-
-        balance_amount = units_left * academy_service.price_per_unit
-
-        # Determine threshold by context
-        threshold_amount = (
-            float(subscription.recharge_threshold_amount) if owner else float(team.recharge_threshold_amount)
-        )
-
-        # If balance is not below threshold, do not recharge
-        if balance_amount >= threshold_amount:
-            raise AbortTask("balance-above-threshold")
-
-        # First, evaluate against global subscription budget (limit is global)
-        allowed, adjusted_amount, reason = evaluate_auto_recharge(
-            subscription, recharge_amount, team=team, seat=seat, service=None
-        )
-        if not allowed:
-            logger.warning(f"Auto-recharge aborted for subscription {subscription.id}: {reason or 'not-allowed'}")
-            raise AbortTask(reason or "auto-recharge-not-allowed")
-        recharge_amount = adjusted_amount
-        # Select the single service item for this service
-        if owner:
-            si_qs = ServiceItem.objects.filter(
-                Q(subscriptionserviceitem__subscription=subscription)
-                | Q(planserviceitem__plan__subscription=subscription),
-                is_team_allowed=False,
-                service=service,
-            )
-        else:
-            si_qs = ServiceItem.objects.filter(
-                Q(subscriptionserviceitem__subscription=subscription)
-                | Q(planserviceitem__plan__subscription=subscription),
-                is_team_allowed=True,
-                service=service,
-            )
-
-        service_item = si_qs.distinct().select_related("service").first()
-        if not service_item:
-            raise AbortTask(f"No {'owner' if owner else 'team'}-context service item found for service {service.slug}")
-
-        # Use atomic transaction to ensure all-or-nothing operation
-        # If payment fails, all consumables will be rolled back
         try:
             with transaction.atomic():
-                # At this point `recharge_amount` has been adjusted by the global budget check
-                amount_for_service = recharge_amount
-                units = int(amount_for_service / academy_service.price_per_unit)
-
-                if units <= 0:
-                    raise AbortTask(
-                        f"Calculated 0 units for service {service.slug} (amount: {amount_for_service:.2f}, "
-                        f"price: {academy_service.price_per_unit})"
-                    )
-
-                # Actual cost for these units
-                total_spent = units * academy_service.price_per_unit
-
-                # Create consumable according to context
-                if owner:
-                    consumable = Consumable.objects.create(
-                        service_item=service_item,
-                        user=subscription.user,
-                        subscription=subscription,
-                        how_many=units,
-                        unit_type=service_item.unit_type,
-                        valid_until=None,
-                    )
-                elif seat:
-                    consumable = Consumable.objects.create(
-                        service_item=service_item,
-                        user=seat.user if seat.user_id else None,
-                        subscription_billing_team=team,
-                        subscription_seat=seat,
-                        subscription=subscription,
-                        how_many=units,
-                        unit_type=service_item.unit_type,
-                        valid_until=None,
-                    )
-                else:
-                    consumable = Consumable.objects.create(
-                        service_item=service_item,
-                        user=None,  # Team-owned
-                        subscription_billing_team=team,
-                        subscription=subscription,
-                        how_many=units,
-                        unit_type=service_item.unit_type,
-                        valid_until=None,
-                    )
-
-                logger.info(
-                    f"Created consumable: service={service.slug}, units={units}, cost={total_spent:.2f} {currency.code}, "
-                    f"consumable_id={consumable.id}"
-                )
-                created_count = 1
-
                 # Create invoice via Stripe payment
                 from .services.stripe import Stripe
-                from .models import Bag
+
+                charged_user = get_user_from_consumable_to_be_charged(consumable)
 
                 # Create a temporary bag for the auto-recharge
                 bag = Bag.objects.create(
-                    user=subscription.user,
-                    academy=academy,
+                    user=resource.user,  # it must be charged to the owner
+                    academy=resource.academy,
                     currency=currency,
-                    amount_per_month=total_spent,
-                    amount_per_quarter=total_spent,
-                    amount_per_half=total_spent,
-                    amount_per_year=total_spent,
                     type="CHARGE",
                     status="PAID",
                     was_delivered=True,
@@ -2457,74 +2319,54 @@ def process_auto_recharge(
 
                 # Process payment via Stripe
                 # If this fails, the entire transaction will rollback
-                s = Stripe(academy=academy)
-                context_desc = (
-                    f"seat {seat.email or seat.id} in team {team.name}"
-                    if seat
-                    else ("owner" if owner else f"team {team.name}")
-                )
-                invoice = s.pay(
-                    subscription.user,
+                s = Stripe(academy=resource.academy)
+                context_desc = f"auto-recharge for {charged_user.email}"
+                s.pay(
+                    resource.user,  # it must be charged to the owner
                     bag,
-                    total_spent,
+                    price * amount,
                     currency=currency.code,
                     description=f"Auto-recharge for {context_desc}",
-                    subscription_billing_team=team if not owner else None,
-                    subscription_seat=seat if seat else None,
+                    subscription_billing_team=team,
+                    subscription_seat=seat,
                 )
-                logger.info(f"Created invoice {invoice.id} for auto-recharge: {total_spent:.2f} {currency.code}")
+
+                emails = [resource.user.email]
+                if charged_user.email not in resource.user.email:
+                    if charged_user:
+                        emails.append(charged_user.email)
+
+                if charged_user is None:
+                    charged_user = resource.user
+
+                user_settings = get_user_settings(charged_user)
+                lang = user_settings.lang
+
+                subject = translation(
+                    lang,
+                    en=f"Consumables Auto-Recharged for {charged_user.email}",
+                    es=f"Consumibles Auto-Recargados para {charged_user.email}",
+                )
+                message = translation(
+                    lang,
+                    en=f"The consumables have been auto-recharged for {charged_user.email}",
+                    es=f"Los consumibles han sido auto-recargados para {charged_user.email}",
+                )
+
+                for email in emails:
+                    notify_actions.send_email_message(
+                        "message",
+                        email,
+                        {
+                            "SUBJECT": subject,
+                            "MESSAGE": message,
+                        },
+                        academy=resource.academy,
+                    )
 
         except Exception as e:
-            # Transaction will automatically rollback on any exception
-            logger.error(f"Auto-recharge transaction failed for team {team.id}: {e}")
-            logger.info("Rolled back consumable and payment")
-            raise RetryTask(f"Payment failed for team {team.id}: {e}")
-
-        logger.info(
-            f"Auto-recharge completed for team {team.id}: "
-            f"{total_spent:.2f} {currency.code} charged, {created_count} consumable created"
-        )
-
-        settings = get_user_settings(subscription.user)
-        lang = settings.lang
-
-        # Send notification to subscription owner
-        try:
-            notify_actions.send_email_message(
-                "auto_recharge_completed",
-                subscription.user.email,
-                {
-                    "subject": translation(lang, en="Consumables Auto-Recharged", es="Consumibles Auto-Recargados"),
-                    "team_name": team.name,
-                    "recharge_amount": f"{total_spent:.2f} {currency.code}",
-                    "period_spend": f"{team.get_current_period_spend():.2f} {currency.code}",
-                    "period_limit": (
-                        f"{team.max_period_spend:.2f} {currency.code}" if team.max_period_spend else "Unlimited"
-                    ),
-                    "currency": currency.code,
-                    "next_reset": (
-                        subscription.next_payment_at.strftime("%Y-%m-%d") if subscription.next_payment_at else "N/A"
-                    ),
-                },
-            )
-        except Exception as e:
-            logger.warning(f"Failed to send auto-recharge notification: {e}")
-
-        return {
-            "team_id": team.id,
-            "recharge_amount": float(total_spent),
-            "currency": currency.code,
-            "consumables_created": created_count,
-            "current_period_spend": team.get_current_period_spend(),
-            "next_reset": subscription.next_payment_at.isoformat() if subscription.next_payment_at else None,
-        }
+            raise AbortTask(f"Consumable auto-recharge failed for {resource.__class__.__name__} {resource.id}: {e}")
 
     finally:
         # Always release the lock
-        try:
-            team_lock.release()
-            if seat_lock:
-                seat_lock.release()
-            logger.debug(f"Released auto-recharge lock for team {team.id}")
-        except Exception as e:
-            logger.warning(f"Failed to release lock for team {team.id}: {e}")
+        lock.release()

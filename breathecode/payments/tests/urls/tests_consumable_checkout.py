@@ -1146,15 +1146,14 @@ def test_seats__seats_required(database, client: APIClient):
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,
+        # Not passing how_many to test validation
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        # missing seats
     }
     response = client.post(url, data, format="json")
 
     json = response.json()
-    expected = {"detail": "seats-required", "status_code": 400}
+    expected = {"detail": "how-many-is-required", "status_code": 400}
 
     assert json == expected
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -1203,10 +1202,9 @@ def test_seats__purchase_creates_team_and_owner_seat(database, client: APIClient
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,  # base validation requirement
+        "how_many": desired_seats,  # seats count
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        "seats": desired_seats,
     }
     response = client.post(url, data, format="json")
 
@@ -1300,10 +1298,9 @@ def test_seats__purchase_creates_team_sets_strategy_from_plan(database, client: 
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,
+        "how_many": desired_seats,  # seats count
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        "seats": desired_seats,
     }
     response = client.post(url, data, format="json")
 
@@ -1368,10 +1365,9 @@ def test_seats__existing_team_updates_strategy_from_plan(database, client: APICl
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,
+        "how_many": desired_seats,  # seats count
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        "seats": desired_seats,
     }
     response = client.post(url, data, format="json")
 
@@ -1437,10 +1433,9 @@ def test_seats__increase_existing_team_delta_only(database, client: APIClient):
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,
+        "how_many": desired_seats,  # seats count
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        "seats": desired_seats,
     }
     response = client.post(url, data, format="json")
 
