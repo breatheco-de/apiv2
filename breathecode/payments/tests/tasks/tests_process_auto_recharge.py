@@ -27,9 +27,28 @@ def _call_underlying(func, *args, **kwargs):
     return target(*args, **kwargs)
 
 
+def _reload_tasks_with_noop_decorator(monkeypatch):
+    """Reload the tasks module after replacing the task decorator with a no-op.
+
+    This prevents the decorator from creating TaskManager records or scheduling during unit tests
+    that don't want decorator side effects.
+    """
+    import importlib
+    import breathecode.payments.tasks as tasks
+
+    try:
+        import task_manager.django.decorators as tmd
+    except ModuleNotFoundError:
+        # Fallback to core namespace if needed
+        import task_manager.core.decorators as tmd  # type: ignore
+
+    monkeypatch.setattr(tmd, "task", lambda *a, **k: (lambda f: f), raising=False)
+    return importlib.reload(tasks)
+
+
 def test_process_auto_recharge_calls_action(monkeypatch):
     """The task should fetch the consumable and call the action with it."""
-    tasks = tasks_mod
+    tasks = _reload_tasks_with_noop_decorator(monkeypatch)
 
     fake_consumable = object()
 
@@ -57,7 +76,7 @@ def test_process_auto_recharge_calls_action(monkeypatch):
 
 def test_process_auto_recharge_not_found(monkeypatch):
     """If the consumable does not exist, the task raises AbortTask."""
-    tasks = tasks_mod
+    tasks = _reload_tasks_with_noop_decorator(monkeypatch)
 
     class DummyManager:
         def select_related(self, *_):
@@ -80,7 +99,7 @@ def test_process_auto_recharge_not_found(monkeypatch):
 
 def test_process_auto_recharge_db_happy_path(database, monkeypatch):
     """DB integration: creates real Consumable and ensures the task loads it and calls the action."""
-    tasks = tasks_mod
+    tasks = _reload_tasks_with_noop_decorator(monkeypatch)
 
     # Fixtures
     usd = Currency.objects.create(code="USD", name="US Dollar", decimals=2)

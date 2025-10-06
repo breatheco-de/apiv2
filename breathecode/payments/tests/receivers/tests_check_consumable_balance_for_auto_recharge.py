@@ -12,9 +12,9 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 
-from breathecode.payments import actions, receivers, tasks
+from breathecode.payments import receivers, tasks
 from breathecode.payments.models import Currency, Service, ServiceItem, Subscription, Consumable
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Country, City
 
 
 def build_consumable():
@@ -85,11 +85,16 @@ def test_check_consumable_balance_for_auto_recharge__db_happy_path(database, mon
     """DB integration: create real Consumable and ensure the task is enqueued with its id."""
     usd = Currency.objects.create(code="USD", name="US Dollar", decimals=2)
     owner = User.objects.create(username="owner", email="owner@example.com")
+    country = Country.objects.create(code="US", name="United States")
+    city = City.objects.create(name="City", country=country)
+
     academy = Academy.objects.create(
         slug="a1",
         name="Academy 1",
         logo_url="https://example.com/logo.png",
         street_address="Addr 1",
+        city=city,
+        country=country,
         main_currency=usd,
     )
 
