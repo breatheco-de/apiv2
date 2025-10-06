@@ -434,6 +434,85 @@ class Stripe:
 
         return invoice
 
+    def partial_refund(self, invoice: Invoice, refund_amount: float) -> Invoice:
+        """
+        Refunds a partial amount from a payment associated with a given invoice.
+
+        This method creates a Stripe partial refund for the charge ID stored in the invoice.
+        The invoice status is updated to "PARTIALLY_REFUNDED", and refund details are saved.
+        The amount_refunded field is updated with the partial refund amount.
+
+        Args:
+            invoice (Invoice): The invoice object representing the payment to be partially refunded.
+                              It must have a `stripe_id` (charge ID).
+            refund_amount (float): The amount to refund in the major currency unit (e.g., dollars).
+
+        Returns:
+            Invoice: The updated Invoice object with partial refund details.
+
+        Raises:
+            PaymentException: If there's an issue with the Stripe refund process.
+            ValidationException: If the refund amount is invalid.
+        """
+        stripe.api_key = self.api_key
+
+        if refund_amount <= 0:
+            raise ValidationException(
+                translation(
+                    self.language,
+                    en="Refund amount must be greater than zero",
+                    es="El monto del reembolso debe ser mayor que cero",
+                    slug="invalid-refund-amount",
+                ),
+                code=400,
+            )
+
+        if refund_amount > invoice.amount:
+            raise ValidationException(
+                translation(
+                    self.language,
+                    en="Refund amount cannot be greater than the original payment amount",
+                    es="El monto del reembolso no puede ser mayor que el monto del pago original",
+                    slug="refund-amount-exceeds-payment",
+                ),
+                code=400,
+            )
+
+        if invoice.status == "REFUNDED":
+            raise ValidationException(
+                translation(
+                    self.language,
+                    en="Invoice is already fully refunded",
+                    es="La factura ya está completamente reembolsada",
+                    slug="invoice-already-refunded",
+                ),
+                code=400,
+            )
+
+        self.add_contact(invoice.user)
+
+        decimals_factor = 1
+        for _ in range(invoice.currency.decimals):
+            decimals_factor *= 10
+
+        refund_amount_cents = math.ceil(refund_amount * decimals_factor)
+
+        def callback():
+            return stripe.Refund.create(
+                charge=invoice.stripe_id, amount=refund_amount_cents, reason="requested_by_customer"
+            )
+
+        refund = self._i18n_validations(callback)
+
+        invoice.refund_stripe_id = refund["id"]
+        invoice.refunded_at = timezone.now()
+        invoice.amount_refunded = refund_amount
+        invoice.status = Invoice.Status.REFUNDED
+
+        invoice.save()
+
+        return invoice
+
     def create_payment_link(self, price_id: str, quantity: int) -> tuple[str, str]:
         """
         Creates a Stripe Payment Link.

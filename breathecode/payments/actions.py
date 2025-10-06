@@ -18,6 +18,7 @@ from pytz import UTC
 from rest_framework.request import Request
 
 from breathecode.admissions import tasks as admissions_tasks
+from breathecode.payments.services.stripe import Stripe
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import UserInvite, UserSetting
@@ -2197,3 +2198,166 @@ def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional
 
     if plan.owner != cohort.academy:
         admissions_tasks.build_profile_academy.delay(cohort.academy.id, user.id)
+
+
+def deprecate_subscription_and_calculate_refund(
+    user: User, deprecated_plan: int | str, lang: str = "en", process_refund: bool = True
+) -> dict:
+    """
+    Deprecate a user's subscription and calculate/process the refund amount.
+
+    This function handles the deprecation of an existing subscription when a user
+    wants to upgrade/downgrade to a different plan. It calculates the refund amount
+    based on the remaining time in the current subscription period and optionally
+    processes the refund automatically.
+
+    Args:
+        user (User): The user whose subscription needs to be deprecated
+        deprecated_plan (int | str): The ID or slug of the plan to deprecate, or subscription_id if it's an integer
+        lang (str): Language for error messages
+        process_refund (bool): Whether to automatically process the refund via Stripe
+
+    Returns:
+        dict: Information about the deprecation including refund amount and processing status
+
+    Raises:
+        ValidationException: If the subscription is not found or cannot be deprecated
+    """
+    utc_now = timezone.now()
+
+    if isinstance(deprecated_plan, str):
+        old_subscription = Subscription.objects.filter(
+            user=user, plans__slug=deprecated_plan, status__in=["ACTIVE", "FULLY_PAID"]
+        ).first()
+    else:
+        old_subscription = Subscription.objects.filter(
+            user=user, plans__id=deprecated_plan, status__in=["ACTIVE", "FULLY_PAID"]
+        ).first()
+
+    if not old_subscription:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"No active subscription found for plan {deprecated_plan}",
+                es=f"No se encontró suscripción activa para el plan {deprecated_plan}",
+                slug="subscription-not-found",
+            ),
+            code=404,
+        )
+
+    if old_subscription.status in ["DEPRECATED", "PAYMENT_ISSUE", "EXPIRED", "ERROR"]:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"This subscription cannot be refunded because it has status: {old_subscription.status}",
+                es=f"Esta suscripción no puede ser reembolsada porque tiene estado: {old_subscription.status}",
+                slug="subscription-cannot-be-refunded",
+            ),
+            code=400,
+        )
+
+    if old_subscription.status == "CANCELLED":
+        utc_now = timezone.now()
+        if old_subscription.next_payment_at and old_subscription.next_payment_at <= utc_now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This cancelled subscription cannot be refunded because the payment period has already passed",
+                    es="Esta suscripción cancelada no puede ser reembolsada porque el período de pago ya pasó",
+                    slug="cancelled-subscription-payment-period-passed",
+                ),
+                code=400,
+            )
+
+    last_invoice = old_subscription.invoices.filter(status="FULFILLED").order_by("-paid_at").first()
+    if not last_invoice:
+        raise ValidationException(
+            translation(
+                lang,
+                en="No paid invoices found for this subscription",
+                es="No se encontraron facturas pagadas para esta suscripción",
+                slug="no-paid-invoices",
+            ),
+            code=400,
+        )
+
+    refund_amount = 0
+    refund_processed = False
+    days_remaining = 0
+    refund_ratio = 0
+
+    if old_subscription.next_payment_at:
+        days_remaining = (old_subscription.next_payment_at - utc_now).days
+        if days_remaining <= 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="No remaining days in current billing period",
+                    es="No quedan días en el período de facturación actual",
+                    slug="no-remaining-days",
+                ),
+                code=400,
+            )
+    elif old_subscription.valid_until and old_subscription.valid_until > utc_now:
+        days_remaining = (old_subscription.valid_until - utc_now).days
+    else:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Subscription has no valid period remaining",
+                es="La suscripción no tiene período válido restante",
+                slug="no-valid-period",
+            ),
+            code=400,
+        )
+
+    if old_subscription.pay_every_unit == "MONTH":
+        total_days = old_subscription.pay_every * 30
+    elif old_subscription.pay_every_unit == "YEAR":
+        total_days = old_subscription.pay_every * 365
+    elif old_subscription.pay_every_unit == "WEEK":
+        total_days = old_subscription.pay_every * 7
+    else:
+        from calendar import monthrange
+
+        year, month = last_invoice.paid_at.year, last_invoice.paid_at.month
+        total_days = monthrange(year, month)[1]
+
+    if total_days > 0:
+        refund_ratio = days_remaining / total_days
+        refund_amount = round(last_invoice.amount * refund_ratio, 2)
+
+    logger.info(f"Deprecate Subscription: {old_subscription.id}")
+    logger.info(f"Plan: {old_subscription.plans.first().slug if old_subscription.plans.exists() else 'N/A'}")
+    logger.info(f"Total days in period: {total_days}, Days remaining: {days_remaining}")
+    logger.info(f"Refund ratio: {refund_ratio:.2f}, Refund amount: ${refund_amount}")
+
+    if process_refund and refund_amount > 0:
+        try:
+            stripe_service = Stripe(academy=old_subscription.academy)
+            stripe_service.set_language(lang)
+
+            # Process partial refund via Stripe
+            stripe_service.partial_refund(last_invoice, refund_amount)
+            refund_processed = True
+
+            logger.info(f"Automatic refund processed for subscription {old_subscription.id}: ${refund_amount}")
+
+        except Exception as e:
+            logger.error(f"Failed to process automatic refund for subscription {old_subscription.id}: {str(e)}")
+            refund_processed = False
+
+    old_subscription.status = "DEPRECATED"
+    old_subscription.status_message = f"Deprecated and refunded on {utc_now.isoformat()}"
+    old_subscription.save()
+
+    return {
+        "subscription_id": old_subscription.id,
+        "plan_slug": old_subscription.plans.first().slug if old_subscription.plans.exists() else None,
+        "refund_amount": refund_amount,
+        "days_remaining": days_remaining,
+        "refund_ratio": refund_ratio,
+        "total_days_in_period": total_days,
+        "deprecated_at": utc_now,
+        "refund_processed": refund_processed,
+    }

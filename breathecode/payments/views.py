@@ -21,7 +21,6 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language
 from breathecode.commission.tasks import register_referral_from_invoice
@@ -96,6 +95,7 @@ from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.decorators.consume import discount_consumption_sessions
 from breathecode.utils.redis import Lock
+
 
 logger = getLogger(__name__)
 
@@ -2900,11 +2900,6 @@ class PayView(APIView):
                         code=500,
                     )
 
-                # Calculate is_recurrent based on:
-                # 1. If it's a free trial -> False
-                # 2. If it's a free plan -> True
-                # 3. If it has paid plans -> True
-                # 4. If only service items -> use user's choice (recurrent parameter)
                 is_free_trial = available_for_free_trial
                 is_free_plan = available_free
                 has_plans = bag.plans.exists()
@@ -2923,7 +2918,19 @@ class PayView(APIView):
                 bag.expires_at = None
                 bag.save()
 
-                # Create reward coupons for sellers if coupons were used
+                deprecated_plan_info = None
+                if "deprecated_plan" in request.data and request.data["deprecated_plan"]:
+                    deprecated_plan = request.data["deprecated_plan"]
+                    try:
+                        deprecated_plan_info = actions.deprecate_subscription_and_calculate_refund(
+                            request.user, deprecated_plan, lang
+                        )
+                        logger.info(
+                            f"Deprecated plan {deprecated_plan} for user {request.user.id}: {deprecated_plan_info}"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to deprecate plan {deprecated_plan} for user {request.user.id}: {str(e)}")
+
                 if coupons.exists() and original_price > 0:
                     actions.create_seller_reward_coupons(list(coupons), original_price, request.user)
 
@@ -2963,6 +2970,9 @@ class PayView(APIView):
                 data = serializer.data
                 serializer = GetCouponSerializer(coupons, many=True)
                 data["coupons"] = serializer.data
+
+                if deprecated_plan_info:
+                    data["deprecated_plan"] = deprecated_plan_info
 
                 return Response(data, status=201)
 
@@ -3511,3 +3521,71 @@ class SubscriptionSeatView(APIView):
         Consumable.objects.filter(subscription_seat_id=seat.id).update(user=None)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PlanRefundView(APIView):
+    """
+    Vista para hacer reembolso proporcional de todas las subscripciones activas de un plan específico.
+    Requiere autenticación - el usuario se obtiene automáticamente de request.user.
+    """
+
+    def post(self, request, plan_slug, academy_id=None):
+        """
+        Hace reembolso proporcional de todas las subscripciones activas del plan especificado
+        para el usuario autenticado.
+
+        Args:
+            plan_slug: Slug del plan a hacer refund
+            academy_id: ID de la academia (inyectado por el decorador)
+
+        Returns:
+            dict: Información de los refunds realizados
+        """
+        lang = get_user_language(request)
+        user = request.user
+
+        subscriptions = Subscription.objects.filter(
+            user=user, plans__slug=plan_slug, status__in=["ACTIVE", "FULLY_PAID"]
+        )
+
+        if not subscriptions.exists():
+            return Response(
+                {
+                    "detail": translation(
+                        lang,
+                        en=f"No active subscriptions found for plan {plan_slug}",
+                        es=f"No se encontraron subscripciones activas para el plan {plan_slug}",
+                        slug="no-active-subscriptions-for-plan",
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        refund_results = []
+        total_refund_amount = 0
+
+        for subscription in subscriptions:
+            try:
+                result = actions.deprecate_subscription_and_calculate_refund(user, plan_slug, lang)
+                refund_results.append(
+                    {
+                        "subscription_id": subscription.id,
+                        "refund_amount": result.get("refund_amount", 0),
+                        "refund_processed": result.get("refund_processed", False),
+                    }
+                )
+                total_refund_amount += result.get("refund_amount", 0)
+            except Exception as e:
+                logger.error(f"Error processing refund for subscription {subscription.id}: {str(e)}")
+                refund_results.append({"subscription_id": subscription.id, "error": str(e), "refund_processed": False})
+
+        return Response(
+            {
+                "plan_slug": plan_slug,
+                "user_id": user.id,
+                "total_refund_amount": total_refund_amount,
+                "subscriptions_processed": len(subscriptions),
+                "refund_results": refund_results,
+            },
+            status=status.HTTP_200_OK,
+        )

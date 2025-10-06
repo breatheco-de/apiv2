@@ -32,6 +32,7 @@ from ..views import (
     MeUserCouponsView,
     PaymentMethodView,
     PayView,
+    PlanRefundView,
     PlanOfferView,
     PlanView,
     AcademyPlanServiceItemView,
@@ -46,6 +47,7 @@ urlpatterns = [
     path("planoffer", PlanOfferView.as_view(), name="planoffer"),
     path("plan", PlanView.as_view(), name="plan"),
     path("plan/<slug:plan_slug>", PlanView.as_view(), name="plan_slug"),
+    path("plan/<slug:plan_slug>/refund", PlanRefundView.as_view(), name="plan_slug_refund"),
     path(
         "academy/plan/serviceitem",
         AcademyPlanServiceItemView.as_view(),
