@@ -4,9 +4,11 @@ from unittest.mock import MagicMock
 
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 # We will call the real functions from AbstractIOweYou, but everything else is mocked
-from breathecode.payments.models import AbstractIOweYou
+from breathecode.payments.models import AbstractIOweYou, Currency, Subscription, Bag, Invoice
+from breathecode.admissions.models import Academy, Country, City
 
 
 # -----------------------------------------------------------------------------
@@ -209,3 +211,100 @@ def test_get_current_period_spend__integration_like_with_wraps():
     assert wrapper.called is True
     assert result == invoices_total
     self_like.invoices.filter.assert_called()
+
+
+def test_get_current_period_spend__uses_fulfilled_and_paid_at_window():
+    now_time = timezone.now()
+    start = now_time - relativedelta(days=3)
+    end = start + relativedelta(months=1)
+
+    self_like = _spend_self(start, end, invoices_total=40.0)
+
+    # call real method
+    total = AbstractIOweYou.get_current_period_spend(self_like)
+    assert total == 40.0
+
+    # inspect kwargs of the filter call
+    _, kwargs = self_like.invoices.filter.call_args
+    # status must be FULFILLED in this codebase
+    from breathecode.payments.models import Invoice
+
+    assert kwargs["status"] == Invoice.Status.FULFILLED
+    assert kwargs["paid_at__gte"] == start
+    assert kwargs["paid_at__lt"] == end
+    assert "bag__service_items__service" not in kwargs
+
+
+def test_get_current_period_spend__uses_service_and_paid_at_window():
+    now_time = timezone.now()
+    start = now_time - relativedelta(days=5)
+    end = start + relativedelta(months=1)
+
+    self_like = _spend_self(start, end, invoices_total=22.0)
+
+    mocked_service = object()
+    _ = AbstractIOweYou.get_current_period_spend(self_like, service=mocked_service)
+
+    _, kwargs = self_like.invoices.filter.call_args
+    from breathecode.payments.models import Invoice
+
+    assert kwargs["status"] == Invoice.Status.FULFILLED
+    assert kwargs["paid_at__gte"] == start
+    assert kwargs["paid_at__lt"] == end
+    assert kwargs.get("bag__service_items__service") is mocked_service
+
+
+def test_get_current_period_spend__db_happy_path(database, monkeypatch):
+    """DB integration: create real rows and ensure ORM path works and sums paid invoices."""
+    # Avoid external deps
+    monkeypatch.setattr(
+        "breathecode.payments.models.get_user_settings",
+        lambda user_id: SimpleNamespace(lang="en"),
+        raising=True,
+    )
+
+    class _DummyTask:
+        def delay(self, *args, **kwargs):
+            return None
+
+    monkeypatch.setattr("breathecode.activity.tasks.add_activity", _DummyTask(), raising=True)
+
+    # Minimal fixtures
+    usd = Currency.objects.create(code="USD", name="US Dollar", decimals=2)
+    user = User.objects.create(username="u1", email="u1@example.com")
+    country = Country.objects.create(code="US", name="United States")
+    city = City.objects.create(name="City", country=country)
+
+    academy = Academy.objects.create(
+        slug="a1",
+        name="Academy 1",
+        logo_url="https://example.com/logo.png",
+        street_address="Somewhere 123",
+        city=city,
+        country=country,
+        main_currency=usd,
+    )
+
+    now = timezone.now()
+    sub = Subscription.objects.create(
+        user=user,
+        academy=academy,
+        paid_at=now - relativedelta(days=3),
+        next_payment_at=now + relativedelta(days=27),
+    )
+
+    bag = Bag.objects.create(user=user, academy=academy, currency=usd)
+    inv = Invoice.objects.create(
+        user=user,
+        academy=academy,
+        currency=usd,
+        bag=bag,
+        amount=50.0,
+        paid_at=now - relativedelta(days=1),
+        status=Invoice.Status.FULFILLED,
+    )
+
+    sub.invoices.add(inv)
+
+    total = sub.get_current_period_spend()
+    assert total == pytest.approx(50.0)

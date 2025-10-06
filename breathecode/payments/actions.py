@@ -1,6 +1,6 @@
 import os
 import re
-import math
+from decimal import Decimal, ROUND_FLOOR
 import redis
 import redis.lock
 from datetime import datetime, timedelta
@@ -2219,7 +2219,7 @@ def get_user_from_consumable_to_be_charged(
     - A `User` instance or `None` when team‑shared without a specific user.
     """
     resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
-    is_team_allowed = instance.service_item.service.is_team_allowed
+    is_team_allowed = instance.service_item.is_team_allowed
 
     user = None
     team: SubscriptionBillingTeam | None = instance.subscription_billing_team or instance.subscription_seat.billing_team
@@ -2273,32 +2273,47 @@ def validate_auto_recharge_service_units(
     user = get_user_from_consumable_to_be_charged(instance)
     service = instance.service_item.service
 
-    user_spend = resource.get_current_period_spend(service, user)
+    # Normalize spends to Decimal
+    _user_spend = resource.get_current_period_spend(service, user)
+    user_spend: Decimal = Decimal(str(_user_spend)) if _user_spend is not None else Decimal("0")
 
-    team_spend = user_spend
+    team_spend: Decimal = user_spend
     if user:
-        team_spend = resource.get_current_period_spend(service)
+        _team_spend = resource.get_current_period_spend(service)
+        team_spend = Decimal(str(_team_spend)) if _team_spend is not None else Decimal("0")
 
-    if team_spend >= resource.recharge_threshold_amount:
+    # Thresholds may come as DecimalField (DB) or float in stubs; normalize to Decimal
+    threshold_dec = (
+        Decimal(str(resource.recharge_threshold_amount))
+        if resource.recharge_threshold_amount is not None
+        else Decimal("0")
+    )
+
+    if team_spend >= threshold_dec:
         return 0.0, 0, "auto-recharge-threshold-reached"
 
-    if resource.max_period_spend and (
-        team_spend >= resource.max_period_spend or team_spend + resource.recharge_amount >= resource.max_period_spend
-    ):
+    max_spend_dec = Decimal(str(resource.max_period_spend)) if getattr(resource, "max_period_spend", None) else None
+
+    recharge_amount: Decimal = Decimal(str(resource.recharge_amount))
+
+    if max_spend_dec and (team_spend >= max_spend_dec or team_spend + recharge_amount >= max_spend_dec):
         return 0.0, 0, "max-period-spend-reached"
 
-    recharge_amount = resource.recharge_amount
-    if resource.max_period_spend and team_spend + recharge_amount > resource.max_period_spend:
-        recharge_amount = resource.max_period_spend - team_spend
+    if max_spend_dec and team_spend + recharge_amount > max_spend_dec:
+        recharge_amount = max_spend_dec - team_spend
 
     price_qs = AcademyService.objects.filter(service=service, academy=resource.academy)
     if (price := price_qs.first()) is None:
         return 0.0, 0, "academy-service-not-found"
 
-    if price.price_per_unit is None or price.price_per_unit <= 0:
+    if price.price_per_unit is None:
         return 0.0, 0, "price-per-unit-not-found"
 
-    if price.price_per_unit > recharge_amount:
+    price_per_unit_dec = Decimal(str(price.price_per_unit))
+    if price_per_unit_dec <= 0:
+        return 0.0, 0, "price-per-unit-not-found"
+
+    if price_per_unit_dec > recharge_amount:
         return 0.0, 0, "price-per-unit-exceeded"
 
     consumables = Consumable.list(user=user, service=instance.service_item.service)
@@ -2311,13 +2326,16 @@ def validate_auto_recharge_service_units(
         available += consumable.how_many
         total += consumable.service_item.how_many
 
-    if total / available > 0.2:
+    # Use Decimal for ratio comparison to avoid float mixing
+    if available and (Decimal(total) / Decimal(available) > Decimal("0.2")):
         return 0.0, 0, "more-than-20-percent-left"
 
-    if available * price.price_per_unit > resource.recharge_threshold_amount:
+    if Decimal(available) * price_per_unit_dec > threshold_dec:
         return 0.0, 0, None
 
-    return price.price_per_unit, math.floor(recharge_amount / price.price_per_unit), None
+    # Compute units using Decimal and return price as float for compatibility
+    units = int((Decimal(str(recharge_amount)) / price_per_unit_dec).to_integral_value(rounding=ROUND_FLOOR))
+    return float(price.price_per_unit), units, None
 
 
 def process_auto_recharge(
