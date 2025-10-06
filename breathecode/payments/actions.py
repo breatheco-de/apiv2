@@ -2161,6 +2161,21 @@ def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional
 def get_user_from_consumable_to_be_charged(
     instance: Consumable,
 ) -> User | None:
+    """
+    Resolve the user that should be considered the consumer for charging/notifications.
+
+    Rules:
+    - For `PlanFinancing` (always individual) or when the service is not team‑allowed,
+      the user is the resource owner (`resource.user`).
+    - For team‑allowed services with PER_SEAT strategy, it is the seat user if present,
+      otherwise it falls back to the resource owner.
+
+    Parameters:
+    - instance: The `Consumable` linked to either a `Subscription` or `PlanFinancing`.
+
+    Returns:
+    - A `User` instance or `None` when team‑shared without a specific user.
+    """
     resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
     is_team_allowed = instance.service_item.service.is_team_allowed
 
@@ -2179,6 +2194,29 @@ def get_user_from_consumable_to_be_charged(
 def validate_auto_recharge_service_units(
     instance: Consumable,
 ) -> tuple[float, int, str | None]:  # price, amount, error
+    """
+    Decide whether an auto‑recharge should happen and, if so, how many units to buy.
+
+    The decision takes into account:
+    - Auto‑recharge enablement on the owning resource (`Subscription` or `PlanFinancing`).
+    - Whether a seat is inactive (no recharge for inactive seats).
+    - Presence of a main currency in the academy (required to price the units).
+    - The effective user to consider for spending (derived from
+      `get_user_from_consumable_to_be_charged`).
+    - Current period spend for the service/user/team and configured thresholds/limits
+      (`recharge_threshold_amount`, `max_period_spend`).
+    - Academy price per unit for the service.
+    - Remaining balance heuristics (e.g., more than 20% left).
+
+    Parameters:
+    - instance: The `Consumable` being consumed.
+
+    Returns:
+    - (price_per_unit, units_to_buy, None) when allowed.
+    - (0.0, 0, "<slug>") when not allowed, where the slug explains the reason
+      (e.g., "main-currency-not-found", "auto-recharge-threshold-reached",
+      "max-period-spend-reached", "price-per-unit-not-found").
+    """
     resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
     if (
         resource is None
@@ -2244,23 +2282,31 @@ def process_auto_recharge(
     consumable: Consumable,
 ):
     """
-    Process automatic consumable recharge for a billing team.
+    Execute the auto‑recharge workflow for the resource that owns a consumable.
 
-    This task:
-    1. Acquires Redis lock to prevent concurrent recharges
-    2. Creates consumables for team-allowed services
-    3. Charges the subscription owner via Stripe
-    4. Tracks spending via invoices
+    This is an ACTION (not a Celery task). The Celery entry point that calls this is
+    `breathecode.payments.tasks.process_auto_recharge`. This function:
 
-    Args:
-        team: SubscriptionBillingTeam
-        recharge_amount: Amount in subscription currency to recharge
-        seat: Optional SubscriptionSeat for per-seat recharge
-        service: Service to restrict recharge to a single service (required)
+    1) Resolves the owning resource from the `consumable` (either `Subscription` or `PlanFinancing`).
+    2) Acquires a Redis lock to avoid concurrent recharges per resource.
+    3) Validates the recharge using `validate_auto_recharge_service_units` which returns
+       the unit price and number of units to buy or an error slug.
+    4) Performs the payment (Stripe) by creating a temporary `Bag` and charging the
+       subscription owner. The charged user in emails can be the seat holder depending on the
+       service/team strategy.
+    5) Sends notification emails to the resource owner and, when applicable, the charged user.
 
-    Note:
-        Uses Redis lock to prevent race conditions when multiple
-        consumptions trigger recharge simultaneously.
+    Parameters:
+    - consumable: The `Consumable` instance that triggered the recharge path.
+
+    Returns:
+    - None. Side‑effects include DB writes (Bag/Invoice), Stripe charge and notifications.
+
+    Raises:
+    - AbortTask: When the flow cannot proceed (e.g., configuration, payment or validation issues).
+
+    Concurrency:
+    - Guarded by a Redis lock named `process_auto_recharge:<ResourceClass>:<resource_id>`.
     """
 
     resource: Subscription | PlanFinancing | None = consumable.subscription or consumable.plan_financing
