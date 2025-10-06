@@ -233,7 +233,6 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if "user" not in extras:
         extras["user"] = user
 
-    # Issue owner consumable; per-seat issuance is handled by renew_team_member_consumables
     consumable = Consumable(
         service_item=service_item,
         unit_type=service_item.unit_type,
@@ -561,7 +560,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 try:
                     s = Stripe(academy=subscription.academy)
                     s.set_language(settings.lang)
-                    invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
+                    team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+                    invoice = s.pay(
+                        subscription.user, bag, amount, currency=bag.currency, subscription_billing_team=team
+                    )
 
                 except Exception:
                     message = translation(
@@ -1270,7 +1272,7 @@ def build_subscription(
         SubscriptionSeat.objects.get_or_create(
             billing_team=team,
             user=bag.user,
-            defaults={"email": subscription.user.email, "is_active": True, "seat_multiplier": 1},
+            defaults={"email": subscription.user.email, "is_active": True},
         )
 
     build_service_stock_scheduler_from_subscription.delay(subscription.id)
@@ -1795,3 +1797,36 @@ def check_and_retry_pending_bags(**_: Any):
         retry_pending_bag_delivery.delay(bag_id=bag.id)
 
     return count
+
+
+@task(bind=False, priority=TaskPriority.NOTIFICATION)
+def process_auto_recharge(
+    consumable_id: int,
+    **_: Any,
+):
+    """
+    Process automatic consumable recharge for a billing team.
+
+    This task:
+    1. Acquires Redis lock to prevent concurrent recharges
+    2. Creates consumables for team-allowed services
+    3. Charges the subscription owner via Stripe
+    4. Tracks spending via invoices
+
+    Args:
+        team_id: SubscriptionBillingTeam ID
+        recharge_amount: Amount in subscription currency to recharge
+        seat_id: Optional SubscriptionSeat ID for per-seat recharge
+        service_id: Optional Service ID to restrict the recharge to a single service
+
+    Note:
+        Uses Redis lock to prevent race conditions when multiple
+        consumptions trigger recharge simultaneously.
+    """
+
+    try:
+        consumable = Consumable.objects.select_related("subscription").get(id=consumable_id)
+    except Consumable.DoesNotExist:
+        raise AbortTask(f"Consumable {consumable_id} not found")
+
+    actions.process_auto_recharge(consumable)

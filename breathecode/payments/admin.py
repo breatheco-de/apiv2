@@ -323,7 +323,7 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionSeat)
 class SubscriptionSeatAdmin(admin.ModelAdmin):
-    list_display = ("id", "billing_team", "email", "user", "seat_multiplier")
+    list_display = ("id", "billing_team", "email", "user")
     list_filter = [
         "billing_team__subscription__user__email",
         "billing_team__subscription__user__first_name",

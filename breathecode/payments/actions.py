@@ -1,9 +1,15 @@
 import os
 import re
-import uuid
+import math
+import redis
+import redis.lock
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
+import uuid
+from django.db import transaction
+from django.conf import settings
+from task_manager.core.exceptions import AbortTask, RetryTask
 
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
@@ -1949,14 +1955,12 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
 
 class SeatDict(TypedDict, total=False):
     email: str
-    seat_multiplier: int
     first_name: str | None
     last_name: str | None
 
 
 class AddSeat(TypedDict):
     email: str
-    seat_multiplier: int
     first_name: str
     last_name: str
 
@@ -1964,7 +1968,6 @@ class AddSeat(TypedDict):
 class ReplaceSeat(TypedDict):
     from_email: str
     to_email: str
-    seat_multiplier: int
     first_name: str
     last_name: str
 
@@ -2005,7 +2008,7 @@ def invite_user_to_subscription_team(
         )
 
 
-def create_seat(email: str, user: User | None, seat_multiplier: int, billing_team: SubscriptionBillingTeam, lang: str):
+def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
     if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
         raise ValidationException(
             translation(
@@ -2021,7 +2024,6 @@ def create_seat(email: str, user: User | None, seat_multiplier: int, billing_tea
         billing_team=billing_team,
         user=user,
         email=email,
-        seat_multiplier=seat_multiplier,
     )
     seat_log_entry = create_seat_log_entry(seat, "ADDED")
     seat.seat_log.append(seat_log_entry)
@@ -2127,7 +2129,6 @@ def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
         serialized = {
             "email": normalize_email(seat["email"]),
             "user": seat.get("user", None),
-            "seat_multiplier": seat.get("seat_multiplier", 1),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
         }
@@ -2154,11 +2155,11 @@ def validate_seats_limit(
 ):
     seats = {}
     for seat in SubscriptionSeat.objects.filter(billing_team=team):
-        seats[seat.email] = seat.seat_multiplier
+        seats[seat.email] = 1
 
     for seat in add_seats:
         # seat is a dict-like (TypedDict)
-        seats[seat["email"]] = seat.get("seat_multiplier", 1)
+        seats[seat["email"]] = 1
 
     for seat in replace_seats:
         # carry forward the existing multiplier when replacing an email
@@ -2197,3 +2198,263 @@ def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional
 
     if plan.owner != cohort.academy:
         admissions_tasks.build_profile_academy.delay(cohort.academy.id, user.id)
+
+
+def get_user_from_consumable_to_be_charged(
+    instance: Consumable,
+) -> User | None:
+    """
+    Resolve the user that should be considered the consumer for charging/notifications.
+
+    Rules:
+    - For `PlanFinancing` (always individual) or when the service is not team‑allowed,
+      the user is the resource owner (`resource.user`).
+    - For team‑allowed services with PER_SEAT strategy, it is the seat user if present,
+      otherwise it falls back to the resource owner.
+
+    Parameters:
+    - instance: The `Consumable` linked to either a `Subscription` or `PlanFinancing`.
+
+    Returns:
+    - A `User` instance or `None` when team‑shared without a specific user.
+    """
+    resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
+    is_team_allowed = instance.service_item.service.is_team_allowed
+
+    user = None
+    team: SubscriptionBillingTeam | None = instance.subscription_billing_team or instance.subscription_seat.billing_team
+    strategy = team.consumption_strategy if team else None
+
+    if is_team_allowed is False or isinstance(resource, PlanFinancing):
+        user = resource.user
+    elif is_team_allowed and strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT:
+        user = instance.subscription_seat.user or resource.user
+
+    return user
+
+
+def validate_auto_recharge_service_units(
+    instance: Consumable,
+) -> tuple[float, int, str | None]:  # price, amount, error
+    """
+    Decide whether an auto‑recharge should happen and, if so, how many units to buy.
+
+    The decision takes into account:
+    - Auto‑recharge enablement on the owning resource (`Subscription` or `PlanFinancing`).
+    - Whether a seat is inactive (no recharge for inactive seats).
+    - Presence of a main currency in the academy (required to price the units).
+    - The effective user to consider for spending (derived from
+      `get_user_from_consumable_to_be_charged`).
+    - Current period spend for the service/user/team and configured thresholds/limits
+      (`recharge_threshold_amount`, `max_period_spend`).
+    - Academy price per unit for the service.
+    - Remaining balance heuristics (e.g., more than 20% left).
+
+    Parameters:
+    - instance: The `Consumable` being consumed.
+
+    Returns:
+    - (price_per_unit, units_to_buy, None) when allowed.
+    - (0.0, 0, "<slug>") when not allowed, where the slug explains the reason
+      (e.g., "main-currency-not-found", "auto-recharge-threshold-reached",
+      "max-period-spend-reached", "price-per-unit-not-found").
+    """
+    resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
+    if (
+        resource is None
+        or resource.auto_recharge_enabled is False
+        or (instance.subscription_seat and instance.subscription_seat.is_active is False)
+    ):
+        return 0.0, 0, None
+
+    if resource.academy.main_currency is None:
+        return 0.0, 0, "main-currency-not-found"
+
+    user = get_user_from_consumable_to_be_charged(instance)
+    service = instance.service_item.service
+
+    user_spend = resource.get_current_period_spend(service, user)
+
+    team_spend = user_spend
+    if user:
+        team_spend = resource.get_current_period_spend(service)
+
+    if team_spend >= resource.recharge_threshold_amount:
+        return 0.0, 0, "auto-recharge-threshold-reached"
+
+    if resource.max_period_spend and (
+        team_spend >= resource.max_period_spend or team_spend + resource.recharge_amount >= resource.max_period_spend
+    ):
+        return 0.0, 0, "max-period-spend-reached"
+
+    recharge_amount = resource.recharge_amount
+    if resource.max_period_spend and team_spend + recharge_amount > resource.max_period_spend:
+        recharge_amount = resource.max_period_spend - team_spend
+
+    price_qs = AcademyService.objects.filter(service=service, academy=resource.academy)
+    if (price := price_qs.first()) is None:
+        return 0.0, 0, "academy-service-not-found"
+
+    if price.price_per_unit is None or price.price_per_unit <= 0:
+        return 0.0, 0, "price-per-unit-not-found"
+
+    if price.price_per_unit > recharge_amount:
+        return 0.0, 0, "price-per-unit-exceeded"
+
+    consumables = Consumable.list(user=user, service=instance.service_item.service)
+    total = 0
+    available = 0
+    for consumable in consumables:
+        if consumable.how_many == -1:
+            return 0.0, 0, None
+
+        available += consumable.how_many
+        total += consumable.service_item.how_many
+
+    if total / available > 0.2:
+        return 0.0, 0, "more-than-20-percent-left"
+
+    if available * price.price_per_unit > resource.recharge_threshold_amount:
+        return 0.0, 0, None
+
+    return price.price_per_unit, math.floor(recharge_amount / price.price_per_unit), None
+
+
+def process_auto_recharge(
+    consumable: Consumable,
+):
+    """
+    Execute the auto‑recharge workflow for the resource that owns a consumable.
+
+    This is an ACTION (not a Celery task). The Celery entry point that calls this is
+    `breathecode.payments.tasks.process_auto_recharge`. This function:
+
+    1) Resolves the owning resource from the `consumable` (either `Subscription` or `PlanFinancing`).
+    2) Acquires a Redis lock to avoid concurrent recharges per resource.
+    3) Validates the recharge using `validate_auto_recharge_service_units` which returns
+       the unit price and number of units to buy or an error slug.
+    4) Performs the payment (Stripe) by creating a temporary `Bag` and charging the
+       subscription owner. The charged user in emails can be the seat holder depending on the
+       service/team strategy.
+    5) Sends notification emails to the resource owner and, when applicable, the charged user.
+
+    Parameters:
+    - consumable: The `Consumable` instance that triggered the recharge path.
+
+    Returns:
+    - None. Side‑effects include DB writes (Bag/Invoice), Stripe charge and notifications.
+
+    Raises:
+    - AbortTask: When the flow cannot proceed (e.g., configuration, payment or validation issues).
+
+    Concurrency:
+    - Guarded by a Redis lock named `process_auto_recharge:<ResourceClass>:<resource_id>`.
+    """
+
+    resource: Subscription | PlanFinancing | None = consumable.subscription or consumable.plan_financing
+    if not resource:
+        return
+
+    currency: Currency | None = resource.academy.main_currency
+    if not currency:
+        return
+
+    # Connect to Redis
+    redis_client = redis.Redis.from_url(settings.REDIS_URL)
+    team = consumable.subscription_billing_team or (
+        consumable.subscription_seat.billing_team if consumable.subscription_seat else None
+    )
+    seat = consumable.subscription_seat
+
+    lock_key = f"process_auto_recharge:{resource.__class__.__name__}:{resource.id}"
+    lock_timeout = 300  # 5 minutes max lock time
+
+    # Try to acquire lock
+    lock: redis.lock.Lock | None = redis_client.lock(lock_key, timeout=lock_timeout, blocking_timeout=5)
+    # lock.release()
+
+    if lock.acquire(blocking=False) is False:
+        raise RetryTask(f"Auto-recharge already in progress for {resource.__class__.__name__} {resource.id}")
+
+    try:
+        logger.info(f"Processing auto-recharge for {resource.__class__.__name__} {resource.id}")
+
+        price, amount, error = validate_auto_recharge_service_units(consumable)
+        if error:
+            logger.warning(f"Auto-recharge not allowed for consumable {consumable.id}: {error}")
+            return
+
+        if amount <= 0:
+            logger.warning(f"Auto-recharge not allowed for consumable {consumable.id}: amount is zero or negative")
+            return
+
+        try:
+            with transaction.atomic():
+                # Create invoice via Stripe payment
+                from .services.stripe import Stripe
+
+                charged_user = get_user_from_consumable_to_be_charged(consumable)
+
+                # Create a temporary bag for the auto-recharge
+                bag = Bag.objects.create(
+                    user=resource.user,  # it must be charged to the owner
+                    academy=resource.academy,
+                    currency=currency,
+                    type="CHARGE",
+                    status="PAID",
+                    was_delivered=True,
+                )
+
+                # Process payment via Stripe
+                # If this fails, the entire transaction will rollback
+                s = Stripe(academy=resource.academy)
+                context_desc = f"auto-recharge for {charged_user.email}"
+                s.pay(
+                    resource.user,  # it must be charged to the owner
+                    bag,
+                    price * amount,
+                    currency=currency.code,
+                    description=f"Auto-recharge for {context_desc}",
+                    subscription_billing_team=team,
+                    subscription_seat=seat,
+                )
+
+                emails = [resource.user.email]
+                if charged_user.email not in resource.user.email:
+                    if charged_user:
+                        emails.append(charged_user.email)
+
+                if charged_user is None:
+                    charged_user = resource.user
+
+                user_settings = get_user_settings(charged_user)
+                lang = user_settings.lang
+
+                subject = translation(
+                    lang,
+                    en=f"Consumables Auto-Recharged for {charged_user.email}",
+                    es=f"Consumibles Auto-Recargados para {charged_user.email}",
+                )
+                message = translation(
+                    lang,
+                    en=f"The consumables have been auto-recharged for {charged_user.email}",
+                    es=f"Los consumibles han sido auto-recargados para {charged_user.email}",
+                )
+
+                for email in emails:
+                    notify_actions.send_email_message(
+                        "message",
+                        email,
+                        {
+                            "SUBJECT": subject,
+                            "MESSAGE": message,
+                        },
+                        academy=resource.academy,
+                    )
+
+        except Exception as e:
+            raise AbortTask(f"Consumable auto-recharge failed for {resource.__class__.__name__} {resource.id}: {e}")
+
+    finally:
+        # Always release the lock
+        lock.release()
