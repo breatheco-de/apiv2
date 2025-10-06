@@ -2027,6 +2027,7 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
     )
     seat_log_entry = create_seat_log_entry(seat, "ADDED")
     seat.seat_log.append(seat_log_entry)
+    seat.is_active = True
     seat.save()
 
     if not user:
@@ -2090,8 +2091,7 @@ def replace_seat(
     seat.is_active = True
     seat_log_entry = create_seat_log_entry(seat, "REPLACED")
     seat.seat_log.append(seat_log_entry)
-    seat.save(update_fields=["seat_log", "is_active"])
-    seat.save()
+    seat.save(update_fields=["seat_log", "is_active", "email", "user"])
 
     if not to_user:
         invite_user_to_subscription_team(
@@ -2222,13 +2222,17 @@ def get_user_from_consumable_to_be_charged(
     is_team_allowed = instance.service_item.is_team_allowed
 
     user = None
-    team: SubscriptionBillingTeam | None = instance.subscription_billing_team or instance.subscription_seat.billing_team
+    seat = getattr(instance, "subscription_seat", None)
+    team: SubscriptionBillingTeam | None = getattr(instance, "subscription_billing_team", None) or (
+        seat.billing_team if seat else None
+    )
     strategy = team.consumption_strategy if team else None
 
     if is_team_allowed is False or isinstance(resource, PlanFinancing):
         user = resource.user
     elif is_team_allowed and strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT:
-        user = instance.subscription_seat.user or resource.user
+        # Seat user if present, otherwise fallback to resource owner
+        user = seat.user if (seat and seat.user) else resource.user
 
     return user
 
