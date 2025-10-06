@@ -6,8 +6,21 @@ Mock-based tests (no DB) covering team-allowed vs not, PER_SEAT vs PER_TEAM stra
 
 import pytest
 from types import SimpleNamespace
+from django.contrib.auth.models import User
+from django.utils import timezone
+from dateutil.relativedelta import relativedelta
 
 from breathecode.payments import actions
+from breathecode.payments.models import (
+    Currency,
+    Service,
+    ServiceItem,
+    Subscription,
+    SubscriptionBillingTeam,
+    SubscriptionSeat,
+    Consumable,
+)
+from breathecode.admissions.models import Academy, Country, City
 
 
 class DummyTeamStrategy:
@@ -65,3 +78,49 @@ def test_get_user_from_consumable_to_be_charged(is_team_allowed, strategy, seat_
         assert out is seat_user
     else:
         assert out is None
+
+
+def test_get_user_from_consumable_to_be_charged__db_happy_path(database):
+    """DB integration: when PER_SEAT and service allows teams, returns the seat user."""
+    usd = Currency.objects.create(code="USD", name="US Dollar", decimals=2)
+    user = User.objects.create(username="owner", email="owner@example.com")
+    seat_user = User.objects.create(username="seat", email="seat@example.com")
+
+    country = Country.objects.create(code="US", name="United States")
+    city = City.objects.create(name="City", country=country)
+
+    academy = Academy.objects.create(
+        slug="a1",
+        name="Academy 1",
+        logo_url="https://example.com/logo.png",
+        street_address="Addr 1",
+        city=city,
+        country=country,
+        main_currency=usd,
+    )
+
+    # Minimal service with team allowed
+    service = Service.objects.create(slug="svc-1", owner=academy)
+    service_item = ServiceItem.objects.create(service=service, is_team_allowed=True)
+
+    now = timezone.now()
+    sub = Subscription.objects.create(
+        user=user,
+        academy=academy,
+        paid_at=now - relativedelta(days=1),
+        next_payment_at=now + relativedelta(days=29),
+    )
+
+    team = SubscriptionBillingTeam.objects.create(subscription=sub, name="Team 1", consumption_strategy="PER_SEAT")
+    seat = SubscriptionSeat.objects.create(billing_team=team, user=seat_user, email=seat_user.email)
+
+    c = Consumable.objects.create(
+        service_item=service_item,
+        user=seat_user,
+        subscription=sub,
+        subscription_billing_team=team,
+        subscription_seat=seat,
+    )
+
+    out = actions.get_user_from_consumable_to_be_charged(c)
+    assert out == seat_user

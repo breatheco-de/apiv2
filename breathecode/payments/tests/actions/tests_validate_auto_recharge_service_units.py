@@ -10,8 +10,13 @@ Mock-based tests (no DB) covering allow/deny decisions and error slugs:
 
 import pytest
 from types import SimpleNamespace
+from django.contrib.auth.models import User
+from django.utils import timezone
+from dateutil.relativedelta import relativedelta
 
 from breathecode.payments import actions
+from breathecode.payments.models import Currency, Service, ServiceItem, AcademyService, Subscription
+from breathecode.admissions.models import Academy
 
 
 # -----------------------------------------------------------------------------
@@ -222,3 +227,57 @@ def test_validate_units__max_period_spend_reached(monkeypatch):
 
     price, amount, error = actions.validate_auto_recharge_service_units(c)
     assert (price, amount, error) == (0.0, 0, "max-period-spend-reached")
+
+
+def test_validate_auto_recharge_service_units__db_happy_path(database, monkeypatch):
+    """DB integration: creates AcademyService in DB and validates happy path result."""
+    # Minimal fixtures
+    usd = Currency.objects.create(code="USD", name="US Dollar", decimals=2)
+    owner = User.objects.create(username="owner", email="owner@example.com")
+    academy = Academy.objects.create(
+        slug="a1",
+        name="Academy 1",
+        logo_url="https://example.com/logo.png",
+        street_address="Addr 1",
+        city="City",
+        country="US",
+        main_currency=usd,
+    )
+
+    svc = Service.objects.create(slug="svc-1", owner=academy)
+    si = ServiceItem.objects.create(service=svc, is_team_allowed=False)
+    AcademyService.objects.create(academy=academy, currency=usd, service=svc, price_per_unit=10.0)
+
+    now = timezone.now()
+    sub = Subscription.objects.create(
+        user=owner,
+        academy=academy,
+        paid_at=now - relativedelta(days=1),
+        next_payment_at=now + relativedelta(days=29),
+        auto_recharge_enabled=True,
+        recharge_threshold_amount=50.0,
+        recharge_amount=25.0,
+    )
+
+    # Build a real-ish consumable stub: we don't need to persist it, only fields used by the function
+    c = SimpleNamespace(
+        subscription=sub,
+        plan_financing=None,
+        service_item=SimpleNamespace(service=svc),
+    )
+
+    # Patch get_user_from_consumable_to_be_charged for spend calculation
+    monkeypatch.setattr(actions, "get_user_from_consumable_to_be_charged", lambda instance: owner)
+    # Keep Consumable.list simple to avoid full inventory setup
+    monkeypatch.setattr(
+        actions,
+        "Consumable",
+        SimpleNamespace(
+            list=lambda user, service: [SimpleNamespace(how_many=5, service_item=SimpleNamespace(how_many=0))]
+        ),
+    )
+
+    price, amount, error = actions.validate_auto_recharge_service_units(c)
+    assert error is None
+    assert price == 10.0
+    assert amount == 2

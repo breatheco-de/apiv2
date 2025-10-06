@@ -1,5 +1,17 @@
 import pytest
 from types import SimpleNamespace
+from django.contrib.auth.models import User
+from django.utils import timezone
+from dateutil.relativedelta import relativedelta
+from breathecode.payments.models import (
+    Currency,
+    Service,
+    ServiceItem,
+    Subscription,
+    Consumable,
+    Bag,
+)
+from breathecode.admissions.models import Academy, Country, City
 
 from task_manager.core.exceptions import RetryTask
 
@@ -189,3 +201,89 @@ def test_action_process_auto_recharge_lock_conflict(monkeypatch):
 
     with pytest.raises(RetryTask):
         actions.process_auto_recharge(c)
+
+
+def test_action_process_auto_recharge_db_happy_path(database, monkeypatch):
+    """DB integration: ensure ORM writes (Bag) succeed while Stripe/Redis/emails are mocked."""
+    # Fixtures
+    usd = Currency.objects.create(code="USD", name="US Dollar", decimals=2)
+    owner = User.objects.create(username="owner", email="owner@example.com")
+    country = Country.objects.create(code="US", name="United States")
+    city = City.objects.create(name="City", country=country)
+
+    academy = Academy.objects.create(
+        slug="a1",
+        name="Academy 1",
+        logo_url="https://example.com/logo.png",
+        street_address="Addr 1",
+        city=city,
+        country=country,
+        main_currency=usd,
+    )
+
+    svc = Service.objects.create(slug="svc-1", owner=academy)
+    si = ServiceItem.objects.create(service=svc, is_team_allowed=False)
+
+    now = timezone.now()
+    sub = Subscription.objects.create(
+        user=owner,
+        academy=academy,
+        paid_at=now - relativedelta(days=2),
+        next_payment_at=now + relativedelta(days=28),
+    )
+
+    c = Consumable.objects.create(service_item=si, user=owner, subscription=sub)
+
+    # Redis lock OK
+    class DummyLock:
+        def acquire(self, blocking=False):
+            return True
+
+        def release(self):
+            pass
+
+    class DummyRedis:
+        def lock(self, *_, **__):
+            return DummyLock()
+
+    monkeypatch.setattr(actions.redis, "Redis", SimpleNamespace(from_url=lambda *_: DummyRedis()))
+
+    # Validation
+    monkeypatch.setattr(actions, "validate_auto_recharge_service_units", lambda instance: (10.0, 2, None))
+    monkeypatch.setattr(actions, "get_user_from_consumable_to_be_charged", lambda instance: owner)
+
+    # External systems
+    class DummyStripe:
+        def __init__(self, academy):
+            self.academy = academy
+
+        def pay(self, *args, **kwargs):
+            return None
+
+    monkeypatch.setattr("breathecode.payments.services.stripe.Stripe", DummyStripe, raising=False)
+
+    sent = []
+    monkeypatch.setattr(
+        actions.notify_actions, "send_email_message", lambda *args, **kwargs: sent.append((args, kwargs))
+    )
+    monkeypatch.setattr(actions, "get_user_settings", lambda user: SimpleNamespace(lang="en"))
+    monkeypatch.setattr(actions, "translation", lambda lang, en=None, es=None: en)
+
+    # Avoid external activity task on Bag save
+    from breathecode.activity import tasks as tasks_activity
+
+    monkeypatch.setattr(tasks_activity, "add_activity", SimpleNamespace(delay=lambda *a, **k: None))
+
+    # Act
+    actions.process_auto_recharge(c)
+
+    # Assert Bag created in DB
+    bags = list(Bag.objects.all())
+    assert len(bags) == 1
+    bag = bags[0]
+    assert bag.user == owner
+    assert bag.academy == academy
+    assert bag.currency == usd
+    assert bag.type == "CHARGE"
+    assert bag.status == "PAID"
+    assert bag.was_delivered is True
