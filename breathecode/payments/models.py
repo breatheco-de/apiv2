@@ -862,6 +862,10 @@ class Plan(AbstractPriceByTime):
         default=True, help_text="Is if true, it will create a renewable subscription instead of a plan financing"
     )
 
+    exclude_from_referral_program = models.BooleanField(
+        default=True, help_text="If is true, referral coupons will not be allowed"
+    )
+
     status = models.CharField(max_length=12, choices=Status, default=Status.DRAFT, help_text="Status")
 
     time_of_life = models.IntegerField(default=1, blank=True, null=True, help_text="Plan lifetime (e.g. 1, 2, 3, ...)")
@@ -1076,7 +1080,7 @@ class Seller(models.Model):
         INDIVIDUAL = ("INDIVIDUAL", "Individual")
         BUSINESS = ("BUSINESS", "Business")
 
-    name = models.CharField(max_length=30, help_text="Company name or person name")
+    name = models.CharField(max_length=50, help_text="Company name or person name")
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, blank=True, null=True, limit_choices_to={"is_active": True}
     )

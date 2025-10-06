@@ -22,16 +22,15 @@ from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
 from rest_framework.request import Request
-from breathecode.admissions import tasks as admissions_tasks
 
+from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import UserSetting, UserInvite
+from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.authenticate.models import UserInvite, UserSetting
 from breathecode.media.models import File
+from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
 from breathecode.utils import getLogger
-from breathecode.authenticate.actions import get_app_url
-from breathecode.notify import actions as notify_actions
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
 
@@ -54,8 +53,8 @@ from .models import (
     Service,
     ServiceItem,
     Subscription,
-    SubscriptionSeat,
     SubscriptionBillingTeam,
+    SubscriptionSeat,
 )
 
 logger = getLogger(__name__)
@@ -868,12 +867,33 @@ def get_bag_from_subscription(
     # Also exclude coupons where the user is the seller
     utc_now = timezone.now()
 
-    subscription_coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now)).exclude(
-        seller__user=subscription.user
+    # Add valid (non-expired and with remaining uses) coupons from the subscription and from auto applied user restricted coupons
+    subscription_coupons = (
+        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+        .exclude(seller__user=subscription.user)
+        .exclude(~Q(referral_type=Coupon.Referral.NO_REFERRAL))
+    )
+    user_coupons = Coupon.objects.filter(
+        Q(offered_at=None) | Q(offered_at__lte=utc_now),
+        Q(expires_at=None) | Q(expires_at__gte=utc_now),
+        allowed_user=subscription.user,
+        auto=True,
+    ).exclude(how_many_offers=0)
+    coupon_slugs = list(
+        set(
+            list(subscription_coupons.values_list("slug", flat=True))
+            + list(user_coupons.values_list("slug", flat=True))
+        )
     )
 
-    if subscription_coupons.exists():
-        bag.coupons.set(subscription_coupons)
+    if subscription_coupons.exists() or user_coupons.exists():
+        valid_coupons = get_available_coupons(
+            subscription.plans.first(),
+            coupon_slugs,
+            subscription.user,
+            only_sent_coupons=True,
+        )
+        bag.coupons.set(valid_coupons)
 
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
         bag, subscription.currency or last_invoice.currency, lang
@@ -1066,13 +1086,15 @@ def max_coupons_allowed():
         return 1
 
 
-def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user: Optional[User] = None) -> list[Coupon]:
+def get_available_coupons(
+    plan: Plan,
+    coupons: Optional[list[str]] = None,
+    user: Optional[User] = None,
+    only_sent_coupons: bool = False,
+) -> list[Coupon]:
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
         sub_kwargs = {"invoices__bag__coupons": coupon}
-        if coupon.offered_at:
-            sub_kwargs["created_at__gte"] = coupon.offered_at
-
         if coupon.expires_at:
             sub_kwargs["created_at__lte"] = coupon.expires_at
 
@@ -1092,6 +1114,16 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
         if coupon.allowed_user and (not user or coupon.allowed_user != user):
             founded_coupon_slugs.append(coupon.slug)
             return
+        # Check if coupon is restricted to a specific plan
+        if coupon.referral_type != Coupon.Referral.NO_REFERRAL:
+            if coupon.plans.exists():
+                if coupon.plans.filter(exclude_from_referral_program=True).exists():
+                    founded_coupon_slugs.append(coupon.slug)
+                    return
+            else:
+                if plan and plan.exclude_from_referral_program:
+                    founded_coupon_slugs.append(coupon.slug)
+                    return
 
         if coupon.slug not in founded_coupon_slugs:
             if coupon.how_many_offers == -1:
@@ -1104,7 +1136,7 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
                 return
 
             total_spent_coupons = get_total_spent_coupons(coupon)
-            if coupon.how_many_offers >= total_spent_coupons:
+            if coupon.how_many_offers > total_spent_coupons:
                 founded_coupons.append(coupon)
 
             founded_coupon_slugs.append(coupon.slug)
@@ -1117,17 +1149,19 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
         Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
     )
+
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
 
-    special_offers = (
-        Coupon.objects.filter(*cou_args, auto=True)
-        .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
-        .select_related("seller__user", "allowed_user")
-        .only(*cou_fields)
-    )
+    if not only_sent_coupons:
+        special_offers = (
+            Coupon.objects.filter(*cou_args, auto=True)
+            .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
+            .select_related("seller__user", "allowed_user")
+            .only(*cou_fields)
+        )
 
-    for coupon in special_offers:
-        manage_coupon(coupon)
+        for coupon in special_offers:
+            manage_coupon(coupon)
 
     valid_coupons = (
         Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
@@ -1135,10 +1169,18 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
         .select_related("seller__user", "allowed_user")
         .only(*cou_fields)
     )
+    print("cupones no expirados", valid_coupons)
 
     max = max_coupons_allowed()
-    for coupon in valid_coupons[0:max]:
-        manage_coupon(coupon)
+
+    if only_sent_coupons:
+        sent_coupons = Coupon.objects.filter(*cou_args, slug__in=coupons).only(*cou_fields)
+
+        for coupon in sent_coupons:
+            manage_coupon(coupon)
+    else:
+        for coupon in valid_coupons[0:max]:
+            manage_coupon(coupon)
 
     return founded_coupons
 

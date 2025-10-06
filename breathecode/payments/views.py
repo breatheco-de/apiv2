@@ -18,12 +18,12 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language
+from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
@@ -38,7 +38,7 @@ from breathecode.payments.actions import (
     get_discounted_price,
     max_coupons_allowed,
 )
-from breathecode.payments.caches import PlanOfferCache
+from breathecode.payments.caches import PlanOfferCache, SubscriptionCache, PlanFinancingCache
 from breathecode.payments.models import (
     AcademyService,
     Bag,
@@ -58,6 +58,7 @@ from breathecode.payments.models import (
     Seller,
     Service,
     ServiceItem,
+    PlanServiceItem,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
@@ -68,6 +69,7 @@ from breathecode.payments.serializers import (
     GetBagSerializer,
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
+    GetCouponWithPlansSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetInvoiceSerializer,
@@ -81,6 +83,7 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    GetAbstractIOweYouSmallSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
@@ -1060,13 +1063,17 @@ class MePlanFinancingChargeView(APIView):
 
 class AcademySubscriptionView(APIView):
 
-    extensions = APIViewExtensions(sort="-id", paginate=True)
+    extensions = APIViewExtensions(sort="-id", paginate=True, cache=SubscriptionCache, cache_per_user=True)
 
     @capable_of("read_subscription")
     def get(self, request, subscription_id=None, academy_id=None):
         handler = self.extensions(request)
-        lang = get_user_language(request)
 
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        lang = get_user_language(request)
         now = timezone.now()
 
         if subscription_id:
@@ -1115,7 +1122,8 @@ class AcademySubscriptionView(APIView):
             items = items.filter(user__id=int(user_id))
 
         items = handler.queryset(items)
-        serializer = GetSubscriptionSerializer(items, many=True)
+
+        serializer = GetAbstractIOweYouSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -1159,10 +1167,17 @@ class AcademySubscriptionView(APIView):
 
 class AcademyPlanFinancingView(APIView):
 
-    extensions = APIViewExtensions(sort="-id", paginate=True)
+    extensions = APIViewExtensions(sort="-id", paginate=True, cache=PlanFinancingCache, cache_per_user=True)
 
     def get(self, request, financing_id=None, academy_id=None):
         handler = self.extensions(request)
+
+        # Check cache first to avoid expensive database queries
+        cache = handler.cache.get()
+        if cache is not None:
+            logger.info(f"AcademyPlanFinancingView: Returning cached data for user {request.user.id}")
+            return cache
+
         lang = get_user_language(request)
         now = timezone.now()
 
@@ -1180,15 +1195,21 @@ class AcademyPlanFinancingView(APIView):
             serializer = GetPlanFinancingSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = PlanFinancing.objects.annotate(
-            fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED"))
-        ).filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+        # Optimize query with select_related and prefetch_related
+        items = (
+            PlanFinancing.objects.select_related("user", "plan", "currency")
+            .prefetch_related("invoices")
+            .annotate(fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED")))
+            .filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+        )
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
 
+        # Apply pagination and sorting
         items = handler.queryset(items)
-        serializer = GetPlanFinancingSerializer(items, many=True)
+
+        serializer = GetAbstractIOweYouSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -1269,65 +1290,59 @@ class UserCouponView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     def get(self, request):
-        user = request.user
-        lang = get_user_language(request)
+        try:
+            user = request.user
+            lang = get_user_language(request)
 
-        # Check if the user already has coupons as a seller
-        seller = Seller.objects.filter(user=user).first()
+            # Check if the user already has coupons as a seller
+            seller = Seller.objects.filter(user=user).first()
 
-        if not seller:
-            # Create a new seller for this user
-            seller = Seller(
-                name=f"{user.first_name} {user.last_name}".strip() or f"User {user.id}",
-                user=user,
-                type=Seller.Partner.INDIVIDUAL,
-                is_active=True,
-            )
-            seller.save()
-
-        # Get existing coupons for this seller
-        coupons = Coupon.objects.filter(seller=seller)
-
-        # If no coupons exist, create one
-        if not coupons.exists():
-            # Look for the plan by slug - this could be made configurable
-            plan_slug = request.GET.get("plan_slug", "4geeks-plus-subscription")
-            plan = Plan.objects.filter(slug=plan_slug).first()
-
-            if not plan:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en=f"Required plan '{plan_slug}' not found",
-                        es=f"Plan requerido '{plan_slug}' no encontrado",
-                        slug="plan-not-found",
-                    ),
-                    code=404,
+            if not seller:
+                # Create a new seller for this user
+                seller = Seller(
+                    name=f"{user.first_name}".strip() or f"User {user.id}",
+                    user=user,
+                    type=Seller.Partner.INDIVIDUAL,
+                    is_active=True,
                 )
+                seller.save()
 
-            # Create a unique slug for the coupon
-            slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
-
-            coupon = Coupon(
-                slug=slug,
-                discount_type=Coupon.Discount.PERCENT_OFF,
-                discount_value=0.1,  # 10% discount
-                referral_type=Coupon.Referral.PERCENTAGE,
-                referral_value=0.1,  # 10% commission
-                auto=False,
-                how_many_offers=-1,  # No limit
-                seller=seller,
-            )
-            coupon.save()
-
-            # Add the plan to the coupon
-            coupon.plans.add(plan)
-
-            # Reload the coupons
+            # Get existing coupons for this seller
             coupons = Coupon.objects.filter(seller=seller)
 
-        serializer = GetCouponSerializer(coupons, many=True)
-        return Response(serializer.data)
+            # If no coupons exist, create one
+            if not coupons.exists():
+
+                # Create a unique slug for the coupon
+                slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
+
+                coupon = Coupon(
+                    slug=slug,
+                    discount_type=Coupon.Discount.PERCENT_OFF,
+                    discount_value=0.1,  # 10% discount
+                    referral_type=Coupon.Referral.PERCENTAGE,
+                    referral_value=0.1,  # 10% commission
+                    auto=False,
+                    how_many_offers=-1,  # No limit
+                    seller=seller,
+                )
+                coupon.save()
+                # Note: Since we don't specify plans, all plans are available for this
+                # coupon, so, for referrals, we control each plan with the bool "exclude_from_referral_program"
+
+                # Reload the coupons
+                coupons = Coupon.objects.filter(seller=seller)
+
+            serializer = GetCouponWithPlansSerializer(coupons, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(e)
+            raise ValidationException(
+                translation(
+                    lang, en="Error getting coupons", es="Error al obtener los cupones", slug="error-getting-coupons"
+                ),
+                code=500,
+            )
 
 
 class MeUserCouponsView(APIView):
@@ -1336,7 +1351,7 @@ class MeUserCouponsView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     def get(self, request):
-        """Get all coupons that the current user can use."""
+        """Get all coupons that the current user can use, with validity status."""
         handler = self.extensions(request)
         user = request.user
         utc_now = timezone.now()
@@ -1348,10 +1363,58 @@ class MeUserCouponsView(APIView):
             allowed_user=user,
         ).exclude(how_many_offers=0)
 
+        plan = request.GET.get("plan")
+        if plan:
+            plan = Plan.objects.get(slug=plan)
+        else:
+            # NO_REFERRAL coupons doesn't should have any plans because it works for all of them, so use any
+            plan = Plan.objects.first()
+        slugs = list(user_restricted_coupons.values_list("slug", flat=True))
+
+        valid_coupons = get_available_coupons(plan=plan, coupons=slugs, user=user, only_sent_coupons=True)
+        valid_coupon_ids = {coupon.id for coupon in valid_coupons}
+
         coupons = handler.queryset(user_restricted_coupons)
-        serializer = GetCouponSerializer(coupons, many=True)
+        # Mark each coupon as valid or invalid
+        for coupon in coupons:
+            coupon._is_valid = coupon.id in valid_coupon_ids
+        # Convert to list to ensure evaluation
+        coupons_list = list(coupons)
+        serializer = GetCouponSerializer(coupons_list, many=True)
+
+        # Add is_valid field to each coupon in the response
+        for i, coupon_data in enumerate(serializer.data):
+            coupon_data["is_valid"] = getattr(coupons_list[i], "_is_valid", False)
 
         return handler.response(serializer.data)
+
+    def put(self, request, coupon_slug):
+        """Activate automatic application of a user's coupon."""
+        lang = get_user_language(request)
+        user = request.user
+
+        # Buscar el cupón del usuario
+        coupon = Coupon.objects.filter(slug=coupon_slug, allowed_user=user).first()
+
+        if not coupon:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Coupon {coupon_slug} not found",
+                    es=f"Cupón {coupon_slug} no encontrado",
+                    slug="coupon-not-found",
+                ),
+                code=404,
+            )
+        coupon.auto = not coupon.auto
+        coupon.save()
+
+        return Response(
+            {
+                "coupon_slug": coupon.slug,
+                "auto": coupon.auto,
+            }
+        )
 
 
 class AcademyInvoiceView(APIView):
@@ -3017,6 +3080,168 @@ class AcademyPaymentMethodView(APIView):
 
         method.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanServiceItemView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        logger.info(f"AcademyPlanServiceItemView.post called by user {request.user.id}")
+        lang = get_user_language(request)
+        handler = self.extensions(request)
+
+        try:
+            request_data = request.data
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid JSON format: {str(e)}",
+                    es=f"Formato JSON inválido: {str(e)}",
+                    slug="invalid-json-format",
+                ),
+                code=400,
+            )
+
+        plan = request_data.get("plan")
+        if not plan:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="plan is required",
+                    es="plan es requerido",
+                    slug="plan-required",
+                ),
+                code=400,
+            )
+
+        plan_kwargs = {}
+        if plan and isinstance(plan, int):
+            plan_kwargs["id"] = plan
+        elif plan and isinstance(plan, str):
+            plan_kwargs["slug"] = plan
+
+        plan = Plan.objects.filter(**plan_kwargs).first()
+
+        if not plan:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan not found",
+                    es="Plan no encontrado",
+                    slug="plan-not-found",
+                ),
+                code=404,
+            )
+
+        service_item = request_data.get("service_item")
+        if not service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_item_id(s) is required",
+                    es="service_item_id(s) es requerido",
+                    slug="service-item-required",
+                ),
+                code=400,
+            )
+
+        if isinstance(service_item, int):
+            service_item_ids = [service_item]
+        elif isinstance(service_item, str):
+            if "," in service_item:
+                service_item_ids = [int(x.strip()) for x in service_item.split(",") if x.strip().isdigit()]
+            else:
+                service_item_ids = [int(service_item)]
+
+        service_items = ServiceItem.objects.filter(id__in=service_item_ids)
+        if len(service_items) != len(service_item_ids):
+            found_ids = [item.id for item in service_items]
+            missing_ids = [id for id in service_item_ids if id not in found_ids]
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Service items not found: {missing_ids}",
+                    es=f"Service items no encontrados: {missing_ids}",
+                    slug="service-item-not-found",
+                ),
+                code=404,
+            )
+
+        created_items = []
+        for service_item in service_items:
+            psi, created = PlanServiceItem.objects.get_or_create(plan=plan, service_item=service_item)
+            created_items.append(
+                {"plan_service_item_id": psi.id, "service_item_id": service_item.id, "created": created}
+            )
+
+        return handler.response(
+            {
+                "status": "ok",
+                "created_items": created_items,
+                "total_created": len([item for item in created_items if item["created"]]),
+            }
+        )
+
+    @capable_of("crud_plan")
+    def delete(self, request, academy_id=None):
+        lang = get_user_language(request)
+        handler = self.extensions(request)
+
+        try:
+            request_data = request.data
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid JSON format: {str(e)}",
+                    es=f"Formato JSON inválido: {str(e)}",
+                    slug="invalid-json-format",
+                ),
+                code=400,
+            )
+
+        plan_service_item = request_data.get("plan_service_item")
+        if not plan_service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="plan_service_item_id(s) is required",
+                    es="plan_service_item_id(s) es requerido",
+                    slug="plan-service-item-id-required",
+                ),
+                code=400,
+            )
+
+        if isinstance(plan_service_item, int):
+            plan_service_item_ids = [plan_service_item]
+        elif isinstance(plan_service_item, str):
+            if "," in plan_service_item:
+                plan_service_item_ids = [int(x.strip()) for x in plan_service_item.split(",") if x.strip().isdigit()]
+            else:
+                plan_service_item_ids = [int(plan_service_item)]
+
+        plan_service_items = PlanServiceItem.objects.filter(id__in=plan_service_item_ids)
+        if len(plan_service_items) != len(plan_service_item_ids):
+            found_ids = [item.id for item in plan_service_items]
+            missing_ids = [id for id in plan_service_item_ids if id not in found_ids]
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan service items not found: {missing_ids}",
+                    es=f"Plan service items no encontrados: {missing_ids}",
+                    slug="plan-service-item-not-found",
+                ),
+                code=404,
+            )
+
+        deleted_count = plan_service_items.count()
+        plan_service_items.delete()
+
+        return handler.response(
+            {"status": "ok", "deleted": True, "deleted_count": deleted_count, "deleted_ids": plan_service_item_ids}
+        )
 
 
 # ------------------------------
