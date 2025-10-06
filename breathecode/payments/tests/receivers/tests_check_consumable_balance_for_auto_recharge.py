@@ -43,7 +43,7 @@ def test_check_consumable_balance_for_auto_recharge__error(monkeypatch):
 
     monkeypatch.setattr(tasks.process_auto_recharge, "delay", fake_delay)
 
-    receivers.check_consumable_balance_for_auto_recharge(sender=None, instance=c, how_many=1)
+    receivers.check_consumable_balance_for_auto_recharge(sender=None, instance=c)
     assert called["delay"] is False
 
 
@@ -60,7 +60,7 @@ def test_check_consumable_balance_for_auto_recharge__amount_zero(monkeypatch):
 
     monkeypatch.setattr(tasks.process_auto_recharge, "delay", fake_delay)
 
-    receivers.check_consumable_balance_for_auto_recharge(sender=None, instance=c, how_many=1)
+    receivers.check_consumable_balance_for_auto_recharge(sender=None, instance=c)
     assert called["delay"] is False
 
 
@@ -77,7 +77,7 @@ def test_check_consumable_balance_for_auto_recharge__ok(monkeypatch):
 
     monkeypatch.setattr(tasks.process_auto_recharge, "delay", fake_delay)
 
-    receivers.check_consumable_balance_for_auto_recharge(sender=None, instance=c, how_many=1)
+    receivers.check_consumable_balance_for_auto_recharge(sender=None, instance=c)
     assert captured["consumable_id"] == c.id
 
 
@@ -121,5 +121,5 @@ def test_check_consumable_balance_for_auto_recharge__db_happy_path(database, mon
 
     monkeypatch.setattr(tasks.process_auto_recharge, "delay", fake_delay)
 
-    receivers.check_consumable_balance_for_auto_recharge(sender=None, instance=c, how_many=1)
+    receivers.check_consumable_balance_for_auto_recharge(sender=None, instance=c)
     assert captured["consumable_id"] == c.id

@@ -2331,7 +2331,7 @@ def validate_auto_recharge_service_units(
         total += consumable.service_item.how_many
 
     # Use Decimal for ratio comparison to avoid float mixing
-    if available and (Decimal(total) / Decimal(available) > Decimal("0.2")):
+    if len(consumables) > 0 and available > 1 and (Decimal(total) / Decimal(available) > Decimal("0.2")):
         return 0.0, 0, "more-than-20-percent-left"
 
     if Decimal(available) * price_per_unit_dec > threshold_dec:
