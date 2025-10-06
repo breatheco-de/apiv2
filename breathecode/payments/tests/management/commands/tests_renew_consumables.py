@@ -228,4 +228,8 @@ def test_this_resource_requires_a_renovation(bc: Breathecode, entity, entity_att
         assert bc.database.list_of("payments.PlanFinancing") == bc.format.to_dict(model.plan_financing)
 
     # two schedulers were created with expired consumables, expect one task per scheduler
-    assert tasks.renew_consumables.delay.call_args_list == [call(1), call(2)]
+    # Note: for subscriptions, both subscriptions() and plan_financing() methods find the schedulers
+    if entity == "subscription":
+        assert tasks.renew_consumables.delay.call_args_list == [call(1), call(2), call(1), call(2)]
+    else:
+        assert tasks.renew_consumables.delay.call_args_list == [call(1), call(2)]

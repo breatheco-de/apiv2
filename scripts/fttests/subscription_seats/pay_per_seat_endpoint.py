@@ -241,7 +241,6 @@ def test_add_seat(subscription_id: int, **ctx):
         "add_seats": [
             {
                 "email": user_email,
-                "seat_multiplier": 1,
                 "first_name": "Lord",
                 "last_name": "Valomero",
             }
@@ -278,7 +277,6 @@ def test_replace_seat(subscription_id: int, **ctx):
             {
                 "from_email": from_email,
                 "to_email": to_email,
-                "seat_multiplier": 1,
                 "first_name": "Lord",
                 "last_name": "Valomero",
             }

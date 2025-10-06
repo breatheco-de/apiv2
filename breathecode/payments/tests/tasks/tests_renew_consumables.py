@@ -362,7 +362,7 @@ def test_with_two_cohorts_linked(
             username=f"member{model.subscription.id}", email=f"member{model.subscription.id}@example.com"
         )
         seat = SubscriptionSeat.objects.create(
-            billing_team=team, user=member_user, email=member_user.email, is_active=True, seat_multiplier=1
+            billing_team=team, user=member_user, email=member_user.email, is_active=True
         )
         scheduler = model.service_stock_scheduler
         scheduler.subscription_seat = seat
@@ -472,7 +472,7 @@ def test_two_mentorship_services_linked(
             username=f"member{model.subscription.id}", email=f"member{model.subscription.id}@example.com"
         )
         seat = SubscriptionSeat.objects.create(
-            billing_team=team, user=member_user, email=member_user.email, is_active=True, seat_multiplier=1
+            billing_team=team, user=member_user, email=member_user.email, is_active=True
         )
         scheduler = model.service_stock_scheduler
         scheduler.subscription_seat = seat
@@ -584,7 +584,7 @@ def test_two_event_types_linked(
             username=f"member{model.subscription.id}", email=f"member{model.subscription.id}@example.com"
         )
         seat = SubscriptionSeat.objects.create(
-            billing_team=team, user=member_user, email=member_user.email, is_active=True, seat_multiplier=1
+            billing_team=team, user=member_user, email=member_user.email, is_active=True
         )
         scheduler = model.service_stock_scheduler
         scheduler.subscription_seat = seat
@@ -697,7 +697,7 @@ def test_without_a_resource_linked__type_void(
             username=f"member{model.subscription.id}", email=f"member{model.subscription.id}@example.com"
         )
         seat = SubscriptionSeat.objects.create(
-            billing_team=team, user=member_user, email=member_user.email, is_active=True, seat_multiplier=1
+            billing_team=team, user=member_user, email=member_user.email, is_active=True
         )
         scheduler = model.service_stock_scheduler
         scheduler.subscription_seat = seat

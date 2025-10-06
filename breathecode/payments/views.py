@@ -21,7 +21,6 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language
 from breathecode.commission.tasks import register_referral_from_invoice
@@ -65,6 +64,7 @@ from breathecode.payments.models import (
     SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
+    BillingTeamAutoRechargeSerializer,
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
     GetConsumptionSessionSerializer,
@@ -2461,6 +2461,7 @@ class ConsumableCheckoutView(APIView):
                         amount,
                         currency=bag.currency.code.lower(),
                         description=description,
+                        subscription_billing_team=team,
                     )
 
                     # Ensure billing team exists and update seats limit
@@ -2493,7 +2494,7 @@ class ConsumableCheckoutView(APIView):
                             billing_team=team,
                             user=subscription.user,
                             email=(subscription.user.email or "").strip().lower(),
-                            defaults={"is_active": True, "seat_multiplier": 1},
+                            defaults={"is_active": True},
                         )
 
                         # migrate existing consumables with support for team seats
@@ -3260,6 +3261,30 @@ class SubscriptionBillingTeamView(APIView):
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
     extensions = APIViewExtensions(sort="-id")
 
+    def _serializer(self, team: SubscriptionBillingTeam) -> dict[str, Any]:
+        subscription = team.subscription
+        period_start, period_end = team.get_current_monthly_period_dates()
+        return {
+            "id": team.id,
+            "subscription": subscription.id,
+            "name": team.name,
+            "seats_limit": team.seats_limit,
+            "seats_count": team.seats.filter(is_active=True).count(),
+            "seats_log": team.seats_log,
+            # Auto-recharge settings
+            "auto_recharge_enabled": team.auto_recharge_enabled,
+            "recharge_threshold_amount": str(team.recharge_threshold_amount),
+            "recharge_amount": str(team.recharge_amount),
+            "max_period_spend": str(team.max_period_spend) if team.max_period_spend else None,
+            # Current spending (calculated from invoices)
+            "current_period_spend": team.get_current_period_spend(),
+            # Virtual attributes for current period
+            "period_start": period_start.isoformat().replace("+00:00", "T") if period_start else None,
+            "period_end": period_end.isoformat().replace("+00:00", "T") if period_end else None,
+            # Subscription currency
+            "currency": subscription.currency.code if subscription.currency else None,
+        }
+
     def get(self, request, subscription_id: int):
         lang = get_user_language(request)
 
@@ -3295,15 +3320,74 @@ class SubscriptionBillingTeamView(APIView):
                 code=404,
             )
 
-        data = {
-            "id": team.id,
-            "subscription": subscription.id,
-            "name": team.name,
-            "seats_limit": team.seats_limit,
-            "seats_count": sum(seat.seat_multiplier for seat in team.seats.filter(is_active=True)),
-            "seats_log": team.seats_log,
-            # "consumption_strategy": team.consumption_strategy,
-        }
+        data = self._serializer(team)
+        return Response(data, status=status.HTTP_200_OK)
+
+    def put(self, request, subscription_id: int):
+        """Update billing team auto-recharge settings."""
+        lang = get_user_language(request)
+
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team",
+                    es="Solo el dueño puede gestionar el equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+        if not team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Billing team not found",
+                    es="Equipo de facturación no encontrado",
+                    slug="billing-team-not-found",
+                ),
+                code=404,
+            )
+
+        # Validate input
+        serializer = BillingTeamAutoRechargeSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+
+        # Update only the billing-related fields
+        update_fields = []
+        validated_data = serializer.validated_data
+
+        if "auto_recharge_enabled" in validated_data:
+            team.auto_recharge_enabled = validated_data["auto_recharge_enabled"]
+            update_fields.append("auto_recharge_enabled")
+
+        if "recharge_threshold_amount" in validated_data:
+            team.recharge_threshold_amount = validated_data["recharge_threshold_amount"]
+            update_fields.append("recharge_threshold_amount")
+
+        if "recharge_amount" in validated_data:
+            team.recharge_amount = validated_data["recharge_amount"]
+            update_fields.append("recharge_amount")
+
+        if "max_period_spend" in validated_data:
+            team.max_period_spend = validated_data["max_period_spend"]
+            update_fields.append("max_period_spend")
+
+        if update_fields:
+            team.save(update_fields=update_fields)
+
+        data = self._serializer(team)
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -3363,7 +3447,6 @@ class SubscriptionSeatView(APIView):
             "id": seat.id,
             "email": seat.email,
             "user": seat.user_id,
-            "seat_multiplier": seat.seat_multiplier,
             "is_active": seat.is_active,
             "seat_log": seat.seat_log,
         }
@@ -3432,7 +3515,7 @@ class SubscriptionSeatView(APIView):
 
         for seat in add_seats:
             try:
-                result.append(actions.create_seat(seat["email"], seat["user"], seat["seat_multiplier"], team, lang))
+                result.append(actions.create_seat(seat["email"], seat["user"], team, lang))
             except ValidationException as e:
                 errors.append(e)
 
