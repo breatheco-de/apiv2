@@ -1,0 +1,552 @@
+{
+  "info": {
+    "name": "4Geeks Subscription & Seats API",
+    "description": "Complete API collection for testing subscription flows, seat management, and consumables.\n\n## Setup\n1. Set environment variables:\n   - `base_url`: API base URL\n   - `user_token_1`: Owner token\n   - `user_token_2`: Second user token\n   - `academy_id`: Academy ID\n   - `academy_slug`: Academy slug\n\n## Flows\n- **PER_SEAT Payment**: Pay plan with seats\n- **PER_TEAM Payment**: Pay plan with team seats\n- **Consumable Checkout**: Add seats after subscription\n- **Seat Management**: Add, replace, delete seats",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://breathecode.herokuapp.com",
+      "type": "string"
+    },
+    {
+      "key": "user_token_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_token_2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "academy_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "academy_slug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "plan_slug",
+      "value": "4geeks-premium",
+      "type": "string"
+    },
+    {
+      "key": "subscription_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bag_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Setup & Plans",
+      "item": [
+        {
+          "name": "Get Plan Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/payments/plan/{{plan_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "payments", "plan", "{{plan_slug}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/payments/me/subscription",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "payments", "me", "subscription"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Payment Flow",
+      "item": [
+        {
+          "name": "Preview Plan (No Seats)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"PREVIEW\",\n  \"plans\": [1]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments/checking",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "payments", "checking"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Preview Plan with Team Seats",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"PREVIEW\",\n  \"plans\": [1],\n  \"team_seats\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments/checking",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "payments", "checking"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Bag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('bag_token', response.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"BAG\",\n  \"plans\": [1],\n  \"team_seats\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments/checking",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "payments", "checking"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Payment Card",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_number\": \"4242424242424242\",\n  \"cvc\": \"123\",\n  \"exp_month\": \"12\",\n  \"exp_year\": \"2035\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments/card",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "payments", "card"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pay Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{bag_token}}\",\n  \"chosen_period\": \"MONTH\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments/pay",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "payments", "pay"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Billing Team & Auto-Recharge",
+      "item": [
+        {
+          "name": "Get Billing Team",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v2/payments/subscription/{{subscription_id}}/billing-team",
+              "host": ["{{base_url}}"],
+              "path": ["v2", "payments", "subscription", "{{subscription_id}}", "billing-team"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enable Auto-Recharge",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auto_recharge_enabled\": true,\n  \"recharge_threshold_amount\": \"10.00\",\n  \"recharge_amount\": \"20.00\",\n  \"max_monthly_spend\": \"100.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v2/payments/subscription/{{subscription_id}}/billing-team",
+              "host": ["{{base_url}}"],
+              "path": ["v2", "payments", "subscription", "{{subscription_id}}", "billing-team"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Seat Management",
+      "item": [
+        {
+          "name": "Get Seats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v2/payments/subscription/{{subscription_id}}/billing-team/seat",
+              "host": ["{{base_url}}"],
+              "path": ["v2", "payments", "subscription", "{{subscription_id}}", "billing-team", "seat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Seat",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"add_seats\": [\n    {\n      \"email\": \"lord@valomero.com\",\n      \"first_name\": \"Lord\",\n      \"last_name\": \"Valomero\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v2/payments/subscription/{{subscription_id}}/billing-team/seat",
+              "host": ["{{base_url}}"],
+              "path": ["v2", "payments", "subscription", "{{subscription_id}}", "billing-team", "seat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Replace Seat",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"replace_seats\": [\n    {\n      \"from_email\": \"lord@valomero.com\",\n      \"to_email\": \"user2@example.com\",\n      \"first_name\": \"User\",\n      \"last_name\": \"Two\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v2/payments/subscription/{{subscription_id}}/billing-team/seat",
+              "host": ["{{base_url}}"],
+              "path": ["v2", "payments", "subscription", "{{subscription_id}}", "billing-team", "seat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Seat",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v2/payments/subscription/{{subscription_id}}/billing-team/seat/2",
+              "host": ["{{base_url}}"],
+              "path": ["v2", "payments", "subscription", "{{subscription_id}}", "billing-team", "seat", "2"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Consumables",
+      "item": [
+        {
+          "name": "Get My Consumables",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/provisioning/me/consumables",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "provisioning", "me", "consumables"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consumable Checkout (Add Seats)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service\": \"seat-service\",\n  \"how_many\": 3,\n  \"subscription\": {{subscription_id}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v2/payments/consumable/checkout",
+              "host": ["{{base_url}}"],
+              "path": ["v2", "payments", "consumable", "checkout"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Assets",
+      "item": [
+        {
+          "name": "Access Lesson (Owner)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/registry/asset/brute-forcelab-lumi?academy={{academy_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "registry", "asset", "brute-forcelab-lumi"],
+              "query": [
+                {
+                  "key": "academy",
+                  "value": "{{academy_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Access Lesson (User 2)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_2}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/registry/asset/brute-forcelab-lumi?academy={{academy_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "registry", "asset", "brute-forcelab-lumi"],
+              "query": [
+                {
+                  "key": "academy",
+                  "value": "{{academy_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. User Info",
+      "item": [
+        {
+          "name": "Get Me (User 1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_1}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "auth", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Me (User 2)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token_2}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

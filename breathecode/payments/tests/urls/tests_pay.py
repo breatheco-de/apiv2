@@ -36,18 +36,21 @@ def format_invoice_item(data={}):
     return {
         "academy_id": 1,
         "amount": 0.0,
-        "currency_id": 1,
+        "amount_refunded": 0.0,
         "bag_id": 1,
+        "currency_id": 1,
+        "externally_managed": False,
         "id": 1,
         "paid_at": UTC_NOW,
-        "status": "FULFILLED",
-        "stripe_id": None,
-        "user_id": 1,
-        "refund_stripe_id": None,
-        "refunded_at": None,
-        "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "refund_stripe_id": None,
+        "refunded_at": None,
+        "status": "FULFILLED",
+        "stripe_id": None,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
+        "user_id": 1,
         **data,
     }
 
@@ -1505,6 +1508,9 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
         "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "amount_refunded": 0.0,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
     }
 
     expected_serializer = get_serializer(bc, model.currency, model.user, data={})
@@ -1652,6 +1658,9 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
         "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "amount_refunded": 0.0,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
     }
 
     expected_serializer = get_serializer(bc, model.currency, model.user, data={})

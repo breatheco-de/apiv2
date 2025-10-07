@@ -219,7 +219,7 @@ def owner_seat_missing(subscription_id: int, team_id: int, user_id: int, email: 
     SubscriptionSeat.objects.get_or_create(
         billing_team=team,
         user_id=user_id,
-        defaults={"email": email, "is_active": True, "seat_multiplier": 1},
+        defaults={"email": email, "is_active": True},
     )
     return True
 

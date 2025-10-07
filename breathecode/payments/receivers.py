@@ -15,6 +15,8 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments.models import Invoice
 from breathecode.payments import tasks
+from django.db.models.signals import post_save
+
 
 from .models import (
     Consumable,
@@ -33,6 +35,7 @@ from .signals import (
     grant_plan_permissions,
     revoke_plan_permissions,
 )
+from .actions import validate_auto_recharge_service_units
 
 logger = logging.getLogger(__name__)
 
@@ -366,3 +369,30 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
             return
 
     logger.info("=== END HANDLE STRIPE REFUND RECEIVER ===")
+
+
+def check_consumable_balance_for_auto_recharge(sender: Type[Consumable], instance: Consumable, **kwargs):
+    """
+    Monitor consumable consumption and trigger auto-recharge when balance is low.
+
+    This receiver checks if:
+    1. The consumable belongs to a billing team with auto-recharge enabled
+    2. The current balance (in subscription currency) falls below the threshold
+    3. Monthly spending limit hasn't been exceeded
+
+    If all conditions are met, it triggers a recharge via signal.
+    """
+
+    price, amount, error = validate_auto_recharge_service_units(instance)
+    if error:
+        logger.warning(f"Auto-recharge not allowed for consumable {instance.id}: {error}")
+        return
+
+    if amount <= 0:
+        logger.warning(f"Auto-recharge not allowed for consumable {instance.id}: amount is zero or negative")
+        return
+
+    tasks.process_auto_recharge.delay(instance.id)
+
+
+post_save.connect(check_consumable_balance_for_auto_recharge, sender=Consumable)

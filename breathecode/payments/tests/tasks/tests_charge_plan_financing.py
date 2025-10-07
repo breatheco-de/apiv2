@@ -7,6 +7,7 @@ import logging
 import os
 import random
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -35,6 +36,10 @@ def plan_financing_item(data={}):
         "status": "ACTIVE",
         "user_id": 1,
         "valid_until": UTC_NOW,
+        "auto_recharge_enabled": False,
+        "recharge_threshold_amount": Decimal("10.00"),
+        "recharge_amount": Decimal("10.00"),
+        "max_period_spend": None,
         **data,
     }
 
@@ -81,6 +86,8 @@ def invoice_item(data={}):
         "payment_method_id": None,
         "proof_id": None,
         "amount_refunded": 0.0,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
         **data,
     }
 
@@ -351,7 +358,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(
             self.bc.database.list_of("payments.Invoice"),
             [
-                self.bc.format.to_dict(model.invoice),
+                {**self.bc.format.to_dict(model.invoice), "status": "PENDING"},
                 invoice_item(
                     {
                         "academy_id": 1,

@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 import math
 import os
+from datetime import datetime, timedelta
+from typing import Any, Optional, TYPE_CHECKING, Protocol, TypeVar, Awaitable
 import random
-from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Awaitable, Optional, Protocol, TypeVar
 
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -45,39 +45,47 @@ if TYPE_CHECKING:
         def filter(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
         def exclude(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
         def only(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def defer(self, *fields: str) -> "TypedQuerySet[_M]": ...
         def prefetch_related(self, *lookups: str) -> "TypedQuerySet[_M]": ...
         def select_related(self, *lookups: str) -> "TypedQuerySet[_M]": ...
+        def select_for_update(
+            self, nowait: bool = ..., skip_locked: bool = ..., of: tuple = ...
+        ) -> "TypedQuerySet[_M]": ...
         def order_by(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def distinct(self, *fields: str) -> "TypedQuerySet[_M]": ...
+        def annotate(self, *args, **kwargs) -> "TypedQuerySet[_M]": ...
         def all(self) -> "TypedQuerySet[_M]": ...
+        def none(self) -> "TypedQuerySet[_M]": ...
 
         # Evaluation / retrieval
+        def get(self, *args, **kwargs) -> _M: ...
+        def create(self, *args, **kwargs) -> _M: ...
+        def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+        def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
         def exists(self) -> bool: ...
         def count(self) -> int: ...
         def first(self) -> _M | None: ...
         def last(self) -> _M | None: ...
+        def latest(self, *fields: str) -> _M: ...
+        def earliest(self, *fields: str) -> _M: ...
+
+        # Iteration
+        def __iter__(self) -> Any: ...
+        def __getitem__(self, key: int | slice) -> _M | "TypedQuerySet[_M]": ...
 
         # Async evaluation / retrieval
+        def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
+        def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+        def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
         def aexists(self) -> Awaitable[bool]: ...
         def acount(self) -> Awaitable[int]: ...
         def afirst(self) -> Awaitable[_M | None]: ...
         def alast(self) -> Awaitable[_M | None]: ...
 
-        # Creation / singular retrieval
-        def get(self, *args, **kwargs) -> _M: ...
-        def create(self, *args, **kwargs) -> _M: ...
-        def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
-        def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
-
-        # Async creation / singular retrieval
-        def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
-        def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
-        def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
-        def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
-
         # Values APIs (coarse types, sufficient for our usages)
         def values(self, *fields: str) -> list[dict[str, Any]]: ...
         def values_list(self, *fields: str, flat: bool = ...) -> list[Any]: ...
-
     class TypedManager(Protocol[_M]):
         def filter(self, *args, **kwargs) -> TypedQuerySet[_M]: ...
         def all(self) -> TypedQuerySet[_M]: ...
@@ -85,12 +93,27 @@ if TYPE_CHECKING:
         def create(self, *args, **kwargs) -> _M: ...
         def get_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
         def update_or_create(self, *args, **kwargs) -> tuple[_M, bool]: ...
+        def select_related(self, *fields: str) -> TypedQuerySet[_M]: ...
+        def prefetch_related(self, *lookups: str) -> TypedQuerySet[_M]: ...
+        def exclude(self, *args, **kwargs) -> TypedQuerySet[_M]: ...
+        def order_by(self, *fields: str) -> TypedQuerySet[_M]: ...
+        def distinct(self, *fields: str) -> TypedQuerySet[_M]: ...
+        def values(self, *fields: str) -> list[dict[str, Any]]: ...
+        def values_list(self, *fields: str, flat: bool = ...) -> list[Any]: ...
+        def count(self) -> int: ...
+        def exists(self) -> bool: ...
+        def first(self) -> _M | None: ...
+        def last(self) -> _M | None: ...
 
         # Async counterparts
         def aget(self, *args, **kwargs) -> Awaitable[_M]: ...
         def acreate(self, *args, **kwargs) -> Awaitable[_M]: ...
         def aget_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
         def aupdate_or_create(self, *args, **kwargs) -> Awaitable[tuple[_M, bool]]: ...
+        def acount(self) -> Awaitable[int]: ...
+        def aexists(self) -> Awaitable[bool]: ...
+        def afirst(self) -> Awaitable[_M | None]: ...
+        def alast(self) -> Awaitable[_M | None]: ...
 
 
 class Currency(models.Model):
@@ -1468,6 +1491,22 @@ class Invoice(models.Model):
     externally_managed = models.BooleanField(
         default=False, help_text="If the billing is managed externally outside of the system"
     )
+    subscription_billing_team = models.ForeignKey(
+        "SubscriptionBillingTeam",
+        null=True,
+        blank=True,
+        default=None,
+        on_delete=models.CASCADE,
+        help_text="Subscription billing team",
+    )
+    subscription_seat = models.ForeignKey(
+        "SubscriptionSeat",
+        null=True,
+        blank=True,
+        default=None,
+        on_delete=models.CASCADE,
+        help_text="Subscription seat",
+    )
 
     proof = models.OneToOneField(
         ProofOfPayment,
@@ -1609,8 +1648,201 @@ class AbstractIOweYou(models.Model):
         related_name="%(class)s_as_seat_service_item",
     )
 
+    # Auto-recharge settings (applies to subscriptions and plan financing)
+    auto_recharge_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable automatic consumable recharge when balance runs low",
+    )
+    recharge_threshold_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=10.00,
+        help_text="Balance threshold to trigger auto-recharge (in subscription currency)",
+    )
+    recharge_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=10.00,
+        help_text="Amount to recharge when threshold is reached (in subscription currency)",
+    )
+    max_period_spend = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Maximum spending per monthly period (null = unlimited)",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def get_current_monthly_period_dates(self) -> tuple[datetime, datetime]:
+        """
+        Calculate the current monthly spending period boundaries.
+
+        Spending limits are tracked monthly, starting from paid_at day.
+        This is independent of individual service regeneration schedules (which can
+        be weekly, monthly, etc. per service).
+
+        Example:
+            - Subscription paid_at: Jan 15
+            - Monthly periods: Jan 15-Feb 15, Feb 15-Mar 15, Mar 15-Apr 15, etc.
+            - Spending limit resets each period regardless of payment frequency
+
+        Returns:
+            (period_start, period_end) tuple for current month
+        """
+        from dateutil.relativedelta import relativedelta
+
+        now = timezone.now()
+
+        # Get paid_at from the instance (works for both Subscription and PlanFinancing)
+        paid_at = getattr(self, "paid_at", None)
+
+        if not paid_at:
+            # Fallback: use calendar month
+            period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            period_end = period_start + relativedelta(months=1)
+            return period_start, period_end
+
+        # Calculate monthly periods from paid_at day
+        # Example: paid_at = Jan 15 → periods are 15th to 15th of each month
+
+        # Calculate how many complete months have passed since paid_at
+        months_diff = (now.year - paid_at.year) * 12 + (now.month - paid_at.month)
+
+        # Adjust if we haven't reached the day yet this month
+        if now.day < paid_at.day:
+            months_diff -= 1
+
+        # Calculate period boundaries
+        period_start = paid_at + relativedelta(months=months_diff)
+        period_end = period_start + relativedelta(months=1)
+
+        return period_start, period_end
+
+    def get_current_period_spend(
+        self,
+        service: "Service" = None,
+        user: User | None = None,
+    ) -> float:
+        """
+        Compute the amount spent in the current monthly period from paid invoices.
+
+        Period boundaries are derived from the owner's `paid_at` day via
+        `get_current_monthly_period_dates()` and invoices are filtered by their
+        `paid_at` timestamp within [period_start, period_end).
+
+        Args:
+            service: Optional `Service` to filter spending by a single service. When set,
+                invoices are filtered using `bag__service_items__service=service`.
+            user: Optional user context for the spending calculation. Accepts a `User`
+                instance, an integer user ID, or a numeric string ID. If omitted, it
+                defaults to `self.user`.
+
+                - When `self` is a `Subscription`, spending includes invoices where:
+                  - `invoice.user` is the given user, or
+                  - `invoice.subscription_seat.user` is the given user and the seat is active, or
+                  - `invoice.user` is null and the given user holds an active seat in the
+                    `subscription_billing_team` with `PER_TEAM` consumption strategy.
+
+                - When `self` is a `PlanFinancing`, spending includes only invoices for the
+                  given user that are not attributed to any team or seat.
+
+        Returns:
+            float: Total amount spent in the current period.
+
+        Raises:
+            ValidationException: If `user` is a non-numeric string (slug
+                `client-user-id-must-be-an-integer`).
+
+        Notes:
+            - Uses `paid_at` to filter invoices in the period window.
+            - Independent of payment frequency and service regeneration schedules.
+        """
+        from django.db.models import Sum
+        from breathecode.payments.models import Invoice
+
+        period_start, period_end = self.get_current_monthly_period_dates()
+        if not period_start:
+            return 0.0
+
+        if user is None:
+            user = self.user
+
+        settings = get_user_settings(user.id)
+        lang = settings.lang
+
+        # Query invoices for auto-recharge in this monthly period
+        # Build dynamic filters targeting the correct user/context
+        filter_args = []
+
+        # User
+        if isinstance(user, str) and not user.isdigit():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Client user id must be an integer",
+                    es="El id del cliente debe ser un entero",
+                    slug="client-user-id-must-be-an-integer",
+                )
+            )
+
+        is_subscription = isinstance(self, Subscription)
+
+        if is_subscription and isinstance(user, str):
+            filter_args.append(
+                Q(user__id=int(user))
+                | Q(subscription_seat__user__id=int(user), subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=int(user),
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
+
+        elif is_subscription and isinstance(user, int):
+            filter_args.append(
+                Q(user__id=user)
+                | Q(subscription_seat__user__id=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user__id=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
+
+        elif is_subscription and isinstance(user, User):
+            filter_args.append(
+                Q(user=user)
+                | Q(subscription_seat__user=user, subscription_seat__is_active=True)
+                | Q(
+                    user__isnull=True,
+                    subscription_billing_team__seats__user=user,
+                    subscription_billing_team__seats__is_active=True,
+                    subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+            )
+
+        elif is_subscription is False:
+            filter_args.append(Q(user=user, subscription_billing_team__isnull=True, subscription_seat__isnull=True))
+
+        filter_kwargs = {
+            "status": Invoice.Status.FULFILLED,
+            "paid_at__gte": period_start,
+            "paid_at__lt": period_end,
+        }
+
+        if service:
+            filter_kwargs["bag__service_items__service"] = service
+
+        invoices = self.invoices.filter(*filter_args, **filter_kwargs)
+
+        total = invoices.aggregate(total=Sum("amount"))["total"]
+        return float(total) if total else 0.0
 
     class Meta:
         abstract = True
@@ -1863,6 +2095,132 @@ class SubscriptionBillingTeam(models.Model):
     def __str__(self) -> str:
         return f"{self.subscription_id}:{self.name}"
 
+    def get_current_monthly_period_dates(self) -> tuple[datetime, datetime]:
+        """
+        Proxy to subscription's get_current_monthly_period_dates.
+
+        Returns:
+            (period_start, period_end) tuple for current month
+        """
+        return self.subscription.get_current_monthly_period_dates()
+
+    def get_current_period_spend(self, service: "Service" = None) -> float:
+        """
+        Calculate actual spending in current monthly period from invoices for this team.
+
+        Returns total amount from paid invoices for auto-recharge in the
+        current monthly spending period, filtered by this team.
+
+        Args:
+            service: Optional Service to filter spending by specific service.
+
+        Returns:
+            Total spending for this team in current period
+        """
+        from django.db.models import Sum
+        from breathecode.payments.models import Invoice
+
+        period_start, period_end = self.get_current_monthly_period_dates()
+
+        if not period_start:
+            return 0.0
+
+        # Query invoices for auto-recharge in this monthly period
+        # Filter by team to only count this team's spending
+        invoices = Invoice.objects.filter(
+            user=self.subscription.user,
+            status=Invoice.Status.FULFILLED,
+            paid_at__gte=period_start,
+            subscription_billing_team=self,  # Filter by this team
+        )
+
+        if period_end:
+            invoices = invoices.filter(paid_at__lt=period_end)
+
+        # Filter by service if provided
+        if service:
+            # When implemented, filter invoices by service
+            # invoices = invoices.filter(service_item__service=service)
+            pass
+
+        total = invoices.aggregate(total=Sum("amount"))["total"]
+        return float(total) if total else 0.0
+
+    @property
+    def auto_recharge_enabled(self) -> bool:
+        """Proxy to subscription's auto_recharge_enabled."""
+        return self.subscription.auto_recharge_enabled
+
+    @property
+    def recharge_threshold_amount(self):
+        """Proxy to subscription's recharge_threshold_amount."""
+        return self.subscription.recharge_threshold_amount
+
+    @property
+    def recharge_amount(self):
+        """Proxy to subscription's recharge_amount."""
+        return self.subscription.recharge_amount
+
+    @property
+    def max_period_spend(self):
+        """Proxy to subscription's max_period_spend."""
+        return self.subscription.max_period_spend
+
+    def can_auto_recharge(self, amount: float, lang: str = "en") -> tuple[bool, str]:
+        """
+        Check if auto-recharge is allowed for the given amount.
+
+        Args:
+            amount: Amount to recharge in subscription currency
+            lang: Language code for error messages (en, es)
+
+        Returns:
+            (allowed, reason) tuple
+        """
+        from capyc.core.i18n import translation
+
+        if not self.auto_recharge_enabled:
+            return False, translation(
+                lang,
+                en="Auto-recharge is disabled",
+                es="La recarga automática está deshabilitada",
+                slug="auto-recharge-disabled",
+            )
+
+        if not self.max_period_spend:
+            return True, translation(
+                lang,
+                en="No spending limit",
+                es="Sin límite de gasto",
+                slug="no-spending-limit",
+            )
+
+        current_spend = self.get_current_period_spend()
+        potential_spend = current_spend + amount
+
+        if potential_spend > float(self.max_period_spend):
+            available = float(self.max_period_spend) - current_spend
+            if available <= 0:
+                return False, translation(
+                    lang,
+                    en=f"Billing period limit reached ({current_spend}/{self.max_period_spend})",
+                    es=f"Límite del período de facturación alcanzado ({current_spend}/{self.max_period_spend})",
+                    slug="billing-period-limit-reached",
+                )
+            return False, translation(
+                lang,
+                en=f"Would exceed limit (available: {available})",
+                es=f"Excedería el límite (disponible: {available})",
+                slug="would-exceed-limit",
+            )
+
+        return True, translation(
+            lang,
+            en="OK",
+            es="OK",
+            slug="ok",
+        )
+
 
 class SubscriptionSeat(models.Model):
     """Seat assignment per subscription and service item (add-on).
@@ -1890,11 +2248,6 @@ class SubscriptionSeat(models.Model):
     email = models.CharField(max_length=150, help_text="Email of the member (normalized)", db_index=True, default="")
     is_active = models.BooleanField(default=True, help_text="if true, this user is able to access the subscription")
 
-    # number multiplier applied to per-member issuance from policy items
-    seat_multiplier = models.PositiveIntegerField(
-        default=1, help_text="Multiplier applied to per-member consumables issuance (>= 1)"
-    )
-
     seat_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this seat")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -1911,7 +2264,7 @@ class SubscriptionSeat(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.billing_team_id}:{self.user_id}({self.seat_multiplier})"
+        return f"{self.billing_team_id}:{self.user_id}"
 
     def clean(self):
         # normalize email
@@ -2030,6 +2383,8 @@ class Consumable(AbstractServiceItem):
         service: Optional[Service | str | int] = None,
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
+        subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
+        subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: Optional[dict] = None,
     ) -> QuerySet["Consumable"]:
 
@@ -2119,6 +2474,18 @@ class Consumable(AbstractServiceItem):
         elif isinstance(permission, Permission):
             param["service_item__service__groups__permissions"] = permission
 
+        # Subscription Billing Team
+        if subscription_billing_team and isinstance(subscription_billing_team, int):
+            param["subscription_billing_team__id"] = subscription_billing_team
+        elif subscription_billing_team:
+            param["subscription_billing_team"] = subscription_billing_team
+
+        # Subscription Seat
+        if subscription_seat and isinstance(subscription_seat, int):
+            param["subscription_seat__id"] = subscription_seat
+        elif subscription_seat:
+            param["subscription_seat"] = subscription_seat
+
         return (
             cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
             .exclude(how_many=0)
@@ -2135,11 +2502,20 @@ class Consumable(AbstractServiceItem):
         service: Optional[Service | str | int] = None,
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
+        subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
+        subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: dict = None,
     ) -> QuerySet["Consumable"]:
 
         return cls.list(
-            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+            user=user,
+            lang=lang,
+            service=service,
+            service_type=service_type,
+            permission=permission,
+            subscription_billing_team=subscription_billing_team,
+            subscription_seat=subscription_seat,
+            extra=extra,
         )
 
     @classmethod
@@ -2151,6 +2527,8 @@ class Consumable(AbstractServiceItem):
         service: Optional[Service | str | int] = None,
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
+        subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
+        subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: Optional[dict] = None,
     ) -> Consumable | None:
 
@@ -2158,7 +2536,14 @@ class Consumable(AbstractServiceItem):
             extra = {}
 
         return cls.list(
-            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+            user=user,
+            lang=lang,
+            service=service,
+            service_type=service_type,
+            permission=permission,
+            subscription_billing_team=subscription_billing_team,
+            subscription_seat=subscription_seat,
+            extra=extra,
         ).first()
 
     @classmethod
@@ -2171,10 +2556,19 @@ class Consumable(AbstractServiceItem):
         service: Optional[Service | str | int] = None,
         service_type: Optional[str] = None,
         permission: Optional[Permission | str | int] = None,
+        subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
+        subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: Optional[dict] = None,
     ) -> Consumable | None:
         return cls.get(
-            user=user, lang=lang, service=service, service_type=service_type, permission=permission, extra=extra
+            user=user,
+            lang=lang,
+            service=service,
+            service_type=service_type,
+            permission=permission,
+            subscription_billing_team=subscription_billing_team,
+            subscription_seat=subscription_seat,
+            extra=extra,
         )
 
     def clean(self) -> None:

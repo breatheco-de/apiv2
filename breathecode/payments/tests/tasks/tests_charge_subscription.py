@@ -6,6 +6,7 @@ import logging
 import os
 import random
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -41,6 +42,10 @@ def subscription_item(data={}):
         "status": "ACTIVE",
         "user_id": 1,
         "valid_until": UTC_NOW,
+        "auto_recharge_enabled": False,
+        "recharge_threshold_amount": Decimal("10.00"),
+        "recharge_amount": Decimal("10.00"),
+        "max_period_spend": None,
         **data,
     }
 

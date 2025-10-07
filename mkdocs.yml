@@ -77,6 +77,14 @@ nav:
 
     - Program Manager:
           - "program-manager/blocking-users.md"
+    - Payments:
+          - "payments/index.md"
+          - Subscription Seats:
+                - "payments/subscription-seats-guide.md"
+                - "payments/subscription-seats-api.md"
+          - Auto-Recharge:
+                - "payments/auto-recharge.md"
+                - "payments/auto-recharge-architecture.md"
     - Testing:
           - "testing/running-tests.md"
           - "testing/parametrize.md"
