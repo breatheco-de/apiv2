@@ -38,7 +38,7 @@ from breathecode.payments.actions import (
     get_discounted_price,
     max_coupons_allowed,
 )
-from breathecode.payments.caches import PlanOfferCache, SubscriptionCache, PlanFinancingCache
+from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
     AcademyService,
     Bag,
@@ -55,16 +55,17 @@ from breathecode.payments.models import (
     Plan,
     PlanFinancing,
     PlanOffer,
+    PlanServiceItem,
     Seller,
     Service,
     ServiceItem,
-    PlanServiceItem,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
     BillingTeamAutoRechargeSerializer,
+    GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
     GetConsumptionSessionSerializer,
@@ -83,7 +84,6 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
-    GetAbstractIOweYouSmallSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
@@ -1761,7 +1761,7 @@ class PlanOfferView(APIView):
 
 class CouponBaseView(APIView):
 
-    def get_coupons(self) -> list[Coupon]:
+    def get_coupons(self, only_sent_coupons: bool = False) -> list[Coupon]:
         plan_pk: str = self.request.GET.get("plan")
         if not plan_pk:
             raise ValidationException(
@@ -1796,7 +1796,9 @@ class CouponBaseView(APIView):
         else:
             coupon_codes = []
 
-        return get_available_coupons(plan, coupons=coupon_codes, user=self.request.user)
+        return get_available_coupons(
+            plan, coupons=coupon_codes, user=self.request.user, only_sent_coupons=only_sent_coupons
+        )
 
 
 class CouponView(CouponBaseView):
@@ -1813,7 +1815,7 @@ class BagCouponView(CouponBaseView):
 
     def put(self, request, bag_id):
         lang = get_user_language(request)
-        coupons = self.get_coupons()
+        coupons = self.get_coupons(only_sent_coupons=True)
 
         # do no show the bags of type preview they are build
         client = None
