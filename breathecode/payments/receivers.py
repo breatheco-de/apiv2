@@ -15,6 +15,8 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments.models import Invoice
 from breathecode.payments import tasks
+from django.db.models.signals import post_save
+
 
 from .models import (
     Consumable,
@@ -369,9 +371,7 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
     logger.info("=== END HANDLE STRIPE REFUND RECEIVER ===")
 
 
-def check_consumable_balance_for_auto_recharge(
-    sender: Type[Consumable], instance: Consumable, how_many: float, **kwargs
-):
+def check_consumable_balance_for_auto_recharge(sender: Type[Consumable], instance: Consumable, **kwargs):
     """
     Monitor consumable consumption and trigger auto-recharge when balance is low.
 
@@ -395,4 +395,4 @@ def check_consumable_balance_for_auto_recharge(
     tasks.process_auto_recharge.delay(instance.id)
 
 
-consume_service.connect(check_consumable_balance_for_auto_recharge, sender=Consumable)
+post_save.connect(check_consumable_balance_for_auto_recharge, sender=Consumable)
