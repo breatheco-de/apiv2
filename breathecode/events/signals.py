@@ -6,6 +6,7 @@ emisor = Emisor("breathecode.events")
 
 event_saved = emisor.signal("event_saved")
 event_status_updated = emisor.signal("event_status_updated")
+event_rescheduled = emisor.signal("event_rescheduled")
 new_event_attendee = emisor.signal("new_event_attendee")
 new_event_order = emisor.signal("new_event_order")
 
