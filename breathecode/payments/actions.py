@@ -1164,7 +1164,8 @@ def get_available_coupons(
         )
         print("special_offers", special_offer)
 
-        manage_coupon(special_offer)
+        if special_offer:
+            manage_coupon(special_offer)
 
     valid_coupons = (
         Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
