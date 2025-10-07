@@ -8,7 +8,6 @@ from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 import uuid
 from django.db import transaction
-from django.conf import settings
 from task_manager.core.exceptions import AbortTask, RetryTask
 
 from adrf.requests import AsyncRequest
@@ -33,6 +32,7 @@ from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
+from django_redis import get_redis_connection
 
 from .models import (
     SERVICE_UNITS,
@@ -2382,7 +2382,7 @@ def process_auto_recharge(
         return
 
     # Connect to Redis
-    redis_client = redis.Redis.from_url(settings.REDIS_URL)
+    redis_client = get_redis_connection("default")
     team = consumable.subscription_billing_team or (
         consumable.subscription_seat.billing_team if consumable.subscription_seat else None
     )
