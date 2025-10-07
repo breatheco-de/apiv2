@@ -1092,7 +1092,6 @@ def get_available_coupons(
     user: Optional[User] = None,
     only_sent_coupons: bool = False,
 ) -> list[Coupon]:
-    print("entrando", coupons)
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
         sub_kwargs = {"invoices__bag__coupons": coupon}
@@ -1172,7 +1171,6 @@ def get_available_coupons(
         .select_related("seller__user", "allowed_user")
         .only(*cou_fields)
     )
-    print("cupones no expirados", valid_coupons)
 
     max = max_coupons_allowed()
 
