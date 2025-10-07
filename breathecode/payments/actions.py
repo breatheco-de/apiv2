@@ -1,27 +1,27 @@
 import os
 import re
-from decimal import Decimal, ROUND_FLOOR
-import redis
-import redis.lock
+import uuid
 from datetime import datetime, timedelta
+from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
-import uuid
-from django.db import transaction
-from django.conf import settings
-from task_manager.core.exceptions import AbortTask, RetryTask
 
+import redis
+import redis.lock
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
+from django.db import transaction
 from django.db.models import Q, QuerySet, Sum
 from django.http import HttpRequest
 from django.utils import timezone
 from pytz import UTC
 from rest_framework.request import Request
+from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
@@ -1092,6 +1092,7 @@ def get_available_coupons(
     user: Optional[User] = None,
     only_sent_coupons: bool = False,
 ) -> list[Coupon]:
+    print("entrando", coupons)
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
         sub_kwargs = {"invoices__bag__coupons": coupon}
@@ -1162,9 +1163,8 @@ def get_available_coupons(
             .only(*cou_fields)
             .first()
         )
-        print("special_offers", special_offer)
-
-        manage_coupon(special_offer)
+        if special_offer is not None:
+            manage_coupon(special_offer)
 
     valid_coupons = (
         Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
