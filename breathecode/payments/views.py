@@ -2463,10 +2463,11 @@ class ConsumableCheckoutView(APIView):
                     # Ensure billing team exists and update seats limit
                     if not team:
                         created_team = True
+                        # Add +1 seat for owner (first seat is free)
                         team = SubscriptionBillingTeam.objects.create(
                             subscription=subscription,
                             name=f"Team {subscription.id}",
-                            seats_limit=desired_limit,
+                            seats_limit=desired_limit + 1,
                             consumption_strategy=(
                                 plan.consumption_strategy
                                 if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
