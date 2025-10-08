@@ -1702,7 +1702,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         return instance
 
-    def get_access_token(self, obj: UserInvite):
+    def get_access_token(self, obj: UserInvite, organization="4geeks"):
         lang = self.context.get("lang", "en")
 
         if obj.status != "ACCEPTED":
@@ -1735,7 +1735,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         self.instance.save()
 
         token, _ = Token.get_or_create(user=self.user, token_type="login")
-        async_to_sync(sync_with_rigobot)(token.key)
+        async_to_sync(sync_with_rigobot)(token.key, organization=organization)
         return token.key
 
     def get_plans(self, obj: UserInvite):
