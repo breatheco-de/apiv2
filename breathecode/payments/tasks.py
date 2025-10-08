@@ -117,10 +117,10 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     ):
         raise AbortTask(f"The plan financing {scheduler.plan_handler.plan_financing.id} is over")
 
-    # it needs to be paid
     if (
         scheduler.plan_handler
         and scheduler.plan_handler.plan_financing
+        and scheduler.plan_handler.plan_financing.status == PlanFinancing.Status.ACTIVE
         and scheduler.plan_handler.plan_financing.next_payment_at < utc_now
     ):
         raise AbortTask(
@@ -320,7 +320,7 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
         raise AbortTask(f"The plan financing {plan_financing.id} is cancelled, deprecated or expired")
 
     utc_now = timezone.now()
-    if plan_financing.next_payment_at < utc_now:
+    if plan_financing.next_payment_at < utc_now and plan_financing.status != PlanFinancing.Status.FULLY_PAID:
         raise AbortTask(f"The PlanFinancing {plan_financing.id} needs to be paid to renew the consumables")
 
     if plan_financing.plan_expires_at and plan_financing.plan_expires_at < utc_now:
@@ -1142,18 +1142,29 @@ def build_service_stock_scheduler_from_plan_financing(
             delta = actions.calculate_relative_delta(unit, unit_type)
             valid_until = plan_financing.created_at + delta
 
-            if valid_until > plan_financing.next_payment_at:
+            if (
+                plan_financing.status != PlanFinancing.Status.FULLY_PAID
+                and valid_until > plan_financing.next_payment_at
+            ):
                 valid_until = plan_financing.next_payment_at
 
             if plan_financing.plan_expires_at and valid_until > plan_financing.plan_expires_at:
                 valid_until = plan_financing.plan_expires_at
 
-            if plan_financing.valid_until and valid_until > plan_financing.valid_until:
+            if (
+                plan_financing.valid_until
+                and valid_until > plan_financing.valid_until
+                and plan_financing.status != PlanFinancing.Status.FULLY_PAID
+            ):
                 valid_until = plan_financing.valid_until
+
+            if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
+                utc_now = timezone.now()
+                valid_until = utc_now + delta
 
             handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing, handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler, defaults={"valid_until": valid_until})
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
