@@ -26,6 +26,7 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import UserInvite, UserSetting
+from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
@@ -2012,7 +2013,23 @@ def invite_user_to_subscription_team(
         )
 
 
+def _validate_email(email: str, lang: str):
+    email_status = validate_email(email, lang)
+    if email_status["score"] <= 0.60:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address seems to have poor quality. Are you able to provide a different email address?",
+                es="El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?",
+                slug="poor-quality-email",
+            ),
+            data=email_status,
+        )
+
+
 def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
+    _validate_email(email, lang)
+
     if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
         raise ValidationException(
             translation(
@@ -2067,6 +2084,8 @@ def replace_seat(
     subscription_seat: SubscriptionSeat,
     lang: str,
 ):
+    _validate_email(to_email, lang)
+
     seat = SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=from_email).first()
     if not seat:
         raise ValidationException(
