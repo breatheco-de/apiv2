@@ -1312,6 +1312,8 @@ def get_github_token(request, token=None):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_github_token(request):
+
+    companyName = "4Geeks"
     def error_message(obj: Any, default: str):
         if isinstance(obj, dict):
             return obj.get("error_description") or obj.get("error") or default
@@ -1450,7 +1452,6 @@ async def save_github_token(request):
         if invite:
             academy = invite.academy
 
-        companyName = "4Geeks"
         if "4geeks" not in url:
             parsed_url = urlparse(url)
             domain = (
@@ -1555,7 +1556,7 @@ async def save_github_token(request):
         token, _ = await Token.aget_or_create(user=user, token_type="login")
 
     # register user in rigobot
-    await sync_with_rigobot(token.key)
+    await sync_with_rigobot(token.key, organization=companyName.lower())
 
     redirect_url = set_query_parameter(url, "token", token.key)
     return HttpResponseRedirect(redirect_to=redirect_url)
