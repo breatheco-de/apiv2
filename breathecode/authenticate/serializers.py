@@ -1702,11 +1702,16 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         return instance
 
-    def get_access_token(self, obj: UserInvite, organization="4geeks"):
+    def get_access_token(self, obj: UserInvite):
         lang = self.context.get("lang", "en")
 
         if obj.status != "ACCEPTED":
             return None
+
+        # Determine organization based on academy slug
+        organization = "4geeks"  # default
+        if obj.academy and obj.academy.slug == "learnpack":
+            organization = "learnpack"
 
         # if should be created within the signal
         if not self.user:
