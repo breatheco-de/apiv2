@@ -2478,6 +2478,23 @@ def process_auto_recharge(
                         academy=resource.academy,
                     )
 
+                attrs = consumable.service_item.__dict__.copy()
+                attrs.pop("id")
+                attrs.pop("_state")
+                attrs.pop("how_many")
+
+                si, _ = ServiceItem.objects.get_or_create(
+                    **attrs,
+                    how_many=amount,
+                )
+
+                attrs = consumable.__dict__.copy()
+                attrs.pop("id")
+                attrs.pop("_state")
+                attrs.pop("service_item")
+
+                Consumable.objects.create(**attrs, service_item=si)
+
         except Exception as e:
             raise AbortTask(f"Consumable auto-recharge failed for {resource.__class__.__name__} {resource.id}: {e}")
 
