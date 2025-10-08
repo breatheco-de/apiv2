@@ -887,6 +887,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     if not UserInvite.objects.filter(token=token).exists():
                         break
 
+                is_email_validated = UserInvite.objects.filter(email=email, is_email_validated=True).exists()
+
                 invite = UserInvite(
                     email=email,
                     first_name=validated_data["first_name"],
@@ -896,6 +898,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     role=role,
                     author=self.context.get("request").user,
                     token=token,
+                    is_email_validated=is_email_validated,
                 )
                 invite.save()
 
@@ -1131,6 +1134,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     if not UserInvite.objects.filter(token=token).exists():
                         break
 
+                is_email_validated = UserInvite.objects.filter(email=email, is_email_validated=True).exists()
+
                 now = timezone.now()
 
                 invite = UserInvite(
@@ -1144,6 +1149,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     author=self.context.get("request").user,
                     token=token,
                     expires_at=now + relativedelta(months=6),
+                    is_email_validated=is_email_validated,
                 )
                 invite.save()
 
@@ -1667,6 +1673,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, *args, **kwargs):
+        email = self.validated_data.get("email")
+        if email:
+            is_email_validated = UserInvite.objects.filter(email=email, is_email_validated=True).exists()
+            self.validated_data["is_email_validated"] = is_email_validated
+
         instance = super().create(*args, **kwargs)
 
         if self.plan:
