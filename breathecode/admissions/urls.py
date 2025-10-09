@@ -25,6 +25,7 @@ from .views import (
     SyllabusVersionView,
     SyllabusView,
     UserMeView,
+    UserMicroCohortsSyncView,
     UserView,
     get_all_academies,
     get_public_syllabus,
@@ -50,6 +51,11 @@ urlpatterns = [
     # me
     path("me/cohort/user/log", MeCohortUserHistoryView.as_view(), name="me_cohort_user_log"),
     path("me/cohort/<int:cohort_id>/user/log", MeCohortUserHistoryView.as_view(), name="me_cohort_id_user_log"),
+    path(
+        "me/micro-cohorts/sync/<str:macro_cohort_slug>",
+        UserMicroCohortsSyncView.as_view(),
+        name="me_micro_cohorts_sync",
+    ),
     # new endpoints (replacing above)
     path("academy/cohort/user", AcademyCohortUserView.as_view(), name="academy_cohort_user"),
     path("academy/cohort/<str:cohort_id>/log", AcademyCohortHistoryView.as_view(), name="academy_cohort_id_history"),
