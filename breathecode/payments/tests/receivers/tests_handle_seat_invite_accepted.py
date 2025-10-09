@@ -16,6 +16,9 @@ class DummyPlans:
     def first(self):
         return self._plan
 
+    def all(self):
+        return [self._plan]
+
 
 class DummySubscription:
     def __init__(self, _id: int, plan):
@@ -110,7 +113,14 @@ def test_integration_binds_seat_and_assigns_consumables_when_per_seat(monkeypatc
     from datetime import timedelta
     from django.contrib.auth.models import User
     from breathecode.admissions.models import Academy, Country, City
-    from breathecode.payments.models import Subscription, SubscriptionBillingTeam, SubscriptionSeat, Consumable, Service
+    from breathecode.payments.models import (
+        Subscription,
+        SubscriptionBillingTeam,
+        SubscriptionSeat,
+        Consumable,
+        Service,
+        ServiceItem,
+    )
 
     # Patch actions.grant_student_capabilities
     grant_capabilities_called = MagicMock()
@@ -140,6 +150,10 @@ def test_integration_binds_seat_and_assigns_consumables_when_per_seat(monkeypatc
         next_payment_at=now + timedelta(days=30),
     )
 
+    # Attach a dummy plans manager to any Subscription instance so receiver can read plan strategy
+    plan = SimpleNamespace(consumption_strategy=receivers.Plan.ConsumptionStrategy.PER_SEAT)
+    monkeypatch.setattr(Subscription, "plans", property(lambda self: DummyPlans(plan)), raising=False)
+
     team = SubscriptionBillingTeam.objects.create(
         subscription=subscription,
         name="Team X",
@@ -149,12 +163,15 @@ def test_integration_binds_seat_and_assigns_consumables_when_per_seat(monkeypatc
     seat = SubscriptionSeat.objects.create(billing_team=team, email="Member@Example.com")
 
     # Create a consumable with user=None (waiting for invitation acceptance)
+    # Must have subscription_billing_team set since user is None (validation requirement)
     service = Service.objects.create(slug="test-service", type="COHORT_SET")
+    service_item = ServiceItem.objects.create(service=service, how_many=10, unit_type="UNIT")
     consumable = Consumable.objects.create(
         subscription=subscription,
         subscription_seat=seat,
-        user=None,  # Not assigned yet
-        service=service,
+        subscription_billing_team=team,  # Required when user=None
+        user=None,  # Not assigned yet (waiting for invitation acceptance)
+        service_item=service_item,
         cohort_set_id=None,
         how_many=1,
     )
