@@ -307,7 +307,7 @@ class Command(BaseCommand):
                 cohort_user = CohortUser(
                     user=us,
                     cohort=cohort,
-                    role_id="teacher",
+                    role_id="TEACHER",
                 )
                 cohort_user.save()
 
@@ -338,7 +338,7 @@ class Command(BaseCommand):
                 cohort_user = CohortUser(
                     user=us,
                     cohort=cohort,
-                    role_id="student",
+                    role="STUDENT",
                     finantial_status=financial_status[_student["financial_status"]],
                     educational_status=educational_status[_student["status"]],
                 )
