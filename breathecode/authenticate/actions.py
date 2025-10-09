@@ -945,8 +945,8 @@ def accept_invite_action(data=None, token=None, lang="en"):
     return invite
 
 
-async def sync_with_rigobot(token_key):
-    rigobot_payload = {"organization": "4geeks", "user_token": token_key}
+async def sync_with_rigobot(token_key, organization="4geeks"):
+    rigobot_payload = {"organization": organization, "user_token": token_key}
     rigobot_host = os.getenv("RIGOBOT_HOST", "https://rigobot.herokuapp.com")
 
     async with aiohttp.ClientSession() as session:

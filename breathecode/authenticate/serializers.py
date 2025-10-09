@@ -1320,26 +1320,30 @@ class AuthSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get("email")
         password = attrs.get("password")
+        user = None
 
-        if email and password:
-            email = email.lower()
-            user = User.objects.filter(Q(email__iexact=email) | Q(username=email)).first()
-            if not user:
-                msg = "Unable to log in with provided credentials."
+        invite = UserInvite.objects.filter(email__iexact=email).order_by("-id").first()
+
+        if invite is None or (invite.status == "ACCEPTED" and invite.is_email_validated):
+            if email and password:
+                email = email.lower()
+                user = User.objects.filter(Q(email__iexact=email) | Q(username=email)).first()
+                if not user:
+                    msg = "Unable to log in with provided credentials."
+                    raise serializers.ValidationError(msg, code=403)
+                if user.check_password(password) != True:
+                    msg = "Unable to log in with provided credentials."
+                    raise serializers.ValidationError(msg, code=403)
+                # The authenticate call simply returns None for is_active=False
+                # users. (Assuming the default ModelBackend authentication
+                # backend.)
+            else:
+                msg = 'Must include "username" and "password".'
                 raise serializers.ValidationError(msg, code=403)
-            if user.check_password(password) != True:
-                msg = "Unable to log in with provided credentials."
-                raise serializers.ValidationError(msg, code=403)
-            # The authenticate call simply returns None for is_active=False
-            # users. (Assuming the default ModelBackend authentication
-            # backend.)
-        else:
-            msg = 'Must include "username" and "password".'
-            raise serializers.ValidationError(msg, code=403)
 
         if (
-            user
-            and not UserInvite.objects.filter(email__iexact=email, status="ACCEPTED", is_email_validated=True).exists()
+            invite
+            and not invite.is_email_validated
         ):
             invites = UserInvite.objects.filter(
                 email__iexact=email, status="ACCEPTED", is_email_validated=False
@@ -1349,6 +1353,10 @@ class AuthSerializer(serializers.Serializer):
             raise ValidationException(
                 "You need to validate your email first", slug="email-not-validated", silent=True, code=403, data=data
             )
+
+        if user is None:
+            msg = "Unable to log in with provided credentials."
+            raise serializers.ValidationError(msg, code=403)
 
         attrs["user"] = user
         return attrs
@@ -1700,6 +1708,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if obj.status != "ACCEPTED":
             return None
 
+        # Determine organization based on academy slug
+        organization = "4geeks"  # default
+        if obj.academy and obj.academy.slug == "learnpack":
+            organization = "learnpack"
+
         # if should be created within the signal
         if not self.user:
             self.user = User.objects.filter(email=self.email).first()
@@ -1727,7 +1740,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         self.instance.save()
 
         token, _ = Token.get_or_create(user=self.user, token_type="login")
-        async_to_sync(sync_with_rigobot)(token.key)
+        async_to_sync(sync_with_rigobot)(token.key, organization=organization)
         return token.key
 
     def get_plans(self, obj: UserInvite):
