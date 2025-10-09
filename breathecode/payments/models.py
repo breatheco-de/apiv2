@@ -1831,7 +1831,7 @@ class AbstractIOweYou(models.Model):
             filter_args.append(Q(user=user, subscription_billing_team__isnull=True, subscription_seat__isnull=True))
 
         filter_kwargs = {
-            "status": Invoice.Status.PAID,
+            "status": Invoice.Status.FULFILLED,
             "paid_at__gte": period_start,
             "paid_at__lt": period_end,
         }
@@ -2129,13 +2129,13 @@ class SubscriptionBillingTeam(models.Model):
         # Filter by team to only count this team's spending
         invoices = Invoice.objects.filter(
             user=self.subscription.user,
-            status=Invoice.Status.PAID,
-            created_at__gte=period_start,
+            status=Invoice.Status.FULFILLED,
+            paid_at__gte=period_start,
             subscription_billing_team=self,  # Filter by this team
         )
 
         if period_end:
-            invoices = invoices.filter(created_at__lt=period_end)
+            invoices = invoices.filter(paid_at__lt=period_end)
 
         # Filter by service if provided
         if service:

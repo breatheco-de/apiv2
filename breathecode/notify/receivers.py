@@ -15,7 +15,7 @@ from breathecode.authenticate.models import UserInvite
 from breathecode.authenticate.signals import invite_status_updated
 from breathecode.events.models import Event, EventCheckin
 from breathecode.events.serializers import EventHookCheckinSerializer, EventJoinSmallSerializer
-from breathecode.events.signals import event_status_updated, new_event_attendee, new_event_order
+from breathecode.events.signals import event_rescheduled, event_status_updated, new_event_attendee, new_event_order
 from breathecode.marketing.models import FormEntry
 from breathecode.marketing.serializers import FormEntryHookSerializer
 from breathecode.marketing.signals import form_entry_won_or_lost, new_form_entry_deal
@@ -146,6 +146,21 @@ def handle_event_status_updated(sender, instance, **kwargs):
     model_label = get_model_label(instance)
     serializer = EventJoinSmallSerializer(instance)
     HookManager.process_model_event(instance, model_label, "event_status_updated", payload_override=serializer.data)
+
+
+@receiver(event_rescheduled, sender=Event)
+def handle_event_rescheduled(sender, instance, **kwargs):
+    logger.info("Sending event_rescheduled hook with new starting at")
+    model_label = get_model_label(instance)
+    serializer = EventJoinSmallSerializer(instance)
+
+    checkins = EventCheckin.objects.filter(event=instance, attendee__isnull=False, status="PENDING").select_related(
+        "attendee"
+    )
+    if checkins.exists():
+        email_list = [checkin.attendee.email for checkin in checkins]
+        bulk_email_payload = {"event": serializer.data, "recipients": email_list}
+    HookManager.process_model_event(instance, model_label, "event_rescheduled", payload_override=bulk_email_payload)
 
 
 @receiver(asset_status_updated, sender=Asset)

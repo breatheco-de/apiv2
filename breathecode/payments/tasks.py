@@ -1799,7 +1799,7 @@ def check_and_retry_pending_bags(**_: Any):
     return count
 
 
-@task(bind=False, priority=TaskPriority.NOTIFICATION)
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
 def process_auto_recharge(
     consumable_id: int,
     **_: Any,
