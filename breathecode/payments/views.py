@@ -2463,10 +2463,11 @@ class ConsumableCheckoutView(APIView):
                     # Ensure billing team exists and update seats limit
                     if not team:
                         created_team = True
+                        # Add +1 seat for owner (first seat is free)
                         team = SubscriptionBillingTeam.objects.create(
                             subscription=subscription,
                             name=f"Team {subscription.id}",
-                            seats_limit=desired_limit,
+                            seats_limit=desired_limit + 1,
                             consumption_strategy=(
                                 plan.consumption_strategy
                                 if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
@@ -3531,18 +3532,20 @@ class SubscriptionSeatView(APIView):
                 u = None
                 if seat["to_user"]:
                     u = User.objects.filter(id=seat["to_user"]).first()
+                    if not u:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="User not found",
+                                es="Usuario no encontrado",
+                                slug="user-not-found",
+                            ),
+                            code=404,
+                        )
+
                 elif seat["to_email"]:
                     u = User.objects.filter(email=seat["to_email"]).first()
-                if not u:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="User not found",
-                            es="Usuario no encontrado",
-                            slug="user-not-found",
-                        ),
-                        code=404,
-                    )
+
                 result.append(actions.replace_seat(seat["from_email"], seat["to_email"], u, s, lang))
             except ValidationException as e:
                 errors.append(e)
