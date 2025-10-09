@@ -423,7 +423,7 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         storage = Storage()
         cloud_file = storage.file(os.getenv("DOWNLOADS_BUCKET", None), download.name)
         cloud_file.upload(buffer.getvalue(), content_type="text/csv")
-        download.url = cloud_file.url()
+        download.url = "will be generated on demand"  # We'll generate signed URLs on demand
         download.status = "DONE"
         download.save()
         return True
