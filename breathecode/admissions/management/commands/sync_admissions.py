@@ -307,7 +307,7 @@ class Command(BaseCommand):
                 cohort_user = CohortUser(
                     user=us,
                     cohort=cohort,
-                    role_id="TEACHER",
+                    role="TEACHER",
                 )
                 cohort_user.save()
 
