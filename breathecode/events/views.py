@@ -591,11 +591,60 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
             if past == "true":
                 lookup["starting_at__lte"] = timezone.now()
 
+        status = self.request.GET.get("status")
+        if status:
+            lookup["status__iexact"] = status
+
         items = items.filter(**lookup)
+
+        # Handle like filter for event titles (case-insensitive search)
+        like = self.request.GET.get("like")
+        if like:
+            items = items.filter(title__icontains=like)
+        
+        # Check if CSV format is requested (detected from URL path)
+        if request.path.endswith('.csv'):
+            return self._async_export_as_csv(items, academy_id)
+        
+        # Default JSON response
         items = handler.queryset(items)
         serializer = EventSmallSerializerNoAcademy(items, many=True)
 
         return handler.response(serializer.data)
+
+    def _async_export_as_csv(self, queryset, academy_id):
+        """Export events to CSV format asynchronously (following AdminExportCsvMixin pattern)"""
+        from breathecode.monitoring.tasks import async_download_csv
+        from breathecode.events.models import Event
+        from breathecode.authenticate.actions import get_user_language
+        
+        lang = get_user_language(self.request)
+        meta = Event._meta
+        ids = list(queryset.values_list("pk", flat=True))
+        
+        if not ids:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="No events found to export",
+                    es="No se encontraron eventos para exportar",
+                    slug="no-events-to-export"
+                ),
+                404
+            )
+        
+        # Use the exact same pattern as AdminExportCsvMixin
+        async_download_csv.delay(Event.__module__, meta.object_name, ids, academy_id)
+        
+        return Response({
+            'message': translation(
+                lang,
+                en='Data is being downloaded, check downloads for status.',
+                es='Los datos se están descargando, revisa downloads para el estado.',
+                slug="csv-export-started"
+            ),
+            'total_events': len(ids)
+        }, status=202)
 
     @capable_of("crud_event")
     def post(self, request, format=None, academy_id=None):
@@ -1142,10 +1191,50 @@ class AcademyEventCheckinView(APIView):
             items = items.filter(created_at__lte=end_date)
 
         items = items.filter(**lookup)
+        
+        # Check if CSV format is requested (detected from URL path)
+        if request.path.endswith('.csv'):
+            return self._async_export_as_csv(items, academy_id)
+        
+        # Default JSON response
         items = handler.queryset(items)
         serializer = EventCheckinSerializer(items, many=True)
 
         return handler.response(serializer.data)
+    
+    def _async_export_as_csv(self, queryset, academy_id):
+        """Export event checkins to CSV format asynchronously"""
+        from breathecode.monitoring.tasks import async_download_csv
+        from breathecode.events.models import EventCheckin
+        from breathecode.authenticate.actions import get_user_language
+        
+        lang = get_user_language(self.request)
+        meta = EventCheckin._meta
+        ids = list(queryset.values_list("pk", flat=True))
+        
+        if not ids:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="No event checkins found to export",
+                    es="No se encontraron registros de asistencia para exportar",
+                    slug="no-checkins-to-export"
+                ),
+                404
+            )
+        
+        # Use the exact same pattern as AdminExportCsvMixin
+        async_download_csv.delay(EventCheckin.__module__, meta.object_name, ids, academy_id)
+        
+        return Response({
+            'message': translation(
+                lang,
+                en='Data is being downloaded, check downloads for status.',
+                es='Los datos se están descargando, revisa downloads para el estado.',
+                slug="csv-export-started"
+            ),
+            'total_checkins': len(ids)
+        }, status=202)
 
 
 @api_view(["POST"])

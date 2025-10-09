@@ -1984,11 +1984,11 @@ def invite_user_to_subscription_team(
         email=obj.get("email", ""),
         academy=subscription.academy,
         subscription_seat=subscription_seat,
-        role_id="student",
+        role="student",
         defaults={
             "status": "PENDING",
             "author": subscription.user,
-            "role_id": "student",
+            "role": "student",
             "token": str(uuid.uuid4()),
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),

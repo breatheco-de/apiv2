@@ -311,3 +311,64 @@ class RepositorySubscriptionView(APIView, GenerateLookupsMixin):
             instance = serializer.save()
             return Response(RepoSubscriptionSmallSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyDownloadView(APIView):
+    """
+    Academy-specific download endpoint with proper capability check
+    """
+
+    @capable_of("read_downloads")
+    def get(self, request, academy_id=None, download_id=None):
+        lang = get_user_language(request)
+
+        if download_id is not None:
+            download = CSVDownload.objects.filter(id=download_id, academy__id=academy_id).first()
+            if download is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"CSV Download {download_id} not found for academy {academy_id}",
+                        es=f"Descarga CSV {download_id} no encontrada para la academia {academy_id}",
+                        slug="download-not-found"
+                    ),
+                    code=status.HTTP_404_NOT_FOUND
+                )
+
+            raw = request.GET.get("raw", "")
+            if raw == "true":
+                from ..services.google_cloud import Storage
+
+                try:
+                    storage = Storage()
+                    cloud_file = storage.file(os.getenv("DOWNLOADS_BUCKET", None), download.name)
+                    buffer = cloud_file.stream_download()
+
+                except CircuitBreakerError:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="The circuit breaker is open due to an error, please try again later",
+                            es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
+                            slug="circuit-breaker-open",
+                        ),
+                        slug="circuit-breaker-open",
+                        data={"service": "Google Cloud Storage"},
+                        silent=True,
+                        code=503,
+                    )
+
+                return StreamingHttpResponse(
+                    buffer.all(),
+                    content_type="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={download.name}"},
+                )
+            else:
+                serializer = CSVDownloadSmallSerializer(download, many=False)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # List all downloads for the academy
+        csv_downloads = CSVDownload.objects.filter(academy__id=academy_id)
+        serializer = CSVDownloadSmallSerializer(csv_downloads, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)

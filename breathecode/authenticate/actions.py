@@ -748,10 +748,10 @@ def accept_invite(accepting_ids=None, user=None):
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None and (role := role.upper()) in ["TEACHER", "ASSISTANT", "REVIEWER", "STUDENT"]:
-                cu = CohortUser(user=user, cohort=invite.cohort, role_id=role.lower(), educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status="ACTIVE")
                 cu.save()
             elif cu is None:
-                cu = CohortUser(user=user, cohort=invite.cohort, role_id="student", educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role="STUDENT", educational_status="ACTIVE")
                 cu.save()
 
         if user is not None and invite.user is None:
@@ -888,11 +888,11 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if invite.cohort is not None:
         role = "student"
         if invite.role is not None and invite.role.slug != "student":
-            role = invite.role.slug.lower()
+            role = invite.role.slug.upper()
 
         cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
         if cu is None:
-            cu = CohortUser(user=user, cohort=invite.cohort, role_id=role)
+            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
             cu.save()
 
         plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
@@ -945,8 +945,8 @@ def accept_invite_action(data=None, token=None, lang="en"):
     return invite
 
 
-async def sync_with_rigobot(token_key):
-    rigobot_payload = {"organization": "4geeks", "user_token": token_key}
+async def sync_with_rigobot(token_key, organization="4geeks"):
+    rigobot_payload = {"organization": organization, "user_token": token_key}
     rigobot_host = os.getenv("RIGOBOT_HOST", "https://rigobot.herokuapp.com")
 
     async with aiohttp.ClientSession() as session:

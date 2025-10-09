@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AcademyDownloadView,
     DjangoAdminView,
     RepositorySubscriptionView,
     get_apps,
@@ -18,6 +19,8 @@ urlpatterns = [
     path("endpoint", get_endpoints),
     path("download", get_download),
     path("download/<int:download_id>", get_download),
+    path("academy/download", AcademyDownloadView.as_view(), name="academy_download"),
+    path("academy/download/<int:download_id>", AcademyDownloadView.as_view(), name="academy_download_id"),
     path("upload", get_upload),
     path("upload/<int:upload_id>", get_upload),
     path("reposubscription", RepositorySubscriptionView.as_view()),

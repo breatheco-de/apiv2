@@ -827,6 +827,12 @@ class MeSubscriptionView(APIView):
             subscriptions = subscriptions.filter(invoices__id__in=ids)
             plan_financings = plan_financings.filter(invoices__id__in=ids)
 
+        # Filter by academy (accepts id(s) or slug(s))
+        if academy := request.GET.get("academy"):
+            args, kwargs = self.get_lookup("academy", academy)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
+
         if service := request.GET.get("service"):
             service_items_args, service_items_kwargs = self.get_lookup("service_items__service", service)
             plans_args, plans_kwargs = self.get_lookup("plans__service_items__service", service)
