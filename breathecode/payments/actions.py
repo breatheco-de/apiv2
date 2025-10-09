@@ -1,6 +1,6 @@
 import os
 import re
-import math
+from decimal import Decimal, ROUND_FLOOR
 import redis
 import redis.lock
 from datetime import datetime, timedelta
@@ -8,7 +8,6 @@ from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 import uuid
 from django.db import transaction
-from django.conf import settings
 from task_manager.core.exceptions import AbortTask, RetryTask
 
 from adrf.requests import AsyncRequest
@@ -27,12 +26,14 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import UserInvite, UserSetting
+from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
+from django_redis import get_redis_connection
 
 from .models import (
     SERVICE_UNITS,
@@ -585,7 +586,7 @@ class BagHandler:
 
         plan: Plan | None = self.bag.plans.first()
         service_item, _ = ServiceItem.objects.get_or_create(
-            service=plan.seat_service_price.service, how_many=seats, is_renewable=False, is_team_allowed=True
+            service=plan.seat_service_price.service, how_many=seats + 1, is_renewable=False, is_team_allowed=True
         )
 
         self.bag.seat_service_item = service_item
@@ -1153,15 +1154,19 @@ def get_available_coupons(
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
 
     if not only_sent_coupons:
-        special_offers = (
+        special_offer = (
             Coupon.objects.filter(*cou_args, auto=True)
-            .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
+            .exclude(
+                Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT) | Q(allowed_user__isnull=False)
+            )
             .select_related("seller__user", "allowed_user")
             .only(*cou_fields)
+            .first()
         )
+        print("special_offers", special_offer)
 
-        for coupon in special_offers:
-            manage_coupon(coupon)
+        if special_offer:
+            manage_coupon(special_offer)
 
     valid_coupons = (
         Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
@@ -2008,7 +2013,23 @@ def invite_user_to_subscription_team(
         )
 
 
+def _validate_email(email: str, lang: str):
+    email_status = validate_email(email, lang)
+    if email_status["score"] <= 0.60:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address seems to have poor quality. Are you able to provide a different email address?",
+                es="El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?",
+                slug="poor-quality-email",
+            ),
+            data=email_status,
+        )
+
+
 def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
+    _validate_email(email, lang)
+
     if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
         raise ValidationException(
             translation(
@@ -2027,6 +2048,7 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
     )
     seat_log_entry = create_seat_log_entry(seat, "ADDED")
     seat.seat_log.append(seat_log_entry)
+    seat.is_active = True
     seat.save()
 
     if not user:
@@ -2062,6 +2084,8 @@ def replace_seat(
     subscription_seat: SubscriptionSeat,
     lang: str,
 ):
+    _validate_email(to_email, lang)
+
     seat = SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=from_email).first()
     if not seat:
         raise ValidationException(
@@ -2090,8 +2114,7 @@ def replace_seat(
     seat.is_active = True
     seat_log_entry = create_seat_log_entry(seat, "REPLACED")
     seat.seat_log.append(seat_log_entry)
-    seat.save(update_fields=["seat_log", "is_active"])
-    seat.save()
+    seat.save(update_fields=["seat_log", "is_active", "email", "user"])
 
     if not to_user:
         invite_user_to_subscription_team(
@@ -2219,16 +2242,20 @@ def get_user_from_consumable_to_be_charged(
     - A `User` instance or `None` when team‑shared without a specific user.
     """
     resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
-    is_team_allowed = instance.service_item.service.is_team_allowed
+    is_team_allowed = instance.service_item.is_team_allowed
 
     user = None
-    team: SubscriptionBillingTeam | None = instance.subscription_billing_team or instance.subscription_seat.billing_team
+    seat = getattr(instance, "subscription_seat", None)
+    team: SubscriptionBillingTeam | None = getattr(instance, "subscription_billing_team", None) or (
+        seat.billing_team if seat else None
+    )
     strategy = team.consumption_strategy if team else None
 
     if is_team_allowed is False or isinstance(resource, PlanFinancing):
         user = resource.user
     elif is_team_allowed and strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT:
-        user = instance.subscription_seat.user or resource.user
+        # Seat user if present, otherwise fallback to resource owner
+        user = seat.user if (seat and seat.user) else resource.user
 
     return user
 
@@ -2273,32 +2300,47 @@ def validate_auto_recharge_service_units(
     user = get_user_from_consumable_to_be_charged(instance)
     service = instance.service_item.service
 
-    user_spend = resource.get_current_period_spend(service, user)
+    # Normalize spends to Decimal
+    _user_spend = resource.get_current_period_spend(service, user)
+    user_spend: Decimal = Decimal(str(_user_spend)) if _user_spend is not None else Decimal("0")
 
-    team_spend = user_spend
+    team_spend: Decimal = user_spend
     if user:
-        team_spend = resource.get_current_period_spend(service)
+        _team_spend = resource.get_current_period_spend(service)
+        team_spend = Decimal(str(_team_spend)) if _team_spend is not None else Decimal("0")
 
-    if team_spend >= resource.recharge_threshold_amount:
+    # Thresholds may come as DecimalField (DB) or float in stubs; normalize to Decimal
+    threshold_dec = (
+        Decimal(str(resource.recharge_threshold_amount))
+        if resource.recharge_threshold_amount is not None
+        else Decimal("0")
+    )
+
+    if team_spend >= threshold_dec:
         return 0.0, 0, "auto-recharge-threshold-reached"
 
-    if resource.max_period_spend and (
-        team_spend >= resource.max_period_spend or team_spend + resource.recharge_amount >= resource.max_period_spend
-    ):
+    max_spend_dec = Decimal(str(resource.max_period_spend)) if getattr(resource, "max_period_spend", None) else None
+
+    recharge_amount: Decimal = Decimal(str(resource.recharge_amount))
+
+    if max_spend_dec and (team_spend >= max_spend_dec or team_spend + recharge_amount >= max_spend_dec):
         return 0.0, 0, "max-period-spend-reached"
 
-    recharge_amount = resource.recharge_amount
-    if resource.max_period_spend and team_spend + recharge_amount > resource.max_period_spend:
-        recharge_amount = resource.max_period_spend - team_spend
+    if max_spend_dec and team_spend + recharge_amount > max_spend_dec:
+        recharge_amount = max_spend_dec - team_spend
 
     price_qs = AcademyService.objects.filter(service=service, academy=resource.academy)
     if (price := price_qs.first()) is None:
         return 0.0, 0, "academy-service-not-found"
 
-    if price.price_per_unit is None or price.price_per_unit <= 0:
+    if price.price_per_unit is None:
         return 0.0, 0, "price-per-unit-not-found"
 
-    if price.price_per_unit > recharge_amount:
+    price_per_unit_dec = Decimal(str(price.price_per_unit))
+    if price_per_unit_dec <= 0:
+        return 0.0, 0, "price-per-unit-not-found"
+
+    if price_per_unit_dec > recharge_amount:
         return 0.0, 0, "price-per-unit-exceeded"
 
     consumables = Consumable.list(user=user, service=instance.service_item.service)
@@ -2311,13 +2353,16 @@ def validate_auto_recharge_service_units(
         available += consumable.how_many
         total += consumable.service_item.how_many
 
-    if total / available > 0.2:
+    # Use Decimal for ratio comparison to avoid float mixing
+    if len(consumables) > 0 and available > 1 and (Decimal(total) / Decimal(available) > Decimal("0.2")):
         return 0.0, 0, "more-than-20-percent-left"
 
-    if available * price.price_per_unit > resource.recharge_threshold_amount:
+    if Decimal(available) * price_per_unit_dec > threshold_dec:
         return 0.0, 0, None
 
-    return price.price_per_unit, math.floor(recharge_amount / price.price_per_unit), None
+    # Compute units using Decimal and return price as float for compatibility
+    units = int((Decimal(str(recharge_amount)) / price_per_unit_dec).to_integral_value(rounding=ROUND_FLOOR))
+    return float(price.price_per_unit), units, None
 
 
 def process_auto_recharge(
@@ -2360,7 +2405,7 @@ def process_auto_recharge(
         return
 
     # Connect to Redis
-    redis_client = redis.Redis.from_url(settings.REDIS_URL)
+    redis_client = get_redis_connection("default")
     team = consumable.subscription_billing_team or (
         consumable.subscription_seat.billing_team if consumable.subscription_seat else None
     )
@@ -2451,6 +2496,23 @@ def process_auto_recharge(
                         },
                         academy=resource.academy,
                     )
+
+                attrs = consumable.service_item.__dict__.copy()
+                attrs.pop("id")
+                attrs.pop("_state")
+                attrs.pop("how_many")
+
+                si, _ = ServiceItem.objects.get_or_create(
+                    **attrs,
+                    how_many=amount,
+                )
+
+                attrs = consumable.__dict__.copy()
+                attrs.pop("id")
+                attrs.pop("_state")
+                attrs.pop("service_item")
+
+                Consumable.objects.create(**attrs, service_item=si)
 
         except Exception as e:
             raise AbortTask(f"Consumable auto-recharge failed for {resource.__class__.__name__} {resource.id}: {e}")

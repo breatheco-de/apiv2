@@ -1306,9 +1306,9 @@ def test_seats__purchase_creates_team_sets_strategy_from_plan(database, client: 
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    # Team should be created with desired seats and strategy from plan
+    # Team should be created with desired seats + 1 (owner seat is free) and strategy from plan
     team = SubscriptionBillingTeam.objects.get(subscription=model.subscription)
-    assert team.seats_limit == desired_seats
+    assert team.seats_limit == desired_seats + 1
     assert team.consumption_strategy == "PER_TEAM"
 
     # Scheduler should be triggered only when team is created
