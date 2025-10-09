@@ -25,6 +25,7 @@ CAPABILITIES = [
         "slug": "read_assignment_sensitive_details",
         "description": 'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"',
     },
+    {"slug": "read_downloads", "description": "Access the list of downloads"},
     {"slug": "read_shortlink", "description": "Access the list of marketing shortlinks"},
     {"slug": "crud_shortlink", "description": "Create, update and delete marketing short links"},
     {"slug": "crud_assignment", "description": "Update assignments"},
@@ -207,6 +208,7 @@ ROLES = [
         "name": "Academy Token",
         "caps": [
             "read_member",
+            "read_downloads",
             "read_syllabus",
             "read_student",
             "read_all_cohort",

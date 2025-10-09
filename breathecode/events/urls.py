@@ -55,6 +55,7 @@ urlpatterns = [
     path("eventype", EventTypeView.as_view(), name="eventype"),
     path("event/<int:event_id>/checkin", EventCheckinView.as_view(), name="event_checkin"),
     path("academy/event", AcademyEventView.as_view(), name="academy_event"),
+    path("academy/event.csv", AcademyEventView.as_view(), name="academy_event_csv"),
     path("academy/event/<int:event_id>", AcademyEventView.as_view(), name="academy_event_id"),
     path("academy/event/<int:event_id>/join", AcademyEventJoinView.as_view(), name="academy_event_id_join"),
     path("academy/organization", AcademyOrganizationView.as_view(), name="academy_organization"),
@@ -91,6 +92,7 @@ urlpatterns = [
         name="academy_eventype_slug_visibilitysetting_id",
     ),
     path("academy/checkin", AcademyEventCheckinView.as_view(), name="academy_checkin"),
+    path("academy/checkin.csv", AcademyEventCheckinView.as_view(), name="academy_checkin_csv"),
     path("eventbrite/webhook/<int:organization_id>", eventbrite_webhook, name="eventbrite_webhook_id"),
     path("live-workshop-status", live_workshop_status, name="live_workshop_status"),
 ]

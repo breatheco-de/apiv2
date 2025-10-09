@@ -140,9 +140,9 @@ def execute_scripts(self, script_id):
 
 
 @shared_task(bind=True, priority=TaskPriority.MARKETING.value)
-def async_download_csv(self, module, model_name, ids_to_download):
+def async_download_csv(self, module, model_name, ids_to_download, academy_id=None):
     logger.debug("Starting to download csv for ")
-    return download_csv(module, model_name, ids_to_download)
+    return download_csv(module, model_name, ids_to_download, academy_id)
 
 
 @shared_task(bind=True, priority=TaskPriority.MARKETING.value)
