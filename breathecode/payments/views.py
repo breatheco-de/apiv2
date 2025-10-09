@@ -38,7 +38,7 @@ from breathecode.payments.actions import (
     get_discounted_price,
     max_coupons_allowed,
 )
-from breathecode.payments.caches import PlanOfferCache, SubscriptionCache, PlanFinancingCache
+from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
     AcademyService,
     Bag,
@@ -55,16 +55,17 @@ from breathecode.payments.models import (
     Plan,
     PlanFinancing,
     PlanOffer,
+    PlanServiceItem,
     Seller,
     Service,
     ServiceItem,
-    PlanServiceItem,
     Subscription,
     SubscriptionBillingTeam,
     SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
     BillingTeamAutoRechargeSerializer,
+    GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
     GetConsumptionSessionSerializer,
@@ -83,7 +84,6 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
-    GetAbstractIOweYouSmallSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
@@ -1761,7 +1761,7 @@ class PlanOfferView(APIView):
 
 class CouponBaseView(APIView):
 
-    def get_coupons(self) -> list[Coupon]:
+    def get_coupons(self, only_sent_coupons: bool = False) -> list[Coupon]:
         plan_pk: str = self.request.GET.get("plan")
         if not plan_pk:
             raise ValidationException(
@@ -1796,7 +1796,9 @@ class CouponBaseView(APIView):
         else:
             coupon_codes = []
 
-        return get_available_coupons(plan, coupons=coupon_codes, user=self.request.user)
+        return get_available_coupons(
+            plan, coupons=coupon_codes, user=self.request.user, only_sent_coupons=only_sent_coupons
+        )
 
 
 class CouponView(CouponBaseView):
@@ -1813,7 +1815,7 @@ class BagCouponView(CouponBaseView):
 
     def put(self, request, bag_id):
         lang = get_user_language(request)
-        coupons = self.get_coupons()
+        coupons = self.get_coupons(only_sent_coupons=True)
 
         # do no show the bags of type preview they are build
         client = None
@@ -2461,10 +2463,11 @@ class ConsumableCheckoutView(APIView):
                     # Ensure billing team exists and update seats limit
                     if not team:
                         created_team = True
+                        # Add +1 seat for owner (first seat is free)
                         team = SubscriptionBillingTeam.objects.create(
                             subscription=subscription,
                             name=f"Team {subscription.id}",
-                            seats_limit=desired_limit,
+                            seats_limit=desired_limit + 1,
                             consumption_strategy=(
                                 plan.consumption_strategy
                                 if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
@@ -3529,18 +3532,20 @@ class SubscriptionSeatView(APIView):
                 u = None
                 if seat["to_user"]:
                     u = User.objects.filter(id=seat["to_user"]).first()
+                    if not u:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="User not found",
+                                es="Usuario no encontrado",
+                                slug="user-not-found",
+                            ),
+                            code=404,
+                        )
+
                 elif seat["to_email"]:
                     u = User.objects.filter(email=seat["to_email"]).first()
-                if not u:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="User not found",
-                            es="Usuario no encontrado",
-                            slug="user-not-found",
-                        ),
-                        code=404,
-                    )
+
                 result.append(actions.replace_seat(seat["from_email"], seat["to_email"], u, s, lang))
             except ValidationException as e:
                 errors.append(e)
