@@ -2144,3 +2144,121 @@ class CohortJoinView(APIView):
         serializer = GetAbstractIOweYouSerializer(resource, many=False)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class UserMicroCohortsSyncView(APIView):
+    """
+    API endpoint for users to sync themselves to missing micro-cohorts.
+    This allows users who are in macro-cohorts to automatically join
+    their related micro-cohorts that they might be missing.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, macro_cohort_slug):
+        """
+        Sync the authenticated user to all missing micro-cohorts
+        from a specific macro-cohort.
+        """
+        user = request.user
+        lang = get_user_language(request)
+
+        if not macro_cohort_slug:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="macro_cohort_slug is required",
+                    es="macro_cohort_slug es requerido",
+                    slug="macro-cohort-slug-required",
+                )
+            )
+
+        macro_cohort = Cohort.objects.filter(slug=macro_cohort_slug).first()
+
+        if not macro_cohort:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Macro-cohort with slug '{macro_cohort_slug}' not found",
+                    es=f"Macro-cohort con slug '{macro_cohort_slug}' no encontrada",
+                    slug="macro-cohort-not-found",
+                )
+            )
+
+        user_macro_cohort = CohortUser.objects.filter(user=user, cohort=macro_cohort).first()
+
+        if not user_macro_cohort:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"You are not enrolled in the macro-cohort '{macro_cohort.name}'",
+                    es=f"No estás inscrito en la macro-cohort '{macro_cohort.name}'",
+                    slug="not-enrolled-in-macro-cohort",
+                )
+            )
+
+        micro_cohorts = macro_cohort.micro_cohorts.all()
+        print(micro_cohorts)
+
+        if not micro_cohorts.exists():
+            return Response(
+                {
+                    "detail": translation(
+                        lang,
+                        en=f"Macro-cohort '{macro_cohort.name}' has no micro-cohorts",
+                        es=f"La macro-cohort '{macro_cohort.name}' no tiene micro-cohorts",
+                        slug="no-micro-cohorts",
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        added_count = 0
+        already_existing_count = 0
+        micro_cohorts_added = []
+
+        for micro_cohort in micro_cohorts:
+            micro_cohort_user = CohortUser.objects.filter(
+                user=user, cohort=micro_cohort, role=user_macro_cohort.role
+            ).first()
+
+            if micro_cohort_user is None:
+                micro_cohort_user = CohortUser.objects.create(
+                    user=user,
+                    cohort=micro_cohort,
+                    role=user_macro_cohort.role,
+                    finantial_status=user_macro_cohort.finantial_status,
+                    educational_status=user_macro_cohort.educational_status,
+                )
+                added_count += 1
+                micro_cohorts_added.append(
+                    {
+                        "id": micro_cohort.id,
+                        "name": micro_cohort.name,
+                        "slug": micro_cohort.slug,
+                        "role": micro_cohort_user.role,
+                    }
+                )
+                logger.info(f"Added user {user.email} to micro-cohort {micro_cohort.name}")
+            else:
+                already_existing_count += 1
+
+        return Response(
+            {
+                "detail": translation(
+                    lang,
+                    en=f"Successfully added to {added_count} micro-cohorts from '{macro_cohort.name}'. {already_existing_count} were already enrolled.",
+                    es=f"Agregado exitosamente a {added_count} micro-cohorts de '{macro_cohort.name}'. {already_existing_count} ya estaban inscritos.",
+                    slug="micro-cohorts-sync-success",
+                ),
+                "macro_cohort": {
+                    "id": macro_cohort.id,
+                    "name": macro_cohort.name,
+                    "slug": macro_cohort.slug,
+                },
+                "added_count": added_count,
+                "already_existing_count": already_existing_count,
+                "micro_cohorts_added": micro_cohorts_added,
+            },
+            status=status.HTTP_200_OK,
+        )
