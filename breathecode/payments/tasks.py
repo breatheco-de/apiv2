@@ -182,10 +182,11 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
         selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription, service_item.service)
 
-    # If resource is Subscription and this scheduler is tied to a subscription seat with an assigned user,
-    # issue the consumable for the seat assignee instead of the subscription owner.
-    if subscription and scheduler.subscription_seat and scheduler.subscription_seat.user_id:
-        user = scheduler.subscription_seat.user
+    # If resource is Subscription and this scheduler is tied to a subscription seat,
+    # issue the consumable for the seat assignee (or None if not yet assigned) instead of the subscription owner.
+    if subscription and scheduler.subscription_seat:
+        # Use the seat's user if assigned, otherwise None (waiting for invitation acceptance)
+        user = scheduler.subscription_seat.user if scheduler.subscription_seat.user_id else None
 
     unit = service_item.renew_at
     unit_type = service_item.renew_at_unit

@@ -16,6 +16,9 @@ class DummyPlans:
     def first(self):
         return self._plan
 
+    def all(self):
+        return [self._plan]
+
 
 class DummySubscription:
     def __init__(self, _id: int, plan):
@@ -99,23 +102,29 @@ def test_noop_when_status_not_accepted(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_integration_binds_seat_and_calls_scheduler_when_per_seat(monkeypatch, database):
+def test_integration_binds_seat_and_assigns_consumables_when_per_seat(monkeypatch, database):
     """
     Integration test
     Given a real Subscription, BillingTeam with PER_SEAT strategy, and a pending SubscriptionSeat (user=None)
     When handle_seat_invite_accepted is invoked for an ACCEPTED invite matching the seat email
-    Then the seat is bound to the real user (email lowercased) and the per-seat scheduler is called.
+    Then the seat is bound to the real user (email lowercased) and existing consumables are assigned to the user.
     """
     from django.utils import timezone
     from datetime import timedelta
     from django.contrib.auth.models import User
     from breathecode.admissions.models import Academy, Country, City
-    from breathecode.payments.models import Subscription, SubscriptionBillingTeam, SubscriptionSeat
+    from breathecode.payments.models import (
+        Subscription,
+        SubscriptionBillingTeam,
+        SubscriptionSeat,
+        Consumable,
+        Service,
+        ServiceItem,
+    )
 
-    # Patch task delay
-    called = MagicMock()
-    dummy_task = types.SimpleNamespace(build_service_stock_scheduler_from_subscription=SimpleNamespace(delay=called))
-    monkeypatch.setattr(receivers, "tasks", dummy_task)
+    # Patch actions.grant_student_capabilities
+    grant_capabilities_called = MagicMock()
+    monkeypatch.setattr(receivers.actions, "grant_student_capabilities", grant_capabilities_called)
 
     # Real owner and subscription
     owner = User.objects.create(username="owner", email="owner@example.com")
@@ -141,6 +150,10 @@ def test_integration_binds_seat_and_calls_scheduler_when_per_seat(monkeypatch, d
         next_payment_at=now + timedelta(days=30),
     )
 
+    # Attach a dummy plans manager to any Subscription instance so receiver can read plan strategy
+    plan = SimpleNamespace(consumption_strategy=receivers.Plan.ConsumptionStrategy.PER_SEAT)
+    monkeypatch.setattr(Subscription, "plans", property(lambda self: DummyPlans(plan)), raising=False)
+
     team = SubscriptionBillingTeam.objects.create(
         subscription=subscription,
         name="Team X",
@@ -148,6 +161,20 @@ def test_integration_binds_seat_and_calls_scheduler_when_per_seat(monkeypatch, d
     )
 
     seat = SubscriptionSeat.objects.create(billing_team=team, email="Member@Example.com")
+
+    # Create a consumable with user=None (waiting for invitation acceptance)
+    # Must have subscription_billing_team set since user is None (validation requirement)
+    service = Service.objects.create(slug="test-service", type="COHORT_SET")
+    service_item = ServiceItem.objects.create(service=service, how_many=10, unit_type="UNIT")
+    consumable = Consumable.objects.create(
+        subscription=subscription,
+        subscription_seat=seat,
+        subscription_billing_team=team,  # Required when user=None
+        user=None,  # Not assigned yet (waiting for invitation acceptance)
+        service_item=service_item,
+        cohort_set_id=None,
+        how_many=1,
+    )
 
     # Invite with matching email: use a real Django User for FK assignment
     member = User.objects.create(username="member", email="member@example.com")
@@ -160,16 +187,28 @@ def test_integration_binds_seat_and_calls_scheduler_when_per_seat(monkeypatch, d
     seat.refresh_from_db()
     assert seat.user == invite.user
     assert seat.email == invite.user.email.lower()
-    # Scheduler fired for this subscription and seat
-    called.assert_called_once_with(subscription.id, seat_id=seat.id)
+
+    # Assert: consumable assigned to user
+    consumable.refresh_from_db()
+    assert consumable.user == member
+
+    # Assert: student capabilities granted
+    grant_capabilities_called.assert_called()
 
 
-def test_triggers_scheduler_and_binds_when_per_seat(monkeypatch):
-    """Bind seat to user, normalize email, and call per-seat scheduler when strategy enables per-seat issuance."""
+def test_updates_consumables_and_binds_when_per_seat(monkeypatch):
+    """Bind seat to user, normalize email, and update consumables when strategy enables per-seat issuance."""
     # Arrange
-    called = MagicMock()
-    dummy_task = types.SimpleNamespace(build_service_stock_scheduler_from_subscription=SimpleNamespace(delay=called))
-    monkeypatch.setattr(receivers, "tasks", dummy_task)
+    # Mock Consumable.objects.filter().update() to track consumable updates
+    mock_consumable_qs = MagicMock()
+    mock_consumable_qs.update = MagicMock()
+    mock_consumable_manager = MagicMock()
+    mock_consumable_manager.filter.return_value = mock_consumable_qs
+    monkeypatch.setattr(receivers.Consumable, "objects", mock_consumable_manager, raising=False)
+
+    # Mock actions.grant_student_capabilities
+    grant_capabilities_called = MagicMock()
+    monkeypatch.setattr(receivers.actions, "grant_student_capabilities", grant_capabilities_called)
 
     plan = SimpleNamespace(consumption_strategy=receivers.Plan.ConsumptionStrategy.BOTH)
     subscription = DummySubscription(1, plan)
@@ -189,15 +228,26 @@ def test_triggers_scheduler_and_binds_when_per_seat(monkeypatch):
     assert seat.user is invite.user
     assert seat.email == invite.user.email.lower()
     assert seat._saved is True
-    called.assert_called_once_with(subscription.id, seat_id=seat.id)
+    # Assert consumables were updated with the new user
+    mock_consumable_manager.filter.assert_called_once()
+    mock_consumable_qs.update.assert_called_once_with(user=invite.user)
+    # Assert student capabilities granted
+    grant_capabilities_called.assert_called_once_with(invite.user, plan)
 
 
-def test_does_not_trigger_when_per_team_only(monkeypatch):
-    """Bind seat to user but do not call scheduler when only PER_TEAM strategy is effective."""
+def test_does_not_update_consumables_when_per_team_only(monkeypatch):
+    """Bind seat to user but do not update consumables when only PER_TEAM strategy is effective."""
     # Arrange
-    called = MagicMock()
-    dummy_task = types.SimpleNamespace(build_service_stock_scheduler_from_subscription=SimpleNamespace(delay=called))
-    monkeypatch.setattr(receivers, "tasks", dummy_task)
+    # Mock Consumable.objects.filter().update() to track consumable updates
+    mock_consumable_qs = MagicMock()
+    mock_consumable_qs.update = MagicMock()
+    mock_consumable_manager = MagicMock()
+    mock_consumable_manager.filter.return_value = mock_consumable_qs
+    monkeypatch.setattr(receivers.Consumable, "objects", mock_consumable_manager, raising=False)
+
+    # Mock actions.grant_student_capabilities
+    grant_capabilities_called = MagicMock()
+    monkeypatch.setattr(receivers.actions, "grant_student_capabilities", grant_capabilities_called)
 
     plan = SimpleNamespace(consumption_strategy=receivers.Plan.ConsumptionStrategy.PER_SEAT)
     subscription = DummySubscription(2, plan)
@@ -216,4 +266,8 @@ def test_does_not_trigger_when_per_team_only(monkeypatch):
     # Assert
     assert seat.user is invite.user
     assert seat._saved is True
-    called.assert_not_called()
+    # Assert consumables were NOT updated (PER_TEAM strategy)
+    mock_consumable_manager.filter.assert_not_called()
+    mock_consumable_qs.update.assert_not_called()
+    # Assert capabilities were NOT granted (PER_TEAM strategy)
+    grant_capabilities_called.assert_not_called()
