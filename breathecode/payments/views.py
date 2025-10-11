@@ -51,6 +51,7 @@ from breathecode.payments.models import (
     FinancialReputation,
     Invoice,
     MentorshipServiceSet,
+    PaymentContact,
     PaymentMethod,
     Plan,
     PlanFinancing,
@@ -1501,6 +1502,59 @@ class CardView(APIView):
 
 class V2CardView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        """
+        Get payment method information for the authenticated user.
+
+        Query Parameters:
+            - academy_id (optional): Specific academy to check. If not provided,
+              returns info for all academies the user has payment contacts with.
+
+        Returns:
+            200: Payment method information
+            {
+                "has_payment_method": bool,
+                "details": {
+                    "academy_name": {
+                        "has_payment_method": true,
+                        "card_last4": "4242",
+                        "card_brand": "Visa",
+                        "card_exp_month": 12,
+                        "card_exp_year": 2025
+                    }
+                }
+            }
+        """
+        lang = get_user_language(request)
+        academy = get_academy_from_body(request.query_params.dict(), lang=lang, raise_exception=False)
+
+        if not academy:
+            # Return info for all academies
+            contacts = PaymentContact.objects.filter(user=request.user)
+            if not contacts.exists():
+                return Response({"has_payment_method": False, "details": {}})
+
+            details = {}
+            for contact in contacts:
+                s = Stripe(academy=contact.academy)
+                s.set_language(lang)
+                info = s.get_payment_method_info(request.user)
+                if info:
+                    academy_name = contact.academy.name if contact.academy else "Default"
+                    details[academy_name] = info
+
+            return Response({"has_payment_method": bool(details), "details": details})
+
+        # Return info for specific academy
+        s = Stripe(academy=academy)
+        s.set_language(lang)
+        info = s.get_payment_method_info(request.user)
+
+        if info:
+            return Response(info)
+
+        return Response({"has_payment_method": False})
 
     def post(self, request):
         lang = get_user_language(request)
