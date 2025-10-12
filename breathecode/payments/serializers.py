@@ -382,6 +382,7 @@ class GetPlanOfferSerializer(serpy.Serializer):
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     amount = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
     paid_at = serpy.Field()
