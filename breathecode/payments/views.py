@@ -1279,7 +1279,7 @@ class MeInvoiceView(APIView):
                     translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
                 )
 
-            serializer = GetInvoiceSerializer(item, many=True)
+            serializer = GetInvoiceSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = Invoice.objects.filter(user=request.user)
