@@ -390,14 +390,6 @@ class GetInvoiceSmallSerializer(serpy.Serializer):
     user = GetUserSmallSerializer(many=False)
 
 
-class GetInvoiceSerializer(GetInvoiceSmallSerializer):
-    id = serpy.Field()
-    amount = serpy.Field()
-    paid_at = serpy.Field()
-    status = serpy.Field()
-    currency = GetCurrencySmallSerializer()
-
-
 class GetMentorshipServiceSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -704,6 +696,20 @@ class GetBagSerializer(serpy.Serializer):
     def get_coupons(self, obj):
         return GetCouponSerializer(obj.coupons.filter(), many=True).data
 
+class GetInvoiceSerializer(GetInvoiceSmallSerializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    paid_at = serpy.Field()
+    status = serpy.Field()
+    externally_managed = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    bag = GetBagSerializer(many=False)
+
+    amount_refunded = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    refunded_at = serpy.Field()
+
+    
 
 class ServiceSerializer(serializers.Serializer):
 
