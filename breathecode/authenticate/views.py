@@ -316,7 +316,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             if v and str(v).strip():
                 try:
                     args = {}
-                    if isinstance(v, int):
+                    if isinstance(v, int) or v.isnumeric():
                         args["id"] = v
                     else:
                         args["slug"] = v
