@@ -326,7 +326,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                 except Exception:
                     raise ValidationException(
                         translation(
-                            lang, en="The academy does not exist", es="La academia no existe", slug="academy-not-found"
+                            lang, en="The academy could not be found", es="La academia no existe o no se pudo encontrar", slug="academy-not-found"
                         )
                     )
 
