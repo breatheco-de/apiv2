@@ -3,6 +3,7 @@ from django.urls import path
 from ..views import (
     AcademyAcademyServiceView,
     AcademyCohortSetCohortView,
+    AcademyConsumableView,
     AcademyInvoiceView,
     AcademyPlanFinancingView,
     AcademyPlanSubscriptionView,
@@ -60,6 +61,7 @@ urlpatterns = [
     path("service/<slug:service_slug>", ServiceView.as_view()),
     path("service/<slug:service_slug>/items", ServiceItemView.as_view()),
     path("academy/service", AcademyServiceView.as_view()),
+    path("academy/service/consumable", AcademyConsumableView.as_view(), name="academy_service_consumable"),
     path("academy/service/<slug:service_slug>", AcademyServiceView.as_view()),
     path("academy/academyservice", AcademyAcademyServiceView.as_view()),
     path("academy/academyservice/<slug:service_slug>", AcademyAcademyServiceView.as_view()),

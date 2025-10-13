@@ -662,6 +662,64 @@ class AppConsumableView(MeConsumableView):
         return super().get(request)
 
 
+class AcademyConsumableView(APIView):
+    """
+    Academy endpoint to view consumables for users in the academy.
+    Filters by academy_id (from request header) and allows filtering by users and service slugs.
+    """
+
+    @capable_of("read_consumable")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+        utc_now = timezone.now()
+
+        # Start with consumables that belong to the academy through subscriptions or plan_financings
+        items = Consumable.objects.filter(
+            Q(valid_until__gte=utc_now) | Q(valid_until=None),
+            Q(subscription__academy_id=academy_id) | Q(plan_financing__academy_id=academy_id),
+        ).exclude(how_many=0)
+
+        # Filter by users if provided (comma-separated list of user IDs)
+        if users := request.GET.get("users"):
+            try:
+                user_ids = [int(x.strip()) for x in users.split(",") if x.strip()]
+                items = items.filter(user_id__in=user_ids)
+            except ValueError:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="users parameter must contain comma-separated integers",
+                        es="El parámetro users debe contener enteros separados por comas",
+                        slug="invalid-users-param",
+                    ),
+                    code=400,
+                )
+
+        # Filter by service slugs if provided (comma-separated list)
+        if service_slugs := request.GET.get("service"):
+            slugs = [s.strip() for s in service_slugs.split(",") if s.strip()]
+            items = items.filter(service_item__service__slug__in=slugs)
+
+        # Group by resource types
+        mentorship_services = MentorshipServiceSet.objects.none()
+        mentorship_services = filter_consumables(request, items, mentorship_services, "mentorship_service_set")
+
+        cohorts = CohortSet.objects.none()
+        cohorts = filter_consumables(request, items, cohorts, "cohort_set")
+
+        event_types = EventTypeSet.objects.none()
+        event_types = filter_consumables(request, items, event_types, "event_type_set")
+
+        balance = {
+            "mentorship_service_sets": get_balance_by_resource(mentorship_services, "mentorship_service_set"),
+            "cohort_sets": get_balance_by_resource(cohorts, "cohort_set"),
+            "event_type_sets": get_balance_by_resource(event_types, "event_type_set"),
+            "voids": filter_void_consumable_balance(request, items),
+        }
+
+        return Response(balance)
+
+
 class MentorshipServiceSetView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(sort="-id", paginate=True)

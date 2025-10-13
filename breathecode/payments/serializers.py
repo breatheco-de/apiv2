@@ -91,7 +91,6 @@ class GetServiceSerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
-    currency = GetCurrencySmallSerializer(many=False)
 
     owner = GetAcademySmallSerializer(many=False)
     private = serpy.Field()
