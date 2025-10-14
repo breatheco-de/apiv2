@@ -543,3 +543,86 @@ class Stripe:
                 continue
 
         return any_success, errors, details
+
+    def has_payment_method(self, user: User) -> bool:
+        """
+        Check if a user has a payment method on file with Stripe.
+
+        This is a quick check that verifies if the user has a Stripe customer
+        record and if that customer has a default payment source.
+
+        Args:
+            user (User): The user to check.
+
+        Returns:
+            bool: True if user has a payment method, False otherwise.
+        """
+        stripe.api_key = self.api_key
+
+        contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
+        if not contact:
+            return False
+
+        try:
+
+            def callback():
+                return stripe.Customer.retrieve(contact.stripe_id)
+
+            customer = self._i18n_validations(callback)
+            return customer.get("default_source") is not None
+
+        except Exception as e:
+            logger.error(f"Error checking payment method for user {user.id}: {str(e)}")
+            return False
+
+    def get_payment_method_info(self, user: User) -> dict | None:
+        """
+        Retrieve payment method information for a user from Stripe.
+
+        Fetches the default payment source details from Stripe for the given user.
+        Returns masked card information (last 4 digits, brand, expiration).
+
+        Args:
+            user (User): The user whose payment method info to retrieve.
+
+        Returns:
+            dict | None: A dictionary containing payment method details if found:
+                {
+                    "has_payment_method": True,
+                    "card_last4": "4242",
+                    "card_brand": "Visa",
+                    "card_exp_month": 12,
+                    "card_exp_year": 2025
+                }
+                Returns None if no payment method exists or an error occurs.
+        """
+        stripe.api_key = self.api_key
+
+        contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
+        if not contact:
+            return None
+
+        try:
+
+            def callback():
+                customer = stripe.Customer.retrieve(contact.stripe_id)
+                if not customer.get("default_source"):
+                    return None
+                return stripe.Customer.retrieve_source(customer.id, customer.default_source)
+
+            source = self._i18n_validations(callback)
+
+            if not source:
+                return None
+
+            return {
+                "has_payment_method": True,
+                "card_last4": source.last4,
+                "card_brand": source.brand,
+                "card_exp_month": source.exp_month,
+                "card_exp_year": source.exp_year,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting payment method info for user {user.id}: {str(e)}")
+            return None

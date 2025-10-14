@@ -195,6 +195,10 @@ CAPABILITIES = [
         "slug": "crud_commission",
         "description": "Create, update or delete commission data and reports",
     },
+    {
+        "slug": "read_consumable",
+        "description": "Read user service consumables to understand how many units are available",
+    },
 ]
 
 ROLES = [
@@ -240,6 +244,7 @@ ROLES = [
             "crud_mentorship_session",
             "read_calendly_organization",
             "crud_subscription",
+            "read_consumable",
             "validate_assignment_flag",
         ],
     },
@@ -546,6 +551,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             "caps": extend(roles, ["staff", "community_manager"])
             + [
                 "crud_media",
+                "read_consumable",
                 "read_activity",
                 "read_lead",
                 "read_user_assessment",
@@ -605,6 +611,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             "name": "Mentor in residence",
             "caps": extend(roles, ["teacher"])
             + [
+                "read_consumable",
                 "crud_syllabus",
                 "crud_cohort",
                 "crud_student",

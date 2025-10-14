@@ -1013,6 +1013,8 @@ def get_academy_from_body(body: dict[str, Any], lang: str = "en", raise_exceptio
 
     if isinstance(academy_slug, int):
         academy = Academy.objects.filter(id=academy_slug).first()
+    elif isinstance(academy_slug, str) and academy_slug.isnumeric():
+        academy = Academy.objects.filter(id=academy_slug).first()
     elif isinstance(academy_slug, str):
         academy = Academy.objects.filter(slug=academy_slug).first()
 
