@@ -735,7 +735,7 @@ def is_eventbrite_enabled():
     return os.getenv("EVENTBRITE", "0") == "1"
 
 
-def create_google_meet_for_event(event: Event, academy=None, online_event=True, private: bool = True) -> str:
+def create_google_meet_for_event(event: Event, private: bool = True) -> str:
     """
     Create a Google Meet room for an event and return the meeting URL.
 
@@ -751,14 +751,12 @@ def create_google_meet_for_event(event: Event, academy=None, online_event=True, 
         Exception: If academy doesn't have proper Google Cloud configuration
     """
 
-    target_academy = academy or (event.academy if event else None)
+    target_academy = event.academy if event else None
 
     if not target_academy:
         raise Exception("Academy must be provided to create Google Meet")
 
-    is_online = online_event if event is None else event.online_event
-
-    if not is_online:
+    if not event.online_event:
         raise Exception("Event must be marked as online to create Google Meet")
 
     settings = AcademyAuthSettings.objects.filter(academy=target_academy, google_cloud_owner__isnull=False).first()
