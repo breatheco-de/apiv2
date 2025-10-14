@@ -778,14 +778,15 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
                 code=400,
             )
 
-        if price_per_month != 0:
-            price_per_month += academy_service.price_per_unit * bag.seat_service_item.how_many
-        if price_per_quarter != 0:
-            price_per_quarter += academy_service.price_per_unit * bag.seat_service_item.how_many * 3
-        if price_per_half != 0:
-            price_per_half += academy_service.price_per_unit * bag.seat_service_item.how_many * 6
-        if price_per_year != 0:
-            price_per_year += academy_service.price_per_unit * bag.seat_service_item.how_many * 12
+        how_many_seats = bag.seat_service_item.how_many
+        if how_many_seats > 0 and price_per_month != 0:
+            price_per_month += academy_service.price_per_unit * how_many_seats
+        if how_many_seats > 0 and price_per_quarter != 0:
+            price_per_quarter += academy_service.price_per_unit * how_many_seats * 3
+        if how_many_seats > 0 and price_per_half != 0:
+            price_per_half += academy_service.price_per_unit * how_many_seats * 6
+        if how_many_seats > 0 and price_per_year != 0:
+            price_per_year += academy_service.price_per_unit * how_many_seats * 12
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -2278,7 +2279,7 @@ def validate_seats_limit(
     for seat in seats.values():
         value += seat
 
-    if team.seats_limit and value > team.seats_limit:
+    if team.additional_seats and value > team.seats_limit:
         raise ValidationException(
             translation(
                 lang,

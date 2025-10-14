@@ -1260,7 +1260,7 @@ def build_subscription(
             subscription=subscription,
             defaults={
                 "name": f"Team {subscription.id}",
-                "seats_limit": subscription.seat_service_item.how_many,
+                "additional_seats": subscription.seat_service_item.how_many,
                 "consumption_strategy": (
                     # if BOTH is implemented should be required to get the strategy from the bag
                     Plan.ConsumptionStrategy.PER_SEAT
