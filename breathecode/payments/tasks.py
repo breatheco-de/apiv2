@@ -4,7 +4,9 @@ import os
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
+import requests
 from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import PaymentException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
 from django.utils import timezone
@@ -22,6 +24,7 @@ from breathecode.notify import actions as notify_actions
 from breathecode.payments import actions
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import consume_service, reimburse_service_units
+from breathecode.payments.views import CoinbaseChargeView
 from breathecode.services.google.google import Google
 from breathecode.utils.decorators import TaskPriority
 from breathecode.utils.redis import Lock
@@ -33,6 +36,7 @@ from .models import (
     Consumable,
     ConsumptionSession,
     Invoice,
+    PaymentMethod,
     Plan,
     PlanFinancing,
     PlanOffer,
@@ -348,9 +352,11 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
     invoice = subscription.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by("-id").first()
 
     if invoice:
-        s = Stripe(academy=subscription.academy)
-        s.set_language(settings.lang)
-        s.refund_payment(invoice)
+        coinbase_method = PaymentMethod.objects.filter(is_coinbase=True).first()
+        if invoice.payment_method != coinbase_method and not invoice.coinbase_charge_id:
+            s = Stripe(academy=subscription.academy)
+            s.set_language(settings.lang)
+            s.refund_payment(invoice)
 
 
 @task(
@@ -443,6 +449,191 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         )
         raise AbortTask(f"Subscription with id {subscription.id} is deprecated")
 
+    def handle_coinbase_charge():
+        # If a pending invoice exists, a Coinbase charge also already exists and was sent to the user
+        pending_invoice = subscription.invoices.filter(
+            status="PENDING",
+            coinbase_charge_id__isnull=False,
+            created_at__gte=last_paid_invoice.created_at,
+        ).first()
+        if not pending_invoice:
+            try:
+                utc_now = timezone.now()
+                bag = actions.get_bag_from_subscription(subscription, settings)
+                coupons = bag.coupons.all()
+                amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
+                if coupons:
+                    original_amount = amount
+                    amount = actions.get_discounted_price(amount, coupons)
+                    logger.info(
+                        f"Applied coupon discount: original={original_amount}, discounted={amount} for subscription {subscription_id}"
+                    )
+
+                invoice = Invoice.objects.create(
+                    bag=bag,
+                    user=subscription.user,
+                    amount=amount,
+                    currency=bag.currency,
+                    status="PENDING",
+                    paid_at=utc_now,
+                    externally_managed=True,
+                    payment_method=coinbase_method,
+                    academy=bag.academy,
+                )
+
+                response = CoinbaseChargeView.create_charge(
+                    academy=subscription.academy,
+                    amount=amount,
+                    invoice=invoice,
+                    return_url=f"{get_app_url()}/subscription/{subscription.id}",
+                    cancel_url=f"{get_app_url()}/subscription/{subscription.id}",
+                    original_price=invoice.amount,
+                )
+                charge_data = response.json()
+                charge = charge_data.get("data")
+                if not charge:
+                    logger.error("CoinbasePayView: Missing 'data' field in Coinbase response")
+                    raise AbortTask(
+                        translation(
+                            settings.lang,
+                            en="Invalid Coinbase response format",
+                            es="Formato de respuesta de Coinbase inválido",
+                            slug="invalid-coinbase-response",
+                        ),
+                        code=500,
+                    )
+
+                invoice.coinbase_charge_id = charge["id"]
+                invoice.save()
+                subscription.invoices.add(invoice)
+                message = translation(
+                    settings.lang,
+                    en="Your subscription is due for renewal. Please complete your payment using the link below.",
+                    es="Tu suscripción requiere renovación. Por favor completa tu pago usando el siguiente enlace.",
+                )
+
+                button = translation(
+                    settings.lang,
+                    en="Pay now",
+                    es="Pagar ahora",
+                )
+
+                notify_actions.send_email_message(
+                    "message",
+                    subscription.user.email,
+                    {
+                        "subject": translation(
+                            settings.lang,
+                            en="Subscription renewal required",
+                            es="Renovación de suscripción requerida",
+                        ),
+                        "message": message,
+                        "button": button,
+                        "link": charge["hosted_url"],
+                    },
+                )
+            except Exception as e:
+                logger.error(
+                    f"Error creating Coinbase charge for subscription {subscription_id}: {e}",
+                    exc_info=True,
+                )
+                subscription.status = "ERROR"
+                subscription.status_message = f"Error creating Coinbase charge: {str(e)}"
+                subscription.save()
+
+                if subscription.status not in no_charge_statuses:
+                    manager = schedule_task(charge_subscription, "1d")
+                    if not manager.exists(subscription.id):
+                        manager.call(subscription.id)
+
+                raise AbortTask(f"Error creating Coinbase charge for subscription {subscription_id}: {e}")
+        else:
+            if subscription.status == "ACTIVE":
+                subscription.status = "PAYMENT_ISSUE"
+                subscription.save()
+            logger.info(
+                f"Pending Coinbase invoice {pending_invoice.id} already exists for subscription {subscription_id}"
+            )
+            try:
+                amount = actions.get_amount_by_chosen_period(
+                    pending_invoice.bag, pending_invoice.bag.chosen_period, settings.lang
+                )
+                headers = {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CC-Api-Key": os.getenv("COINBASE_API_KEY"),
+                }
+                response = requests.get(
+                    f"https://api.commerce.coinbase.com/charges/{pending_invoice.coinbase_charge_id}",
+                    headers=headers,
+                )
+                charge_data = response.json()
+                charge = charge_data.get("data")
+                if charge and charge.get("status") == "EXPIRED":
+                    new_charge = CoinbaseChargeView.create_charge(
+                        academy=subscription.academy,
+                        amount=amount,
+                        invoice=pending_invoice,
+                        return_url=f"{get_app_url()}/subscription/{subscription.id}",
+                        cancel_url=f"{get_app_url()}/subscription/{subscription.id}",
+                        original_price=pending_invoice.amount,
+                    )
+                    charge_data = new_charge.json()
+                    charge = charge_data.get("data")
+                    if not charge:
+                        logger.error("CoinbasePayView: Missing 'data' field in Coinbase response")
+                        raise AbortTask(
+                            translation(
+                                settings.lang,
+                                en="Invalid Coinbase response format",
+                                es="Formato de respuesta de Coinbase inválido",
+                                slug="invalid-coinbase-response",
+                            ),
+                            code=500,
+                        )
+                    pending_invoice.coinbase_charge_id = charge["id"]
+                    pending_invoice.paid_at = timezone.now()  # Actualizar timestamp
+                    pending_invoice.save()
+                    message = translation(
+                        settings.lang,
+                        en="Your payment link expired. Please use this new link to complete your subscription renewal.",
+                        es="Tu enlace de pago expiró. Por favor usa este nuevo enlace para completar la renovación de tu suscripción.",
+                    )
+
+                    button = translation(
+                        settings.lang,
+                        en="Pay now",
+                        es="Pagar ahora",
+                    )
+
+                    notify_actions.send_email_message(
+                        "message",
+                        subscription.user.email,
+                        {
+                            "subject": translation(
+                                settings.lang,
+                                en="New payment link - Subscription renewal",
+                                es="Nuevo enlace de pago - Renovación de suscripción",
+                            ),
+                            "message": message,
+                            "button": button,
+                            "link": new_charge["hosted_url"],
+                        },
+                    )
+            except Exception as e:
+                logger.error(
+                    f"Error creating Coinbase charge for subscription {subscription_id}: {e}",
+                    exc_info=True,
+                )
+        # Reschedule for 2 days to resend the email with a new charge
+        if subscription.status not in no_charge_statuses:
+            manager = schedule_task(charge_subscription, "2d")
+            if not manager.exists(subscription.id):
+                manager.call(subscription.id)
+        raise AbortTask(
+            f"Subscription set with PAYMENT_ISSUE status, for Coinbase payment for renewal of subscription {subscription_id}"
+        )
+
     bag = None
     client = None
     if IS_DJANGO_REDIS:
@@ -489,6 +680,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 subscription.status = Subscription.Status.DEPRECATED
                 subscription.save()
                 handle_deprecated_subscription()
+                raise AbortTask(f"Waiting for Coinbase payment for subscription {subscription_id}")
 
             if subscription.valid_until and subscription.valid_until < utc_now and subscription.status in statuses:
                 if subscription.status != Subscription.Status.EXPIRED:
@@ -507,25 +699,36 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 )
 
                 if invoice is None:
-                    message = translation(
-                        settings.lang,
-                        en="Please make your payment in your academy",
-                        es="Por favor realiza tu pago en tu academia",
+                    # Detect if the payment method is Coinbase
+                    coinbase_method = PaymentMethod.objects.filter(is_coinbase=True).first()
+                    last_paid_invoice = (
+                        subscription.invoices.filter(status="FULFILLED", payment_method=coinbase_method)
+                        .order_by("-paid_at")
+                        .first()
                     )
+                    if last_paid_invoice and last_paid_invoice.coinbase_charge_id:
+                        handle_coinbase_charge()
 
-                    button = translation(
-                        settings.lang,
-                        en="Please make your payment in your academy",
-                        es="Por favor realiza tu pago en tu academia",
-                    )
-                    alert_payment_issue(message, button)
+                    else:
+                        message = translation(
+                            settings.lang,
+                            en="Please make your payment in your academy",
+                            es="Por favor realiza tu pago en tu academia",
+                        )
 
-                    if subscription.status not in no_charge_statuses:
-                        manager = schedule_task(charge_subscription, "1d")
-                        if not manager.exists(subscription.id):
-                            manager.call(subscription.id)
+                        button = translation(
+                            settings.lang,
+                            en="Please make your payment in your academy",
+                            es="Por favor realiza tu pago en tu academia",
+                        )
+                        alert_payment_issue(message, button)
 
-                    raise AbortTask(f"Payment to Subscription {subscription_id} failed")
+                        if subscription.status not in no_charge_statuses:
+                            manager = schedule_task(charge_subscription, "1d")
+                            if not manager.exists(subscription.id):
+                                manager.call(subscription.id)
+
+                        raise AbortTask(f"Payment to Subscription {subscription_id} failed")
 
                 bag = invoice.bag
 
@@ -671,9 +874,11 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
     invoice = plan_financing.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by("-id").first()
 
     if invoice:
-        s = Stripe(academy=plan_financing.academy)
-        s.set_language(settings.lang)
-        s.refund_payment(invoice)
+        coinbase_method = PaymentMethod.objects.filter(is_coinbase=True).first()
+        if invoice.payment_method != coinbase_method and not invoice.coinbase_charge_id:
+            s = Stripe(academy=plan_financing.academy)
+            s.set_language(settings.lang)
+            s.refund_payment(invoice)
 
 
 @task(
@@ -716,6 +921,184 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
         ]:
             plan_financing.status = "PAYMENT_ISSUE"
             plan_financing.save()
+
+    def handle_coinbase_charge():
+        # If a pending invoice exists, a Coinbase charge also already exists and was sent to the user
+        pending_invoice = plan_financing.invoices.filter(
+            status="PENDING",
+            coinbase_charge_id__isnull=False,
+            created_at__gte=last_paid_invoice.created_at,
+        ).first()
+        if not pending_invoice:
+            try:
+                utc_now = timezone.now()
+                # Use the original bag from first invoice (has how_many_installments)
+                bag = first_invoice.bag
+                # Use fixed monthly price (no coupon recalculation)
+                amount = plan_financing.monthly_price
+
+                invoice = Invoice.objects.create(
+                    bag=bag,
+                    user=plan_financing.user,
+                    amount=amount,
+                    currency=bag.currency,
+                    status="PENDING",
+                    paid_at=utc_now,
+                    externally_managed=True,
+                    payment_method=coinbase_method,
+                    academy=bag.academy,
+                )
+
+                response = CoinbaseChargeView.create_charge(
+                    academy=plan_financing.academy,
+                    amount=amount,
+                    invoice=invoice,
+                    return_url=f"{get_app_url()}/plan-financing/{plan_financing.id}",
+                    cancel_url=f"{get_app_url()}/plan-financing/{plan_financing.id}",
+                    original_price=amount,
+                )
+                charge_data = response.json()
+                charge = charge_data.get("data")
+                if not charge:
+                    logger.error("CoinbasePayView: Missing 'data' field in Coinbase response")
+                    raise PaymentException(
+                        translation(
+                            settings.lang,
+                            en="Invalid Coinbase response format",
+                            es="Formato de respuesta de Coinbase inválido",
+                            slug="invalid-coinbase-response",
+                        ),
+                        code=500,
+                    )
+
+                invoice.coinbase_charge_id = charge["id"]
+                invoice.save()
+                plan_financing.invoices.add(invoice)
+                message = translation(
+                    settings.lang,
+                    en="Your next installment payment is due. Please complete your payment using the link below.",
+                    es="Tu próxima cuota está pendiente. Por favor completa tu pago usando el siguiente enlace.",
+                )
+
+                button = translation(
+                    settings.lang,
+                    en="Pay installment",
+                    es="Pagar cuota",
+                )
+
+                notify_actions.send_email_message(
+                    "message",
+                    plan_financing.user.email,
+                    {
+                        "subject": translation(
+                            settings.lang,
+                            en="Plan financing installment payment required",
+                            es="Pago de cuota de financiamiento requerido",
+                        ),
+                        "message": message,
+                        "button": button,
+                        "link": charge["hosted_url"],
+                    },
+                )
+            except Exception as e:
+                logger.error(
+                    f"Error creating Coinbase charge for plan financing {plan_financing_id}: {e}",
+                    exc_info=True,
+                )
+                plan_financing.status = "ERROR"
+                plan_financing.status_message = f"Error creating Coinbase charge: {str(e)}"
+                plan_financing.save()
+
+                if plan_financing.status not in no_charge_statuses:
+                    manager = schedule_task(charge_plan_financing, "1d")
+                    if not manager.exists(plan_financing.id):
+                        manager.call(plan_financing.id)
+
+                raise AbortTask(f"Error creating Coinbase charge for plan financing {plan_financing_id}: {e}")
+        else:
+            if plan_financing.status == "ACTIVE":
+                plan_financing.status = "PAYMENT_ISSUE"
+                plan_financing.save()
+            logger.info(
+                f"Pending Coinbase invoice {pending_invoice.id} already exists for plan financing {plan_financing_id}"
+            )
+            try:
+                amount = plan_financing.monthly_price
+                headers = {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CC-Api-Key": os.getenv("COINBASE_API_KEY"),
+                }
+                response = requests.get(
+                    f"https://api.commerce.coinbase.com/charges/{pending_invoice.coinbase_charge_id}",
+                    headers=headers,
+                )
+                charge_data = response.json()
+                charge = charge_data.get("data")
+                if charge and charge.get("status") == "EXPIRED":
+                    new_charge = CoinbaseChargeView.create_charge(
+                        academy=plan_financing.academy,
+                        amount=amount,
+                        invoice=pending_invoice,
+                        return_url=f"{get_app_url()}/plan-financing/{plan_financing.id}",
+                        cancel_url=f"{get_app_url()}/plan-financing/{plan_financing.id}",
+                        original_price=pending_invoice.amount,
+                    )
+                    charge_data = new_charge.json()
+                    charge = charge_data.get("data")
+                    if not charge:
+                        logger.error("CoinbasePayView: Missing 'data' field in Coinbase response")
+                        raise PaymentException(
+                            translation(
+                                settings.lang,
+                                en="Invalid Coinbase response format",
+                                es="Formato de respuesta de Coinbase inválido",
+                                slug="invalid-coinbase-response",
+                            ),
+                            code=500,
+                        )
+                    pending_invoice.coinbase_charge_id = charge["id"]
+                    pending_invoice.paid_at = timezone.now()
+                    pending_invoice.save()
+                    message = translation(
+                        settings.lang,
+                        en="Your installment payment link expired. Please use this new link to complete your payment.",
+                        es="Tu enlace de pago de cuota expiró. Por favor usa este nuevo enlace para completar tu pago.",
+                    )
+
+                    button = translation(
+                        settings.lang,
+                        en="Pay installment",
+                        es="Pagar cuota",
+                    )
+
+                    notify_actions.send_email_message(
+                        "message",
+                        plan_financing.user.email,
+                        {
+                            "subject": translation(
+                                settings.lang,
+                                en="New payment link - Plan financing installment",
+                                es="Nuevo enlace de pago - Cuota de financiamiento",
+                            ),
+                            "message": message,
+                            "button": button,
+                            "link": new_charge["hosted_url"],
+                        },
+                    )
+            except Exception as e:
+                logger.error(
+                    f"Error creating Coinbase charge for plan financing {plan_financing_id}: {e}",
+                    exc_info=True,
+                )
+        # Reschedule for 2 days to resend the email with a new charge
+        if plan_financing.status not in no_charge_statuses:
+            manager = schedule_task(charge_plan_financing, "2d")
+            if not manager.exists(plan_financing.id):
+                manager.call(plan_financing.id)
+        raise AbortTask(
+            f"PlanFinancing set with PAYMENT_ISSUE status, waiting for Coinbase payment for plan financing {plan_financing_id}"
+        )
 
     bag = None
     client = None
@@ -796,18 +1179,33 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                     )
 
                     if invoice is None:
-                        message = translation(
-                            settings.lang,
-                            en="Please make your payment in your academy",
-                            es="Por favor realiza tu pago en tu academia",
+                        # Detect if the payment method is Coinbase
+                        coinbase_method = PaymentMethod.objects.filter(is_coinbase=True).first()
+                        last_paid_invoice = (
+                            plan_financing.invoices.filter(
+                                status="FULFILLED",
+                                payment_method=coinbase_method,
+                            )
+                            .order_by("-paid_at")
+                            .first()
                         )
 
-                        button = translation(
-                            settings.lang,
-                            en="Please make your payment in your academy",
-                            es="Por favor realiza tu pago en tu academia",
-                        )
-                        alert_payment_issue(message, button)
+                        if last_paid_invoice and last_paid_invoice.coinbase_charge_id:
+                            handle_coinbase_charge()
+
+                        else:
+                            message = translation(
+                                settings.lang,
+                                en="Please make your payment in your academy",
+                                es="Por favor realiza tu pago en tu academia",
+                            )
+
+                            button = translation(
+                                settings.lang,
+                                en="Please make your payment in your academy",
+                                es="Por favor realiza tu pago en tu academia",
+                            )
+                            alert_payment_issue(message, button)
 
                         if plan_financing.status not in no_charge_statuses:
                             manager = schedule_task(charge_plan_financing, "1d")

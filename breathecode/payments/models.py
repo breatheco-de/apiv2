@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 import math
 import os
-from datetime import datetime, timedelta
-from typing import Any, Optional, TYPE_CHECKING, Protocol, TypeVar, Awaitable
 import random
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, Awaitable, Optional, Protocol, TypeVar
 
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -1382,6 +1382,7 @@ class PaymentMethod(models.Model):
 
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
+    is_coinbase = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
@@ -1533,6 +1534,10 @@ class Invoice(models.Model):
 
     amount_refunded = models.FloatField(
         default=0, help_text="Amount refunded, this field will only be set when the invoice is refunded"
+    )
+
+    coinbase_charge_id = models.CharField(
+        max_length=40, null=True, default=None, blank=True, help_text="Coinbase charge id"
     )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
@@ -1762,6 +1767,7 @@ class AbstractIOweYou(models.Model):
             - Independent of payment frequency and service regeneration schedules.
         """
         from django.db.models import Sum
+
         from breathecode.payments.models import Invoice
 
         period_start, period_end = self.get_current_monthly_period_dates()
@@ -2118,6 +2124,7 @@ class SubscriptionBillingTeam(models.Model):
             Total spending for this team in current period
         """
         from django.db.models import Sum
+
         from breathecode.payments.models import Invoice
 
         period_start, period_end = self.get_current_monthly_period_dates()
@@ -3122,6 +3129,7 @@ class AcademyPaymentSettings(models.Model):
 
     class POSVendor(models.TextChoices):
         STRIPE = "STRIPE", "Stripe"
+        COINBASE = "COINBASE", "Coinbase Commerce"
 
     academy = models.OneToOneField(
         Academy, on_delete=models.CASCADE, related_name="payment_settings", help_text="Academy"
@@ -3133,6 +3141,12 @@ class AcademyPaymentSettings(models.Model):
         help_text="Point of Sale vendor like Stripe, etc.",
     )
     pos_api_key = models.CharField(max_length=255, blank=True, help_text="API key for the POS vendor")
+    coinbase_api_key = models.CharField(
+        max_length=255, blank=True, null=True, help_text="API key for Coinbase Commerce"
+    )
+    coinbase_webhook_secret = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Webhook secret for Coinbase Commerce"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

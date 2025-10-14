@@ -7,16 +7,16 @@ from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
+    AcademyService,
+    Bag,
     Currency,
     FinancingOption,
-    AcademyService,
     PaymentMethod,
     Plan,
     PlanOfferTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
-    Bag,
 )
 from breathecode.utils import serializers, serpy
 
@@ -773,6 +773,7 @@ class GetPaymentMethod(serpy.Serializer):
     is_backed = serpy.Field()
     lang = serpy.Field()
     is_credit_card = serpy.Field()
+    is_coinbase = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
