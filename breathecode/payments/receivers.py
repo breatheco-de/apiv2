@@ -14,7 +14,9 @@ from breathecode.monitoring import signals as monitoring_signals
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments.models import Invoice
-from breathecode.payments import tasks
+from breathecode.payments import tasks, actions
+from django.db.models.signals import post_save
+
 
 from .models import (
     Consumable,
@@ -33,6 +35,7 @@ from .signals import (
     grant_plan_permissions,
     revoke_plan_permissions,
 )
+from .actions import validate_auto_recharge_service_units
 
 logger = logging.getLogger(__name__)
 
@@ -238,9 +241,14 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
             or plan_strategy == Plan.ConsumptionStrategy.BOTH
         )
 
-        # Issue per-seat consumables only when strategy requires it; otherwise rely on renew task for team-level
+        # Assign existing consumables that were created with user=None to the newly accepted user
         if per_seat_enabled:
-            tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id, seat_id=seat.id)
+            # Update existing consumables for this seat to assign them to the user
+            Consumable.objects.filter(subscription_seat=seat, user__isnull=True).update(user=instance.user)
+
+            # Grant student capabilities for each plan
+            for p in subscription.plans.all():
+                actions.grant_student_capabilities(instance.user, p)
 
 
 # to be able to use unittest instead of integration test
@@ -366,3 +374,30 @@ def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
             return
 
     logger.info("=== END HANDLE STRIPE REFUND RECEIVER ===")
+
+
+def check_consumable_balance_for_auto_recharge(sender: Type[Consumable], instance: Consumable, **kwargs):
+    """
+    Monitor consumable consumption and trigger auto-recharge when balance is low.
+
+    This receiver checks if:
+    1. The consumable belongs to a billing team with auto-recharge enabled
+    2. The current balance (in subscription currency) falls below the threshold
+    3. Monthly spending limit hasn't been exceeded
+
+    If all conditions are met, it triggers a recharge via signal.
+    """
+
+    price, amount, error = validate_auto_recharge_service_units(instance)
+    if error:
+        logger.warning(f"Auto-recharge not allowed for consumable {instance.id}: {error}")
+        return
+
+    if amount <= 0:
+        logger.warning(f"Auto-recharge not allowed for consumable {instance.id}: amount is zero or negative")
+        return
+
+    tasks.process_auto_recharge.delay(instance.id)
+
+
+post_save.connect(check_consumable_balance_for_auto_recharge, sender=Consumable)

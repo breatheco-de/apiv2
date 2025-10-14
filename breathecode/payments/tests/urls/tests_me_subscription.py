@@ -65,21 +65,25 @@ def group_serializer(group, permissions=[]):
 
 def service_serializer(service, groups=[], permissions=[]):
     return {
+        "consumer": "NO_SET",
+        "groups": [group_serializer(group, permissions) for group in groups],
+        "icon_url": service.icon_url,
         "id": service.id,
         "private": service.private,
+        "session_duration": None,
         "slug": service.slug,
         "title": service.title,
-        "icon_url": service.icon_url,
-        "groups": [group_serializer(group, permissions) for group in groups],
+        "type": "COHORT_SET",
     }
 
 
 def service_item_serializer(self, service_item, service, groups=[], permissions=[]):
     return {
         "how_many": service_item.how_many,
-        "unit_type": service_item.unit_type,
-        "sort_priority": service_item.sort_priority,
+        "is_team_allowed": False,
         "service": service_serializer(service, groups, permissions),
+        "sort_priority": service_item.sort_priority,
+        "unit_type": service_item.unit_type,
     }
 
 

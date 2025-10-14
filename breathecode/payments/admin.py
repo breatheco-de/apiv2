@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from django.db.models import Q, Count
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -40,9 +40,9 @@ from breathecode.payments.models import (
     ServiceStockScheduler,
     ServiceTranslation,
     Subscription,
-    SubscriptionServiceItem,
-    SubscriptionSeat,
     SubscriptionBillingTeam,
+    SubscriptionSeat,
+    SubscriptionServiceItem,
 )
 
 # Register your models here.
@@ -126,6 +126,7 @@ class PlanAdmin(admin.ModelAdmin):
         "trial_duration",
         "trial_duration_unit",
         "owner",
+        "exclude_from_referral_program",
     )
     list_filter = [
         "status",
@@ -133,6 +134,7 @@ class PlanAdmin(admin.ModelAdmin):
         "consumption_strategy",
         "is_onboarding",
         "has_waiting_list",
+        "exclude_from_referral_program",
         "trial_duration_unit",
         "time_of_life_unit",
         "owner",
@@ -160,6 +162,7 @@ class PlanAdmin(admin.ModelAdmin):
                     "owner",
                     "is_onboarding",
                     "has_waiting_list",
+                    "exclude_from_referral_program",
                 )
             },
         ),
@@ -320,7 +323,7 @@ class SubscriptionServiceItemAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionSeat)
 class SubscriptionSeatAdmin(admin.ModelAdmin):
-    list_display = ("id", "billing_team", "email", "user", "seat_multiplier")
+    list_display = ("id", "billing_team", "email", "user")
     list_filter = [
         "billing_team__subscription__user__email",
         "billing_team__subscription__user__first_name",
@@ -678,7 +681,7 @@ class CouponAdmin(admin.ModelAdmin):
         "seller__user__first_name",
         "seller__user__last_name",
     ]
-    raw_id_fields = ["seller", "allowed_user"]
+    raw_id_fields = ["seller", "allowed_user", "referred_buyer"]
 
 
 @admin.register(PaymentMethod)

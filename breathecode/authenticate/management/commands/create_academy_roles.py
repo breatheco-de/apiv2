@@ -25,6 +25,7 @@ CAPABILITIES = [
         "slug": "read_assignment_sensitive_details",
         "description": 'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"',
     },
+    {"slug": "read_downloads", "description": "Access the list of downloads"},
     {"slug": "read_shortlink", "description": "Access the list of marketing shortlinks"},
     {"slug": "crud_shortlink", "description": "Create, update and delete marketing short links"},
     {"slug": "crud_assignment", "description": "Update assignments"},
@@ -173,6 +174,7 @@ CAPABILITIES = [
         "slug": "crud_subscription",
         "description": "Create, update or delete subscriptions and plan financings of other users",
     },
+    {"slug": "crud_plan", "description": "Create, update or delete plans and services related to them"},
     {
         "slug": "upload_assignment_telemetry",
         "description": "Allow upload the user's telemetry in a LearnPack assignment",
@@ -193,6 +195,10 @@ CAPABILITIES = [
         "slug": "crud_commission",
         "description": "Create, update or delete commission data and reports",
     },
+    {
+        "slug": "read_consumable",
+        "description": "Read user service consumables to understand how many units are available",
+    },
 ]
 
 ROLES = [
@@ -206,6 +212,7 @@ ROLES = [
         "name": "Academy Token",
         "caps": [
             "read_member",
+            "read_downloads",
             "read_syllabus",
             "read_student",
             "read_all_cohort",
@@ -225,6 +232,7 @@ ROLES = [
             "read_asset",
             "read_category",
             "read_cohort_log",
+            "read_subscription",
             "read_lead_gen_app",
             "read_mentorship_service",
             "read_mentorship_mentor",
@@ -236,6 +244,7 @@ ROLES = [
             "crud_mentorship_session",
             "read_calendly_organization",
             "crud_subscription",
+            "read_consumable",
             "validate_assignment_flag",
         ],
     },
@@ -252,6 +261,7 @@ ROLES = [
             "read_activity",
             "read_technology",
             "read_academyservice",
+            "read_subscription",
             "upload_assignment_telemetry",
         ],
     },
@@ -283,6 +293,7 @@ ROLES = [
             "read_mentorship_mentor",
             "read_lead_gen_app",
             "read_technology",
+            "read_subscription",
             "read_service",
         ],
     },
@@ -318,6 +329,7 @@ ROLES = [
             "read_lead_gen_app",
             "read_technology",
             "read_service",
+            "read_subscription",
             "read_survey_template",
         ],
     },
@@ -338,6 +350,7 @@ ROLES = [
             "read_mentorship_mentor",
             "read_cohort_log",
             "read_service",
+            "read_subscription",
             "read_academyservice",
             "upload_assignment_telemetry",
             "validate_assignment_flag",
@@ -487,7 +500,14 @@ def extend_roles(roles: list[RoleType]) -> None:
             "slug": "syllabus_coordinator",
             "name": "Syllabus Coordinator",
             "caps": extend(roles, ["staff", "content_writer"])
-            + ["crud_syllabus", "crud_media", "crud_technology", "read_freelancer_bill", "crud_freelancer_bill"],
+            + [
+                "crud_syllabus",
+                "crud_certificate",
+                "crud_media",
+                "crud_technology",
+                "read_freelancer_bill",
+                "crud_freelancer_bill",
+            ],
         }
     )
     roles.append(
@@ -531,6 +551,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             "caps": extend(roles, ["staff", "community_manager"])
             + [
                 "crud_media",
+                "read_consumable",
                 "read_activity",
                 "read_lead",
                 "read_user_assessment",
@@ -590,6 +611,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             "name": "Mentor in residence",
             "caps": extend(roles, ["teacher"])
             + [
+                "read_consumable",
                 "crud_syllabus",
                 "crud_cohort",
                 "crud_student",
@@ -628,7 +650,6 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "get_academy_feedback_settings",
                 "crud_academy_feedback_settings",
                 "get_academy_auth_settings",
-                "read_subscription",
                 "crud_subscription",
                 "read_commission",
                 "crud_commission",

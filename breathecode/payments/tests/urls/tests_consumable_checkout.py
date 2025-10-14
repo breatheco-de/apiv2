@@ -78,18 +78,21 @@ def format_invoice_item(data={}):
     return {
         "academy_id": 1,
         "amount": 0.0,
-        "currency_id": 1,
+        "amount_refunded": 0.0,
         "bag_id": 1,
+        "currency_id": 1,
+        "externally_managed": False,
         "id": 1,
         "paid_at": UTC_NOW,
-        "status": "FULFILLED",
-        "stripe_id": None,
-        "user_id": 1,
-        "refund_stripe_id": None,
-        "refunded_at": None,
-        "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "refund_stripe_id": None,
+        "refunded_at": None,
+        "status": "FULFILLED",
+        "stripe_id": None,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
+        "user_id": 1,
         **data,
     }
 
@@ -1053,6 +1056,9 @@ def test_checkout_with_country_code_and_exceptions(
         "externally_managed": False,
         "payment_method_id": None,
         "proof_id": None,
+        "amount_refunded": 0.0,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
     }
     assert database.list_of("payments.Invoice") == [expected_invoice_data]
 
@@ -1117,6 +1123,8 @@ def test_seats__subscription_is_required(database, client: APIClient):
 
 
 @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+@patch("stripe.Customer.create", MagicMock(return_value={"id": "cus_mock"}))
+@patch("stripe.Charge.create", MagicMock(return_value={"id": "ch_mock"}))
 def test_seats__seats_required(database, client: APIClient):
     # Create plan and subscription without billing team
     plan = {"is_renewable": False, "trial_duration": 0}
@@ -1138,15 +1146,14 @@ def test_seats__seats_required(database, client: APIClient):
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,
+        # Not passing how_many to test validation
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        # missing seats
     }
     response = client.post(url, data, format="json")
 
     json = response.json()
-    expected = {"detail": "seats-required", "status_code": 400}
+    expected = {"detail": "how-many-is-required", "status_code": 400}
 
     assert json == expected
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -1195,10 +1202,9 @@ def test_seats__purchase_creates_team_and_owner_seat(database, client: APIClient
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,  # base validation requirement
+        "how_many": desired_seats,  # seats count
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        "seats": desired_seats,
     }
     response = client.post(url, data, format="json")
 
@@ -1292,18 +1298,17 @@ def test_seats__purchase_creates_team_sets_strategy_from_plan(database, client: 
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,
+        "how_many": desired_seats,  # seats count
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        "seats": desired_seats,
     }
     response = client.post(url, data, format="json")
 
     assert response.status_code == status.HTTP_201_CREATED
 
-    # Team should be created with desired seats and strategy from plan
+    # Team should be created with desired seats + 1 (owner seat is free) and strategy from plan
     team = SubscriptionBillingTeam.objects.get(subscription=model.subscription)
-    assert team.seats_limit == desired_seats
+    assert team.seats_limit == desired_seats + 1
     assert team.consumption_strategy == "PER_TEAM"
 
     # Scheduler should be triggered only when team is created
@@ -1360,10 +1365,9 @@ def test_seats__existing_team_updates_strategy_from_plan(database, client: APICl
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,
+        "how_many": desired_seats,  # seats count
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        "seats": desired_seats,
     }
     response = client.post(url, data, format="json")
 
@@ -1429,10 +1433,9 @@ def test_seats__increase_existing_team_delta_only(database, client: APIClient):
     url = reverse_lazy("payments:consumable_checkout")
     data = {
         "service": model.service.id,
-        "how_many": 1,
+        "how_many": desired_seats,  # seats count
         "academy": model.academy.id,
         "subscription": model.subscription.id,
-        "seats": desired_seats,
     }
     response = client.post(url, data, format="json")
 
@@ -1458,6 +1461,7 @@ def test_seats__increase_existing_team_delta_only(database, client: APIClient):
             {
                 "stripe_id": "1",
                 "amount": float(amount),
+                "subscription_billing_team_id": 1,
             }
         )
     ]

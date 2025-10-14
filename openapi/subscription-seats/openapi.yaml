@@ -1,0 +1,888 @@
+openapi: 3.0.3
+info:
+  title: 4Geeks Subscription & Seats API
+  description: |
+    API endpoints for managing subscriptions, seats, and consumables in the 4Geeks platform.
+
+    This API supports:
+    - PER_SEAT and PER_TEAM consumption strategies
+    - Subscription creation and management
+    - Seat lifecycle (add, replace, delete)
+    - Consumable checkout and management
+    - Auto-recharge configuration
+
+    ## Authentication
+    All endpoints require Bearer token authentication.
+
+    ## Consumption Strategies
+    - **PER_SEAT**: Each seat holder gets isolated consumables
+    - **PER_TEAM**: All team members share team-owned consumables
+
+  version: 1.0.0
+  contact:
+    name: 4Geeks API Support
+    url: https://4geeks.com
+    email: support@4geeks.com
+
+servers:
+  - url: https://breathecode.herokuapp.com
+    description: Production server
+  - url: https://api.staging.4geeks.com
+    description: Staging server
+  - url: http://localhost:8000
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Plans
+    description: Plan management and preview
+  - name: Payment
+    description: Payment and checkout operations
+  - name: Subscriptions
+    description: Subscription management
+  - name: Seats
+    description: Seat management for team subscriptions
+  - name: Consumables
+    description: Consumable management and checkout
+  - name: Assets
+    description: Asset access (lessons, resources)
+  - name: Billing Team
+    description: Billing team configuration and auto-recharge
+
+paths:
+  /v1/payments/plan/{plan_slug}:
+    get:
+      tags:
+        - Plans
+      summary: Get plan details
+      description: Retrieve detailed information about a specific plan
+      operationId: getPlan
+      parameters:
+        - name: plan_slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: 4geeks-premium
+      responses:
+        '200':
+          description: Plan details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+              example:
+                id: 1
+                slug: 4geeks-premium
+                title: 4Geeks Premium
+                consumption_strategy: PER_SEAT
+                seat_service_price:
+                  id: 10
+                  service:
+                    slug: seat-service
+                    consumer: READ_LESSON
+                  price_per_unit: 5.00
+                service_items:
+                  - id: 1
+                    service:
+                      slug: lesson-access
+                      consumer: READ_LESSON
+                    how_many: 100
+                    is_team_allowed: true
+
+  /v1/payments/checking:
+    post:
+      tags:
+        - Payment
+      summary: Preview or create bag
+      description: |
+        Preview a plan purchase or create a bag for checkout.
+        - Use `type: PREVIEW` to preview without creating a bag
+        - Use `type: BAG` to create a bag and get a token
+        - Include `team_seats` for PER_TEAM plans
+      operationId: checking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - plans
+              properties:
+                type:
+                  type: string
+                  enum: [PREVIEW, BAG]
+                  description: Preview or create bag
+                plans:
+                  type: array
+                  items:
+                    type: integer
+                  description: Array of plan IDs
+                team_seats:
+                  type: integer
+                  description: Number of team seats (for PER_TEAM plans)
+                  minimum: 1
+            examples:
+              preview:
+                summary: Preview without seats
+                value:
+                  type: PREVIEW
+                  plans: [1]
+              preview_with_seats:
+                summary: Preview with team seats
+                value:
+                  type: PREVIEW
+                  plans: [1]
+                  team_seats: 3
+              create_bag:
+                summary: Create bag for checkout
+                value:
+                  type: BAG
+                  plans: [1]
+                  team_seats: 3
+      responses:
+        '200':
+          description: Preview or bag created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Bag token (only for type=BAG)
+                  amount:
+                    type: number
+                  seat_service_item:
+                    type: object
+                    nullable: true
+              examples:
+                preview:
+                  value:
+                    amount: 99.00
+                    seat_service_item: null
+                preview_with_seats:
+                  value:
+                    amount: 149.00
+                    seat_service_item:
+                      id: 10
+                      how_many: 3
+                bag:
+                  value:
+                    token: bag_abc123xyz
+                    amount: 149.00
+
+  /v1/payments/card:
+    put:
+      tags:
+        - Payment
+      summary: Add payment card
+      description: Attach a payment card to the user account
+      operationId: addCard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - card_number
+                - cvc
+                - exp_month
+                - exp_year
+              properties:
+                card_number:
+                  type: string
+                  example: "4242424242424242"
+                cvc:
+                  type: string
+                  example: "123"
+                exp_month:
+                  type: string
+                  example: "12"
+                exp_year:
+                  type: string
+                  example: "2035"
+      responses:
+        '200':
+          description: Card added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /v1/payments/pay:
+    post:
+      tags:
+        - Payment
+      summary: Pay for a plan
+      description: Process payment for a bag and create subscription
+      operationId: pay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - chosen_period
+              properties:
+                token:
+                  type: string
+                  description: Bag token from /checking
+                chosen_period:
+                  type: string
+                  enum: [MONTH, QUARTER, HALF, YEAR]
+            example:
+              token: bag_abc123xyz
+              chosen_period: MONTH
+      responses:
+        '200':
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  amount:
+                    type: number
+                  status:
+                    type: string
+              example:
+                amount: 149.00
+                status: PAID
+
+  /v1/payments/me/subscription:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get user subscriptions
+      description: Retrieve all subscriptions for the authenticated user
+      operationId: getMySubscriptions
+      responses:
+        '200':
+          description: User subscriptions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscriptions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Subscription'
+              example:
+                subscriptions:
+                  - id: 1
+                    status: ACTIVE
+                    plans:
+                      - id: 1
+                        slug: 4geeks-premium
+                    has_billing_team: true
+
+  /v2/payments/subscription/{subscription_id}/billing-team:
+    get:
+      tags:
+        - Billing Team
+      summary: Get billing team
+      description: Retrieve billing team configuration for a subscription
+      operationId: getBillingTeam
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Billing team details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingTeam'
+              example:
+                id: 1
+                subscription: 123
+                name: Team 123
+                seats_limit: 3
+                seats_count: 2
+                seats_log: []
+                auto_recharge_enabled: true
+                recharge_threshold_amount: "10.00"
+                recharge_amount: "20.00"
+                max_period_spend: "100.00"
+                current_period_spend: 45.00
+                period_start: "2025-01-15T00:00:00Z"
+                period_end: "2025-02-15T00:00:00Z"
+                currency: "USD"
+
+    put:
+      tags:
+        - Billing Team
+      summary: Update billing team
+      description: |
+        Update billing team auto-recharge configuration.
+        Only billing-related fields can be modified.
+      operationId: updateBillingTeam
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                auto_recharge_enabled:
+                  type: boolean
+                  description: Enable/disable automatic recharge
+                recharge_threshold_amount:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  description: Balance threshold to trigger recharge (in subscription currency)
+                recharge_amount:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  description: Amount to recharge when threshold is reached
+                max_period_spend:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  nullable: true
+                  description: Maximum spending per monthly period (null = unlimited)
+            example:
+              auto_recharge_enabled: true
+              recharge_threshold_amount: 10.00
+              recharge_amount: 20.00
+              max_period_spend: 100.00
+      responses:
+        '200':
+          description: Billing team updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingTeam'
+              example:
+                id: 1
+                subscription: 123
+                name: Team 123
+                seats_limit: 3
+                seats_count: 2
+                seats_log: []
+                auto_recharge_enabled: true
+                recharge_threshold_amount: "10.00"
+                recharge_amount: "20.00"
+                max_period_spend: "100.00"
+                current_period_spend: 0.00
+                period_start: "2025-01-15T00:00:00Z"
+                period_end: "2025-02-15T00:00:00Z"
+                currency: "USD"
+
+  /v2/payments/subscription/{subscription_id}/billing-team/seat:
+    get:
+      tags:
+        - Seats
+      summary: Get subscription seats
+      description: Retrieve all seats for a subscription
+      operationId: getSeats
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of seats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Seat'
+              example:
+                - id: 1
+                  user: 456
+                  email: owner@example.com
+                  is_active: true
+                - id: 2
+                  user: null
+                  email: lord@valomero.com
+                  is_active: true
+
+    put:
+      tags:
+        - Seats
+      summary: Manage seats
+      description: Add or replace seats in a subscription
+      operationId: manageSeats
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                add_seats:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - email
+                    properties:
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                replace_seats:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - from_email
+                      - to_email
+                    properties:
+                      from_email:
+                        type: string
+                      to_email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+            examples:
+              add_seat:
+                summary: Add new seat
+                value:
+                  add_seats:
+                    - email: lord@valomero.com
+                      first_name: Lord
+                      last_name: Valomero
+              replace_seat:
+                summary: Replace pending seat
+                value:
+                  replace_seats:
+                    - from_email: lord@valomero.com
+                      to_email: user2@example.com
+                      first_name: User
+                      last_name: Two
+      responses:
+        '200':
+          description: Seats updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Seat'
+
+  /v2/payments/subscription/{subscription_id}/billing-team/seat/{seat_id}:
+    delete:
+      tags:
+        - Seats
+      summary: Delete seat
+      description: Remove a seat from a subscription
+      operationId: deleteSeat
+      parameters:
+        - name: subscription_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: seat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Seat deleted successfully
+
+  /v2/payments/consumable/checkout:
+    post:
+      tags:
+        - Consumables
+      summary: Consumable checkout
+      description: |
+        Purchase additional consumables (seats) for an existing subscription.
+        This creates a billing team if it doesn't exist and adds seats.
+      operationId: consumableCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - service
+                - how_many
+                - subscription
+              properties:
+                service:
+                  type: string
+                  description: Service slug (seat service)
+                how_many:
+                  type: integer
+                  description: Number of seats to purchase
+                  minimum: 1
+                subscription:
+                  type: integer
+                  description: Subscription ID
+                is_team_allowed:
+                  type: boolean
+                  description: Whether this is for team seats
+                  default: true
+            example:
+              service: seat-service
+              how_many: 3
+              subscription: 123
+      responses:
+        '200':
+          description: Checkout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /v1/provisioning/me/consumables:
+    get:
+      tags:
+        - Consumables
+      summary: Get user consumables
+      description: |
+        Retrieve all consumables for the authenticated user.
+        Returns consumables grouped by service consumer type.
+      operationId: getMyConsumables
+      responses:
+        '200':
+          description: User consumables
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      service:
+                        type: string
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Consumable'
+              examples:
+                per_seat:
+                  summary: PER_SEAT consumables
+                  value:
+                    READ_LESSON:
+                      - service: lesson-access
+                        items:
+                          - id: 1
+                            user: 456
+                            subscription: 123
+                            subscription_seat: 1
+                            subscription_billing_team: 1
+                            how_many: 50
+                          - id: 2
+                            user: 456
+                            subscription: 123
+                            subscription_seat: null
+                            subscription_billing_team: null
+                            how_many: 10
+                per_team:
+                  summary: PER_TEAM consumables
+                  value:
+                    READ_LESSON:
+                      - service: lesson-access
+                        items:
+                          - id: 1
+                            user: 456
+                            subscription: 123
+                            subscription_seat: null
+                            subscription_billing_team: null
+                            how_many: 10
+                          - id: 2
+                            user: null
+                            subscription: 123
+                            subscription_seat: null
+                            subscription_billing_team: 1
+                            how_many: 50
+
+  /v1/registry/asset/{asset_slug}:
+    get:
+      tags:
+        - Assets
+      summary: Access asset
+      description: |
+        Access a protected asset (lesson, resource).
+        Requires valid consumables for the asset's service.
+      operationId: getAsset
+      parameters:
+        - name: asset_slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: brute-forcelab-lumi
+        - name: academy
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Academy ID
+      responses:
+        '200':
+          description: Asset accessible
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slug:
+                    type: string
+                  title:
+                    type: string
+                  content:
+                    type: string
+        '403':
+          description: Access denied (no consumables)
+
+  /v1/auth/me:
+    get:
+      tags:
+        - User
+      summary: Get current user
+      description: Retrieve authenticated user information
+      operationId: getMe
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  email:
+                    type: string
+                  first_name:
+                    type: string
+                  last_name:
+                    type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from authentication.
+        Set as environment variable: FTT_USER_TOKEN1, FTT_USER_TOKEN2, etc.
+
+  schemas:
+    Plan:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        consumption_strategy:
+          type: string
+          enum: [PER_SEAT, PER_TEAM, BOTH]
+        seat_service_price:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            service:
+              type: object
+              properties:
+                slug:
+                  type: string
+                consumer:
+                  type: string
+            price_per_unit:
+              type: number
+        service_items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              service:
+                type: object
+                properties:
+                  slug:
+                    type: string
+                  consumer:
+                    type: string
+              how_many:
+                type: integer
+              is_team_allowed:
+                type: boolean
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [ACTIVE, CANCELLED, PAYMENT_ISSUE, ERROR, EXPIRED, DEPRECATED]
+        plans:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              slug:
+                type: string
+        has_billing_team:
+          type: boolean
+        user:
+          type: integer
+        academy:
+          type: integer
+        currency:
+          type: object
+          properties:
+            code:
+              type: string
+            name:
+              type: string
+
+    BillingTeam:
+      type: object
+      properties:
+        id:
+          type: integer
+        subscription:
+          type: integer
+        name:
+          type: string
+        seats_limit:
+          type: integer
+        consumption_strategy:
+          type: string
+          enum: [PER_SEAT, PER_TEAM]
+        auto_recharge_enabled:
+          type: boolean
+          description: Enable automatic consumable recharge
+        recharge_threshold_amount:
+          type: number
+          format: decimal
+          description: Trigger recharge when balance falls below this (in subscription currency)
+        recharge_amount:
+          type: number
+          format: decimal
+          description: Amount to recharge (in subscription currency)
+        max_monthly_spend:
+          type: number
+          format: decimal
+          nullable: true
+          description: Maximum monthly spending limit (null = unlimited)
+        current_month_spend:
+          type: number
+          format: decimal
+          description: Current month spending
+        last_recharge_reset_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Seat:
+      type: object
+      properties:
+        id:
+          type: integer
+        user:
+          type: integer
+          nullable: true
+          description: User ID (null for pending invites)
+        email:
+          type: string
+        is_active:
+          type: boolean
+
+    Consumable:
+      type: object
+      properties:
+        id:
+          type: integer
+        user:
+          type: integer
+          nullable: true
+          description: User ID (null for team-owned consumables)
+        subscription:
+          type: integer
+          nullable: true
+        subscription_seat:
+          type: integer
+          nullable: true
+          description: Seat ID (for PER_SEAT consumables)
+        subscription_billing_team:
+          type: integer
+          nullable: true
+          description: Billing team ID (for team consumables)
+        how_many:
+          type: integer
+          description: Available units (-1 = unlimited)
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+        service_item:
+          type: object
+          properties:
+            id:
+              type: integer
+            service:
+              type: object
+              properties:
+                slug:
+                  type: string
+                consumer:
+                  type: string
+
+  examples:
+    TestCard:
+      summary: Test credit card
+      value:
+        card_number: "4242424242424242"
+        cvc: "123"
+        exp_month: "12"
+        exp_year: "2035"

@@ -14,13 +14,12 @@ def factory():
     return APIRequestFactory()
 
 
-def build_seat(id=1, email="a@b.com", user_id=None, seat_multiplier=1, is_active=True, seat_log=None):
+def build_seat(id=1, email="a@b.com", user_id=None, is_active=True, seat_log=None):
     """Build a fake seat object for view tests."""
     seat = MagicMock()
     seat.id = id
     seat.email = email
     seat.user_id = user_id
-    seat.seat_multiplier = seat_multiplier
     seat.is_active = is_active
     seat.seat_log = seat_log or []
     return seat
@@ -56,8 +55,8 @@ def test_get_list_ok(mock_get_subscription, mock_get_team, mock_get_seats, mock_
     mock_get_subscription.return_value = build_subscription()
     mock_get_team.return_value = build_team()
 
-    seat1 = build_seat(id=1, email="x@y.com", user_id=1, seat_multiplier=2)
-    seat2 = build_seat(id=2, email="y@z.com", user_id=None, seat_multiplier=1)
+    seat1 = build_seat(id=1, email="x@y.com", user_id=1)
+    seat2 = build_seat(id=2, email="y@z.com", user_id=None)
     mock_get_seats.return_value = [seat1, seat2]
 
     request = factory.get("/v2/payments/subscriptions/99/seats")
@@ -72,7 +71,6 @@ def test_get_list_ok(mock_get_subscription, mock_get_team, mock_get_seats, mock_
             "id": 1,
             "email": "x@y.com",
             "user": 1,
-            "seat_multiplier": 2,
             "is_active": True,
             "seat_log": [],
         },
@@ -80,7 +78,6 @@ def test_get_list_ok(mock_get_subscription, mock_get_team, mock_get_seats, mock_
             "id": 2,
             "email": "y@z.com",
             "user": None,
-            "seat_multiplier": 1,
             "is_active": True,
             "seat_log": [],
         },
@@ -134,8 +131,8 @@ def test_get_list_ok_integration_db(client):
     team = SubscriptionBillingTeam.objects.create(subscription=sub, name="Team", seats_limit=10)
 
     u1 = User.objects.create(username="u1", email="x@y.com")
-    SubscriptionSeat.objects.create(billing_team=team, email="x@y.com", user=u1, seat_multiplier=2)
-    SubscriptionSeat.objects.create(billing_team=team, email="y@z.com", user=None, seat_multiplier=1)
+    SubscriptionSeat.objects.create(billing_team=team, email="x@y.com", user=u1)
+    SubscriptionSeat.objects.create(billing_team=team, email="y@z.com", user=None)
 
     # Act: call real endpoint
     client.force_authenticate(user=owner)
@@ -151,12 +148,10 @@ def test_get_list_ok_integration_db(client):
 
     assert data[0]["email"] == "x@y.com"
     assert data[0]["user"] == u1.id
-    assert data[0]["seat_multiplier"] == 2
     assert data[0]["is_active"] is True
 
     assert data[1]["email"] == "y@z.com"
     assert data[1]["user"] is None
-    assert data[1]["seat_multiplier"] == 1
     assert data[1]["is_active"] is True
 
 
@@ -223,20 +218,20 @@ def test_put_add_seats_happy_path(
     mock_get_team.return_value = team
 
     mock_norm_add.return_value = [
-        MagicMock(email="a@b.com", user=10, seat_multiplier=2, first_name="A", last_name="B"),
-        MagicMock(email="c@d.com", user=None, seat_multiplier=1, first_name="C", last_name="D"),
+        MagicMock(email="a@b.com", user=10, first_name="A", last_name="B"),
+        MagicMock(email="c@d.com", user=None, first_name="C", last_name="D"),
     ]
 
-    seat1 = build_seat(id=1, email="a@b.com", user_id=10, seat_multiplier=2)
-    seat2 = build_seat(id=2, email="c@d.com", user_id=None, seat_multiplier=1)
+    seat1 = build_seat(id=1, email="a@b.com", user_id=10)
+    seat2 = build_seat(id=2, email="c@d.com", user_id=None)
     mock_create_seat.side_effect = [seat1, seat2]
 
     request = factory.put(
         "/v2/payments/subscriptions/99/seats",
         data={
             "add_seats": [
-                {"email": "a@b.com", "seat_multiplier": 2, "first_name": "A", "last_name": "B"},
-                {"email": "c@d.com", "seat_multiplier": 1, "first_name": "C", "last_name": "D"},
+                {"email": "a@b.com", "first_name": "A", "last_name": "B"},
+                {"email": "c@d.com", "first_name": "C", "last_name": "D"},
             ]
         },
         format="json",
@@ -256,7 +251,6 @@ def test_put_add_seats_happy_path(
             "id": 1,
             "email": "a@b.com",
             "user": 10,
-            "seat_multiplier": 2,
             "is_active": True,
             "seat_log": [],
         },
@@ -264,7 +258,6 @@ def test_put_add_seats_happy_path(
             "id": 2,
             "email": "c@d.com",
             "user": None,
-            "seat_multiplier": 1,
             "is_active": True,
             "seat_log": [],
         },
@@ -297,11 +290,11 @@ def test_put_add_seats_with_errors(
     mock_get_team.return_value = team
 
     mock_norm_add.return_value = [
-        MagicMock(email="a@b.com", user=10, seat_multiplier=2, first_name="A", last_name="B"),
-        MagicMock(email="bad", user=None, seat_multiplier=1, first_name="C", last_name="D"),
+        MagicMock(email="a@b.com", user=10, first_name="A", last_name="B"),
+        MagicMock(email="bad", user=None, first_name="C", last_name="D"),
     ]
 
-    seat1 = build_seat(id=1, email="a@b.com", user_id=10, seat_multiplier=2)
+    seat1 = build_seat(id=1, email="a@b.com", user_id=10)
     # first succeeds, second raises validation error
     mock_create_seat.side_effect = [seat1, ValidationException("invalid-email", code=400)]
 
@@ -309,8 +302,8 @@ def test_put_add_seats_with_errors(
         "/v2/payments/subscriptions/99/seats",
         data={
             "add_seats": [
-                {"email": "a@b.com", "seat_multiplier": 2, "first_name": "A", "last_name": "B"},
-                {"email": "bad", "seat_multiplier": 1, "first_name": "C", "last_name": "D"},
+                {"email": "a@b.com", "first_name": "A", "last_name": "B"},
+                {"email": "bad", "first_name": "C", "last_name": "D"},
             ]
         },
         format="json",
@@ -327,6 +320,7 @@ def test_put_add_seats_with_errors(
     assert resp.data["errors"] == [{"message": "invalid-email", "code": 400}]
 
 
+@pytest.mark.django_db
 @patch("breathecode.payments.views.get_user_language", return_value="en")
 @patch("breathecode.payments.views.SubscriptionSeat.objects")
 @patch("breathecode.payments.views.SubscriptionSeatView._get_subscription")
@@ -408,8 +402,8 @@ def test_put_add_seats_integration_db(client):
 
     payload = {
         "add_seats": [
-            {"email": "a@b.com", "seat_multiplier": 2, "first_name": "A", "last_name": "B"},
-            {"email": "c@d.com", "seat_multiplier": 1, "first_name": "C", "last_name": "D"},
+            {"email": "a@b.com", "first_name": "A", "last_name": "B"},
+            {"email": "c@d.com", "first_name": "C", "last_name": "D"},
         ]
     }
 
@@ -419,20 +413,18 @@ def test_put_add_seats_integration_db(client):
         patch("breathecode.payments.views.actions.normalize_replace_seat", return_value=[]),
         patch("breathecode.payments.views.actions.validate_seats_limit"),
     ):
-
-        # objects holding attributes
+        # return dicts as normalize_add_seats would in production
         mock_norm.return_value = [
-            type("SeatObj", (), {"email": "a@b.com", "user": u1, "seat_multiplier": 2})(),
-            type("SeatObj", (), {"email": "c@d.com", "user": u2, "seat_multiplier": 1})(),
+            {"email": "a@b.com", "user": u1},
+            {"email": "c@d.com", "user": u2},
         ]
 
         # create_seat to persist into DB
-        def create_seat_side_effect(email, user, seat_multiplier, billing_team, lang):
+        def create_seat_side_effect(email, user, billing_team, lang):
             return SubscriptionSeat.objects.create(
                 billing_team=team,
                 user=user,
                 email=email,
-                seat_multiplier=seat_multiplier,
             )
 
         with patch("breathecode.payments.views.actions.create_seat", side_effect=create_seat_side_effect):
@@ -471,7 +463,7 @@ def test_delete_happy_path_integration_db(client):
         next_payment_at=timezone.now(),
     )
     team = SubscriptionBillingTeam.objects.create(subscription=sub, name="Team", seats_limit=10)
-    seat = SubscriptionSeat.objects.create(billing_team=team, email="bye@x.com", user=None, seat_multiplier=1)
+    seat = SubscriptionSeat.objects.create(billing_team=team, email="bye@x.com", user=None)
 
     client.force_authenticate(user=owner)
     url = f"/v2/payments/subscription/{sub.id}/billing-team/seat/{seat.id}"
@@ -481,3 +473,146 @@ def test_delete_happy_path_integration_db(client):
     seat.refresh_from_db()
     assert seat.is_active is False
     assert seat.user is None
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "invalid_email",
+    [
+        "informacionlmdvgmail.com",  # Missing @
+        "user@",  # Missing domain
+        "@example.com",  # Missing local part
+        "user name@example.com",  # Space in local part
+        "user..name@example.com",  # Consecutive dots
+        "user@",  # Incomplete domain
+        "",  # Empty email
+        "not-an-email",  # No @ symbol
+    ],
+)
+def test_put_add_seats_with_invalid_email(client, invalid_email):
+    """PUT add_seats with invalid email format returns 207 with error."""
+    from capyc.rest_framework.exceptions import ValidationException
+
+    # Arrange
+    country = Country.objects.create(code="US", name="United States")
+    city = City.objects.create(name="Miami", country=country)
+    academy = Academy.objects.create(
+        slug="academy",
+        name="Academy",
+        logo_url="https://example.com/logo.png",
+        street_address="123 Main St",
+        city=city,
+        country=country,
+    )
+
+    owner = User.objects.create(username="owner", email="owner@example.com")
+    sub = Subscription.objects.create(
+        user=owner,
+        academy=academy,
+        paid_at=timezone.now(),
+        next_payment_at=timezone.now(),
+    )
+    team = SubscriptionBillingTeam.objects.create(subscription=sub, name="Team", seats_limit=10)
+
+    payload = {
+        "add_seats": [
+            {"email": invalid_email, "first_name": "Test", "last_name": "User"},
+        ]
+    }
+
+    # Patch normalizers and validator
+    with (
+        patch("breathecode.payments.views.actions.normalize_add_seats") as mock_norm,
+        patch("breathecode.payments.views.actions.normalize_replace_seat", return_value=[]),
+        patch("breathecode.payments.views.actions.validate_seats_limit"),
+        patch("breathecode.payments.actions.validate_email") as mock_validate_email,
+    ):
+        mock_norm.return_value = [{"email": invalid_email, "user": None}]
+        # Mock validate_email to raise ValidationException for invalid emails
+        mock_validate_email.side_effect = ValidationException("invalid-email", code=400)
+
+        # Act
+        client.force_authenticate(user=owner)
+        url = f"/v2/payments/subscription/{sub.id}/billing-team/seat"
+        resp = client.put(url, data=payload, content_type="application/json")
+
+    # Assert
+    assert resp.status_code == status.HTTP_207_MULTI_STATUS
+    data = resp.json()
+    assert len(data["errors"]) == 1
+    assert len(data["data"]) == 0
+    assert "invalid-email" in data["errors"][0]["message"]
+    assert data["errors"][0]["code"] == 400
+    # Ensure no seat was created in DB
+    assert SubscriptionSeat.objects.filter(billing_team=team).count() == 0
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "invalid_email",
+    [
+        "newusergmail.com",  # Missing @
+        "user@",  # Missing domain
+        "@example.com",  # Missing local part
+        "",  # Empty email
+    ],
+)
+def test_put_replace_seats_with_invalid_email(client, invalid_email):
+    """PUT replace_seats with invalid email format returns 207 with error."""
+    from capyc.rest_framework.exceptions import ValidationException
+
+    # Arrange
+    country = Country.objects.create(code="US", name="United States")
+    city = City.objects.create(name="Miami", country=country)
+    academy = Academy.objects.create(
+        slug="academy",
+        name="Academy",
+        logo_url="https://example.com/logo.png",
+        street_address="123 Main St",
+        city=city,
+        country=country,
+    )
+
+    owner = User.objects.create(username="owner", email="owner@example.com")
+    sub = Subscription.objects.create(
+        user=owner,
+        academy=academy,
+        paid_at=timezone.now(),
+        next_payment_at=timezone.now(),
+    )
+    team = SubscriptionBillingTeam.objects.create(subscription=sub, name="Team", seats_limit=10)
+    # Create an existing seat to replace
+    old_seat = SubscriptionSeat.objects.create(billing_team=team, email="old@example.com", user=None)
+
+    payload = {
+        "replace_seats": [
+            {"from_email": "old@example.com", "to_email": invalid_email},
+        ]
+    }
+
+    # Patch normalizers and validator
+    with (
+        patch("breathecode.payments.views.actions.normalize_add_seats", return_value=[]),
+        patch("breathecode.payments.views.actions.normalize_replace_seat") as mock_norm_replace,
+        patch("breathecode.payments.views.actions.validate_seats_limit"),
+        patch("breathecode.payments.actions.validate_email") as mock_validate_email,
+    ):
+        mock_norm_replace.return_value = [{"from_email": "old@example.com", "to_email": invalid_email, "to_user": None}]
+        # Mock validate_email to raise ValidationException for invalid emails
+        mock_validate_email.side_effect = ValidationException("invalid-email", code=400)
+
+        # Act
+        client.force_authenticate(user=owner)
+        url = f"/v2/payments/subscription/{sub.id}/billing-team/seat"
+        resp = client.put(url, data=payload, content_type="application/json")
+
+    # Assert
+    assert resp.status_code == status.HTTP_207_MULTI_STATUS
+    data = resp.json()
+    assert len(data["errors"]) == 1
+    assert len(data["data"]) == 0
+    assert "invalid-email" in data["errors"][0]["message"]
+    assert data["errors"][0]["code"] == 400
+    # Ensure old seat was not modified
+    old_seat.refresh_from_db()
+    assert old_seat.email == "old@example.com"

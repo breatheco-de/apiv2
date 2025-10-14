@@ -83,6 +83,18 @@ def validate_email(email, lang):
     }
     """
 
+    pattern = r"^[^@]+@[^@]+\.[^@]+$"
+    if not isinstance(email, str) or not email or not re.match(pattern, email):
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address is not valid",
+                es="La dirección de correo electrónico no es válida",
+                slug="email-not-valid",
+            ),
+            data={"email": email},
+        )
+
     resp = requests.get(
         f"https://emailvalidation.abstractapi.com/v1/?api_key={MAIL_ABSTRACT_KEY}&email={email}", timeout=10
     )

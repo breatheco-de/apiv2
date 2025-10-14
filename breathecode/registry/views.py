@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.parse import urlparse
 import aiohttp
 import requests
 import base64
@@ -26,12 +26,11 @@ from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from slugify import slugify
-from django.utils import timezone
 
 
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.actions import get_user_language
-from breathecode.authenticate.models import ProfileAcademy, User, CredentialsGithub, Token
+from breathecode.authenticate.models import ProfileAcademy, User, CredentialsGithub
 from breathecode.notify.actions import send_email_message
 from breathecode.registry.permissions.consumers import asset_by_slug
 from breathecode.services.seo import SEOAnalyzer
@@ -173,104 +172,99 @@ def handle_internal_link(request):
         return render_message(request, "Missing asset parameter", status=400)
     if not file_path:
         return render_message(request, "Missing path parameter", status=400)
-    
-    # Strip query string from file_path to get the correct file extension
+
     parsed_path = urlparse(file_path)
-    clean_file_path = parsed_path.path  # Get the path without query string
-    file_extension = Path(clean_file_path).suffix.lower()  # Extract extension from clean path
-    
+    clean_file_path = parsed_path.path
+    file_extension = Path(clean_file_path).suffix.lower()
+
     # Get the asset
     try:
         asset = Asset.objects.get(id=asset_id)
     except Asset.DoesNotExist:
         return render_message(request, f"Asset with id {asset_id} not found", status=404)
-    
+
     # Check if asset has an owner with GitHub credentials
     if not asset.owner:
         return render_message(request, "Asset has no owner configured", status=400)
     credentials = CredentialsGithub.objects.filter(user=asset.owner).first()
     if not credentials:
         return render_message(request, "No GitHub credentials found for asset owner", status=400)
-    
+
     # Optional token validation for private access
     if token:
         try:
-            valid_token = Token.objects.filter(key=token).first()
-            if not valid_token or (valid_token.expires_at and valid_token.expires_at < timezone.now()):
-                return render_message(request, "Invalid or expired token", status=401)
+            return render_message(request, "Invalid or expired token", status=401)
         except Exception:
             return render_message(request, "Invalid token", status=401)
-    
+
     # Get repository information from asset
     try:
         org_name, repo_name, branch_name = asset.get_repo_meta()
     except Exception as e:
         logger.error(f"Error parsing repository metadata for asset {asset_id}: {str(e)}")
         return render_message(request, "Invalid repository URL in asset", status=400)
-    
+
     # Use GitHub API to fetch the file content
     try:
         github = Github(credentials.token)
-        # Construct the API URL for the file (use clean_file_path to avoid query string)
-        api_url = f"/repos/{org_name}/{repo_name}/contents/{clean_file_path}"
+
+        # Sanitize path (strip query like ?raw=true) and build GitHub Contents API URL
+        _parsed = urlparse(file_path)
+        _clean_path = _parsed.path
+
+        # Construct the API URL for the file
+        api_url = f"/repos/{org_name}/{repo_name}/contents/{_clean_path}"
         if branch_name:
             api_url += f"?ref={branch_name}"
-        # Fetch the file content
+
+        # Fetch the file content metadata/content
         response = github.get(api_url)
-        is_binary = False
-        content = None
-        if "content" in response:
-            # Decode the base64 content
-            content = base64.b64decode(response["content"])
-            if not content:
-                raise Exception("File is empty")
-            # Determine content type based on file extension
-            content_type = "text/plain"
-            # Text file types
-            if file_extension in [".md", ".markdown"]:
-                content_type = "text/markdown"
-            elif file_extension in [".html", ".htm"]:
-                content_type = "text/html"
-            elif file_extension in [".json"]:
-                content_type = "application/json"
-            elif file_extension in [".py"]:
-                content_type = "text/x-python"
-            elif file_extension in [".js"]:
-                content_type = "text/javascript"
-            elif file_extension in [".css"]:
-                content_type = "text/css"
-            elif file_extension in [".xml"]:
-                content_type = "application/xml"
-            elif file_extension in [".yml", ".yaml"]:
-                content_type = "text/yaml"
-           
-            # Binary file types
-            elif file_extension in [".png"]:
-                content_type = "image/png"
-                is_binary = True
-            elif file_extension in [".jpg", ".jpeg"]:
-                content_type = "image/jpeg"
-                is_binary = True
-            elif file_extension in [".gif"]:
-                content_type = "image/gif"
-                is_binary = True
-            elif file_extension in [".pdf"]:
-                content_type = "application/pdf"
-                is_binary = True
-            
-            # Return content based on file type
-            if is_binary:
-                return HttpResponse(content, content_type=content_type)
-            else:
-                # Decode text content as UTF-8
-                content = content.decode("utf-8")
-                return HttpResponse(content, content_type=content_type)
-        else:
-            return render_message(request, "File content not found", status=404)
+
+        file_extension = Path(_clean_path).suffix.lower()
+
+        ext_map = {
+            ".md": "text/markdown",
+            ".markdown": "text/markdown",
+            ".htm": "text/html",
+            ".html": "text/html",
+            ".json": "application/json",
+            ".py": "text/x-python",
+            ".js": "text/javascript",
+            ".css": "text/css",
+            ".xml": "application/xml",
+            ".yml": "text/yaml",
+            ".yaml": "text/yaml",
+            ".txt": "text/plain",
+            ".csv": "text/csv",
+            ".pdf": "application/pdf",
+        }
+
+        if response.get("content"):
+            content_bytes = base64.b64decode(response["content"])
+            content_type = ext_map.get(file_extension, "application/octet-stream")
+            return HttpResponse(content_bytes, content_type=content_type)
+
+        download_url = response.get("download_url")
+        if download_url:
+            r = requests.get(download_url, timeout=30)
+            content_bytes = r.content
+            content_type = ext_map.get(file_extension, "application/octet-stream")
+            return HttpResponse(content_bytes, content_type=content_type)
+
+        # 3) Fallback: fetch blob by sha via GitHub API
+        sha = response.get("sha")
+        if sha:
+            blob = github.get(f"/repos/{org_name}/{repo_name}/git/blobs/{sha}")
+            if blob and blob.get("content"):
+                content_bytes = base64.b64decode(blob["content"])
+                content_type = ext_map.get(file_extension, "application/octet-stream")
+                return HttpResponse(content_bytes, content_type=content_type)
+
+        return render_message(request, "File content not found", status=404)
+
     except Exception as e:
         logger.error(f"Error fetching file from GitHub: {str(e)}")
         error_str = str(e).lower()
-        binary_str = 'as binary' if is_binary else 'as non-binary/text'
         if "404" in error_str or "not found" in error_str:
             return render_message(request, f"File not found: {file_path}", status=404)
         elif "403" in error_str or "forbidden" in error_str:
@@ -278,8 +272,7 @@ def handle_internal_link(request):
         elif "401" in error_str or "unauthorized" in error_str:
             return render_message(request, "GitHub authentication failed", status=401)
         else:
-            # Avoid leaking large/binary content in error messages
-            return render_message(request, f"Error accessing '{file_extension}' file {binary_str}: {str(e)}", status=500)
+            return render_message(request, f"Error accessing file: {str(e)}", status=500)
 
 
 @api_view(["GET"])

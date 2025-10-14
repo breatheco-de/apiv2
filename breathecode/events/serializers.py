@@ -359,6 +359,15 @@ class EventHookCheckinSerializer(serpy.Serializer):
     attended_at = serpy.Field()
     attendee = UserSerializer(required=False)
     event = EventJoinSmallSerializer()
+    user_language = serpy.MethodField()
+
+    def get_user_language(self, obj):
+        if obj.attendee:
+            from breathecode.authenticate.actions import get_user_settings
+
+            settings = get_user_settings(obj.attendee.id)
+            return settings.lang
+        return None
 
 
 class EventSerializer(serializers.ModelSerializer):
