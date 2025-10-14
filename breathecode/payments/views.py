@@ -2397,11 +2397,12 @@ class ConsumableCheckoutView(APIView):
 
             created_team = False
             team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
-            current_limit = team.seats_limit if team else 0
+            current_limit = team.additional_seats if team else 0
             desired_limit = seats
             delta = desired_limit - current_limit
 
             if delta <= 0:
+                # TODO: in a future you should decrease the seats limit and return a invoice with no amount
                 raise ValidationException(
                     translation(
                         lang,
@@ -2473,7 +2474,7 @@ class ConsumableCheckoutView(APIView):
                         team = SubscriptionBillingTeam.objects.create(
                             subscription=subscription,
                             name=f"Team {subscription.id}",
-                            seats_limit=desired_limit + 1,
+                            additional_seats=desired_limit,
                             consumption_strategy=(
                                 plan.consumption_strategy
                                 if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
@@ -2534,13 +2535,13 @@ class ConsumableCheckoutView(APIView):
                             }
                         )
                         team.seats_log = seats_log
-                        team.seats_limit = desired_limit
+                        team.additional_seats = desired_limit
                         team.consumption_strategy = (
                             plan.consumption_strategy
                             if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
                             else Plan.ConsumptionStrategy.PER_SEAT
                         )
-                        team.save(update_fields=["seats_log", "seats_limit", "consumption_strategy"])
+                        team.save(update_fields=["seats_log", "additional_seats", "consumption_strategy"])
 
                     if created_team:
                         tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id)
@@ -3272,6 +3273,7 @@ class SubscriptionBillingTeamView(APIView):
             "subscription": subscription.id,
             "name": team.name,
             "seats_limit": team.seats_limit,
+            "additional_seats": team.additional_seats,
             "seats_count": team.seats.filter(is_active=True).count(),
             "seats_log": team.seats_log,
             # Auto-recharge settings

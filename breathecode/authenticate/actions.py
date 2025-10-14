@@ -46,6 +46,14 @@ def get_app_url():
     return url
 
 
+def get_api_url():
+    url = os.getenv("API_URL", "https://breathecode.herokuapp.com/")
+    if url and url[-1] == "/":
+        url = url[:-1]
+
+    return url
+
+
 def get_github_scopes(user, default_scopes=""):
     # Start with mandatory "user" scope and add any additional default scopes
     scopes = {"user:email"}  # Always include "user"

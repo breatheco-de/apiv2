@@ -684,6 +684,11 @@ class GetBagSerializer(serpy.Serializer):
     amount_per_quarter = serpy.Field()
     amount_per_half = serpy.Field()
     amount_per_year = serpy.Field()
+    discounted_amount_per_month = serpy.Field()
+    discounted_amount_per_quarter = serpy.Field()
+    discounted_amount_per_half = serpy.Field()
+    discounted_amount_per_year = serpy.Field()
+
     token = serpy.Field()
     seat_service_item = serpy.MethodField()
     expires_at = serpy.Field()
