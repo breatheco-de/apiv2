@@ -542,25 +542,25 @@ def add_stripe_webhook(context: dict) -> StripeEvent:
     return event
 
 
-def add_stripe_webhook_error(raw_payload: bytes, sig_header: str | None, slug: str, message: str) -> StripeEvent:
-    """Persist an error Stripe webhook for observability and auditing purposes."""
+def add_stripe_webhook_error(raw_payload: bytes, sig_header: str | None, slug: str, message: str) -> StripeEvent | None:
     try:
+        decoded = raw_payload.decode("utf-8") if isinstance(raw_payload, (bytes, bytearray)) else str(raw_payload)
+        parsed = {}
         try:
-            decoded = raw_payload.decode("utf-8") if isinstance(raw_payload, (bytes, bytearray)) else str(raw_payload)
+            parsed = json.loads(decoded or "{}")
         except Exception:
-            decoded = repr(raw_payload)
+            parsed = {}
 
         event = StripeEvent(
-            stripe_id=None,
-            type="unknown",
+            stripe_id=parsed.get("id"),
+            type=parsed.get("type", "unknown"),
             status="ERROR",
-            status_texts={"slug": slug, "message": message},
-            data={"raw": decoded},
+            status_texts={"slug": slug, "message": message, "verified": False},
+            data={"parsed": parsed, "raw_text": decoded},
             request={"headers": {"Stripe-Signature": sig_header}},
         )
         event.save()
         return event
-
     except Exception:
         return None
 
