@@ -406,11 +406,11 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         download.save()
 
         meta = model._meta
-        
+
         # Check if model defines custom CSV fields with get_csv_fields()
-        if hasattr(model, 'get_csv_fields'):
+        if hasattr(model, "get_csv_fields"):
             csv_fields = model.get_csv_fields()
-            
+
             # Check if fields are tuples (header, path) or just strings
             if csv_fields and isinstance(csv_fields[0], tuple):
                 headers = [f[0] for f in csv_fields]
@@ -422,7 +422,7 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
             # Fallback to all model fields
             field_paths = [field.name for field in meta.fields]
             headers = field_paths
-        
+
         # rebuild query from the admin
         queryset = model.objects.filter(pk__in=ids_to_download)
 
@@ -430,24 +430,24 @@ def download_csv(module, model_name, ids_to_download, academy_id=None):
         buffer = StringIO()
         writer = csv.writer(buffer)
         writer.writerow(headers)
-        
+
         for obj in queryset:
             row = []
             for field_path in field_paths:
                 # Handle dot notation for related fields (e.g., "event.slug")
-                if '.' in field_path:
+                if "." in field_path:
                     value = obj
-                    for attr in field_path.split('.'):
+                    for attr in field_path.split("."):
                         if value is None:
                             break
                         value = getattr(value, attr, None)
-                    row.append(value if value is not None else '')
+                    row.append(value if value is not None else "")
                 else:
                     # Simple field access (supports properties, methods, and regular fields)
-                    value = getattr(obj, field_path, '')
+                    value = getattr(obj, field_path, "")
                     # Handle callable attributes (methods without @property decorator)
                     row.append(value() if callable(value) else value)
-            
+
             writer.writerow(row)
 
         # upload to google cloud bucket
@@ -540,6 +540,29 @@ def add_stripe_webhook(context: dict) -> StripeEvent:
         raise ValidationException("Invalid stripe webhook payload", code=400, slug="invalid-stripe-webhook-payload")
 
     return event
+
+
+def add_stripe_webhook_error(raw_payload: bytes, sig_header: str | None, slug: str, message: str) -> StripeEvent:
+    """Persist an error Stripe webhook for observability and auditing purposes."""
+    try:
+        try:
+            decoded = raw_payload.decode("utf-8") if isinstance(raw_payload, (bytes, bytearray)) else str(raw_payload)
+        except Exception:
+            decoded = repr(raw_payload)
+
+        event = StripeEvent(
+            stripe_id=None,
+            type="unknown",
+            status="ERROR",
+            status_texts={"slug": slug, "message": message},
+            data={"raw": decoded},
+            request={"headers": {"Stripe-Signature": sig_header}},
+        )
+        event.save()
+        return event
+
+    except Exception:
+        return None
 
 
 class DjangoAdminActions:
