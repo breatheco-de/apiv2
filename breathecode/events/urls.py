@@ -12,7 +12,6 @@ from .views import (
     AcademyOrganizationView,
     AcademyOrganizerView,
     AcademyVenueView,
-    CreateGoogleMeetView,
     EventCheckinView,
     EventMeCheckinView,
     EventMeView,
@@ -94,6 +93,4 @@ urlpatterns = [
     path("academy/checkin", AcademyEventCheckinView.as_view(), name="academy_checkin"),
     path("eventbrite/webhook/<int:organization_id>", eventbrite_webhook, name="eventbrite_webhook_id"),
     path("live-workshop-status", live_workshop_status, name="live_workshop_status"),
-    path("academy/event/createmeet", CreateGoogleMeetView.as_view(), name="academy_event_createmeet"),
-    path("academy/event/createmeet/<int:event_id>", CreateGoogleMeetView.as_view(), name="academy_event_createmeet_id"),
 ]

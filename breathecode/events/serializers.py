@@ -413,7 +413,12 @@ class EventSerializer(serializers.ModelSerializer):
 
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
-        if online_event == True and (live_stream_url is None or live_stream_url == ""):
+        allow_missing_live_stream = self.context.get("allow_missing_live_stream_url", False)
+        if (
+            online_event == True
+            and (live_stream_url is None or live_stream_url == "")
+            and not allow_missing_live_stream
+        ):
             raise ValidationException(
                 translation(
                     lang,

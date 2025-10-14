@@ -27,7 +27,7 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.events import actions
-from breathecode.events.actions import create_google_meet_for_event, create_google_meet_for_new_event
+from breathecode.events.actions import create_google_meet_for_event
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
@@ -620,10 +620,26 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         data["sync_status"] = "PENDING"
 
         serializer = EventSerializer(
-            data={**data, "academy": academy.id}, context={"lang": lang, "academy_id": academy_id}
+            data={**data, "academy": academy.id},
+            context={
+                "lang": lang,
+                "academy_id": academy_id,
+                "allow_missing_live_stream_url": True,
+            },
         )
         if serializer.is_valid():
-            serializer.save()
+            event = serializer.save()
+
+            try:
+                if getattr(event, "online_event", False) and not getattr(event, "live_stream_url", None):
+                    create_google_meet_for_event(event)
+                    event.refresh_from_db()
+                    serializer = EventSerializer(event, many=False)
+            except Exception as e:
+                logger.error(
+                    f"Failed to auto-create Google Meet for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                )
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -689,6 +705,24 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         all_events = []
         for serializer in all_serializers:
             all_events.append(serializer.save())
+
+        try:
+            for idx, event in enumerate(all_events):
+                data = data_list[idx] if idx < len(data_list) else {}
+
+                create_meet = data.get("create_meet")
+                if isinstance(create_meet, str):
+                    create_meet = create_meet.lower() in ["1", "true", "yes"]
+
+                if (
+                    create_meet
+                    and getattr(event, "online_event", False)
+                    and not getattr(event, "live_stream_url", None)
+                ):
+                    create_google_meet_for_event(event)
+                    event.refresh_from_db()
+        except Exception as e:
+            logger.error(f"Failed to auto-create Google Meet on PUT for academy {academy_id}: {str(e)}")
 
         if isinstance(request.data, list):
             serializer = EventSerializer(all_events, many=True)
@@ -1782,127 +1816,3 @@ def live_workshop_status(request):
             result = None
         cache.set(cache_key, result, timeout=timeout)
     return Response(result)
-
-
-class CreateGoogleMeetView(APIView):
-    """
-    Vista para crear Google Meet URL para eventos.
-    - Si se pasa event_id: crea Google Meet para un evento existente
-    - Si no se pasa event_id: crea Google Meet para un nuevo evento
-    """
-
-    @capable_of("crud_event")
-    def post(self, request, academy_id=None, event_id=None):
-        """
-        POST endpoint para crear Google Meet URL.
-
-        URLs:
-        - POST /v1/events/academy/event/createmeet (nuevo evento)
-        - POST /v1/events/academy/event/createmeet/{event_id} (evento existente)
-        """
-        lang = get_user_language(request)
-
-        if not academy_id:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Missing academy_id",
-                    es="Falta el academy_id",
-                    slug="missing-academy-id",
-                ),
-                code=400,
-            )
-
-        try:
-            if event_id:
-                event = Event.objects.filter(id=event_id, academy__id=academy_id).first()
-                if not event:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en=f"Event not found for this academy {academy_id}",
-                            es=f"Evento no encontrado para esta academia {academy_id}",
-                            slug="event-not-found",
-                        ),
-                        code=404,
-                    )
-
-                if not event.online_event:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="Event must be marked as online to create Google Meet",
-                            es="El evento debe estar marcado como online para crear Google Meet",
-                            slug="event-not-online",
-                        ),
-                        code=400,
-                    )
-
-                if event.live_stream_url:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="Event already has a live stream URL",
-                            es="El evento ya tiene una URL de transmisión en vivo",
-                            slug="event-already-has-url",
-                        ),
-                        code=400,
-                    )
-
-                meet_url = create_google_meet_for_event(event)
-
-                event.refresh_from_db()
-
-                serializer = EventSerializer(event, many=False)
-
-                return Response(
-                    {
-                        "status": "ok",
-                        "message": "Google Meet created successfully for existing event",
-                        "meet_url": meet_url,
-                        "event": serializer.data,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-
-            else:
-                print("ACA ENTRE")
-                meet_url = create_google_meet_for_new_event(academy_id)
-
-                return Response(
-                    {
-                        "status": "ok",
-                        "message": "Google Meet created successfully for new event",
-                        "meet_url": meet_url,
-                        "academy_id": academy_id,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-
-        except ValidationException:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to create Google Meet for academy {academy_id}, event {event_id}: {str(e)}")
-
-            # Check for specific OAuth errors
-            error_message = str(e)
-            if "invalid_client" in error_message:
-                error_message = (
-                    "Google Cloud OAuth client not found. Please check academy's Google Cloud configuration."
-                )
-            elif "invalid_grant" in error_message:
-                error_message = "Google Cloud credentials are expired or invalid. Please re-authenticate."
-            elif "insufficient_scope" in error_message:
-                error_message = "Google Cloud credentials don't have required permissions for Google Meet API."
-            elif "auth settings" in error_message.lower():
-                error_message = f"Academy Google Cloud configuration issue: {error_message}"
-
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Failed to create Google Meet: {error_message}",
-                    es=f"Error al crear Google Meet: {error_message}",
-                    slug="google-meet-creation-failed",
-                ),
-                code=500,
-            )
