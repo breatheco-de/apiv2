@@ -1258,7 +1258,6 @@ class Bag(AbstractAmountByTime):
         objects: TypedManager["Bag"]
 
     _coupons_qs: Optional[QuerySet[Coupon]] = None
-    _seat_service_price: Optional[AcademyService] = None
 
     class Status(models.TextChoices):
         RENEWAL = ("RENEWAL", "Renewal")
@@ -1346,29 +1345,11 @@ class Bag(AbstractAmountByTime):
             self._coupons_qs = self.coupons.all()
         return self._coupons_qs
 
-    @property
-    def seat_service_price(self):
-        if self.seat_service_item is None:
-            return None
-
-        if self._seat_service_price is None:
-            self._seat_service_price = AcademyService.objects.filter(
-                academy=self.academy,
-                service=self.seat_service_item.service,
-            ).first()
-        return self._seat_service_price
-
     def get_discounted_price(self, price: float, multiplier: int = 1) -> float:
         import breathecode.payments.actions as actions
 
         if not price:
             return None
-
-        seat_service_price = self.seat_service_price
-        if seat_service_price is None or self.seat_service_item is None:
-            return None
-
-        price += seat_service_price.price_per_unit * (self.seat_service_item.how_many) * multiplier
 
         return actions.get_discounted_price(price, self.cached_coupons)
 
@@ -1399,7 +1380,6 @@ class Bag(AbstractAmountByTime):
 
     def save(self, *args, **kwargs):
         self._coupons_qs = None
-        self._seat_service_price = None
         created = self.pk is None
         self.full_clean()
         super().save(*args, **kwargs)
