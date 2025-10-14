@@ -586,7 +586,7 @@ class BagHandler:
 
         plan: Plan | None = self.bag.plans.first()
         service_item, _ = ServiceItem.objects.get_or_create(
-            service=plan.seat_service_price.service, how_many=seats + 1, is_renewable=False, is_team_allowed=True
+            service=plan.seat_service_price.service, how_many=seats, is_renewable=False, is_team_allowed=True
         )
 
         self.bag.seat_service_item = service_item

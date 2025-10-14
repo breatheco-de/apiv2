@@ -1368,7 +1368,7 @@ class Bag(AbstractAmountByTime):
         if seat_service_price is None or self.seat_service_item is None:
             return None
 
-        price += seat_service_price.price_per_unit * (self.seat_service_item.how_many - 1) * multiplier
+        price += seat_service_price.price_per_unit * (self.seat_service_item.how_many) * multiplier
 
         return actions.get_discounted_price(price, self.cached_coupons)
 
