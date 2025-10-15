@@ -666,9 +666,9 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 )
             )
 
-        auto_create_meet = request.data.get("auto_create_meet", False)
-        if isinstance(auto_create_meet, str):
-            auto_create_meet = auto_create_meet.lower() in ["1", "true", "yes"]
+        create_meet = request.data.get("create_meet", False)
+        if isinstance(create_meet, str):
+            create_meet = create_meet.lower() in ["1", "true", "yes"]
 
         meet_private = request.data.get("meet_private", True)
         if isinstance(meet_private, str):
@@ -676,7 +676,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
         data = {}
         for key in request.data.keys():
-            if key in ("auto_create_meet", "meet_private"):
+            if key in ("create_meet", "meet_private"):
                 continue
             data[key] = request.data.get(key)
 
@@ -687,7 +687,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
             context={
                 "lang": lang,
                 "academy_id": academy_id,
-                "allow_missing_live_stream_url": bool(auto_create_meet),
+                "allow_missing_live_stream_url": bool(create_meet),
             },
         )
         if serializer.is_valid():
@@ -695,7 +695,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 event = serializer.save()
 
                 if (
-                    auto_create_meet
+                    create_meet
                     and getattr(event, "online_event", False)
                     and not getattr(event, "live_stream_url", None)
                 ):
