@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 import math
 import os
-from datetime import datetime, timedelta
-from typing import Any, Optional, TYPE_CHECKING, Protocol, TypeVar, Awaitable
 import random
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, Awaitable, Optional, Protocol, TypeVar
 
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -1795,6 +1795,7 @@ class AbstractIOweYou(models.Model):
             - Independent of payment frequency and service regeneration schedules.
         """
         from django.db.models import Sum
+
         from breathecode.payments.models import Invoice
 
         period_start, period_end = self.get_current_monthly_period_dates()
@@ -1962,7 +1963,7 @@ class PlanFinancing(AbstractIOweYou):
         is_paid = is_plan_financing_paid(self)
 
         if on_create:
-            signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
+            # Now we don't send the signal planfinancing_created here, it will be sent by the m2m_changed signal
             if is_paid:
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
@@ -2159,6 +2160,7 @@ class SubscriptionBillingTeam(models.Model):
             Total spending for this team in current period
         """
         from django.db.models import Sum
+
         from breathecode.payments.models import Invoice
 
         period_start, period_end = self.get_current_monthly_period_dates()

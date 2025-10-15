@@ -25,7 +25,7 @@ from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.notify.models import HookError
 from breathecode.payments.models import PlanFinancing, Subscription
 from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionHookSerializer
-from breathecode.payments.signals import planfinancing_created, subscription_created
+from breathecode.payments.signals import subscription_created
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetHookSerializer
 from breathecode.registry.signals import asset_status_updated
@@ -188,18 +188,26 @@ def edu_status_updated(sender, instance, **kwargs):
     )
 
 
-@receiver(planfinancing_created, sender=PlanFinancing)
-def new_planfinancing_created(sender, instance, **kwargs):
-    logger.debug("Sending new PlanFinancing to hook")
-    model_label = get_model_label(instance)
-    serializer = GetPlanFinancingSerializer(instance)
-    HookManager.process_model_event(
-        instance,
-        model_label,
-        "planfinancing_created",
-        payload_override=serializer.data,
-        academy_override=instance.academy,
-    )
+@receiver(m2m_changed, sender=PlanFinancing.plans.through)
+def new_planfinancing_created(sender, instance, action, **kwargs):
+    # Only execute after plans are added
+    if action != "post_add":
+        return
+
+    plans_count = instance.plans.count()
+    pk_set = kwargs.get("pk_set", set())
+
+    if plans_count == len(pk_set):
+        logger.debug("Sending new PlanFinancing to hook")
+        model_label = get_model_label(instance)
+        serializer = GetPlanFinancingSerializer(instance)
+        HookManager.process_model_event(
+            instance,
+            model_label,
+            "planfinancing_created",
+            payload_override=serializer.data,
+            academy_override=instance.academy,
+        )
 
 
 @receiver(subscription_created, sender=Subscription)
