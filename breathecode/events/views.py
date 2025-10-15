@@ -804,11 +804,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 if isinstance(meet_private, str):
                     meet_private = meet_private.lower() in ["1", "true", "yes"]
 
-                if (
-                    create_meet
-                    and getattr(event, "online_event", False)
-                    and not getattr(event, "live_stream_url", None)
-                ):
+                if create_meet and getattr(event, "online_event", False):
                     try:
                         create_google_meet_for_event(event, private=meet_private)
                         event.refresh_from_db()
