@@ -27,6 +27,7 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.events import actions
+from breathecode.events.actions import create_google_meet_for_event
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
@@ -601,11 +602,11 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         like = self.request.GET.get("like")
         if like:
             items = items.filter(title__icontains=like)
-        
+
         # Check if CSV format is requested (detected from URL path)
-        if request.path.endswith('.csv'):
+        if request.path.endswith(".csv"):
             return self._async_export_as_csv(items, academy_id)
-        
+
         # Default JSON response
         items = handler.queryset(items)
         serializer = EventSmallSerializerNoAcademy(items, many=True)
@@ -617,34 +618,37 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         from breathecode.monitoring.tasks import async_download_csv
         from breathecode.events.models import Event
         from breathecode.authenticate.actions import get_user_language
-        
+
         lang = get_user_language(self.request)
         meta = Event._meta
         ids = list(queryset.values_list("pk", flat=True))
-        
+
         if not ids:
             raise ValidationException(
                 translation(
                     lang,
                     en="No events found to export",
                     es="No se encontraron eventos para exportar",
-                    slug="no-events-to-export"
+                    slug="no-events-to-export",
                 ),
-                404
+                404,
             )
-        
+
         # Use the exact same pattern as AdminExportCsvMixin
         async_download_csv.delay(Event.__module__, meta.object_name, ids, academy_id)
-        
-        return Response({
-            'message': translation(
-                lang,
-                en='Data is being downloaded, check downloads for status.',
-                es='Los datos se están descargando, revisa downloads para el estado.',
-                slug="csv-export-started"
-            ),
-            'total_events': len(ids)
-        }, status=202)
+
+        return Response(
+            {
+                "message": translation(
+                    lang,
+                    en="Data is being downloaded, check downloads for status.",
+                    es="Los datos se están descargando, revisa downloads para el estado.",
+                    slug="csv-export-started",
+                ),
+                "total_events": len(ids),
+            },
+            status=202,
+        )
 
     @capable_of("crud_event")
     def post(self, request, format=None, academy_id=None):
@@ -661,17 +665,47 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 )
             )
 
+        auto_create_meet = request.data.get("auto_create_meet", False)
+        if isinstance(auto_create_meet, str):
+            auto_create_meet = auto_create_meet.lower() in ["1", "true", "yes"]
+
+        meet_private = request.data.get("meet_private", True)
+        if isinstance(meet_private, str):
+            meet_private = meet_private.lower() in ["1", "true", "yes"]
+
         data = {}
         for key in request.data.keys():
+            if key in ("auto_create_meet", "meet_private"):
+                continue
             data[key] = request.data.get(key)
 
         data["sync_status"] = "PENDING"
 
         serializer = EventSerializer(
-            data={**data, "academy": academy.id}, context={"lang": lang, "academy_id": academy_id}
+            data={**data, "academy": academy.id},
+            context={
+                "lang": lang,
+                "academy_id": academy_id,
+                "allow_missing_live_stream_url": bool(auto_create_meet),
+            },
         )
         if serializer.is_valid():
-            serializer.save()
+            event = serializer.save()
+
+            try:
+                if (
+                    auto_create_meet
+                    and getattr(event, "online_event", False)
+                    and not getattr(event, "live_stream_url", None)
+                ):
+                    create_google_meet_for_event(event, private=meet_private)
+                    event.refresh_from_db()
+                    serializer = EventSerializer(event, many=False)
+            except Exception as e:
+                logger.error(
+                    f"Failed to auto-create Google Meet for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                )
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -727,8 +761,24 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         index = -1
         for data in data_list:
             index += 1
+            create_meet = data.get("create_meet")
+            if isinstance(create_meet, str):
+                create_meet = create_meet.lower() in ["1", "true", "yes"]
+            meet_private = data.get("meet_private")
+            if isinstance(meet_private, str):
+                meet_private = meet_private.lower() in ["1", "true", "yes"]
+
+            payload = {k: v for k, v in data.items() if k not in ("create_meet", "meet_private")}
+
             serializer = EventPUTSerializer(
-                all_events[index], data=data, context={"lang": lang, "request": request, "academy_id": academy_id}
+                all_events[index],
+                data=payload,
+                context={
+                    "lang": lang,
+                    "request": request,
+                    "academy_id": academy_id,
+                    "allow_missing_live_stream_url": bool(create_meet),
+                },
             )
             all_serializers.append(serializer)
             if not serializer.is_valid():
@@ -736,7 +786,28 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
         all_events = []
         for serializer in all_serializers:
-            all_events.append(serializer.save())
+            event = serializer.save()
+            all_events.append(event)
+
+        try:
+            for idx, event in enumerate(all_events):
+                data = data_list[idx] if idx < len(data_list) else {}
+                create_meet = data.get("create_meet")
+                if isinstance(create_meet, str):
+                    create_meet = create_meet.lower() in ["1", "true", "yes"]
+                meet_private = data.get("meet_private", True)
+                if isinstance(meet_private, str):
+                    meet_private = meet_private.lower() in ["1", "true", "yes"]
+
+                if (
+                    create_meet
+                    and getattr(event, "online_event", False)
+                    and not getattr(event, "live_stream_url", None)
+                ):
+                    create_google_meet_for_event(event, private=meet_private)
+                    event.refresh_from_db()
+        except Exception as e:
+            logger.error(f"Failed to auto-create Google Meet on PUT for academy {academy_id}: {str(e)}")
 
         if isinstance(request.data, list):
             serializer = EventSerializer(all_events, many=True)
@@ -1191,50 +1262,53 @@ class AcademyEventCheckinView(APIView):
             items = items.filter(created_at__lte=end_date)
 
         items = items.filter(**lookup)
-        
+
         # Check if CSV format is requested (detected from URL path)
-        if request.path.endswith('.csv'):
+        if request.path.endswith(".csv"):
             return self._async_export_as_csv(items, academy_id)
-        
+
         # Default JSON response
         items = handler.queryset(items)
         serializer = EventCheckinSerializer(items, many=True)
 
         return handler.response(serializer.data)
-    
+
     def _async_export_as_csv(self, queryset, academy_id):
         """Export event checkins to CSV format asynchronously"""
         from breathecode.monitoring.tasks import async_download_csv
         from breathecode.events.models import EventCheckin
         from breathecode.authenticate.actions import get_user_language
-        
+
         lang = get_user_language(self.request)
         meta = EventCheckin._meta
         ids = list(queryset.values_list("pk", flat=True))
-        
+
         if not ids:
             raise ValidationException(
                 translation(
                     lang,
                     en="No event checkins found to export",
                     es="No se encontraron registros de asistencia para exportar",
-                    slug="no-checkins-to-export"
+                    slug="no-checkins-to-export",
                 ),
-                404
+                404,
             )
-        
+
         # Use the exact same pattern as AdminExportCsvMixin
         async_download_csv.delay(EventCheckin.__module__, meta.object_name, ids, academy_id)
-        
-        return Response({
-            'message': translation(
-                lang,
-                en='Data is being downloaded, check downloads for status.',
-                es='Los datos se están descargando, revisa downloads para el estado.',
-                slug="csv-export-started"
-            ),
-            'total_checkins': len(ids)
-        }, status=202)
+
+        return Response(
+            {
+                "message": translation(
+                    lang,
+                    en="Data is being downloaded, check downloads for status.",
+                    es="Los datos se están descargando, revisa downloads para el estado.",
+                    slug="csv-export-started",
+                ),
+                "total_checkins": len(ids),
+            },
+            status=202,
+        )
 
 
 @api_view(["POST"])
