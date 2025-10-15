@@ -21,6 +21,7 @@ from rest_framework.permissions import AllowAny
 
 # from django.http import HttpResponse
 from rest_framework.response import Response
+from django.db import transaction
 from rest_framework.views import APIView
 
 import breathecode.activity.tasks as tasks_activity
@@ -690,23 +691,27 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
             },
         )
         if serializer.is_valid():
-            event = serializer.save()
+            with transaction.atomic():
+                event = serializer.save()
 
-            try:
                 if (
                     auto_create_meet
                     and getattr(event, "online_event", False)
                     and not getattr(event, "live_stream_url", None)
                 ):
-                    create_google_meet_for_event(event, private=meet_private)
-                    event.refresh_from_db()
-                    serializer = EventSerializer(event, many=False)
-            except Exception as e:
-                logger.error(
-                    f"Failed to auto-create Google Meet for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
-                )
+                    try:
+                        create_google_meet_for_event(event, private=meet_private)
+                        event.refresh_from_db()
+                        serializer = EventSerializer(event, many=False)
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to auto-create Google Meet for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                        )
+                        raise ValidationException(
+                            f"Failed to auto-create Google Meet for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                        )
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_event")
@@ -784,12 +789,12 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        all_events = []
-        for serializer in all_serializers:
-            event = serializer.save()
-            all_events.append(event)
+        with transaction.atomic():
+            all_events = []
+            for serializer in all_serializers:
+                event = serializer.save()
+                all_events.append(event)
 
-        try:
             for idx, event in enumerate(all_events):
                 data = data_list[idx] if idx < len(data_list) else {}
                 create_meet = data.get("create_meet")
@@ -804,10 +809,14 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                     and getattr(event, "online_event", False)
                     and not getattr(event, "live_stream_url", None)
                 ):
-                    create_google_meet_for_event(event, private=meet_private)
-                    event.refresh_from_db()
-        except Exception as e:
-            logger.error(f"Failed to auto-create Google Meet on PUT for academy {academy_id}: {str(e)}")
+                    try:
+                        create_google_meet_for_event(event, private=meet_private)
+                        event.refresh_from_db()
+                    except Exception as e:
+                        logger.error(f"Failed to auto-create Google Meet on PUT for academy {academy_id}: {str(e)}")
+                        raise ValidationException(
+                            f"Failed to auto-create Google Meet on PUT for academy {academy_id}: {str(e)}"
+                        )
 
         if isinstance(request.data, list):
             serializer = EventSerializer(all_events, many=True)
