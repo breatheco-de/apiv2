@@ -100,6 +100,11 @@ PERMISSIONS = [
         "description": "Admin permission to read cohorts from all academies",
         "codename": "read_cohorts_from_all",
     },
+    {
+        "name": "Manage organizations",
+        "description": "Admin permission to manage organizations",
+        "codename": "manage_organizations",
+    },
 ]
 
 GROUPS = [
@@ -129,6 +134,7 @@ GROUPS = [
         "name": "Creator",
         "permissions": [
             "learnpack_create_package",
+            "manage_organizations",
         ],
         "inherit": [],
     },
