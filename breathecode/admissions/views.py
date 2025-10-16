@@ -32,6 +32,7 @@ from breathecode.utils import (
     capable_of,
     localize_query,
 )
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import render_message
 
@@ -40,22 +41,27 @@ from .models import (
     DELETED,
     STUDENT,
     Academy,
+    City,
     Cohort,
     CohortTimeSlot,
     CohortUser,
+    Country,
     Syllabus,
     SyllabusSchedule,
     SyllabusScheduleTimeSlot,
     SyllabusVersion,
 )
 from .serializers import (
+    AcademyPOSTSerializer,
     AcademyReportSerializer,
     AcademySerializer,
+    CitySerializer,
     CohortPUTSerializer,
     CohortSerializer,
     CohortTimeSlotSerializer,
     CohortUserPUTSerializer,
     CohortUserSerializer,
+    CountrySerializer,
     GetAcademyWithStatusSerializer,
     GetBigAcademySerializer,
     GetCohortSerializer,
@@ -138,6 +144,66 @@ def render_syllabus_preview(request, syllabus_id, version):
 def get_timezones(request, id=None):
     # timezones = [(x, x) for x in pytz.common_timezones]
     return Response(pytz.common_timezones)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_countries(request):
+    """Get all countries available in the system."""
+    countries = Country.objects.all().order_by("name")
+    serializer = CountrySerializer(countries, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_cities(request):
+    """Get all cities available in the system."""
+    cities = City.objects.all().select_related("country").order_by("name")
+    serializer = CitySerializer(cities, many=True)
+    return Response(serializer.data)
+
+
+class AcademyListView(APIView):
+    """
+    List all academies or create a new academy.
+    
+    GET: List all academies (public)
+    POST: Create a new academy (requires 'manage_organizations' permission)
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """List all academies with optional filters."""
+        items = Academy.objects.all()
+
+        status_filter = request.GET.get("status")
+        if status_filter:
+            items = items.filter(status__in=status_filter.upper().split(","))
+
+        academy_ids = request.GET.get("academy_id")
+        if academy_ids:
+            items = items.filter(id__in=academy_ids.split(","))
+
+        serializer = AcademySerializer(items, many=True)
+        return Response(serializer.data)
+
+    @has_permission("manage_organizations")
+    def post(self, request):
+        """Create a new academy."""
+        lang = get_user_language(request)
+        
+        serializer = AcademyPOSTSerializer(data=request.data, context={"request": request, "lang": lang})
+        
+        if serializer.is_valid():
+            academy = serializer.save()
+            
+            # Return the created academy with the standard serializer
+            response_serializer = GetBigAcademySerializer(academy)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])
