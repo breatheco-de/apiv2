@@ -59,3 +59,51 @@ class GoogleCalendar:
         attendees.extend(to_add)
         event["attendees"] = attendees
         return self.update_event(calendar_id, event_id, event)
+
+    def insert_event_with_conference(self, calendar_id: str, body: dict, send_updates: str = "all"):
+        import uuid
+
+        if "conferenceData" not in body:
+            body["conferenceData"] = {
+                "createRequest": {
+                    "requestId": str(uuid.uuid4()),
+                    "conferenceSolutionKey": {"type": "hangoutsMeet"},
+                }
+            }
+
+        return (
+            self.service()
+            .events()
+            .insert(
+                calendarId=calendar_id,
+                body=body,
+                conferenceDataVersion=1,
+                sendUpdates=send_updates,
+            )
+            .execute()
+        )
+
+    def add_conference(self, calendar_id: str, event_id: str, send_updates: str = "all"):
+        import uuid
+
+        body = {
+            "conferenceData": {
+                "createRequest": {
+                    "requestId": str(uuid.uuid4()),
+                    "conferenceSolutionKey": {"type": "hangoutsMeet"},
+                }
+            }
+        }
+
+        return (
+            self.service()
+            .events()
+            .patch(
+                calendarId=calendar_id,
+                eventId=event_id,
+                body=body,
+                conferenceDataVersion=1,
+                sendUpdates=send_updates,
+            )
+            .execute()
+        )
