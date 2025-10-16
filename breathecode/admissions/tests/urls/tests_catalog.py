@@ -71,11 +71,15 @@ class CatalogCitiesTestSuite(AdmissionsTestCase):
         self.assertEqual(len(json), 2)
         
         # Should be ordered by name
+        self.assertEqual(json[0]["id"], city2.id)
         self.assertEqual(json[0]["name"], "Boston")
+        self.assertEqual(json[0]["country"]["id"], "us")
         self.assertEqual(json[0]["country"]["code"], "us")
         self.assertEqual(json[0]["country"]["name"], "United States")
         
+        self.assertEqual(json[1]["id"], city1.id)
         self.assertEqual(json[1]["name"], "Miami")
+        self.assertEqual(json[1]["country"]["id"], "us")
         self.assertEqual(json[1]["country"]["code"], "us")
         self.assertEqual(json[1]["country"]["name"], "United States")
 

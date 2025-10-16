@@ -43,7 +43,8 @@ class CountrySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
     # Use a Field subclass like IntField if you need more validation.
-    id = serpy.Field()
+    # Country uses 'code' as primary key, so we expose it as both id and code
+    id = serpy.Field(attr="pk")
     code = serpy.Field()
     name = serpy.Field()
 
