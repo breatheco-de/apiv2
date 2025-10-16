@@ -10,21 +10,18 @@ from django.db.models.query_utils import Q
 from django.utils import timezone
 
 from breathecode.admissions.models import Cohort, CohortTimeSlot, CohortUser, TimeSlot
+from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
+from breathecode.services.google_calendar.google_calendar import GoogleCalendar
 from breathecode.utils.datetime_integer import DatetimeInteger
 
 from .models import Event, EventType, Organization, Organizer, Venue
-from breathecode.authenticate.models import AcademyAuthSettings
-from breathecode.services.google_apps.google_apps import GoogleApps
-from breathecode.services.google_meet.google_meet import GoogleMeet
-from breathecode.services.google_calendar.google_calendar import GoogleCalendar
-from google.apps.meet_v2.types import Space, SpaceConfig
 from .utils import Eventbrite
 
 logger = logging.getLogger(__name__)
 
 
-def ensure_calendar_event_for_event(event: Event) -> str:
+def ensure_calendar_event_for_event(event: Event, private: bool = True) -> str:
     """
     Ensure a Google Calendar event exists for the given Event and return its id.
     Uses academy google_cloud_owner credentials.
@@ -48,11 +45,40 @@ def ensure_calendar_event_for_event(event: Event) -> str:
         "location": event.live_stream_url or "",
     }
 
+    if private:
+        body.update(
+            {
+                "visibility": "private",
+                "guestsCanInviteOthers": False,
+                "guestsCanModify": False,
+                "anyoneCanAddSelf": False,
+            }
+        )
+    else:
+        body.update(
+            {
+                "visibility": "public",
+                "anyoneCanAddSelf": True,
+            }
+        )
+
     if not getattr(event, "calendar_event_id", None):
-        created = gc.insert_event("primary", body)
+        created = gc.insert_event_with_conference("primary", body)
         event.calendar_event_id = created.get("id")
-        event.save(update_fields=["calendar_event_id"])
+        if created.get("hangoutLink"):
+            event.live_stream_url = created["hangoutLink"]
+            event.save(update_fields=["calendar_event_id", "live_stream_url"])
+        else:
+            event.save(update_fields=["calendar_event_id"])
         return event.calendar_event_id
+
+    try:
+        updated = gc.add_conference("primary", event.calendar_event_id)
+        if updated.get("hangoutLink") and event.live_stream_url != updated["hangoutLink"]:
+            event.live_stream_url = updated["hangoutLink"]
+            event.save(update_fields=["live_stream_url"])
+    except Exception:
+        pass
 
     return event.calendar_event_id
 
@@ -233,42 +259,23 @@ def get_my_event_types(_user):
 
 def create_google_meet_for_event(event: Event, private: bool = True) -> str:
     """
-    Create a Google Meet room for an event and return the meeting URL.
-    Args:
-        event: Event instance to create Google Meet for (can be None if creating before event)
-        academy: Academy instance (required if event is None)
-        online_event: Whether the event is online (default True)
-    Returns:
-        str: Google Meet URL
-    Raises:
-        Exception: If academy doesn't have proper Google Cloud configuration
+    Crea/asegura una conferencia de Google Meet adjunta al evento de Calendar y devuelve el hangoutLink.
+    La privacidad (privado) se controla invitando asistentes como guests del Calendar y por políticas del dominio.
     """
 
     target_academy = event.academy if event else None
-
     if not target_academy:
         raise Exception("Academy must be provided to create Google Meet")
-
     if not event.online_event:
         raise Exception("Event must be marked as online to create Google Meet")
 
     settings = AcademyAuthSettings.objects.filter(academy=target_academy, google_cloud_owner__isnull=False).first()
-
     if not settings:
         raise Exception(f"Academy {target_academy.id} doesn't have auth settings for google cloud")
-
     if not hasattr(settings.google_cloud_owner, "credentialsgoogle"):
         raise Exception(f"Academy {target_academy.id} doesn't have a google cloud owner with credentials")
 
-    meet = GoogleMeet(
-        token=settings.google_cloud_owner.credentialsgoogle.token,
-        refresh_token=settings.google_cloud_owner.credentialsgoogle.refresh_token,
-    )
-
-    s = Space(
-        config=SpaceConfig(access_type=SpaceConfig.AccessType.RESTRICTED if private else SpaceConfig.AccessType.OPEN),
-    )
-    space = meet.create_space(space=s)
+    ensure_calendar_event_for_event(event, private=private)
 
     try:
         if event.host_user and event.host_user.email:
@@ -276,33 +283,11 @@ def create_google_meet_for_event(event: Event, private: bool = True) -> str:
     except Exception as e:
         logger.warning(f"Calendar invite for host failed in event {event.id}: {e}")
 
-    google = GoogleApps(
-        id_token=settings.google_cloud_owner.credentialsgoogle.id_token,
-        refresh_token=settings.google_cloud_owner.credentialsgoogle.refresh_token,
-    )
-
-    google.subscribe_meet_webhook(
-        name=space.name,
-        event_types=[
-            "google.workspace.meet.conference.v2.started",
-            "google.workspace.meet.conference.v2.ended",
-            "google.workspace.meet.participant.v2.joined",
-            "google.workspace.meet.participant.v2.left",
-            "google.workspace.meet.recording.v2.fileGenerated",
-            "google.workspace.meet.transcript.v2.fileGenerated",
-        ],
-    )
-
-    if event:
-        event.live_stream_url = space.meeting_uri
-        if hasattr(event, "meeting_space_name"):
-            event.meeting_space_name = space.name
-        event.save()
-        logger.info(f"Created Google Meet for event {event.id}: {space.meeting_uri}")
-    else:
-        logger.info(f"Created Google Meet for academy {target_academy.id}: {space.meeting_uri}")
-
-    return space.meeting_uri
+    event.refresh_from_db()
+    if not event.live_stream_url:
+        raise Exception("Meet hangoutLink was not created")
+    logger.info(f"Created Google Meet (Calendar) for event {event.id}: {event.live_stream_url}")
+    return event.live_stream_url
 
 
 def sync_org_venues(org):
