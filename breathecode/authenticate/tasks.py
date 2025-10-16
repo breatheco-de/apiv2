@@ -146,11 +146,16 @@ def create_user_from_invite(user_invite_id: int, **_):
     user.save()
 
     if user_invite.token:
+        academy_name = None
+        if getattr(user_invite, "academy", None) and getattr(user_invite.academy, "white_labeled", False):
+            academy_name = getattr(user_invite.academy, "name", None)
+        subject = f"Set your password at {academy_name}" if academy_name else "Set your password"
+
         notify_actions.send_email_message(
             "pick_password",
             user.email,
             {
-                "SUBJECT": "Set your password at 4Geeks",
+                "SUBJECT": subject,
                 "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
             },
             academy=user_invite.academy,
