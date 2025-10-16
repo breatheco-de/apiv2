@@ -17,10 +17,60 @@ from .models import Event, EventType, Organization, Organizer, Venue
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_meet.google_meet import GoogleMeet
+from breathecode.services.google_calendar.google_calendar import GoogleCalendar
 from google.apps.meet_v2.types import Space, SpaceConfig
 from .utils import Eventbrite
 
 logger = logging.getLogger(__name__)
+
+
+def ensure_calendar_event_for_event(event: Event) -> str:
+    """
+    Ensure a Google Calendar event exists for the given Event and return its id.
+    Uses academy google_cloud_owner credentials.
+    """
+    if not event.academy:
+        raise Exception("Event has no academy")
+
+    settings = AcademyAuthSettings.objects.filter(academy=event.academy, google_cloud_owner__isnull=False).first()
+
+    if not settings or not hasattr(settings.google_cloud_owner, "credentialsgoogle"):
+        raise Exception("Academy has no google_cloud_owner with credentials")
+
+    owner_creds = settings.google_cloud_owner.credentialsgoogle
+    gc = GoogleCalendar(token=owner_creds.token, refresh_token=owner_creds.refresh_token)
+
+    body = {
+        "summary": event.title or f"Event {event.id}",
+        "description": (event.description or "")[:2000],
+        "start": {"dateTime": event.starting_at.isoformat()},
+        "end": {"dateTime": event.ending_at.isoformat()},
+        "location": event.live_stream_url or "",
+    }
+
+    if not getattr(event, "calendar_event_id", None):
+        created = gc.insert_event("primary", body)
+        event.calendar_event_id = created.get("id")
+        event.save(update_fields=["calendar_event_id"])
+        return event.calendar_event_id
+
+    return event.calendar_event_id
+
+
+def invite_emails_to_event_calendar(event: Event, emails: list[str]) -> None:
+    if not emails:
+        return
+
+    settings = AcademyAuthSettings.objects.filter(academy=event.academy, google_cloud_owner__isnull=False).first()
+    if not settings or not hasattr(settings.google_cloud_owner, "credentialsgoogle"):
+        return
+
+    owner_creds = settings.google_cloud_owner.credentialsgoogle
+    gc = GoogleCalendar(token=owner_creds.token, refresh_token=owner_creds.refresh_token)
+
+    event_id = ensure_calendar_event_for_event(event)
+    gc.add_attendees("primary", event_id, [e for e in emails if e])
+
 
 status_map = {
     "draft": "DRAFT",
@@ -219,6 +269,12 @@ def create_google_meet_for_event(event: Event, private: bool = True) -> str:
         config=SpaceConfig(access_type=SpaceConfig.AccessType.RESTRICTED if private else SpaceConfig.AccessType.OPEN),
     )
     space = meet.create_space(space=s)
+
+    try:
+        if event.host_user and event.host_user.email:
+            invite_emails_to_event_calendar(event, [event.host_user.email])
+    except Exception as e:
+        logger.warning(f"Calendar invite for host failed in event {event.id}: {e}")
 
     google = GoogleApps(
         id_token=settings.google_cloud_owner.credentialsgoogle.id_token,

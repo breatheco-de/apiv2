@@ -28,7 +28,7 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.events import actions
-from breathecode.events.actions import create_google_meet_for_event
+from breathecode.events.actions import create_google_meet_for_event, invite_emails_to_event_calendar
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
@@ -1224,6 +1224,12 @@ class EventMeCheckinView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
+
+            try:
+                if event.online_event and event.live_stream_url:
+                    invite_emails_to_event_calendar(event, [request.user.email])
+            except Exception as e:
+                logger.warning(f"Calendar invite for attendee failed in event {event.id}: {e}")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
