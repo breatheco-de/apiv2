@@ -83,3 +83,52 @@ class CatalogCitiesTestSuite(AdmissionsTestCase):
         self.assertEqual(json[1]["country"]["code"], "us")
         self.assertEqual(json[1]["country"]["name"], "United States")
 
+    def test_get_cities_filtered_by_country(self):
+        """Test getting cities filtered by country"""
+        # Create test countries and cities
+        country_us = Country.objects.create(code="us", name="United States")
+        country_es = Country.objects.create(code="es", name="Spain")
+        
+        city_miami = City.objects.create(name="Miami", country=country_us)
+        city_boston = City.objects.create(name="Boston", country=country_us)
+        city_madrid = City.objects.create(name="Madrid", country=country_es)
+        city_barcelona = City.objects.create(name="Barcelona", country=country_es)
+
+        # Filter by US
+        url = "/v1/admissions/catalog/cities?country=us"
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 2)
+        self.assertEqual(json[0]["name"], "Boston")
+        self.assertEqual(json[0]["country"]["code"], "us")
+        self.assertEqual(json[1]["name"], "Miami")
+        self.assertEqual(json[1]["country"]["code"], "us")
+
+        # Filter by Spain
+        url = "/v1/admissions/catalog/cities?country=es"
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 2)
+        self.assertEqual(json[0]["name"], "Barcelona")
+        self.assertEqual(json[0]["country"]["code"], "es")
+        self.assertEqual(json[1]["name"], "Madrid")
+        self.assertEqual(json[1]["country"]["code"], "es")
+
+    def test_get_cities_filtered_by_invalid_country(self):
+        """Test getting cities with invalid country filter"""
+        # Create test country and city
+        country = Country.objects.create(code="us", name="United States")
+        City.objects.create(name="Miami", country=country)
+
+        # Filter by non-existent country
+        url = "/v1/admissions/catalog/cities?country=xx"
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 0)  # No cities for invalid country
+

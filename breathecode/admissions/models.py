@@ -132,6 +132,17 @@ class Academy(models.Model):
 
     logistical_information = models.CharField(max_length=150, blank=True, null=True)
 
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="owned_academies",
+        help_text="Primary owner of the academy, typically the first admin with role 'admin'",
+        db_index=True,
+    )
+
     def default_ac_slug(self):
         return self.slug
 

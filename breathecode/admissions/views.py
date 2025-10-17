@@ -158,8 +158,15 @@ def get_countries(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_cities(request):
-    """Get all cities available in the system."""
-    cities = City.objects.all().select_related("country").order_by("name")
+    """Get all cities available in the system, optionally filtered by country."""
+    cities = City.objects.all().select_related("country")
+    
+    # Filter by country code/id if provided (country uses code as primary key)
+    country = request.GET.get("country")
+    if country:
+        cities = cities.filter(country__pk=country)
+    
+    cities = cities.order_by("name")
     serializer = CitySerializer(cities, many=True)
     return Response(serializer.data)
 
@@ -197,7 +204,9 @@ class AcademyListView(APIView):
         serializer = AcademyPOSTSerializer(data=request.data, context={"request": request, "lang": lang})
         
         if serializer.is_valid():
-            academy = serializer.save()
+            # Set the creator as the owner before saving
+            # The academy_saved signal will automatically create ProfileAcademy with admin role
+            academy = serializer.save(owner=request.user)
             
             # Return the created academy with the standard serializer
             response_serializer = GetBigAcademySerializer(academy)
