@@ -138,7 +138,7 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     params = {"callback": "https://admin.4geeks.com"}
     querystr = urllib.parse.urlencode(params)
     url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
-    subject = "Invitation to join"
+    subject = "Invitation to join 4Geeks"
     if academy and getattr(academy, "white_labeled", False):
         subject = f"Invitation to join {academy.name}"
 

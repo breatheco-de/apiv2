@@ -149,7 +149,7 @@ def create_user_from_invite(user_invite_id: int, **_):
         academy_name = None
         if getattr(user_invite, "academy", None) and getattr(user_invite.academy, "white_labeled", False):
             academy_name = getattr(user_invite.academy, "name", None)
-        subject = f"Set your password at {academy_name}" if academy_name else "Set your password"
+        subject = f"Set your password at {academy_name}" if academy_name else "Set your password at 4Geeks"
 
         notify_actions.send_email_message(
             "pick_password",
