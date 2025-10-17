@@ -104,6 +104,7 @@ CAPABILITIES = [
         "slug": "crud_content_variables",
         "description": "Update, create and delete content variables used in the asset markdowns",
     },
+    {"slug": "webmaster", "description": "Manage the academy website and blog"},
     {"slug": "read_tag", "description": "Read marketing tags and their details"},
     {"slug": "crud_tag", "description": "Update, create and delete a marketing tag and its details"},
     {"slug": "get_gitpod_user", "description": "List gitpod user the academy is consuming"},
@@ -403,6 +404,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             "caps": extend(roles, ["basic"])
             + [
                 "read_keywordcluster",
+                "webmaster",
                 "read_member",
                 "read_media",
                 "read_keyword",
