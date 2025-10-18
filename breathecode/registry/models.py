@@ -357,7 +357,7 @@ class Asset(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="Automatically calculated based on the package.json, pipfile or alternatives. String like: python=3.10,node=16.0",
+        help_text="Automatically calculated based on the package.json, pyproject.toml or alternatives. String like: python=3.10,node=16.0",
     )
 
     readme_url = models.URLField(
