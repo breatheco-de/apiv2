@@ -37,7 +37,10 @@ class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
         handler = self.extensions(request)
 
         # Filter by the old syllabus (OneToOneField) and the new syllabuses (ManyToManyField)
-        items = Specialty.objects.filter(syllabuses__academy_owner=academy_id).distinct()
+        # Exclude deleted specialties
+        items = Specialty.objects.filter(
+            syllabuses__academy_owner=academy_id
+        ).exclude(status=Specialty.DELETED).distinct()
 
         like = request.GET.get("like")
         if like:
