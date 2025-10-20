@@ -1973,7 +1973,8 @@ class LiveKitTokenView(APIView):
             )
 
         now = timezone.now()
-        if not (now >= event.starting_at - timedelta(minutes=10) and now <= event.starting_at + timedelta(hours=3)):
+        open_from = event.starting_at - timedelta(minutes=10)
+        if now < open_from:
             raise ValidationException(
                 translation(en="The live room is not open yet", es="La sala en vivo aún no está abierta"),
                 slug="room-closed",
