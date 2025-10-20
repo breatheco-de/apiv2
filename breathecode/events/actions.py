@@ -866,5 +866,5 @@ def ensure_livekit_room_for_event(event: Event, empty_timeout: int = 900, max_pa
     meet_base = getattr(settings, "LIVEKIT_MEET_URL", "") or ""
     meet_base = meet_base.rstrip("/")
     if meet_base:
-        return f"{meet_base}/room/{room_name}"
+        return f"{meet_base}/rooms/{room_name}"
     return room_name
