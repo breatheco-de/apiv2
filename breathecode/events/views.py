@@ -1997,4 +1997,12 @@ class LiveKitTokenView(APIView):
 
         token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
 
-        return Response({"serverUrl": settings.LIVEKIT_URL, "token": token, "identity": identity, "room": room})
+        return Response(
+            {
+                "serverUrl": settings.LIVEKIT_URL,
+                "token": token,
+                "identity": identity,
+                "room": room,
+                "participantName": name,
+            }
+        )
