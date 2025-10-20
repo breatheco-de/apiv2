@@ -8,6 +8,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.admissions.models import CohortTimeSlot
+from breathecode.events.actions import ensure_livekit_room_for_event
 from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import TaskPriority
 from breathecode.utils.datetime_integer import DatetimeInteger
@@ -272,3 +273,30 @@ def generate_event_recap(event_id: int, **kwargs):
         context.status_text = error_msg[:255]
         context.save()
         raise RetryTask(error_msg)
+
+
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value)
+def create_livekit_room_for_event(self, event_id: int):
+    """Pre-create a LiveKit room for the given event and store the meeting URL.
+
+    This does not block HTTP views and follows the Celery rule to only handle one instance by id.
+    """
+    logger.info(f"Starting create_livekit_room_for_event for event {event_id}")
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        logger.error(f"Event {event_id} not found")
+        AbortTask(f"Event {event_id} not found")
+
+    if not getattr(event, "online_event", False):
+        logger.info(f"Event {event_id} is not an online event; skipping room creation")
+        AbortTask(f"Event {event_id} is not an online event; skipping room creation")
+
+    try:
+        url = ensure_livekit_room_for_event(event)
+        if url and not getattr(event, "live_stream_url", None):
+            event.live_stream_url = url
+            event.save(update_fields=["live_stream_url"])
+    except Exception as e:
+        logger.error(f"Failed to create LiveKit room for event {event_id}: {e}")
+        AbortTask(f"Failed to create LiveKit room for event {event_id}: {e}")
