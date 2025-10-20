@@ -3,11 +3,14 @@ import os
 import re
 from datetime import datetime, timedelta
 
+import jwt
 import pytz
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models.query_utils import Q
 from django.http.response import HttpResponse
 from django.shortcuts import redirect, render
@@ -17,18 +20,17 @@ from icalendar import Event as iEvent
 from icalendar import vCalAddress, vText
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 # from django.http import HttpResponse
 from rest_framework.response import Response
-from django.db import transaction
 from rest_framework.views import APIView
 
 import breathecode.activity.tasks as tasks_activity
+import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.events import actions
-from breathecode.events.actions import create_google_meet_for_event, invite_emails_to_event_calendar
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
@@ -616,9 +618,9 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
     def _async_export_as_csv(self, queryset, academy_id):
         """Export events to CSV format asynchronously (following AdminExportCsvMixin pattern)"""
-        from breathecode.monitoring.tasks import async_download_csv
-        from breathecode.events.models import Event
         from breathecode.authenticate.actions import get_user_language
+        from breathecode.events.models import Event
+        from breathecode.monitoring.tasks import async_download_csv
 
         lang = get_user_language(self.request)
         meta = Event._meta
@@ -700,15 +702,19 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                     and not getattr(event, "live_stream_url", None)
                 ):
                     try:
-                        create_google_meet_for_event(event, private=meet_private)
-                        event.refresh_from_db()
+                        meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                        if meet_base:
+                            event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
+                            event.save(update_fields=["live_stream_url"])
+
+                        tasks_events.create_livekit_room_for_event.delay(event.id)
                         serializer = EventSerializer(event, many=False)
                     except Exception as e:
                         logger.error(
-                            f"Failed to auto-create Google Meet for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                            f"Failed to auto-create LiveKit room for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
                         )
                         raise ValidationException(
-                            f"Failed to auto-create Google Meet for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                            f"Failed to auto-create LiveKit room for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
                         )
 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -806,12 +812,16 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
                 if create_meet and getattr(event, "online_event", False):
                     try:
-                        create_google_meet_for_event(event, private=meet_private)
-                        event.refresh_from_db()
+                        meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                        if meet_base and not getattr(event, "live_stream_url", None):
+                            event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
+                            event.save(update_fields=["live_stream_url"])
+
+                        tasks_events.create_livekit_room_for_event.delay(event.id)
                     except Exception as e:
-                        logger.error(f"Failed to auto-create Google Meet on PUT for academy {academy_id}: {str(e)}")
+                        logger.error(f"Failed to auto-create LiveKit room on PUT for academy {academy_id}: {str(e)}")
                         raise ValidationException(
-                            f"Failed to auto-create Google Meet on PUT for academy {academy_id}: {str(e)}"
+                            f"Failed to auto-create LiveKit room on PUT for academy {academy_id}: {str(e)}"
                         )
 
         if isinstance(request.data, list):
@@ -1224,12 +1234,6 @@ class EventMeCheckinView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
-
-            try:
-                if event.online_event and event.live_stream_url:
-                    invite_emails_to_event_calendar(event, [request.user.email])
-            except Exception as e:
-                logger.warning(f"Calendar invite for attendee failed in event {event.id}: {e}")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1286,9 +1290,9 @@ class AcademyEventCheckinView(APIView):
 
     def _async_export_as_csv(self, queryset, academy_id):
         """Export event checkins to CSV format asynchronously"""
-        from breathecode.monitoring.tasks import async_download_csv
-        from breathecode.events.models import EventCheckin
         from breathecode.authenticate.actions import get_user_language
+        from breathecode.events.models import EventCheckin
+        from breathecode.monitoring.tasks import async_download_csv
 
         lang = get_user_language(self.request)
         meta = EventCheckin._meta
@@ -1955,3 +1959,41 @@ def live_workshop_status(request):
             result = None
         cache.set(cache_key, result, timeout=timeout)
     return Response(result)
+
+
+class LiveKitTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, event_id: int):
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            raise ValidationException(
+                translation(en=f"Event {event_id} not found", es=f"Evento {event_id} no encontrado"),
+                slug="event-not-found",
+            )
+
+        now = timezone.now()
+        if not (now >= event.starting_at - timedelta(minutes=10) and now <= event.starting_at + timedelta(hours=3)):
+            raise ValidationException(
+                translation(en="The live room is not open yet", es="La sala en vivo aún no está abierta"),
+                slug="room-closed",
+            )
+
+        room = f"event-{event.id}"
+        identity = str(request.user.username)
+        first = (request.user.first_name or "").strip()
+        last = (request.user.last_name or "").strip()
+        name = f"{first} {last}".strip() or (request.user.email or "")
+
+        payload = {
+            "iss": settings.LIVEKIT_API_KEY,
+            "sub": identity,
+            "name": name,
+            "nbf": int((now - timedelta(seconds=5)).timestamp()),
+            "exp": int((now + timedelta(minutes=20)).timestamp()),
+            "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True},
+        }
+
+        token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
+
+        return Response({"serverUrl": settings.LIVEKIT_URL, "token": token, "identity": identity, "room": room})
