@@ -929,7 +929,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 "academy_invite",
                 profile_academy.user.email or invite.email,
                 {
-                    "subject": f"Invitation to study at {profile_academy.academy.name}",
+                    "subject": f"{profile_academy.academy.name} is inviting you to {profile_academy.academy.slug}.4Geeks.com",
                     "invites": [ProfileAcademySmallSerializer(profile_academy).data],
                     "user": UserSmallSerializer(profile_academy.user).data,
                     "LINK": os.getenv("API_URL") + "/v1/auth/academy/html/invite",

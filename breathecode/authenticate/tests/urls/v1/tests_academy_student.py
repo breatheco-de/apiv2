@@ -1126,7 +1126,7 @@ class StudentPostTestSuite(AuthTestCase):
                 "academy_invite",
                 model.user[1].email,
                 {
-                    "subject": f"Invitation to study at {model.academy.name}",
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "invites": [
                         {
                             "id": 2,
@@ -1256,7 +1256,7 @@ class StudentPostTestSuite(AuthTestCase):
                 "academy_invite",
                 model.user[1].email,
                 {
-                    "subject": f"Invitation to study at {model.academy.name}",
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "invites": [
                         {
                             "id": 2,
@@ -1390,9 +1390,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude@dude.dude",
                 {
                     "email": "dude@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             )
@@ -1557,9 +1557,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude@dude.dude",
                 {
                     "email": "dude@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             ),
@@ -1752,9 +1752,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude2@dude.dude",
                 {
                     "email": "dude2@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             )

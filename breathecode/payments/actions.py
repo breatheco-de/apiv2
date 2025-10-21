@@ -2003,11 +2003,11 @@ def invite_user_to_subscription_team(
                 "email": obj.get("email", ""),
                 "subject": translation(
                     lang,
-                    en=f"Invitation to join {subscription.academy.name}",
-                    es=f"Invitación para unirse a {subscription.academy.name}",
+                    en=f"{subscription.academy.name} is inviting you to {subscription.academy.slug}.4Geeks.com",
+                    es=f"{subscription.academy.name} te está invitando a {subscription.academy.slug}.4Geeks.com",
                 ),
                 "LINK": get_app_url() + "/v1/auth/member/invite/" + invite.token,
-                "FIST_NAME": invite.first_name or "",
+                "FIRST_NAME": invite.first_name or "",
             },
             academy=subscription.academy,
         )

@@ -135,9 +135,9 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
         email,
         {
             "email": email,
-            "subject": "Invitation to join 4Geeks",
+            "subject": f"{academy.name if academy else '4Geeks'} is inviting you to {academy.slug if academy else '4geeks'}.4Geeks.com",
             "LINK": url,
-            "FIST_NAME": first_name,
+            "FIRST_NAME": first_name,
             **extra,
         },
         academy=academy,

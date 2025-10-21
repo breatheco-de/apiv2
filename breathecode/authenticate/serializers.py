@@ -910,9 +910,9 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     email,
                     {
                         "email": email,
-                        "subject": "Welcome to " + academy.name,
+                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
-                        "FIST_NAME": validated_data["first_name"],
+                        "FIRST_NAME": validated_data["first_name"],
                     },
                     academy=academy,
                 )
@@ -1157,9 +1157,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     email,
                     {
                         "email": email,
-                        "subject": "Welcome to " + academy.name,
+                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
-                        "FIST_NAME": validated_data["first_name"],
+                        "FIRST_NAME": validated_data["first_name"],
                     },
                     academy=academy,
                 )

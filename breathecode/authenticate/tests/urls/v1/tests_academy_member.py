@@ -1807,9 +1807,9 @@ class MemberPostTestSuite(AuthTestCase):
                     "dude@dude.dude",
                     {
                         "email": "dude@dude.dude",
-                        "subject": "Welcome to " + model.academy.name,
+                        "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                         "LINK": url,
-                        "FIST_NAME": "Kenny",
+                        "FIRST_NAME": "Kenny",
                     },
                     academy=model.academy,
                 )
@@ -2036,9 +2036,9 @@ class MemberPostTestSuite(AuthTestCase):
                     "dude2@dude.dude",
                     {
                         "email": "dude2@dude.dude",
-                        "subject": "Welcome to " + model.academy.name,
+                        "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                         "LINK": url,
-                        "FIST_NAME": "Kenny",
+                        "FIRST_NAME": "Kenny",
                     },
                     academy=model.academy,
                 )
