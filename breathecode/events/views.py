@@ -2,7 +2,7 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import jwt
 import pytz
@@ -31,6 +31,7 @@ import breathecode.activity.tasks as tasks_activity
 import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
+from breathecode.services.daily.client import DailyClient
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
@@ -702,20 +703,32 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                     and getattr(event, "online_event", False)
                     and not getattr(event, "live_stream_url", None)
                 ):
+                    provider = request.data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
                     try:
-                        meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
-                        if meet_base:
-                            event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
-                            event.save(update_fields=["live_stream_url"])
+                        if provider == "daily":
+                            margin = timedelta(hours=1)
+                            target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
+                            exp_epoch = int(target_end.timestamp())
+                            room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                            if room and room.get("url"):
+                                event.live_stream_url = room["url"]
+                                event.save(update_fields=["live_stream_url"])
 
-                        tasks_events.create_livekit_room_for_event.delay(event.id)
+                        else:
+                            meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                            if meet_base:
+                                event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
+                                event.save(update_fields=["live_stream_url"])
+
+                            tasks_events.create_livekit_room_for_event.delay(event.id)
+
                         serializer = EventSerializer(event, many=False)
                     except Exception as e:
                         logger.error(
-                            f"Failed to auto-create LiveKit room for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                            f"Failed to auto-create meeting room for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
                         )
                         raise ValidationException(
-                            f"Failed to auto-create LiveKit room for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                            f"Failed to auto-create meeting room for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
                         )
 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -812,17 +825,36 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                     meet_private = meet_private.lower() in ["1", "true", "yes"]
 
                 if create_meet and getattr(event, "online_event", False):
+                    provider = data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
                     try:
-                        meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
-                        if meet_base and not getattr(event, "live_stream_url", None):
-                            event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
-                            event.save(update_fields=["live_stream_url"])
+                        if provider == "daily":
+                            margin = timedelta(hours=1)
+                            target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
+                            exp_epoch = int(target_end.timestamp())
 
-                        tasks_events.create_livekit_room_for_event.delay(event.id)
+                            if not getattr(event, "live_stream_url", None):
+                                room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                                if room and room.get("url"):
+                                    event.live_stream_url = room["url"]
+                                    event.save(update_fields=["live_stream_url"])
+                            else:
+                                parsed = urlparse(event.live_stream_url)
+                                room_name = parsed.path.strip("/").split("/")[-1]
+                                DailyClient().extend_room(name=room_name, exp_in_epoch=exp_epoch)
+
+                        elif provider == "livekit":
+                            meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                            if meet_base and not getattr(event, "live_stream_url", None):
+                                event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
+                                event.save(update_fields=["live_stream_url"])
+
+                            tasks_events.create_livekit_room_for_event.delay(event.id)
                     except Exception as e:
-                        logger.error(f"Failed to auto-create LiveKit room on PUT for academy {academy_id}: {str(e)}")
+                        logger.error(
+                            f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
+                        )
                         raise ValidationException(
-                            f"Failed to auto-create LiveKit room on PUT for academy {academy_id}: {str(e)}"
+                            f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
                         )
 
         if isinstance(request.data, list):
@@ -1144,6 +1176,20 @@ def join_event(request, token, event):
     try:
         base_url = (event.live_stream_url or "").strip()
         normalized = base_url.lower()
+        if base_url and "daily.co" in normalized:
+            first = (checkin.attendee.first_name or "").strip()
+            last = (checkin.attendee.last_name or "").strip()
+            name = f"{first} {last}".strip() or (getattr(checkin.attendee, "email", None) or "")
+
+            data = {
+                "subject": event.title or f"Event {event.id}",
+                "room_url": event.live_stream_url,
+                "userName": name,
+                "backup_room_url": "",
+                "leave_url": "close",
+            }
+            return render(request, "daily.html", data)
+
         if base_url and ("livekit" in normalized or "live-kit" in normalized):
             room = f"event-{event.id}"
             identity = str(checkin.attendee.username)
