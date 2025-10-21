@@ -2,6 +2,7 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 
 import jwt
 import pytz
@@ -1139,6 +1140,37 @@ def join_event(request, token, event):
         tasks_activity.add_activity.delay(
             checkin.attendee.id, "event_checkin_assisted", related_type="events.EventCheckin", related_id=checkin.id
         )
+
+    try:
+        base_url = (event.live_stream_url or "").strip()
+        normalized = base_url.lower()
+        if base_url and ("livekit" in normalized or "live-kit" in normalized):
+            room = f"event-{event.id}"
+            identity = str(checkin.attendee.username)
+            first = (checkin.attendee.first_name or "").strip()
+            last = (checkin.attendee.last_name or "").strip()
+            name = f"{first} {last}".strip() or (getattr(checkin.attendee, "email", None) or "")
+
+            payload = {
+                "iss": settings.LIVEKIT_API_KEY,
+                "sub": identity,
+                "name": name,
+                "nbf": int((now - timedelta(seconds=5)).timestamp()),
+                "exp": int((now + timedelta(minutes=20)).timestamp()),
+                "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True},
+            }
+            lk_token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
+
+            params = urlencode(
+                {
+                    "token": lk_token,
+                    "serverUrl": settings.LIVEKIT_URL,
+                    "participantName": name,
+                }
+            )
+            return redirect(f"{base_url}?{params}")
+    except Exception:
+        pass
 
     return redirect(event.live_stream_url)
 
