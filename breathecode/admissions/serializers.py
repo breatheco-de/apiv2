@@ -164,6 +164,8 @@ class GetSyllabusScheduleSerializer(serpy.Serializer):
 class GetSmallSyllabusScheduleSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
+    schedule_type = serpy.Field()
+    description = serpy.Field()
     syllabus = serpy.MethodField()
 
     def get_syllabus(self, obj):
