@@ -1039,6 +1039,17 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if user is None:
                 raise ValidationException("User not found", slug="user-not-found")
 
+            # Validate that plans are not being added to existing users
+            if "plans" in validated_data and validated_data["plans"]:
+                raise ValidationException(
+                    translation(
+                        en=f"Cannot add payment plans when user already exists. User {user.id} ({user.email}) should be enrolled through their existing account or payment system.",
+                        es=f"No se pueden agregar planes de pago cuando el usuario ya existe. El usuario {user.id} ({user.email}) debe inscribirse a través de su cuenta existente o sistema de pago.",
+                    ),
+                    slug="cannot-add-plans-to-existing-user",
+                    code=400,
+                )
+
             email = user.email
             token, created = Token.get_or_create(user, token_type="temporal")
             querystr = urllib.parse.urlencode(
