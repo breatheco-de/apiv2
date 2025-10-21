@@ -822,6 +822,10 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     raise ValidationException("Cohort not found", slug="cohort-not-found")
                 cohort.append(cohort_search)
 
+        # Remove 'invite' field as it's not a ProfileAcademy model field
+        # It's only used for validation logic
+        invite = validated_data.pop("invite", None)
+
         user = None
         email = None
         status = "INVITED"
@@ -853,7 +857,6 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         # if there is not user (first time) it will be considere an invite
         if "user" not in validated_data:
-            validated_data.pop("invite")  # the front end sends invite=true so we need to remove it
             email = validated_data["email"].lower()
 
             if len(cohort) == 0:
