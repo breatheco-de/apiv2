@@ -93,6 +93,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
 
 
 class GetServiceSerializer(serpy.Serializer):
+    id = serpy.Field()
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
