@@ -53,7 +53,7 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
 
-        response = self.client.get(self.url)
+        response = self.client.get(self.url, headers={"academy": 1})
         json = response.json()
         expected = {
             "detail": "You (user: 1) don't have this capability: read_consumable for academy 1",
@@ -73,7 +73,7 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         )
         self.bc.request.authenticate(model.user)
 
-        response = self.client.get(self.url)
+        response = self.client.get(self.url, headers={"academy": 1})
         json = response.json()
         expected = {
             "cohort_sets": [],

@@ -30,7 +30,7 @@ class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
     """List academy specialties with pagination and filtering."""
 
     permission_classes = [AllowAny]
-    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+    extensions = APIViewExtensions(paginate=True)
 
     @capable_of("read_certificate")
     def get(self, request, academy_id=None):
@@ -49,6 +49,14 @@ class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
         syllabus_slug = request.GET.get("syllabus_slug")
         if syllabus_slug:
             items = items.filter(syllabuses__slug=syllabus_slug).distinct()
+
+        # Custom sorting: by number of graduates (total_issued from metrics), then alphabetically
+        # Use JSON field operations to extract total_issued from metrics
+        items = items.extra(
+            select={
+                'total_issued': "COALESCE((metrics->>'total_issued')::integer, 0)"
+            }
+        ).order_by('-total_issued', 'name')
 
         items = handler.queryset(items)
         serializer = SpecialtySerializer(items, many=True)

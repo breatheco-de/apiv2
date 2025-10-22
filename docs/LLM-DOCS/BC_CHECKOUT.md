@@ -259,7 +259,7 @@ Status: 200
 }
 ```
 
-After the card was saved, we call the "pay" endpoint to charge the user:
+## 3) After the card was saved, we call the "pay" endpoint to charge the user:
 
 Then you call the pay method like this: 
 POST /v2/payments/pay

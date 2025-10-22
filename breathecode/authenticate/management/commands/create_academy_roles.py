@@ -157,6 +157,7 @@ CAPABILITIES = [
     {"slug": "read_provisioning_bill", "description": "Read provisioning activities and bills"},
     {"slug": "crud_provisioning_activity", "description": "Create, update or delete provisioning activities"},
     {"slug": "read_service", "description": "Read service details"},
+    {"slug": "crud_service", "description": "Create, update or delete service definitions"},
     {"slug": "read_academyservice", "description": "Read Academy Service details"},
     {"slug": "crud_academyservice", "description": "Crud Academy Service details"},
     {
