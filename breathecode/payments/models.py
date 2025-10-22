@@ -411,6 +411,76 @@ class ServiceItem(AbstractServiceItem):
         # Include a marker if this service item supports teams
         return f"{self.service.slug} ({self.how_many}){' [team]' if self.is_team_allowed else ''}"
 
+    @classmethod
+    def get_or_create_for_service(
+        cls,
+        service: "Service",
+        how_many: int,
+        unit_type: str = "UNIT",
+        is_renewable: bool = False,
+        is_team_allowed: bool = False,
+        renew_at: int = 1,
+        renew_at_unit: str = "MONTH",
+        sort_priority: int = 1,
+    ) -> tuple["ServiceItem", bool]:
+        """
+        Get or create a ServiceItem with proper uniqueness constraints.
+        
+        This method encapsulates the business logic for what makes a ServiceItem unique.
+        Based on the model's clean() method, these fields are immutable after creation:
+        - service, how_many, unit_type (core identity)
+        - is_renewable, renew_at, renew_at_unit (renewal behavior)
+        
+        The field is_team_allowed is intentionally mutable, but for practical purposes
+        we treat it as part of the unique identity since team vs non-team items
+        are fundamentally different products.
+        
+        Args:
+            service: The Service this item belongs to
+            how_many: Quantity (-1 for unlimited, must be > 0)
+            unit_type: Type of unit (UNIT, CREDIT, DAY, etc.)
+            is_renewable: Whether consumables should auto-renew
+            is_team_allowed: Whether this supports team seats
+            renew_at: Renewal frequency number (only relevant if is_renewable=True)
+            renew_at_unit: Renewal frequency unit (DAY, WEEK, MONTH, YEAR)
+            sort_priority: Display priority (not part of uniqueness)
+            
+        Returns:
+            Tuple of (ServiceItem instance, created boolean)
+            
+        Example:
+            service_item, created = ServiceItem.get_or_create_for_service(
+                service=my_service,
+                how_many=10,
+                is_team_allowed=True
+            )
+        """
+        # Define what makes a ServiceItem unique (based on immutable fields)
+        lookup_fields = {
+            "service": service,
+            "how_many": how_many,
+            "unit_type": unit_type,
+            "is_renewable": is_renewable,
+            "is_team_allowed": is_team_allowed,
+        }
+        
+        # Only include renewal fields if the item is renewable
+        if is_renewable:
+            lookup_fields["renew_at"] = renew_at
+            lookup_fields["renew_at_unit"] = renew_at_unit
+        
+        # Fields that can vary without creating a new item
+        defaults = {
+            "sort_priority": sort_priority,
+        }
+        
+        # If not renewable, set renewal fields to defaults but don't use for lookup
+        if not is_renewable:
+            defaults["renew_at"] = renew_at
+            defaults["renew_at_unit"] = renew_at_unit
+        
+        return cls.objects.get_or_create(**lookup_fields, defaults=defaults)
+
     # Helper methods for team management
     def team_members_qs_for_subscription(self, subscription: "Subscription") -> QuerySet["SubscriptionSeat"]:
         from .models import SubscriptionSeat  # local import to avoid circular

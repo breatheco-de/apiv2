@@ -2934,7 +2934,7 @@ class ConsumableCheckoutView(APIView):
                             ),
                         )
 
-                        service_item, _ = ServiceItem.objects.get_or_create(
+                        service_item, _ = ServiceItem.get_or_create_for_service(
                             service=service,
                             how_many=desired_limit,
                             is_team_allowed=True,
@@ -3037,7 +3037,7 @@ class ConsumableCheckoutView(APIView):
             try:
                 s.set_language(lang)
                 s.add_contact(request.user)
-                service_item, _ = ServiceItem.objects.get_or_create(
+                service_item, _ = ServiceItem.get_or_create_for_service(
                     service=service, how_many=total_items, is_team_allowed=is_team_allowed
                 )
 

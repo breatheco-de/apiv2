@@ -502,7 +502,7 @@ class BagHandler:
                 args, kwargs = self._lookups(service_item["service"])
 
                 service = Service.objects.filter(*args, **kwargs).first()
-                service_item, _ = ServiceItem.objects.get_or_create(
+                service_item, _ = ServiceItem.get_or_create_for_service(
                     service=service,
                     how_many=service_item["how_many"],
                     is_team_allowed=service_item.get("is_team_allowed", True),
@@ -585,7 +585,7 @@ class BagHandler:
             return
 
         plan: Plan | None = self.bag.plans.first()
-        service_item, _ = ServiceItem.objects.get_or_create(
+        service_item, _ = ServiceItem.get_or_create_for_service(
             service=plan.seat_service_price.service, how_many=seats + 1, is_renewable=False, is_team_allowed=True
         )
 
@@ -2497,14 +2497,17 @@ def process_auto_recharge(
                         academy=resource.academy,
                     )
 
-                attrs = consumable.service_item.__dict__.copy()
-                attrs.pop("id")
-                attrs.pop("_state")
-                attrs.pop("how_many")
-
-                si, _ = ServiceItem.objects.get_or_create(
-                    **attrs,
+                # Clone the existing ServiceItem with a different how_many
+                original = consumable.service_item
+                si, _ = ServiceItem.get_or_create_for_service(
+                    service=original.service,
                     how_many=amount,
+                    unit_type=original.unit_type,
+                    is_renewable=original.is_renewable,
+                    is_team_allowed=original.is_team_allowed,
+                    renew_at=original.renew_at,
+                    renew_at_unit=original.renew_at_unit,
+                    sort_priority=original.sort_priority,
                 )
 
                 attrs = consumable.__dict__.copy()

@@ -112,6 +112,7 @@ class GetServiceSerializer(serpy.Serializer):
 
 
 class GetServiceItemSerializer(serpy.Serializer):
+    id = serpy.Field()
     unit_type = serpy.Field()
     how_many = serpy.Field()
     sort_priority = serpy.Field()
@@ -746,7 +747,19 @@ class ServiceItemSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        return ServiceItem.objects.create(**validated_data)
+        # Use the model's get_or_create_for_service method which encapsulates
+        # the business logic for ServiceItem uniqueness
+        service_item, created = ServiceItem.get_or_create_for_service(
+            service=validated_data.get("service"),
+            how_many=validated_data.get("how_many"),
+            unit_type=validated_data.get("unit_type", "UNIT"),
+            is_renewable=validated_data.get("is_renewable", False),
+            is_team_allowed=validated_data.get("is_team_allowed", False),
+            renew_at=validated_data.get("renew_at", 1),
+            renew_at_unit=validated_data.get("renew_at_unit", "MONTH"),
+            sort_priority=validated_data.get("sort_priority", 1),
+        )
+        return service_item
 
 
 class PlanSerializer(serializers.ModelSerializer):
