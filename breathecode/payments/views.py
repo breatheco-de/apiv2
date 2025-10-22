@@ -841,11 +841,82 @@ class ServiceItemView(APIView):
 
 class AcademyServiceItemView(APIView):
     """
-    Academy endpoint to create ServiceItems.
-    ServiceItems are immutable after creation, so only POST is implemented.
+    Academy endpoint to manage ServiceItems.
+    GET: List and filter service items
+    POST: Create new service items (immutable after creation)
     """
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_service")
+    def get(self, request, academy_id=None):
+        """
+        List and filter ServiceItems for an academy.
+        
+        Query Parameters:
+        - service: Filter by service ID or slug
+        - is_renewable: Filter by renewable status (true/false)
+        - is_team_allowed: Filter by team allowed status (true/false)
+        - renew_at: Filter by renewal period number
+        - renew_at_unit: Filter by renewal unit (DAY/WEEK/MONTH/YEAR)
+        - how_many: Filter by quantity (use -1 for unlimited)
+        - unit_type: Filter by unit type (UNIT/CREDIT/other)
+        - how_many_gt: Filter items with how_many greater than value
+        - how_many_lt: Filter items with how_many less than value
+        """
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        # Start with service items from services owned by the academy or global services
+        items = ServiceItem.objects.filter(Q(service__owner__id=academy_id) | Q(service__owner=None))
+
+        # Filter by service (ID or slug)
+        if service := request.GET.get("service"):
+            if service.isdigit():
+                items = items.filter(service__id=int(service))
+            else:
+                items = items.filter(service__slug=service)
+
+        # Filter by boolean fields
+        if is_renewable := request.GET.get("is_renewable"):
+            items = items.filter(is_renewable=is_renewable.lower() == "true")
+
+        if is_team_allowed := request.GET.get("is_team_allowed"):
+            items = items.filter(is_team_allowed=is_team_allowed.lower() == "true")
+
+        # Filter by renewal parameters
+        if renew_at := request.GET.get("renew_at"):
+            if renew_at.isdigit():
+                items = items.filter(renew_at=int(renew_at))
+
+        if renew_at_unit := request.GET.get("renew_at_unit"):
+            items = items.filter(renew_at_unit=renew_at_unit.upper())
+
+        # Filter by how_many (quantity)
+        if how_many := request.GET.get("how_many"):
+            if how_many.lstrip("-").isdigit():
+                items = items.filter(how_many=int(how_many))
+
+        # Range filters for how_many
+        if how_many_gt := request.GET.get("how_many_gt"):
+            if how_many_gt.lstrip("-").isdigit():
+                items = items.filter(how_many__gt=int(how_many_gt))
+
+        if how_many_lt := request.GET.get("how_many_lt"):
+            if how_many_lt.lstrip("-").isdigit():
+                items = items.filter(how_many__lt=int(how_many_lt))
+
+        # Filter by unit_type
+        if unit_type := request.GET.get("unit_type"):
+            items = items.filter(unit_type__in=unit_type.upper().split(","))
+
+        # Add language annotation for serializer
+        items = items.annotate(lang=Value(lang, output_field=CharField()))
+
+        items = handler.queryset(items)
+        serializer = GetServiceItemWithFeaturesSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
     @capable_of("crud_service")
     def post(self, request, academy_id=None):
@@ -3538,6 +3609,7 @@ class AcademyPlanServiceItemView(APIView):
                 code=400,
             )
 
+        # Handle different input formats for service_item
         if isinstance(service_item, int):
             service_item_ids = [service_item]
         elif isinstance(service_item, str):
@@ -3545,6 +3617,18 @@ class AcademyPlanServiceItemView(APIView):
                 service_item_ids = [int(x.strip()) for x in service_item.split(",") if x.strip().isdigit()]
             else:
                 service_item_ids = [int(service_item)]
+        elif isinstance(service_item, list):
+            service_item_ids = [int(x) if isinstance(x, int) else int(x) for x in service_item]
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_item must be an integer, string, or list",
+                    es="service_item debe ser un entero, cadena o lista",
+                    slug="invalid-service-item-format",
+                ),
+                code=400,
+            )
 
         service_items = ServiceItem.objects.filter(id__in=service_item_ids)
         if len(service_items) != len(service_item_ids):

@@ -234,3 +234,54 @@ class AcademyServiceItemTestSuite(PaymentsTestCase):
         # Even though we passed False, SEAT type should force it to True
         self.assertEqual(json["is_team_allowed"], True)
 
+    """
+    🔽🔽🔽 GET - Auth and permissions
+    """
+
+    def test_get__no_auth(self):
+        """Test that GET without authentication returns 401"""
+        url = "/v1/payments/academy/serviceitem"
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {"detail": "Authentication credentials were not provided.", "status_code": 401}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 401)
+
+    def test_get__no_capability(self):
+        """Test that GET without read_service capability returns 403"""
+        model = self.bc.database.create(user=1)
+
+        self.bc.request.authenticate(model.user)
+
+        url = "/v1/payments/academy/serviceitem"
+        response = self.client.get(url, headers={"academy": 1})
+
+        json = response.json()
+        expected = {
+            "detail": "You (user: 1) don't have this capability: read_service for academy 1",
+            "status_code": 403,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 403)
+
+    """
+    🔽🔽🔽 GET - List all service items
+    """
+
+    def test_get__empty_list(self):
+        """Test GET returns empty list when no service items exist"""
+        model = self.bc.database.create(user=1, role=1, capability="read_service", profile_academy=1)
+
+        self.bc.request.authenticate(model.user)
+
+        url = "/v1/payments/academy/serviceitem"
+        response = self.client.get(url, headers={"academy": 1})
+
+        json = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json, [])
+
