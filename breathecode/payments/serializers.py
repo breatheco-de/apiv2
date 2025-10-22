@@ -719,7 +719,7 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
 
 
-class ServiceSerializer(serializers.Serializer):
+class ServiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Service
