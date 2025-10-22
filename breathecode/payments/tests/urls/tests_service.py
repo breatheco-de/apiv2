@@ -160,3 +160,141 @@ class ServiceViewTestSuite(PaymentsTestCase):
         self.assertEqual(len(json), 1)
         self.assertEqual(json[0]["slug"], model.service[0].slug)
 
+    def test_like_filter_by_slug(self):
+        """Test filtering services by slug using like parameter"""
+        model = self.bc.database.create(service=3, academy=1)
+
+        model.service[0].slug = "ai-conversation-message"
+        model.service[0].title = "AI Chat Messages"
+        model.service[0].private = False
+        model.service[0].owner = model.academy
+        model.service[0].save()
+
+        model.service[1].slug = "code-review-service"
+        model.service[1].title = "Code Review Service"
+        model.service[1].private = False
+        model.service[1].owner = model.academy
+        model.service[1].save()
+
+        model.service[2].slug = "mentorship-sessions"
+        model.service[2].title = "Mentorship Sessions"
+        model.service[2].private = False
+        model.service[2].owner = model.academy
+        model.service[2].save()
+
+        url = "/v1/payments/service?like=message"
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 1)
+        self.assertEqual(json[0]["slug"], "ai-conversation-message")
+
+    def test_like_filter_by_title(self):
+        """Test filtering services by title using like parameter"""
+        model = self.bc.database.create(service=2, academy=1)
+
+        model.service[0].slug = "service-a"
+        model.service[0].title = "Premium Code Reviews"
+        model.service[0].private = False
+        model.service[0].owner = model.academy
+        model.service[0].save()
+
+        model.service[1].slug = "service-b"
+        model.service[1].title = "Basic Mentorship"
+        model.service[1].private = False
+        model.service[1].owner = model.academy
+        model.service[1].save()
+
+        url = "/v1/payments/service?like=code"
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 1)
+        self.assertEqual(json[0]["title"], "Premium Code Reviews")
+
+    def test_like_filter_case_insensitive(self):
+        """Test that like filter is case-insensitive"""
+        model = self.bc.database.create(service=1, academy=1)
+
+        model.service.slug = "ai-conversation"
+        model.service.title = "AI Conversation"
+        model.service.private = False
+        model.service.owner = model.academy
+        model.service.save()
+
+        # Test uppercase
+        url = "/v1/payments/service?like=CONVERSATION"
+        response = self.client.get(url)
+        self.assertEqual(len(response.json()), 1)
+
+        # Test lowercase
+        url = "/v1/payments/service?like=conversation"
+        response = self.client.get(url)
+        self.assertEqual(len(response.json()), 1)
+
+
+class AcademyServiceLikeFilterTestSuite(PaymentsTestCase):
+    """Test suite for AcademyService 'like' search filter"""
+
+    def test_like_filter_by_service_slug(self):
+        """Test filtering academy services by service slug"""
+        model = self.bc.database.create(
+            user=1, role=1, capability="read_academyservice", profile_academy=1, academy_service=3, service=3, currency=1
+        )
+
+        model.service[0].slug = "ai-conversation-message"
+        model.service[0].title = "AI Chat Messages"
+        model.service[0].save()
+        model.academy_service[0].service = model.service[0]
+        model.academy_service[0].save()
+
+        model.service[1].slug = "code-review-service"
+        model.service[1].title = "Code Review Service"
+        model.service[1].save()
+        model.academy_service[1].service = model.service[1]
+        model.academy_service[1].save()
+
+        model.service[2].slug = "mentorship-sessions"
+        model.service[2].title = "Mentorship Sessions"
+        model.service[2].save()
+        model.academy_service[2].service = model.service[2]
+        model.academy_service[2].save()
+
+        self.client.force_authenticate(model.user)
+        url = "/v1/payments/academy/academyservice?like=message"
+        response = self.client.get(url, headers={"academy": 1})
+
+        json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 1)
+        self.assertEqual(json[0]["service"]["slug"], "ai-conversation-message")
+
+    def test_like_filter_by_service_title(self):
+        """Test filtering academy services by service title"""
+        model = self.bc.database.create(
+            user=1, role=1, capability="read_academyservice", profile_academy=1, academy_service=2, service=2, currency=1
+        )
+
+        model.service[0].slug = "service-a"
+        model.service[0].title = "Premium Code Reviews"
+        model.service[0].save()
+        model.academy_service[0].service = model.service[0]
+        model.academy_service[0].save()
+
+        model.service[1].slug = "service-b"
+        model.service[1].title = "Basic Mentorship"
+        model.service[1].save()
+        model.academy_service[1].service = model.service[1]
+        model.academy_service[1].save()
+
+        self.client.force_authenticate(model.user)
+        url = "/v1/payments/academy/academyservice?like=code"
+        response = self.client.get(url, headers={"academy": 1})
+
+        json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 1)
+        self.assertEqual(json[0]["service"]["title"], "Premium Code Reviews")
+

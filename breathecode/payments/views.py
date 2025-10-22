@@ -231,6 +231,10 @@ class AcademyPlanView(APIView):
         else:
             items = Plan.objects.filter(query, Q(owner__id=academy_id) | Q(owner=None)).exclude(status="DELETED")
 
+        # Add "like" search filter for slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
         items = handler.queryset(items)
         serializer = GetPlanSerializer(
             items,
@@ -586,6 +590,10 @@ class ServiceView(APIView):
         if mentorship_service_slug := request.GET.get("mentorship_service_slug"):
             items = items.filter(mentorship_services__slug=mentorship_service_slug)
 
+        # Add "like" search filter for slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
         items = handler.queryset(items)
         serializer = GetServiceSerializer(
             items, many=True, context={"academy_id": request.GET.get("academy")}, select=request.GET.get("select")
@@ -627,6 +635,10 @@ class AcademyServiceView(APIView):
 
         if mentorship_service_slug := request.GET.get("mentorship_service_slug"):
             items = items.filter(mentorship_services__slug=mentorship_service_slug)
+
+        # Add "like" search filter for slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
 
         items = handler.queryset(items)
         serializer = GetServiceSerializer(
@@ -710,6 +722,10 @@ class AcademyAcademyServiceView(APIView):
 
         if event_type_set := request.GET.get("event_type_set"):
             items = items.filter(available_event_type_sets__slug__exact=event_type_set)
+
+        # Add "like" search filter for service slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(service__slug__icontains=like) | Q(service__title__icontains=like))
 
         items = handler.queryset(items)
         serializer = GetAcademyServiceSmallSerializer(items, many=True, context={"country_code": country_code})

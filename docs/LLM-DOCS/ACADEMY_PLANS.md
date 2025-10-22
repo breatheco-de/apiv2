@@ -62,6 +62,7 @@ Academy
 - `is_onboarding={true/false}` - Filter onboarding plans
 - `country_code={code}` - Get pricing adjusted for country (e.g., "US", "ES")
 - `status={status}` - Filter by status (DRAFT, ACTIVE, UNLISTED, DELETED)
+- `like={search_term}` - Search by slug or title (case-insensitive, partial match)
 - `limit={number}` - Results per page
 - `offset={number}` - Pagination offset
 
@@ -147,6 +148,14 @@ Headers:
 Get pricing for Spain:
 ```bash
 GET /v1/payments/academy/plan?country_code=ES
+Headers:
+  Academy: 1
+```
+
+Search plans by name:
+```bash
+GET /v1/payments/academy/plan?like=bootcamp
+# Returns plans with "bootcamp" in slug or title
 Headers:
   Academy: 1
 ```
@@ -875,6 +884,7 @@ This is a **public, unauthenticated endpoint** for browsing available services.
 - `cohort_slug` - Filter by cohort
 - `mentorship_service_slug` - Filter by mentorship service
 - `academy` - Optional academy ID (enables private service viewing if user has capability)
+- `like` - Search by slug or title (case-insensitive, partial match)
 
 **Privacy Filtering:**
 - **Without auth or capability:** Returns only `private=false` services
@@ -891,6 +901,12 @@ GET /v1/payments/service
 GET /v1/payments/service?academy=1
 Authorization: Token {token}
 # Returns all services if user has read_service capability
+```
+
+**Example - Search Services:**
+```bash
+GET /v1/payments/service?like=mentorship
+# Returns services with "mentorship" in slug or title
 ```
 
 **Response:**
@@ -934,9 +950,10 @@ Services define **what features or resources** are available. They can be owned 
 **Authentication:** Required - `read_service` capability
 
 **Query Parameters:**
-- `group` - Filter by permission group codename
+- `group` - Filter by permission group name
 - `cohort_slug` - Filter by cohort
 - `mentorship_service_slug` - Filter by mentorship service
+- `like` - Search by slug or title (case-insensitive, partial match)
 
 **Response:**
 ```json
