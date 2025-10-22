@@ -680,7 +680,7 @@ class AcademyService(models.Model):
         objects: TypedManager["AcademyService"]
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
-    service = models.OneToOneField(Service, on_delete=models.CASCADE, help_text="Service")
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, help_text="Service")
 
     price_per_unit = models.FloatField(default=1, help_text="Price per unit (e.g. 1, 2, 3, ...)")
     bundle_size = models.FloatField(
@@ -713,6 +713,9 @@ class AcademyService(models.Model):
     available_cohort_sets = models.ManyToManyField(
         CohortSet, blank=True, help_text="Available cohort sets to be sold in this service and plan"
     )
+
+    class Meta:
+        unique_together = [["academy", "service"]]
 
     def __str__(self) -> str:
         return f"{self.academy.slug} -> {self.service.slug}"
