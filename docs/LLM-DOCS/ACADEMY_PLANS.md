@@ -17,13 +17,19 @@ This document provides comprehensive information about managing payment plans, s
 
 ```
 Academy
-  └── Plan
-      ├── Service Items (what's included)
-      │   └── Service (e.g., "Mentorship", "AI Chat", "Code Reviews")
-      ├── Financing Options (payment methods)
-      ├── Cohort Set (which cohorts)
-      ├── Pricing (by time period and country)
-      └── Subscription/Financing (how customers pay)
+  ├── Plan
+  │   ├── Service Items (what's included)
+  │   │   └── Service (e.g., "Mentorship", "AI Chat", "Code Reviews")
+  │   ├── Financing Options (installment plans)
+  │   ├── Cohort Set (which cohorts)
+  │   ├── Pricing (by time period and country)
+  │   └── Subscription/Financing (how customers pay)
+  │
+  └── Payment Methods (how customers can pay)
+      ├── Credit Cards (Stripe, etc.)
+      ├── Bank Transfers (regional)
+      ├── Third-party (PayPal, crypto, etc.)
+      └── Internal (cash, scholarships, etc.)
 ```
 
 ### Business Models
@@ -2173,6 +2179,8 @@ GET /v1/payments/serviceitem?plan=premium-bootcamp
 | Manage cohort sets | `crud_plan` | Configure cohorts |
 | View services | `read_service` | Read services |
 | Manage services | `crud_service` | CRUD services |
+| View payment methods | `read_paymentmethod` | Read payment methods |
+| Manage payment methods | `crud_paymentmethod` | CRUD payment methods |
 | View consumables | `read_consumable` | View usage |
 | View invoices | `read_invoice` | Access billing |
 
@@ -2182,16 +2190,26 @@ GET /v1/payments/serviceitem?plan=premium-bootcamp
 - `read_subscription`
 - `crud_subscription`
 - `crud_plan`
+- `read_paymentmethod`
+- `crud_paymentmethod`
 - `read_invoice`
 
 **Academy Admin (Full Access):**
 - All payment capabilities
+- All payment method capabilities
 - Plus academy management capabilities
 
 **Support Staff (Read-Only):**
 - `read_subscription`
+- `read_paymentmethod`
 - `read_invoice`
 - `read_consumable`
+
+**Accountant:**
+- `read_subscription`
+- `read_paymentmethod`
+- `crud_paymentmethod`
+- `read_invoice`
 
 ---
 
@@ -2323,6 +2341,808 @@ poetry run python manage.py check_task_status
 
 ---
 
+## Payment Method Management
+
+### What are Payment Methods?
+
+**Payment Methods** define the different ways customers can pay for plans and services at your academy. Each academy can create and manage their own payment methods while also having access to global payment methods.
+
+### Ownership Model
+- Each payment method can belong to a specific academy or be global (academy=null)
+- Academies can only create, update, and delete their own payment methods
+- Global payment methods can be viewed by all but only managed by platform staff
+- GET requests return both academy-specific and global payment methods
+
+**Model Structure:**
+```json
+{
+  "id": 1,
+  "title": "Credit Card",
+  "description": "Pay with Visa, Mastercard, or Amex",
+  "is_backed": true,
+  "is_credit_card": true,
+  "currency": {
+    "code": "USD",
+    "name": "US Dollar"
+  },
+  "academy": {
+    "id": 55,
+    "name": "My Academy",
+    "slug": "my-academy"
+  },
+  "lang": "en-US",
+  "third_party_link": "https://stripe.com/...",
+  "included_country_codes": "US,CA,MX",
+  "visibility": "PUBLIC",
+  "deprecated": false
+}
+```
+
+### Visibility Levels
+
+| Visibility | Description | Use Case |
+|------------|-------------|----------|
+| `PUBLIC` | Shown to all customers | Standard payment methods |
+| `INTERNAL` | Shown only to staff/admin | Internal tracking |
+| `HIDDEN` | Not displayed anywhere | Deprecated methods |
+
+### Managing Payment Methods
+
+#### List Payment Methods
+
+**Endpoint:** `GET /v1/payments/academy/paymentmethod`
+
+**Authentication:** Required - `read_paymentmethod` capability
+
+**Headers:**
+- `Academy: {academy_id}` - Required
+- `Authorization: Token {your-token}` - Required
+
+**Query Parameters:**
+- `visibility={PUBLIC|INTERNAL|HIDDEN}` - Filter by visibility
+- `currency_code={code}` - Filter by currency (e.g., "USD")
+- `lang={lang_code}` - Filter by language (e.g., "en-US")
+- `deprecated={true|false}` - Filter by deprecated status
+- Standard pagination: `limit`, `offset`
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "title": "Credit Card",
+    "description": "Pay with Visa, Mastercard, or Amex via Stripe",
+    "is_backed": true,
+    "is_credit_card": true,
+    "currency": {
+      "code": "USD",
+      "name": "US Dollar"
+    },
+    "academy": {
+      "id": 55,
+      "name": "My Academy",
+      "slug": "my-academy"
+    },
+    "lang": "en-US",
+    "third_party_link": "https://checkout.stripe.com/...",
+    "included_country_codes": "US,CA,MX,BR",
+    "visibility": "PUBLIC",
+    "deprecated": false
+  },
+  {
+    "id": 2,
+    "title": "Bank Transfer - BCP",
+    "description": "Wire transfer to Banco de Crédito del Perú",
+    "is_backed": true,
+    "is_credit_card": false,
+    "currency": {
+      "code": "PEN",
+      "name": "Peruvian Sol"
+    },
+    "academy": {
+      "id": 55,
+      "name": "My Academy",
+      "slug": "my-academy"
+    },
+    "lang": "es-PE",
+    "third_party_link": null,
+    "included_country_codes": "PE",
+    "visibility": "PUBLIC",
+    "deprecated": false
+  }
+]
+```
+
+**Example Requests:**
+
+List all payment methods (academy + global):
+```bash
+GET /v1/payments/academy/paymentmethod
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+Filter by visibility:
+```bash
+GET /v1/payments/academy/paymentmethod?visibility=PUBLIC
+Headers:
+  Academy: 1
+```
+
+Filter by currency:
+```bash
+GET /v1/payments/academy/paymentmethod?currency_code=USD
+Headers:
+  Academy: 1
+```
+
+Get only active (non-deprecated) methods:
+```bash
+GET /v1/payments/academy/paymentmethod?deprecated=false
+Headers:
+  Academy: 1
+```
+
+---
+
+#### Get Single Payment Method
+
+**Endpoint:** `GET /v1/payments/academy/paymentmethod/{paymentmethod_id}`
+
+**Authentication:** Required - `read_paymentmethod` capability
+
+**Response:** Single payment method object (same structure as list)
+
+**Example:**
+```bash
+GET /v1/payments/academy/paymentmethod/123
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+---
+
+#### Create Payment Method
+
+**Endpoint:** `POST /v1/payments/academy/paymentmethod`
+
+**Authentication:** Required - `crud_paymentmethod` capability
+
+**Headers:**
+- `Academy: {academy_id}` - Required
+- `Authorization: Token {your-token}` - Required
+
+**Request Body:**
+```json
+{
+  "title": "Bank Transfer - BCP",
+  "description": "Wire transfer to Banco de Crédito del Perú. Account: 123-456-789",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "PEN",
+  "lang": "es-PE",
+  "third_party_link": "https://bcp.com.pe/empresas/",
+  "included_country_codes": "PE",
+  "visibility": "PUBLIC",
+  "deprecated": false
+}
+```
+
+**Field Details:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | String | ✅ Yes | Payment method name (max 120 chars) |
+| `description` | String | ✅ Yes | Description shown to customers (max 480 chars) |
+| `is_backed` | Boolean | No | If true, represents real income (default: false) |
+| `is_credit_card` | Boolean | No | Credit card flag (default: false) |
+| `currency` | String | No | Currency code (e.g., "USD", "PEN") |
+| `lang` | String | ✅ Yes | Language code (e.g., "en-US", "es-PE") |
+| `third_party_link` | URL | No | Link to external payment processor |
+| `included_country_codes` | String | No | Comma-separated country codes (e.g., "PE,CO,CL") |
+| `visibility` | String | No | PUBLIC, INTERNAL, or HIDDEN (default: PUBLIC) |
+| `deprecated` | Boolean | No | Mark as deprecated (default: false) |
+
+**Notes:**
+- `academy` is automatically set from the Academy header
+- Cannot manually set `academy` or `academy_id`
+- `is_backed=true` means this payment represents confirmed revenue
+
+**Response:** `201 CREATED`
+```json
+{
+  "id": 123,
+  "title": "Bank Transfer - BCP",
+  "description": "Wire transfer to Banco de Crédito del Perú. Account: 123-456-789",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "PEN",
+  "academy": 55,
+  "lang": "es-PE",
+  "third_party_link": "https://bcp.com.pe/empresas/",
+  "included_country_codes": "PE",
+  "visibility": "PUBLIC",
+  "deprecated": false
+}
+```
+
+---
+
+#### Update Payment Method
+
+**Endpoint:** `PUT /v1/payments/academy/paymentmethod/{paymentmethod_id}`
+
+**Authentication:** Required - `crud_paymentmethod` capability
+
+**Request Body:** (partial updates supported)
+```json
+{
+  "description": "Updated wire transfer instructions. New account: 987-654-321",
+  "third_party_link": "https://bcp.com.pe/new-link",
+  "deprecated": false
+}
+```
+
+**Example - Mark as Deprecated:**
+```bash
+PUT /v1/payments/academy/paymentmethod/123
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "deprecated": true,
+  "visibility": "HIDDEN"
+}
+```
+
+**Example - Update Description:**
+```bash
+PUT /v1/payments/academy/paymentmethod/123
+Body:
+{
+  "description": "Updated payment instructions: New bank account 999-888-777"
+}
+```
+
+**Restrictions:**
+- ❌ Can ONLY update payment methods owned by your academy
+- ❌ Cannot update global payment methods (where academy=null)
+- ✅ Partial updates supported - only send fields you want to change
+
+**Response:** `200 OK` with updated payment method object
+
+---
+
+#### Delete Payment Method
+
+**Endpoint:** `DELETE /v1/payments/academy/paymentmethod/{paymentmethod_id}`
+
+**Authentication:** Required - `crud_paymentmethod` capability
+
+**Headers:**
+- `Academy: {academy_id}` - Required
+- `Authorization: Token {your-token}` - Required
+
+**Behavior:**
+- Permanently deletes the payment method
+- Can only delete payment methods owned by your academy
+- No cascade deletion (existing invoices/transactions remain)
+
+**Response:** `204 No Content`
+
+**Example:**
+```bash
+DELETE /v1/payments/academy/paymentmethod/123
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+**Restrictions:**
+- ❌ Can ONLY delete payment methods owned by your academy
+- ❌ Cannot delete global payment methods
+
+**Error Response:**
+```json
+{
+  "detail": "Payment method not found for this academy",
+  "slug": "payment-method-not-found",
+  "status_code": 404
+}
+```
+
+---
+
+### Payment Method Examples
+
+#### Example 1: Credit Card (Stripe)
+
+```json
+{
+  "title": "Credit Card",
+  "description": "Pay securely with Visa, Mastercard, American Express, or Discover",
+  "is_backed": true,
+  "is_credit_card": true,
+  "currency": "USD",
+  "lang": "en-US",
+  "third_party_link": "https://checkout.stripe.com/pay/cs_...",
+  "included_country_codes": "US,CA,MX,BR,AR,CL,CO,PE",
+  "visibility": "PUBLIC",
+  "deprecated": false
+}
+```
+
+**Use Case:** Standard online payment processing
+
+#### Example 2: Bank Transfer (Regional)
+
+```json
+{
+  "title": "Transferencia Bancaria - BCP",
+  "description": "Transferencia a Banco de Crédito del Perú. Cuenta Corriente: 193-123456789-0-00. CCI: 002-193-123456789000-00",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "PEN",
+  "lang": "es-PE",
+  "third_party_link": null,
+  "included_country_codes": "PE",
+  "visibility": "PUBLIC",
+  "deprecated": false
+}
+```
+
+**Use Case:** Local bank transfers in Peru
+
+#### Example 3: PayPal
+
+```json
+{
+  "title": "PayPal",
+  "description": "Pay with your PayPal account or debit/credit card through PayPal",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "USD",
+  "lang": "en-US",
+  "third_party_link": "https://www.paypal.com/paypalme/youracademy",
+  "included_country_codes": "US,CA,MX,GB,DE,FR,ES,IT",
+  "visibility": "PUBLIC",
+  "deprecated": false
+}
+```
+
+**Use Case:** Alternative payment processor
+
+#### Example 4: Cash/In-Person (Internal)
+
+```json
+{
+  "title": "Cash Payment",
+  "description": "Pay in cash at academy office. Receipt will be provided.",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "USD",
+  "lang": "en-US",
+  "third_party_link": null,
+  "included_country_codes": "",
+  "visibility": "INTERNAL",
+  "deprecated": false
+}
+```
+
+**Use Case:** In-person payments, internal tracking
+
+#### Example 5: Scholarship/Grant (Not Backed)
+
+```json
+{
+  "title": "Scholarship Award",
+  "description": "Payment covered by scholarship or grant program",
+  "is_backed": false,
+  "is_credit_card": false,
+  "currency": "USD",
+  "lang": "en-US",
+  "third_party_link": null,
+  "included_country_codes": "",
+  "visibility": "INTERNAL",
+  "deprecated": false
+}
+```
+
+**Use Case:** Tracking non-revenue payments
+
+---
+
+### Country-Specific Payment Methods
+
+**Use `included_country_codes` to control visibility:**
+
+**Example - Latin America Bank Transfers:**
+```json
+[
+  {
+    "title": "Transferencia Bancaria - BCP (Perú)",
+    "included_country_codes": "PE",
+    "lang": "es-PE",
+    "currency": "PEN"
+  },
+  {
+    "title": "Transferencia Bancaria - Bancolombia",
+    "included_country_codes": "CO",
+    "lang": "es-CO",
+    "currency": "COP"
+  },
+  {
+    "title": "Transferencia Bancaria - Santander (Chile)",
+    "included_country_codes": "CL",
+    "lang": "es-CL",
+    "currency": "CLP"
+  }
+]
+```
+
+**Frontend Usage:**
+```bash
+GET /v1/payments/academy/paymentmethod?included_country_codes=PE
+# Returns only methods available in Peru
+```
+
+---
+
+### Payment Method Best Practices
+
+1. ✅ **Clear Titles** - Use recognizable names ("Credit Card", "PayPal", "Bank Transfer")
+2. ✅ **Detailed Descriptions** - Include account numbers, instructions, processing times
+3. ✅ **Set is_backed=true** - For real payment methods that represent revenue
+4. ✅ **Use included_country_codes** - Show relevant methods per region
+5. ✅ **Match language to region** - Use `es-PE` for Peru, `es-MX` for Mexico
+6. ✅ **Deprecate instead of delete** - Set `deprecated=true` for old methods
+7. ✅ **Link third-party processors** - Provide URLs for external payment pages
+8. ❌ **Don't delete active methods** - Use `deprecated=true` and `visibility=HIDDEN` instead
+
+---
+
+### Payment Method Workflow
+
+**Step 1: Create payment method for your region**
+```bash
+POST /v1/payments/academy/paymentmethod
+Headers:
+  Academy: 55
+  Authorization: Token {token}
+
+Body:
+{
+  "title": "Transferencia Bancaria - BCP",
+  "description": "Transferir a: Banco de Crédito del Perú\nCuenta Corriente: 193-123456789-0-00\nCCI: 002-193-123456789000-00\nBeneficiario: Academia Ejemplo SAC",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "PEN",
+  "lang": "es-PE",
+  "included_country_codes": "PE",
+  "visibility": "PUBLIC"
+}
+```
+
+**Step 2: Verify it appears in the list**
+```bash
+GET /v1/payments/academy/paymentmethod?visibility=PUBLIC
+Headers:
+  Academy: 55
+```
+
+**Step 3: Customers see it at checkout**
+```bash
+GET /v1/payments/methods?academy_id=55&country_code=PE
+# Public endpoint - no auth required
+# Returns payment methods for Peru at academy 55
+```
+
+**Step 4: Update if needed**
+```bash
+PUT /v1/payments/academy/paymentmethod/123
+Body:
+{
+  "description": "Updated bank account information..."
+}
+```
+
+**Step 5: Deprecate when no longer used**
+```bash
+PUT /v1/payments/academy/paymentmethod/123
+Body:
+{
+  "deprecated": true,
+  "visibility": "HIDDEN"
+}
+```
+
+---
+
+### Public vs Academy Endpoints
+
+#### Public Endpoint (No Auth)
+
+**Endpoint:** `GET /v1/payments/methods`
+
+**Purpose:** Used by checkout pages to show available payment methods
+
+**Query Parameters:**
+- `academy_id` - Filter by academy
+- `currency_code` - Filter by currency
+- `lang` - Filter by language
+- `country_code` - Filter by country availability
+- `visibility` - Filter by visibility level
+
+**Example:**
+```bash
+GET /v1/payments/methods?academy_id=55&country_code=PE&currency_code=PEN
+# Returns public payment methods available in Peru for academy 55
+```
+
+**Response:** Same structure as academy endpoint
+
+**Use Case:**
+- Displaying payment options on public checkout pages
+- Showing methods to unauthenticated users
+- Building payment selection UI
+
+#### Academy Endpoint (Authenticated)
+
+**Endpoint:** `GET /v1/payments/academy/paymentmethod`
+
+**Purpose:** Management interface for academy staff
+
+**Requires:** `read_paymentmethod` capability
+
+**Features:**
+- ✅ Full CRUD operations
+- ✅ Create new payment methods
+- ✅ Update existing methods
+- ✅ Delete methods
+- ✅ View all visibility levels (including INTERNAL/HIDDEN)
+
+**Use Case:**
+- Academy admin dashboard
+- Payment method configuration
+- Managing regional payment options
+
+---
+
+### Common Payment Method Configurations
+
+#### Stripe/Credit Card Processing
+
+```json
+{
+  "title": "Credit/Debit Card",
+  "description": "Secure payment processing via Stripe. We accept Visa, Mastercard, American Express, and Discover.",
+  "is_backed": true,
+  "is_credit_card": true,
+  "currency": "USD",
+  "lang": "en-US",
+  "third_party_link": "https://dashboard.stripe.com/...",
+  "included_country_codes": "",
+  "visibility": "PUBLIC"
+}
+```
+
+**Notes:**
+- Empty `included_country_codes` = available worldwide
+- `is_backed=true` = confirmed revenue
+- `is_credit_card=true` = enables credit card specific logic
+
+#### Regional Bank Transfer
+
+```json
+{
+  "title": "Transferencia Bancaria",
+  "description": "Transferir a:\n\nBanco: BCP\nCuenta: 193-123456789\nCCI: 002-193-123456789000-00\nBeneficiario: Academia SAC\nRUC: 20123456789\n\nEnviar comprobante a: pagos@academy.com",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "PEN",
+  "lang": "es-PE",
+  "third_party_link": null,
+  "included_country_codes": "PE",
+  "visibility": "PUBLIC"
+}
+```
+
+**Tips:**
+- Use `\n` for line breaks in description
+- Include all payment details
+- Provide email for receipt submission
+- Match language to country
+
+#### PayPal/Alternative Processors
+
+```json
+{
+  "title": "PayPal",
+  "description": "Pay with PayPal balance, bank account, or card through PayPal secure checkout",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "USD",
+  "lang": "en-US",
+  "third_party_link": "https://www.paypal.com/paypalme/youracademy",
+  "included_country_codes": "US,CA,MX,GB,DE,FR,ES,IT,BR,AR",
+  "visibility": "PUBLIC"
+}
+```
+
+#### Mobile Payment (Country-Specific)
+
+```json
+{
+  "title": "Yape - BCP",
+  "description": "Paga con Yape escaneando el código QR o enviando a: 987-654-321. Incluye tu nombre completo en la descripción.",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "PEN",
+  "lang": "es-PE",
+  "third_party_link": "https://www.yape.com.pe/",
+  "included_country_codes": "PE",
+  "visibility": "PUBLIC"
+}
+```
+
+**Use Case:** Peru-specific mobile payment app
+
+#### Cryptocurrency (if accepted)
+
+```json
+{
+  "title": "Bitcoin/Crypto",
+  "description": "Pay with Bitcoin, Ethereum, or USDT. Contact accounting@academy.com for wallet address.",
+  "is_backed": true,
+  "is_credit_card": false,
+  "currency": "USD",
+  "lang": "en-US",
+  "third_party_link": "https://commerce.coinbase.com/...",
+  "included_country_codes": "",
+  "visibility": "INTERNAL"
+}
+```
+
+**Note:** Use INTERNAL visibility for less common methods
+
+---
+
+### Deprecation Strategy
+
+**Don't delete payment methods that have historical data. Instead, deprecate them:**
+
+```bash
+# Step 1: Mark as deprecated
+PUT /v1/payments/academy/paymentmethod/123
+Body:
+{
+  "deprecated": true
+}
+
+# Step 2: Hide from customers
+PUT /v1/payments/academy/paymentmethod/123
+Body:
+{
+  "visibility": "HIDDEN"
+}
+```
+
+**Why not delete?**
+- Historical invoices reference the payment method
+- Transaction records need the method for reporting
+- Audit trails require complete payment history
+
+**Effect of deprecation:**
+- ❌ Not shown in checkout
+- ✅ Still visible in historical invoices
+- ✅ Admin can still view it
+- ✅ Reports still accurate
+
+---
+
+### Multi-Currency Support
+
+**Create payment methods for each currency:**
+
+```bash
+# USD for North America
+POST /v1/payments/academy/paymentmethod
+Body:
+{
+  "title": "Credit Card",
+  "currency": "USD",
+  "lang": "en-US",
+  "included_country_codes": "US,CA,MX"
+}
+
+# EUR for Europe
+POST /v1/payments/academy/paymentmethod
+Body:
+{
+  "title": "Tarjeta de Crédito",
+  "currency": "EUR",
+  "lang": "es-ES",
+  "included_country_codes": "ES,FR,DE,IT"
+}
+
+# PEN for Peru
+POST /v1/payments/academy/paymentmethod
+Body:
+{
+  "title": "Tarjeta de Crédito",
+  "currency": "PEN",
+  "lang": "es-PE",
+  "included_country_codes": "PE"
+}
+```
+
+**Checkout displays the right method based on:**
+1. User's country
+2. Selected currency
+3. Language preference
+
+---
+
+### Error Handling
+
+**404 - Payment Method Not Found:**
+```json
+{
+  "detail": "Payment method not found for this academy",
+  "slug": "payment-method-not-found",
+  "status_code": 404
+}
+```
+
+**Causes:**
+- Payment method doesn't exist
+- Payment method belongs to different academy
+- Trying to modify global payment method
+
+**Solution:** Verify the payment method ID and academy ownership
+
+**400 - Currency Not Found:**
+```json
+{
+  "detail": "Currency not found",
+  "slug": "currency-not-found",
+  "status_code": 400
+}
+```
+
+**Cause:** Invalid currency code
+
+**Solution:** Use valid ISO currency codes (USD, EUR, PEN, etc.)
+
+---
+
+### Integration with Invoices
+
+When students make payments, they select a payment method:
+
+**Invoice Creation:**
+```json
+{
+  "user": 123,
+  "amount": 299.00,
+  "currency": "USD",
+  "payment_method_id": 1,  // Links to PaymentMethod
+  "status": "FULFILLED"
+}
+```
+
+**Benefits:**
+- Track which payment methods are most popular
+- Generate reports by payment type
+- Understand revenue sources
+- Regional payment preferences
+
+---
+
 ## Related Documentation
 
 - [BC_CHECKOUT.md](./BC_CHECKOUT.md) - Customer purchase flow
@@ -2419,9 +3239,43 @@ Academy Plans provide a flexible payment system for selling educational services
 1. **Create plans** with pricing, trial periods, and lifetime
 2. **Add service items** to define what's included
 3. **Configure financing** for installment payments
-4. **Link cohort sets** to grant course access
-5. **Activate and sell** through invitation or checkout
-6. **Track subscriptions** and financings automatically
+4. **Set up payment methods** for regional and payment processor options
+5. **Link cohort sets** to grant course access
+6. **Activate and sell** through invitation or checkout
+7. **Track subscriptions** and financings automatically
 
 The system handles automatic renewals, consumable allocation, capability grants, and certificate issuance - you just define the packages! 🎯
+
+### Quick Reference - Payment Methods
+
+**List payment methods:**
+```bash
+GET /v1/payments/academy/paymentmethod
+Headers: {Academy: 1, Authorization: Token ...}
+```
+
+**Create payment method:**
+```bash
+POST /v1/payments/academy/paymentmethod
+Body: {
+  "title": "Bank Transfer",
+  "description": "Account details...",
+  "currency": "USD",
+  "lang": "en-US",
+  "is_backed": true,
+  "visibility": "PUBLIC"
+}
+```
+
+**Update payment method:**
+```bash
+PUT /v1/payments/academy/paymentmethod/123
+Body: {"description": "Updated details..."}
+```
+
+**Deprecate payment method:**
+```bash
+PUT /v1/payments/academy/paymentmethod/123
+Body: {"deprecated": true, "visibility": "HIDDEN"}
+```
 

@@ -177,6 +177,8 @@ CAPABILITIES = [
         "description": "Create, update or delete subscriptions and plan financings of other users",
     },
     {"slug": "crud_plan", "description": "Create, update or delete plans and services related to them"},
+    {"slug": "read_paymentmethod", "description": "Read payment methods for the academy"},
+    {"slug": "crud_paymentmethod", "description": "Create, update or delete payment methods for the academy"},
     {
         "slug": "upload_assignment_telemetry",
         "description": "Allow upload the user's telemetry in a LearnPack assignment",
@@ -246,6 +248,8 @@ ROLES = [
             "crud_mentorship_session",
             "read_calendly_organization",
             "crud_subscription",
+            "read_paymentmethod",
+            "crud_paymentmethod",
             "read_consumable",
             "validate_assignment_flag",
         ],
@@ -654,6 +658,8 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "crud_academy_feedback_settings",
                 "get_academy_auth_settings",
                 "crud_subscription",
+                "read_paymentmethod",
+                "crud_paymentmethod",
                 "read_commission",
                 "crud_commission",
             ],
@@ -684,6 +690,8 @@ def extend_roles(roles: list[RoleType]) -> None:
                 "read_organization",
                 "crud_provisioning_bill",
                 "crud_subscription",
+                "read_paymentmethod",
+                "crud_paymentmethod",
             ],
         }
     )

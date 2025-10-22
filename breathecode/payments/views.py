@@ -3494,6 +3494,60 @@ class PaymentMethodView(APIView):
 class AcademyPaymentMethodView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
+    @capable_of("read_paymentmethod")
+    def get(self, request, paymentmethod_id=None, academy_id=None):
+        """
+        Get payment methods for the academy.
+        Returns both academy-specific and global payment methods (where academy=null).
+        """
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if paymentmethod_id:
+            # Get specific payment method
+            method = PaymentMethod.objects.filter(
+                Q(academy__id=academy_id) | Q(academy__isnull=True), id=paymentmethod_id
+            ).first()
+            
+            if not method:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Payment method not found",
+                        es="Método de pago no encontrado",
+                        slug="payment-method-not-found",
+                    ),
+                    code=404,
+                )
+            
+            serializer = GetPaymentMethod(method, many=False)
+            return Response(serializer.data)
+
+        # List payment methods for this academy and global ones
+        items = PaymentMethod.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+
+        # Optional filters
+        visibility = request.GET.get("visibility")
+        if visibility:
+            items = items.filter(visibility=visibility)
+
+        currency_code = request.GET.get("currency_code")
+        if currency_code:
+            items = items.filter(currency__code__iexact=currency_code)
+
+        lang_filter = request.GET.get("lang")
+        if lang_filter:
+            items = items.filter(lang=lang_filter)
+
+        deprecated = request.GET.get("deprecated")
+        if deprecated is not None:
+            items = items.filter(deprecated=deprecated.lower() in ["true", "1", "yes"])
+
+        items = handler.queryset(items)
+        serializer = GetPaymentMethod(items, many=True)
+
+        return handler.response(serializer.data)
+
     @capable_of("crud_paymentmethod")
     def post(self, request, academy_id):
         academy = Academy.objects.filter(id=academy_id).first()
