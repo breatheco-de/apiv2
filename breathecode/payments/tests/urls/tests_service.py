@@ -234,6 +234,70 @@ class ServiceViewTestSuite(PaymentsTestCase):
         response = self.client.get(url)
         self.assertEqual(len(response.json()), 1)
 
+    def test_filter_by_academy_owner(self):
+        """Test filtering services by academy owner"""
+        academy1 = self.bc.database.create(academy=1, skip_objects=["service"]).academy
+        academy2 = self.bc.database.create(academy=1, skip_objects=["service"]).academy
+
+        model = self.bc.database.create(service=3)
+
+        # Service owned by academy 1
+        model.service[0].slug = "service-academy-1"
+        model.service[0].private = False
+        model.service[0].owner = academy1
+        model.service[0].save()
+
+        # Service owned by academy 2
+        model.service[1].slug = "service-academy-2"
+        model.service[1].private = False
+        model.service[1].owner = academy2
+        model.service[1].save()
+
+        # Global service (no owner)
+        model.service[2].slug = "service-global"
+        model.service[2].private = False
+        model.service[2].owner = None
+        model.service[2].save()
+
+        # Filter by academy 1 - should return academy 1's services + global
+        url = f"/v1/payments/service?academy={academy1.id}"
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 2)
+        slugs = [s["slug"] for s in json]
+        self.assertIn("service-academy-1", slugs)
+        self.assertIn("service-global", slugs)
+        self.assertNotIn("service-academy-2", slugs)
+
+    def test_filter_by_academy_returns_global_services(self):
+        """Test that filtering by academy includes global services"""
+        academy1 = self.bc.database.create(academy=1, skip_objects=["service"]).academy
+        model = self.bc.database.create(service=2)
+
+        # Academy service
+        model.service[0].slug = "academy-service"
+        model.service[0].private = False
+        model.service[0].owner = academy1
+        model.service[0].save()
+
+        # Global service
+        model.service[1].slug = "global-service"
+        model.service[1].private = False
+        model.service[1].owner = None
+        model.service[1].save()
+
+        url = f"/v1/payments/service?academy={academy1.id}"
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json), 2)
+        slugs = [s["slug"] for s in json]
+        self.assertIn("academy-service", slugs)
+        self.assertIn("global-service", slugs)
+
 
 class AcademyServiceLikeFilterTestSuite(PaymentsTestCase):
     """Test suite for AcademyService 'like' search filter"""

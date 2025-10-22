@@ -581,6 +581,11 @@ class ServiceView(APIView):
         else:
             items = Service.objects.filter(private=False)
 
+        # Add optional academy owner filter
+        if academy_id := request.GET.get("academy"):
+            if str(academy_id).isdigit():
+                items = items.filter(Q(owner__id=int(academy_id)) | Q(owner=None))
+
         if group := request.GET.get("group"):
             items = items.filter(groups__name=group)
 
