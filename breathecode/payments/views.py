@@ -541,9 +541,25 @@ class ServiceView(APIView):
         handler = self.extensions(request)
 
         lang = get_user_language(request)
+        
+        # Check if user has read_service capability to view private services
+        can_view_private = False
+        if request.user and request.user.is_authenticated:
+            academy_id = request.GET.get("academy")
+            if academy_id and str(academy_id).isdigit():
+                from breathecode.authenticate.models import ProfileAcademy
+                
+                capable = ProfileAcademy.objects.filter(
+                    user=request.user.id, academy__id=int(academy_id), role__capabilities__slug="read_service"
+                )
+                can_view_private = capable.exists()
 
         if service_slug:
-            item = Service.objects.filter(slug=service_slug).first()
+            # Filter by private status if user doesn't have capability
+            if can_view_private:
+                item = Service.objects.filter(slug=service_slug).first()
+            else:
+                item = Service.objects.filter(slug=service_slug, private=False).first()
 
             if not item:
                 raise ValidationException(
@@ -555,10 +571,14 @@ class ServiceView(APIView):
             )
             return handler.response(serializer.data)
 
-        items = Service.objects.filter()
+        # Filter services based on capability
+        if can_view_private:
+            items = Service.objects.filter()
+        else:
+            items = Service.objects.filter(private=False)
 
         if group := request.GET.get("group"):
-            items = items.filter(group__codename=group)
+            items = items.filter(groups__name=group)
 
         if cohort_slug := request.GET.get("cohort_slug"):
             items = items.filter(cohorts__slug=cohort_slug)
@@ -600,7 +620,7 @@ class AcademyServiceView(APIView):
         items = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None) | Q(private=False))
 
         if group := request.GET.get("group"):
-            items = items.filter(group__codename=group)
+            items = items.filter(groups__name=group)
 
         if cohort_slug := request.GET.get("cohort_slug"):
             items = items.filter(cohorts__slug=cohort_slug)

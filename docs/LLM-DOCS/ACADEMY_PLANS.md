@@ -834,11 +834,109 @@ When a student purchases a plan with this cohort set, they get access to all inc
 
 ## Service Management
 
-### List Services
+BreatheCode uses a **two-tier service system**:
+
+1. **Service** - Base service definitions (what services exist)
+2. **AcademyService** - Academy-specific pricing and configuration (how to sell them)
+
+This separation allows services to be shared across academies while maintaining academy-specific pricing.
+
+### 🔄 Creation Flow (Important!)
+
+**You must create Services BEFORE AcademyServices:**
+
+```
+Step 1: Service exists
+   ├── Created by your academy (owner=your_academy)
+   ├── Created by another academy (owner=other_academy) ← You can still use it!
+   └── Global service (owner=None) ← Shared across all academies
+        ↓
+Step 2: Create AcademyService
+   └── Links the Service to your academy with your pricing
+```
+
+**Example:**
+- Academy A creates Service "AI Chat" (owner=Academy A)
+- Academy B can create AcademyService using that same "AI Chat" service
+- Each academy sets their own price, bundle size, and discounts
+
+---
+
+### Public Service Catalog
+
+**Endpoint:** `GET /v1/payments/service`
+
+This is a **public, unauthenticated endpoint** for browsing available services.
+
+**Authentication:** ❌ Not required (but capability affects results)
+
+**Query Parameters:**
+- `group` - Filter by permission group name
+- `cohort_slug` - Filter by cohort
+- `mentorship_service_slug` - Filter by mentorship service
+- `academy` - Optional academy ID (enables private service viewing if user has capability)
+
+**Privacy Filtering:**
+- **Without auth or capability:** Returns only `private=false` services
+- **With `read_service` capability + academy ID:** Returns all services (including private)
+
+**Example - Public Access:**
+```bash
+GET /v1/payments/service
+# Returns only public services
+```
+
+**Example - With Capability:**
+```bash
+GET /v1/payments/service?academy=1
+Authorization: Token {token}
+# Returns all services if user has read_service capability
+```
+
+**Response:**
+```json
+[
+  {
+    "title": "AI Chat Messages",
+    "slug": "ai-conversation-message",
+    "owner": {
+      "id": 1,
+      "name": "4Geeks Academy",
+      "slug": "4geeks"
+    },
+    "private": false,
+    "groups": []
+  }
+]
+```
+
+**Use Case:**
+- Students browsing available features
+- Building public service catalogs
+- Checking which services exist before creating AcademyService
+
+---
+
+### Part 1: Service Management (Base Services)
+
+Services define **what features or resources** are available. They can be owned by an academy, another academy, or be global (owner=None).
+
+**Key Points:**
+- ✅ Services can be **reused across academies**
+- ✅ One Service → Many AcademyServices (different academies, different pricing)
+- ✅ Academy B can use services created by Academy A
+- ✅ Global services (owner=None) are available to all academies
+
+#### List Services
 
 **Endpoint:** `GET /v1/payments/academy/service`
 
 **Authentication:** Required - `read_service` capability
+
+**Query Parameters:**
+- `group` - Filter by permission group codename
+- `cohort_slug` - Filter by cohort
+- `mentorship_service_slug` - Filter by mentorship service
 
 **Response:**
 ```json
@@ -851,6 +949,7 @@ When a student purchases a plan with this cohort set, they get access to all inc
     "type": "VOID",
     "consumer": "ADD_CODE_REVIEW",
     "private": true,
+    "session_duration": null,
     "groups": [
       {
         "name": "Student",
@@ -866,7 +965,15 @@ When a student purchases a plan with this cohort set, they get access to all inc
 ]
 ```
 
-### Create Service
+#### Get Single Service
+
+**Endpoint:** `GET /v1/payments/academy/service/{service_slug}`
+
+**Authentication:** Required - `read_service` capability
+
+**Response:** Single service object (same structure as list)
+
+#### Create Service
 
 **Endpoint:** `POST /v1/payments/academy/service`
 
@@ -881,15 +988,444 @@ When a student purchases a plan with this cohort set, they get access to all inc
   "type": "MENTORSHIP_SERVICE_SET",
   "consumer": "JOIN_MENTORSHIP",
   "private": true,
-  "session_duration": "3600"  // seconds
+  "session_duration": "3600"
 }
 ```
 
-### Update Service
+**Notes:**
+- `owner` is automatically set to the academy from the header
+- `slug` must be unique
+- Service types: `COHORT_SET`, `MENTORSHIP_SERVICE_SET`, `EVENT_TYPE_SET`, `VOID`, `SEAT`
+
+#### Update Service
 
 **Endpoint:** `PUT /v1/payments/academy/service/{service_slug}`
 
 **Authentication:** Required - `crud_service` capability
+
+**Request Body:** Same fields as POST (partial updates supported)
+
+**Notes:**
+- Can only update services owned by your academy or global services
+
+---
+
+### Part 2: AcademyService Management (Pricing Configuration)
+
+**AcademyService** defines **how an academy prices and sells** a specific service. It includes pricing, bundle sizes, discounts, and availability.
+
+#### What is AcademyService?
+
+AcademyService connects a Service to an Academy with specific pricing rules:
+- **Price per unit** - How much one unit costs
+- **Bundle size** - Minimum units that can be purchased
+- **Max items** - Maximum quantity limit
+- **Discount ratio** - Bulk purchase discounts
+- **Country pricing** - Regional price adjustments
+- **Availability** - Which mentorship/event/cohort sets can use it
+
+#### List Academy Services
+
+**Endpoint:** `GET /v1/payments/academy/academyservice`
+
+**Authentication:** Required - `read_academyservice` capability
+
+**Query Parameters:**
+- `currency__code` - Filter by currency code (e.g., "USD")
+- `mentorship_service_set` - Filter by mentorship set slug
+- `event_type_set` - Filter by event type set slug
+- `country_code` - Get country-adjusted pricing
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "academy": {
+      "id": 1,
+      "name": "4Geeks Academy",
+      "slug": "4geeks"
+    },
+    "service": {
+      "id": 12,
+      "slug": "ai-conversation-message",
+      "title": "AI Chat Messages",
+      "type": "VOID",
+      "consumer": "AI_INTERACTION"
+    },
+    "currency": {
+      "code": "USD",
+      "name": "US Dollar"
+    },
+    "price_per_unit": 0.10,
+    "bundle_size": 100,
+    "max_items": 10000,
+    "max_amount": 1000.00,
+    "discount_ratio": 0.90,
+    "pricing_ratio_exceptions": {
+      "MX": 0.70,
+      "ES": 0.85
+    },
+    "available_mentorship_service_sets": [
+      {
+        "id": 1,
+        "slug": "standard-mentorship",
+        "name": "Standard Mentorship"
+      }
+    ],
+    "available_event_type_sets": [],
+    "available_cohort_sets": []
+  }
+]
+```
+
+#### Get Single Academy Service
+
+**Endpoint:** `GET /v1/payments/academy/academyservice/{service_slug}`
+
+**Authentication:** Required - `read_academyservice` capability
+
+**Query Parameters:**
+- `currency__code` - Specify currency (required if service has multiple)
+- `country_code` - Get adjusted pricing for specific country
+
+**Example:**
+```bash
+GET /v1/payments/academy/academyservice/ai-conversation-message
+  ?currency__code=USD
+  &country_code=ES
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+#### Create Academy Service
+
+**Endpoint:** `POST /v1/payments/academy/academyservice`
+
+**Authentication:** Required - `crud_academyservice` capability
+
+**Request Body:**
+```json
+{
+  "service": 12,
+  "currency": "USD",
+  "price_per_unit": 0.10,
+  "bundle_size": 100,
+  "max_items": 10000,
+  "max_amount": 1000.00,
+  "discount_ratio": 0.90,
+  "pricing_ratio_exceptions": {
+    "MX": 0.70,
+    "ES": 0.85
+  },
+  "available_mentorship_service_sets": [1, 2],
+  "available_event_type_sets": [5],
+  "available_cohort_sets": [10, 11]
+}
+```
+
+**Field Descriptions:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `service` | integer | ✅ Yes | Service ID to price |
+| `currency` | string | ✅ Yes | Currency code (e.g., "USD") |
+| `price_per_unit` | float | ✅ Yes | Price per single unit |
+| `bundle_size` | float | No | Minimum units (default: 1) |
+| `max_items` | float | No | Max quantity limit (default: 1) |
+| `max_amount` | float | No | Max price limit (default: 1) |
+| `discount_ratio` | float | No | Discount multiplier (default: 1.0) |
+| `pricing_ratio_exceptions` | object | No | Country-specific ratios |
+| `available_mentorship_service_sets` | array | No | Mentorship set IDs |
+| `available_event_type_sets` | array | No | Event type set IDs |
+| `available_cohort_sets` | array | No | Cohort set IDs |
+
+**Notes:**
+- `academy` is automatically set from the header
+- `service` must be OneToOne per academy (one AcademyService per Service per Academy)
+
+**Response:** `201 CREATED` with created AcademyService object
+
+#### Update Academy Service
+
+**Endpoint:** `PUT /v1/payments/academy/academyservice/{service_slug}`
+
+**Authentication:** Required - `crud_academyservice` capability
+
+**Request Body (partial updates supported):**
+```json
+{
+  "price_per_unit": 0.12,
+  "discount_ratio": 0.85,
+  "pricing_ratio_exceptions": {
+    "MX": 0.65,
+    "ES": 0.80,
+    "CO": 0.75
+  }
+}
+```
+
+**Example - Update Pricing:**
+```bash
+PUT /v1/payments/academy/academyservice/ai-conversation-message
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "price_per_unit": 0.15,
+  "max_items": 20000
+}
+```
+
+---
+
+### AcademyService Pricing Examples
+
+#### Example 1: AI Chat Messages (Pay-per-use)
+```json
+{
+  "service": 12,
+  "currency": "USD",
+  "price_per_unit": 0.01,
+  "bundle_size": 100,
+  "max_items": 50000,
+  "max_amount": 500.00,
+  "discount_ratio": 1.0
+}
+```
+- Students buy in bundles of 100 messages
+- Each message costs $0.01
+- 100 messages = $1.00
+- Maximum 50,000 messages ($500 limit)
+
+#### Example 2: Mentorship Sessions (Bulk Discount)
+```json
+{
+  "service": 25,
+  "currency": "USD",
+  "price_per_unit": 50.00,
+  "bundle_size": 1,
+  "max_items": 20,
+  "max_amount": 800.00,
+  "discount_ratio": 0.90
+}
+```
+- Each session: $50
+- Buy 10 sessions: $500 × 0.90 = $450 (10% discount)
+- Maximum 20 sessions
+
+#### Example 3: Regional Pricing
+```json
+{
+  "service": 12,
+  "currency": "USD",
+  "price_per_unit": 1.00,
+  "bundle_size": 10,
+  "pricing_ratio_exceptions": {
+    "MX": 0.70,
+    "ES": 0.85,
+    "IN": 0.50,
+    "BR": 0.60
+  }
+}
+```
+- Base: $1.00 per unit
+- Mexico: $0.70 (30% off)
+- Spain: $0.85 (15% off)
+- India: $0.50 (50% off)
+- Brazil: $0.60 (40% off)
+
+---
+
+### Three Endpoints Comparison
+
+| Aspect | Public `/service` | Academy `/academy/service` | Academy `/academy/academyservice` |
+|--------|-------------------|---------------------------|-----------------------------------|
+| **Purpose** | Browse available services | Manage service definitions | Configure academy pricing |
+| **Auth Required** | ❌ No | ✅ Yes | ✅ Yes |
+| **Capability** | Optional: `read_service` | `read_service` / `crud_service` | `read_academyservice` / `crud_academyservice` |
+| **Shows Private** | Only with capability | ✅ Yes | N/A |
+| **Has Pricing** | ❌ No | ❌ No | ✅ Yes |
+| **Has Discounts** | ❌ No | ❌ No | ✅ Yes |
+| **Can Create** | ❌ No | ✅ Yes | ✅ Yes |
+| **Ownership** | Shows all public | Academy-owned or global | Always academy-specific |
+| **Use Case** | Public catalog | Define services | Price services |
+
+### Service → AcademyService Relationship
+
+```
+Service (Platform-wide)
+├── ID: 12
+├── Slug: "ai-conversation-message"
+├── Owner: Academy A (or None for global)
+├── Private: false
+│
+├── AcademyService (Academy A)
+│   ├── Price: $0.01/unit
+│   ├── Bundle: 100
+│   └── Currency: USD
+│
+├── AcademyService (Academy B)
+│   ├── Price: €0.015/unit
+│   ├── Bundle: 50
+│   └── Currency: EUR
+│
+└── AcademyService (Academy C)
+    ├── Price: $0.02/unit
+    ├── Bundle: 200
+    └── Currency: USD
+```
+
+**Key Point:** One Service can have multiple AcademyServices (one per academy), each with different pricing!
+
+---
+
+### Complete Workflow
+
+**Scenario:** Sell AI chat messages at your academy
+
+#### Option A: Using Existing Service (Recommended)
+
+1. **Browse available services (public endpoint):**
+```bash
+GET /v1/payments/service
+# Check if "ai-conversation-message" already exists
+```
+
+2. **If service exists, create AcademyService with your pricing:**
+```bash
+POST /v1/payments/academy/academyservice
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body: {
+  "service": 12,  // Use existing service ID
+  "currency": "USD",
+  "price_per_unit": 0.01,
+  "bundle_size": 100,
+  "max_items": 50000
+}
+```
+
+**Note:** The service can be owned by ANY academy or be global. You're just setting YOUR pricing!
+
+---
+
+#### Option B: Creating New Service
+
+1. **Check if Service exists:**
+```bash
+GET /v1/payments/academy/service/ai-conversation-message
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+2. **Create Service if it doesn't exist:**
+```bash
+POST /v1/payments/academy/service
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body: {
+  "slug": "ai-conversation-message",
+  "title": "AI Chat Messages",
+  "type": "VOID",
+  "consumer": "AI_INTERACTION",
+  "private": false  // Make it available to other academies
+}
+```
+
+**Important:** `owner` is automatically set to YOUR academy, but other academies can still use it!
+
+3. **Now create AcademyService (your pricing):**
+```bash
+POST /v1/payments/academy/academyservice
+Body: {
+  "service": 12,  // ID from service you just created
+  "currency": "USD",
+  "price_per_unit": 0.01,
+  "bundle_size": 100,
+  "max_items": 50000
+}
+```
+
+---
+
+#### Remaining Steps (Both Options)
+
+4. **Create ServiceItem (define quantity):**
+```bash
+# ServiceItems define "how many" units in a plan
+# Typically created by platform staff via Django admin
+# Links Service → Plan with quantity (-1 = unlimited)
+```
+
+5. **Add ServiceItem to Plan:**
+```bash
+POST /v1/payments/academy/plan/serviceitem
+Body: {
+  "plan": "premium-plan",
+  "service_item": [45, 93]
+}
+```
+
+6. **Students purchase plan → Get consumables**
+
+---
+
+### Cross-Academy Service Sharing Example
+
+**Academy A creates a service:**
+```bash
+# Academy A
+POST /v1/payments/academy/service
+Headers: {Academy: 1}
+Body: {
+  "slug": "live-code-review",
+  "title": "Live Code Review Sessions",
+  "type": "VOID",
+  "consumer": "ADD_CODE_REVIEW",
+  "private": false
+}
+# → Service ID: 50, owner: Academy A
+```
+
+**Academy B uses the same service with different pricing:**
+```bash
+# Academy B (different academy!)
+POST /v1/payments/academy/academyservice
+Headers: {Academy: 2}
+Body: {
+  "service": 50,  // ← Using Academy A's service!
+  "currency": "EUR",
+  "price_per_unit": 25.00,
+  "bundle_size": 1
+}
+```
+
+**Academy C also uses it:**
+```bash
+# Academy C
+POST /v1/payments/academy/academyservice
+Headers: {Academy: 3}
+Body: {
+  "service": 50,  // ← Same service, different academy pricing
+  "currency": "USD",
+  "price_per_unit": 30.00,
+  "bundle_size": 1
+}
+```
+
+**Result:**
+- One Service (ID: 50, owned by Academy A)
+- Three AcademyServices (Academy A, B, C each with own pricing)
+- Students at each academy pay their academy's rate
 
 ---
 
