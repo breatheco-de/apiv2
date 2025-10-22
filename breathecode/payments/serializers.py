@@ -97,9 +97,14 @@ class GetServiceSerializer(serpy.Serializer):
     slug = serpy.Field()
     # description = serpy.Field()
 
-    owner = GetAcademySmallSerializer(many=False)
+    owner = serpy.MethodField()
     private = serpy.Field()
     groups = serpy.MethodField()
+
+    def get_owner(self, obj):
+        if obj.owner:
+            return GetAcademySmallSerializer(obj.owner, many=False).data
+        return None
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data

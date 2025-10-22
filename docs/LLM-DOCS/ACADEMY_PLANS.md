@@ -883,7 +883,7 @@ This is a **public, unauthenticated endpoint** for browsing available services.
 - `group` - Filter by permission group name
 - `cohort_slug` - Filter by cohort
 - `mentorship_service_slug` - Filter by mentorship service
-- `academy` - Optional academy ID (enables private service viewing if user has capability)
+- `academy` - Optional academy ID (filters by owner + enables private service viewing with capability)
 - `like` - Search by slug or title (case-insensitive, partial match)
 
 **Privacy Filtering:**
@@ -896,11 +896,18 @@ GET /v1/payments/service
 # Returns only public services
 ```
 
+**Example - Filter by Academy:**
+```bash
+GET /v1/payments/service?academy=1
+# Returns services owned by academy 1 + global services (owner=None)
+```
+
 **Example - With Capability:**
 ```bash
 GET /v1/payments/service?academy=1
 Authorization: Token {token}
-# Returns all services if user has read_service capability
+# Returns all services owned by academy 1 + global services
+# If user has read_service capability, also includes private services
 ```
 
 **Example - Search Services:**

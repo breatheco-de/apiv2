@@ -739,11 +739,28 @@ class AcademyAcademyServiceView(APIView):
 
     @capable_of("crud_academyservice")
     def post(self, request, academy_id=None):
-        data = request.data
+        lang = get_user_language(request)
+        data = request.data.copy()
 
         data["academy"] = academy_id
 
-        serializer = POSTAcademyServiceSerializer(data=request.data)
+        # Convert currency code to ID
+        currency_code = data.get("currency", "")
+        if currency_code:
+            currency = Currency.objects.filter(code__iexact=currency_code).first()
+            if not currency:
+                raise ValidationException(
+                    translation(lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"),
+                    code=400,
+                )
+            data["currency"] = currency.id
+        else:
+            raise ValidationException(
+                translation(lang, en="Currency is required", es="Divisa es requerida", slug="currency-required"),
+                code=400,
+            )
+
+        serializer = POSTAcademyServiceSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
