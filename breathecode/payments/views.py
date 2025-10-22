@@ -3618,7 +3618,33 @@ class AcademyPlanServiceItemView(APIView):
             else:
                 service_item_ids = [int(service_item)]
         elif isinstance(service_item, list):
-            service_item_ids = [int(x) if isinstance(x, int) else int(x) for x in service_item]
+            # Validate that list doesn't contain null values
+            if None in service_item or any(x is None for x in service_item):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="service_item array cannot contain null values. Use an empty array [] or omit the field if you don't want to add service items.",
+                        es="El array service_item no puede contener valores null. Use un array vacío [] u omita el campo si no desea agregar service items.",
+                        slug="service-item-contains-null",
+                    ),
+                    code=400,
+                )
+            
+            # Validate that all items are valid integers
+            service_item_ids = []
+            for x in service_item:
+                try:
+                    service_item_ids.append(int(x))
+                except (ValueError, TypeError):
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Invalid service_item value: {x}. All values must be valid integers.",
+                            es=f"Valor service_item inválido: {x}. Todos los valores deben ser enteros válidos.",
+                            slug="invalid-service-item-value",
+                        ),
+                        code=400,
+                    )
         else:
             raise ValidationException(
                 translation(

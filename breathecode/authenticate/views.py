@@ -1068,12 +1068,16 @@ class StudentView(APIView, GenerateLookupsMixin):
 
     @capable_of("crud_student")
     def post(self, request, academy_id=None):
+        # Detect if we're creating multiple students (bulk creation)
+        many = isinstance(request.data, list)
 
-        serializer = StudentPOSTSerializer(data=request.data, context={"academy_id": academy_id, "request": request})
+        serializer = StudentPOSTSerializer(
+            data=request.data, context={"academy_id": academy_id, "request": request}, many=many
+        )
 
         if serializer.is_valid():
             result = serializer.save()
-            result = GetProfileAcademySmallSerializer(result, many=False)
+            result = GetProfileAcademySmallSerializer(result, many=many)
             return Response(result.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
