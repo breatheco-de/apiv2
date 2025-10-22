@@ -430,10 +430,17 @@ class ServiceItem(AbstractServiceItem):
         Based on the model's clean() method, these fields are immutable after creation:
         - service, how_many, unit_type (core identity)
         - is_renewable, renew_at, renew_at_unit (renewal behavior)
+        - is_team_allowed (team vs non-team are different products)
         
-        The field is_team_allowed is intentionally mutable, but for practical purposes
-        we treat it as part of the unique identity since team vs non-team items
-        are fundamentally different products.
+        Note: ALL immutable fields are included in the uniqueness check to properly
+        match existing database records, even if some fields are not relevant
+        (e.g., renew_at when is_renewable=False).
+        
+        **Duplicate Handling:**
+        If multiple ServiceItems exist with the same criteria (due to data inconsistencies),
+        this method will always return the oldest one (by ID, lowest first). This allows the
+        system to gracefully handle existing duplicates while newer duplicates can be
+        cleaned up separately.
         
         Args:
             service: The Service this item belongs to
@@ -456,30 +463,32 @@ class ServiceItem(AbstractServiceItem):
             )
         """
         # Define what makes a ServiceItem unique (based on immutable fields)
+        # Include ALL immutable fields to match existing database records
         lookup_fields = {
             "service": service,
             "how_many": how_many,
             "unit_type": unit_type,
             "is_renewable": is_renewable,
             "is_team_allowed": is_team_allowed,
+            "renew_at": renew_at,
+            "renew_at_unit": renew_at_unit,
         }
         
-        # Only include renewal fields if the item is renewable
-        if is_renewable:
-            lookup_fields["renew_at"] = renew_at
-            lookup_fields["renew_at_unit"] = renew_at_unit
+        # Try to find existing ServiceItem(s) with these criteria
+        # If duplicates exist, always return the oldest one (by id, which is creation order)
+        # This gracefully handles existing data inconsistencies
+        existing = cls.objects.filter(**lookup_fields).order_by("id").first()
         
-        # Fields that can vary without creating a new item
-        defaults = {
-            "sort_priority": sort_priority,
-        }
+        if existing:
+            # Found existing item, reuse it
+            return existing, False
         
-        # If not renewable, set renewal fields to defaults but don't use for lookup
-        if not is_renewable:
-            defaults["renew_at"] = renew_at
-            defaults["renew_at_unit"] = renew_at_unit
-        
-        return cls.objects.get_or_create(**lookup_fields, defaults=defaults)
+        # No existing item found, create new one
+        new_item = cls.objects.create(
+            **lookup_fields,
+            sort_priority=sort_priority,
+        )
+        return new_item, True
 
     # Helper methods for team management
     def team_members_qs_for_subscription(self, subscription: "Subscription") -> QuerySet["SubscriptionSeat"]:
