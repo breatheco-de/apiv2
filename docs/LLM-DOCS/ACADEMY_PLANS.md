@@ -1051,7 +1051,13 @@ AcademyService connects a Service to an Academy with specific pricing rules:
       "slug": "ai-conversation-message",
       "title": "AI Chat Messages",
       "type": "VOID",
-      "consumer": "AI_INTERACTION"
+      "consumer": "AI_INTERACTION",
+      "owner": {
+        "id": 1,
+        "name": "4Geeks Academy",
+        "slug": "4geeks"
+      },
+      "private": false
     },
     "currency": {
       "code": "USD",
@@ -1078,6 +1084,11 @@ AcademyService connects a Service to an Academy with specific pricing rules:
   }
 ]
 ```
+
+**Understanding the Response:**
+- `academy` - The academy that owns this pricing (AcademyService owner)
+- `service.owner` - The academy that created the Service definition
+- These can be **different**! You can price services created by other academies
 
 #### Get Single Academy Service
 
@@ -1409,6 +1420,36 @@ Body: {
 }
 ```
 
+**Response shows service ownership:**
+```json
+{
+  "id": 2,
+  "academy": {
+    "id": 2,
+    "name": "Academy B",
+    "slug": "academy-b"
+  },
+  "service": {
+    "id": 50,
+    "slug": "live-code-review",
+    "title": "Live Code Review Sessions",
+    "owner": {
+      "id": 1,
+      "name": "Academy A",
+      "slug": "academy-a"
+    },
+    "private": false
+  },
+  "price_per_unit": 25.00,
+  "currency": {"code": "EUR"}
+}
+```
+
+**Notice:**
+- `academy` (id: 2) = Who owns THIS pricing config
+- `service.owner` (id: 1) = Who created the service definition
+- Different academies! Academy B is using Academy A's service ✅
+
 **Academy C also uses it:**
 ```bash
 # Academy C
@@ -1423,9 +1464,13 @@ Body: {
 ```
 
 **Result:**
-- One Service (ID: 50, owned by Academy A)
-- Three AcademyServices (Academy A, B, C each with own pricing)
+- One Service (ID: 50, `owner`=Academy A)
+- Three AcademyServices:
+  - Academy A's pricing: €25.00/unit
+  - Academy B's pricing: €25.00/unit
+  - Academy C's pricing: $30.00/unit
 - Students at each academy pay their academy's rate
+- All three academies using the same service created by Academy A!
 
 ---
 
