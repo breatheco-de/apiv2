@@ -33,14 +33,13 @@ def default_white_label_features():
             "show_marketing_navigation": False,  # show marketing navigation (url to 4geeks programs)
             "custom_links": [],  # Aditional links added to white label academy navbar (follow frontend structure)
         },
-        "dashboard": {
+        "features": {
             "show_referral_program_widget": False,  # show referral program widget
+            "show_events_widget": True,  # show events widget
             "show_mentoring_widget": False,  # show mentoring widget
             "show_feedback_widget": False,  # show feedback widget
             "show_community_widget": False,  # show community widget
             "show_other_academy_courses": False,  # show other academy courses on dashboard
-        },
-        "features": {
             "show_other_academy_events": False,  # show other academy events
         },
     }
