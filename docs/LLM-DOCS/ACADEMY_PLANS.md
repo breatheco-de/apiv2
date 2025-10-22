@@ -356,6 +356,103 @@ Service Items define **what's included** in a plan:
 
 ---
 
+### Creating Service Items
+
+**Endpoint:** `POST /v1/payments/academy/serviceitem`
+
+**Authentication:** Required - `crud_service` capability
+
+**Headers:**
+- `Academy: {academy_id}` - Required
+- `Authorization: Token {your-token}` - Required
+
+**Request Body:**
+```json
+{
+  "service": 12,
+  "how_many": 100,
+  "unit_type": "UNIT",
+  "sort_priority": 1,
+  "is_renewable": false,
+  "is_team_allowed": false,
+  "renew_at": 1,
+  "renew_at_unit": "MONTH"
+}
+```
+
+**Required Fields:**
+- `service` (integer) - Service ID
+- `how_many` (integer) - Number of units (-1 for unlimited, must be > 0)
+
+**Optional Fields:**
+- `unit_type` (string) - Default: "UNIT"
+- `sort_priority` (integer) - Display order (default: 1)
+- `is_renewable` (boolean) - Auto-renew consumables (default: false)
+- `is_team_allowed` (boolean) - Allow team seats (default: false, auto-set to true for SEAT type)
+- `renew_at` (integer) - Renewal interval (default: 1, only relevant if is_renewable=true)
+- `renew_at_unit` (string) - Renewal unit: DAY, WEEK, MONTH, YEAR (default: MONTH)
+
+**Example - Create Unlimited Service Item:**
+```bash
+POST /v1/payments/academy/serviceitem
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "service": 12,
+  "how_many": -1,
+  "sort_priority": 1
+}
+```
+
+**Example - Create Renewable Service Item:**
+```bash
+POST /v1/payments/academy/serviceitem
+Body:
+{
+  "service": 25,
+  "how_many": 5,
+  "is_renewable": true,
+  "renew_at": 1,
+  "renew_at_unit": "MONTH"
+}
+```
+
+**Response:** `201 CREATED`
+```json
+{
+  "id": 456,
+  "service": {
+    "id": 12,
+    "slug": "mentorship-sessions",
+    "title": "Mentorship Sessions",
+    "type": "MENTORSHIP_SERVICE_SET",
+    "consumer": "JOIN_MENTORSHIP"
+  },
+  "unit_type": "UNIT",
+  "how_many": 5,
+  "sort_priority": 1,
+  "is_renewable": true,
+  "is_team_allowed": false,
+  "renew_at": 1,
+  "renew_at_unit": "MONTH",
+  "features": []
+}
+```
+
+**Important Notes:**
+- ⚠️ **ServiceItems are immutable** - Cannot be updated after creation (except `is_team_allowed`)
+- ⚠️ **Cannot be deleted** - Create new one instead if configuration changes
+- ✅ `how_many` must be -1 (unlimited) or > 0
+- ✅ SEAT type services automatically set `is_team_allowed=true`
+
+**Why Immutable?**
+ServiceItems define critical business logic for active subscriptions and financings. Changing `how_many`, `is_renewable`, or renewal settings after plans are sold could break active customer subscriptions.
+
+---
+
 ### 6. Add Service Items to Plan
 
 **Endpoint:** `POST /v1/payments/academy/plan/serviceitem`
@@ -721,13 +818,37 @@ Include in plan creation/update:
 
 ## Complete Plan Creation Workflow
 
-### Step 1: Create Service Items (if needed)
+### Step 1: Create or View Service Items
 
-Service items are usually pre-created by admins. To view available ones:
+#### Option A: Create New Service Items
+
+If you need custom service items for your academy:
+
+```bash
+POST /v1/payments/academy/serviceitem
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "service": 12,
+  "how_many": -1,
+  "is_renewable": false
+}
+```
+
+**Response:** Returns created ServiceItem with ID `456`
+
+#### Option B: Use Existing Service Items
+
+View already-created service items:
 
 ```bash
 GET /v1/payments/serviceitem
 ```
+
+**Response:** Array of available service items to link to plans
 
 ### Step 2: Create the Plan
 
@@ -757,7 +878,9 @@ Body:
 }
 ```
 
-### Step 3: Add Service Items
+### Step 3: Add Service Items to Plan
+
+Link the service items (created in Step 1 or existing ones) to your plan:
 
 ```bash
 POST /v1/payments/academy/plan/serviceitem
@@ -767,9 +890,11 @@ Headers:
 Body:
 {
   "plan": "web-dev-bootcamp-2025",
-  "service_item": [45, 52, 93, 106]
+  "service_item": [456, 52, 93, 106]  # Use IDs from Step 1
 }
 ```
+
+**Note:** Service item `456` is the one you created in Step 1.
 
 ### Step 4: Link Financing Options (Optional)
 
@@ -1788,16 +1913,20 @@ Defines how long a plan provides access:
 
 ### Service Item Validation
 
-1. ✅ `how_many` must be -1 (unlimited) or positive integer
-2. ✅ `sort_priority` determines display order
-3. ❌ Cannot change core fields after creation (immutable):
+1. ✅ `service` must exist (valid Service ID)
+2. ✅ `how_many` must be -1 (unlimited) or positive integer (> 0)
+3. ❌ `how_many` cannot be 0 or less than -1
+4. ✅ `sort_priority` determines display order
+5. ❌ Cannot change core fields after creation (immutable):
    - `unit_type`
    - `how_many`
    - `service`
    - `is_renewable`
    - `renew_at`
    - `renew_at_unit`
-4. ✅ CAN change: `is_team_allowed`
+6. ✅ CAN change: `is_team_allowed`
+7. ✅ SEAT type services automatically set `is_team_allowed=true`
+8. ❌ Cannot delete service items (no DELETE endpoint)
 
 ---
 
@@ -2003,11 +2132,13 @@ GET /v1/payments/serviceitem?plan=premium-bootcamp
 
 ### Service Item Strategy
 
-1. ✅ **Use -1 for core features** - unlimited access
-2. ✅ **Set limits for premium features** - e.g., 100 AI chats
-3. ✅ **Prioritize sorting** - most important features first
-4. ✅ **Enable team sharing selectively** - not all items need team access
-5. ❌ **Don't modify after creation** - create new instead
+1. ✅ **Create via API** - Academies can now create their own service items
+2. ✅ **Use -1 for core features** - unlimited access
+3. ✅ **Set limits for premium features** - e.g., 100 AI chats
+4. ✅ **Prioritize sorting** - most important features first
+5. ✅ **Enable team sharing selectively** - not all items need team access
+6. ✅ **Plan ahead** - ServiceItems are immutable, think through quantities before creation
+7. ❌ **Don't modify after creation** - create new instead if you need different configuration
 
 ### Pricing Strategy
 
@@ -2037,7 +2168,8 @@ GET /v1/payments/serviceitem?plan=premium-bootcamp
 | Create plan | `crud_subscription` | Full CRUD on plans |
 | Update plan | `crud_subscription` | Modify existing plans |
 | Delete plan | `crud_subscription` | Soft delete plans |
-| Manage service items | `crud_plan` | Link/unlink services |
+| Link service items to plans | `crud_plan` | Link/unlink services |
+| Create service items | `crud_service` | Create new service items |
 | Manage cohort sets | `crud_plan` | Configure cohorts |
 | View services | `read_service` | Read services |
 | Manage services | `crud_service` | CRUD services |
@@ -2207,7 +2339,15 @@ poetry run python manage.py check_task_status
 
 **Create basic monthly plan:**
 ```bash
-# 1. Create plan
+# 1. Create service item (if needed)
+POST /v1/payments/academy/serviceitem
+Body: {
+  "service": 12,
+  "how_many": -1
+}
+# Response: { "id": 456, ... }
+
+# 2. Create plan
 POST /v1/payments/academy/plan
 Body: {
   "slug": "basic-monthly",
@@ -2216,18 +2356,27 @@ Body: {
   "is_renewable": true
 }
 
-# 2. Add services
+# 3. Add services
 POST /v1/payments/academy/plan/serviceitem
-Body: {"plan": "basic-monthly", "service_item": [45, 93]}
+Body: {"plan": "basic-monthly", "service_item": [456, 93]}
 
-# 3. Activate
+# 4. Activate
 PUT /v1/payments/academy/plan/basic-monthly
 Body: {"status": "ACTIVE"}
 ```
 
 **Create bootcamp with financing:**
 ```bash
-# 1. Create plan
+# 1. Create custom service items
+POST /v1/payments/academy/serviceitem
+Body: {"service": 12, "how_many": 10, "is_renewable": false}
+# Response: { "id": 450, ... }
+
+POST /v1/payments/academy/serviceitem
+Body: {"service": 25, "how_many": 5, "is_renewable": false}
+# Response: { "id": 451, ... }
+
+# 2. Create plan
 POST /v1/payments/academy/plan
 Body: {
   "slug": "bootcamp-2025",
@@ -2239,11 +2388,11 @@ Body: {
   "cohort_set": 8
 }
 
-# 2. Add comprehensive services
+# 3. Add service items to plan
 POST /v1/payments/academy/plan/serviceitem
-Body: {"plan": "bootcamp-2025", "service_item": [45,52,93,106]}
+Body: {"plan": "bootcamp-2025", "service_item": [450, 451, 93, 106]}
 
-# 3. Activate
+# 4. Activate
 PUT /v1/payments/academy/plan/bootcamp-2025
 Body: {"status": "ACTIVE"}
 ```

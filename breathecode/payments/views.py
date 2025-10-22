@@ -92,6 +92,7 @@ from breathecode.payments.serializers import (
     PlanSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
+    ServiceItemSerializer,
     ServiceSerializer,
 )
 from breathecode.payments.services.stripe import Stripe
