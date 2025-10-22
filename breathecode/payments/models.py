@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import math
 import os
@@ -563,9 +565,39 @@ class FinancingOption(models.Model):
         default=dict, blank=True, help_text="Exceptions to the general pricing ratios per country"
     )
 
+    pricing_hash = models.CharField(
+        max_length=64,
+        editable=False,
+        db_index=True,
+        help_text="SHA256 hash of pricing_ratio_exceptions for uniqueness checking",
+        default="",
+    )
+
     how_many_months = models.IntegerField(
         default=1, help_text="How many months and installments to collect (e.g. 1, 2, 3, ...)"
     )
+
+    @staticmethod
+    def _generate_pricing_hash(pricing_ratio_exceptions: Optional[dict]) -> str:
+        """
+        Generate a deterministic hash from pricing_ratio_exceptions.
+        
+        This ensures that two financing options with different country-specific
+        pricing are treated as distinct options.
+        
+        Args:
+            pricing_ratio_exceptions: Dictionary of country pricing overrides
+            
+        Returns:
+            SHA256 hash string (64 characters)
+        """
+        if not pricing_ratio_exceptions:
+            # Empty/None pricing gets a consistent hash
+            return hashlib.sha256(b"{}").hexdigest()
+        
+        # Sort keys to ensure deterministic hash regardless of dict ordering
+        normalized = json.dumps(pricing_ratio_exceptions, sort_keys=True, separators=(',', ':'))
+        return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
 
     def clean(self) -> None:
         if not self.monthly_price:
@@ -581,11 +613,92 @@ class FinancingOption(models.Model):
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
+        # Auto-generate pricing_hash before saving
+        self.pricing_hash = self._generate_pricing_hash(self.pricing_ratio_exceptions)
         self.full_clean()
         return super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.monthly_price} {self.currency.code} per {self.how_many_months} months"
+
+    @classmethod
+    def get_or_create_for_academy(
+        cls,
+        academy: Optional["Academy"],
+        monthly_price: float,
+        currency: "Currency",
+        how_many_months: int,
+        pricing_ratio_exceptions: Optional[dict] = None,
+    ) -> tuple["FinancingOption", bool]:
+        """
+        Get or create a FinancingOption with proper uniqueness constraints.
+        
+        This method encapsulates the business logic for what makes a FinancingOption unique:
+        - academy (can be None for global financing options)
+        - monthly_price
+        - currency
+        - how_many_months
+        - pricing_hash (hash of pricing_ratio_exceptions)
+        
+        Using pricing_hash ensures that two financing options with the same base price
+        but different country-specific pricing ratios are treated as distinct products.
+        
+        **Duplicate Handling:**
+        If multiple FinancingOptions exist with the same criteria (due to data 
+        inconsistencies), this method will always return the oldest one (by ID, 
+        lowest first). This allows the system to gracefully handle existing 
+        duplicates while newer duplicates can be cleaned up separately.
+        
+        Args:
+            academy: Academy owner (None for global financing options)
+            monthly_price: Monthly price amount
+            currency: Currency instance
+            how_many_months: Number of monthly installments
+            pricing_ratio_exceptions: Country-specific pricing overrides (optional)
+            
+        Returns:
+            Tuple of (FinancingOption instance, created boolean)
+            
+        Example:
+            usd = Currency.objects.get(code="USD")
+            financing, created = FinancingOption.get_or_create_for_academy(
+                academy=my_academy,
+                monthly_price=299.00,
+                currency=usd,
+                how_many_months=12,
+                pricing_ratio_exceptions={"PE": 1.2}
+            )
+        """
+        # Generate hash for the pricing exceptions
+        pricing_hash = cls._generate_pricing_hash(pricing_ratio_exceptions)
+        
+        # Define what makes a FinancingOption unique (including pricing_hash)
+        lookup_fields = {
+            "academy": academy,
+            "monthly_price": monthly_price,
+            "currency": currency,
+            "how_many_months": how_many_months,
+            "pricing_hash": pricing_hash,
+        }
+        
+        # Try to find existing FinancingOption(s) with these criteria
+        # If duplicates exist, always return the oldest one (by id)
+        # This gracefully handles existing data inconsistencies
+        existing = cls.objects.filter(**lookup_fields).order_by("id").first()
+        
+        if existing:
+            return existing, False
+        
+        # No existing item found, create new one
+        # Note: pricing_hash will be auto-generated in save() method
+        new_item = cls.objects.create(
+            academy=academy,
+            monthly_price=monthly_price,
+            currency=currency,
+            how_many_months=how_many_months,
+            pricing_ratio_exceptions=pricing_ratio_exceptions or {},
+        )
+        return new_item, True
 
 
 class CohortSet(models.Model):

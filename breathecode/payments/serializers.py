@@ -827,7 +827,16 @@ class FinancingOptionSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        return FinancingOption.objects.create(**validated_data)
+        # Use the model's get_or_create_for_academy method which encapsulates
+        # the business logic for FinancingOption uniqueness
+        financing_option, created = FinancingOption.get_or_create_for_academy(
+            academy=validated_data.get("academy"),
+            monthly_price=validated_data.get("monthly_price"),
+            currency=validated_data.get("currency"),
+            how_many_months=validated_data.get("how_many_months"),
+            pricing_ratio_exceptions=validated_data.get("pricing_ratio_exceptions"),
+        )
+        return financing_option
 
     def update(self, instance, validated_data):
         for key in validated_data:
