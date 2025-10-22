@@ -34,13 +34,13 @@ def default_white_label_features():
             "custom_links": [],  # Aditional links added to white label academy navbar (follow frontend structure)
         },
         "features": {
-            "show_referral_program_widget": False,  # show referral program widget
-            "show_events_widget": True,  # show events widget
-            "show_mentoring_widget": False,  # show mentoring widget
-            "show_feedback_widget": False,  # show feedback widget
-            "show_community_widget": False,  # show community widget
-            "show_other_academy_courses": False,  # show other academy courses on dashboard
-            "show_other_academy_events": False,  # show other academy events
+            "allow_referral_program": False,  # allow referral program
+            "allow_events": True,  # allow events
+            "allow_mentoring": False,  # allow mentoring
+            "allow_feedback_widget": False,  # allow feedback widget
+            "allow_community_widget": False,  # allow community widget
+            "allow_other_academy_courses": False,  # allow other academy courses on dashboard
+            "allow_other_academy_events": False,  # allow other academy events
         },
     }
 
@@ -169,6 +169,28 @@ class Academy(models.Model):
 
     def default_ac_slug(self):
         return self.slug
+
+    def get_white_label_features(self):
+        """
+        Returns white_label_features merged with defaults.
+        This ensures that if new fields are added to the default structure,
+        existing academies will automatically get them.
+        """
+        return self._deep_merge_dict(default_white_label_features(), self.white_label_features or {})
+
+    @staticmethod
+    def _deep_merge_dict(default, override):
+        """
+        Deep merge two dictionaries, with override taking precedence.
+        If a key exists in both and both values are dicts, merge recursively.
+        """
+        result = default.copy()
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = Academy._deep_merge_dict(result[key], value)
+            else:
+                result[key] = value
+        return result
 
     def __str__(self):
         return self.name
