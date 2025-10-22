@@ -735,7 +735,7 @@ class ServiceSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ServiceItemSerializer(serializers.Serializer):
+class ServiceItemSerializer(serializers.ModelSerializer):
     status_fields = ["unit_type"]
 
     class Meta:
@@ -744,6 +744,9 @@ class ServiceItemSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         return attrs
+    
+    def create(self, validated_data):
+        return ServiceItem.objects.create(**validated_data)
 
 
 class PlanSerializer(serializers.ModelSerializer):

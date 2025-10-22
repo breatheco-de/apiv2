@@ -838,6 +838,68 @@ class ServiceItemView(APIView):
         return handler.response(serializer.data)
 
 
+class AcademyServiceItemView(APIView):
+    """
+    Academy endpoint to create ServiceItems.
+    ServiceItems are immutable after creation, so only POST is implemented.
+    """
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_service")
+    def post(self, request, academy_id=None):
+        """
+        Create a new ServiceItem.
+        
+        Required fields:
+        - service: Service ID
+        - how_many: Number of units (-1 for unlimited, must be > 0)
+        
+        Optional fields:
+        - unit_type: Default "UNIT"
+        - sort_priority: Default 1
+        - is_renewable: Default False
+        - is_team_allowed: Default False (auto-set to True for SEAT type services)
+        - renew_at: Default 1 (relevant only if is_renewable=True)
+        - renew_at_unit: Default "MONTH" (relevant only if is_renewable=True)
+        """
+        lang = get_user_language(request)
+
+        # Validate service exists
+        service_id = request.data.get("service")
+        if not service_id:
+            raise ValidationException(
+                translation(
+                    lang, en="service is required", es="service es requerido", slug="service-required"
+                ),
+                code=400,
+            )
+
+        service = Service.objects.filter(id=service_id).first()
+        if not service:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Service with id {service_id} not found",
+                    es=f"No se encontró el servicio con id {service_id}",
+                    slug="service-not-found",
+                ),
+                code=404,
+            )
+
+        # Create ServiceItem
+        serializer = ServiceItemSerializer(data=request.data)
+        if serializer.is_valid():
+            service_item = serializer.save()
+
+            # Return with features if available
+            service_item.lang = lang
+            response_serializer = GetServiceItemWithFeaturesSerializer(service_item)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class MeConsumableView(APIView):
 
     def get(self, request):
