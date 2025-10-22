@@ -240,27 +240,27 @@ class AcademyServiceLikeFilterTestSuite(PaymentsTestCase):
 
     def test_like_filter_by_service_slug(self):
         """Test filtering academy services by service slug"""
+        from breathecode.payments.models import AcademyService, Service
+
         model = self.bc.database.create(
-            user=1, role=1, capability="read_academyservice", profile_academy=1, academy_service=3, service=3, currency=1
+            user=1, role=1, capability="read_academyservice", profile_academy=1, currency=1
         )
 
-        model.service[0].slug = "ai-conversation-message"
-        model.service[0].title = "AI Chat Messages"
-        model.service[0].save()
-        model.academy_service[0].service = model.service[0]
-        model.academy_service[0].save()
+        # Create services manually
+        service1 = Service.objects.create(slug="ai-conversation-message", title="AI Chat Messages")
+        service2 = Service.objects.create(slug="code-review-service", title="Code Review Service")
+        service3 = Service.objects.create(slug="mentorship-sessions", title="Mentorship Sessions")
 
-        model.service[1].slug = "code-review-service"
-        model.service[1].title = "Code Review Service"
-        model.service[1].save()
-        model.academy_service[1].service = model.service[1]
-        model.academy_service[1].save()
-
-        model.service[2].slug = "mentorship-sessions"
-        model.service[2].title = "Mentorship Sessions"
-        model.service[2].save()
-        model.academy_service[2].service = model.service[2]
-        model.academy_service[2].save()
+        # Create academy services
+        AcademyService.objects.create(
+            academy=model.academy, service=service1, currency=model.currency, price_per_unit=0.01
+        )
+        AcademyService.objects.create(
+            academy=model.academy, service=service2, currency=model.currency, price_per_unit=0.02
+        )
+        AcademyService.objects.create(
+            academy=model.academy, service=service3, currency=model.currency, price_per_unit=0.03
+        )
 
         self.client.force_authenticate(model.user)
         url = "/v1/payments/academy/academyservice?like=message"
@@ -273,21 +273,23 @@ class AcademyServiceLikeFilterTestSuite(PaymentsTestCase):
 
     def test_like_filter_by_service_title(self):
         """Test filtering academy services by service title"""
+        from breathecode.payments.models import AcademyService, Service
+
         model = self.bc.database.create(
-            user=1, role=1, capability="read_academyservice", profile_academy=1, academy_service=2, service=2, currency=1
+            user=1, role=1, capability="read_academyservice", profile_academy=1, currency=1
         )
 
-        model.service[0].slug = "service-a"
-        model.service[0].title = "Premium Code Reviews"
-        model.service[0].save()
-        model.academy_service[0].service = model.service[0]
-        model.academy_service[0].save()
+        # Create services manually
+        service1 = Service.objects.create(slug="service-a", title="Premium Code Reviews")
+        service2 = Service.objects.create(slug="service-b", title="Basic Mentorship")
 
-        model.service[1].slug = "service-b"
-        model.service[1].title = "Basic Mentorship"
-        model.service[1].save()
-        model.academy_service[1].service = model.service[1]
-        model.academy_service[1].save()
+        # Create academy services
+        AcademyService.objects.create(
+            academy=model.academy, service=service1, currency=model.currency, price_per_unit=0.01
+        )
+        AcademyService.objects.create(
+            academy=model.academy, service=service2, currency=model.currency, price_per_unit=0.02
+        )
 
         self.client.force_authenticate(model.user)
         url = "/v1/payments/academy/academyservice?like=code"

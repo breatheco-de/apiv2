@@ -1052,6 +1052,7 @@ AcademyService connects a Service to an Academy with specific pricing rules:
 - `mentorship_service_set` - Filter by mentorship set slug
 - `event_type_set` - Filter by event type set slug
 - `country_code` - Get country-adjusted pricing
+- `like` - Search by service slug or title (case-insensitive, partial match)
 
 **Response:**
 ```json
