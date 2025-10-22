@@ -26,6 +26,25 @@ def default_syllabus_version_json():
     return {"days": []}
 
 
+def default_white_label_features():
+    """Default value for `Academy.white_label_features` field."""
+    return {
+        "navigation": {
+            "show_marketing_navigation": False,  # show marketing navigation (url to 4geeks programs)
+            "custom_links": [],  # Aditional links added to white label academy navbar (follow frontend structure)
+        },
+        "features": {
+            "allow_referral_program": False,  # allow referral program
+            "allow_events": True,  # allow events
+            "allow_mentoring": False,  # allow mentoring
+            "allow_feedback_widget": False,  # allow feedback widget
+            "allow_community_widget": False,  # allow community widget
+            "allow_other_academy_courses": False,  # allow other academy courses on dashboard
+            "allow_other_academy_events": False,  # allow other academy events
+        },
+    }
+
+
 User.add_to_class("__str__", get_user_label)
 
 __all__ = ["UserAdmissions", "Country", "City", "Academy", "Syllabus", "Cohort", "CohortUser", "CohortTimeSlot"]
@@ -103,6 +122,11 @@ class Academy(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, db_index=True)
     zip_code = models.IntegerField(blank=True, null=True, db_index=True)
     white_labeled = models.BooleanField(default=False)
+    white_label_features = models.JSONField(
+        default=default_white_label_features,
+        blank=True,
+        help_text="JSON field to store white label feature configurations for example: eliminate dashboard widgets, include custom links, etc.",
+    )
 
     active_campaign_slug = models.SlugField(
         max_length=100, unique=False, null=True, default=None, blank=True, db_index=True
@@ -145,6 +169,28 @@ class Academy(models.Model):
 
     def default_ac_slug(self):
         return self.slug
+
+    def get_white_label_features(self):
+        """
+        Returns white_label_features merged with defaults.
+        This ensures that if new fields are added to the default structure,
+        existing academies will automatically get them.
+        """
+        return self._deep_merge_dict(default_white_label_features(), self.white_label_features or {})
+
+    @staticmethod
+    def _deep_merge_dict(default, override):
+        """
+        Deep merge two dictionaries, with override taking precedence.
+        If a key exists in both and both values are dicts, merge recursively.
+        """
+        result = default.copy()
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = Academy._deep_merge_dict(result[key], value)
+            else:
+                result[key] = value
+        return result
 
     def __str__(self):
         return self.name
@@ -217,9 +263,10 @@ class Syllabus(models.Model):
     def save(self, *args, **kwargs):
         created = not self.id
         super().save(*args, **kwargs)
-        
+
         if created:
             from .signals import syllabus_created
+
             syllabus_created.send_robust(instance=self, sender=self.__class__)
 
 

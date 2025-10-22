@@ -154,7 +154,7 @@ This finds the first active admin for each academy and sets them as owner.
 
 ### Core Implementation:
 - `breathecode/admissions/models.py` - Added owner field
-- `breathecode/admissions/views.py` - Sets owner on creation  
+- `breathecode/admissions/views.py` - Sets owner on creation
 - `breathecode/admissions/receivers.py` - Signal creates ProfileAcademy
 - `breathecode/admissions/serializers.py` - Includes owner in response
 
@@ -231,4 +231,3 @@ Creator is now academy owner AND admin!
 ---
 
 **Status**: ✅ **Production Ready** - Signal-based implementation complete!
-
