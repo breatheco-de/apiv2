@@ -827,10 +827,30 @@ class FinancingOptionSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        from breathecode.admissions.models import Academy
+        
+        # Get academy from validated_data or from save() kwargs
+        # The view calls serializer.save(academy_id=academy_id)
+        academy_id = validated_data.pop("academy_id", None)
+        academy = validated_data.get("academy")
+        
+        # Convert academy_id to Academy instance if needed
+        if academy_id and not academy:
+            academy = Academy.objects.filter(id=academy_id).first()
+            if not academy:
+                raise ValidationException(
+                    translation(
+                        en="Academy not found",
+                        es="Academia no encontrada",
+                    ),
+                    slug="academy-not-found",
+                    code=404,
+                )
+        
         # Use the model's get_or_create_for_academy method which encapsulates
         # the business logic for FinancingOption uniqueness
         financing_option, created = FinancingOption.get_or_create_for_academy(
-            academy=validated_data.get("academy"),
+            academy=academy,
             monthly_price=validated_data.get("monthly_price"),
             currency=validated_data.get("currency"),
             how_many_months=validated_data.get("how_many_months"),
