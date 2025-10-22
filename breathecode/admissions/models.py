@@ -26,6 +26,26 @@ def default_syllabus_version_json():
     return {"days": []}
 
 
+def default_white_label_features():
+    """Default value for `Academy.white_label_features` field."""
+    return {
+        "navigation": {
+            "show_marketing_navigation": False,  # show marketing navigation (url to 4geeks programs)
+            "custom_links": [],  # Aditional links added to white label academy navbar (follow frontend structure)
+        },
+        "dashboard": {
+            "show_referral_program_widget": False,  # show referral program widget
+            "show_mentoring_widget": False,  # show mentoring widget
+            "show_feedback_widget": False,  # show feedback widget
+            "show_community_widget": False,  # show community widget
+            "show_other_academy_courses": False,  # show other academy courses on dashboard
+        },
+        "features": {
+            "show_other_academy_events": False,  # show other academy events
+        },
+    }
+
+
 User.add_to_class("__str__", get_user_label)
 
 __all__ = ["UserAdmissions", "Country", "City", "Academy", "Syllabus", "Cohort", "CohortUser", "CohortTimeSlot"]
@@ -103,6 +123,11 @@ class Academy(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, db_index=True)
     zip_code = models.IntegerField(blank=True, null=True, db_index=True)
     white_labeled = models.BooleanField(default=False)
+    white_label_features = models.JSONField(
+        default=default_white_label_features,
+        blank=True,
+        help_text="JSON field to store white label feature configurations for example: eliminate dashboard widgets, include custom links, etc.",
+    )
 
     active_campaign_slug = models.SlugField(
         max_length=100, unique=False, null=True, default=None, blank=True, db_index=True
@@ -217,9 +242,10 @@ class Syllabus(models.Model):
     def save(self, *args, **kwargs):
         created = not self.id
         super().save(*args, **kwargs)
-        
+
         if created:
             from .signals import syllabus_created
+
             syllabus_created.send_robust(instance=self, sender=self.__class__)
 
 
