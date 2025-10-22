@@ -48,6 +48,7 @@ from breathecode.payments.models import (
     Coupon,
     Currency,
     EventTypeSet,
+    FinancingOption,
     FinancialReputation,
     Invoice,
     MentorshipServiceSet,
@@ -66,6 +67,7 @@ from breathecode.payments.models import (
 )
 from breathecode.payments.serializers import (
     BillingTeamAutoRechargeSerializer,
+    FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
@@ -74,6 +76,7 @@ from breathecode.payments.serializers import (
     GetCouponWithPlansSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
+    GetFinancingOptionSerializer,
     GetInvoiceSerializer,
     GetInvoiceSmallSerializer,
     GetMentorshipServiceSetSerializer,
@@ -318,6 +321,164 @@ class AcademyPlanView(APIView):
 
         plan.status = "DELETED"
         plan.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyFinancingOptionView(APIView):
+    """Manage financing options for academy plans"""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_subscription")
+    def get(self, request, financing_option_id=None, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if financing_option_id:
+            item = FinancingOption.objects.filter(id=financing_option_id).first()
+            if not item:
+                raise ValidationException(
+                    translation(
+                        lang, en="Financing option not found", es="Opción de financiamiento no encontrada", slug="not-found"
+                    ),
+                    code=404,
+                )
+
+            serializer = GetFinancingOptionSerializer(
+                item, many=False, context={"lang": lang, "country_code": request.GET.get("country_code")}
+            )
+            return Response(serializer.data)
+
+        # List financing options for this academy and global ones
+        items = FinancingOption.objects.filter(Q(academy__id=academy_id) | Q(academy=None))
+
+        # Filter by currency if provided
+        currency_code = request.GET.get("currency")
+        if currency_code:
+            items = items.filter(currency__code__iexact=currency_code)
+
+        # Filter by months if provided
+        how_many_months = request.GET.get("how_many_months")
+        if how_many_months:
+            items = items.filter(how_many_months=int(how_many_months))
+
+        items = handler.queryset(items)
+        serializer = GetFinancingOptionSerializer(
+            items, many=True, context={"lang": lang, "country_code": request.GET.get("country_code")}
+        )
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_subscription")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        # Validate and convert currency code to ID
+        data = request.data.copy()
+        currency_code = data.get("currency", "")
+
+        if currency_code:
+            currency = Currency.objects.filter(code__iexact=currency_code).first()
+            if not currency:
+                raise ValidationException(
+                    translation(
+                        lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"
+                    ),
+                    code=400,
+                )
+            data["currency"] = currency.id
+        else:
+            raise ValidationException(
+                translation(lang, en="Currency is required", es="Divisa es requerida", slug="currency-required"),
+                code=400,
+            )
+
+        serializer = FinancingOptionSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Set academy ownership
+        financing_option = serializer.save(academy_id=academy_id)
+
+        # Return using GET serializer for consistent response
+        response_serializer = GetFinancingOptionSerializer(
+            financing_option, many=False, context={"lang": lang}
+        )
+
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    @capable_of("crud_subscription")
+    def put(self, request, financing_option_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Only allow updating financing options owned by this academy (not global ones)
+        financing_option = FinancingOption.objects.filter(academy__id=academy_id, id=financing_option_id).first()
+        if not financing_option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing option not found or does not belong to this academy",
+                    es="Opción de financiamiento no encontrada o no pertenece a esta academia",
+                ),
+                slug="not-found",
+                code=404,
+            )
+
+        # Validate and convert currency code to ID if provided
+        data = request.data.copy()
+        if "currency" in data and isinstance(data["currency"], str):
+            currency = Currency.objects.filter(code__iexact=data["currency"]).first()
+            if not currency:
+                raise ValidationException(
+                    translation(
+                        lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"
+                    ),
+                    code=400,
+                )
+            data["currency"] = currency.id
+
+        serializer = FinancingOptionSerializer(financing_option, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return using GET serializer for consistent response
+        response_serializer = GetFinancingOptionSerializer(
+            serializer.instance, many=False, context={"lang": lang}
+        )
+
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def delete(self, request, financing_option_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Only allow deleting financing options owned by this academy
+        financing_option = FinancingOption.objects.filter(academy__id=academy_id, id=financing_option_id).first()
+        if not financing_option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing option not found or does not belong to this academy",
+                    es="Opción de financiamiento no encontrada o no pertenece a esta academia",
+                ),
+                slug="not-found",
+                code=404,
+            )
+
+        # Check if financing option is being used by any plans
+        plans_using = Plan.objects.filter(financing_options=financing_option).count()
+        if plans_using > 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cannot delete financing option. It is being used by {plans_using} plan(s)",
+                    es=f"No se puede eliminar la opción de financiamiento. Está siendo usada por {plans_using} plan(es)",
+                ),
+                slug="financing-option-in-use",
+                code=400,
+            )
+
+        financing_option.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

@@ -468,6 +468,15 @@ class FinancingOption(models.Model):
     if TYPE_CHECKING:
         objects: TypedManager["FinancingOption"]
 
+    academy = models.ForeignKey(
+        "admissions.Academy",
+        on_delete=models.CASCADE,
+        help_text="Academy that owns this financing option",
+        null=True,
+        blank=True,
+        default=None,
+    )
+
     monthly_price = models.FloatField(default=1, help_text="Monthly price (e.g. 1, 2, 3, ...)")
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency")
 

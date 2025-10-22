@@ -140,9 +140,10 @@ class GetConsumableSerializer(GetServiceItemSerializer):
 
 
 class GetFinancingOptionSerializer(serpy.Serializer):
+    id = serpy.Field()
+    academy = serpy.MethodField()
     monthly_price = serpy.MethodField()
     how_many_months = serpy.Field()
-
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
 
@@ -166,6 +167,11 @@ class GetFinancingOptionSerializer(serpy.Serializer):
             slug = obj_currency.code.upper()  # Use code attribute
             if slug not in self.cache:
                 self.cache[slug] = obj_currency
+
+    def get_academy(self, obj: FinancingOption):
+        if obj.academy:
+            return GetAcademySmallSerializer(obj.academy).data
+        return None
 
     def get_currency(self, obj: FinancingOption):
         country_code = self.context.get("country_code")
@@ -760,13 +766,45 @@ class PutPlanSerializer(PlanSerializer):
     def validate(self, attrs):
         return attrs
 
+
+class FinancingOptionSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating FinancingOption"""
+
+    class Meta:
+        model = FinancingOption
+        fields = ["id", "academy", "monthly_price", "how_many_months", "currency", "pricing_ratio_exceptions"]
+        read_only_fields = ["id", "academy"]
+
+    def validate_monthly_price(self, value):
+        if value <= 0:
+            raise ValidationException(
+                translation(
+                    en="Monthly price must be greater than 0",
+                    es="El precio mensual debe ser mayor que 0",
+                ),
+                slug="invalid-monthly-price",
+                code=400,
+            )
+        return value
+
+    def validate_how_many_months(self, value):
+        if value <= 0:
+            raise ValidationException(
+                translation(
+                    en="Number of months must be greater than 0",
+                    es="El número de meses debe ser mayor que 0",
+                ),
+                slug="invalid-months",
+                code=400,
+            )
+        return value
+
     def create(self, validated_data):
-        return Plan.objects.create(**validated_data)
+        return FinancingOption.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         for key in validated_data:
             setattr(instance, key, validated_data[key])
-
         instance.save()
         return instance
 
