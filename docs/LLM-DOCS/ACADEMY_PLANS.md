@@ -1179,7 +1179,8 @@ Headers:
 
 **Notes:**
 - `academy` is automatically set from the header
-- `service` must be OneToOne per academy (one AcademyService per Service per Academy)
+- Each academy can have only one AcademyService per Service (enforced by `unique_together` constraint)
+- Multiple academies can price the same Service differently
 
 **Response:** `201 CREATED` with created AcademyService object
 
@@ -1315,7 +1316,10 @@ Service (Platform-wide)
     └── Currency: USD
 ```
 
-**Key Point:** One Service can have multiple AcademyServices (one per academy), each with different pricing!
+**Key Points:**
+- One Service can have multiple AcademyServices (one per academy), each with different pricing
+- This enables cross-academy service sharing where Academy A creates a service, and Academy B can price it differently for their students
+- The `unique_together` constraint on `(academy, service)` prevents duplicate pricing entries
 
 ---
 
