@@ -341,11 +341,17 @@ class AcademyFinancingOptionView(APIView):
         lang = get_user_language(request)
 
         if financing_option_id:
-            item = FinancingOption.objects.filter(id=financing_option_id).first()
+            # Only return if owned by this academy OR is global (academy=None)
+            item = FinancingOption.objects.filter(
+                Q(academy__id=academy_id) | Q(academy=None), id=financing_option_id
+            ).first()
             if not item:
                 raise ValidationException(
                     translation(
-                        lang, en="Financing option not found", es="Opción de financiamiento no encontrada", slug="not-found"
+                        lang,
+                        en="Financing option not found or does not belong to this academy",
+                        es="Opción de financiamiento no encontrada o no pertenece a esta academia",
+                        slug="not-found",
                     ),
                     code=404,
                 )

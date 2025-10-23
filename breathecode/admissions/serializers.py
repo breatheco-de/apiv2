@@ -382,6 +382,32 @@ class GetCohortSerializer(serpy.Serializer):
     available_as_saas = serpy.Field()
     shortcuts = serpy.Field()
 
+    micro_cohorts = serpy.MethodField()
+    def get_micro_cohorts(self, obj):
+        cohorts = obj.micro_cohorts.all()
+        
+        # Sort by cohorts_order if it exists
+        if obj.cohorts_order:
+            # Parse the comma-separated IDs
+            order_ids = [int(id.strip()) for id in obj.cohorts_order.split(',') if id.strip().isdigit()]
+            
+            # Create a dictionary for quick lookup
+            cohort_dict = {cohort.id: cohort for cohort in cohorts}
+            
+            # Build sorted list based on order_ids
+            sorted_cohorts = []
+            for cohort_id in order_ids:
+                if cohort_id in cohort_dict:
+                    sorted_cohorts.append(cohort_dict[cohort_id])
+            
+            # Append any micro cohorts not in the order list at the end
+            remaining = [c for c in cohorts if c.id not in order_ids]
+            sorted_cohorts.extend(remaining)
+            
+            cohorts = sorted_cohorts
+        
+        return GetTinyCohortSerializer(cohorts, many=True).data
+
     def get_timeslots(self, obj):
         timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
         return SmallCohortTimeSlotSerializer(timeslots, many=True).data
