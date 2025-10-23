@@ -34,6 +34,7 @@ class SyllabusVersionTinySerializer(serpy.Serializer):
 
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
+    version = serpy.Field()
     slug = serpy.MethodField()
     name = serpy.MethodField()
     syllabus = serpy.MethodField()
