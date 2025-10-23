@@ -816,14 +816,14 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
                     message = translation(
                         settings.lang,
-                        en=f"We regret to inform you that your 4Geeks plan financing has been discontinued. Please check our suggested plans for alternatives.",
-                        es=f"Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado. Por favor, revisa nuestros planes sugeridos para alternativas.",
+                        en="We regret to inform you that your 4Geeks plan financing has been discontinued. Please check our suggested plans for alternatives.",
+                        es="Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado. Por favor, revisa nuestros planes sugeridos para alternativas.",
                     )
                 else:
                     message = translation(
                         settings.lang,
-                        en=f"We regret to inform you that your 4Geeks plan financing has been discontinued.",
-                        es=f"Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado.",
+                        en="We regret to inform you that your 4Geeks plan financing has been discontinued.",
+                        es="Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado.",
                     )
 
                 obj["MESSAGE"] = message
@@ -1912,3 +1912,55 @@ def process_auto_recharge(
         raise AbortTask(f"Consumable {consumable_id} not found")
 
     actions.process_auto_recharge(consumable)
+
+
+@task(bind=False, priority=TaskPriority.ACADEMY.value)
+def update_payment_plans_with_micro_cohorts(cohort_id: int, **_: Any):
+    """
+    Update all payment plans that include the cohort to also include its micro-cohorts.
+
+    This task is triggered when micro-cohorts are added to a cohort (either new macro-cohort
+    or existing macro-cohort getting new micro-cohorts).
+    It finds all CohortSets that contain the cohort and adds the micro-cohorts to them.
+
+    Args:
+        cohort_id: ID of the cohort that got new micro-cohorts
+    """
+    logger.info(f"Starting update_payment_plans_with_micro_cohorts for cohort {cohort_id}")
+
+    try:
+        cohort = Cohort.objects.get(id=cohort_id)
+    except Cohort.DoesNotExist:
+        raise AbortTask(f"Cohort with id {cohort_id} not found")
+
+    micro_cohorts = cohort.micro_cohorts.all()
+
+    if not micro_cohorts.exists():
+        raise AbortTask(f"Cohort {cohort_id} has no micro-cohorts, skipping update")
+
+    logger.info(f"Found {micro_cohorts.count()} micro-cohorts for cohort {cohort_id}")
+
+    cohort_sets = CohortSet.objects.filter(cohorts=cohort).distinct()
+
+    if not cohort_sets.exists():
+        raise AbortTask(f"Cohort {cohort_id} has no CohortSets, skipping update")
+
+    logger.info(f"Found {cohort_sets.count()} CohortSets containing cohort {cohort_id}")
+
+    updated_count = 0
+
+    for cohort_set in cohort_sets:
+        current_cohorts = set(cohort_set.cohorts.values_list("id", flat=True))
+
+        micro_cohort_ids = set(micro_cohorts.values_list("id", flat=True))
+
+        new_cohorts = micro_cohort_ids - current_cohorts
+
+        if new_cohorts:
+            cohort_set.cohorts.add(*micro_cohorts)
+            updated_count += 1
+            logger.info(f"Added {len(new_cohorts)} micro-cohorts to CohortSet {cohort_set.id} ({cohort_set.slug})")
+        else:
+            logger.info(f"CohortSet {cohort_set.id} ({cohort_set.slug}) already contains all micro-cohorts")
+
+    logger.info(f"Successfully updated {updated_count} CohortSets with micro-cohorts")

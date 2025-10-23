@@ -13,7 +13,14 @@ from breathecode.certificate.actions import how_many_pending_tasks, get_assets_f
 
 from ..activity import tasks as activity_tasks
 from .models import Academy, Cohort, CohortUser, Syllabus, SyllabusVersion
-from .signals import academy_saved, cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
+from .signals import (
+    academy_saved,
+    cohort_log_saved,
+    cohort_user_created,
+    micro_cohorts_added,
+    student_edu_status_updated,
+    syllabus_created,
+)
 
 # add your receives here
 logger = logging.getLogger(__name__)
@@ -218,19 +225,19 @@ def create_owner_profile_academy(sender: Type[Academy], instance: Academy, creat
     """
     When an academy is created with an owner, automatically create a ProfileAcademy
     with admin role for that owner.
-    
+
     This ensures the owner can manage the academy they created.
     """
     if created and instance.owner:
         from breathecode.authenticate.models import ProfileAcademy, Role
-        
+
         logger.info(f"Creating ProfileAcademy for academy owner: {instance.slug} -> {instance.owner.email}")
-        
+
         admin_role = Role.objects.filter(slug="admin").first()
         if not admin_role:
             logger.warning(f"Admin role not found, cannot create ProfileAcademy for academy {instance.slug}")
             return
-        
+
         profile_academy, created_profile = ProfileAcademy.objects.get_or_create(
             user=instance.owner,
             academy=instance,
@@ -240,10 +247,23 @@ def create_owner_profile_academy(sender: Type[Academy], instance: Academy, creat
                 "first_name": instance.owner.first_name,
                 "last_name": instance.owner.last_name,
                 "status": "ACTIVE",
-            }
+            },
         )
-        
+
         if created_profile:
             logger.info(f"Created ProfileAcademy for {instance.owner.email} at {instance.slug}")
         else:
             logger.info(f"ProfileAcademy already exists for {instance.owner.email} at {instance.slug}")
+
+
+@receiver(micro_cohorts_added, sender=Cohort)
+def update_payment_plans_when_micro_cohorts_added(sender: Type[Cohort], instance: Cohort, **kwargs: Any):
+    """
+    Receiver that triggers when micro-cohorts are added to a cohort.
+    This updates all payment plans that include the cohort to also include the new micro-cohorts.
+    """
+    logger.info(f"Micro-cohorts were added to cohort {instance.id} ({instance.slug}), updating payment plans")
+
+    from breathecode.payments import tasks as payment_tasks
+
+    payment_tasks.update_payment_plans_with_micro_cohorts.delay(instance.id)

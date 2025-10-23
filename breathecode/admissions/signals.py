@@ -20,3 +20,5 @@ syllabus_version_json_updated = emisor.signal("syllabus_version_json_updated")
 syllabus_created = emisor.signal("syllabus_created")
 
 timeslot_saved = emisor.signal("timeslot_saved")
+
+micro_cohorts_added = emisor.signal("micro_cohorts_added")
