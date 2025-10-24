@@ -117,6 +117,7 @@ class AssetErrorLogType:
     INVALID_README_URL = "invalid-readme-url"
     INVALID_IMAGE = "invalid-image"
     README_SYNTAX = "readme-syntax-error"
+    INVALID_TELEMETRY = "invalid-telemetry"
 
 
 def is_url(value):
@@ -585,6 +586,65 @@ class AssetValidator:
                     "Check the asset images, there seems to be images not properly downloaded",
                 )
 
+    def telemetry(self):
+        """
+        Validate that if telemetry.batch exists in config, the URL contains the correct asset_id.
+        """
+        if not self.asset.config:
+            return
+
+        # Check if telemetry exists in config
+        telemetry = self.asset.config.get("telemetry")
+        if not telemetry:
+            return
+
+        # Check if batch URL exists
+        batch_url = telemetry.get("batch")
+        if not batch_url:
+            return
+
+        # Parse the URL to extract query parameters
+        try:
+            parsed_url = urlparse(batch_url)
+            
+            # Extract query parameters
+            from urllib.parse import parse_qs
+            query_params = parse_qs(parsed_url.query)
+            
+            # Check if asset_id parameter exists
+            if "asset_id" not in query_params:
+                self.error(
+                    AssetErrorLogType.INVALID_TELEMETRY,
+                    f"Telemetry batch URL is missing asset_id parameter: {batch_url}",
+                )
+                return
+            
+            # Get the asset_id from the URL (parse_qs returns lists)
+            url_asset_id = query_params["asset_id"][0]
+            
+            # Convert to int for comparison
+            try:
+                url_asset_id_int = int(url_asset_id)
+            except ValueError:
+                self.error(
+                    AssetErrorLogType.INVALID_TELEMETRY,
+                    f"Telemetry batch URL has invalid asset_id format: {url_asset_id}",
+                )
+                return
+            
+            # Check if asset_id matches the actual asset id
+            if url_asset_id_int != self.asset.id:
+                self.error(
+                    AssetErrorLogType.INVALID_TELEMETRY,
+                    f"Telemetry batch URL has incorrect asset_id. Expected {self.asset.id}, got {url_asset_id_int}",
+                )
+                
+        except Exception as e:
+            self.error(
+                AssetErrorLogType.INVALID_TELEMETRY,
+                f"Error validating telemetry batch URL: {str(e)}",
+            )
+
 
 class LessonValidator(AssetValidator):
     warns = []
@@ -612,7 +672,7 @@ class StarterValidator(AssetValidator):
 
 class ExerciseValidator(AssetValidator):
     warns = ["difficulty"]
-    errors = ["readme", "preview"]
+    errors = ["readme", "preview", "telemetry"]
 
     def __init__(self, _asset, log_errors=False, reset_errors=False):
         super().__init__(_asset, log_errors, reset_errors)
@@ -620,7 +680,7 @@ class ExerciseValidator(AssetValidator):
 
 class ProjectValidator(ExerciseValidator):
     warns = ["difficulty"]
-    errors = ["readme", "preview"]
+    errors = ["readme", "preview", "telemetry"]
 
     def __init__(self, _asset, log_errors=False, reset_errors=False):
         super().__init__(_asset, log_errors, reset_errors)
