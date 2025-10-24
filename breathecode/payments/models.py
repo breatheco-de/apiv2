@@ -427,23 +427,23 @@ class ServiceItem(AbstractServiceItem):
     ) -> tuple["ServiceItem", bool]:
         """
         Get or create a ServiceItem with proper uniqueness constraints.
-        
+
         This method encapsulates the business logic for what makes a ServiceItem unique.
         Based on the model's clean() method, these fields are immutable after creation:
         - service, how_many, unit_type (core identity)
         - is_renewable, renew_at, renew_at_unit (renewal behavior)
         - is_team_allowed (team vs non-team are different products)
-        
+
         Note: ALL immutable fields are included in the uniqueness check to properly
         match existing database records, even if some fields are not relevant
         (e.g., renew_at when is_renewable=False).
-        
+
         **Duplicate Handling:**
         If multiple ServiceItems exist with the same criteria (due to data inconsistencies),
         this method will always return the oldest one (by ID, lowest first). This allows the
         system to gracefully handle existing duplicates while newer duplicates can be
         cleaned up separately.
-        
+
         Args:
             service: The Service this item belongs to
             how_many: Quantity (-1 for unlimited, must be > 0)
@@ -453,10 +453,10 @@ class ServiceItem(AbstractServiceItem):
             renew_at: Renewal frequency number (only relevant if is_renewable=True)
             renew_at_unit: Renewal frequency unit (DAY, WEEK, MONTH, YEAR)
             sort_priority: Display priority (not part of uniqueness)
-            
+
         Returns:
             Tuple of (ServiceItem instance, created boolean)
-            
+
         Example:
             service_item, created = ServiceItem.get_or_create_for_service(
                 service=my_service,
@@ -475,16 +475,16 @@ class ServiceItem(AbstractServiceItem):
             "renew_at": renew_at,
             "renew_at_unit": renew_at_unit,
         }
-        
+
         # Try to find existing ServiceItem(s) with these criteria
         # If duplicates exist, always return the oldest one (by id, which is creation order)
         # This gracefully handles existing data inconsistencies
         existing = cls.objects.filter(**lookup_fields).order_by("id").first()
-        
+
         if existing:
             # Found existing item, reuse it
             return existing, False
-        
+
         # No existing item found, create new one
         new_item = cls.objects.create(
             **lookup_fields,
@@ -581,23 +581,23 @@ class FinancingOption(models.Model):
     def _generate_pricing_hash(pricing_ratio_exceptions: Optional[dict]) -> str:
         """
         Generate a deterministic hash from pricing_ratio_exceptions.
-        
+
         This ensures that two financing options with different country-specific
         pricing are treated as distinct options.
-        
+
         Args:
             pricing_ratio_exceptions: Dictionary of country pricing overrides
-            
+
         Returns:
             SHA256 hash string (64 characters)
         """
         if not pricing_ratio_exceptions:
             # Empty/None pricing gets a consistent hash
             return hashlib.sha256(b"{}").hexdigest()
-        
+
         # Sort keys to ensure deterministic hash regardless of dict ordering
-        normalized = json.dumps(pricing_ratio_exceptions, sort_keys=True, separators=(',', ':'))
-        return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+        normalized = json.dumps(pricing_ratio_exceptions, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
     def clean(self) -> None:
         if not self.monthly_price:
@@ -632,33 +632,33 @@ class FinancingOption(models.Model):
     ) -> tuple["FinancingOption", bool]:
         """
         Get or create a FinancingOption with proper uniqueness constraints.
-        
+
         This method encapsulates the business logic for what makes a FinancingOption unique:
         - academy (can be None for global financing options)
         - monthly_price
         - currency
         - how_many_months
         - pricing_hash (hash of pricing_ratio_exceptions)
-        
+
         Using pricing_hash ensures that two financing options with the same base price
         but different country-specific pricing ratios are treated as distinct products.
-        
+
         **Duplicate Handling:**
-        If multiple FinancingOptions exist with the same criteria (due to data 
-        inconsistencies), this method will always return the oldest one (by ID, 
-        lowest first). This allows the system to gracefully handle existing 
+        If multiple FinancingOptions exist with the same criteria (due to data
+        inconsistencies), this method will always return the oldest one (by ID,
+        lowest first). This allows the system to gracefully handle existing
         duplicates while newer duplicates can be cleaned up separately.
-        
+
         Args:
             academy: Academy owner (None for global financing options)
             monthly_price: Monthly price amount
             currency: Currency instance
             how_many_months: Number of monthly installments
             pricing_ratio_exceptions: Country-specific pricing overrides (optional)
-            
+
         Returns:
             Tuple of (FinancingOption instance, created boolean)
-            
+
         Example:
             usd = Currency.objects.get(code="USD")
             financing, created = FinancingOption.get_or_create_for_academy(
@@ -671,7 +671,7 @@ class FinancingOption(models.Model):
         """
         # Generate hash for the pricing exceptions
         pricing_hash = cls._generate_pricing_hash(pricing_ratio_exceptions)
-        
+
         # Define what makes a FinancingOption unique (including pricing_hash)
         lookup_fields = {
             "academy": academy,
@@ -680,15 +680,15 @@ class FinancingOption(models.Model):
             "how_many_months": how_many_months,
             "pricing_hash": pricing_hash,
         }
-        
+
         # Try to find existing FinancingOption(s) with these criteria
         # If duplicates exist, always return the oldest one (by id)
         # This gracefully handles existing data inconsistencies
         existing = cls.objects.filter(**lookup_fields).order_by("id").first()
-        
+
         if existing:
             return existing, False
-        
+
         # No existing item found, create new one
         # Note: pricing_hash will be auto-generated in save() method
         new_item = cls.objects.create(
@@ -1461,6 +1461,8 @@ class Bag(AbstractAmountByTime):
     if TYPE_CHECKING:
         objects: TypedManager["Bag"]
 
+    _coupons_qs: Optional[QuerySet[Coupon]] = None
+
     class Status(models.TextChoices):
         RENEWAL = ("RENEWAL", "Renewal")
         CHECKING = ("CHECKING", "Checking")
@@ -1541,6 +1543,36 @@ class Bag(AbstractAmountByTime):
         related_name="%(class)s_as_seat_service_item",
     )
 
+    @property
+    def cached_coupons(self):
+        if self._coupons_qs is None:
+            self._coupons_qs = self.coupons.all()
+        return self._coupons_qs
+
+    def get_discounted_price(self, price: float, multiplier: int = 1) -> float:
+        import breathecode.payments.actions as actions
+
+        if not price:
+            return None
+
+        return actions.get_discounted_price(price, self.cached_coupons)
+
+    @property
+    def discounted_amount_per_month(self):
+        return self.get_discounted_price(self.amount_per_month, 1)
+
+    @property
+    def discounted_amount_per_quarter(self):
+        return self.get_discounted_price(self.amount_per_quarter, 3)
+
+    @property
+    def discounted_amount_per_half(self):
+        return self.get_discounted_price(self.amount_per_half, 6)
+
+    @property
+    def discounted_amount_per_year(self):
+        return self.get_discounted_price(self.amount_per_year, 12)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1551,6 +1583,7 @@ class Bag(AbstractAmountByTime):
         return super().clean()
 
     def save(self, *args, **kwargs):
+        self._coupons_qs = None
         created = self.pk is None
         self.full_clean()
         super().save(*args, **kwargs)
@@ -2285,7 +2318,15 @@ class SubscriptionBillingTeam(models.Model):
     subscription = models.OneToOneField(Subscription, on_delete=models.CASCADE, help_text="Subscription")
     name = models.CharField(max_length=80, help_text="Team name")
     seats_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this billing team")
-    seats_limit = models.PositiveIntegerField(default=1, help_text="Limit of seats for this team")
+
+    additional_seats = models.PositiveIntegerField(
+        default=0, help_text="Additional seats for this team excluding the owner seat"
+    )
+
+    @property
+    def seats_limit(self):
+        return self.additional_seats + 1
+
     consumption_strategy = models.CharField(
         max_length=8,
         help_text="Consumption strategy",

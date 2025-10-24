@@ -739,7 +739,12 @@ def replace_private_github_urls(asset: Asset):
             url_info = github_service.parse_github_url(url)
 
             # Only replace URLs that point to files (blob, raw)
-            if url_info and not url_info["is_image"] and url_info["url_type"] in ["blob", "raw"] and url_info.get("path"):
+            if (
+                url_info
+                and not url_info["is_image"]
+                and url_info["url_type"] in ["blob", "raw"]
+                and url_info.get("path")
+            ):
                 # Create the internal link URL
                 # Token can be added as a query parameter when accessing the link
                 internal_url = f"{os.getenv('API_URL')}/asset/internal-link?id={asset.id}&path={url_info['path']}"
@@ -986,8 +991,11 @@ def process_asset_config(asset, config):
         if isinstance(config["title"], str):
             if asset.lang in ["", "us", "en"] or asset.title == "" or asset.title is None:
                 asset.title = config["title"]
-        elif isinstance(config["title"], dict) and asset.lang in config["title"]:
-            asset.title = config["title"][asset.lang]
+        elif isinstance(config["title"], dict) and asset.lang:
+            if asset.lang in ["us", "en"]:
+                asset.title = config["title"].get("en") or config["title"].get("us")
+            elif asset.lang in config["title"]:
+                asset.title = config["title"][asset.lang]
 
     if "description" in config:
         if isinstance(config["description"], str):
@@ -995,8 +1003,11 @@ def process_asset_config(asset, config):
             if asset.lang in ["", "us", "en"] or asset.description == "" or asset.description is None:
                 asset.description = config["description"]
         # there are multiple translations, and the translation exists for this lang
-        elif isinstance(config["description"], dict) and asset.lang in config["description"]:
-            asset.description = config["description"][asset.lang]
+        elif isinstance(config["description"], dict) and asset.lang:
+            if asset.lang in ["us", "en"]:
+                asset.description = config["description"].get("en") or config["description"].get("us")
+            elif asset.lang in config["description"]:
+                asset.description = config["description"][asset.lang]
 
     if "preview" in config:
         asset.preview = config["preview"]

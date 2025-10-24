@@ -625,7 +625,6 @@ class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
 
 
-
 class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
@@ -647,6 +646,11 @@ class GetBagSerializer(serpy.Serializer):
     amount_per_quarter = serpy.Field()
     amount_per_half = serpy.Field()
     amount_per_year = serpy.Field()
+    discounted_amount_per_month = serpy.Field()
+    discounted_amount_per_quarter = serpy.Field()
+    discounted_amount_per_half = serpy.Field()
+    discounted_amount_per_year = serpy.Field()
+
     token = serpy.Field()
     seat_service_item = serpy.MethodField()
     expires_at = serpy.Field()
@@ -666,6 +670,7 @@ class GetBagSerializer(serpy.Serializer):
     def get_coupons(self, obj):
         return GetCouponSerializer(obj.coupons.filter(), many=True).data
 
+
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -678,6 +683,7 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     amount_refunded = serpy.Field()
     refund_stripe_id = serpy.Field()
     refunded_at = serpy.Field()
+
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
@@ -697,6 +703,7 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
+
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     plan_expires_at = serpy.Field()
@@ -745,7 +752,7 @@ class ServiceItemSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         return attrs
-    
+
     def create(self, validated_data):
         # Use the model's get_or_create_for_service method which encapsulates
         # the business logic for ServiceItem uniqueness
@@ -828,12 +835,12 @@ class FinancingOptionSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         from breathecode.admissions.models import Academy
-        
+
         # Get academy from validated_data or from save() kwargs
         # The view calls serializer.save(academy_id=academy_id)
         academy_id = validated_data.pop("academy_id", None)
         academy = validated_data.get("academy")
-        
+
         # Convert academy_id to Academy instance if needed
         if academy_id and not academy:
             academy = Academy.objects.filter(id=academy_id).first()
@@ -846,7 +853,7 @@ class FinancingOptionSerializer(serializers.ModelSerializer):
                     slug="academy-not-found",
                     code=404,
                 )
-        
+
         # Use the model's get_or_create_for_academy method which encapsulates
         # the business logic for FinancingOption uniqueness
         financing_option, created = FinancingOption.get_or_create_for_academy(

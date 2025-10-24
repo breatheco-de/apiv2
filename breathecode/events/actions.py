@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timedelta
 
 import pytz
+from django.conf import settings
 from django.db.models import QuerySet
 from django.db.models.query_utils import Q
 from django.utils import timezone
@@ -13,6 +14,7 @@ from breathecode.admissions.models import Cohort, CohortTimeSlot, CohortUser, Ti
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
 from breathecode.services.google_calendar.google_calendar import GoogleCalendar
+from breathecode.services.livekit.client import LiveKitAdmin
 from breathecode.utils.datetime_integer import DatetimeInteger
 
 from .models import Event, EventType, Organization, Organizer, Venue
@@ -842,3 +844,27 @@ def is_eventbrite_enabled():
         return True
 
     return os.getenv("EVENTBRITE", "0") == "1"
+
+
+def build_room_name(event: Event) -> str:
+    return f"event-{event.id}"
+
+
+def ensure_livekit_room_for_event(event: Event, empty_timeout: int = 900, max_participants: int = 300) -> str:
+    """Ensure a LiveKit room exists for the given event and return the meeting URL.
+
+    If the room already exists, any raised HTTP error should be ignored by callers when appropriate.
+    """
+
+    room_name = build_room_name(event)
+    try:
+        client = LiveKitAdmin()
+        client.create_room(room_name, empty_timeout=empty_timeout, max_participants=max_participants)
+    except Exception:
+        pass
+
+    meet_base = getattr(settings, "LIVEKIT_MEET_URL", "") or ""
+    meet_base = meet_base.rstrip("/")
+    if meet_base:
+        return f"{meet_base}/rooms/{room_name}"
+    return room_name

@@ -585,8 +585,8 @@ class BagHandler:
             return
 
         plan: Plan | None = self.bag.plans.first()
-        service_item, _ = ServiceItem.get_or_create_for_service(
-            service=plan.seat_service_price.service, how_many=seats + 1, is_renewable=False, is_team_allowed=True
+        service_item, _ = ServiceItem.objects.get_or_create(
+            service=plan.seat_service_price.service, how_many=seats, is_renewable=False, is_team_allowed=True
         )
 
         self.bag.seat_service_item = service_item
@@ -778,14 +778,15 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
                 code=400,
             )
 
-        if price_per_month != 0:
-            price_per_month += academy_service.price_per_unit * bag.seat_service_item.how_many
-        if price_per_quarter != 0:
-            price_per_quarter += academy_service.price_per_unit * bag.seat_service_item.how_many * 3
-        if price_per_half != 0:
-            price_per_half += academy_service.price_per_unit * bag.seat_service_item.how_many * 6
-        if price_per_year != 0:
-            price_per_year += academy_service.price_per_unit * bag.seat_service_item.how_many * 12
+        how_many_seats = bag.seat_service_item.how_many
+        if how_many_seats > 0 and price_per_month != 0:
+            price_per_month += academy_service.price_per_unit * how_many_seats
+        if how_many_seats > 0 and price_per_quarter != 0:
+            price_per_quarter += academy_service.price_per_unit * how_many_seats * 3
+        if how_many_seats > 0 and price_per_half != 0:
+            price_per_half += academy_service.price_per_unit * how_many_seats * 6
+        if how_many_seats > 0 and price_per_year != 0:
+            price_per_year += academy_service.price_per_unit * how_many_seats * 12
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -1977,9 +1978,80 @@ class ReplaceSeat(TypedDict):
     last_name: str
 
 
+def notify_user_was_added_to_subscription_team(
+    subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
+):
+    """
+    Send a notification email to an existing user that was added to a subscription team.
+
+    This function notifies users who already exist in the platform and were directly assigned
+    to a subscription team seat. It sends a welcome notification informing them they've been
+    added to the team with immediate access to consumables and services.
+
+    Args:
+        subscription: The Subscription the user is being added to
+        subscription_seat: The SubscriptionSeat with an assigned user (must have user != None)
+        lang: Language code for email localization (e.g., 'en', 'es')
+
+    Returns:
+        None. Returns early without sending email if subscription_seat.user is None.
+
+    Note:
+        This function is the opposite of invite_user_to_subscription_team:
+        - This handles seats WITH users (existing platform users)
+        - invite_user_to_subscription_team handles seats WITHOUT users (pending invitations)
+
+    See Also:
+        invite_user_to_subscription_team: For inviting non-existent users
+    """
+    if subscription_seat.user is None:
+        return
+
+    billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
+    notify_actions.send_email_message(
+        "welcome_academy",
+        subscription_seat.email,
+        {
+            "email": subscription_seat.email,
+            "subject": translation(
+                lang,
+                en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
+                es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
+            ),
+            "LINK": get_app_url(),
+            "FIST_NAME": subscription_seat.user.first_name or "",
+        },
+        academy=subscription.academy,
+    )
+
+
 def invite_user_to_subscription_team(
     obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
 ):
+    """
+    Create and send an invitation for a non-existent user to join a subscription team.
+
+    This function handles the invitation flow for users who don't exist in the platform yet.
+    It creates a UserInvite record and sends a welcome email with an invitation link. When the
+    user accepts the invite, the related consumables (created with user=None) will be automatically
+    assigned to them via the handle_seat_invite_accepted receiver.
+
+    Args:
+        obj: Dictionary containing user information (email, first_name, last_name)
+        subscription: The Subscription the user is being invited to
+        subscription_seat: The SubscriptionSeat reserved for this user (user=None until accepted)
+        lang: Language code for email localization (e.g., 'en', 'es')
+
+    Behavior:
+        - Creates a UserInvite if one doesn't exist, or reuses existing pending invite
+        - Sends welcome email only if invite is newly created or still pending
+        - The subscription_seat remains with user=None until the invite is accepted
+        - Upon acceptance, consumables are automatically assigned via signal receiver
+
+    Related:
+        - See handle_seat_invite_accepted in receivers.py for post-acceptance logic
+        - See Issue #9973 for the complete invitation flow
+    """
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=subscription.academy,
@@ -1996,18 +2068,19 @@ def invite_user_to_subscription_team(
         },
     )
     if created or invite.status == "PENDING":
+        billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
         notify_actions.send_email_message(
             "welcome_academy",
-            obj.get("email", ""),
+            subscription_seat.email,
             {
-                "email": obj.get("email", ""),
+                "email": subscription_seat.email,
                 "subject": translation(
                     lang,
-                    en=f"{subscription.academy.name} is inviting you to {subscription.academy.slug}.4Geeks.com",
-                    es=f"{subscription.academy.name} te está invitando a {subscription.academy.slug}.4Geeks.com",
+                    en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
+                    es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
                 ),
-                "LINK": get_app_url() + "/v1/auth/member/invite/" + invite.token,
-                "FIRST_NAME": invite.first_name or "",
+                "LINK": get_app_url(),
+                "FIST_NAME": subscription_seat.user.first_name or "",
             },
             academy=subscription.academy,
         )
@@ -2060,6 +2133,11 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
         )
 
     else:
+        notify_user_was_added_to_subscription_team(
+            seat.billing_team.subscription,
+            seat,
+            lang,
+        )
         for plan in seat.billing_team.subscription.plans.all():
             grant_student_capabilities(user, plan)
 
@@ -2125,6 +2203,12 @@ def replace_seat(
         )
 
     else:
+        notify_user_was_added_to_subscription_team(
+            seat.billing_team.subscription,
+            seat,
+            lang,
+        )
+
         for plan in subscription_seat.billing_team.subscription.plans.all():
             grant_student_capabilities(to_user, plan)
 
@@ -2135,8 +2219,9 @@ def replace_seat(
         SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT,
     )
 
-    # if strategy is not per team and there is a user, reassign consumables from the seat to the new user
-    if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM and to_user:
+    # if strategy is not per team, reassign consumables from the seat to the new user (or None if pending invite)
+    if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+        # Set user to the new user if exists, otherwise None (waiting for invitation acceptance)
         Consumable.objects.filter(subscription_seat=seat).update(user=to_user)
 
     return seat
@@ -2194,7 +2279,7 @@ def validate_seats_limit(
     for seat in seats.values():
         value += seat
 
-    if team.seats_limit and value > team.seats_limit:
+    if team.additional_seats and value > team.seats_limit:
         raise ValidationException(
             translation(
                 lang,

@@ -151,6 +151,10 @@ def get_serializer(
         "amount_per_quarter": bag.amount_per_quarter,
         "amount_per_half": bag.amount_per_half,
         "amount_per_year": bag.amount_per_year,
+        "discounted_amount_per_month": bag.discounted_amount_per_month,
+        "discounted_amount_per_quarter": bag.discounted_amount_per_quarter,
+        "discounted_amount_per_half": bag.discounted_amount_per_half,
+        "discounted_amount_per_year": bag.discounted_amount_per_year,
         "expires_at": bag.expires_at,
         "is_recurrent": bag.is_recurrent,
         "seat_service_item": (
@@ -873,7 +877,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         possible_choices = [x for x in range(1, 6) if x != how_many1]
         how_many2 = random.choice(possible_choices)
-        service_item = {"how_many": how_many1}
+        service_item = {"how_many": how_many1, "is_team_allowed": True}
         academy = {"available_as_saas": True}
 
         model = self.bc.database.create(
@@ -979,7 +983,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         possible_choices = [x for x in range(1, 6) if x != how_many1]
         how_many2 = random.choice(possible_choices)
-        service_item = {"how_many": how_many1}
+        service_item = {"how_many": how_many1, "is_team_allowed": True}
         academy = {"available_as_saas": True}
 
         model = self.bc.database.create(
@@ -1113,7 +1117,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         possible_choices = [x for x in range(1, 6) if x != how_many1]
         how_many2 = random.choice(possible_choices)
-        service_item = {"how_many": how_many1}
+        service_item = {"how_many": how_many1, "is_team_allowed": True}
         academy = {"available_as_saas": True}
 
         model = self.bc.database.create(
@@ -1239,7 +1243,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         possible_choices = [x for x in range(1, 6) if x != how_many1]
         how_many2 = random.choice(possible_choices)
-        service_item = {"how_many": how_many1}
+        service_item = {"how_many": how_many1, "is_team_allowed": True}
         academy = {"available_as_saas": True}
 
         model = self.bc.database.create(
@@ -1359,7 +1363,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         possible_choices = [x for x in range(1, 6) if x != how_many1]
         how_many2 = random.choice(possible_choices)
-        service_item = {"how_many": how_many1}
+        service_item = {"how_many": how_many1, "is_team_allowed": True}
         academy = {"available_as_saas": True}
 
         model = self.bc.database.create(
@@ -1488,7 +1492,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         possible_choices = [x for x in range(1, 6) if x != how_many1]
         how_many2 = random.choice(possible_choices)
-        service_item = {"how_many": how_many1}
+        service_item = {"how_many": how_many1, "is_team_allowed": True}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
         academy = {"available_as_saas": True}
 
@@ -1624,7 +1628,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         possible_choices = [x for x in range(1, 6) if x != how_many1]
         how_many2 = random.choice(possible_choices)
-        service_item = {"how_many": how_many1}
+        service_item = {"how_many": how_many1, "is_team_allowed": True}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
         academy = {"available_as_saas": True}
 
@@ -1733,7 +1737,7 @@ class SignalTestSuite(PaymentsTestCase):
         how_many1 = random.randint(1, 5)
         possible_choices = [x for x in range(1, 6) if x != how_many1]
         how_many2 = random.choice(possible_choices)
-        service_item = {"how_many": how_many1}
+        service_item = {"how_many": how_many1, "is_team_allowed": True}
         subscription = {"valid_until": UTC_NOW - timedelta(seconds=1)}
         academy = {"available_as_saas": True}
 
@@ -3665,7 +3669,7 @@ def test_get_a_plan_with_add_ons(
 
     how_many2 = random.choice([x for x in range(5, 6)])
 
-    service_item = {"how_many": how_many2}
+    service_item = {"how_many": how_many2, "is_team_allowed": True}
     academy = {"available_as_saas": True}
 
     model = database.create(
