@@ -559,6 +559,20 @@ EDU_STATUS = (
 
 
 class CohortUser(models.Model):
+    """
+    Represents a user's membership in a cohort with a specific role.
+    
+    The role determines the user's permissions and responsibilities within the cohort,
+    and maps to a corresponding ProfileAcademy role for academy-wide permissions.
+    """
+
+    # Mapping of CohortUser roles to ProfileAcademy role slugs
+    ROLE_TO_PROFILE_ACADEMY_SLUG = {
+        TEACHER: "teacher",
+        ASSISTANT: "assistant",
+        REVIEWER: "homework_reviewer",
+        STUDENT: "student",
+    }
 
     def __init__(self, *args, **kwargs):
         super(CohortUser, self).__init__(*args, **kwargs)
@@ -590,6 +604,28 @@ class CohortUser(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def get_profile_academy_role_slug(self) -> str:
+        """
+        Get the ProfileAcademy role slug corresponding to this CohortUser's role.
+        
+        Returns:
+            str: The role slug for ProfileAcademy (e.g., 'teacher', 'student')
+        """
+        return self.ROLE_TO_PROFILE_ACADEMY_SLUG.get(self.role, "student")
+
+    @classmethod
+    def map_role_to_profile_academy_slug(cls, cohort_user_role: str) -> str:
+        """
+        Map a CohortUser role to its corresponding ProfileAcademy role slug.
+        
+        Args:
+            cohort_user_role: The CohortUser role (e.g., 'TEACHER', 'ASSISTANT')
+            
+        Returns:
+            str: The role slug for ProfileAcademy (e.g., 'teacher', 'assistant')
+        """
+        return cls.ROLE_TO_PROFILE_ACADEMY_SLUG.get(cohort_user_role, "student")
 
     def clean(self):
         if self.role:

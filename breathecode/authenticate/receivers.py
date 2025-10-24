@@ -40,8 +40,21 @@ def set_user_group(sender, instance, created: bool, **_):
     group = None
     groups = None
 
+    # Only run on creation for most models
     if not created:
-        return
+        # Special case: For ProfileAcademy, also run when status changes to ACTIVE
+        # This handles the two-step creation pattern: create as INVITED, then update to ACTIVE
+        if sender == ProfileAcademy:
+            # Check if status just changed to ACTIVE (handles two-step invite acceptance)
+            status_changed_to_active = (
+                hasattr(instance, "_ProfileAcademy__old_status")
+                and instance._ProfileAcademy__old_status != "ACTIVE"
+                and instance.status == "ACTIVE"
+            )
+            if not status_changed_to_active:
+                return
+        else:
+            return
 
     # prevent errors with migrations
     try:
@@ -74,6 +87,7 @@ def set_user_group(sender, instance, created: bool, **_):
             groups = instance.user.groups
 
         if groups and group:
+            # Use add() which is idempotent - won't duplicate if already in group
             groups.add(group)
 
     # this prevent a bug with migrations

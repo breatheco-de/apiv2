@@ -62,7 +62,10 @@ async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
     #     },
     # )
 
-    tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, "student")
+    # Get the ProfileAcademy role slug from the CohortUser model mapping
+    role_slug = instance.get_profile_academy_role_slug()
+
+    tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, role_slug)
 
 
 @receiver(revision_status_updated, sender=Task, weak=False)
