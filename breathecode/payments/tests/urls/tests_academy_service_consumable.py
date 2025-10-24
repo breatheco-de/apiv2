@@ -53,7 +53,7 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
 
-        response = self.client.get(self.url)
+        response = self.client.get(self.url, headers={"academy": 1})
         json = response.json()
         expected = {
             "detail": "You (user: 1) don't have this capability: read_consumable for academy 1",
@@ -73,7 +73,7 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         )
         self.bc.request.authenticate(model.user)
 
-        response = self.client.get(self.url)
+        response = self.client.get(self.url, headers={"academy": 1})
         json = response.json()
         expected = {
             "cohort_sets": [],
@@ -197,7 +197,7 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(json["voids"]), 1)
-        
+
         # Should only have 1 consumable (for user 1)
         items = json["voids"][0]["items"]
         self.assertEqual(len(items), 1)
@@ -232,7 +232,7 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Should have 2 consumables
         items = json["voids"][0]["items"]
         self.assertEqual(len(items), 2)
@@ -266,7 +266,7 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Should only have consumables for the first service
         if json["voids"]:
             self.assertEqual(len(json["voids"]), 1)
@@ -300,7 +300,7 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Should have consumables for the first two services only
         if json["voids"]:
             self.assertLessEqual(len(json["voids"]), 2)
@@ -337,14 +337,18 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Should only see consumables from academy 1
         if json["voids"]:
             for void_item in json["voids"]:
                 for item in void_item["items"]:
                     # Verify the consumable's subscription belongs to academy 1
                     if item["subscription"]:
-                        consumable = model.consumable[0] if model.consumable[0].subscription.academy_id == 1 else model.consumable[1]
+                        consumable = (
+                            model.consumable[0]
+                            if model.consumable[0].subscription.academy_id == 1
+                            else model.consumable[1]
+                        )
                         self.assertEqual(consumable.subscription.academy_id, 1)
 
     def test_invalid_users_parameter(self):
@@ -395,10 +399,9 @@ class AcademyServiceConsumableTestCase(PaymentsTestCase):
         json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Should only have the valid consumable
         if json["voids"]:
             items = json["voids"][0]["items"]
             self.assertEqual(len(items), 1)
             self.assertEqual(items[0]["how_many"], 10)
-

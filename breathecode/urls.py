@@ -1,4 +1,36 @@
-"""breathecode URL Configuration.
+"""
+Main URL Configuration for BreatheCode API v2
+
+This module defines the main URL routing for the BreatheCode API, organizing endpoints
+by version and application modules following REST conventions.
+
+REST Naming Conventions:
+========================
+
+1. Version-based URLs:
+   - /v1/* - Version 1 endpoints (legacy)
+   - /v2/* - Version 2 endpoints (current)
+
+2. Application Modules:
+   - Each app has its own namespace and URL patterns
+   - Apps are mounted under versioned paths: /v1/admissions/, /v1/events/
+
+3. Special Routes:
+   - /s/* - Marketing short links
+   - /mentor/* - Mentorship short links
+   - /asset/* - Registry asset short links
+   - /start - Provisioning start links
+
+4. Documentation & Admin:
+   - /admin/ - Django admin interface
+   - /swagger/ - API documentation (Swagger UI)
+   - /redoc/ - API documentation (ReDoc)
+   - /openapi.json - OpenAPI schema
+
+5. Development Tools:
+   - /graphql - GraphQL endpoint
+   - /explorer/ - Database explorer
+   - /v1/cypress/ - Cypress testing endpoints (test environment only)
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/3.0/topics/http/urls/

@@ -12,8 +12,8 @@ from breathecode.assignments.signals import revision_status_updated
 from breathecode.certificate.actions import how_many_pending_tasks, get_assets_from_syllabus
 
 from ..activity import tasks as activity_tasks
-from .models import Cohort, CohortUser, Syllabus, SyllabusVersion
-from .signals import cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
+from .models import Academy, Cohort, CohortUser, Syllabus, SyllabusVersion
+from .signals import academy_saved, cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
 
 # add your receives here
 logger = logging.getLogger(__name__)
@@ -211,3 +211,39 @@ def create_initial_syllabus_version(sender: Type[Syllabus], instance: Syllabus, 
 
     # Create the first version (version 1) with default JSON
     SyllabusVersion.objects.create(syllabus=instance, version=1, status="PUBLISHED")
+
+
+@receiver(academy_saved, sender=Academy)
+def create_owner_profile_academy(sender: Type[Academy], instance: Academy, created: bool, **kwargs: Any):
+    """
+    When an academy is created with an owner, automatically create a ProfileAcademy
+    with admin role for that owner.
+
+    This ensures the owner can manage the academy they created.
+    """
+    if created and instance.owner:
+        from breathecode.authenticate.models import ProfileAcademy, Role
+
+        logger.info(f"Creating ProfileAcademy for academy owner: {instance.slug} -> {instance.owner.email}")
+
+        admin_role = Role.objects.filter(slug="admin").first()
+        if not admin_role:
+            logger.warning(f"Admin role not found, cannot create ProfileAcademy for academy {instance.slug}")
+            return
+
+        profile_academy, created_profile = ProfileAcademy.objects.get_or_create(
+            user=instance.owner,
+            academy=instance,
+            defaults={
+                "email": instance.owner.email,
+                "role": admin_role,
+                "first_name": instance.owner.first_name,
+                "last_name": instance.owner.last_name,
+                "status": "ACTIVE",
+            },
+        )
+
+        if created_profile:
+            logger.info(f"Created ProfileAcademy for {instance.owner.email} at {instance.slug}")
+        else:
+            logger.info(f"ProfileAcademy already exists for {instance.owner.email} at {instance.slug}")

@@ -1,3 +1,56 @@
+"""
+URL Configuration for Admissions App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/cohorts, /syllabus/versions
+   - Use singular nouns for individual resources: /academy/cohort/<id>
+
+2. HTTP Methods:
+   - GET /academy/cohort - List all cohorts
+   - POST /academy/cohort - Create new cohort
+   - GET /academy/cohort/<id> - Get specific cohort
+   - PUT/PATCH /academy/cohort/<id> - Update specific cohort
+   - DELETE /academy/cohort/<id> - Delete specific cohort
+
+3. Nested Resources:
+   - /academy/cohort/<id>/user - Users in a specific cohort
+   - /academy/cohort/<id>/timeslot - Time slots for a specific cohort
+
+4. Actions (Non-REST exceptions):
+   - /academy/cohort/<id>/join - Join a cohort (POST)
+   - /academy/cohort/me - Get current user's cohort
+   - /academy/activate - Activate academy (POST)
+
+5. Special Endpoints:
+   - /me/* - Current user's resources
+   - /public/* - Publicly accessible endpoints
+   - /academy/* - Academy-only endpoints
+   - /admin/* - Admin-only endpoints
+   - /catalog/* - Reference data endpoints
+
+6. Deprecated Endpoints:
+   - Marked with 🔽 comments for gradual migration
+   - Maintained for backward compatibility
+
+7. URL Naming:
+   - Use snake_case for URL names: academy_cohort_id
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_cohort_id - Get/update specific cohort
+- academy_cohort_id_user_id - Get/update specific user in cohort
+- me_cohort_user_log - Current user's cohort history
+- public_cohort_user - Public cohort user data
+- admin_cohort - Admin cohort management
+"""
+
 from django.urls import path
 
 from .views import (
@@ -28,7 +81,6 @@ from .views import (
     UserMeView,
     UserMicroCohortsSyncView,
     UserView,
-    get_all_academies,
     get_cities,
     get_countries,
     get_public_syllabus,

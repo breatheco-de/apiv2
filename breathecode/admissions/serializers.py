@@ -30,6 +30,26 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+class SyllabusVersionTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    version = serpy.Field()
+    slug = serpy.MethodField()
+    name = serpy.MethodField()
+    syllabus = serpy.MethodField()
+
+    def get_slug(self, obj):
+        return obj.syllabus.slug if obj.syllabus else None
+
+    def get_name(self, obj):
+        return obj.syllabus.name if obj.syllabus else None
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
+
+
 class GetTinyCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
 
@@ -37,6 +57,7 @@ class GetTinyCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
+    syllabus_version = SyllabusVersionTinySerializer(required=False)
 
 
 class CountrySerializer(serpy.Serializer):
@@ -164,6 +185,8 @@ class GetSyllabusScheduleSerializer(serpy.Serializer):
 class GetSmallSyllabusScheduleSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
+    schedule_type = serpy.Field()
+    description = serpy.Field()
     syllabus = serpy.MethodField()
 
     def get_syllabus(self, obj):
@@ -234,6 +257,12 @@ class GetBigAcademySerializer(serpy.Serializer):
     linkedin_url = serpy.Field()
     youtube_url = serpy.Field()
     is_hidden_on_prework = serpy.Field()
+    white_label_features = serpy.MethodField()
+    owner = UserSmallSerializer(required=False)
+
+    def get_white_label_features(self, obj):
+        """Return white_label_features merged with defaults."""
+        return obj.get_white_label_features()
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
@@ -373,6 +402,33 @@ class GetCohortSerializer(serpy.Serializer):
     is_hidden_on_prework = serpy.Field()
     available_as_saas = serpy.Field()
     shortcuts = serpy.Field()
+
+    micro_cohorts = serpy.MethodField()
+
+    def get_micro_cohorts(self, obj):
+        cohorts = obj.micro_cohorts.all()
+
+        # Sort by cohorts_order if it exists
+        if obj.cohorts_order:
+            # Parse the comma-separated IDs
+            order_ids = [int(id.strip()) for id in obj.cohorts_order.split(",") if id.strip().isdigit()]
+
+            # Create a dictionary for quick lookup
+            cohort_dict = {cohort.id: cohort for cohort in cohorts}
+
+            # Build sorted list based on order_ids
+            sorted_cohorts = []
+            for cohort_id in order_ids:
+                if cohort_id in cohort_dict:
+                    sorted_cohorts.append(cohort_dict[cohort_id])
+
+            # Append any micro cohorts not in the order list at the end
+            remaining = [c for c in cohorts if c.id not in order_ids]
+            sorted_cohorts.extend(remaining)
+
+            cohorts = sorted_cohorts
+
+        return GetTinyCohortSerializer(cohorts, many=True).data
 
     def get_timeslots(self, obj):
         timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
@@ -730,7 +786,7 @@ class AcademySerializer(serializers.ModelSerializer):
 
 class AcademyPOSTSerializer(serializers.ModelSerializer):
     """Serializer for creating new academies."""
-    
+
     status_fields = ["status"]
 
     class Meta:
@@ -779,10 +835,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
     def validate_slug(self, value):
         """Ensure slug is unique."""
         if Academy.objects.filter(slug=value).exists():
-            raise ValidationException(
-                "Academy with this slug already exists",
-                slug="academy-slug-exists"
-            )
+            raise ValidationException("Academy with this slug already exists", slug="academy-slug-exists")
         return value
 
 

@@ -1,6 +1,4 @@
 from breathecode.admissions.serializers import GetSmallSyllabusScheduleSerializer
-from breathecode.authenticate.models import ProfileAcademy
-from breathecode.authenticate.serializers import GetProfileAcademyTinySerializer
 from breathecode.utils import serpy
 
 
@@ -126,9 +124,14 @@ class SpecialtySerializer(serpy.Serializer):
     name = serpy.Field()
     logo_url = serpy.Field()
     description = serpy.Field()
+    duration_in_hours = serpy.Field()
+    status = serpy.Field()
 
     updated_at = serpy.Field()
     created_at = serpy.Field()
+
+    # metrics
+    metrics = serpy.Field()
 
     # old syllabus
     syllabus = serpy.MethodField()

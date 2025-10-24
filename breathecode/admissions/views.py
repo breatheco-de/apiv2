@@ -8,7 +8,7 @@ from adrf.decorators import api_view
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser, User
-from django.db.models import FloatField, Max, Q, Value
+from django.db.models import F, FloatField, Max, Q, Value
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -158,8 +158,15 @@ def get_countries(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_cities(request):
-    """Get all cities available in the system."""
-    cities = City.objects.all().select_related("country").order_by("name")
+    """Get all cities available in the system, optionally filtered by country."""
+    cities = City.objects.all().select_related("country")
+
+    # Filter by country code/id if provided (country uses code as primary key)
+    country = request.GET.get("country")
+    if country:
+        cities = cities.filter(country__pk=country)
+
+    cities = cities.order_by("name")
     serializer = CitySerializer(cities, many=True)
     return Response(serializer.data)
 
@@ -167,7 +174,7 @@ def get_cities(request):
 class AcademyListView(APIView):
     """
     List all academies or create a new academy.
-    
+
     GET: List all academies (public)
     POST: Create a new academy (requires 'manage_organizations' permission)
     """
@@ -193,16 +200,18 @@ class AcademyListView(APIView):
     def post(self, request):
         """Create a new academy."""
         lang = get_user_language(request)
-        
+
         serializer = AcademyPOSTSerializer(data=request.data, context={"request": request, "lang": lang})
-        
+
         if serializer.is_valid():
-            academy = serializer.save()
-            
+            # Set the creator as the owner before saving
+            # The academy_saved signal will automatically create ProfileAcademy with admin role
+            academy = serializer.save(owner=request.user)
+
             # Return the created academy with the standard serializer
             response_serializer = GetBigAcademySerializer(academy)
             return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -337,6 +346,9 @@ class PublicCohortView(APIView):
         if upcoming == "true":
             now = timezone.now()
             items = items.filter(Q(kickoff_date__gte=now) | Q(never_ends=True))
+        elif upcoming == "false":
+            now = timezone.now()
+            items = items.filter(kickoff_date__lt=now, never_ends=False)
 
         never_ends = request.GET.get("never_ends", None)
         if never_ends == "false":
@@ -1260,6 +1272,9 @@ class CohortMeView(APIView, GenerateLookupsMixin):
         if upcoming == "true":
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
+        elif upcoming == "false":
+            now = timezone.now()
+            items = items.filter(kickoff_date__lt=now)
 
         stage = request.GET.get("stage", None)
         if stage is not None:
@@ -1270,6 +1285,35 @@ class CohortMeView(APIView, GenerateLookupsMixin):
         like = request.GET.get("like", None)
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
+
+        # Filter by live cohorts (has online_meeting_url)
+        live = request.GET.get("live", None)
+        if live is not None:
+            if live.lower() == "true":
+                items = items.filter(online_meeting_url__isnull=False)
+            elif live.lower() == "false":
+                items = items.filter(online_meeting_url__isnull=True)
+
+        # Filter by remote available cohorts
+        remote = request.GET.get("remote", None)
+        if remote is not None:
+            if remote.lower() == "true":
+                items = items.filter(remote_available=True)
+            elif remote.lower() == "false":
+                items = items.filter(remote_available=False)
+
+        # Filter by available_as_saas (defaults to academy.available_as_saas if not specified)
+        available_as_saas = request.GET.get("available_as_saas", None)
+        if available_as_saas is not None:
+            if available_as_saas.lower() == "true":
+                items = items.filter(available_as_saas=True)
+            elif available_as_saas.lower() == "false":
+                items = items.filter(available_as_saas=False)
+        else:
+            # Default to academy's available_as_saas setting
+            # If academy.available_as_saas=True, show only cohorts with available_as_saas=True
+            # If academy.available_as_saas=False, show only cohorts with available_as_saas=False
+            items = items.filter(available_as_saas=F("academy__available_as_saas"))
 
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)
@@ -1310,6 +1354,9 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         if upcoming == "true":
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
+        elif upcoming == "false":
+            now = timezone.now()
+            items = items.filter(kickoff_date__lt=now)
 
         academy = request.GET.get("academy", None)
         if academy is not None:
@@ -1328,6 +1375,48 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         like = request.GET.get("like", None)
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
+
+        specialty = request.GET.get("specialty", None)
+        if specialty is not None:
+            # Filter by specialty slug through syllabus relationships
+            items = items.filter(
+                Q(syllabus_version__syllabus__specialty_with_one_syllabus__slug__in=specialty.split(","))
+                | Q(syllabus_version__syllabus__specialties_with_many_syllabus__slug__in=specialty.split(","))
+            )
+
+        syllabus = request.GET.get("syllabus", None)
+        if syllabus is not None:
+            # Filter by syllabus slug
+            items = items.filter(syllabus_version__syllabus__slug__in=syllabus.split(","))
+
+        # Filter by live cohorts (has online_meeting_url)
+        live = request.GET.get("live", None)
+        if live is not None:
+            if live.lower() == "true":
+                items = items.filter(online_meeting_url__isnull=False)
+            elif live.lower() == "false":
+                items = items.filter(online_meeting_url__isnull=True)
+
+        # Filter by remote available cohorts
+        remote = request.GET.get("remote", None)
+        if remote is not None:
+            if remote.lower() == "true":
+                items = items.filter(remote_available=True)
+            elif remote.lower() == "false":
+                items = items.filter(remote_available=False)
+
+        # Filter by available_as_saas (defaults to academy.available_as_saas if not specified)
+        available_as_saas = request.GET.get("available_as_saas", None)
+        if available_as_saas is not None:
+            if available_as_saas.lower() == "true":
+                items = items.filter(available_as_saas=True)
+            elif available_as_saas.lower() == "false":
+                items = items.filter(available_as_saas=False)
+        else:
+            # Default to academy's available_as_saas setting
+            # If academy.available_as_saas=True, show only cohorts with available_as_saas=True
+            # If academy.available_as_saas=False, show only cohorts with available_as_saas=False
+            items = items.filter(available_as_saas=F("academy__available_as_saas"))
 
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)

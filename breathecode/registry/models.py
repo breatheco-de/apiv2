@@ -357,7 +357,7 @@ class Asset(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="Automatically calculated based on the package.json, pipfile or alternatives. String like: python=3.10,node=16.0",
+        help_text="Automatically calculated based on the package.json, pyproject.toml or alternatives. String like: python=3.10,node=16.0",
     )
 
     readme_url = models.URLField(
@@ -607,9 +607,7 @@ class Asset(models.Model):
                 context += "This asset is external, which means it opens outside 4geeks. "
 
             if self.interactive:
-                context += (
-                    "This asset opens as a LearnPack Package so it has a step-by-step of the exercises that you should follow. "
-                )
+                context += "This asset opens as a LearnPack Package so it has a step-by-step of the exercises that you should follow. "
 
             if self.gitpod:
                 context += (
@@ -636,9 +634,7 @@ class Asset(models.Model):
                 context += "This project should be delivered by sending a github repository URL. "
 
             if self.asset_type == "PROJECT" and self.delivery_instructions and self.delivery_formats:
-                context += (
-                    f"This project should be delivered by adding a file of one of these types: {self.delivery_formats}. "
-                )
+                context += f"This project should be delivered by adding a file of one of these types: {self.delivery_formats}. "
 
             if self.asset_type == "PROJECT" and self.delivery_regex_url:
                 context += (

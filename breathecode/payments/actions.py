@@ -24,7 +24,7 @@ from rest_framework.request import Request
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_app_url, get_api_url, get_user_settings
+from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
@@ -502,7 +502,7 @@ class BagHandler:
                 args, kwargs = self._lookups(service_item["service"])
 
                 service = Service.objects.filter(*args, **kwargs).first()
-                service_item, _ = ServiceItem.objects.get_or_create(
+                service_item, _ = ServiceItem.get_or_create_for_service(
                     service=service,
                     how_many=service_item["how_many"],
                     is_team_allowed=service_item.get("is_team_allowed", True),
@@ -585,8 +585,8 @@ class BagHandler:
             return
 
         plan: Plan | None = self.bag.plans.first()
-        service_item, _ = ServiceItem.objects.get_or_create(
-            service=plan.seat_service_price.service, how_many=seats, is_renewable=False, is_team_allowed=True
+        service_item, _ = ServiceItem.get_or_create_for_service(
+            service=plan.seat_service_price.service, how_many=seats + 1, is_renewable=False, is_team_allowed=True
         )
 
         self.bag.seat_service_item = service_item
@@ -2068,7 +2068,6 @@ def invite_user_to_subscription_team(
         },
     )
     if created or invite.status == "PENDING":
-        billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
         notify_actions.send_email_message(
             "welcome_academy",
             obj.get("email", ""),
@@ -2076,11 +2075,11 @@ def invite_user_to_subscription_team(
                 "email": obj.get("email", ""),
                 "subject": translation(
                     lang,
-                    en=f"Invitation to join {billing_team_name} at {subscription.academy.name}",
-                    es=f"Invitación para unirse a {billing_team_name} en {subscription.academy.name}",
+                    en=f"{subscription.academy.name} is inviting you to {subscription.academy.slug}.4Geeks.com",
+                    es=f"{subscription.academy.name} te está invitando a {subscription.academy.slug}.4Geeks.com",
                 ),
-                "LINK": get_api_url() + "/v1/auth/member/invite/" + invite.token,
-                "FIST_NAME": invite.first_name or "",
+                "LINK": get_app_url() + "/v1/auth/member/invite/" + invite.token,
+                "FIRST_NAME": invite.first_name or "",
             },
             academy=subscription.academy,
         )
@@ -2582,14 +2581,17 @@ def process_auto_recharge(
                         academy=resource.academy,
                     )
 
-                attrs = consumable.service_item.__dict__.copy()
-                attrs.pop("id")
-                attrs.pop("_state")
-                attrs.pop("how_many")
-
-                si, _ = ServiceItem.objects.get_or_create(
-                    **attrs,
+                # Clone the existing ServiceItem with a different how_many
+                original = consumable.service_item
+                si, _ = ServiceItem.get_or_create_for_service(
+                    service=original.service,
                     how_many=amount,
+                    unit_type=original.unit_type,
+                    is_renewable=original.is_renewable,
+                    is_team_allowed=original.is_team_allowed,
+                    renew_at=original.renew_at,
+                    renew_at_unit=original.renew_at_unit,
+                    sort_priority=original.sort_priority,
                 )
 
                 attrs = consumable.__dict__.copy()

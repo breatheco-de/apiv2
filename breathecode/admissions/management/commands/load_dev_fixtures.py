@@ -67,13 +67,17 @@ class Command(BaseCommand):
             fixtures = [
                 # Level 1: Users first (authenticate fixture will fail on ProfileAcademy but that's OK)
                 ("authenticate", "Users", ["breathecode/authenticate/fixtures/dev_data.json"]),
-                # Level 2: Admissions (needs users for CohortUser)  
-                ("admissions", "Countries, Cities, Academies, Cohorts", ["breathecode/admissions/fixtures/dev_data.json"]),
+                # Level 2: Admissions (needs users for CohortUser)
+                (
+                    "admissions",
+                    "Countries, Cities, Academies, Cohorts",
+                    ["breathecode/admissions/fixtures/dev_data.json"],
+                ),
             ]
 
             # Load each fixture group
             errors = []
-            for app_name, description, fixture_files in fixtures:
+            for _app_name, description, fixture_files in fixtures:
                 if verbosity >= 1:
                     self.stdout.write(f"\nLoading {description}...")
 
@@ -92,7 +96,7 @@ class Command(BaseCommand):
                         # Extract just the relevant error message
                         if "Problem installing" in error_msg:
                             error_msg = error_msg.split("Problem installing")[1].split("\n")[0]
-                        
+
                         self.stdout.write(self.style.WARNING(f"  ⚠ Partially loaded {fixture_file}"))
                         self.stdout.write(self.style.WARNING(f"    Some records skipped due to: {error_msg}"))
                         errors.append((fixture_file, error_msg))
@@ -117,6 +121,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"\n✗ Critical error loading fixtures: {str(e)}"))
             if verbosity >= 2:
                 import traceback
+
                 traceback.print_exc()
 
         finally:
@@ -132,6 +137,34 @@ class Command(BaseCommand):
             if verbosity >= 2:
                 self.stdout.write(self.style.SUCCESS("✓ Signals restored"))
 
+        # Create UserInvite records for all staff users
+        if verbosity >= 1:
+            self.stdout.write("\n" + "=" * 70)
+            self.stdout.write("Creating UserInvite records for staff users...")
+
+        call_command("create_staff_invites", verbosity=0)
+
+        if verbosity >= 1:
+            self.stdout.write(self.style.SUCCESS("✓ Staff UserInvites created"))
+
+        # Assign Admin group to all staff users
+        if verbosity >= 1:
+            self.stdout.write("\nAssigning groups to staff users...")
+
+        call_command("assign_staff_groups", verbosity=0)
+
+        if verbosity >= 1:
+            self.stdout.write(self.style.SUCCESS("✓ Staff groups assigned"))
+
+        # Populate academy owners from ProfileAcademy
+        if verbosity >= 1:
+            self.stdout.write("\nPopulating academy owners...")
+
+        call_command("populate_academy_owners", verbosity=0)
+
+        if verbosity >= 1:
+            self.stdout.write(self.style.SUCCESS("✓ Academy owners populated"))
+
         # Print summary
         if verbosity >= 1:
             self.stdout.write("\n" + "=" * 70)
@@ -140,12 +173,13 @@ class Command(BaseCommand):
 
             # Show what was loaded
             from breathecode.admissions.models import Country, City, Academy, Cohort
+            from breathecode.authenticate.models import UserInvite
             from django.contrib.auth.models import User
 
-            self.stdout.write(f"\nData summary:")
+            self.stdout.write("\nData summary:")
             self.stdout.write(f"  Countries: {Country.objects.count()}")
             self.stdout.write(f"  Cities: {City.objects.count()}")
             self.stdout.write(f"  Academies: {Academy.objects.count()}")
             self.stdout.write(f"  Cohorts: {Cohort.objects.count()}")
             self.stdout.write(f"  Users: {User.objects.count()}")
-
+            self.stdout.write(f"  Staff UserInvites: {UserInvite.objects.filter(user__is_staff=True).count()}")
