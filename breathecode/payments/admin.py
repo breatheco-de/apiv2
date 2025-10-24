@@ -182,6 +182,7 @@ class PlanAdmin(admin.ModelAdmin):
             "Pricing",
             {
                 "fields": (
+                    "currency",
                     "price_per_month",
                     "price_per_quarter",
                     "price_per_half",

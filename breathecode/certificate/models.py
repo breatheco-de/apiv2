@@ -32,6 +32,23 @@ class Specialty(models.Model):
     description = models.TextField(max_length=500, blank=True, null=True, default=None)
     # how long it takes to expire, leave null for unlimited
     expiration_day_delta = models.IntegerField(blank=True, null=True, default=None)
+    
+    # Status choices
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    DELETED = "DELETED"
+    SPECIALTY_STATUS = (
+        (ACTIVE, "Active"),
+        (INACTIVE, "Inactive"),
+        (DELETED, "Deleted"),
+    )
+    
+    status = models.CharField(
+        max_length=15,
+        choices=SPECIALTY_STATUS,
+        default=ACTIVE,
+        help_text="Current status of the specialty"
+    )
 
     # old syllabus
     syllabus = models.OneToOneField(
@@ -53,6 +70,12 @@ class Specialty(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+    
+    metrics = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Key performance metrics for this specialty"
+    )
 
     def __str__(self):
         return self.name

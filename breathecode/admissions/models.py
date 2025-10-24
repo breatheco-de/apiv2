@@ -132,6 +132,17 @@ class Academy(models.Model):
 
     logistical_information = models.CharField(max_length=150, blank=True, null=True)
 
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="owned_academies",
+        help_text="Primary owner of the academy, typically the first admin with role 'admin'",
+        db_index=True,
+    )
+
     def default_ac_slug(self):
         return self.slug
 
@@ -206,9 +217,10 @@ class Syllabus(models.Model):
     def save(self, *args, **kwargs):
         created = not self.id
         super().save(*args, **kwargs)
-        
+
         if created:
             from .signals import syllabus_created
+
             syllabus_created.send_robust(instance=self, sender=self.__class__)
 
 
@@ -448,6 +460,20 @@ class Cohort(models.Model):
         if self.pk is None or self._old_stage != self.stage:
             stage_updated = True
 
+        micro_cohorts_were_added = False
+        if not created and self.pk:
+            old_micro_cohorts = set()
+            try:
+                old_instance = Cohort.objects.get(pk=self.pk)
+                old_micro_cohorts = set(old_instance.micro_cohorts.values_list("id", flat=True))
+            except Cohort.DoesNotExist:
+                pass
+
+            current_micro_cohorts = set(self.micro_cohorts.values_list("id", flat=True))
+            new_micro_cohorts = current_micro_cohorts - old_micro_cohorts
+            if new_micro_cohorts:
+                micro_cohorts_were_added = True
+
         super().save(*args, **kwargs)
 
         signals.cohort_saved.send_robust(instance=self, sender=self.__class__, created=created)
@@ -457,6 +483,9 @@ class Cohort(models.Model):
 
         if stage_updated:
             signals.cohort_stage_updated.send_robust(instance=self, sender=self.__class__)
+
+        if micro_cohorts_were_added:
+            signals.micro_cohorts_added.send_robust(instance=self, sender=self.__class__)
 
         self._current_history_log = self.history_log
 

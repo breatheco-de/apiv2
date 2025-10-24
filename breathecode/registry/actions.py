@@ -1387,7 +1387,7 @@ def pull_repo_dependencies(github, asset):
         raise Exception(f"Error retrieving programming languages from repository {org_name}/{repo_name}: {str(e)}")
 
     # Parse version from dependency files
-    dependency_files = ["requirements.txt", "pyproject.toml", "Pipfile", "package.json"]
+    dependency_files = ["requirements.txt", "pyproject.toml", "package.json"]
     language_versions = {}
 
     for file_name in dependency_files:
@@ -1454,13 +1454,6 @@ def detect_language_version(file_name, content):
         engines = data.get("engines", {})
         if "node" in engines:
             return {"javascript": engines["node"]}
-
-    if file_name == "Pipfile":
-
-        data = tomli.loads(content)
-        version = data.get("requires", {}).get("python_version", None)
-        if version:
-            return {"python": version}
 
     return {}
 

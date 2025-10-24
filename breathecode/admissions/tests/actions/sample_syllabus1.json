@@ -1037,8 +1037,8 @@
             "description": "The back-end side has almost no limitations, you have access to the entire computer, printers or anything you need. Your life as a back-end developer will start by doing API's because it is the most needed skill in the market. We really hope you like it as much as we do!",
             "key-concepts": [
                 "Python has access to the entire machine",
-                "Python has packages just like NPM but it is calles Pipenv",
-                "The pipfile is like the package.json",
+                "Python has packages just like NPM but it is called Poetry",
+                "The pyproject.toml is like the package.json",
                 "Flask is the most popular Python Framework",
                 "workflow for creating and enpoint in Flask (same MVC pattern but now on the backend)",
                 "Flask easily works with SQLAlchemy (models.py)",
