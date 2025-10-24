@@ -1412,11 +1412,6 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
                 items = items.filter(available_as_saas=True)
             elif available_as_saas.lower() == "false":
                 items = items.filter(available_as_saas=False)
-        else:
-            # Default to academy's available_as_saas setting
-            # If academy.available_as_saas=True, show only cohorts with available_as_saas=True
-            # If academy.available_as_saas=False, show only cohorts with available_as_saas=False
-            items = items.filter(available_as_saas=F('academy__available_as_saas'))
 
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)
