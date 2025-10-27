@@ -14,6 +14,7 @@ from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.contrib.auth.models import Group, Permission, User
 from django.core.handlers.wsgi import WSGIRequest
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.utils import timezone
@@ -1546,6 +1547,15 @@ class Invoice(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["coinbase_charge_id"],
+                condition=models.Q(coinbase_charge_id__isnull=False),
+                name="unique_coinbase_charge_id",
+            )
+        ]
+
     def clean(self) -> None:
         if self.payment_method and self.externally_managed is False:
             raise forms.ValidationError("Payment method cannot be setted if the billing isn't managed externally")
@@ -1600,7 +1610,7 @@ class AbstractIOweYou(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
 
     externally_managed = models.BooleanField(
-        default=False, help_text="If the billing is managed externally outside of the system"
+        default=False, help_text="If the payment method is different than credit card this will be set to true"
     )
 
     selected_cohort_set = models.ForeignKey(
@@ -3146,6 +3156,12 @@ class AcademyPaymentSettings(models.Model):
     )
     coinbase_webhook_secret = models.CharField(
         max_length=255, blank=True, null=True, help_text="Webhook secret for Coinbase Commerce"
+    )
+
+    early_renewal_window_days = models.PositiveIntegerField(
+        default=2,
+        validators=[MaxValueValidator(14)],
+        help_text="Days before expiration when early renewal is allowed, 0 means it is not allowed",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

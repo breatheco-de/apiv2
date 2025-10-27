@@ -1,7 +1,6 @@
 from datetime import timedelta
 from typing import Any
 
-import requests
 from adrf.views import APIView
 from capyc.core.i18n import translation
 from capyc.core.shorteners import C
@@ -23,7 +22,7 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_academy_from_body, get_user_language
+from breathecode.authenticate.actions import get_academy_from_body, get_user_language, get_user_settings
 from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
@@ -92,6 +91,7 @@ from breathecode.payments.serializers import (
     PUTAcademyServiceSerializer,
     ServiceSerializer,
 )
+from breathecode.payments.services.coinbase import CoinbaseCommerce
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
 from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
@@ -825,7 +825,8 @@ class MeSubscriptionView(APIView):
             )
 
         if invoice := request.GET.get("invoice"):
-            ids = [int(x) for x in invoice if x.isnumeric()]
+            ids = [int(x) for x in invoice.split(",") if x.isnumeric()]
+            print(ids)
             subscriptions = subscriptions.filter(invoices__id__in=ids)
             plan_financings = plan_financings.filter(invoices__id__in=ids)
 
@@ -2651,6 +2652,7 @@ class PayView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     def post(self, request):
+        logger.info(f"PayView: POST request received - user_id={request.user.id}, data={request.data}")
         utc_now = timezone.now()
         lang = get_user_language(request)
 
@@ -2796,6 +2798,9 @@ class PayView(APIView):
 
                 if not available_for_free_trial and not available_free and not chosen_period and how_many_installments:
                     bag.how_many_installments = how_many_installments
+                    print(
+                        f"how_many_installments para coinbase: {bag.how_many_installments}, hmn: {how_many_installments}, id: {bag.id}"
+                    )
 
                 coupons = bag.coupons.none()
 
@@ -2804,10 +2809,8 @@ class PayView(APIView):
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
                         original_price = option.monthly_price
-
                         # Apply pricing ratio first
                         adjusted_price, _, c = apply_pricing_ratio(original_price, bag.country_code, option)
-
                         if c and c.code != bag.currency.code:
                             bag.currency = c
                             bag.save()
@@ -2875,8 +2878,56 @@ class PayView(APIView):
                         )
                     )
 
+                payment_method = request.data.get("payment_method", "stripe")
+
+                if payment_method == "coinbase" and amount > 0:
+
+                    return_url = request.data.get("return_url")
+                    cancel_url = request.data.get("cancel_url")
+                    logger.info(f"Coinbase payment URLs - return_url={return_url}, cancel_url={cancel_url}")
+
+                    if not return_url:
+                        logger.warning(
+                            f"Missing return_url for Coinbase payment - user_id={request.user.id}, bag_id={bag.id}"
+                        )
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Return url is required",
+                                es="Return url es requerido",
+                                slug="return-url-required",
+                            ),
+                            code=400,
+                        )
+
+                    coinbase = CoinbaseCommerce(academy=bag.academy)
+                    coinbase.set_language(lang)
+                    charge = coinbase.create_charge(
+                        bag=bag,
+                        amount=amount,
+                        metadata={
+                            "bag_id": bag.id,
+                            "user_id": request.user.id,
+                            "amount": str(amount),
+                            "chosen_period": chosen_period,
+                            "how_many_installments": bag.how_many_installments,
+                            "is_recurrent": recurrent,
+                            "original_price": original_price,
+                            "selected_cohort": request.GET.get("selected_cohort"),
+                        },
+                        return_url=return_url,
+                        cancel_url=cancel_url,
+                    )
+
+                    # Stop the flow here, a webhook will finish the process and create the invoice
+                    logger.info(
+                        f"PayView: Coinbase charge created - charge_id={charge['id']}, hosted_url={charge.get('hosted_url')}"
+                    )
+                    return Response({"hosted_url": charge.get("hosted_url")}, status=status.HTTP_201_CREATED)
+
                 if amount >= 0.50:
                     s = Stripe(academy=bag.academy)
+                    print(f"academy para stripe: {bag.academy}")
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
 
@@ -2970,579 +3021,147 @@ class PayView(APIView):
                 raise e
 
 
-class CoinbasePayView(APIView):
-
-    def post(self, request):
-        try:
-            utc_now = timezone.now()
-            lang = get_user_language(request)
-
-            reputation, _ = FinancialReputation.objects.get_or_create(user=request.user)
-            current_reputation = reputation.get_reputation()
-
-            if current_reputation == "FRAUD" or current_reputation == "BAD":
-                raise PaymentException(
-                    translation(
-                        lang,
-                        en="The payment could not be completed because you have a bad reputation on this platform",
-                        es="No se pudo completar el pago porque tienes mala reputación en esta plataforma",
-                        slug="fraud-or-bad-reputation",
-                    ),
-                    silent=True,
-                )
-
-            bag_token = request.data.get("token")
-
-            if not bag_token:
-                raise ValidationException(
-                    translation(
-                        lang, en="Invalid bag token", es="El token de la bolsa es inválido", slug="missing-token"
-                    ),
-                    code=404,
-                )
-
-            bag = Bag.objects.filter(
-                token=bag_token,
-                expires_at__gt=utc_now,
-                status="CHECKING",
-                user=request.user,
-            ).first()
-
-            if not bag:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en="Bag not found, maybe you need to renew the checking",
-                        es="Bolsa no encontrada, quizás necesitas renovar el checking",
-                        slug="not-found-or-without-checking",
-                    ),
-                    code=404,
-                )
-
-            if bag.service_items.count() == 0 and bag.plans.count() == 0:
-                raise ValidationException(
-                    translation(lang, en="Bag is empty", es="La bolsa está vacía", slug="bag-is-empty"), code=400
-                )
-
-            how_many_installments = request.data.get("how_many_installments")
-            chosen_period = request.data.get("chosen_period", "").upper()
-
-            logger.info(
-                f"CoinbasePayView: Processing payment for user {request.user.id}, "
-                f"bag {bag.id}, academy {bag.academy.id}, "
-                f"installments={how_many_installments}, period={chosen_period}"
-            )
-
-            available_for_free_trial = False
-            available_free = False
-            if not how_many_installments and not chosen_period:
-                available_for_free_trial = (
-                    bag.amount_per_month == 0
-                    and bag.amount_per_quarter == 0
-                    and bag.amount_per_half == 0
-                    and bag.amount_per_year == 0
-                )
-                plan = bag.plans.first()
-                available_for_free_trial = available_for_free_trial and (
-                    not plan.financing_options.filter().exists() if plan else False
-                )
-                available_free = available_for_free_trial and not plan.trial_duration
-                available_for_free_trial = available_for_free_trial and plan.trial_duration
-
-            logger.info(
-                f"CoinbasePayView: Payment type detection - "
-                f"free_trial={available_for_free_trial}, free_plan={available_free}"
-            )
-
-            if not available_for_free_trial and not available_free and not how_many_installments and not chosen_period:
-                logger.error("CoinbasePayView: Missing payment parameters - neither period nor installments provided")
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en="Missing chosen period or how_many_installments",
-                        es="Falta el periodo elegido o el número de cuotas",
-                        slug="missing-chosen-period",
-                    ),
-                    code=400,
-                )
-
-            available_chosen_periods = ["MONTH", "QUARTER", "HALF", "YEAR"]
-
-            if (
-                not available_for_free_trial
-                and not available_free
-                and not how_many_installments
-                and chosen_period not in available_chosen_periods
-            ):
-                logger.error(
-                    f"CoinbasePayView: Invalid chosen period - provided={chosen_period}, "
-                    f"valid_options={available_chosen_periods}"
-                )
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en=f"Invalid chosen period ({', '.join(available_chosen_periods)})",
-                        es=f"Periodo elegido inválido ({', '.join(available_chosen_periods)})",
-                        slug="invalid-chosen-period",
-                    ),
-                    code=400,
-                )
-            if (
-                not available_for_free_trial
-                and not available_free
-                and not chosen_period
-                and (not isinstance(how_many_installments, int) or how_many_installments <= 0)
-            ):
-                logger.error(
-                    f"CoinbasePayView: Invalid how_many_installments - "
-                    f"value={how_many_installments}, type={type(how_many_installments).__name__}"
-                )
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en="how_many_installments must be a positive number greather than 0",
-                        es="how_many_installments debe ser un número positivo mayor a 0",
-                        slug="invalid-how-many-installments",
-                    ),
-                    code=400,
-                )
-            if available_free and not available_for_free_trial:
-                logger.error(f"CoinbasePayView: Rejecting permanently free plan - bag_id={bag.id}")
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en="This plan is permanently free and doesn't require payment through Coinbase",
-                        es="Este plan es permanentemente gratuito y no requiere pago a través de Coinbase",
-                        slug="plan-is-free",
-                    ),
-                    code=400,
-                )
-
-            return_url = request.data.get("return_url")
-            cancel_url = request.data.get("cancel_url")
-
-            if not available_for_free_trial and not available_free and not return_url:
-                logger.error("CoinbasePayView: Missing required return_url for paid payment")
-                raise ValidationException(
-                    translation(
-                        lang, en="return_url is required", es="return_url es requerido", slug="return-url-required"
-                    ),
-                    code=400,
-                )
-            if not available_for_free_trial and not available_free and not chosen_period and how_many_installments:
-                bag.how_many_installments = how_many_installments
-
-            coupons = bag.coupons.all()
-            logger.info(f"CoinbasePayView: Found {coupons.count()} coupons in bag")
-
-            if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
-                logger.info(
-                    f"CoinbasePayView: Calculating amount for Plan Financing with {bag.how_many_installments} installments"
-                )
-                try:
-                    plan = bag.plans.filter().first()
-                    if not plan:
-                        logger.error(f"CoinbasePayView: No plan found in bag {bag.id}")
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="No plan found in bag",
-                                es="No se encontró plan en la bolsa",
-                                slug="no-plan-in-bag",
-                            ),
-                            code=400,
-                        )
-
-                    option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
-                    if not option:
-                        logger.error(
-                            f"CoinbasePayView: Plan {plan.slug} does not support {bag.how_many_installments} installments"
-                        )
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en=f"This plan does not have a {bag.how_many_installments}-installment option configured.",
-                                es=f"Este plan no tiene opción de {bag.how_many_installments} cuotas configurada.",
-                                slug="no-installment-option",
-                            ),
-                            code=400,
-                        )
-
-                    original_price = option.monthly_price
-                    logger.info(f"CoinbasePayView: Original price from financing option: {original_price}")
-
-                    # Apply pricing ratio first
-                    adjusted_price, _, c = apply_pricing_ratio(original_price, bag.country_code, option)
-                    logger.info(
-                        f"CoinbasePayView: Adjusted price after pricing ratio: {adjusted_price} (country: {bag.country_code})"
-                    )
-
-                    if c and c.code != bag.currency.code:
-                        bag.currency = c
-                        bag.save()
-                        logger.info(f"CoinbasePayView: Updated bag currency to {c.code}")
-
-                    # Initialize add-ons to zero by default
-                    add_ons_amount = 0
-                    if request.data.get("add_ons"):
-                        add_ons_amount = actions.manage_plan_financing_add_ons(request, bag, lang)
-                        logger.info(f"CoinbasePayView: Add-ons amount: {add_ons_amount}")
-
-                    adjusted_price += add_ons_amount
-
-                    # Then apply coupons
-                    coupons = bag.coupons.all()
-                    amount = get_discounted_price(adjusted_price, coupons)
-                    logger.info(
-                        f"CoinbasePayView: Final amount after coupons: {amount} (before coupons: {adjusted_price})"
-                    )
-
-                except ValidationException:
-                    raise
-                except Exception as e:
-                    logger.error(
-                        f"CoinbasePayView: Error calculating Plan Financing amount - "
-                        f"bag_id={bag.id}, installments={bag.how_many_installments}, error={str(e)}",
-                        exc_info=True,
-                    )
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="Bag bad configured, related to financing option",
-                            es="La bolsa está mal configurada, relacionado a la opción de financiamiento",
-                            slug="invalid-bag-configured-by-installments",
-                        ),
-                        code=500,
-                    )
-            elif not available_for_free_trial and not available_free:
-                logger.info(f"CoinbasePayView: Calculating amount for Subscription with period {chosen_period}")
-                amount = get_amount_by_chosen_period(bag, chosen_period, lang)
-                logger.info(f"CoinbasePayView: Base amount for {chosen_period}: {amount}")
-                coupons = bag.coupons.all()
-                original_price = amount
-                amount = get_discounted_price(amount, coupons)
-                logger.info(f"CoinbasePayView: Final amount after coupons: {amount} (before coupons: {original_price})")
-
-            else:
-                logger.info("CoinbasePayView: Processing free trial/free plan (amount = 0)")
-                original_price = 0
-                amount = 0
-
-            coinbase_method = PaymentMethod.objects.filter(is_coinbase=True, lang=lang, academy=bag.academy).first()
-            if not coinbase_method:
-                logger.error(
-                    f"CoinbasePayView: Coinbase payment method not found - academy={bag.academy.id}, lang={lang}"
-                )
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en="Coinbase Commerce is not available",
-                        es="Coinbase Commerce no está disponible",
-                        slug="coinbase-not-available",
-                    ),
-                    code=404,
-                )
-
-            if amount == 0:
-                logger.info("CoinbasePayView: Handling free trial without Coinbase charge (amount=0)")
-                with transaction.atomic():
-                    sid = transaction.savepoint()
-
-                    try:
-                        invoice = Invoice(
-                            user=request.user,
-                            amount=0,
-                            paid_at=utc_now,
-                            bag=bag,
-                            status="FULFILLED",
-                            currency=bag.currency,
-                            academy=bag.academy,
-                        )
-                        invoice.save()
-                        logger.info(f"CoinbasePayView: Created FULFILLED invoice {invoice.id} for free trial")
-
-                        # Actualizar bag
-                        bag.chosen_period = chosen_period or "NO_SET"
-                        bag.status = "PAID"
-                        bag.token = None
-                        bag.expires_at = None
-                        bag.is_recurrent = False
-                        bag.save()
-                        logger.info(f"CoinbasePayView: Updated bag {bag.id} to PAID status")
-
-                        transaction.savepoint_commit(sid)
-
-                        tasks.build_free_subscription.delay(bag.id, invoice.id)
-                        logger.info(f"CoinbasePayView: Dispatched build_free_subscription task for bag {bag.id}")
-
-                        if plans := bag.plans.all():
-                            for plan in plans:
-                                actions.grant_student_capabilities(request.user, plan)
-
-                        # Registrar actividad
-                        tasks_activity.add_activity.delay(
-                            request.user.id,
-                            "checkout_completed",
-                            related_type="payments.Invoice",
-                            related_id=invoice.id,
-                        )
-                        logger.info(f"CoinbasePayView: Successfully completed free trial for user {request.user.id}")
-
-                        # Retornar sin hosted_url (no hay pago ahora)
-                        return Response(
-                            {
-                                "message": "Free trial started",
-                                "invoice_id": invoice.id,
-                                "bag_id": bag.id,
-                                "is_free_trial": True,
-                                "amount": 0,
-                            },
-                            status=status.HTTP_201_CREATED,
-                        )
-
-                    except Exception as e:
-                        transaction.savepoint_rollback(sid)
-                        logger.error(f"Error creating free trial: {str(e)}", exc_info=True)
-                        raise
-
-            logger.info(
-                f"CoinbasePayView: Starting paid payment flow - "
-                f"amount={amount}, original_price={original_price}, currency={bag.currency.code}"
-            )
-
-            with transaction.atomic():
-                try:
-                    logger.info(f"CoinbasePayView: Creating PENDING invoice for user {request.user.id}")
-                    invoice = Invoice.objects.create(
-                        bag=bag,
-                        user=request.user,
-                        amount=amount,
-                        currency=bag.currency,
-                        status="PENDING",
-                        paid_at=utc_now,
-                        externally_managed=True,
-                        payment_method=coinbase_method,
-                        academy=bag.academy,
-                    )
-                    logger.info(f"CoinbasePayView: Created invoice {invoice.id} with status PENDING")
-                except Exception as e:
-                    logger.error(f"CoinbasePayView: Error creating invoice - {str(e)}", exc_info=True)
-                    raise
-
-                try:
-                    response = self.create_charge(
-                        academy=bag.academy,
-                        amount=amount,
-                        invoice=invoice,
-                        return_url=return_url,
-                        cancel_url=cancel_url,
-                        original_price=original_price,
-                    )
-
-                    charge_data = response.json()
-                    charge = charge_data.get("data")
-
-                    if not charge:
-                        logger.error("CoinbasePayView: Missing 'data' field in Coinbase response")
-                        raise PaymentException(
-                            translation(
-                                lang,
-                                en="Invalid Coinbase response format",
-                                es="Formato de respuesta de Coinbase inválido",
-                                slug="invalid-coinbase-response",
-                            ),
-                            code=500,
-                        )
-
-                    charge_id = charge["id"]
-                    hosted_url = charge.get("hosted_url")
-                    logger.info(
-                        f"CoinbasePayView: Successfully created Coinbase charge - "
-                        f"charge_id={charge_id}, invoice_id={invoice.id}, hosted_url={hosted_url}"
-                    )
-
-                    invoice.coinbase_charge_id = charge_id
-                    invoice.save()
-                    logger.info(f"CoinbasePayView: Updated invoice {invoice.id} with coinbase_charge_id={charge_id}")
-
-                    return Response(
-                        {
-                            "charge_id": charge["id"],
-                            "invoice_status": invoice.status,
-                        },
-                        status=status.HTTP_201_CREATED,
-                    )
-                except (PaymentException, ValidationException):
-                    raise
-                except requests.exceptions.RequestException as e:
-                    error_msg = str(e)
-                    if hasattr(e, "response") and e.response is not None:
-                        try:
-                            error_data = e.response.json()
-                            error_msg = error_data.get("error", {}).get("message", str(e))
-                        except Exception:
-                            error_msg = e.response.text or str(e)
-
-                    logger.error(
-                        f"CoinbasePayView: Network error creating Coinbase charge - "
-                        f"invoice_id={invoice.id}, error={error_msg}",
-                        exc_info=True,
-                    )
-
-                    raise PaymentException(
-                        translation(
-                            lang,
-                            en=f"Error creating Coinbase charge: {error_msg}",
-                            es=f"Error creando cargo de Coinbase: {error_msg}",
-                            slug="coinbase-charge-error",
-                        ),
-                        code=400,
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"CoinbasePayView: Unexpected error in Coinbase payment flow - "
-                        f"invoice_id={invoice.id}, bag_id={bag.id}, user_id={request.user.id}, "
-                        f"error={str(e)}",
-                        exc_info=True,
-                    )
-                    raise
-        except Exception as e:
-            logger.error(f"CoinbasePayView: Unexpected error in Coinbase payment flow - {str(e)}", exc_info=True)
-            raise
-
-
 class CoinbaseChargeView(APIView):
-    def create_charge(self, request, bag, amount, invoice, return_url, cancel_url, original_price):
-        settings = AcademyPaymentSettings.objects.filter(academy=bag.academy).first()
-        if not settings:
-            logger.error(f"CoinbasePayView: AcademyPaymentSettings not found for academy {bag.academy.id}")
-            raise ValidationException(
-                translation(
-                    settings.lang, en="Settings not found", es="Configuración no encontrada", slug="settings-not-found"
-                ),
-                code=404,
-            )
-
-        api_key = settings.coinbase_api_key
-        if not api_key:
-            logger.error(f"CoinbasePayView: Coinbase API key not configured for academy {bag.academy.id}")
-            raise ValidationException(
-                translation(
-                    settings.lang,
-                    en="Coinbase Commerce is not configured for this academy. Please contact support.",
-                    es="Coinbase Commerce no está configurado para esta academia. Por favor contacta a soporte.",
-                    slug="coinbase-not-configured",
-                ),
-                code=500,
-            )
-        headers = {
-            "Content-Type": "application/json",
-            "X-CC-Api-Key": api_key,
-        }
-        description = f"Purchase at {bag.academy.name}"
-        charge_body = {
-            "name": f"Order {bag.id}",
-            "description": description,
-            "pricing_type": "fixed_price",
-            "local_price": {
-                "amount": str(amount),
-                "currency": bag.currency.code,
-            },
-            "metadata": {
-                "invoice_id": invoice.id,
-                "original_price": original_price,
-            },
-            "redirect_url": return_url,
-            "cancel_url": cancel_url,
-        }
-        logger.info(
-            f"CoinbasePayView: Calling Coinbase API - "
-            f"amount={charge_body['local_price']['amount']}, "
-            f"currency={charge_body['local_price']['currency']}, "
-            f"bag_id={bag.id}"
-        )
-        response = requests.post("https://api.commerce.coinbase.com/charges", headers=headers, json=charge_body)
-        logger.info(f"CoinbasePayView: Coinbase API response status: {response.status_code}")
-
-        # Validar response antes de acceder al JSON
-        if response.status_code != 201:
-            error_msg = "Unknown error"
-            try:
-                error_data = response.json()
-                error_msg = error_data.get("error", {}).get("message", response.text)
-                logger.error(f"CoinbasePayView: Coinbase API error - status={response.status_code}, error={error_msg}")
-            except Exception:
-                error_msg = response.text
-                logger.error(
-                    f"CoinbasePayView: Coinbase API error (non-JSON) - "
-                    f"status={response.status_code}, response={error_msg}"
-                )
-
-            raise PaymentException(
-                translation(
-                    settings.lang,
-                    en=f"Error creating Coinbase charge: {error_msg}",
-                    es=f"Error creando cargo de Coinbase: {error_msg}",
-                    slug="coinbase-charge-error",
-                ),
-                code=400,
-            )
-        return response
 
     def handle_paid_charge(self, request):
         """
         Handles successful charge events (pending/confirmed).
-        Updates invoice, delivers service, and dispatches tasks.
-        Mimics the exact flow of PayView for consistency.
+        Updates PENDING invoice to FULFILLED and delivers service.
         """
 
         from django.utils import timezone
 
+        lang = get_user_language(request)
         event_data = request.data.get("event", {})
         charge_data = event_data.get("data", {})
         charge_id = charge_data.get("id")
         metadata = charge_data.get("metadata", {})
         event_type = event_data.get("type")
-
-        invoice_id = metadata.get("invoice_id")
-        invoice = Invoice.objects.filter(id=invoice_id).first()
-
-        logger.info(
-            f"CoinbaseWebhookView: Processing {event_type} - "
-            f"invoice_id={invoice.id}, current_status={invoice.status}"
-        )
         utc_now = timezone.now()
 
-        try:
-            with transaction.atomic():
-                sid = transaction.savepoint()
+        invoice = Invoice.objects.filter(coinbase_charge_id=charge_id).first()
+        if not invoice:
+            logger.error(
+                f"handle_paid_charge: Invoice not found for charge - " f"event_type={event_type}, charge_id={charge_id}"
+            )
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invoice not found",
+                    es="Invoice no encontrado",
+                ),
+                code=404,
+                slug="invoice-not-found",
+            )
 
-                try:
-                    bag = invoice.bag
-                    is_renewal = bag.status == Bag.Status.RENEWAL
+        logger.info(
+            f"handle_paid_charge: START processing - event_type={event_type}, invoice_id={invoice.id}, "
+            f"charge_id={charge_id}, current_status={invoice.status}"
+        )
 
-                    # Update invoice to FULFILLED
-                    Invoice.objects.filter(id=invoice.id).update(
-                        status="FULFILLED",
-                        paid_at=utc_now,
-                        coinbase_charge_id=charge_id,
+        # Check if already FULFILLED
+        if invoice.status == "FULFILLED":
+            logger.warning(f"handle_paid_charge: Invoice already FULFILLED - invoice_id={invoice.id}, skipping")
+            return Response({"message": "Payment already processed"}, status=200)
+
+        with transaction.atomic():
+            sid = transaction.savepoint()
+            logger.info(f"handle_paid_charge: Transaction started - invoice_id={invoice.id}")
+
+            try:
+                updated_count = Invoice.objects.filter(id=invoice.id, status="PENDING").update(
+                    status="FULFILLED", paid_at=utc_now
+                )
+
+                # Avoid problems with duplicated webhooks calls at the same time
+                if updated_count == 0:
+                    logger.warning(
+                        f"handle_paid_charge: Invoice already processed by another webhook - "
+                        f"invoice_id={invoice.id}, charge_id={charge_id}, skipping"
                     )
-                    invoice.refresh_from_db()
+                    transaction.savepoint_rollback(sid)
+                    return Response(
+                        {"message": "Payment already processed by another webhook"},
+                        status=200,
+                    )
 
+                # Refresh to get updated invoice
+                invoice.refresh_from_db()
+
+                logger.info(
+                    f"handle_paid_charge: Invoice updated to FULFILLED atomically - "
+                    f"invoice_id={invoice.id}, charge_id={charge_id}"
+                )
+
+                bag = invoice.bag
+                is_renewal = bag.status == Bag.Status.RENEWAL
+
+                logger.info(
+                    f"handle_paid_charge: Bag retrieved - bag_id={bag.id if bag else None}, "
+                    f"bag_status={bag.status if bag else None}, is_renewal={is_renewal}"
+                )
+
+                if not bag:
+                    raise ValidationException(
+                        "Bag not found",
+                        code=404,
+                        slug="bag-not-found",
+                    )
+                logger.info(f"handle_paid_charge: Updating bag status to PAID - bag_id={bag.id}")
+                bag.status = "PAID"
+                bag.save()
+
+                coupons = bag.coupons.all()
+                logger.info(f"handle_paid_charge: Coupons retrieved - count={coupons.count()}, invoice_id={invoice.id}")
+
+                if is_renewal:
                     logger.info(
-                        f"CoinbaseWebhookView: Invoice updated to FULFILLED - "
-                        f"invoice_id={invoice.id}, charge_id={charge_id}"
+                        f"handle_paid_charge: RENEWAL flow - searching for subscription or plan_financing - "
+                        f"invoice_id={invoice.id}, user_id={invoice.user.id}"
                     )
 
-                    if bag:
-                        bag.status = "PAID"
-                        bag.save()
-                        logger.info(f"CoinbaseWebhookView: Bag updated - bag_id={bag.id}")
+                    # Get subscription/plan_financing ID from metadata
+                    subscription_id = metadata.get("subscription_id")
+                    plan_financing_id = metadata.get("plan_financing_id")
 
-                    # Get coupons from bag (needed for both renewal and initial purchase)
-                    coupons = bag.coupons.all() if bag else Bag.objects.none().coupons.all()
+                    subscription = None
+                    plan_financing = None
 
-                    if is_renewal:
+                    if subscription_id:
+                        try:
+                            subscription = Subscription.objects.get(id=int(float(subscription_id)))
+                            subscription.invoices.add(invoice)
+                            logger.info(
+                                f"handle_paid_charge: Invoice {invoice.id} linked to subscription {subscription.id} "
+                                f"(from metadata)"
+                            )
+                        except Subscription.DoesNotExist:
+                            logger.error(
+                                f"handle_paid_charge: Subscription {subscription_id} from metadata not found - "
+                                f"invoice_id={invoice.id}, charge_id={charge_id}"
+                            )
+                            subscription = None
+                    elif plan_financing_id:
+                        try:
+                            plan_financing = PlanFinancing.objects.get(id=int(plan_financing_id))
+                            plan_financing.invoices.add(invoice)
+                            logger.info(
+                                f"handle_paid_charge: Invoice {invoice.id} linked to plan_financing {plan_financing.id} "
+                                f"(from metadata)"
+                            )
+                        except PlanFinancing.DoesNotExist:
+                            logger.error(
+                                f"handle_paid_charge: PlanFinancing {plan_financing_id} from metadata not found - "
+                                f"invoice_id={invoice.id}, charge_id={charge_id}"
+                            )
+                            plan_financing = None
+
+                    # Fallback: search by user and plans if not found via metadata
+                    if not subscription and not plan_financing:
+                        logger.info(
+                            f"handle_paid_charge: No ID in metadata or not found, searching by user/plans - "
+                            f"invoice_id={invoice.id}"
+                        )
                         subscription = (
                             Subscription.objects.filter(
                                 user=invoice.user,
@@ -3561,234 +3180,363 @@ class CoinbaseChargeView(APIView):
                             .exclude(status__in=["EXPIRED", "CANCELLED", "DEPRECATED"])
                             .first()
                         )
-                        if subscription:
-                            transaction.savepoint_commit(sid)
+
+                    logger.info(
+                        f"handle_paid_charge: RENEWAL search results - subscription={subscription.id if subscription else None}, "
+                        f"plan_financing={plan_financing.id if plan_financing else None}, invoice_id={invoice.id}"
+                    )
+
+                    if subscription:
+                        logger.info(
+                            f"handle_paid_charge: Found subscription for renewal - subscription_id={subscription.id}, "
+                            f"status={subscription.status}, next_payment_at={subscription.next_payment_at}, "
+                            f"invoice_id={invoice.id}"
+                        )
+
+                        # Determine if charge_subscription should be called immediately
+                        should_charge_now = (
+                            utc_now >= subscription.next_payment_at
+                            and subscription.status == Subscription.Status.PAYMENT_ISSUE
+                        )
+
+                        transaction.savepoint_commit(sid)
+
+                        if should_charge_now:
+                            logger.info(
+                                f"handle_paid_charge: Calling charge_subscription immediately - "
+                                f"subscription_id={subscription.id}, reason=past_due_with_payment_issue"
+                            )
                             transaction.on_commit(lambda: tasks.charge_subscription.delay(subscription.id))
-                        elif plan_financing:
-                            transaction.savepoint_commit(sid)
+                        else:
+                            logger.info(
+                                f"handle_paid_charge: Invoice marked as FULFILLED, charge_subscription will run on schedule - "
+                                f"subscription_id={subscription.id}, reason=paid_before_due_date"
+                            )
+
+                    elif plan_financing:
+                        logger.info(
+                            f"handle_paid_charge: Found plan_financing for renewal - plan_financing_id={plan_financing.id}, "
+                            f"status={plan_financing.status}, next_payment_at={plan_financing.next_payment_at}, "
+                            f"invoice_id={invoice.id}"
+                        )
+
+                        # Determine if charge_plan_financing should be called immediately
+                        should_charge_now = (
+                            utc_now >= plan_financing.next_payment_at
+                            and plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE
+                        )
+
+                        transaction.savepoint_commit(sid)
+
+                        if should_charge_now:
+                            logger.info(
+                                f"handle_paid_charge: Calling charge_plan_financing immediately - "
+                                f"plan_financing_id={plan_financing.id}, reason=past_due_with_payment_issue"
+                            )
                             transaction.on_commit(lambda: tasks.charge_plan_financing.delay(plan_financing.id))
                         else:
-                            logger.error(
-                                f"CoinbaseWebhookView: RENEWAL detected but no Subscription or PlanFinancing found - "
-                                f"invoice_id={invoice.id}, bag_id={bag.id}, user_id={invoice.user.id}"
-                            )
-                    else:
-                        # Create reward coupons for sellers if coupons were used (same as PayView)
-                        original_price = metadata.get("original_price")
-                        if coupons.exists() and original_price:
-                            try:
-                                original_price_float = float(original_price)
-                                if original_price_float > 0:
-                                    logger.info(
-                                        f"CoinbaseWebhookView: Creating seller rewards - "
-                                        f"invoice_id={invoice.id}, original_price={original_price_float}, "
-                                        f"coupons_count={coupons.count()}"
-                                    )
-                                    actions.create_seller_reward_coupons(
-                                        list(coupons), original_price_float, invoice.user
-                                    )
-                            except Exception as e:
-                                logger.error(
-                                    f"CoinbaseWebhookView: Error creating seller rewards - "
-                                    f"invoice_id={invoice.id}, error={str(e)}",
-                                    exc_info=True,
-                                )
-
-                        # Dispatch appropriate tasks based on bag configuration
-                        if bag:
-                            is_financing = metadata.get("is_financing", False)
-                            how_many_installments = metadata.get("how_many_installments")
-                            chosen_period = metadata.get("chosen_period")
-
                             logger.info(
-                                f"CoinbaseWebhookView: Dispatching tasks - "
-                                f"bag_id={bag.id}, is_financing={is_financing}, "
-                                f"installments={how_many_installments}, period={chosen_period}"
+                                f"handle_paid_charge: Invoice marked as FULFILLED, charge_plan_financing will run on schedule - "
+                                f"plan_financing_id={plan_financing.id}, reason=paid_before_due_date"
                             )
 
-                            # Check if it's a free trial
-                            if original_price == 0 or original_price == "0":
-                                logger.info(f"CoinbaseWebhookView: Free trial detected - bag_id={bag.id}")
-                                tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
-
-                            # Plan financing
-                            elif is_financing and how_many_installments:
-                                logger.info(
-                                    f"CoinbaseWebhookView: Dispatching build_plan_financing - "
-                                    f"bag_id={bag.id}, installments={how_many_installments}"
-                                )
-                                tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info="")
-
-                            # Subscription
-                            elif chosen_period:
-                                logger.info(
-                                    f"CoinbaseWebhookView: Dispatching build_subscription - "
-                                    f"bag_id={bag.id}, period={chosen_period}"
-                                )
-                                tasks.build_subscription.delay(bag.id, invoice.id, conversion_info="")
-
-                            else:
-                                logger.warning(
-                                    f"CoinbaseWebhookView: No task dispatched - "
-                                    f"bag_id={bag.id}, metadata={metadata}"
-                                )
-
-                        # Commit transaction before dispatching tasks (same as PayView)
-                        transaction.savepoint_commit(sid)
-                        logger.info(f"CoinbaseWebhookView: Transaction committed - invoice_id={invoice.id}")
-
-                        # CRITICAL: Grant student capabilities (same as PayView)
-                        if bag and (plans := bag.plans.all()):
-                            for plan in plans:
-                                try:
-                                    logger.info(
-                                        f"CoinbaseWebhookView: Granting capabilities - "
-                                        f"user_id={invoice.user.id}, plan_id={plan.id}"
-                                    )
-                                    actions.grant_student_capabilities(
-                                        invoice.user,
-                                        plan,
-                                        selected_cohort=None,  # No selected_cohort in webhook context
-                                    )
-                                except Exception as e:
-                                    logger.error(
-                                        f"CoinbaseWebhookView: Error granting capabilities - "
-                                        f"user_id={invoice.user.id}, plan_id={plan.id}, error={str(e)}",
-                                        exc_info=True,
-                                    )
-
-                        # Handle referrals (only if there are referral coupons, same as PayView)
-                        has_referral_coupons = (
-                            invoice.status == Invoice.Status.FULFILLED
-                            and invoice.amount > 0
-                            and coupons.exclude(referral_type="NO_REFERRAL").exists()
+                    else:
+                        # RENEWAL detected but no Subscription or PlanFinancing found
+                        logger.error(
+                            f"handle_paid_charge: RENEWAL detected but no Subscription or PlanFinancing found - "
+                            f"invoice_id={invoice.id}, bag_id={bag.id}, user_id={invoice.user.id}, "
+                            f"metadata={metadata}"
                         )
 
-                        if has_referral_coupons:
-                            try:
-                                logger.info(
-                                    f"CoinbaseWebhookView: Scheduling referral registration - invoice_id={invoice.id}"
-                                )
-                                # Use on_commit to ensure everything is saved first (same as PayView)
-                                transaction.on_commit(
-                                    lambda inv_id=invoice.id: actions.register_referral_from_invoice.delay(inv_id)
-                                )
-                            except Exception as e:
-                                logger.error(
-                                    f"CoinbaseWebhookView: Error scheduling referral registration - "
-                                    f"invoice_id={invoice.id}, error={str(e)}",
-                                    exc_info=True,
-                                )
+                        transaction.savepoint_commit(sid)
 
-                        # Log activity (same as PayView)
-                        try:
-                            logger.info(f"CoinbaseWebhookView: Logging activity - invoice_id={invoice.id}")
-                            tasks_activity.add_activity.delay(
-                                invoice.user.id,
-                                "checkout_completed",
-                                related_type="payments.Invoice",
-                                related_id=invoice.id,
+                        # Send error email to user
+                        transaction.on_commit(
+                            lambda inv_id=invoice.id: tasks.send_coinbase_error_email.delay(
+                                inv_id,
+                                "subscription_not_found",
+                                "Payment successful but subscription/plan_financing not found",
                             )
-                        except Exception as e:
-                            logger.error(
-                                f"CoinbaseWebhookView: Error logging activity - "
-                                f"invoice_id={invoice.id}, error={str(e)}",
-                                exc_info=True,
-                            )
+                        )
+
+                    return Response(status=status.HTTP_200_OK)
+                else:
+                    logger.info(
+                        f"handle_paid_charge: NEW PURCHASE flow - invoice_id={invoice.id}, user_id={invoice.user.id}"
+                    )
+
+                    # Extract original_price from metadata
+                    original_price = metadata.get("original_price")
+                    if original_price is None:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Error processing payment: missing original_price",
+                                es="Error procesando pago: falta original_price",
+                            ),
+                            code=500,
+                            slug="payment-processing-error",
+                        )
+                    original_price = float(original_price)
+
+                    # Dispatch appropriate tasks based on bag configuration
+                    if bag:
+                        # Extract how_many_installments with default
+                        how_many_installments = metadata.get("how_many_installments", 0)
+                        how_many_installments = int(float(how_many_installments)) if how_many_installments else 0
 
                         logger.info(
-                            f"CoinbaseWebhookView: {event_type} processed successfully - " f"invoice_id={invoice.id}"
+                            f"handle_paid_charge: Preparing task dispatch - "
+                            f"bag_id={bag.id}, "
+                            f"original_price={original_price}"
                         )
+                        chosen_period = metadata.get("chosen_period")
+                        is_recurrent = metadata.get("is_recurrent")
+
+                        if chosen_period and chosen_period not in ["MONTH", "QUARTER", "HALF", "YEAR", "NO_SET"]:
+                            logger.warning(f"Invalid chosen_period in metadata: {chosen_period}, defaulting to NO_SET")
+                            chosen_period = None
+                        logger.info(
+                            f"handle_paid_charge: Metadata values - original_price={original_price}, "
+                            f"chosen_period={chosen_period},"
+                            f"recurrent={is_recurrent},"
+                            f"how_many_installments={how_many_installments}"
+                        )
+
+                        bag.chosen_period = chosen_period or "NO_SET"
+                        bag.how_many_installments = how_many_installments
+                        bag.token = None
+                        bag.expires_at = None
+                        bag.save()
+
+                        logger.info(
+                            f"handle_paid_charge: Checking seller rewards - original_price={original_price}, "
+                            f"coupons_exist={coupons.exists()}, invoice_id={invoice.id}"
+                        )
+
+                        if coupons.exists() and original_price:
+                            try:
+                                if original_price > 0:
+                                    logger.info(
+                                        f"handle_paid_charge: Creating seller rewards - "
+                                        f"invoice_id={invoice.id}, original_price={original_price}, "
+                                        f"coupons_count={coupons.count()}"
+                                    )
+                                    actions.create_seller_reward_coupons(list(coupons), original_price, invoice.user)
+                                    logger.info(
+                                        f"handle_paid_charge: Seller rewards created successfully - invoice_id={invoice.id}"
+                                    )
+                            except Exception as e:
+                                logger.error(
+                                    f"handle_paid_charge: Error creating seller rewards - "
+                                    f"invoice_id={invoice.id}, error={str(e)}",
+                                    exc_info=True,
+                                )
+
+                        transaction.savepoint_commit(sid)
+                        logger.info(f"handle_paid_charge: Transaction committed - invoice_id={invoice.id}")
+                        if original_price == 0:
+                            logger.info(f"handle_paid_charge: Free trial detected - bag_id={bag.id}")
+                            tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
+                            logger.info(
+                                f"handle_paid_charge: build_free_subscription task dispatched - bag_id={bag.id}"
+                            )
+
+                        elif bag.how_many_installments > 0:
+                            logger.info(
+                                f"handle_paid_charge: Dispatching build_plan_financing - "
+                                f"bag_id={bag.id}, invoice_id={invoice.id}"
+                            )
+                            tasks.build_plan_financing.delay(
+                                bag.id, invoice.id, conversion_info="", externally_managed=True
+                            )
+                            logger.info(f"handle_paid_charge: build_plan_financing task dispatched - bag_id={bag.id}")
+
+                        else:
+                            logger.info(
+                                f"handle_paid_charge: Dispatching build_subscription - "
+                                f"bag_id={bag.id}, invoice_id={invoice.id}"
+                            )
+                            tasks.build_subscription.delay(
+                                bag.id, invoice.id, conversion_info="", externally_managed=True
+                            )
+                            logger.info(f"handle_paid_charge: build_subscription task dispatched - bag_id={bag.id}")
+                    else:
+                        logger.warning(f"handle_paid_charge: No bag found for task dispatch - invoice_id={invoice.id}")
+
+                    if plans := bag.plans.all():
+                        logger.info(
+                            f"handle_paid_charge: Granting student capabilities - "
+                            f"bag_id={bag.id}, plans_count={plans.count()}, invoice_id={invoice.id}"
+                        )
+                        for plan in plans:
+                            logger.info(
+                                f"handle_paid_charge: Granting capabilities for plan - "
+                                f"user_id={invoice.user.id}, plan_id={plan.id}, plan_slug={plan.slug}"
+                            )
+                            actions.grant_student_capabilities(
+                                invoice.user,
+                                plan,
+                                selected_cohort=metadata.get(
+                                    "selected_cohort"
+                                ),  # No selected_cohort in webhook context
+                            )
+                            logger.info(
+                                f"handle_paid_charge: Capabilities granted successfully - "
+                                f"user_id={invoice.user.id}, plan_id={plan.id}"
+                            )
+                    else:
+                        logger.warning(f"handle_paid_charge: No plans found for capabilities - invoice_id={invoice.id}")
+                    has_referral_coupons = (
+                        invoice.status == Invoice.Status.FULFILLED
+                        and invoice.amount > 0
+                        and coupons.exclude(referral_type="NO_REFERRAL").exists()
+                    )
+
+                    logger.info(
+                        f"handle_paid_charge: Checking referrals - has_referral_coupons={has_referral_coupons}, "
+                        f"invoice_status={invoice.status}, invoice_amount={invoice.amount}, invoice_id={invoice.id}"
+                    )
+
+                    if has_referral_coupons:
+                        # Use on_commit to ensure everything is saved first (same as PayView)
+                        transaction.on_commit(
+                            lambda inv_id=invoice.id: actions.register_referral_from_invoice.delay(inv_id)
+                        )
+                    tasks_activity.add_activity.delay(
+                        invoice.user.id,
+                        "checkout_completed",
+                        related_type="payments.Invoice",
+                        related_id=invoice.id,
+                    )
+                    logger.info(f"handle_paid_charge: Activity logged successfully - invoice_id={invoice.id}")
+
+                    logger.info(
+                        f"handle_paid_charge: {event_type} processed successfully - " f"invoice_id={invoice.id}"
+                    )
                     return Response(status=status.HTTP_200_OK)
 
-                except Exception as e:
-                    logger.error(
-                        f"CoinbaseWebhookView: Error processing paid charge - "
-                        f"invoice_id={invoice.id}, event_type={event_type}, error={str(e)}",
-                        exc_info=True,
-                    )
-                    transaction.savepoint_rollback(sid)
-                    raise
+            except Exception as e:
+                logger.error(
+                    f"handle_paid_charge: Error processing paid charge in transaction - "
+                    f"invoice_id={invoice.id}, event_type={event_type}, error={str(e)}",
+                    exc_info=True,
+                )
+                transaction.savepoint_rollback(sid)
+                logger.info(f"handle_paid_charge: Transaction rolled back - invoice_id={invoice.id}")
 
-        except Exception as e:
-            logger.error(
-                f"CoinbaseWebhookView: Unexpected error in handle_paid_charge - "
-                f"invoice_id={invoice_id}, error={str(e)}",
-                exc_info=True,
-            )
-            raise ValidationException(
-                "Error processing payment confirmation",
-                code=500,
-                slug="payment-processing-error",
-            )
+                # Send email to user (with Redis lock to prevent duplicates)
+                try:
+                    tasks.send_coinbase_error_email.delay(
+                        invoice_id=invoice.id,
+                        error_type="processing_error",
+                        error_summary=str(e)[:200],
+                    )
+                except Exception as email_error:
+                    logger.error(
+                        f"handle_paid_charge: Failed to queue error email - error={str(email_error)}", exc_info=True
+                    )
+
+                raise
 
     def handle_failed_charge(self, request):
-        from django.utils import timezone
-
         event_data = request.data.get("event", {})
         charge_data = event_data.get("data", {})
         charge_id = charge_data.get("id")
-        metadata = charge_data.get("metadata", {})
         event_type = event_data.get("type")
 
-        invoice_id = metadata.get("invoice_id")
-        invoice = Invoice.objects.filter(id=invoice_id).first()
+        # Find invoice by charge_id
+        invoice = Invoice.objects.filter(coinbase_charge_id=charge_id).first()
 
-        # Determine severity based on event type
-        if event_type == "charge:reversed":
-            logger.error(
-                f"CoinbaseWebhookView: CRITICAL - Blockchain reversal detected - "
-                f"invoice_id={invoice.id}, charge_id={charge_id}, user_id={invoice.user.id}"
+        if not invoice:
+            # Payment failed before invoice was created
+            logger.warning(
+                f"CoinbaseWebhookView: Payment failed before invoice creation - "
+                f"charge_id={charge_id}, event_type={event_type}"
             )
-            new_status = "REVERSED"
-        else:
-            logger.error(
-                f"CoinbaseWebhookView: Payment failed after delivery - "
-                f"invoice_id={invoice.id}, charge_id={charge_id}, user_id={invoice.user.id}"
-            )
-            new_status = "REFUNDED"
+            return
+
+        logger.error(
+            f"CoinbaseWebhookView: Payment failed after delivery - "
+            f"invoice_id={invoice.id}, charge_id={charge_id}, user_id={invoice.user.id}"
+        )
 
         try:
             with transaction.atomic():
                 sid = transaction.savepoint()
 
                 try:
-                    # Update invoice status
+                    # Update invoice status to REJECTED
                     Invoice.objects.filter(id=invoice.id).update(
-                        status=new_status,
+                        status="REJECTED",
                         coinbase_charge_id=charge_id,
                     )
                     invoice.refresh_from_db()
 
-                    logger.info(f"CoinbaseWebhookView: Invoice marked as {new_status} - " f"invoice_id={invoice.id}")
+                    logger.info(f"CoinbaseWebhookView: Invoice marked as REJECTED - invoice_id={invoice.id}")
 
                     # Update bag
                     bag = invoice.bag
                     if bag:
+                        # Check if it's a renewal BEFORE changing the status
+                        is_renewal = bag.status == "RENEWAL"
+
                         bag.status = "ERROR"
                         bag.was_delivered = False
                         bag.save()
                         logger.info(f"CoinbaseWebhookView: Bag reverted - bag_id={bag.id}")
 
-                        # Revoke access: Cancel subscriptions linked to this bag
-                        # Query subscriptions whose invoices belong to this bag
-                        subscriptions = Subscription.objects.filter(invoices__bag=bag).distinct()
-                        for subscription in subscriptions:
-                            subscription.status = "CANCELLED"
-                            subscription.valid_until = timezone.now()
-                            subscription.save()
-                            logger.info(
-                                f"CoinbaseWebhookView: Subscription cancelled - " f"subscription_id={subscription.id}"
-                            )
+                        # Only revoke access for NEW PURCHASE, not RENEWAL
+                        # For RENEWAL, charge_subscription already handles PAYMENT_ISSUE
+                        if not is_renewal:
+                            logger.info(f"CoinbaseWebhookView: NEW PURCHASE failed - revoking access - bag_id={bag.id}")
 
-                        # Revoke access: Cancel plan financing
-                        plan_financings = PlanFinancing.objects.filter(plan_financing_plan__bag=bag)
-                        for plan_financing in plan_financings:
-                            plan_financing.status = "CANCELLED"
-                            plan_financing.save()
+                            # Revoke access: Mark subscription as ERROR (if it was already created)
+                            # Subscription only exists if charge:pending was already processed and build_subscription finished
+                            subscription = Subscription.objects.filter(invoices=invoice).first()
+                            if subscription:
+                                subscription.status = "ERROR"
+                                subscription.save()
+                                logger.info(
+                                    f"CoinbaseWebhookView: Subscription marked as ERROR - subscription_id={subscription.id}"
+                                )
+
+                                # Send email to user (only if subscription was already created)
+                                try:
+                                    tasks.send_coinbase_error_email.delay(
+                                        invoice_id=invoice.id,
+                                        error_type="failed_payment",
+                                        error_summary="Payment failed after subscription was created",
+                                    )
+                                except Exception as email_error:
+                                    logger.error(
+                                        f"CoinbaseWebhookView: Failed to queue error email - error={str(email_error)}",
+                                        exc_info=True,
+                                    )
+                            else:
+                                logger.info(
+                                    f"CoinbaseWebhookView: No subscription created yet for this invoice - "
+                                    f"invoice_id={invoice.id}"
+                                )
+
+                            # Revoke access: Mark plan financing as ERROR (if it was already created)
+                            plan_financing = PlanFinancing.objects.filter(invoices=invoice).first()
+                            if plan_financing:
+                                plan_financing.status = "ERROR"
+                                plan_financing.save()
+                                logger.info(
+                                    f"CoinbaseWebhookView: PlanFinancing marked as ERROR - "
+                                    f"plan_financing_id={plan_financing.id}"
+                                )
+                            else:
+                                logger.info(
+                                    f"CoinbaseWebhookView: No plan_financing created yet for this invoice - "
+                                    f"invoice_id={invoice.id}"
+                                )
+                        else:
                             logger.info(
-                                f"CoinbaseWebhookView: PlanFinancing cancelled - "
-                                f"plan_financing_id={plan_financing.id}"
+                                f"CoinbaseWebhookView: RENEWAL failed - skipping revocation, "
+                                f"charge_subscription will handle PAYMENT_ISSUE - bag_id={bag.id}"
                             )
 
                     # Log critical activity
@@ -3810,11 +3558,11 @@ class CoinbaseChargeView(APIView):
 
                     logger.warning(
                         f"CoinbaseWebhookView: Access revoked successfully - "
-                        f"invoice_id={invoice.id}, status={new_status}"
+                        f"invoice_id={invoice.id}, invoice_status=REJECTED"
                     )
 
                     return Response(
-                        {"status": "access_revoked", "event": event_type, "invoice_status": new_status}, status=200
+                        {"status": "access_revoked", "event": event_type, "invoice_status": "REJECTED"}, status=200
                     )
 
                 except Exception as e:
@@ -3829,7 +3577,8 @@ class CoinbaseChargeView(APIView):
         except Exception as e:
             logger.error(
                 f"CoinbaseWebhookView: FAILED TO REVOKE ACCESS - MANUAL INTERVENTION REQUIRED - "
-                f"invoice_id={invoice_id}, event_type={event_type}, error={str(e)}",
+                f"invoice_id={invoice.id if invoice else 'N/A'}, charge_id={charge_id}, "
+                f"event_type={event_type}, error={str(e)}",
                 exc_info=True,
             )
             raise ValidationException(
@@ -3843,56 +3592,14 @@ class CoinbaseWebhookView(CoinbaseChargeView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        # ==================== HARDCODE FOR TESTING ====================
-        # Uncomment to test webhook manually
-        import json
-
-        from django.http import HttpRequest
-        from rest_framework.request import Request
-
-        # Create a mock HttpRequest
-        mock_http_request = HttpRequest()
-        mock_http_request.method = "POST"
-        mock_http_request.META = {
-            "HTTP_X_CC_WEBHOOK_SIGNATURE": "test_signature_12345",
-            "CONTENT_TYPE": "application/json",
-        }
-
-        # Mock event data - CUSTOMIZE THIS WITH YOUR TEST DATA
-        mock_event = {
-            "event": {
-                "type": "charge:pending",  # or "charge:confirmed", "charge:failed", "charge:reversed"
-                "data": {
-                    "id": "test-charge-uuid-12345",
-                    "metadata": {
-                        "invoice_id": "1",  # <-- CHANGE THIS TO YOUR TEST INVOICE ID
-                        "bag_id": "1",
-                        "user_id": "1",
-                        "how_many_installments": "1",
-                        "chosen_period": "",
-                        "is_financing": "true",
-                        "original_price": "100.00",
-                    },
-                },
-            }
-        }
-
-        # Set the body
-        mock_body = json.dumps(mock_event).encode("utf-8")
-        mock_http_request._body = mock_body
-
-        # Create DRF Request from mock HttpRequest
-        request = Request(mock_http_request)
-        request._full_data = mock_event
-        # ==================== END HARDCODE ====================
-
         try:
             lang = get_user_language(request)
-            logger.info("Received Coinbase webhook")
+            raw_body = request.body
+            logger.info("CoinbaseWebhookView: Received Coinbase webhook")
 
             signature = request.headers.get("X-CC-Webhook-Signature")
             if not signature:
-                logger.error("Missing Coinbase webhook signature")
+                logger.error("CoinbaseWebhookView: Missing Coinbase webhook signature")
                 raise ValidationException(
                     translation(
                         lang,
@@ -3906,51 +3613,149 @@ class CoinbaseWebhookView(CoinbaseChargeView):
             event_data = request.data.get("event", {})
             charge_data = event_data.get("data", {})
             metadata = charge_data.get("metadata", {})
-            invoice_id = metadata.get("invoice_id")
-
-            invoice = Invoice.objects.filter(id=invoice_id).first()
-            if not invoice:
-                logger.error("CoinbaseWebhookView: Invoice not found")
-                raise ValidationException("Invoice not found", code=400, slug="invoice-not-found")
-            academy_settings = AcademyPaymentSettings.objects.filter(academy=invoice.academy).first()
-            if not academy_settings or not academy_settings.coinbase_webhook_secret:
-                logger.error("CoinbaseWebhookView: Academy not configured for Coinbase")
-                raise ValidationException(
-                    f"Academy {invoice.academy.id} not configured for Coinbase webhooks",
-                    code=400,
-                    slug="academy-not-configured",
-                )
-
-            # Verify the signature sent by Coinbase
-            import hashlib
-            import hmac
-
-            raw_body = request.body.decode("utf-8")
-            computed_signature = hmac.new(
-                key=academy_settings.coinbase_webhook_secret.encode("utf-8"),
-                msg=raw_body.encode("utf-8"),
-                digestmod=hashlib.sha256,
-            ).hexdigest()
-
-            if not hmac.compare_digest(computed_signature, signature):
-                logger.error("CoinbaseWebhookView: Invalid signature")
-                raise ValidationException("Invalid signature", code=400, slug="invalid-signature")
-
+            charge_id = charge_data.get("id")
             event_type = event_data.get("type")
 
+            if event_type == "charge:created":
+                return Response(status=status.HTTP_200_OK)
+
+            # Extract bag_id from metadata
+            bag_id = metadata.get("bag_id")
+            if bag_id is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid webhook: missing bag_id",
+                        es="Webhook inválido: falta bag_id",
+                    ),
+                    code=400,
+                    slug="missing-bag-id",
+                )
+            bag_id = int(float(bag_id))
+
+            logger.info(
+                f"CoinbaseWebhookView: Webhook data parsed - event_type={event_type}, "
+                f"bag_id={bag_id}, charge_id={charge_id}, metadata={metadata}"
+            )
+
+            bag = Bag.objects.filter(id=bag_id).first()
+            if not bag:
+                logger.error(
+                    f"CoinbaseWebhookView: Bag not found - bag_id={bag_id}, "
+                    f"event_type={event_type}, charge_id={charge_id}"
+                )
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Bag not found",
+                        es="Bolsa no encontrada",
+                    ),
+                    code=404,
+                    slug="bag-not-found",
+                )
+
+            coinbase_method = PaymentMethod.objects.filter(is_coinbase=True, academy=bag.academy).first()
+
+            # Extract amount from metadata
+            amount = metadata.get("amount")
+            if amount is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid webhook: missing amount",
+                        es="Webhook inválido: falta amount",
+                    ),
+                    code=400,
+                    slug="missing-amount",
+                )
+            amount = float(amount)
+
+            utc_now = timezone.now()
+
+            invoice = Invoice.objects.filter(user=bag.user, coinbase_charge_id=charge_id).first()
+
+            if not invoice:
+                try:
+                    invoice, created = Invoice.objects.get_or_create(
+                        coinbase_charge_id=charge_id,
+                        defaults={
+                            "bag": bag,
+                            "user": bag.user,
+                            "amount": amount,
+                            "currency": bag.currency,
+                            "status": "PENDING",
+                            "externally_managed": True,
+                            "academy": bag.academy,
+                            "paid_at": utc_now,
+                            "payment_method": coinbase_method,
+                        },
+                    )
+                    if created:
+                        logger.info(
+                            f"CoinbaseWebhookView: PENDING invoice created - "
+                            f"invoice_id={invoice.id}, bag_id={bag.id}, charge_id={charge_id}"
+                        )
+                    else:
+                        logger.info(
+                            f"CoinbaseWebhookView: Invoice already exists - "
+                            f"invoice_id={invoice.id}, status={invoice.status}, charge_id={charge_id}"
+                        )
+                except Invoice.MultipleObjectsReturned:
+                    logger.warning(
+                        f"CoinbaseWebhookView: Multiple invoices found for charge_id={charge_id}, using first"
+                    )
+                    invoice = Invoice.objects.filter(coinbase_charge_id=charge_id).first()
+            else:
+                logger.info(
+                    f"CoinbaseWebhookView: Invoice already exists - "
+                    f"invoice_id={invoice.id}, status={invoice.status}, charge_id={charge_id}"
+                )
+
+            coinbase = CoinbaseCommerce(academy=invoice.academy)
+            coinbase.set_language(lang)
+            logger.info(f"CoinbaseWebhookView: Verifying webhook signature - invoice_id={invoice.id}")
+
+            if not coinbase.verify_webhook_signature(signature, raw_body):
+                logger.error(
+                    f"CoinbaseWebhookView: Invalid signature - invoice_id={invoice.id}, signature={signature[:20]}..."
+                )
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid webhook signature",
+                        es="Firma de webhook inválida",
+                    ),
+                    slug="invalid-webhook-signature",
+                )
+
+            logger.info(f"CoinbaseWebhookView: Signature verified - event_type={event_type}, invoice_id={invoice.id}")
+
             if event_type == "charge:pending":
+                logger.info(f"CoinbaseWebhookView: Handling charge:pending - invoice_id={invoice.id}")
                 return self.handle_paid_charge(request)
 
             if event_type == "charge:confirmed":
                 if invoice.status == Invoice.Status.FULFILLED:
+                    logger.info(f"CoinbaseWebhookView: Invoice already FULFILLED, skipping - invoice_id={invoice.id}")
                     return Response(status=status.HTTP_200_OK)
 
+                logger.info(f"CoinbaseWebhookView: Handling charge:confirmed - invoice_id={invoice.id}")
                 return self.handle_paid_charge(request)
 
-            if event_type == "charge:failed" or event_type == "charge:reversed":
+            if event_type == "charge:failed":
                 if invoice.status == Invoice.Status.FULFILLED:
                     return self.handle_failed_charge(request)
+                logger.info(
+                    f"CoinbaseWebhookView: charge:failed but invoice not FULFILLED, skipping - "
+                    f"invoice_id={invoice.id}, status={invoice.status}"
+                )
+                return Response(status=status.HTTP_200_OK)
 
+            # Unknown or unhandled event type
+            logger.info(
+                f"CoinbaseWebhookView: Unhandled event type - event_type={event_type}, "
+                f"invoice_id={invoice.id if invoice else 'N/A'}, charge_id={charge_id}"
+            )
             return Response(status=status.HTTP_200_OK)
         except ValidationException:
             raise
@@ -3958,7 +3763,631 @@ class CoinbaseWebhookView(CoinbaseChargeView):
             raise
         except Exception as e:
             logger.error(f"CoinbaseWebhookView: Unexpected error - {str(e)}", exc_info=True)
+
+            # Try to get invoice to send error email
+            try:
+                event_data = request.data.get("event", {})
+                charge_data = event_data.get("data", {})
+                charge_id = charge_data.get("id")
+                invoice = Invoice.objects.filter(coinbase_charge_id=charge_id).first()
+
+                if invoice:
+                    tasks.send_coinbase_error_email.delay(
+                        invoice_id=invoice.id,
+                        error_type="webhook_error",
+                        error_summary=str(e)[:200],
+                    )
+            except Exception as email_error:
+                logger.error(f"Failed to queue error email: {str(email_error)}")
+
             raise ValidationException(f"Webhook processing failed: {str(e)}", code=500, slug="webhook-error")
+
+
+class RenewSubscriptionView(APIView):
+    """
+    Renewal view for subscriptions, called from the renew view in the frontend.
+    """
+
+    def post(self, request):
+        lang = get_user_language(request)
+        settings = get_user_settings(request.user.id)
+        subscription_id = request.data.get("subscription")
+        payment_method = request.data.get("payment_method")
+
+        if not payment_method:
+            logger.warning(f"RenewSubscriptionView: Missing payment_method - user_id={request.user.id}")
+            raise ValidationException(
+                translation(lang, en="Payment method is required", es="El método de pago es requerido"),
+                slug="payment-method-required",
+                code=404,
+            )
+
+        if not subscription_id:
+            logger.warning(f"RenewSubscriptionView: Missing subscription_id - user_id={request.user.id}")
+            raise ValidationException(
+                translation(lang, en="Subscription is required", es="La suscripción es requerida"),
+                slug="subscription-required",
+                code=400,
+            )
+
+        subscription = Subscription.objects.filter(id=subscription_id, user=request.user).first()
+
+        if not subscription:
+            logger.warning(
+                f"RenewSubscriptionView: Subscription not found - subscription_id={subscription_id}, user_id={request.user.id}"
+            )
+            raise ValidationException(
+                translation(lang, en="Subscription not found", es="Suscripción no encontrada"),
+                slug="subscription-not-found",
+                code=404,
+            )
+
+        utc_now = timezone.now()
+
+        if subscription.status in [
+            Subscription.Status.CANCELLED,
+            Subscription.Status.EXPIRED,
+            Subscription.Status.DEPRECATED,
+        ]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cannot renew: subscription is {subscription.status.lower()}",
+                    es=f"No se puede renovar: la suscripción está {subscription.status.lower()}",
+                ),
+                slug="subscription-not-renewable",
+                code=400,
+            )
+
+        if subscription.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This plan has been discontinued. We will send you the migrating options soon.",
+                    es="Este plan ha sido discontinuado. Te enviaremos las opciones de migración pronto.",
+                ),
+                slug="plan-discontinued",
+                code=400,
+            )
+
+        if subscription.valid_until and subscription.valid_until < utc_now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This subscription has expired permanently",
+                    es="Esta suscripción ha expirado permanentemente",
+                ),
+                slug="subscription-expired-permanently",
+                code=400,
+            )
+
+        payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
+        if not payment_settings or not payment_settings.early_renewal_window_days:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy payment settings not configured. Please contact support.",
+                    es="Configuración de pagos de la academia no configurada. Por favor contacta a soporte.",
+                ),
+                slug="payment-settings-not-configured",
+                code=500,
+            )
+
+        early_renewal_window_days = payment_settings.early_renewal_window_days
+
+        renewal_window_start = subscription.next_payment_at - timedelta(days=early_renewal_window_days)
+        if utc_now < subscription.next_payment_at:
+            if early_renewal_window_days == 0:
+                logger.warning(
+                    f"RenewSubscriptionView: No early renewal allowed (window=0) - "
+                    f"subscription_id={subscription.id}, utc_now={utc_now}, next_payment_at={subscription.next_payment_at}"
+                )
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Cannot renew before payment due date. Your next payment is due on {subscription.next_payment_at.strftime('%B %d, %Y')}.",
+                        es=f"No se puede renovar antes de la fecha de vencimiento. Tu próximo pago vence el {subscription.next_payment_at.strftime('%B %d, %Y')}.",
+                    ),
+                    slug="no-early-renewal-allowed",
+                    code=400,
+                )
+
+            if utc_now < renewal_window_start:
+                logger.warning(
+                    f"RenewSubscriptionView: Outside renewal window - "
+                    f"subscription_id={subscription.id}, utc_now={utc_now}, renewal_window_start={renewal_window_start}"
+                )
+                raise ValidationException(
+                    translation(lang, en="Too early to renew", es="Muy temprano para renovar"),
+                    slug="too-early-to-renew",
+                    code=400,
+                )
+
+        if utc_now <= subscription.next_payment_at or subscription.status == Subscription.Status.PAYMENT_ISSUE:
+            check_until = (
+                utc_now if subscription.status == Subscription.Status.PAYMENT_ISSUE else subscription.next_payment_at
+            )
+
+            recent_payment = (
+                subscription.invoices.filter(
+                    status="FULFILLED",
+                    bag__was_delivered=False,
+                    paid_at__gte=renewal_window_start,
+                    paid_at__lte=check_until,
+                )
+                .order_by("-paid_at")
+                .first()
+            )
+
+            if recent_payment:
+                logger.warning(
+                    f"RenewSubscriptionView: Already renewed - subscription_id={subscription.id}, "
+                    f"recent_payment_id={recent_payment.id}, paid_at={recent_payment.paid_at}"
+                )
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"This subscription was already renewed on {recent_payment.paid_at.strftime('%B %d, %Y')}. "
+                        f"Your next payment is due on {subscription.next_payment_at.strftime('%B %d, %Y')}.",
+                        es=f"Esta suscripción ya fue renovada el {recent_payment.paid_at.strftime('%B %d, %Y')}. "
+                        f"Tu próximo pago vence el {subscription.next_payment_at.strftime('%B %d, %Y')}.",
+                    ),
+                    slug="already-renewed",
+                    code=400,
+                )
+
+        logger.info(
+            f"RenewSubscriptionView: All validations passed - subscription_id={subscription.id}, payment_method={payment_method}"
+        )
+
+        try:
+            with transaction.atomic():
+                if payment_method == "coinbase":
+                    existing_bag = (
+                        Bag.objects.filter(
+                            user=subscription.user,
+                            status="RENEWAL",
+                            plans=subscription.plans.first(),
+                            amount_per_month=subscription.plans.first().price_per_month,
+                            amount_per_quarter=subscription.plans.first().price_per_quarter,
+                            amount_per_half=subscription.plans.first().price_per_half,
+                            amount_per_year=subscription.plans.first().price_per_year,
+                            was_delivered=False,
+                            created_at__gte=utc_now - timedelta(hours=24),
+                        )
+                        .order_by("-created_at")
+                        .first()
+                    )
+
+                    if existing_bag:
+                        bag = existing_bag
+                    else:
+                        bag = actions.get_bag_from_subscription(subscription, settings)
+
+                    if not bag:
+                        raise ValidationException(
+                            translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
+                            slug="error-getting-bag",
+                            code=404,
+                        )
+
+                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+
+                    coupons = bag.coupons.all()
+                    if coupons:
+                        amount = actions.get_discounted_price(amount, coupons)
+
+                    return_url = request.data.get("return_url")
+                    cancel_url = request.data.get("cancel_url")
+
+                    coinbase = CoinbaseCommerce(academy=subscription.academy)
+                    coinbase.set_language(lang)
+                    charge = coinbase.create_charge(
+                        bag=bag,
+                        amount=amount,
+                        metadata={
+                            "bag_id": bag.id,
+                            "user_id": request.user.id,
+                            "amount": str(amount),
+                            "chosen_period": bag.chosen_period,
+                            "is_recurrent": True,
+                            "subscription_id": subscription.id,
+                        },
+                        return_url=return_url,
+                        cancel_url=cancel_url,
+                    )
+
+                    logger.info(
+                        f"RenewSubscriptionView: Coinbase charge created - subscription_id={subscription.id}, "
+                        f"charge_id={charge['id']}, hosted_url={charge.get('hosted_url')}"
+                    )
+                    subscription.externally_managed = True
+                    subscription.save()
+
+                    return Response(
+                        {
+                            "hosted_url": charge["hosted_url"],
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+
+                else:
+                    bag = actions.get_bag_from_subscription(subscription, settings)
+                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+
+                    coupons = bag.coupons.all()
+                    if coupons:
+                        amount = actions.get_discounted_price(amount, coupons)
+
+                    logger.info(
+                        f"RenewSubscriptionView: Processing Stripe payment - subscription_id={subscription.id}, "
+                        f"bag_id={bag.id}, amount={amount}"
+                    )
+                    try:
+                        s = Stripe(academy=subscription.academy)
+                        s.set_language(lang)
+                        invoice = s.pay(
+                            request.user,
+                            bag,
+                            amount,
+                            currency=bag.currency or subscription.academy.main_currency,
+                        )
+                    except Exception:
+                        raise ValidationException(
+                            translation(lang, en="Error paying with Stripe", es="Error al pagar con Stripe"),
+                            slug="error-paying-with-stripe",
+                            code=500,
+                        )
+
+                    logger.info(
+                        f"RenewSubscriptionView: Stripe payment successful - subscription_id={subscription.id}, "
+                        f"invoice_id={invoice.id}, amount={invoice.amount}, status={invoice.status}"
+                    )
+
+                    subscription.invoices.add(invoice)
+                    subscription.externally_managed = False
+                    subscription.save()
+
+                    # Determine if charge_subscription should be called immediately
+                    should_charge_now = (
+                        utc_now >= subscription.next_payment_at
+                        and subscription.status == Subscription.Status.PAYMENT_ISSUE
+                    )
+
+                    if should_charge_now:
+
+                        transaction.on_commit(lambda: tasks.charge_subscription.delay(subscription.id))
+
+                    serializer = GetInvoiceSerializer(invoice, many=False)
+
+                    tasks_activity.add_activity.delay(
+                        request.user.id,
+                        "checkout_completed",
+                        related_type="payments.Invoice",
+                        related_id=serializer.instance.id,
+                    )
+
+                    data = serializer.data
+                    serializer = GetCouponSerializer(coupons, many=True)
+                    data["coupons"] = serializer.data
+
+                    return Response(data, status=201)
+        except ValidationException:
+            raise
+        except Exception as e:
+            logger.error(f"RenewSubscriptionView payment failed: {str(e)}", exc_info=True)
+            raise ValidationException(
+                translation(lang, en=f"Payment failed: {str(e)}", es=f"Pago falló: {str(e)}"),
+                slug="payment-failed",
+                code=500,
+            )
+
+
+class RenewPlanFinancingView(APIView):
+    """
+    Renewal view for plan financings.
+    Supports both Stripe (synchronous) and Coinbase (asynchronous) payments.
+    """
+
+    def post(self, request):
+        lang = get_user_language(request)
+        settings = get_user_settings(request.user.id)
+        plan_financing_id = request.data.get("planfinancing")
+        payment_method = request.data.get("payment_method")
+
+        if not payment_method:
+            raise ValidationException(
+                translation(lang, en="Payment method is required", es="El método de pago es requerido"),
+                slug="payment-method-required",
+                code=400,
+            )
+
+        if not plan_financing_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing is required",
+                    es="El financiamiento es requerido",
+                ),
+                slug="planfinancing-required",
+                code=400,
+            )
+
+        plan_financing = PlanFinancing.objects.filter(id=plan_financing_id, user=request.user).first()
+
+        if not plan_financing:
+            raise ValidationException(
+                translation(lang, en="Plan financing not found", es="Financiamiento no encontrado"),
+                slug="plan-financing-not-found",
+                code=404,
+            )
+
+        utc_now = timezone.now()
+
+        statuses = [
+            PlanFinancing.Status.ERROR,
+            PlanFinancing.Status.ACTIVE,
+            PlanFinancing.Status.PAYMENT_ISSUE,
+            PlanFinancing.Status.FULLY_PAID,
+        ]
+
+        no_charge_statuses = [
+            PlanFinancing.Status.CANCELLED,
+            PlanFinancing.Status.DEPRECATED,
+            PlanFinancing.Status.EXPIRED,
+        ]
+
+        if plan_financing.status in no_charge_statuses:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cannot renew: plan financing is {plan_financing.status.lower()}",
+                    es=f"No se puede renovar: el financiamiento está {plan_financing.status.lower()}",
+                ),
+                slug="plan-financing-not-renewable",
+                code=400,
+            )
+
+        if plan_financing.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This plan has been discontinued. We will send you the migrating options soon.",
+                    es="Este plan ha sido discontinuado. Te enviaremos las opciones de migración pronto.",
+                ),
+                slug="plan-discontinued",
+                code=400,
+            )
+
+        if plan_financing.status in statuses and (
+            plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now
+        ):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing with id {plan_financing_id} has expired permanently",
+                    es="El financiamiento con id {plan_financing_id} ha expirado permanentemente",
+                ),
+                slug="plan-financing-expired-permanently",
+                code=400,
+            )
+
+        payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
+        if not payment_settings:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy payment settings not configured. Please contact support.",
+                    es="Configuración de pagos de la academia no configurada. Por favor contacta a soporte.",
+                ),
+                slug="payment-settings-not-configured",
+                code=500,
+            )
+
+        early_renewal_window_days = payment_settings.early_renewal_window_days
+
+        renewal_window_start = plan_financing.next_payment_at - timedelta(days=early_renewal_window_days)
+
+        if utc_now < plan_financing.next_payment_at:
+            if early_renewal_window_days == 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Cannot renew before payment due date. Your next payment is due on {plan_financing.next_payment_at.strftime('%B %d, %Y')}.",
+                        es=f"No se puede renovar antes de la fecha de vencimiento. Tu próximo pago vence el {plan_financing.next_payment_at.strftime('%B %d, %Y')}.",
+                    ),
+                    slug="no-early-renewal-allowed",
+                    code=400,
+                )
+
+            if utc_now < renewal_window_start:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Too early to renew",
+                        es="Muy temprano para renovar",
+                    ),
+                    slug="too-early-to-renew",
+                    code=400,
+                )
+
+        invoices = plan_financing.invoices.order_by("created_at")
+        first_invoice = invoices.first()
+
+        if first_invoice is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"No invoices found for plan financing with id {plan_financing_id}",
+                    es=f"No se encontraron facturas para el financiamiento con id {plan_financing_id}",
+                ),
+                slug="no-invoices-found-for-plan-financing",
+                code=404,
+            )
+
+        if utc_now <= plan_financing.next_payment_at or plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
+            check_until = (
+                utc_now
+                if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE
+                else plan_financing.next_payment_at
+            )
+
+            # Look for FULFILLED payments within the renewal window
+            recent_payment = (
+                plan_financing.invoices.filter(
+                    status="FULFILLED",
+                    paid_at__gte=renewal_window_start,
+                    paid_at__lte=check_until,
+                )
+                .order_by("-paid_at")
+                .first()
+            )
+
+            if recent_payment:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"This installment was already paid on {recent_payment.paid_at.strftime('%B %d, %Y')}. "
+                        f"Your next payment is due on {plan_financing.next_payment_at.strftime('%B %d, %Y')}.",
+                        es=f"Esta cuota ya fue pagada el {recent_payment.paid_at.strftime('%B %d, %Y')}. "
+                        f"Tu próximo pago vence el {plan_financing.next_payment_at.strftime('%B %d, %Y')}.",
+                    ),
+                    slug="already-renewed",
+                    code=400,
+                )
+
+        installments = first_invoice.bag.how_many_installments
+        remaining_installments = installments - invoices.count()
+        if remaining_installments == 0:
+            raise ValidationException(
+                translation(lang, en="All installments have been paid", es="Todas las cuotas han sido pagadas"),
+                slug="all-installments-paid",
+                code=400,
+            )
+
+        try:
+            with transaction.atomic():
+                if payment_method == "coinbase":
+                    existing_bag = (
+                        Bag.objects.filter(
+                            user=plan_financing.user,
+                            status="RENEWAL",
+                            plans=plan_financing.plans.first(),
+                            amount_per_month=plan_financing.plans.first().amount_per_month,
+                            amount_per_quarter=plan_financing.plans.first().amount_per_quarter,
+                            amount_per_half=plan_financing.plans.first().amount_per_half,
+                            amount_per_year=plan_financing.plans.first().amount_per_year,
+                            was_delivered=False,
+                            created_at__gte=utc_now - timedelta(hours=24),
+                        )
+                        .order_by("-created_at")
+                        .first()
+                    )
+
+                    if existing_bag:
+                        bag = existing_bag
+                    else:
+                        bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+
+                    if not bag:
+                        raise ValidationException(
+                            translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
+                            slug="error-getting-bag",
+                            code=404,
+                        )
+
+                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+
+                    coupons = bag.coupons.all()
+                    if coupons:
+                        amount = actions.get_discounted_price(amount, coupons)
+
+                    return_url = request.data.get("return_url")
+                    cancel_url = request.data.get("cancel_url")
+
+                    coinbase = CoinbaseCommerce(academy=plan_financing.academy)
+                    coinbase.set_language(lang)
+                    charge = coinbase.create_charge(
+                        bag=bag,
+                        amount=amount,
+                        metadata={
+                            "bag_id": bag.id,
+                            "user_id": request.user.id,
+                            "amount": str(amount),
+                            "chosen_period": bag.chosen_period,
+                            "is_recurrent": True,
+                            "plan_financing_id": plan_financing.id,
+                        },
+                        return_url=return_url,
+                        cancel_url=cancel_url,
+                    )
+
+                    logger.info(
+                        f"RenewPlanFinancingView: Coinbase charge created - plan_financing_id={plan_financing.id}, "
+                        f"charge_id={charge['id']}, hosted_url={charge.get('hosted_url')}"
+                    )
+                    plan_financing.externally_managed = True
+                    plan_financing.save()
+
+                    return Response(
+                        {
+                            "hosted_url": charge["hosted_url"],
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+
+                else:
+                    bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+
+                    coupons = bag.coupons.all()
+                    if coupons:
+                        amount = actions.get_discounted_price(amount, coupons)
+
+                    s = Stripe(academy=plan_financing.academy)
+                    s.set_language(lang)
+
+                    invoice = s.pay(
+                        request.user, bag, amount, currency=bag.currency or plan_financing.academy.main_currency
+                    )
+
+                    plan_financing.invoices.add(invoice)
+                    plan_financing.externally_managed = False
+                    plan_financing.save()
+
+                    # Determine if charge_plan_financing should be called immediately
+                    should_charge_now = (
+                        utc_now >= plan_financing.next_payment_at
+                        and plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE
+                    )
+
+                    if should_charge_now:
+                        transaction.on_commit(lambda: tasks.charge_plan_financing.delay(plan_financing.id))
+
+                    serializer = GetInvoiceSerializer(invoice, many=False)
+
+                    tasks_activity.add_activity.delay(
+                        request.user.id,
+                        "checkout_completed",
+                        related_type="payments.Invoice",
+                        related_id=serializer.instance.id,
+                    )
+
+                    data = serializer.data
+                    serializer = GetCouponSerializer(coupons, many=True)
+                    data["coupons"] = serializer.data
+
+                    return Response(data, status=201)
+
+        except ValidationException:
+            raise
+        except Exception as e:
+            logger.error(f"RenewPlanFinancingView payment failed: {str(e)}", exc_info=True)
+            raise ValidationException(
+                translation(lang, en=f"Payment failed: {str(e)}", es=f"Pago falló: {str(e)}"),
+                slug="payment-failed",
+                code=500,
+            )
 
 
 class AcademyPlanSubscriptionView(APIView):
@@ -4583,3 +5012,74 @@ class SubscriptionSeatView(APIView):
         Consumable.objects.filter(subscription_seat_id=seat.id).update(user=None)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MePaymentCardsView(APIView):
+    """
+    API View to retrieve the authenticated user's saved credit/debit cards.
+
+    GET /v1/payments/me/cards
+    - Returns saved cards for the academy specified in header or query param
+    - If no academy specified, returns empty list
+    - Includes card details for display (brand, last4, expiration)
+    - Marks which card is default
+    """
+
+    def get(self, request):
+        """
+        Get saved payment cards for the authenticated user.
+
+        The academy is obtained from:
+        1. Header 'Academy'
+        2. Query parameter 'academy'
+
+        Returns:
+            200: List of saved cards with details
+            404: Academy not found
+            500: Error retrieving cards from Stripe
+        """
+        lang = get_user_language(request)
+        user = request.user
+
+        from breathecode.payments.services.stripe import Stripe
+
+        # Get academy_id from header or query string
+        academy_id = request.headers.get("Academy") or request.GET.get("academy")
+
+        academy = None
+        if academy_id:
+            academy = Academy.objects.filter(id=academy_id).first()
+            if not academy:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Academy not found",
+                        es="Academia no encontrada",
+                        slug="academy-not-found",
+                    ),
+                    code=404,
+                )
+
+        # Initialize Stripe service with the academy
+        s = Stripe(academy=academy)
+        s.set_language(lang)
+
+        try:
+            cards = s.get_user_saved_cards(user)
+            return Response(cards, status=status.HTTP_200_OK)
+
+        except PaymentException as e:
+            # Already translated and formatted
+            raise e
+
+        except Exception as e:
+            logger.error(f"Error retrieving payment cards for user {user.id}: {str(e)}")
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Unable to retrieve saved payment methods. Please try again later.",
+                    es="No se pudieron obtener los métodos de pago guardados. Inténtalo de nuevo más tarde.",
+                    slug="error-retrieving-cards",
+                ),
+                code=500,
+            )

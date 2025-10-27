@@ -543,3 +543,68 @@ class Stripe:
                 continue
 
         return any_success, errors, details
+
+    def get_user_saved_cards(self, user: User) -> list[dict]:
+        """
+        Retrieves all saved credit/debit cards for a given user from Stripe.
+
+        This method fetches the PaymentContact for the user and retrieves
+        ALL payment methods (cards) associated with their Stripe customer.
+
+        Args:
+            user (User): The Django user whose cards will be retrieved.
+
+        Returns:
+            list[dict]: A list of dictionaries containing card details:
+                - id (str): Stripe PaymentMethod ID
+                - brand (str): Card brand (visa, mastercard, amex, etc.)
+                - last4 (str): Last 4 digits of the card
+                - exp_month (int): Expiration month (1-12)
+                - exp_year (int): Expiration year
+                - funding (str): Type of card (credit, debit, prepaid)
+                - is_default (bool): Whether this is the default payment method
+                - country (str): Country code where card was issued
+
+        Raises:
+            PaymentException: If there's an issue with Stripe API communication.
+        """
+        stripe.api_key = self.api_key
+        print(user, self.academy)
+        contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
+        if not contact:
+            return
+
+        def get_customer_callback():
+            return stripe.Customer.retrieve(contact.stripe_id)
+
+        customer = self._i18n_validations(get_customer_callback)
+        default_source_id = customer.get("default_source")
+
+        # Si no hay default_source, no hay tarjetas
+
+        if not default_source_id:
+            return
+
+        # Obtener la tarjeta default
+        def get_source_callback():
+            return stripe.Customer.retrieve_source(customer.id, default_source_id)
+
+        try:
+            source = self._i18n_validations(get_source_callback)
+
+            # Devolver solo esta tarjeta
+            card = {
+                "id": source.id,
+                "brand": source.brand.lower(),
+                "last4": source.last4,
+                "exp_month": source.exp_month,
+                "exp_year": source.exp_year,
+                "funding": source.funding,
+                "country": source.country,
+            }
+
+            return card
+
+        except Exception as e:
+            logger.error(f"Error retrieving default card for customer {customer.id}: {str(e)}")
+            return
