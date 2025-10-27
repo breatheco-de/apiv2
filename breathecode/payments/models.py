@@ -1258,6 +1258,8 @@ class Bag(AbstractAmountByTime):
     if TYPE_CHECKING:
         objects: TypedManager["Bag"]
 
+    _coupons_qs: Optional[QuerySet[Coupon]] = None
+
     class Status(models.TextChoices):
         RENEWAL = ("RENEWAL", "Renewal")
         CHECKING = ("CHECKING", "Checking")
@@ -1338,6 +1340,36 @@ class Bag(AbstractAmountByTime):
         related_name="%(class)s_as_seat_service_item",
     )
 
+    @property
+    def cached_coupons(self):
+        if self._coupons_qs is None:
+            self._coupons_qs = self.coupons.all()
+        return self._coupons_qs
+
+    def get_discounted_price(self, price: float, multiplier: int = 1) -> float:
+        import breathecode.payments.actions as actions
+
+        if not price:
+            return None
+
+        return actions.get_discounted_price(price, self.cached_coupons)
+
+    @property
+    def discounted_amount_per_month(self):
+        return self.get_discounted_price(self.amount_per_month, 1)
+
+    @property
+    def discounted_amount_per_quarter(self):
+        return self.get_discounted_price(self.amount_per_quarter, 3)
+
+    @property
+    def discounted_amount_per_half(self):
+        return self.get_discounted_price(self.amount_per_half, 6)
+
+    @property
+    def discounted_amount_per_year(self):
+        return self.get_discounted_price(self.amount_per_year, 12)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1348,6 +1380,7 @@ class Bag(AbstractAmountByTime):
         return super().clean()
 
     def save(self, *args, **kwargs):
+        self._coupons_qs = None
         created = self.pk is None
         self.full_clean()
         super().save(*args, **kwargs)
@@ -2097,7 +2130,15 @@ class SubscriptionBillingTeam(models.Model):
     subscription = models.OneToOneField(Subscription, on_delete=models.CASCADE, help_text="Subscription")
     name = models.CharField(max_length=80, help_text="Team name")
     seats_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this billing team")
-    seats_limit = models.PositiveIntegerField(default=1, help_text="Limit of seats for this team")
+
+    additional_seats = models.PositiveIntegerField(
+        default=0, help_text="Additional seats for this team excluding the owner seat"
+    )
+
+    @property
+    def seats_limit(self):
+        return self.additional_seats + 1
+
     consumption_strategy = models.CharField(
         max_length=8,
         help_text="Consumption strategy",

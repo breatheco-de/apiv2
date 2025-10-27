@@ -43,6 +43,8 @@ class CountrySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
     # Use a Field subclass like IntField if you need more validation.
+    # Country uses 'code' as primary key, so we expose it as both id and code
+    id = serpy.Field(attr="pk")
     code = serpy.Field()
     name = serpy.Field()
 
@@ -62,7 +64,9 @@ class CitySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     name = serpy.Field()
+    country = CountrySerializer(required=False)
 
 
 class UserSmallSerializer(serpy.Serializer):
@@ -722,6 +726,64 @@ class AcademySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         del validated_data["slug"]
         return super().update(instance, validated_data)
+
+
+class AcademyPOSTSerializer(serializers.ModelSerializer):
+    """Serializer for creating new academies."""
+    
+    status_fields = ["status"]
+
+    class Meta:
+        model = Academy
+        fields = [
+            "slug",
+            "name",
+            "legal_name",
+            "logo_url",
+            "icon_url",
+            "website_url",
+            "white_label_url",
+            "street_address",
+            "marketing_email",
+            "feedback_email",
+            "marketing_phone",
+            "twitter_handle",
+            "facebook_handle",
+            "instagram_handle",
+            "github_handle",
+            "linkedin_url",
+            "youtube_url",
+            "city",
+            "country",
+            "latitude",
+            "longitude",
+            "zip_code",
+            "white_labeled",
+            "active_campaign_slug",
+            "available_as_saas",
+            "is_hidden_on_prework",
+            "status",
+            "main_currency",
+            "timezone",
+            "logistical_information",
+        ]
+        extra_kwargs = {
+            "slug": {"required": True},
+            "name": {"required": True},
+            "logo_url": {"required": True},
+            "street_address": {"required": True},
+            "city": {"required": True},
+            "country": {"required": True},
+        }
+
+    def validate_slug(self, value):
+        """Ensure slug is unique."""
+        if Academy.objects.filter(slug=value).exists():
+            raise ValidationException(
+                "Academy with this slug already exists",
+                slug="academy-slug-exists"
+            )
+        return value
 
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):

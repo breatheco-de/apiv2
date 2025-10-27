@@ -681,7 +681,7 @@ class CouponAdmin(admin.ModelAdmin):
         "seller__user__first_name",
         "seller__user__last_name",
     ]
-    raw_id_fields = ["seller", "allowed_user"]
+    raw_id_fields = ["seller", "allowed_user", "referred_buyer"]
 
 
 @admin.register(PaymentMethod)

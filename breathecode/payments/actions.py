@@ -12,21 +12,22 @@ from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
 from django.db import transaction
 from django.db.models import Q, QuerySet, Sum
 from django.http import HttpRequest
 from django.utils import timezone
+from django_redis import get_redis_connection
 from pytz import UTC
 from rest_framework.request import Request
 from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.authenticate.actions import get_api_url, get_app_url, get_user_settings
 from breathecode.authenticate.models import UserInvite, UserSetting
+from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
@@ -831,14 +832,15 @@ def get_amount(
                 code=400,
             )
 
-        if price_per_month != 0:
-            price_per_month += academy_service.price_per_unit * bag.seat_service_item.how_many
-        if price_per_quarter != 0:
-            price_per_quarter += academy_service.price_per_unit * bag.seat_service_item.how_many * 3
-        if price_per_half != 0:
-            price_per_half += academy_service.price_per_unit * bag.seat_service_item.how_many * 6
-        if price_per_year != 0:
-            price_per_year += academy_service.price_per_unit * bag.seat_service_item.how_many * 12
+        how_many_seats = bag.seat_service_item.how_many
+        if how_many_seats > 0 and price_per_month != 0:
+            price_per_month += academy_service.price_per_unit * how_many_seats
+        if how_many_seats > 0 and price_per_quarter != 0:
+            price_per_quarter += academy_service.price_per_unit * how_many_seats * 3
+        if how_many_seats > 0 and price_per_half != 0:
+            price_per_half += academy_service.price_per_unit * how_many_seats * 6
+        if how_many_seats > 0 and price_per_year != 0:
+            price_per_year += academy_service.price_per_unit * how_many_seats * 12
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -1220,7 +1222,9 @@ def get_available_coupons(
             .only(*cou_fields)
             .first()
         )
-        if special_offer is not None:
+        print("special_offers", special_offer)
+
+        if special_offer:
             manage_coupon(special_offer)
 
     valid_coupons = (
@@ -2095,18 +2099,89 @@ class ReplaceSeat(TypedDict):
     last_name: str
 
 
+def notify_user_was_added_to_subscription_team(
+    subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
+):
+    """
+    Send a notification email to an existing user that was added to a subscription team.
+
+    This function notifies users who already exist in the platform and were directly assigned
+    to a subscription team seat. It sends a welcome notification informing them they've been
+    added to the team with immediate access to consumables and services.
+
+    Args:
+        subscription: The Subscription the user is being added to
+        subscription_seat: The SubscriptionSeat with an assigned user (must have user != None)
+        lang: Language code for email localization (e.g., 'en', 'es')
+
+    Returns:
+        None. Returns early without sending email if subscription_seat.user is None.
+
+    Note:
+        This function is the opposite of invite_user_to_subscription_team:
+        - This handles seats WITH users (existing platform users)
+        - invite_user_to_subscription_team handles seats WITHOUT users (pending invitations)
+
+    See Also:
+        invite_user_to_subscription_team: For inviting non-existent users
+    """
+    if subscription_seat.user is None:
+        return
+
+    billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
+    notify_actions.send_email_message(
+        "welcome_academy",
+        subscription_seat.email,
+        {
+            "email": subscription_seat.email,
+            "subject": translation(
+                lang,
+                en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
+                es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
+            ),
+            "LINK": get_app_url(),
+            "FIST_NAME": subscription_seat.user.first_name or "",
+        },
+        academy=subscription.academy,
+    )
+
+
 def invite_user_to_subscription_team(
     obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
 ):
+    """
+    Create and send an invitation for a non-existent user to join a subscription team.
+
+    This function handles the invitation flow for users who don't exist in the platform yet.
+    It creates a UserInvite record and sends a welcome email with an invitation link. When the
+    user accepts the invite, the related consumables (created with user=None) will be automatically
+    assigned to them via the handle_seat_invite_accepted receiver.
+
+    Args:
+        obj: Dictionary containing user information (email, first_name, last_name)
+        subscription: The Subscription the user is being invited to
+        subscription_seat: The SubscriptionSeat reserved for this user (user=None until accepted)
+        lang: Language code for email localization (e.g., 'en', 'es')
+
+    Behavior:
+        - Creates a UserInvite if one doesn't exist, or reuses existing pending invite
+        - Sends welcome email only if invite is newly created or still pending
+        - The subscription_seat remains with user=None until the invite is accepted
+        - Upon acceptance, consumables are automatically assigned via signal receiver
+
+    Related:
+        - See handle_seat_invite_accepted in receivers.py for post-acceptance logic
+        - See Issue #9973 for the complete invitation flow
+    """
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=subscription.academy,
         subscription_seat=subscription_seat,
-        role_id="student",
+        role="student",
         defaults={
             "status": "PENDING",
             "author": subscription.user,
-            "role_id": "student",
+            "role": "student",
             "token": str(uuid.uuid4()),
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
@@ -2114,6 +2189,7 @@ def invite_user_to_subscription_team(
         },
     )
     if created or invite.status == "PENDING":
+        billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
         notify_actions.send_email_message(
             "welcome_academy",
             obj.get("email", ""),
@@ -2121,17 +2197,33 @@ def invite_user_to_subscription_team(
                 "email": obj.get("email", ""),
                 "subject": translation(
                     lang,
-                    en=f"Invitation to join {subscription.academy.name}",
-                    es=f"Invitación para unirse a {subscription.academy.name}",
+                    en=f"Invitation to join {billing_team_name} at {subscription.academy.name}",
+                    es=f"Invitación para unirse a {billing_team_name} en {subscription.academy.name}",
                 ),
-                "LINK": get_app_url() + "/v1/auth/member/invite/" + invite.token,
+                "LINK": get_api_url() + "/v1/auth/member/invite/" + invite.token,
                 "FIST_NAME": invite.first_name or "",
             },
             academy=subscription.academy,
         )
 
 
+def _validate_email(email: str, lang: str):
+    email_status = validate_email(email, lang)
+    if email_status["score"] <= 0.60:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address seems to have poor quality. Are you able to provide a different email address?",
+                es="El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?",
+                slug="poor-quality-email",
+            ),
+            data=email_status,
+        )
+
+
 def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
+    _validate_email(email, lang)
+
     if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
         raise ValidationException(
             translation(
@@ -2162,6 +2254,11 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
         )
 
     else:
+        notify_user_was_added_to_subscription_team(
+            seat.billing_team.subscription,
+            seat,
+            lang,
+        )
         for plan in seat.billing_team.subscription.plans.all():
             grant_student_capabilities(user, plan)
 
@@ -2186,6 +2283,8 @@ def replace_seat(
     subscription_seat: SubscriptionSeat,
     lang: str,
 ):
+    _validate_email(to_email, lang)
+
     seat = SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=from_email).first()
     if not seat:
         raise ValidationException(
@@ -2225,6 +2324,12 @@ def replace_seat(
         )
 
     else:
+        notify_user_was_added_to_subscription_team(
+            seat.billing_team.subscription,
+            seat,
+            lang,
+        )
+
         for plan in subscription_seat.billing_team.subscription.plans.all():
             grant_student_capabilities(to_user, plan)
 
@@ -2235,8 +2340,9 @@ def replace_seat(
         SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT,
     )
 
-    # if strategy is not per team and there is a user, reassign consumables from the seat to the new user
-    if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM and to_user:
+    # if strategy is not per team, reassign consumables from the seat to the new user (or None if pending invite)
+    if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+        # Set user to the new user if exists, otherwise None (waiting for invitation acceptance)
         Consumable.objects.filter(subscription_seat=seat).update(user=to_user)
 
     return seat
@@ -2294,7 +2400,7 @@ def validate_seats_limit(
     for seat in seats.values():
         value += seat
 
-    if team.seats_limit and value > team.seats_limit:
+    if team.additional_seats and value > team.seats_limit:
         raise ValidationException(
             translation(
                 lang,
@@ -2505,7 +2611,7 @@ def process_auto_recharge(
         return
 
     # Connect to Redis
-    redis_client = redis.Redis.from_url(settings.REDIS_URL)
+    redis_client = get_redis_connection("default")
     team = consumable.subscription_billing_team or (
         consumable.subscription_seat.billing_team if consumable.subscription_seat else None
     )
@@ -2596,6 +2702,23 @@ def process_auto_recharge(
                         },
                         academy=resource.academy,
                     )
+
+                attrs = consumable.service_item.__dict__.copy()
+                attrs.pop("id")
+                attrs.pop("_state")
+                attrs.pop("how_many")
+
+                si, _ = ServiceItem.objects.get_or_create(
+                    **attrs,
+                    how_many=amount,
+                )
+
+                attrs = consumable.__dict__.copy()
+                attrs.pop("id")
+                attrs.pop("_state")
+                attrs.pop("service_item")
+
+                Consumable.objects.create(**attrs, service_item=si)
 
         except Exception as e:
             raise AbortTask(f"Consumable auto-recharge failed for {resource.__class__.__name__} {resource.id}: {e}")

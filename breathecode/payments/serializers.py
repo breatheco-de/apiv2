@@ -91,7 +91,6 @@ class GetServiceSerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
-    currency = GetCurrencySmallSerializer(many=False)
 
     owner = GetAcademySmallSerializer(many=False)
     private = serpy.Field()
@@ -382,19 +381,12 @@ class GetPlanOfferSerializer(serpy.Serializer):
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     amount = serpy.Field()
     currency = GetCurrencySmallSerializer(many=False)
     paid_at = serpy.Field()
     status = serpy.Field()
     user = GetUserSmallSerializer(many=False)
-
-
-class GetInvoiceSerializer(GetInvoiceSmallSerializer):
-    id = serpy.Field()
-    amount = serpy.Field()
-    paid_at = serpy.Field()
-    status = serpy.Field()
-    currency = GetCurrencySmallSerializer()
 
 
 class GetMentorshipServiceSerializer(serpy.Serializer):
@@ -615,6 +607,66 @@ class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
 
 
+class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    status = serpy.Field()
+    user = GetUserSmallSerializer(many=False)
+    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
+    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
+
+
+class GetBagSerializer(serpy.Serializer):
+    id = serpy.Field()
+    service_items = serpy.MethodField()
+    plans = serpy.MethodField()
+    coupons = serpy.MethodField()
+    status = serpy.Field()
+    type = serpy.Field()
+    is_recurrent = serpy.Field()
+    was_delivered = serpy.Field()
+    amount_per_month = serpy.Field()
+    amount_per_quarter = serpy.Field()
+    amount_per_half = serpy.Field()
+    amount_per_year = serpy.Field()
+    discounted_amount_per_month = serpy.Field()
+    discounted_amount_per_quarter = serpy.Field()
+    discounted_amount_per_half = serpy.Field()
+    discounted_amount_per_year = serpy.Field()
+
+    token = serpy.Field()
+    seat_service_item = serpy.MethodField()
+    expires_at = serpy.Field()
+
+    def get_service_items(self, obj):
+        return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
+
+    def get_seat_service_item(self, obj: Bag):
+        if not obj.seat_service_item or obj.seat_service_item.service.type != "SEAT":
+            return None
+
+        return GetServiceItemSerializer(obj.seat_service_item, many=False).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
+
+    def get_coupons(self, obj):
+        return GetCouponSerializer(obj.coupons.filter(), many=True).data
+
+
+class GetInvoiceSerializer(GetInvoiceSmallSerializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    paid_at = serpy.Field()
+    status = serpy.Field()
+    externally_managed = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    bag = GetBagSerializer(many=False)
+
+    amount_refunded = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    refunded_at = serpy.Field()
+
+
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -633,14 +685,6 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
-
-
-class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
-    status = serpy.Field()
-    user = GetUserSmallSerializer(many=False)
-    plans = serpy.ManyToManyField(GetPlanSmallTinySerializer(attr="plans", many=True))
-    selected_cohort_set = GetCohortSetSerializer(many=False, required=False)
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
@@ -669,39 +713,6 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
-
-
-class GetBagSerializer(serpy.Serializer):
-    id = serpy.Field()
-    service_items = serpy.MethodField()
-    plans = serpy.MethodField()
-    coupons = serpy.MethodField()
-    status = serpy.Field()
-    type = serpy.Field()
-    is_recurrent = serpy.Field()
-    was_delivered = serpy.Field()
-    amount_per_month = serpy.Field()
-    amount_per_quarter = serpy.Field()
-    amount_per_half = serpy.Field()
-    amount_per_year = serpy.Field()
-    token = serpy.Field()
-    seat_service_item = serpy.MethodField()
-    expires_at = serpy.Field()
-
-    def get_service_items(self, obj):
-        return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
-
-    def get_seat_service_item(self, obj: Bag):
-        if not obj.seat_service_item or obj.seat_service_item.service.type != "SEAT":
-            return None
-
-        return GetServiceItemSerializer(obj.seat_service_item, many=False).data
-
-    def get_plans(self, obj):
-        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
-
-    def get_coupons(self, obj):
-        return GetCouponSerializer(obj.coupons.filter(), many=True).data
 
 
 class ServiceSerializer(serializers.Serializer):

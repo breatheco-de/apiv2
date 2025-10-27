@@ -51,23 +51,20 @@ class Command(BaseCommand):
             ServiceStockScheduler.objects.annotate(last_consumable_valid_until=Max("consumables__valid_until"))
             .filter(
                 Q(
-                    plan_handler__subscription__next_payment_at__gt=self.utc_now,
-                    # this validation seems wrong
-                    plan_handler__subscription__invoices__amount__gt=0,
+                    plan_handler__plan_financing__status="ACTIVE",
+                    plan_handler__plan_financing__next_payment_at__gt=self.utc_now,
+                    plan_handler__plan_financing__invoices__amount__gt=0,
                 )
                 | Q(
-                    subscription_handler__subscription__next_payment_at__gt=self.utc_now,
-                    # this validation seems wrong
-                    subscription_handler__subscription__invoices__amount__gt=0,
+                    plan_handler__plan_financing__status="FULLY_PAID",
+                    plan_handler__plan_financing__plan_expires_at__gt=self.utc_now,
+                    plan_handler__plan_financing__invoices__amount__gt=0,
                 ),
                 last_consumable_valid_until__lte=self.utc_now + timedelta(hours=2),
             )
             .exclude(plan_handler__plan_financing__status="CANCELLED")
             .exclude(plan_handler__plan_financing__status="DEPRECATED")
             .exclude(plan_handler__plan_financing__status="PAYMENT_ISSUE")
-            .exclude(subscription_handler__subscription__status="CANCELLED")
-            .exclude(subscription_handler__subscription__status="DEPRECATED")
-            .exclude(subscription_handler__subscription__status="PAYMENT_ISSUE")
             .distinct()
         )
 

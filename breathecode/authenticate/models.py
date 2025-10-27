@@ -162,11 +162,13 @@ PROCESS_STATUS = (
 class UserInvite(models.Model):
     _old_status: str
     _email: str
+    _old_is_email_validated: bool
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._old_status = self.status
         self._email = self.email
+        self._old_is_email_validated = self.is_email_validated
 
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
 
@@ -270,8 +272,13 @@ class UserInvite(models.Model):
         if status_updated:
             signals.invite_status_updated.send_robust(instance=self, sender=UserInvite)
 
+        email_validation_updated = not created and not self._old_is_email_validated and self.is_email_validated
+        if email_validation_updated:
+            signals.invite_email_validated.send_robust(instance=self, sender=UserInvite)
+
         self._email = self.email
         self._old_status = self.status
+        self._old_is_email_validated = self.is_email_validated
 
 
 INVITED = "INVITED"

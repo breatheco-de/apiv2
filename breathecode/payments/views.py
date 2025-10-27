@@ -663,6 +663,64 @@ class AppConsumableView(MeConsumableView):
         return super().get(request)
 
 
+class AcademyConsumableView(APIView):
+    """
+    Academy endpoint to view consumables for users in the academy.
+    Filters by academy_id (from request header) and allows filtering by users and service slugs.
+    """
+
+    @capable_of("read_consumable")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+        utc_now = timezone.now()
+
+        # Start with consumables that belong to the academy through subscriptions or plan_financings
+        items = Consumable.objects.filter(
+            Q(valid_until__gte=utc_now) | Q(valid_until=None),
+            Q(subscription__academy_id=academy_id) | Q(plan_financing__academy_id=academy_id),
+        ).exclude(how_many=0)
+
+        # Filter by users if provided (comma-separated list of user IDs)
+        if users := request.GET.get("users"):
+            try:
+                user_ids = [int(x.strip()) for x in users.split(",") if x.strip()]
+                items = items.filter(user_id__in=user_ids)
+            except ValueError:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="users parameter must contain comma-separated integers",
+                        es="El parámetro users debe contener enteros separados por comas",
+                        slug="invalid-users-param",
+                    ),
+                    code=400,
+                )
+
+        # Filter by service slugs if provided (comma-separated list)
+        if service_slugs := request.GET.get("service"):
+            slugs = [s.strip() for s in service_slugs.split(",") if s.strip()]
+            items = items.filter(service_item__service__slug__in=slugs)
+
+        # Group by resource types
+        mentorship_services = MentorshipServiceSet.objects.none()
+        mentorship_services = filter_consumables(request, items, mentorship_services, "mentorship_service_set")
+
+        cohorts = CohortSet.objects.none()
+        cohorts = filter_consumables(request, items, cohorts, "cohort_set")
+
+        event_types = EventTypeSet.objects.none()
+        event_types = filter_consumables(request, items, event_types, "event_type_set")
+
+        balance = {
+            "mentorship_service_sets": get_balance_by_resource(mentorship_services, "mentorship_service_set"),
+            "cohort_sets": get_balance_by_resource(cohorts, "cohort_set"),
+            "event_type_sets": get_balance_by_resource(event_types, "event_type_set"),
+            "voids": filter_void_consumable_balance(request, items),
+        }
+
+        return Response(balance)
+
+
 class MentorshipServiceSetView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(sort="-id", paginate=True)
@@ -829,6 +887,12 @@ class MeSubscriptionView(APIView):
             print(ids)
             subscriptions = subscriptions.filter(invoices__id__in=ids)
             plan_financings = plan_financings.filter(invoices__id__in=ids)
+
+        # Filter by academy (accepts id(s) or slug(s))
+        if academy := request.GET.get("academy"):
+            args, kwargs = self.get_lookup("academy", academy)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
 
         if service := request.GET.get("service"):
             service_items_args, service_items_kwargs = self.get_lookup("service_items__service", service)
@@ -1275,7 +1339,7 @@ class MeInvoiceView(APIView):
                     translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
                 )
 
-            serializer = GetInvoiceSerializer(item, many=True)
+            serializer = GetInvoiceSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = Invoice.objects.filter(user=request.user)
@@ -1498,6 +1562,47 @@ class CardView(APIView):
 
 class V2CardView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        """
+        Get payment method information for the authenticated user.
+
+        Query Parameters:
+            - academy_id (required): Academy to check payment method for.
+
+        Returns:
+            200: Payment method information
+            {
+                "has_payment_method": true,
+                "card_last4": "4242",
+                "card_brand": "Visa",
+                "card_exp_month": 12,
+                "card_exp_year": 2025
+            }
+        """
+        lang = get_user_language(request)
+        academy = get_academy_from_body(request.query_params.dict(), lang=lang, raise_exception=False)
+
+        if not academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="An academy organization must be specified in order to retrieve payment information for the contact",
+                    es="Se debe especificar una organización de academia para recuperar la información de pago del contacto",
+                    slug="academy-required",
+                ),
+                code=400,
+            )
+
+        # Return info for specific academy
+        s = Stripe(academy=academy)
+        s.set_language(lang)
+        info = s.get_payment_method_info(request.user)
+
+        if info:
+            return Response(info)
+
+        return Response({"has_payment_method": False})
 
     def post(self, request):
         lang = get_user_language(request)
@@ -2394,11 +2499,12 @@ class ConsumableCheckoutView(APIView):
 
             created_team = False
             team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
-            current_limit = team.seats_limit if team else 0
+            current_limit = team.additional_seats if team else 0
             desired_limit = seats
             delta = desired_limit - current_limit
 
             if delta <= 0:
+                # TODO: in a future you should decrease the seats limit and return a invoice with no amount
                 raise ValidationException(
                     translation(
                         lang,
@@ -2466,10 +2572,11 @@ class ConsumableCheckoutView(APIView):
                     # Ensure billing team exists and update seats limit
                     if not team:
                         created_team = True
+                        # Add +1 seat for owner (first seat is free)
                         team = SubscriptionBillingTeam.objects.create(
                             subscription=subscription,
                             name=f"Team {subscription.id}",
-                            seats_limit=desired_limit,
+                            additional_seats=desired_limit,
                             consumption_strategy=(
                                 plan.consumption_strategy
                                 if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
@@ -2530,13 +2637,13 @@ class ConsumableCheckoutView(APIView):
                             }
                         )
                         team.seats_log = seats_log
-                        team.seats_limit = desired_limit
+                        team.additional_seats = desired_limit
                         team.consumption_strategy = (
                             plan.consumption_strategy
                             if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
                             else Plan.ConsumptionStrategy.PER_SEAT
                         )
-                        team.save(update_fields=["seats_log", "seats_limit", "consumption_strategy"])
+                        team.save(update_fields=["seats_log", "additional_seats", "consumption_strategy"])
 
                     if created_team:
                         tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id)
@@ -4687,6 +4794,7 @@ class SubscriptionBillingTeamView(APIView):
             "subscription": subscription.id,
             "name": team.name,
             "seats_limit": team.seats_limit,
+            "additional_seats": team.additional_seats,
             "seats_count": team.seats.filter(is_active=True).count(),
             "seats_log": team.seats_log,
             # Auto-recharge settings
@@ -4953,18 +5061,20 @@ class SubscriptionSeatView(APIView):
                 u = None
                 if seat["to_user"]:
                     u = User.objects.filter(id=seat["to_user"]).first()
+                    if not u:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="User not found",
+                                es="Usuario no encontrado",
+                                slug="user-not-found",
+                            ),
+                            code=404,
+                        )
+
                 elif seat["to_email"]:
                     u = User.objects.filter(email=seat["to_email"]).first()
-                if not u:
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="User not found",
-                            es="Usuario no encontrado",
-                            slug="user-not-found",
-                        ),
-                        code=404,
-                    )
+
                 result.append(actions.replace_seat(seat["from_email"], seat["to_email"], u, s, lang))
             except ValidationException as e:
                 errors.append(e)

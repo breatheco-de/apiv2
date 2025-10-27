@@ -316,7 +316,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             if v and str(v).strip():
                 try:
                     args = {}
-                    if isinstance(v, int):
+                    if isinstance(v, int) or v.isnumeric():
                         args["id"] = v
                     else:
                         args["slug"] = v
@@ -326,7 +326,10 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                 except Exception:
                     raise ValidationException(
                         translation(
-                            lang, en="The academy does not exist", es="La academia no existe", slug="academy-not-found"
+                            lang,
+                            en="The academy could not be found",
+                            es="La academia no existe o no se pudo encontrar",
+                            slug="academy-not-found",
                         )
                     )
 
@@ -1312,6 +1315,9 @@ def get_github_token(request, token=None):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_github_token(request):
+
+    companyName = "4Geeks"
+
     def error_message(obj: Any, default: str):
         if isinstance(obj, dict):
             return obj.get("error_description") or obj.get("error") or default
@@ -1450,7 +1456,6 @@ async def save_github_token(request):
         if invite:
             academy = invite.academy
 
-        companyName = "4Geeks"
         if "4geeks" not in url:
             parsed_url = urlparse(url)
             domain = (
@@ -1555,7 +1560,7 @@ async def save_github_token(request):
         token, _ = await Token.aget_or_create(user=user, token_type="login")
 
     # register user in rigobot
-    await sync_with_rigobot(token.key)
+    await sync_with_rigobot(token.key, organization=companyName.lower())
 
     redirect_url = set_query_parameter(url, "token", token.key)
     return HttpResponseRedirect(redirect_to=redirect_url)
@@ -2447,14 +2452,19 @@ def get_google_token(request, token=None):
     # Add academy_settings to state (avoiding duplication)
     state += f"&academysettings={academy_settings}"
 
+    force_consent = request.query_params.get("force_consent", "").lower() in ("1", "true", "yes")
+
     params = {
         "response_type": "code",
         "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GOOGLE_REDIRECT_URL", ""),
-        "access_type": "offline",  # we need offline access to receive refresh token and avoid total expiration
+        "access_type": "offline",
         "scope": " ".join(scopes),
         "state": state,
     }
+
+    if force_consent:
+        params["prompt"] = "consent"
 
     logger.debug("Redirecting to google")
     logger.debug(params)

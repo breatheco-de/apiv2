@@ -20,7 +20,7 @@ from breathecode.monitoring import signals
 from breathecode.utils import GenerateLookupsMixin, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 
-from .actions import add_github_webhook, add_stripe_webhook, get_admin_actions
+from .actions import add_github_webhook, add_stripe_webhook, add_stripe_webhook_error, get_admin_actions
 from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
 from .serializers import (
     CSVDownloadSmallSerializer,
@@ -107,6 +107,7 @@ def get_download(request, download_id=None):
         raw = request.GET.get("raw", "")
         if raw == "true":
             from ..services.google_cloud import Storage
+            import os
 
             try:
                 storage = Storage()
@@ -229,10 +230,12 @@ def process_stripe_webhook(request):
 
     except ValueError as e:
         logger.error(f"Invalid payload: {str(e)}")
+        add_stripe_webhook_error(payload, sig_header, slug="invalid-payload", message=str(e))
         raise ValidationException("Invalid payload", code=400, slug="invalid-payload")
 
     except stripe.error.SignatureVerificationError as e:
         logger.error(f"Webhook signature verification failed: {str(e)}")
+        add_stripe_webhook_error(payload, sig_header, slug="not-allowed", message=str(e))
         raise ValidationException("Not allowed", code=403, slug="not-allowed")
 
     if event := add_stripe_webhook(event):
@@ -311,3 +314,135 @@ class RepositorySubscriptionView(APIView, GenerateLookupsMixin):
             instance = serializer.save()
             return Response(RepoSubscriptionSmallSerializer(instance).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyDownloadView(APIView):
+    """
+    Academy-specific download endpoint with proper capability check
+    """
+
+    @capable_of("read_downloads")
+    def get(self, request, academy_id=None, download_id=None):
+        lang = get_user_language(request)
+
+        if download_id is not None:
+            download = CSVDownload.objects.filter(id=download_id, academy__id=academy_id).first()
+            if download is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"CSV Download {download_id} not found for academy {academy_id}",
+                        es=f"Descarga CSV {download_id} no encontrada para la academia {academy_id}",
+                        slug="download-not-found",
+                    ),
+                    code=status.HTTP_404_NOT_FOUND,
+                )
+
+            raw = request.GET.get("raw", "")
+            if raw == "true":
+                from ..services.google_cloud import Storage
+
+                try:
+                    storage = Storage()
+                    cloud_file = storage.file(os.getenv("DOWNLOADS_BUCKET", None), download.name)
+                    buffer = cloud_file.stream_download()
+
+                except CircuitBreakerError:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="The circuit breaker is open due to an error, please try again later",
+                            es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
+                            slug="circuit-breaker-open",
+                        ),
+                        slug="circuit-breaker-open",
+                        data={"service": "Google Cloud Storage"},
+                        silent=True,
+                        code=503,
+                    )
+
+                return StreamingHttpResponse(
+                    buffer.all(),
+                    content_type="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={download.name}"},
+                )
+            else:
+                serializer = CSVDownloadSmallSerializer(download, many=False)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # List all downloads for the academy
+        csv_downloads = CSVDownload.objects.filter(academy__id=academy_id)
+        serializer = CSVDownloadSmallSerializer(csv_downloads, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyDownloadSignedUrlView(APIView):
+    """
+    Generate signed URLs for CSV downloads with temporary access
+    """
+
+    @capable_of("read_downloads")
+    def get(self, request, academy_id=None, download_id=None):
+        lang = get_user_language(request)
+
+        # Validate download exists and belongs to academy
+        download = CSVDownload.objects.filter(id=download_id, academy__id=academy_id, status="DONE").first()
+        if download is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"CSV Download {download_id} not found or not ready for academy {academy_id}",
+                    es=f"Descarga CSV {download_id} no encontrada o no lista para la academia {academy_id}",
+                    slug="download-not-found-or-not-ready",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Generate signed URL using Storage helper method
+        from ..services.google_cloud import Storage
+        import os
+
+        expiration_hours = int(request.GET.get("expiration_hours", 1))
+
+        try:
+            storage = Storage()
+            signed_url = storage.generate_download_signed_url(
+                bucket_name=os.getenv("DOWNLOADS_BUCKET", None),
+                file_name=download.name,
+                expiration_hours=expiration_hours,
+            )
+
+            return Response(
+                {
+                    "signed_url": signed_url,
+                    "expires_in_hours": min(expiration_hours, 24),
+                    "filename": download.name,
+                    "download_id": download.id,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except CircuitBreakerError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="The circuit breaker is open due to an error, please try again later",
+                    es="El circuit breaker está abierto debido a un error, por favor intente más tarde",
+                    slug="circuit-breaker-open",
+                ),
+                slug="circuit-breaker-open",
+                data={"service": "Google Cloud Storage"},
+                silent=True,
+                code=503,
+            )
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Failed to generate signed URL: {str(e)}",
+                    es=f"Error al generar URL firmada: {str(e)}",
+                    slug="signed-url-generation-failed",
+                ),
+                code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

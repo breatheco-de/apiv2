@@ -38,6 +38,7 @@ from .models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanOffer,
     PlanServiceItem,
     PlanServiceItemHandler,
     ProofOfPayment,
@@ -119,10 +120,10 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     ):
         raise AbortTask(f"The plan financing {scheduler.plan_handler.plan_financing.id} is over")
 
-    # it needs to be paid
     if (
         scheduler.plan_handler
         and scheduler.plan_handler.plan_financing
+        and scheduler.plan_handler.plan_financing.status == PlanFinancing.Status.ACTIVE
         and scheduler.plan_handler.plan_financing.next_payment_at < utc_now
     ):
         raise AbortTask(
@@ -184,10 +185,11 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
         selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription, service_item.service)
 
-    # If resource is Subscription and this scheduler is tied to a subscription seat with an assigned user,
-    # issue the consumable for the seat assignee instead of the subscription owner.
-    if subscription and scheduler.subscription_seat and scheduler.subscription_seat.user_id:
-        user = scheduler.subscription_seat.user
+    # If resource is Subscription and this scheduler is tied to a subscription seat,
+    # issue the consumable for the seat assignee (or None if not yet assigned) instead of the subscription owner.
+    if subscription and scheduler.subscription_seat:
+        # Use the seat's user if assigned, otherwise None (waiting for invitation acceptance)
+        user = scheduler.subscription_seat.user if scheduler.subscription_seat.user_id else None
 
     unit = service_item.renew_at
     unit_type = service_item.renew_at_unit
@@ -279,6 +281,15 @@ def renew_subscription_consumables(self, subscription_id: int, seat_id: Optional
     ]:
         raise AbortTask(f"The subscription {subscription.id} is deprecated, expired or has a payment issue")
 
+    # Check if subscription has deleted or discontinued plans
+    if subscription.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
+        subscription.status = Subscription.Status.DEPRECATED
+        subscription.save()
+        raise AbortTask(
+            f"The subscription {subscription.id} has deleted/discontinued plans, "
+            "marked as deprecated, consumables will not be renewed"
+        )
+
     subscription_seat = None
     if seat_id and not (
         subscription_seat := SubscriptionSeat.objects.filter(
@@ -321,8 +332,17 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
     ]:
         raise AbortTask(f"The plan financing {plan_financing.id} is cancelled, deprecated or expired")
 
+    # Check if plan financing has deleted or discontinued plans
+    if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
+        plan_financing.status = PlanFinancing.Status.DEPRECATED
+        plan_financing.save()
+        raise AbortTask(
+            f"The plan financing {plan_financing.id} has deleted/discontinued plans, "
+            "marked as deprecated, consumables will not be renewed"
+        )
+
     utc_now = timezone.now()
-    if plan_financing.next_payment_at < utc_now:
+    if plan_financing.next_payment_at < utc_now and plan_financing.status != PlanFinancing.Status.FULLY_PAID:
         raise AbortTask(f"The PlanFinancing {plan_financing.id} needs to be paid to renew the consumables")
 
     if plan_financing.plan_expires_at and plan_financing.plan_expires_at < utc_now:
@@ -706,7 +726,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             if subscription.status == Subscription.Status.DEPRECATED:
                 actions.handle_deprecated_subscription(subscription, settings)
 
-            elif subscription.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+            elif subscription.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
                 subscription.status = Subscription.Status.DEPRECATED
                 subscription.save()
                 actions.handle_deprecated_subscription(subscription, settings)
@@ -1007,6 +1027,62 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} was paid this month")
 
             settings = get_user_settings(plan_financing.user.id)
+
+            # Check if plan financing has deleted or discontinued plans
+            if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
+                plan_financing.status = PlanFinancing.Status.DEPRECATED
+                plan_financing.save()
+
+                # Send notification to user
+                plan = plan_financing.plans.first()
+                link = None
+
+                if plan and (offer := PlanOffer.objects.filter(original_plan=plan).first()):
+                    link = f"{get_app_url()}/checkout?plan={offer.suggested_plan.slug}"
+
+                subject = translation(
+                    settings.lang,
+                    en=f"Your 4Geeks plan financing to {plan.slug if plan else 'plan'} has been discontinued",
+                    es=f"Tu financiamiento 4Geeks a {plan.slug if plan else 'plan'} ha sido descontinuado",
+                )
+
+                obj = {
+                    "SUBJECT": subject,
+                }
+
+                if link:
+                    button = translation(
+                        settings.lang,
+                        en="See suggested plan",
+                        es="Ver plan sugerido",
+                    )
+                    obj["LINK"] = link
+                    obj["BUTTON"] = button
+
+                    message = translation(
+                        settings.lang,
+                        en="We regret to inform you that your 4Geeks plan financing has been discontinued. Please check our suggested plans for alternatives.",
+                        es="Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado. Por favor, revisa nuestros planes sugeridos para alternativas.",
+                    )
+                else:
+                    message = translation(
+                        settings.lang,
+                        en="We regret to inform you that your 4Geeks plan financing has been discontinued.",
+                        es="Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado.",
+                    )
+
+                obj["MESSAGE"] = message
+
+                notify_actions.send_email_message(
+                    "message",
+                    plan_financing.user.email,
+                    obj,
+                    academy=plan_financing.academy,
+                )
+                raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted/discontinued plans")
+
+            # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
+            amount = plan_financing.monthly_price
 
             invoices = plan_financing.invoices.order_by("created_at")
             first_invoice = invoices.first()
@@ -1438,18 +1514,29 @@ def build_service_stock_scheduler_from_plan_financing(
             delta = actions.calculate_relative_delta(unit, unit_type)
             valid_until = plan_financing.created_at + delta
 
-            if valid_until > plan_financing.next_payment_at:
+            if (
+                plan_financing.status != PlanFinancing.Status.FULLY_PAID
+                and valid_until > plan_financing.next_payment_at
+            ):
                 valid_until = plan_financing.next_payment_at
 
             if plan_financing.plan_expires_at and valid_until > plan_financing.plan_expires_at:
                 valid_until = plan_financing.plan_expires_at
 
-            if plan_financing.valid_until and valid_until > plan_financing.valid_until:
+            if (
+                plan_financing.valid_until
+                and valid_until > plan_financing.valid_until
+                and plan_financing.status != PlanFinancing.Status.FULLY_PAID
+            ):
                 valid_until = plan_financing.valid_until
+
+            if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
+                utc_now = timezone.now()
+                valid_until = utc_now + delta
 
             handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing, handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler, defaults={"valid_until": valid_until})
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
@@ -1557,7 +1644,7 @@ def build_subscription(
             subscription=subscription,
             defaults={
                 "name": f"Team {subscription.id}",
-                "seats_limit": subscription.seat_service_item.how_many,
+                "additional_seats": subscription.seat_service_item.how_many,
                 "consumption_strategy": (
                     # if BOTH is implemented should be required to get the strategy from the bag
                     Plan.ConsumptionStrategy.PER_SEAT

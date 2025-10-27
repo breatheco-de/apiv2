@@ -46,6 +46,14 @@ def get_app_url():
     return url
 
 
+def get_api_url():
+    url = os.getenv("API_URL", "https://breathecode.herokuapp.com/")
+    if url and url[-1] == "/":
+        url = url[:-1]
+
+    return url
+
+
 def get_github_scopes(user, default_scopes=""):
     # Start with mandatory "user" scope and add any additional default scopes
     scopes = {"user:email"}  # Always include "user"
@@ -130,12 +138,16 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     params = {"callback": "https://admin.4geeks.com"}
     querystr = urllib.parse.urlencode(params)
     url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
+    subject = "Invitation to join 4Geeks"
+    if academy and getattr(academy, "white_labeled", False):
+        subject = f"Invitation to join {academy.name}"
+
     notify_actions.send_email_message(
         "welcome_academy",
         email,
         {
             "email": email,
-            "subject": "Invitation to join 4Geeks",
+            "subject": subject,
             "LINK": url,
             "FIST_NAME": first_name,
             **extra,
@@ -748,10 +760,10 @@ def accept_invite(accepting_ids=None, user=None):
 
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None and (role := role.upper()) in ["TEACHER", "ASSISTANT", "REVIEWER", "STUDENT"]:
-                cu = CohortUser(user=user, cohort=invite.cohort, role_id=role.lower(), educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role, educational_status="ACTIVE")
                 cu.save()
             elif cu is None:
-                cu = CohortUser(user=user, cohort=invite.cohort, role_id="student", educational_status="ACTIVE")
+                cu = CohortUser(user=user, cohort=invite.cohort, role="STUDENT", educational_status="ACTIVE")
                 cu.save()
 
         if user is not None and invite.user is None:
@@ -807,8 +819,8 @@ JWT_LIFETIME = 10
 
 
 def accept_invite_action(data=None, token=None, lang="en"):
-    from breathecode.payments import tasks as payments_tasks
     from breathecode.payments import actions as payments_actions
+    from breathecode.payments import tasks as payments_tasks
     from breathecode.payments.models import Bag, Invoice, Plan
 
     if data is None:
@@ -888,11 +900,11 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if invite.cohort is not None:
         role = "student"
         if invite.role is not None and invite.role.slug != "student":
-            role = invite.role.slug.lower()
+            role = invite.role.slug.upper()
 
         cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
         if cu is None:
-            cu = CohortUser(user=user, cohort=invite.cohort, role_id=role)
+            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
             cu.save()
 
         plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
@@ -945,8 +957,8 @@ def accept_invite_action(data=None, token=None, lang="en"):
     return invite
 
 
-async def sync_with_rigobot(token_key):
-    rigobot_payload = {"organization": "4geeks", "user_token": token_key}
+async def sync_with_rigobot(token_key, organization="4geeks"):
+    rigobot_payload = {"organization": organization, "user_token": token_key}
     rigobot_host = os.getenv("RIGOBOT_HOST", "https://rigobot.herokuapp.com")
 
     async with aiohttp.ClientSession() as session:
@@ -1005,6 +1017,8 @@ def get_academy_from_body(body: dict[str, Any], lang: str = "en", raise_exceptio
 
     if isinstance(academy_slug, int):
         academy = Academy.objects.filter(id=academy_slug).first()
+    elif isinstance(academy_slug, str) and academy_slug.isnumeric():
+        academy = Academy.objects.filter(id=academy_slug).first()
     elif isinstance(academy_slug, str):
         academy = Academy.objects.filter(slug=academy_slug).first()
 
@@ -1022,16 +1036,17 @@ def replace_user_email(requesting_user, target_user_id, new_email):
     Update user email across all models in the database that store email addresses.
     Only superusers can call this action. Users cannot change their own email.
     """
-    from breathecode.events.models import EventCheckin
-    from breathecode.marketing.models import Contact, FormEntry
-    from breathecode.assessment.models import UserAssessment
-    from breathecode.mentorship.models import SupportAgent, MentorProfile
-    from breathecode.notify.models import SlackUser
-    from breathecode.authenticate.models import User, UserInvite, ProfileAcademy, CredentialsGithub
     from capyc.core.i18n import translation
     from capyc.rest_framework.exceptions import ValidationException
-    from django.core.validators import validate_email
     from django.core.exceptions import ValidationError as DjangoValidationError
+    from django.core.validators import validate_email
+
+    from breathecode.assessment.models import UserAssessment
+    from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, User, UserInvite
+    from breathecode.events.models import EventCheckin
+    from breathecode.marketing.models import Contact, FormEntry
+    from breathecode.mentorship.models import MentorProfile, SupportAgent
+    from breathecode.notify.models import SlackUser
 
     lang = getattr(requesting_user, "lang", "en")
     if not requesting_user.is_superuser:

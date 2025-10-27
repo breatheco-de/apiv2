@@ -1350,6 +1350,10 @@ class AuthSerializer(serializers.Serializer):
                 "You need to validate your email first", slug="email-not-validated", silent=True, code=403, data=data
             )
 
+        if user is None:
+            msg = "Unable to log in with provided credentials."
+            raise serializers.ValidationError(msg, code=403)
+
         attrs["user"] = user
         return attrs
 
@@ -1700,6 +1704,11 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if obj.status != "ACCEPTED":
             return None
 
+        # Determine organization based on academy slug
+        organization = "4geeks"  # default
+        if obj.academy and obj.academy.slug == "learnpack":
+            organization = "learnpack"
+
         # if should be created within the signal
         if not self.user:
             self.user = User.objects.filter(email=self.email).first()
@@ -1727,7 +1736,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         self.instance.save()
 
         token, _ = Token.get_or_create(user=self.user, token_type="login")
-        async_to_sync(sync_with_rigobot)(token.key)
+        async_to_sync(sync_with_rigobot)(token.key, organization=organization)
         return token.key
 
     def get_plans(self, obj: UserInvite):

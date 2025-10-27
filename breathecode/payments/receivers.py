@@ -14,7 +14,7 @@ from breathecode.monitoring import signals as monitoring_signals
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.payments.models import Invoice
-from breathecode.payments import tasks
+from breathecode.payments import tasks, actions
 from django.db.models.signals import post_save
 
 
@@ -241,9 +241,14 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
             or plan_strategy == Plan.ConsumptionStrategy.BOTH
         )
 
-        # Issue per-seat consumables only when strategy requires it; otherwise rely on renew task for team-level
+        # Assign existing consumables that were created with user=None to the newly accepted user
         if per_seat_enabled:
-            tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id, seat_id=seat.id)
+            # Update existing consumables for this seat to assign them to the user
+            Consumable.objects.filter(subscription_seat=seat, user__isnull=True).update(user=instance.user)
+
+            # Grant student capabilities for each plan
+            for p in subscription.plans.all():
+                actions.grant_student_capabilities(instance.user, p)
 
 
 # to be able to use unittest instead of integration test
