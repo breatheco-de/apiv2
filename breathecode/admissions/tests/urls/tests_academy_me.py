@@ -546,3 +546,127 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             ],
         )
         self.assertEqual(cohort_saved.send_robust.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, updating logo_url with valid URL
+    """
+
+    @patch("breathecode.admissions.signals.cohort_saved.send_robust", MagicMock())
+    @patch("breathecode.utils.url_validator.test_url", MagicMock())
+    def test__put__with_academy__update_logo_url_valid(self):
+        """Test updating logo_url with a valid URL"""
+        from breathecode.admissions.signals import cohort_saved
+        from breathecode.utils import url_validator
+
+        self.headers(academy=1)
+        url = reverse_lazy("admissions:academy_me")
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="crud_my_academy",
+            role="potato",
+            skip_cohort=True,
+        )
+
+        # Reset because calls are coming from setup
+        cohort_saved.send_robust.call_args_list = []
+
+        new_logo_url = "https://example.com/new-logo.png"
+        data = {"logo_url": new_logo_url}
+
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json["logo_url"], new_logo_url)
+
+        # Verify test_url was called to validate the URL
+        url_validator.test_url.assert_called_once_with(new_logo_url, allow_relative=False, allow_hash=False)
+
+        # Verify database was updated
+        academy = self.bc.database.get("admissions.Academy", 1, dict=False)
+        self.assertEqual(academy.logo_url, new_logo_url)
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, updating logo_url with invalid URL
+    """
+
+    @patch("breathecode.admissions.signals.cohort_saved.send_robust", MagicMock())
+    @patch("breathecode.utils.url_validator.test_url", MagicMock(side_effect=Exception("Invalid URL")))
+    def test__put__with_academy__update_logo_url_invalid(self):
+        """Test updating logo_url with an invalid URL"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        url = reverse_lazy("admissions:academy_me")
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="crud_my_academy",
+            role="potato",
+            skip_cohort=True,
+        )
+
+        # Reset because calls are coming from setup
+        cohort_saved.send_robust.call_args_list = []
+
+        invalid_logo_url = "not-a-valid-url"
+        data = {"logo_url": invalid_logo_url}
+
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid logo URL", json["detail"])
+        self.assertEqual(json["slug"], "invalid-logo-url")
+
+        # Verify database was NOT updated
+        academy = self.bc.database.get("admissions.Academy", 1, dict=False)
+        self.assertEqual(academy.logo_url, model.academy.logo_url)
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, partial update including logo_url
+    """
+
+    @patch("breathecode.admissions.signals.cohort_saved.send_robust", MagicMock())
+    @patch("breathecode.utils.url_validator.test_url", MagicMock())
+    def test__put__with_academy__partial_update_with_logo_url(self):
+        """Test partial update including logo_url along with other fields"""
+        from breathecode.admissions.signals import cohort_saved
+        from breathecode.utils import url_validator
+
+        self.headers(academy=1)
+        url = reverse_lazy("admissions:academy_me")
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="crud_my_academy",
+            role="potato",
+            skip_cohort=True,
+            country=True,
+        )
+
+        # Reset because calls are coming from setup
+        cohort_saved.send_robust.call_args_list = []
+
+        new_logo_url = "https://example.com/updated-logo.png"
+        new_name = "Updated Academy Name"
+        data = {"logo_url": new_logo_url, "name": new_name}
+
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json["logo_url"], new_logo_url)
+        self.assertEqual(json["name"], new_name)
+
+        # Verify test_url was called to validate the URL
+        url_validator.test_url.assert_called_once_with(new_logo_url, allow_relative=False, allow_hash=False)
+
+        # Verify database was updated
+        academy = self.bc.database.get("admissions.Academy", 1, dict=False)
+        self.assertEqual(academy.logo_url, new_logo_url)
+        self.assertEqual(academy.name, new_name)
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
