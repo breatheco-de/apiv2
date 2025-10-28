@@ -240,6 +240,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     country = CountrySerializer(required=False)
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
+    icon_url = serpy.Field()
     active_campaign_slug = serpy.Field()
     logistical_information = serpy.Field()
     latitude = serpy.Field()
@@ -765,13 +766,14 @@ class AcademySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Academy
-        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework", "logo_url"]
+        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework", "logo_url", "icon_url"]
         extra_kwargs = {
             "name": {"required": False},
             "street_address": {"required": False},
             "country": {"required": False},
             "city": {"required": False},
             "logo_url": {"required": False},
+            "icon_url": {"required": False},
             "slug": {"read_only": True},  # Prevent slug from being updated
         }
 
@@ -785,6 +787,19 @@ class AcademySerializer(serializers.ModelSerializer):
             except Exception as e:
                 raise ValidationException(
                     f"Invalid logo URL: {str(e)}", slug="invalid-logo-url", code=400
+                )
+        return value
+
+    def validate_icon_url(self, value):
+        """Validate that the icon_url is a valid and accessible URL."""
+        if value:
+            from breathecode.utils.url_validator import test_url
+
+            try:
+                test_url(value, allow_relative=False, allow_hash=False)
+            except Exception as e:
+                raise ValidationException(
+                    f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400
                 )
         return value
 

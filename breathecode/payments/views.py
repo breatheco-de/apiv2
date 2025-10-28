@@ -282,13 +282,13 @@ class AcademyPlanView(APIView):
         lang = get_user_language(request)
 
         plan = (
-            Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug), Q(owner__id=academy_id) | Q(owner=None), id=plan_id)
+            Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug), Q(owner__id=academy_id) | Q(owner=None))
             .exclude(status="DELETED")
             .first()
         )
         if not plan:
             raise ValidationException(
-                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"), code=404
+                translation(lang, en="Plan not found", es="El plan no existe", slug="not-found"), code=404
             )
 
         data = {}

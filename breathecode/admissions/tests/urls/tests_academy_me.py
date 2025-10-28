@@ -38,6 +38,7 @@ def put_serializer(academy, country, city, data={}):
             } if country else None,
         } if city else None,
         "logo_url": academy.logo_url,
+        "icon_url": academy.icon_url,
         "active_campaign_slug": academy.active_campaign_slug,
         "logistical_information": academy.logistical_information,
         "latitude": str(academy.latitude) if academy.latitude else None,
@@ -668,5 +669,50 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         # Verify database was updated
         academy = self.bc.database.get("admissions.Academy", 1, dict=False)
         self.assertEqual(academy.logo_url, new_logo_url)
+        self.assertEqual(academy.name, new_name)
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, partial update including icon_url
+    """
+
+    @patch("breathecode.admissions.signals.cohort_saved.send_robust", MagicMock())
+    @patch("breathecode.utils.url_validator.test_url", MagicMock())
+    def test__put__with_academy__partial_update_with_icon_url(self):
+        """Test partial update including icon_url along with other fields"""
+        from breathecode.admissions.signals import cohort_saved
+        from breathecode.utils import url_validator
+
+        self.headers(academy=1)
+        url = reverse_lazy("admissions:academy_me")
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability="crud_my_academy",
+            role="potato",
+            skip_cohort=True,
+            country=True,
+        )
+
+        # Reset because calls are coming from setup
+        cohort_saved.send_robust.call_args_list = []
+
+        new_icon_url = "https://example.com/updated-icon.png"
+        new_name = "Updated Academy Name"
+        data = {"icon_url": new_icon_url, "name": new_name}
+
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json["icon_url"], new_icon_url)
+        self.assertEqual(json["name"], new_name)
+
+        # Verify test_url was called to validate the URL
+        url_validator.test_url.assert_called_once_with(new_icon_url, allow_relative=False, allow_hash=False)
+
+        # Verify database was updated
+        academy = self.bc.database.get("admissions.Academy", 1, dict=False)
+        self.assertEqual(academy.icon_url, new_icon_url)
         self.assertEqual(academy.name, new_name)
         self.assertEqual(cohort_saved.send_robust.call_args_list, [])
