@@ -71,6 +71,7 @@ from .views import (
     ICalCohortsView,
     ICalEventView,
     ICalStudentView,
+    LiveKitTokenView,
     MeLiveClassView,
     OrganizationWebhookView,
     UserEventCheckinView,
@@ -144,4 +145,5 @@ urlpatterns = [
     path("academy/checkin.csv", AcademyEventCheckinView.as_view(), name="academy_checkin_csv"),
     path("eventbrite/webhook/<int:organization_id>", eventbrite_webhook, name="eventbrite_webhook_id"),
     path("live-workshop-status", live_workshop_status, name="live_workshop_status"),
+    path("event/<int:event_id>/livekit/token", LiveKitTokenView.as_view(), name="event_livekit_token"),
 ]

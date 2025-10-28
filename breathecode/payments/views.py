@@ -52,7 +52,6 @@ from breathecode.payments.models import (
     FinancialReputation,
     Invoice,
     MentorshipServiceSet,
-    PaymentContact,
     PaymentMethod,
     Plan,
     PlanFinancing,
@@ -393,9 +392,7 @@ class AcademyFinancingOptionView(APIView):
             currency = Currency.objects.filter(code__iexact=currency_code).first()
             if not currency:
                 raise ValidationException(
-                    translation(
-                        lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"
-                    ),
+                    translation(lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"),
                     code=400,
                 )
             data["currency"] = currency.id
@@ -407,14 +404,12 @@ class AcademyFinancingOptionView(APIView):
 
         serializer = FinancingOptionSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        
+
         # Set academy ownership
         financing_option = serializer.save(academy_id=academy_id)
 
         # Return using GET serializer for consistent response
-        response_serializer = GetFinancingOptionSerializer(
-            financing_option, many=False, context={"lang": lang}
-        )
+        response_serializer = GetFinancingOptionSerializer(financing_option, many=False, context={"lang": lang})
 
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -441,9 +436,7 @@ class AcademyFinancingOptionView(APIView):
             currency = Currency.objects.filter(code__iexact=data["currency"]).first()
             if not currency:
                 raise ValidationException(
-                    translation(
-                        lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"
-                    ),
+                    translation(lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"),
                     code=400,
                 )
             data["currency"] = currency.id
@@ -453,9 +446,7 @@ class AcademyFinancingOptionView(APIView):
         serializer.save()
 
         # Return using GET serializer for consistent response
-        response_serializer = GetFinancingOptionSerializer(
-            serializer.instance, many=False, context={"lang": lang}
-        )
+        response_serializer = GetFinancingOptionSerializer(serializer.instance, many=False, context={"lang": lang})
 
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
@@ -552,14 +543,14 @@ class ServiceView(APIView):
         handler = self.extensions(request)
 
         lang = get_user_language(request)
-        
+
         # Check if user has read_service capability to view private services
         can_view_private = False
         if request.user and request.user.is_authenticated:
             academy_id = request.GET.get("academy")
             if academy_id and str(academy_id).isdigit():
                 from breathecode.authenticate.models import ProfileAcademy
-                
+
                 capable = ProfileAcademy.objects.filter(
                     user=request.user.id, academy__id=int(academy_id), role__capabilities__slug="read_service"
                 )
@@ -858,7 +849,7 @@ class AcademyServiceItemView(APIView):
     def get(self, request, academy_id=None):
         """
         List and filter ServiceItems for an academy.
-        
+
         Query Parameters:
         - service: Filter by service ID or slug
         - is_renewable: Filter by renewable status (true/false)
@@ -928,11 +919,11 @@ class AcademyServiceItemView(APIView):
     def post(self, request, academy_id=None):
         """
         Create a new ServiceItem.
-        
+
         Required fields:
         - service: Service ID
         - how_many: Number of units (-1 for unlimited, must be > 0)
-        
+
         Optional fields:
         - unit_type: Default "UNIT"
         - sort_priority: Default 1
@@ -947,9 +938,7 @@ class AcademyServiceItemView(APIView):
         service_id = request.data.get("service")
         if not service_id:
             raise ValidationException(
-                translation(
-                    lang, en="service is required", es="service es requerido", slug="service-required"
-                ),
+                translation(lang, en="service is required", es="service es requerido", slug="service-required"),
                 code=400,
             )
 
@@ -2887,11 +2876,12 @@ class ConsumableCheckoutView(APIView):
 
             created_team = False
             team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
-            current_limit = team.seats_limit if team else 0
+            current_limit = team.additional_seats if team else 0
             desired_limit = seats
             delta = desired_limit - current_limit
 
             if delta <= 0:
+                # TODO: in a future you should decrease the seats limit and return a invoice with no amount
                 raise ValidationException(
                     translation(
                         lang,
@@ -2963,7 +2953,7 @@ class ConsumableCheckoutView(APIView):
                         team = SubscriptionBillingTeam.objects.create(
                             subscription=subscription,
                             name=f"Team {subscription.id}",
-                            seats_limit=desired_limit + 1,
+                            additional_seats=desired_limit,
                             consumption_strategy=(
                                 plan.consumption_strategy
                                 if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
@@ -3024,13 +3014,13 @@ class ConsumableCheckoutView(APIView):
                             }
                         )
                         team.seats_log = seats_log
-                        team.seats_limit = desired_limit
+                        team.additional_seats = desired_limit
                         team.consumption_strategy = (
                             plan.consumption_strategy
                             if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
                             else Plan.ConsumptionStrategy.PER_SEAT
                         )
-                        team.save(update_fields=["seats_log", "seats_limit", "consumption_strategy"])
+                        team.save(update_fields=["seats_log", "additional_seats", "consumption_strategy"])
 
                     if created_team:
                         tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id)
@@ -3545,7 +3535,7 @@ class AcademyPaymentMethodView(APIView):
             method = PaymentMethod.objects.filter(
                 Q(academy__id=academy_id) | Q(academy__isnull=True), id=paymentmethod_id
             ).first()
-            
+
             if not method:
                 raise ValidationException(
                     translation(
@@ -3556,7 +3546,7 @@ class AcademyPaymentMethodView(APIView):
                     ),
                     code=404,
                 )
-            
+
             serializer = GetPaymentMethod(method, many=False)
             return Response(serializer.data)
 
@@ -3720,7 +3710,7 @@ class AcademyPlanServiceItemView(APIView):
                     ),
                     code=400,
                 )
-            
+
             # Validate that all items are valid integers
             service_item_ids = []
             for x in service_item:
@@ -3855,6 +3845,7 @@ class SubscriptionBillingTeamView(APIView):
             "subscription": subscription.id,
             "name": team.name,
             "seats_limit": team.seats_limit,
+            "additional_seats": team.additional_seats,
             "seats_count": team.seats.filter(is_active=True).count(),
             "seats_log": team.seats_log,
             # Auto-recharge settings
