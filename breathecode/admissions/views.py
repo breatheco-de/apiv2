@@ -499,11 +499,12 @@ class AcademyView(APIView):
         for key in request.data:
             data[key] = request.data.get(key)
 
-        serializer = AcademySerializer(academy, data=data)
+        serializer = AcademySerializer(academy, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            # serializer = GetBigAcademySerializer(academy, data=data)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Return full academy data with nested objects for consistency with GET
+            response_serializer = GetBigAcademySerializer(academy)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

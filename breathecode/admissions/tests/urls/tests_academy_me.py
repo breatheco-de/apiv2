@@ -18,15 +18,46 @@ from ..mixins import AdmissionsTestCase
 
 
 def put_serializer(academy, country, city, data={}):
+    """Helper to generate expected response matching GetBigAcademySerializer format."""
     return {
-        "city": city.id,
-        "country": country.code,
         "id": academy.id,
-        "name": academy.name,
         "slug": academy.slug,
+        "name": academy.name,
+        "country": {
+            "id": country.code,
+            "code": country.code,
+            "name": country.name,
+        } if country else None,
+        "city": {
+            "id": city.id,
+            "name": city.name,
+            "country": {
+                "id": country.code,
+                "code": country.code,
+                "name": country.name,
+            } if country else None,
+        } if city else None,
+        "logo_url": academy.logo_url,
+        "active_campaign_slug": academy.active_campaign_slug,
+        "logistical_information": academy.logistical_information,
+        "latitude": str(academy.latitude) if academy.latitude else None,
+        "longitude": str(academy.longitude) if academy.longitude else None,
+        "marketing_email": academy.marketing_email,
         "street_address": academy.street_address,
+        "website_url": academy.website_url,
+        "marketing_phone": academy.marketing_phone,
+        "twitter_handle": academy.twitter_handle,
+        "facebook_handle": academy.facebook_handle,
+        "instagram_handle": academy.instagram_handle,
+        "github_handle": academy.github_handle,
+        "linkedin_url": academy.linkedin_url,
+        "youtube_url": academy.youtube_url,
         "is_hidden_on_prework": academy.is_hidden_on_prework,
-        **data,
+        "white_label_features": academy.get_white_label_features(),
+        "owner": {
+            "id": academy.owner.id,
+            "email": academy.owner.email,
+        } if academy.owner else None,
     }
 
 
@@ -204,6 +235,176 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 }
             ],
         )
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, with partial update (only updating city)
+    """
+
+    @patch("breathecode.admissions.signals.cohort_saved.send_robust", MagicMock())
+    def test__put__with_academy__partial_update_only_city(self):
+        """Test /academy/me with partial update - only city field"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        url = reverse_lazy("admissions:academy_me")
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            country=2,
+            city=2,
+            capability="crud_my_academy",
+            role="potato",
+            skip_cohort=True,
+        )
+
+        # reset because this call are coming from mixer
+        cohort_saved.send_robust.call_args_list = []
+
+        original_name = model.academy.name
+        original_street = model.academy.street_address
+        new_city = model.city[1]  # Use a different city
+
+        data = {
+            "city": new_city.id,
+        }
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify that only city was updated
+        updated_academy = self.bc.database.get("admissions.Academy", 1, dict=False)
+        self.assertEqual(updated_academy.city_id, new_city.id)
+        self.assertEqual(updated_academy.name, original_name)  # Name unchanged
+        self.assertEqual(updated_academy.street_address, original_street)  # Street unchanged
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, without name field (should work - field is optional)
+    """
+
+    @patch("breathecode.admissions.signals.cohort_saved.send_robust", MagicMock())
+    def test__put__with_academy__without_name_field(self):
+        """Test /academy/me without name field - should succeed as name is optional"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        url = reverse_lazy("admissions:academy_me")
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            country=2,
+            city=2,
+            capability="crud_my_academy",
+            role="potato",
+            skip_cohort=True,
+        )
+
+        # reset because this call are coming from mixer
+        cohort_saved.send_robust.call_args_list = []
+
+        original_name = model.academy.name
+        new_city = model.city[1]
+
+        data = {
+            "city": new_city.id,
+            "street_address": self.bc.fake.address(),
+        }
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify name was not changed
+        updated_academy = self.bc.database.get("admissions.Academy", 1, dict=False)
+        self.assertEqual(updated_academy.name, original_name)
+        self.assertEqual(updated_academy.city_id, new_city.id)
+        self.assertEqual(updated_academy.street_address, data["street_address"])
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, without street_address field (should work - field is optional)
+    """
+
+    @patch("breathecode.admissions.signals.cohort_saved.send_robust", MagicMock())
+    def test__put__with_academy__without_street_address_field(self):
+        """Test /academy/me without street_address field - should succeed as it's optional"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        url = reverse_lazy("admissions:academy_me")
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            country=2,
+            city=2,
+            capability="crud_my_academy",
+            role="potato",
+            skip_cohort=True,
+        )
+
+        # reset because this call are coming from mixer
+        cohort_saved.send_robust.call_args_list = []
+
+        original_street = model.academy.street_address
+        new_city = model.city[1]
+
+        data = {
+            "name": self.bc.fake.name(),
+            "city": new_city.id,
+        }
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify street_address was not changed
+        updated_academy = self.bc.database.get("admissions.Academy", 1, dict=False)
+        self.assertEqual(updated_academy.street_address, original_street)
+        self.assertEqual(updated_academy.name, data["name"])
+        self.assertEqual(updated_academy.city_id, new_city.id)
+        self.assertEqual(cohort_saved.send_robust.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put with Academy, trying to update slug (should be ignored/rejected)
+    """
+
+    @patch("breathecode.admissions.signals.cohort_saved.send_robust", MagicMock())
+    def test__put__with_academy__slug_cannot_be_updated(self):
+        """Test /academy/me - slug field should not be updateable"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        url = reverse_lazy("admissions:academy_me")
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            country=1,
+            city=1,
+            capability="crud_my_academy",
+            role="potato",
+            skip_cohort=True,
+        )
+
+        # reset because this call are coming from mixer
+        cohort_saved.send_robust.call_args_list = []
+
+        original_slug = model.academy.slug
+
+        data = {
+            "slug": "new-different-slug",
+            "name": self.bc.fake.name(),
+        }
+        response = self.client.put(url, data, format="json")
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify slug was NOT changed (it should be ignored/read-only)
+        updated_academy = self.bc.database.get("admissions.Academy", 1, dict=False)
+        self.assertEqual(updated_academy.slug, original_slug)  # Slug unchanged
+        self.assertEqual(updated_academy.name, data["name"])  # Name changed
         self.assertEqual(cohort_saved.send_robust.call_args_list, [])
 
     """

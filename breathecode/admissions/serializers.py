@@ -762,22 +762,28 @@ class GetSyllabusSerializer(serpy.Serializer):
 #        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
     status_fields = ["status"]
-    country = CountrySerializer(required=True)
-    city = CitySerializer(required=True)
 
     class Meta:
         model = Academy
         fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework"]
+        extra_kwargs = {
+            "name": {"required": False},
+            "street_address": {"required": False},
+            "country": {"required": False},
+            "city": {"required": False},
+            "slug": {"read_only": True},  # Prevent slug from being updated
+        }
 
     def validate(self, data):
-
-        if "slug" in data and data["slug"] != self.instance.slug:
-            raise ValidationException("Academy slug cannot be updated")
+        # Additional validation: ensure slug is never in the data
+        if "slug" in data:
+            raise ValidationException("Academy slug cannot be updated", slug="academy-slug-cannot-be-updated")
 
         return data
 
     def update(self, instance, validated_data):
-        del validated_data["slug"]
+        # Extra safety: remove slug if somehow it made it through
+        validated_data.pop("slug", None)
         return super().update(instance, validated_data)
 
 
