@@ -3,6 +3,7 @@ import logging
 import os
 
 import requests
+from capyc.rest_framework.exceptions import ValidationException
 from django.template.loader import get_template
 from django.utils import timezone
 from premailer import transform
@@ -12,7 +13,6 @@ from twilio.rest import Client
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.services.slack import client
-from capyc.rest_framework.exceptions import ValidationException
 
 from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 
@@ -38,11 +38,18 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
     if os.getenv("EMAIL_NOTIFICATIONS_ENABLED", False) == "TRUE" or force:
         template = get_template_content(template_slug, data, ["email"], inline_css=inline_css, academy=academy)
 
+        sender_name = os.environ.get("COMPANY_NAME", "4Geeks")
+        if academy is not None and getattr(academy, "white_labeled", False):
+            try:
+                sender_name = academy.name or sender_name
+            except Exception:
+                sender_name = sender_name
+
         result = requests.post(
             f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
             auth=("api", os.environ.get("MAILGUN_API_KEY", "")),
             data={
-                "from": f"4Geeks <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                "from": f"{sender_name} <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
                 "to": to,
                 "subject": template["subject"],
                 "text": template["text"],

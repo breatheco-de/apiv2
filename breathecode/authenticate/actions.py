@@ -138,12 +138,16 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     params = {"callback": "https://admin.4geeks.com"}
     querystr = urllib.parse.urlencode(params)
     url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
+    subject = "Invitation to join 4Geeks"
+    if academy and getattr(academy, "white_labeled", False):
+        subject = f"Invitation to join {academy.name}"
+
     notify_actions.send_email_message(
         "welcome_academy",
         email,
         {
             "email": email,
-            "subject": "Invitation to join 4Geeks",
+            "subject": subject,
             "LINK": url,
             "FIST_NAME": first_name,
             **extra,
@@ -815,8 +819,8 @@ JWT_LIFETIME = 10
 
 
 def accept_invite_action(data=None, token=None, lang="en"):
-    from breathecode.payments import tasks as payments_tasks
     from breathecode.payments import actions as payments_actions
+    from breathecode.payments import tasks as payments_tasks
     from breathecode.payments.models import Bag, Invoice, Plan
 
     if data is None:
@@ -1032,16 +1036,17 @@ def replace_user_email(requesting_user, target_user_id, new_email):
     Update user email across all models in the database that store email addresses.
     Only superusers can call this action. Users cannot change their own email.
     """
-    from breathecode.events.models import EventCheckin
-    from breathecode.marketing.models import Contact, FormEntry
-    from breathecode.assessment.models import UserAssessment
-    from breathecode.mentorship.models import SupportAgent, MentorProfile
-    from breathecode.notify.models import SlackUser
-    from breathecode.authenticate.models import User, UserInvite, ProfileAcademy, CredentialsGithub
     from capyc.core.i18n import translation
     from capyc.rest_framework.exceptions import ValidationException
-    from django.core.validators import validate_email
     from django.core.exceptions import ValidationError as DjangoValidationError
+    from django.core.validators import validate_email
+
+    from breathecode.assessment.models import UserAssessment
+    from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, User, UserInvite
+    from breathecode.events.models import EventCheckin
+    from breathecode.marketing.models import Contact, FormEntry
+    from breathecode.mentorship.models import MentorProfile, SupportAgent
+    from breathecode.notify.models import SlackUser
 
     lang = getattr(requesting_user, "lang", "en")
     if not requesting_user.is_superuser:

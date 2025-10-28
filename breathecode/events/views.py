@@ -2,12 +2,16 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta
+from urllib.parse import urlencode, urlparse
 
+import jwt
 import pytz
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models.query_utils import Q
 from django.http.response import HttpResponse
 from django.shortcuts import redirect, render
@@ -17,15 +21,17 @@ from icalendar import Event as iEvent
 from icalendar import vCalAddress, vText
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 # from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 import breathecode.activity.tasks as tasks_activity
+import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
+from breathecode.services.daily.client import DailyClient
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
@@ -601,11 +607,11 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         like = self.request.GET.get("like")
         if like:
             items = items.filter(title__icontains=like)
-        
+
         # Check if CSV format is requested (detected from URL path)
-        if request.path.endswith('.csv'):
+        if request.path.endswith(".csv"):
             return self._async_export_as_csv(items, academy_id)
-        
+
         # Default JSON response
         items = handler.queryset(items)
         serializer = EventSmallSerializerNoAcademy(items, many=True)
@@ -614,37 +620,40 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
 
     def _async_export_as_csv(self, queryset, academy_id):
         """Export events to CSV format asynchronously (following AdminExportCsvMixin pattern)"""
-        from breathecode.monitoring.tasks import async_download_csv
-        from breathecode.events.models import Event
         from breathecode.authenticate.actions import get_user_language
-        
+        from breathecode.events.models import Event
+        from breathecode.monitoring.tasks import async_download_csv
+
         lang = get_user_language(self.request)
         meta = Event._meta
         ids = list(queryset.values_list("pk", flat=True))
-        
+
         if not ids:
             raise ValidationException(
                 translation(
                     lang,
                     en="No events found to export",
                     es="No se encontraron eventos para exportar",
-                    slug="no-events-to-export"
+                    slug="no-events-to-export",
                 ),
-                404
+                404,
             )
-        
+
         # Use the exact same pattern as AdminExportCsvMixin
         async_download_csv.delay(Event.__module__, meta.object_name, ids, academy_id)
-        
-        return Response({
-            'message': translation(
-                lang,
-                en='Data is being downloaded, check downloads for status.',
-                es='Los datos se están descargando, revisa downloads para el estado.',
-                slug="csv-export-started"
-            ),
-            'total_events': len(ids)
-        }, status=202)
+
+        return Response(
+            {
+                "message": translation(
+                    lang,
+                    en="Data is being downloaded, check downloads for status.",
+                    es="Los datos se están descargando, revisa downloads para el estado.",
+                    slug="csv-export-started",
+                ),
+                "total_events": len(ids),
+            },
+            status=202,
+        )
 
     @capable_of("crud_event")
     def post(self, request, format=None, academy_id=None):
@@ -661,18 +670,68 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 )
             )
 
+        create_meet = request.data.get("create_meet", False)
+        if isinstance(create_meet, str):
+            create_meet = create_meet.lower() in ["1", "true", "yes"]
+
+        meet_private = request.data.get("meet_private", True)
+        if isinstance(meet_private, str):
+            meet_private = meet_private.lower() in ["1", "true", "yes"]
+
         data = {}
         for key in request.data.keys():
+            if key in ("create_meet", "meet_private"):
+                continue
             data[key] = request.data.get(key)
 
         data["sync_status"] = "PENDING"
 
         serializer = EventSerializer(
-            data={**data, "academy": academy.id}, context={"lang": lang, "academy_id": academy_id}
+            data={**data, "academy": academy.id},
+            context={
+                "lang": lang,
+                "academy_id": academy_id,
+                "allow_missing_live_stream_url": bool(create_meet),
+            },
         )
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            with transaction.atomic():
+                event = serializer.save()
+
+                if (
+                    create_meet
+                    and getattr(event, "online_event", False)
+                    and not getattr(event, "live_stream_url", None)
+                ):
+                    provider = request.data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+                    try:
+                        if provider == "daily":
+                            margin = timedelta(hours=1)
+                            target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
+                            exp_epoch = int(target_end.timestamp())
+                            room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                            if room and room.get("url"):
+                                event.live_stream_url = room["url"]
+                                event.save(update_fields=["live_stream_url"])
+
+                        else:
+                            meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                            if meet_base:
+                                event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
+                                event.save(update_fields=["live_stream_url"])
+
+                            tasks_events.create_livekit_room_for_event.delay(event.id)
+
+                        serializer = EventSerializer(event, many=False)
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to auto-create meeting room for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                        )
+                        raise ValidationException(
+                            f"Failed to auto-create meeting room for event {getattr(event, 'id', None)} in academy {academy_id}: {str(e)}"
+                        )
+
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_event")
@@ -727,16 +786,76 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
         index = -1
         for data in data_list:
             index += 1
+            create_meet = data.get("create_meet")
+            if isinstance(create_meet, str):
+                create_meet = create_meet.lower() in ["1", "true", "yes"]
+            meet_private = data.get("meet_private")
+            if isinstance(meet_private, str):
+                meet_private = meet_private.lower() in ["1", "true", "yes"]
+
+            payload = {k: v for k, v in data.items() if k not in ("create_meet", "meet_private")}
+
             serializer = EventPUTSerializer(
-                all_events[index], data=data, context={"lang": lang, "request": request, "academy_id": academy_id}
+                all_events[index],
+                data=payload,
+                context={
+                    "lang": lang,
+                    "request": request,
+                    "academy_id": academy_id,
+                    "allow_missing_live_stream_url": bool(create_meet),
+                },
             )
             all_serializers.append(serializer)
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        all_events = []
-        for serializer in all_serializers:
-            all_events.append(serializer.save())
+        with transaction.atomic():
+            all_events = []
+            for serializer in all_serializers:
+                event = serializer.save()
+                all_events.append(event)
+
+            for idx, event in enumerate(all_events):
+                data = data_list[idx] if idx < len(data_list) else {}
+                create_meet = data.get("create_meet")
+                if isinstance(create_meet, str):
+                    create_meet = create_meet.lower() in ["1", "true", "yes"]
+                meet_private = data.get("meet_private", True)
+                if isinstance(meet_private, str):
+                    meet_private = meet_private.lower() in ["1", "true", "yes"]
+
+                if create_meet and getattr(event, "online_event", False):
+                    provider = data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+                    try:
+                        if provider == "daily":
+                            margin = timedelta(hours=1)
+                            target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
+                            exp_epoch = int(target_end.timestamp())
+
+                            if not getattr(event, "live_stream_url", None):
+                                room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                                if room and room.get("url"):
+                                    event.live_stream_url = room["url"]
+                                    event.save(update_fields=["live_stream_url"])
+                            else:
+                                parsed = urlparse(event.live_stream_url)
+                                room_name = parsed.path.strip("/").split("/")[-1]
+                                DailyClient().extend_room(name=room_name, exp_in_epoch=exp_epoch)
+
+                        elif provider == "livekit":
+                            meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                            if meet_base and not getattr(event, "live_stream_url", None):
+                                event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
+                                event.save(update_fields=["live_stream_url"])
+
+                            tasks_events.create_livekit_room_for_event.delay(event.id)
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
+                        )
+                        raise ValidationException(
+                            f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
+                        )
 
         if isinstance(request.data, list):
             serializer = EventSerializer(all_events, many=True)
@@ -1054,6 +1173,51 @@ def join_event(request, token, event):
             checkin.attendee.id, "event_checkin_assisted", related_type="events.EventCheckin", related_id=checkin.id
         )
 
+    try:
+        base_url = (event.live_stream_url or "").strip()
+        normalized = base_url.lower()
+        if base_url and "daily.co" in normalized:
+            first = (checkin.attendee.first_name or "").strip()
+            last = (checkin.attendee.last_name or "").strip()
+            name = f"{first} {last}".strip() or (getattr(checkin.attendee, "email", None) or "")
+
+            data = {
+                "subject": event.title or f"Event {event.id}",
+                "room_url": event.live_stream_url,
+                "userName": name,
+                "backup_room_url": "",
+                "leave_url": "close",
+            }
+            return render(request, "daily.html", data)
+
+        if base_url and ("livekit" in normalized or "live-kit" in normalized):
+            room = f"event-{event.id}"
+            identity = str(checkin.attendee.username)
+            first = (checkin.attendee.first_name or "").strip()
+            last = (checkin.attendee.last_name or "").strip()
+            name = f"{first} {last}".strip() or (getattr(checkin.attendee, "email", None) or "")
+
+            payload = {
+                "iss": settings.LIVEKIT_API_KEY,
+                "sub": identity,
+                "name": name,
+                "nbf": int((now - timedelta(seconds=5)).timestamp()),
+                "exp": int((now + timedelta(minutes=20)).timestamp()),
+                "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True},
+            }
+            lk_token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
+
+            params = urlencode(
+                {
+                    "token": lk_token,
+                    "serverUrl": settings.LIVEKIT_URL,
+                    "participantName": name,
+                }
+            )
+            return redirect(f"{base_url}?{params}")
+    except Exception:
+        pass
+
     return redirect(event.live_stream_url)
 
 
@@ -1191,50 +1355,53 @@ class AcademyEventCheckinView(APIView):
             items = items.filter(created_at__lte=end_date)
 
         items = items.filter(**lookup)
-        
+
         # Check if CSV format is requested (detected from URL path)
-        if request.path.endswith('.csv'):
+        if request.path.endswith(".csv"):
             return self._async_export_as_csv(items, academy_id)
-        
+
         # Default JSON response
         items = handler.queryset(items)
         serializer = EventCheckinSerializer(items, many=True)
 
         return handler.response(serializer.data)
-    
+
     def _async_export_as_csv(self, queryset, academy_id):
         """Export event checkins to CSV format asynchronously"""
-        from breathecode.monitoring.tasks import async_download_csv
-        from breathecode.events.models import EventCheckin
         from breathecode.authenticate.actions import get_user_language
-        
+        from breathecode.events.models import EventCheckin
+        from breathecode.monitoring.tasks import async_download_csv
+
         lang = get_user_language(self.request)
         meta = EventCheckin._meta
         ids = list(queryset.values_list("pk", flat=True))
-        
+
         if not ids:
             raise ValidationException(
                 translation(
                     lang,
                     en="No event checkins found to export",
                     es="No se encontraron registros de asistencia para exportar",
-                    slug="no-checkins-to-export"
+                    slug="no-checkins-to-export",
                 ),
-                404
+                404,
             )
-        
+
         # Use the exact same pattern as AdminExportCsvMixin
         async_download_csv.delay(EventCheckin.__module__, meta.object_name, ids, academy_id)
-        
-        return Response({
-            'message': translation(
-                lang,
-                en='Data is being downloaded, check downloads for status.',
-                es='Los datos se están descargando, revisa downloads para el estado.',
-                slug="csv-export-started"
-            ),
-            'total_checkins': len(ids)
-        }, status=202)
+
+        return Response(
+            {
+                "message": translation(
+                    lang,
+                    en="Data is being downloaded, check downloads for status.",
+                    es="Los datos se están descargando, revisa downloads para el estado.",
+                    slug="csv-export-started",
+                ),
+                "total_checkins": len(ids),
+            },
+            status=202,
+        )
 
 
 @api_view(["POST"])
@@ -1870,3 +2037,50 @@ def live_workshop_status(request):
             result = None
         cache.set(cache_key, result, timeout=timeout)
     return Response(result)
+
+
+class LiveKitTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, event_id: int):
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            raise ValidationException(
+                translation(en=f"Event {event_id} not found", es=f"Evento {event_id} no encontrado"),
+                slug="event-not-found",
+            )
+
+        now = timezone.now()
+        open_from = event.starting_at - timedelta(minutes=10)
+        if now < open_from:
+            raise ValidationException(
+                translation(en="The live room is not open yet", es="La sala en vivo aún no está abierta"),
+                slug="room-closed",
+            )
+
+        room = f"event-{event.id}"
+        identity = str(request.user.username)
+        first = (request.user.first_name or "").strip()
+        last = (request.user.last_name or "").strip()
+        name = f"{first} {last}".strip() or (request.user.email or "")
+
+        payload = {
+            "iss": settings.LIVEKIT_API_KEY,
+            "sub": identity,
+            "name": name,
+            "nbf": int((now - timedelta(seconds=5)).timestamp()),
+            "exp": int((now + timedelta(minutes=20)).timestamp()),
+            "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True},
+        }
+
+        token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
+
+        return Response(
+            {
+                "serverUrl": settings.LIVEKIT_URL,
+                "token": token,
+                "identity": identity,
+                "room": room,
+                "participantName": name,
+            }
+        )

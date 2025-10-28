@@ -253,6 +253,14 @@ class Event(models.Model):
         help_text="This URL should have the URL of the meeting if it is an online event, if it's not online it should be empty.",
     )
 
+    calendar_event_id = models.CharField(
+        max_length=128,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Google Calendar event id linked to this event (created when the event meeting url was automatically created)",
+    )
+
     recording_url = models.URLField(
         max_length=255,
         null=True,
@@ -402,21 +410,21 @@ class EventCheckin(models.Model):
         - Calculated properties/methods: 'attendee_name'
         """
         return [
-            ('ID', 'id'),
-            ('Email', 'email'),
-            ('Attendee First Name', 'attendee.first_name'),
-            ('Attendee Last Name', 'attendee.last_name'),
-            ('Attendee Full Name', 'attendee_name'),  # Calculated property
-            ('Event ID', 'event.id'),
-            ('Event Slug', 'event.slug'),
-            ('Event Title', 'event.title'),
-            ('Academy', 'event.academy.name'),
-            ('Status', 'status'),
-            ('Created At', 'created_at'),
-            ('Attended At', 'attended_at'),
-            ('UTM Source', 'utm_source'),
-            ('UTM Medium', 'utm_medium'),
-            ('UTM Campaign', 'utm_campaign'),
+            ("ID", "id"),
+            ("Email", "email"),
+            ("Attendee First Name", "attendee.first_name"),
+            ("Attendee Last Name", "attendee.last_name"),
+            ("Attendee Full Name", "attendee_name"),  # Calculated property
+            ("Event ID", "event.id"),
+            ("Event Slug", "event.slug"),
+            ("Event Title", "event.title"),
+            ("Academy", "event.academy.name"),
+            ("Status", "status"),
+            ("Created At", "created_at"),
+            ("Attended At", "attended_at"),
+            ("UTM Source", "utm_source"),
+            ("UTM Medium", "utm_medium"),
+            ("UTM Campaign", "utm_campaign"),
         ]
 
     @property
@@ -427,7 +435,7 @@ class EventCheckin(models.Model):
         """
         if self.attendee:
             return f"{self.attendee.first_name} {self.attendee.last_name}".strip()
-        return ''
+        return ""
 
     def save(self, *args, **kwargs):
 

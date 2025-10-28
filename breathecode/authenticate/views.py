@@ -326,7 +326,10 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                 except Exception:
                     raise ValidationException(
                         translation(
-                            lang, en="The academy could not be found", es="La academia no existe o no se pudo encontrar", slug="academy-not-found"
+                            lang,
+                            en="The academy could not be found",
+                            es="La academia no existe o no se pudo encontrar",
+                            slug="academy-not-found",
                         )
                     )
 
@@ -1314,6 +1317,7 @@ def get_github_token(request, token=None):
 async def save_github_token(request):
 
     companyName = "4Geeks"
+
     def error_message(obj: Any, default: str):
         if isinstance(obj, dict):
             return obj.get("error_description") or obj.get("error") or default
@@ -2448,14 +2452,19 @@ def get_google_token(request, token=None):
     # Add academy_settings to state (avoiding duplication)
     state += f"&academysettings={academy_settings}"
 
+    force_consent = request.query_params.get("force_consent", "").lower() in ("1", "true", "yes")
+
     params = {
         "response_type": "code",
         "client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
         "redirect_uri": os.getenv("GOOGLE_REDIRECT_URL", ""),
-        "access_type": "offline",  # we need offline access to receive refresh token and avoid total expiration
+        "access_type": "offline",
         "scope": " ".join(scopes),
         "state": state,
     }
+
+    if force_consent:
+        params["prompt"] = "consent"
 
     logger.debug("Redirecting to google")
     logger.debug(params)
