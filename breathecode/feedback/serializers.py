@@ -8,7 +8,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
 
 from .actions import send_cohort_survey_group
-from .models import AcademyFeedbackSettings, Answer, Review, Survey
+from .models import AcademyFeedbackSettings, Answer, FeedbackTag, Review, Survey
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -242,6 +242,20 @@ class AcademyFeedbackSettingsSerializer(serpy.Serializer):
     updated_at = serpy.Field()
 
 
+class FeedbackTagSerializer(serpy.Serializer):
+    """Serializer for FeedbackTag (read operations)"""
+
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    priority = serpy.Field()
+    is_private = serpy.Field()
+    academy = GetAcademySerializer(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
 class AnswerPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -403,3 +417,49 @@ class AcademyFeedbackSettingsPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademyFeedbackSettings
         exclude = ("academy", "created_at", "updated_at")
+
+
+class FeedbackTagPOSTSerializer(serializers.ModelSerializer):
+    """Serializer for creating FeedbackTag"""
+
+    class Meta:
+        model = FeedbackTag
+        exclude = ("created_at", "updated_at")
+
+    def validate(self, data):
+        # Validate that if is_private is True, academy must be set
+        if data.get("is_private", False) and not data.get("academy"):
+            raise ValidationException(
+                "Private tags must have an academy assigned", code=400, slug="private-tag-needs-academy"
+            )
+
+        # Validate that public shared tags (academy=None, is_private=False) are valid
+        if not data.get("academy") and not data.get("is_private", False):
+            # This is a public shared tag - allowed
+            pass
+
+        return data
+
+
+class FeedbackTagPUTSerializer(serializers.ModelSerializer):
+    """Serializer for updating FeedbackTag"""
+
+    class Meta:
+        model = FeedbackTag
+        exclude = ("created_at", "updated_at", "slug")
+
+    def validate(self, data):
+        # Cannot change slug
+        if "slug" in data and data["slug"] != self.instance.slug:
+            raise ValidationException("Cannot change tag slug", code=400, slug="cannot-change-slug")
+
+        # Validate that if is_private is True, academy must be set
+        is_private = data.get("is_private", self.instance.is_private)
+        academy = data.get("academy", self.instance.academy)
+
+        if is_private and not academy:
+            raise ValidationException(
+                "Private tags must have an academy assigned", code=400, slug="private-tag-needs-academy"
+            )
+
+        return data

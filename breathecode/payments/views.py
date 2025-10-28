@@ -1533,14 +1533,29 @@ class AcademySubscriptionView(APIView):
                 .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
             )
 
-        if invoice_ids := request.GET.get("invoice_ids"):
-            items = items.filter(invoices__id__in=invoice_ids.split(","))
+        if invoice_param := request.GET.get("invoice"):
+            values = invoice_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(invoices__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(invoices__slug__in=values)
 
-        if service_slugs := request.GET.get("service_slugs"):
-            items = items.filter(services__slug__in=service_slugs.split(","))
+        if service_param := request.GET.get("service"):
+            values = service_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(services__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(services__slug__in=values)
 
-        if plan_slugs := request.GET.get("plan_slugs"):
-            items = items.filter(plans__slug__in=plan_slugs.split(","))
+        if plan_param := request.GET.get("plan"):
+            values = plan_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(plans__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(plans__slug__in=values)
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
@@ -1629,6 +1644,22 @@ class AcademyPlanFinancingView(APIView):
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
+
+        if invoice_param := request.GET.get("invoice"):
+            values = invoice_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(invoices__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(invoices__slug__in=values)
+
+        if plan_param := request.GET.get("plan"):
+            values = plan_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(plan__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(plan__slug__in=values)
 
         # Apply pagination and sorting
         items = handler.queryset(items)

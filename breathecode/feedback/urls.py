@@ -50,6 +50,7 @@ from django.urls import path
 from .views import (
     AcademyAnswerView,
     AcademyFeedbackSettingsView,
+    AcademyFeedbackTagView,
     AcademySurveyTemplateView,
     AcademySurveyView,
     AnswerMeView,
@@ -80,4 +81,7 @@ urlpatterns = [
     # TODO: missing tests
     path("academy/answer/<int:answer_id>", AcademyAnswerView.as_view(), name="academy_answer_id"),
     path("academy/feedbacksettings", AcademyFeedbackSettingsView.as_view(), name="academy_feedback_settings"),
+    # FeedbackTag endpoints
+    path("academy/tag", AcademyFeedbackTagView.as_view(), name="academy_feedback_tag"),
+    path("academy/tag/<int:tag_id>", AcademyFeedbackTagView.as_view(), name="academy_feedback_tag_id"),
 ]
