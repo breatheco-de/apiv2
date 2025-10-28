@@ -256,6 +256,8 @@ class GetBigAcademySerializer(serpy.Serializer):
     linkedin_url = serpy.Field()
     youtube_url = serpy.Field()
     is_hidden_on_prework = serpy.Field()
+    white_labeled = serpy.Field()
+    white_label_url = serpy.Field()
     white_label_features = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
 
