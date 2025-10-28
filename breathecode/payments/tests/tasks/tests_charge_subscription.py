@@ -6,6 +6,7 @@ import logging
 import os
 import random
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -41,6 +42,10 @@ def subscription_item(data={}):
         "status": "ACTIVE",
         "user_id": 1,
         "valid_until": UTC_NOW,
+        "auto_recharge_enabled": False,
+        "recharge_threshold_amount": Decimal("10.00"),
+        "recharge_amount": Decimal("10.00"),
+        "max_period_spend": None,
         **data,
     }
 
@@ -52,6 +57,7 @@ def bag_item(data={}):
         "amount_per_quarter": 0.0,
         "amount_per_half": 0.0,
         "amount_per_year": 0.0,
+        "seat_service_item_id": None,
         "currency_id": 0,
         "status": "CHECKING",
         "type": "CHARGE",
@@ -85,6 +91,7 @@ def invoice_item(data={}):
         "payment_method_id": None,
         "proof_id": None,
         "externally_managed": False,
+        "amount_refunded": 0.0,
         **data,
     }
 
@@ -799,7 +806,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(
             logging.Logger.error.call_args_list,
             [
-                call("Subscription with id 1 is deprecated", exc_info=True),
+                call("Subscription with id 1 is in status DEPRECATED and cannot be charged", exc_info=True),
             ],
         )
 
@@ -810,17 +817,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         subscription_list = self.bc.database.list_of("payments.Subscription")
         self.assertEqual(len(subscription_list), 1)
         self.assertEqual(subscription_list[0]["id"], 1)
-        assert notify_actions.send_email_message.call_args_list == [
-            call(
-                "message",
-                model.user.email,
-                {
-                    "SUBJECT": f"Your 4Geeks subscription to {model.plan.slug} has been discontinued",
-                    "MESSAGE": f"We regret to inform you that your 4Geeks subscription to {model.plan.slug} has been discontinued.",
-                },
-                academy=model.academy,
-            )
-        ]
+        assert notify_actions.send_email_message.call_args_list == []
         assert activity_tasks.add_activity.delay.call_args_list == []
         assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 
@@ -863,7 +860,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(
             logging.Logger.error.call_args_list,
             [
-                call("Subscription with id 1 is deprecated", exc_info=True),
+                call("Subscription with id 1 is in status DEPRECATED and cannot be charged", exc_info=True),
             ],
         )
 
@@ -874,19 +871,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         subscription_list = self.bc.database.list_of("payments.Subscription")
         self.assertEqual(len(subscription_list), 1)
         self.assertEqual(subscription_list[0]["id"], 1)
-        assert notify_actions.send_email_message.call_args_list == [
-            call(
-                "message",
-                model.user.email,
-                {
-                    "SUBJECT": f"Your 4Geeks subscription to {model.plan.slug} has been discontinued",
-                    "MESSAGE": f"We regret to inform you that your 4Geeks subscription to {model.plan.slug} has been discontinued. Please check our suggested plans for alternatives.",
-                    "LINK": f"{get_app_url()}/checkout?plan={model.plan_offer.suggested_plan.slug}",
-                    "BUTTON": "See suggested plan",
-                },
-                academy=model.academy,
-            )
-        ]
+        assert notify_actions.send_email_message.call_args_list == []
         assert activity_tasks.add_activity.delay.call_args_list == []
         assert self.bc.database.list_of("task_manager.ScheduledTask") == []
 

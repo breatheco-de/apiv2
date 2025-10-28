@@ -359,6 +359,15 @@ class EventHookCheckinSerializer(serpy.Serializer):
     attended_at = serpy.Field()
     attendee = UserSerializer(required=False)
     event = EventJoinSmallSerializer()
+    user_language = serpy.MethodField()
+
+    def get_user_language(self, obj):
+        if obj.attendee:
+            from breathecode.authenticate.actions import get_user_settings
+
+            settings = get_user_settings(obj.attendee.id)
+            return settings.lang
+        return None
 
 
 class EventSerializer(serializers.ModelSerializer):
@@ -413,7 +422,12 @@ class EventSerializer(serializers.ModelSerializer):
 
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
-        if online_event == True and (live_stream_url is None or live_stream_url == ""):
+        allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
+        if (
+            online_event == True
+            and (live_stream_url is None or live_stream_url == "")
+            and not allow_missing_live_stream_url
+        ):
             raise ValidationException(
                 translation(
                     lang,
@@ -523,10 +537,12 @@ class EventPUTSerializer(serializers.ModelSerializer):
 
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
+        allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
         if (
             online_event == True
             and (live_stream_url is None or live_stream_url == "")
             and (self.instance.live_stream_url is None or self.instance.live_stream_url == "")
+            and not allow_missing_live_stream_url
         ):
             raise ValidationException(
                 translation(

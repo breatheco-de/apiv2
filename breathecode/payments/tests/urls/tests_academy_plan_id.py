@@ -21,12 +21,17 @@ def academy_serializer(academy):
 def service_item_serializer(service_item, service):
     return {
         "how_many": service_item.how_many,
+        "is_team_allowed": False,
         "service": {
+            "consumer": "NO_SET",
             "groups": [],
+            "icon_url": service.icon_url,
+            "id": service.id,
             "private": service.private,
+            "session_duration": None,
             "slug": service.slug,
             "title": service.title,
-            "icon_url": service.icon_url,
+            "type": "COHORT_SET",
         },
         "unit_type": service_item.unit_type,
         "sort_priority": service_item.sort_priority,
@@ -61,6 +66,10 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
             "code": currency.code,
             "name": currency.name,
         },
+        "add_ons": [],
+        "title": event.title,
+        "seat_service_price": None,
+        "consumption_strategy": event.consumption_strategy,
         "financing_options": financing_options,
         "pricing_ratio_exceptions": event.pricing_ratio_exceptions,
         "has_available_cohorts": len(cohorts) > 0,
@@ -87,6 +96,9 @@ def put_serializer(
 
     return {
         "add_ons": [],
+        "seat_service_price": None,
+        "consumption_strategy": event.consumption_strategy,
+        "title": event.title,
         "id": event.id,
         "slug": event.slug,
         "currency": currency.id,

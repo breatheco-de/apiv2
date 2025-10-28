@@ -1,12 +1,14 @@
 from datetime import timedelta
+from typing import Any
 
 from adrf.views import APIView
 from capyc.core.i18n import translation
 from capyc.core.shorteners import C
 from capyc.rest_framework.exceptions import PaymentException, ValidationException
+from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import CharField, Count, F, Q, Value
+from django.db.models import CharField, Count, F, Q, QuerySet, Value
 from django.utils import timezone
 from django_redis import get_redis_connection
 from linked_services.rest_framework.decorators import scope
@@ -16,12 +18,12 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.commission.tasks import register_referral_from_invoice
-from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language
+from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
@@ -36,7 +38,7 @@ from breathecode.payments.actions import (
     get_discounted_price,
     max_coupons_allowed,
 )
-from breathecode.payments.caches import PlanOfferCache
+from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
     AcademyService,
     Bag,
@@ -49,20 +51,27 @@ from breathecode.payments.models import (
     FinancialReputation,
     Invoice,
     MentorshipServiceSet,
+    PaymentContact,
     PaymentMethod,
     Plan,
     PlanFinancing,
     PlanOffer,
+    PlanServiceItem,
     Seller,
     Service,
     ServiceItem,
     Subscription,
+    SubscriptionBillingTeam,
+    SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
+    BillingTeamAutoRechargeSerializer,
+    GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
+    GetCouponWithPlansSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetInvoiceSerializer,
@@ -613,9 +622,7 @@ class ServiceItemView(APIView):
 class MeConsumableView(APIView):
 
     def get(self, request):
-        utc_now = timezone.now()
-
-        items = Consumable.objects.filter(Q(valid_until__gte=utc_now) | Q(valid_until=None), user=request.user)
+        items = Consumable.list(user=request.user)
 
         mentorship_services = MentorshipServiceSet.objects.none()
         mentorship_services = filter_consumables(request, items, mentorship_services, "mentorship_service_set")
@@ -653,6 +660,64 @@ class AppConsumableView(MeConsumableView):
             raise ValidationException("User not provided", code=400)
 
         return super().get(request)
+
+
+class AcademyConsumableView(APIView):
+    """
+    Academy endpoint to view consumables for users in the academy.
+    Filters by academy_id (from request header) and allows filtering by users and service slugs.
+    """
+
+    @capable_of("read_consumable")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+        utc_now = timezone.now()
+
+        # Start with consumables that belong to the academy through subscriptions or plan_financings
+        items = Consumable.objects.filter(
+            Q(valid_until__gte=utc_now) | Q(valid_until=None),
+            Q(subscription__academy_id=academy_id) | Q(plan_financing__academy_id=academy_id),
+        ).exclude(how_many=0)
+
+        # Filter by users if provided (comma-separated list of user IDs)
+        if users := request.GET.get("users"):
+            try:
+                user_ids = [int(x.strip()) for x in users.split(",") if x.strip()]
+                items = items.filter(user_id__in=user_ids)
+            except ValueError:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="users parameter must contain comma-separated integers",
+                        es="El parámetro users debe contener enteros separados por comas",
+                        slug="invalid-users-param",
+                    ),
+                    code=400,
+                )
+
+        # Filter by service slugs if provided (comma-separated list)
+        if service_slugs := request.GET.get("service"):
+            slugs = [s.strip() for s in service_slugs.split(",") if s.strip()]
+            items = items.filter(service_item__service__slug__in=slugs)
+
+        # Group by resource types
+        mentorship_services = MentorshipServiceSet.objects.none()
+        mentorship_services = filter_consumables(request, items, mentorship_services, "mentorship_service_set")
+
+        cohorts = CohortSet.objects.none()
+        cohorts = filter_consumables(request, items, cohorts, "cohort_set")
+
+        event_types = EventTypeSet.objects.none()
+        event_types = filter_consumables(request, items, event_types, "event_type_set")
+
+        balance = {
+            "mentorship_service_sets": get_balance_by_resource(mentorship_services, "mentorship_service_set"),
+            "cohort_sets": get_balance_by_resource(cohorts, "cohort_set"),
+            "event_type_sets": get_balance_by_resource(event_types, "event_type_set"),
+            "voids": filter_void_consumable_balance(request, items),
+        }
+
+        return Response(balance)
 
 
 class MentorshipServiceSetView(APIView):
@@ -820,6 +885,12 @@ class MeSubscriptionView(APIView):
             ids = [int(x) for x in invoice if x.isnumeric()]
             subscriptions = subscriptions.filter(invoices__id__in=ids)
             plan_financings = plan_financings.filter(invoices__id__in=ids)
+
+        # Filter by academy (accepts id(s) or slug(s))
+        if academy := request.GET.get("academy"):
+            args, kwargs = self.get_lookup("academy", academy)
+            subscriptions = subscriptions.filter(*args, **kwargs)
+            plan_financings = plan_financings.filter(*args, **kwargs)
 
         if service := request.GET.get("service"):
             service_items_args, service_items_kwargs = self.get_lookup("service_items__service", service)
@@ -1057,13 +1128,17 @@ class MePlanFinancingChargeView(APIView):
 
 class AcademySubscriptionView(APIView):
 
-    extensions = APIViewExtensions(sort="-id", paginate=True)
+    extensions = APIViewExtensions(sort="-id", paginate=True, cache=SubscriptionCache, cache_per_user=True)
 
     @capable_of("read_subscription")
     def get(self, request, subscription_id=None, academy_id=None):
         handler = self.extensions(request)
-        lang = get_user_language(request)
 
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        lang = get_user_language(request)
         now = timezone.now()
 
         if subscription_id:
@@ -1112,7 +1187,8 @@ class AcademySubscriptionView(APIView):
             items = items.filter(user__id=int(user_id))
 
         items = handler.queryset(items)
-        serializer = GetSubscriptionSerializer(items, many=True)
+
+        serializer = GetAbstractIOweYouSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -1156,10 +1232,17 @@ class AcademySubscriptionView(APIView):
 
 class AcademyPlanFinancingView(APIView):
 
-    extensions = APIViewExtensions(sort="-id", paginate=True)
+    extensions = APIViewExtensions(sort="-id", paginate=True, cache=PlanFinancingCache, cache_per_user=True)
 
     def get(self, request, financing_id=None, academy_id=None):
         handler = self.extensions(request)
+
+        # Check cache first to avoid expensive database queries
+        cache = handler.cache.get()
+        if cache is not None:
+            logger.info(f"AcademyPlanFinancingView: Returning cached data for user {request.user.id}")
+            return cache
+
         lang = get_user_language(request)
         now = timezone.now()
 
@@ -1177,15 +1260,21 @@ class AcademyPlanFinancingView(APIView):
             serializer = GetPlanFinancingSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = PlanFinancing.objects.annotate(
-            fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED"))
-        ).filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+        # Optimize query with select_related and prefetch_related
+        items = (
+            PlanFinancing.objects.select_related("user", "plan", "currency")
+            .prefetch_related("invoices")
+            .annotate(fulfilled_invoices_count=Count("invoices", filter=Q(invoices__status="FULFILLED")))
+            .filter(Q(valid_until__gte=now) | Q(fulfilled_invoices_count__gte=F("how_many_installments")))
+        )
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
 
+        # Apply pagination and sorting
         items = handler.queryset(items)
-        serializer = GetPlanFinancingSerializer(items, many=True)
+
+        serializer = GetAbstractIOweYouSmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
@@ -1248,7 +1337,7 @@ class MeInvoiceView(APIView):
                     translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
                 )
 
-            serializer = GetInvoiceSerializer(item, many=True)
+            serializer = GetInvoiceSerializer(item, many=False)
             return handler.response(serializer.data)
 
         items = Invoice.objects.filter(user=request.user)
@@ -1266,65 +1355,59 @@ class UserCouponView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     def get(self, request):
-        user = request.user
-        lang = get_user_language(request)
+        try:
+            user = request.user
+            lang = get_user_language(request)
 
-        # Check if the user already has coupons as a seller
-        seller = Seller.objects.filter(user=user).first()
+            # Check if the user already has coupons as a seller
+            seller = Seller.objects.filter(user=user).first()
 
-        if not seller:
-            # Create a new seller for this user
-            seller = Seller(
-                name=f"{user.first_name} {user.last_name}".strip() or f"User {user.id}",
-                user=user,
-                type=Seller.Partner.INDIVIDUAL,
-                is_active=True,
-            )
-            seller.save()
-
-        # Get existing coupons for this seller
-        coupons = Coupon.objects.filter(seller=seller)
-
-        # If no coupons exist, create one
-        if not coupons.exists():
-            # Look for the plan by slug - this could be made configurable
-            plan_slug = request.GET.get("plan_slug", "4geeks-plus-subscription")
-            plan = Plan.objects.filter(slug=plan_slug).first()
-
-            if not plan:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en=f"Required plan '{plan_slug}' not found",
-                        es=f"Plan requerido '{plan_slug}' no encontrado",
-                        slug="plan-not-found",
-                    ),
-                    code=404,
+            if not seller:
+                # Create a new seller for this user
+                seller = Seller(
+                    name=f"{user.first_name}".strip() or f"User {user.id}",
+                    user=user,
+                    type=Seller.Partner.INDIVIDUAL,
+                    is_active=True,
                 )
+                seller.save()
 
-            # Create a unique slug for the coupon
-            slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
-
-            coupon = Coupon(
-                slug=slug,
-                discount_type=Coupon.Discount.PERCENT_OFF,
-                discount_value=0.1,  # 10% discount
-                referral_type=Coupon.Referral.PERCENTAGE,
-                referral_value=0.1,  # 10% commission
-                auto=False,
-                how_many_offers=-1,  # No limit
-                seller=seller,
-            )
-            coupon.save()
-
-            # Add the plan to the coupon
-            coupon.plans.add(plan)
-
-            # Reload the coupons
+            # Get existing coupons for this seller
             coupons = Coupon.objects.filter(seller=seller)
 
-        serializer = GetCouponSerializer(coupons, many=True)
-        return Response(serializer.data)
+            # If no coupons exist, create one
+            if not coupons.exists():
+
+                # Create a unique slug for the coupon
+                slug = f"{Coupon.generate_coupon_key(prefix=f"referral")}-{user.id}"
+
+                coupon = Coupon(
+                    slug=slug,
+                    discount_type=Coupon.Discount.PERCENT_OFF,
+                    discount_value=0.1,  # 10% discount
+                    referral_type=Coupon.Referral.PERCENTAGE,
+                    referral_value=0.1,  # 10% commission
+                    auto=False,
+                    how_many_offers=-1,  # No limit
+                    seller=seller,
+                )
+                coupon.save()
+                # Note: Since we don't specify plans, all plans are available for this
+                # coupon, so, for referrals, we control each plan with the bool "exclude_from_referral_program"
+
+                # Reload the coupons
+                coupons = Coupon.objects.filter(seller=seller)
+
+            serializer = GetCouponWithPlansSerializer(coupons, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            print(e)
+            raise ValidationException(
+                translation(
+                    lang, en="Error getting coupons", es="Error al obtener los cupones", slug="error-getting-coupons"
+                ),
+                code=500,
+            )
 
 
 class MeUserCouponsView(APIView):
@@ -1333,7 +1416,7 @@ class MeUserCouponsView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
     def get(self, request):
-        """Get all coupons that the current user can use."""
+        """Get all coupons that the current user can use, with validity status."""
         handler = self.extensions(request)
         user = request.user
         utc_now = timezone.now()
@@ -1345,10 +1428,58 @@ class MeUserCouponsView(APIView):
             allowed_user=user,
         ).exclude(how_many_offers=0)
 
+        plan = request.GET.get("plan")
+        if plan:
+            plan = Plan.objects.get(slug=plan)
+        else:
+            # NO_REFERRAL coupons doesn't should have any plans because it works for all of them, so use any
+            plan = Plan.objects.first()
+        slugs = list(user_restricted_coupons.values_list("slug", flat=True))
+
+        valid_coupons = get_available_coupons(plan=plan, coupons=slugs, user=user, only_sent_coupons=True)
+        valid_coupon_ids = {coupon.id for coupon in valid_coupons}
+
         coupons = handler.queryset(user_restricted_coupons)
-        serializer = GetCouponSerializer(coupons, many=True)
+        # Mark each coupon as valid or invalid
+        for coupon in coupons:
+            coupon._is_valid = coupon.id in valid_coupon_ids
+        # Convert to list to ensure evaluation
+        coupons_list = list(coupons)
+        serializer = GetCouponSerializer(coupons_list, many=True)
+
+        # Add is_valid field to each coupon in the response
+        for i, coupon_data in enumerate(serializer.data):
+            coupon_data["is_valid"] = getattr(coupons_list[i], "_is_valid", False)
 
         return handler.response(serializer.data)
+
+    def put(self, request, coupon_slug):
+        """Activate automatic application of a user's coupon."""
+        lang = get_user_language(request)
+        user = request.user
+
+        # Buscar el cupón del usuario
+        coupon = Coupon.objects.filter(slug=coupon_slug, allowed_user=user).first()
+
+        if not coupon:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Coupon {coupon_slug} not found",
+                    es=f"Cupón {coupon_slug} no encontrado",
+                    slug="coupon-not-found",
+                ),
+                code=404,
+            )
+        coupon.auto = not coupon.auto
+        coupon.save()
+
+        return Response(
+            {
+                "coupon_slug": coupon.slug,
+                "auto": coupon.auto,
+            }
+        )
 
 
 class AcademyInvoiceView(APIView):
@@ -1429,6 +1560,47 @@ class CardView(APIView):
 
 class V2CardView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    def get(self, request):
+        """
+        Get payment method information for the authenticated user.
+
+        Query Parameters:
+            - academy_id (required): Academy to check payment method for.
+
+        Returns:
+            200: Payment method information
+            {
+                "has_payment_method": true,
+                "card_last4": "4242",
+                "card_brand": "Visa",
+                "card_exp_month": 12,
+                "card_exp_year": 2025
+            }
+        """
+        lang = get_user_language(request)
+        academy = get_academy_from_body(request.query_params.dict(), lang=lang, raise_exception=False)
+
+        if not academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="An academy organization must be specified in order to retrieve payment information for the contact",
+                    es="Se debe especificar una organización de academia para recuperar la información de pago del contacto",
+                    slug="academy-required",
+                ),
+                code=400,
+            )
+
+        # Return info for specific academy
+        s = Stripe(academy=academy)
+        s.set_language(lang)
+        info = s.get_payment_method_info(request.user)
+
+        if info:
+            return Response(info)
+
+        return Response({"has_payment_method": False})
 
     def post(self, request):
         lang = get_user_language(request)
@@ -1695,7 +1867,7 @@ class PlanOfferView(APIView):
 
 class CouponBaseView(APIView):
 
-    def get_coupons(self) -> list[Coupon]:
+    def get_coupons(self, only_sent_coupons: bool = False) -> list[Coupon]:
         plan_pk: str = self.request.GET.get("plan")
         if not plan_pk:
             raise ValidationException(
@@ -1730,7 +1902,9 @@ class CouponBaseView(APIView):
         else:
             coupon_codes = []
 
-        return get_available_coupons(plan, coupons=coupon_codes, user=self.request.user)
+        return get_available_coupons(
+            plan, coupons=coupon_codes, user=self.request.user, only_sent_coupons=only_sent_coupons
+        )
 
 
 class CouponView(CouponBaseView):
@@ -1747,7 +1921,7 @@ class BagCouponView(CouponBaseView):
 
     def put(self, request, bag_id):
         lang = get_user_language(request)
-        coupons = self.get_coupons()
+        coupons = self.get_coupons(only_sent_coupons=True)
 
         # do no show the bags of type preview they are build
         client = None
@@ -1903,6 +2077,18 @@ class CheckingView(APIView):
         country_code = request.data.get("country_code")
 
         lang = get_user_language(request)
+
+        # Validate supported bag types early to avoid using an uninitialized 'bag'
+        if bag_type not in {"BAG", "PREVIEW"}:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid type. Allowed values are 'BAG' or 'PREVIEW'",
+                    es="Tipo inválido. Los valores permitidos son 'BAG' o 'PREVIEW'",
+                    slug="invalid-bag-type",
+                ),
+                code=400,
+            )
 
         client = None
         if IS_DJANGO_REDIS:
@@ -2120,6 +2306,9 @@ class ConsumableCheckoutView(APIView):
         total_items = request.data.get("how_many")
         academy = request.data.get("academy")
         country_code = request.data.get("country_code")
+        is_team_allowed = request.data.get("is_team_allowed")
+        if is_team_allowed is None:
+            is_team_allowed = True
 
         if not service:
             raise ValidationException(
@@ -2203,7 +2392,7 @@ class ConsumableCheckoutView(APIView):
                 code=400,
             )
 
-        elif service.type not in ["MENTORSHIP_SERVICE_SET", "EVENT_TYPE_SET", "VOID"]:
+        elif service.type not in ["MENTORSHIP_SERVICE_SET", "EVENT_TYPE_SET", "VOID", "SEAT"]:
             raise ValidationException(
                 translation(
                     lang,
@@ -2222,7 +2411,7 @@ class ConsumableCheckoutView(APIView):
             kwargs["available_event_type_sets"] = event_type_set
 
         academy_service = AcademyService.objects.filter(academy_id=academy, service=service, **kwargs).first()
-        if not academy_service:
+        if not academy_service and service.type != "SEAT":
             raise ValidationException(
                 translation(
                     lang,
@@ -2233,6 +2422,251 @@ class ConsumableCheckoutView(APIView):
                 code=404,
             )
 
+        if is_team_allowed not in [True, False]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="is_team_allowed must be a boolean",
+                    es="is_team_allowed debe ser un booleano",
+                    slug="is_team_allowed-must-be-a-boolean",
+                ),
+                code=400,
+            )
+
+        # Seats purchase flow: increase team seats for an existing subscription
+        if service.type == "SEAT":
+            seats = total_items
+
+            subscription_id = request.data.get("subscription")
+            if not subscription_id or not isinstance(subscription_id, int):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Subscription is required",
+                        es="La suscripción es requerida",
+                        slug="subscription-is-required",
+                    ),
+                    code=400,
+                )
+
+            subscription = Subscription.objects.filter(id=subscription_id).first()
+            if not subscription:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Subscription not found",
+                        es="Suscripción no encontrada",
+                        slug="subscription-not-found",
+                    ),
+                    code=404,
+                )
+
+            if subscription.user_id != request.user.id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Only the owner can manage seats",
+                        es="Solo el dueño puede gestionar asientos",
+                        slug="only-owner-allowed",
+                    ),
+                    code=403,
+                )
+
+            plan = subscription.plans.first()
+            if not plan or not plan.seat_service_price:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan does not support team seats",
+                        es="Plan no soporta asientos de equipo",
+                        slug="plan-does-not-support-team-seats",
+                    ),
+                    code=400,
+                )
+
+            if seats is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Seats is required to update team capacity",
+                        es="Se requieren asientos para actualizar la capacidad del equipo",
+                        slug="seats-required",
+                    ),
+                    code=400,
+                )
+
+            created_team = False
+            team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+            current_limit = team.additional_seats if team else 0
+            desired_limit = seats
+            delta = desired_limit - current_limit
+
+            if delta <= 0:
+                # TODO: in a future you should decrease the seats limit and return a invoice with no amount
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Desired seats must be greater than current seats",
+                        es="Los asientos deseados deben ser mayores que los asientos actuales",
+                        slug="desired-seats-must-be-greater",
+                    ),
+                    code=400,
+                )
+
+            # use seat service pricing set on plan
+            academy_service = plan.seat_service_price
+
+            # price seats delta with pricing ratios
+            amount, currency, pricing_ratio_explanation = academy_service.get_discounted_price(delta, country_code)
+
+            if amount <= 0.5:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="The amount is too low",
+                        es="El monto es muy bajo",
+                        slug="the-amount-is-too-low",
+                    ),
+                    code=400,
+                )
+
+            academy = subscription.academy
+            s = Stripe(academy=academy)
+
+            invoice = None
+            with transaction.atomic():
+                sid = transaction.savepoint()
+                try:
+                    s.set_language(lang)
+                    s.add_contact(request.user)
+
+                    # keeps this inside a transaction
+                    bag = Bag(
+                        type="CHARGE",
+                        status="PAID",
+                        was_delivered=True,
+                        user=request.user,
+                        currency=currency,
+                        academy=academy,
+                        is_recurrent=False,
+                        country_code=country_code,
+                        pricing_ratio_explanation=pricing_ratio_explanation,
+                    )
+                    if pricing_ratio_explanation and pricing_ratio_explanation.get("service_items"):
+                        bag.pricing_ratio_explanation = pricing_ratio_explanation
+
+                    bag.save()
+
+                    description = f"Increase team seats by {int(delta)} (to {int(desired_limit)})"
+                    invoice = s.pay(
+                        request.user,
+                        bag,
+                        amount,
+                        currency=bag.currency.code.lower(),
+                        description=description,
+                        subscription_billing_team=team,
+                    )
+
+                    # Ensure billing team exists and update seats limit
+                    if not team:
+                        created_team = True
+                        # Add +1 seat for owner (first seat is free)
+                        team = SubscriptionBillingTeam.objects.create(
+                            subscription=subscription,
+                            name=f"Team {subscription.id}",
+                            additional_seats=desired_limit,
+                            consumption_strategy=(
+                                plan.consumption_strategy
+                                if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
+                                else Plan.ConsumptionStrategy.PER_SEAT
+                            ),
+                        )
+
+                        service_item, _ = ServiceItem.objects.get_or_create(
+                            service=service,
+                            how_many=desired_limit,
+                            is_team_allowed=True,
+                        )
+
+                        # mark subscription has billing team
+                        subscription.has_billing_team = True
+                        subscription.seat_service_item = service_item
+                        subscription.save(update_fields=["has_billing_team", "seat_service_item"])
+
+                        # add owner as first seat
+                        seat, _ = SubscriptionSeat.objects.get_or_create(
+                            billing_team=team,
+                            user=subscription.user,
+                            email=(subscription.user.email or "").strip().lower(),
+                            defaults={"is_active": True},
+                        )
+
+                        # migrate existing consumables with support for team seats
+                        existing_consumables = Consumable.objects.filter(
+                            subscription=subscription,
+                            user=subscription.user,
+                            service_item__is_team_allowed=True,
+                        )
+
+                        if plan.consumption_strategy == Plan.ConsumptionStrategy.PER_TEAM:
+                            existing_consumables.update(
+                                user=None,
+                                subscription_billing_team=team,
+                            )
+
+                        else:
+                            existing_consumables.update(
+                                subscription_seat=seat,
+                                subscription_billing_team=team,
+                            )
+
+                    else:
+                        # update seats limit and log
+                        try:
+                            seats_log = team.seats_log or []
+                        except Exception:
+                            seats_log = []
+                        seats_log.append(
+                            {
+                                "action": "LIMIT_UPDATED",
+                                "from": int(current_limit),
+                                "to": int(desired_limit),
+                                "created_at": timezone.now().isoformat().replace("+00:00", "Z"),
+                            }
+                        )
+                        team.seats_log = seats_log
+                        team.additional_seats = desired_limit
+                        team.consumption_strategy = (
+                            plan.consumption_strategy
+                            if plan.consumption_strategy != Plan.ConsumptionStrategy.BOTH
+                            else Plan.ConsumptionStrategy.PER_SEAT
+                        )
+                        team.save(update_fields=["seats_log", "additional_seats", "consumption_strategy"])
+
+                    if created_team:
+                        tasks.build_service_stock_scheduler_from_subscription.delay(subscription.id)
+
+                    tasks_activity.add_activity.delay(
+                        request.user.id,
+                        "checkout_completed",
+                        related_type="payments.Invoice",
+                        related_id=invoice.id,
+                    )
+
+                except Exception as e:
+                    if invoice:
+                        s.set_language(lang)
+                        s.refund_payment(invoice)
+
+                    transaction.savepoint_rollback(sid)
+                    raise e
+
+                transaction.savepoint_commit(sid)
+
+            serializer = GetInvoiceSerializer(invoice, many=False)
+            return Response(serializer.data, status=201)
+
+        # Default flow: buy consumables for mentorship/events
         academy_service.validate_transaction(total_items, lang)
         amount, currency, pricing_ratio_explanation = academy_service.get_discounted_price(total_items, country_code)
 
@@ -2251,7 +2685,9 @@ class ConsumableCheckoutView(APIView):
             try:
                 s.set_language(lang)
                 s.add_contact(request.user)
-                service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=total_items)
+                service_item, _ = ServiceItem.objects.get_or_create(
+                    service=service, how_many=total_items, is_team_allowed=is_team_allowed
+                )
 
                 # keeps this inside a transaction
                 bag = Bag(
@@ -2482,6 +2918,8 @@ class PayView(APIView):
                             bag.currency = c
                             bag.save()
 
+                        # Initialize add-ons to zero by default
+                        add_ons_amount = 0
                         if request.data.get("add_ons"):
                             add_ons_amount = actions.manage_plan_financing_add_ons(request, bag, lang)
 
@@ -2607,20 +3045,9 @@ class PayView(APIView):
 
                 if plans := bag.plans.all():
                     for plan in plans:
-                        if plan.owner:
-                            admissions_tasks.build_profile_academy.delay(plan.owner.id, bag.user.id)
-
-                        if not plan.cohort_set or not (cohort := request.GET.get("selected_cohort")):
-                            continue
-
-                        cohort = plan.cohort_set.cohorts.filter(slug=cohort).first()
-                        if not cohort:
-                            continue
-
-                        admissions_tasks.build_cohort_user.delay(cohort.id, bag.user.id)
-
-                        if plan.owner != cohort.academy:
-                            admissions_tasks.build_profile_academy.delay(cohort.academy.id, bag.user.id)
+                        actions.grant_student_capabilities(
+                            request.user, plan, selected_cohort=request.GET.get("selected_cohort")
+                        )
 
                 has_referral_coupons = False
                 if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
@@ -2762,4 +3189,515 @@ class AcademyPaymentMethodView(APIView):
             )
 
         method.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPlanServiceItemView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        logger.info(f"AcademyPlanServiceItemView.post called by user {request.user.id}")
+        lang = get_user_language(request)
+        handler = self.extensions(request)
+
+        try:
+            request_data = request.data
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid JSON format: {str(e)}",
+                    es=f"Formato JSON inválido: {str(e)}",
+                    slug="invalid-json-format",
+                ),
+                code=400,
+            )
+
+        plan = request_data.get("plan")
+        if not plan:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="plan is required",
+                    es="plan es requerido",
+                    slug="plan-required",
+                ),
+                code=400,
+            )
+
+        plan_kwargs = {}
+        if plan and isinstance(plan, int):
+            plan_kwargs["id"] = plan
+        elif plan and isinstance(plan, str):
+            plan_kwargs["slug"] = plan
+
+        plan = Plan.objects.filter(**plan_kwargs).first()
+
+        if not plan:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan not found",
+                    es="Plan no encontrado",
+                    slug="plan-not-found",
+                ),
+                code=404,
+            )
+
+        service_item = request_data.get("service_item")
+        if not service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_item_id(s) is required",
+                    es="service_item_id(s) es requerido",
+                    slug="service-item-required",
+                ),
+                code=400,
+            )
+
+        if isinstance(service_item, int):
+            service_item_ids = [service_item]
+        elif isinstance(service_item, str):
+            if "," in service_item:
+                service_item_ids = [int(x.strip()) for x in service_item.split(",") if x.strip().isdigit()]
+            else:
+                service_item_ids = [int(service_item)]
+
+        service_items = ServiceItem.objects.filter(id__in=service_item_ids)
+        if len(service_items) != len(service_item_ids):
+            found_ids = [item.id for item in service_items]
+            missing_ids = [id for id in service_item_ids if id not in found_ids]
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Service items not found: {missing_ids}",
+                    es=f"Service items no encontrados: {missing_ids}",
+                    slug="service-item-not-found",
+                ),
+                code=404,
+            )
+
+        created_items = []
+        for service_item in service_items:
+            psi, created = PlanServiceItem.objects.get_or_create(plan=plan, service_item=service_item)
+            created_items.append(
+                {"plan_service_item_id": psi.id, "service_item_id": service_item.id, "created": created}
+            )
+
+        return handler.response(
+            {
+                "status": "ok",
+                "created_items": created_items,
+                "total_created": len([item for item in created_items if item["created"]]),
+            }
+        )
+
+    @capable_of("crud_plan")
+    def delete(self, request, academy_id=None):
+        lang = get_user_language(request)
+        handler = self.extensions(request)
+
+        try:
+            request_data = request.data
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invalid JSON format: {str(e)}",
+                    es=f"Formato JSON inválido: {str(e)}",
+                    slug="invalid-json-format",
+                ),
+                code=400,
+            )
+
+        plan_service_item = request_data.get("plan_service_item")
+        if not plan_service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="plan_service_item_id(s) is required",
+                    es="plan_service_item_id(s) es requerido",
+                    slug="plan-service-item-id-required",
+                ),
+                code=400,
+            )
+
+        if isinstance(plan_service_item, int):
+            plan_service_item_ids = [plan_service_item]
+        elif isinstance(plan_service_item, str):
+            if "," in plan_service_item:
+                plan_service_item_ids = [int(x.strip()) for x in plan_service_item.split(",") if x.strip().isdigit()]
+            else:
+                plan_service_item_ids = [int(plan_service_item)]
+
+        plan_service_items = PlanServiceItem.objects.filter(id__in=plan_service_item_ids)
+        if len(plan_service_items) != len(plan_service_item_ids):
+            found_ids = [item.id for item in plan_service_items]
+            missing_ids = [id for id in plan_service_item_ids if id not in found_ids]
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan service items not found: {missing_ids}",
+                    es=f"Plan service items no encontrados: {missing_ids}",
+                    slug="plan-service-item-not-found",
+                ),
+                code=404,
+            )
+
+        deleted_count = plan_service_items.count()
+        plan_service_items.delete()
+
+        return handler.response(
+            {"status": "ok", "deleted": True, "deleted_count": deleted_count, "deleted_ids": plan_service_item_ids}
+        )
+
+
+# ------------------------------
+# Team member endpoints (scaffold)
+# ------------------------------
+
+
+class SubscriptionBillingTeamView(APIView):
+    """Manage Subscription's billing team (create/update/show)."""
+
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+    extensions = APIViewExtensions(sort="-id")
+
+    def _serializer(self, team: SubscriptionBillingTeam) -> dict[str, Any]:
+        subscription = team.subscription
+        period_start, period_end = team.get_current_monthly_period_dates()
+        return {
+            "id": team.id,
+            "subscription": subscription.id,
+            "name": team.name,
+            "seats_limit": team.seats_limit,
+            "additional_seats": team.additional_seats,
+            "seats_count": team.seats.filter(is_active=True).count(),
+            "seats_log": team.seats_log,
+            # Auto-recharge settings
+            "auto_recharge_enabled": team.auto_recharge_enabled,
+            "recharge_threshold_amount": str(team.recharge_threshold_amount),
+            "recharge_amount": str(team.recharge_amount),
+            "max_period_spend": str(team.max_period_spend) if team.max_period_spend else None,
+            # Current spending (calculated from invoices)
+            "current_period_spend": team.get_current_period_spend(),
+            # Virtual attributes for current period
+            "period_start": period_start.isoformat().replace("+00:00", "T") if period_start else None,
+            "period_end": period_end.isoformat().replace("+00:00", "T") if period_end else None,
+            # Subscription currency
+            "currency": subscription.currency.code if subscription.currency else None,
+        }
+
+    def get(self, request, subscription_id: int):
+        lang = get_user_language(request)
+
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team",
+                    es="Solo el dueño puede gestionar el equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+        if not team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Billing team not found",
+                    es="Equipo de facturación no encontrado",
+                    slug="billing-team-not-found",
+                ),
+                code=404,
+            )
+
+        data = self._serializer(team)
+        return Response(data, status=status.HTTP_200_OK)
+
+    def put(self, request, subscription_id: int):
+        """Update billing team auto-recharge settings."""
+        lang = get_user_language(request)
+
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team",
+                    es="Solo el dueño puede gestionar el equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+        if not team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Billing team not found",
+                    es="Equipo de facturación no encontrado",
+                    slug="billing-team-not-found",
+                ),
+                code=404,
+            )
+
+        # Validate input
+        serializer = BillingTeamAutoRechargeSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise ValidationException(serializer.errors, code=400)
+
+        # Update only the billing-related fields
+        update_fields = []
+        validated_data = serializer.validated_data
+
+        if "auto_recharge_enabled" in validated_data:
+            team.auto_recharge_enabled = validated_data["auto_recharge_enabled"]
+            update_fields.append("auto_recharge_enabled")
+
+        if "recharge_threshold_amount" in validated_data:
+            team.recharge_threshold_amount = validated_data["recharge_threshold_amount"]
+            update_fields.append("recharge_threshold_amount")
+
+        if "recharge_amount" in validated_data:
+            team.recharge_amount = validated_data["recharge_amount"]
+            update_fields.append("recharge_amount")
+
+        if "max_period_spend" in validated_data:
+            team.max_period_spend = validated_data["max_period_spend"]
+            update_fields.append("max_period_spend")
+
+        if update_fields:
+            team.save(update_fields=update_fields)
+
+        data = self._serializer(team)
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class SubscriptionSeatView(APIView):
+    """CRUD for SubscriptionSeat under a subscription's billing team."""
+
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def _get_subscription(self, subscription_id: int, lang: str):
+        subscription = Subscription.objects.filter(id=subscription_id).first()
+        if not subscription:
+            raise ValidationException(
+                translation(
+                    lang, en="Subscription not found", es="Suscripción no encontrada", slug="subscription-not-found"
+                ),
+                code=404,
+            )
+
+        return subscription
+
+    def _get_plan(self, subscription: Subscription, lang: str):
+        plan = subscription.plans.first()
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no encontrado", slug="plan-not-found"),
+                code=404,
+            )
+
+        if not plan.seat_service_price:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan does not support team",
+                    es="Plan no soporta equipo",
+                    slug="plan-does-not-support-team-seats",
+                ),
+                code=400,
+            )
+
+        return plan
+
+    def _get_team(self, subscription: Subscription, lang: str):
+        team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+        if not team:
+            raise ValidationException(
+                translation(lang, en="Team not found", es="Equipo no encontrado", slug="team-not-found"),
+                code=404,
+            )
+        return team
+
+    def _get_seats(self, team: SubscriptionBillingTeam) -> QuerySet[SubscriptionSeat] | list[SubscriptionSeat]:
+        return SubscriptionSeat.objects.filter(billing_team=team)
+
+    # it's using a serializer like this because serpy doesn't support async code
+    def _serialize_seat(self, seat: SubscriptionSeat) -> dict[str, Any]:
+        return {
+            "id": seat.id,
+            "email": seat.email,
+            "user": seat.user_id,
+            "is_active": seat.is_active,
+            "seat_log": seat.seat_log,
+        }
+
+    def get(self, request, subscription_id: int, seat_id: int = None):
+        lang = get_user_language(request)
+
+        subscription = self._get_subscription(subscription_id, lang)
+        team = self._get_team(subscription, lang)
+        qs = self._get_seats(team)
+        if seat_id:
+            seat = qs.filter(id=seat_id).first()
+            if not seat:
+                raise ValidationException(
+                    translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"),
+                    code=404,
+                )
+            data = self._serialize_seat(seat)
+            return Response(data, status=status.HTTP_200_OK)
+
+        items = [self._serialize_seat(s) for s in qs]
+        return Response(items, status=status.HTTP_200_OK)
+
+    def _get_user(self, email: str):
+        user = User.objects.filter(email_iexact=email).first()
+        return user
+
+    def put(self, request, subscription_id: int):
+        lang = get_user_language(request)
+        data = request.data or {}
+
+        subscription = self._get_subscription(subscription_id, lang)
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team members",
+                    es="Solo el dueño puede gestionar miembros del equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        add_seats = actions.normalize_add_seats(data.get("add_seats", []))
+        replace_seats = actions.normalize_replace_seat(data.get("replace_seats", []))
+
+        if not add_seats and not replace_seats:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Add seats or replace seats are required",
+                    es="Agregar asientos o reemplazar asientos son requeridos",
+                    slug="add-or-replace-seats-required",
+                ),
+                code=400,
+            )
+
+        subscription = self._get_subscription(subscription_id, lang)
+        team = self._get_team(subscription, lang)
+
+        actions.validate_seats_limit(team, add_seats, replace_seats, lang)
+
+        result: list[SubscriptionSeat] = []
+        errors: list[ValidationException] = []
+
+        for seat in add_seats:
+            try:
+                result.append(actions.create_seat(seat["email"], seat["user"], team, lang))
+            except ValidationException as e:
+                errors.append(e)
+
+        for seat in replace_seats:
+            try:
+                s = SubscriptionSeat.objects.filter(billing_team=team, email=seat["from_email"]).first()
+                if not s:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Seat not found",
+                            es="Asiento no encontrado",
+                            slug="seat-not-found",
+                        ),
+                        code=404,
+                    )
+                u = None
+                if seat["to_user"]:
+                    u = User.objects.filter(id=seat["to_user"]).first()
+                    if not u:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="User not found",
+                                es="Usuario no encontrado",
+                                slug="user-not-found",
+                            ),
+                            code=404,
+                        )
+
+                elif seat["to_email"]:
+                    u = User.objects.filter(email=seat["to_email"]).first()
+
+                result.append(actions.replace_seat(seat["from_email"], seat["to_email"], u, s, lang))
+            except ValidationException as e:
+                errors.append(e)
+
+        return Response(
+            {
+                "data": [self._serialize_seat(seat) for seat in result],
+                "errors": [
+                    {
+                        "message": getattr(e, "detail", str(e)),
+                        "code": getattr(e, "code", 400),
+                    }
+                    for e in errors
+                ],
+            },
+            status=status.HTTP_207_MULTI_STATUS,
+        )
+
+    def delete(self, request, subscription_id: int, seat_id: int):
+        lang = get_user_language(request)
+        subscription = self._get_subscription(subscription_id, lang)
+
+        if request.user.id != subscription.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage team members",
+                    es="Solo el dueño puede gestionar miembros del equipo",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        seat = SubscriptionSeat.objects.filter(
+            billing_team__subscription=subscription, id=seat_id, is_active=True
+        ).first()
+        if not seat:
+            raise ValidationException(
+                translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"), code=404
+            )
+        seat.user = None
+        seat.is_active = False
+        seat.save(update_fields=["is_active", "user"])
+
+        Consumable.objects.filter(subscription_seat_id=seat.id).update(user=None)
+
         return Response(status=status.HTTP_204_NO_CONTENT)

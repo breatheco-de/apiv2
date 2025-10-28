@@ -1,4 +1,4 @@
 {% block content %}
 {% endblock %}
 
-The 4Geeks Team
+{{ COMPANY_LEGAL_NAME|default:COMPANY_NAME|default:'4Geeks' }} Team

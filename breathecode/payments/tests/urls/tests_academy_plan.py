@@ -22,12 +22,17 @@ def academy_serializer(academy):
 def service_item_serializer(service_item, service):
     return {
         "how_many": service_item.how_many,
+        "is_team_allowed": False,
         "service": {
+            "consumer": "NO_SET",
             "groups": [],
+            "icon_url": service.icon_url,
+            "id": service.id,
             "private": service.private,
+            "session_duration": None,
             "slug": service.slug,
             "title": service.title,
-            "icon_url": service.icon_url,
+            "type": "COHORT_SET",
         },
         "unit_type": service_item.unit_type,
         "sort_priority": service_item.sort_priority,
@@ -58,12 +63,15 @@ def get_serializer(event, currency, service=None, academy=None, service_items=[]
 
     return {
         "id": event.id,
+        "add_ons": [],
         "title": event.title,
         "slug": event.slug,
         "currency": {
             "code": currency.code,
             "name": currency.name,
         },
+        "seat_service_price": None,
+        "consumption_strategy": event.consumption_strategy,
         "financing_options": financing_options,
         "has_available_cohorts": len(cohorts) > 0,
         "pricing_ratio_exceptions": event.pricing_ratio_exceptions,
@@ -89,6 +97,8 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
     return {
         "id": 0,
         "add_ons": [],
+        "seat_service_price": None,
+        "consumption_strategy": "PER_SEAT",
         "slug": "",
         "currency": currency.id,
         "financing_options": [x.id for x in financing_options],
@@ -110,6 +120,7 @@ def post_serializer(currency, service=None, academy=None, service_items=[], fina
         "event_type_set": None,
         "invites": [],
         "pricing_ratio_exceptions": {},
+        "title": None,
         **data,
     }
 
@@ -119,6 +130,9 @@ def row(currency, academy=None, data={}):
     return {
         "id": 0,
         "slug": "",
+        "title": None,
+        "consumption_strategy": "PER_SEAT",
+        "seat_service_price_id": None,
         "currency_id": currency.id,
         "is_renewable": False,
         "owner_id": academy.id,

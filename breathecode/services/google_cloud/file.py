@@ -64,9 +64,26 @@ class File:
 
     @circuit
     def url(self) -> str:
-        """Delete Blob from Bucket"""
+        """Get public URL for Blob"""
         # TODO Private url
         return self.blob.public_url
+
+    @circuit
+    def generate_signed_url(self, expiration, method: str = "GET") -> str:
+        """Generate a signed URL for private access to the blob
+        
+        Args:
+            expiration (datetime.timedelta): How long the signed URL should be valid
+            method (str): HTTP method for the signed URL (default: GET)
+            
+        Returns:
+            str: Signed URL that provides temporary access to the blob
+        """
+        if not self.blob:
+            # If blob doesn't exist, create a reference to it
+            self.blob = self.bucket.blob(self.file_name)
+        
+        return self.blob.generate_signed_url(expiration=expiration, method=method)
 
     @overload
     def download(self, file: StringIO | TextIOWrapper) -> None: ...

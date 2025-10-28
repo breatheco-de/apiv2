@@ -38,6 +38,12 @@ ENVIRONMENT = os.environ.get("ENV")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a"
 
+LIVEKIT_URL = os.environ.get("LIVEKIT_URL", "")
+LIVEKIT_HTTP_URL = os.getenv("LIVEKIT_HTTP_URL", "")
+LIVEKIT_MEET_URL = os.getenv("LIVEKIT_MEET_URL", "")
+LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "")
+LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = ENVIRONMENT == "development" or ENVIRONMENT == "test"
 
@@ -539,6 +545,7 @@ HOOK_EVENTS = {
     "user_invite.invite_status_updated": "authenticate.UserInvite.invite_status_updated",
     "asset.asset_status_updated": "registry.Asset.asset_status_updated",
     "event.event_status_updated": "events.Event.event_status_updated",
+    "event.event_rescheduled": "events.Event.event_rescheduled",
     "event.new_event_order": "events.EventCheckin.new_event_order",
     "event.new_event_attendee": "events.EventCheckin.new_event_attendee",
     "form_entry.won_or_lost": "marketing.FormEntry.won_or_lost",

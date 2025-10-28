@@ -7,7 +7,6 @@ from typing import Any, Optional
 from capyc.core.i18n import translation
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
-from django.db.models import Q
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -43,6 +42,8 @@ from .models import (
     Service,
     ServiceStockScheduler,
     Subscription,
+    SubscriptionBillingTeam,
+    SubscriptionSeat,
     SubscriptionServiceItem,
 )
 
@@ -64,12 +65,30 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
         return lookups
 
+    def get_extras(scheduler: ServiceStockScheduler):
+        extras = {}
+        if scheduler.subscription_seat:
+            extras["subscription_seat_id"] = scheduler.subscription_seat.id
+            extras["subscription_billing_team_id"] = scheduler.subscription_seat.billing_team.id
+
+        if scheduler.subscription_billing_team:
+            extras["user"] = None
+            if (
+                scheduler.subscription_billing_team.consumption_strategy
+                == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM
+            ):
+                extras["subscription_seat_id"] = None
+
+            extras["subscription_billing_team_id"] = scheduler.subscription_billing_team.id
+        return extras
+
     logger.info(f"Starting renew_consumables for service stock scheduler {scheduler_id}")
 
     if not (scheduler := ServiceStockScheduler.objects.filter(id=scheduler_id).first()):
         raise RetryTask(f"ServiceStockScheduler with id {scheduler_id} not found")
 
     utc_now = timezone.now()
+    extras = get_extras(scheduler)
 
     # is over
     if (
@@ -87,7 +106,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         and scheduler.plan_handler.subscription.next_payment_at < utc_now
     ):
         raise AbortTask(
-            f"The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the " "consumables"
+            f"The subscription {scheduler.plan_handler.subscription.id} needs to be paid to renew the consumables"
         )
 
     # is over
@@ -98,10 +117,10 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     ):
         raise AbortTask(f"The plan financing {scheduler.plan_handler.plan_financing.id} is over")
 
-    # it needs to be paid
     if (
         scheduler.plan_handler
         and scheduler.plan_handler.plan_financing
+        and scheduler.plan_handler.plan_financing.status == PlanFinancing.Status.ACTIVE
         and scheduler.plan_handler.plan_financing.next_payment_at < utc_now
     ):
         raise AbortTask(
@@ -113,6 +132,7 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if (
         scheduler.subscription_handler
         and scheduler.subscription_handler.subscription
+        and scheduler.subscription_handler.subscription.valid_until
         and scheduler.subscription_handler.subscription.valid_until < utc_now
     ):
         raise AbortTask(f"The subscription {scheduler.subscription_handler.subscription.id} is over")
@@ -162,6 +182,12 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
         selected_lookup = get_resource_lookup(scheduler.subscription_handler.subscription, service_item.service)
 
+    # If resource is Subscription and this scheduler is tied to a subscription seat,
+    # issue the consumable for the seat assignee (or None if not yet assigned) instead of the subscription owner.
+    if subscription and scheduler.subscription_seat:
+        # Use the seat's user if assigned, otherwise None (waiting for invitation acceptance)
+        user = scheduler.subscription_seat.user if scheduler.subscription_seat.user_id else None
+
     unit = service_item.renew_at
     unit_type = service_item.renew_at_unit
 
@@ -205,15 +231,18 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
         logger.error(f"The Plan not have a resource linked to it for the ServiceStockScheduler {scheduler.id}")
         return
 
+    if "user" not in extras:
+        extras["user"] = user
+
     consumable = Consumable(
         service_item=service_item,
-        user=user,
         unit_type=service_item.unit_type,
         how_many=service_item.how_many,
         valid_until=scheduler.valid_until,
         subscription=subscription,
         plan_financing=plan_financing,
         **selected_lookup,
+        **extras,
     )
 
     consumable.save()
@@ -234,13 +263,37 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def renew_subscription_consumables(self, subscription_id: int, **_: Any):
+def renew_subscription_consumables(self, subscription_id: int, seat_id: Optional[int] = None, **_: Any):
     """Renew consumables belongs to a subscription."""
 
     logger.info(f"Starting renew_subscription_consumables for id {subscription_id}")
 
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         raise RetryTask(f"Subscription with id {subscription_id} not found")
+
+    if subscription.status in [
+        Subscription.Status.DEPRECATED,
+        Subscription.Status.EXPIRED,
+        Subscription.Status.PAYMENT_ISSUE,
+    ]:
+        raise AbortTask(f"The subscription {subscription.id} is deprecated, expired or has a payment issue")
+
+    # Check if subscription has deleted or discontinued plans
+    if subscription.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
+        subscription.status = Subscription.Status.DEPRECATED
+        subscription.save()
+        raise AbortTask(
+            f"The subscription {subscription.id} has deleted/discontinued plans, "
+            "marked as deprecated, consumables will not be renewed"
+        )
+
+    subscription_seat = None
+    if seat_id and not (
+        subscription_seat := SubscriptionSeat.objects.filter(
+            billing_team__subscription=subscription, id=seat_id
+        ).first()
+    ):
+        raise RetryTask(f"SubscriptionSeat with id {seat_id} not found")
 
     utc_now = timezone.now()
     if subscription.valid_until and subscription.valid_until < utc_now:
@@ -249,10 +302,14 @@ def renew_subscription_consumables(self, subscription_id: int, **_: Any):
     if subscription.next_payment_at < utc_now:
         raise AbortTask(f"The subscription {subscription.id} needs to be paid to renew the consumables")
 
-    for scheduler in ServiceStockScheduler.objects.filter(subscription_handler__subscription=subscription):
+    for scheduler in ServiceStockScheduler.objects.filter(
+        subscription_handler__subscription=subscription, subscription_seat=subscription_seat
+    ):
         renew_consumables.delay(scheduler.id)
 
-    for scheduler in ServiceStockScheduler.objects.filter(plan_handler__subscription=subscription):
+    for scheduler in ServiceStockScheduler.objects.filter(
+        plan_handler__subscription=subscription, subscription_seat=subscription_seat
+    ):
         renew_consumables.delay(scheduler.id)
 
 
@@ -265,8 +322,24 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
         raise RetryTask(f"PlanFinancing with id {plan_financing_id} not found")
 
+    if plan_financing.status in [
+        PlanFinancing.Status.CANCELLED,
+        PlanFinancing.Status.DEPRECATED,
+        PlanFinancing.Status.EXPIRED,
+    ]:
+        raise AbortTask(f"The plan financing {plan_financing.id} is cancelled, deprecated or expired")
+
+    # Check if plan financing has deleted or discontinued plans
+    if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
+        plan_financing.status = PlanFinancing.Status.DEPRECATED
+        plan_financing.save()
+        raise AbortTask(
+            f"The plan financing {plan_financing.id} has deleted/discontinued plans, "
+            "marked as deprecated, consumables will not be renewed"
+        )
+
     utc_now = timezone.now()
-    if plan_financing.next_payment_at < utc_now:
+    if plan_financing.next_payment_at < utc_now and plan_financing.status != PlanFinancing.Status.FULLY_PAID:
         raise AbortTask(f"The PlanFinancing {plan_financing.id} needs to be paid to renew the consumables")
 
     if plan_financing.plan_expires_at and plan_financing.plan_expires_at < utc_now:
@@ -431,7 +504,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             if subscription.status == Subscription.Status.DEPRECATED:
                 handle_deprecated_subscription()
 
-            elif subscription.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+            elif subscription.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
                 subscription.status = Subscription.Status.DEPRECATED
                 subscription.save()
                 handle_deprecated_subscription()
@@ -492,9 +565,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
                 amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
 
-                # Apply coupon discounts if they exist on the subscription (only non-expired)
+                # Apply coupon discounts if they exist on the subscription or they are restricted to the used (only non-expired and with offers left)
                 utc_now = timezone.now()
-                coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+                coupons = bag.coupons.all()
+
                 if coupons:
                     original_amount = amount
                     amount = actions.get_discounted_price(amount, coupons)
@@ -505,7 +579,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 try:
                     s = Stripe(academy=subscription.academy)
                     s.set_language(settings.lang)
-                    invoice = s.pay(subscription.user, bag, amount, currency=bag.currency)
+                    team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+                    invoice = s.pay(
+                        subscription.user, bag, amount, currency=bag.currency, subscription_billing_team=team
+                    )
 
                 except Exception:
                     message = translation(
@@ -571,6 +648,18 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             bag.was_delivered = True
             bag.save()
+
+            if subscription.seat_service_item and subscription.seat_service_item.how_many > 0:
+                team = SubscriptionBillingTeam.objects.filter(
+                    subscription=subscription, defaults={"name": f"Team {subscription.id}"}
+                ).first()
+                if not team:
+                    raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
+
+                for seat in SubscriptionSeat.objects.filter(billing_team=team):
+                    renew_subscription_consumables.delay(subscription.id, seat_id=seat.id)
+
+                return
 
             renew_subscription_consumables.delay(subscription.id)
 
@@ -694,6 +783,59 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} was paid this month")
 
             settings = get_user_settings(plan_financing.user.id)
+
+            # Check if plan financing has deleted or discontinued plans
+            if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
+                plan_financing.status = PlanFinancing.Status.DEPRECATED
+                plan_financing.save()
+
+                # Send notification to user
+                plan = plan_financing.plans.first()
+                link = None
+
+                if plan and (offer := PlanOffer.objects.filter(original_plan=plan).first()):
+                    link = f"{get_app_url()}/checkout?plan={offer.suggested_plan.slug}"
+
+                subject = translation(
+                    settings.lang,
+                    en=f"Your 4Geeks plan financing to {plan.slug if plan else 'plan'} has been discontinued",
+                    es=f"Tu financiamiento 4Geeks a {plan.slug if plan else 'plan'} ha sido descontinuado",
+                )
+
+                obj = {
+                    "SUBJECT": subject,
+                }
+
+                if link:
+                    button = translation(
+                        settings.lang,
+                        en="See suggested plan",
+                        es="Ver plan sugerido",
+                    )
+                    obj["LINK"] = link
+                    obj["BUTTON"] = button
+
+                    message = translation(
+                        settings.lang,
+                        en=f"We regret to inform you that your 4Geeks plan financing has been discontinued. Please check our suggested plans for alternatives.",
+                        es=f"Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado. Por favor, revisa nuestros planes sugeridos para alternativas.",
+                    )
+                else:
+                    message = translation(
+                        settings.lang,
+                        en=f"We regret to inform you that your 4Geeks plan financing has been discontinued.",
+                        es=f"Lamentamos informarte que tu financiamiento 4Geeks ha sido descontinuado.",
+                    )
+
+                obj["MESSAGE"] = message
+
+                notify_actions.send_email_message(
+                    "message",
+                    plan_financing.user.email,
+                    obj,
+                    academy=plan_financing.academy,
+                )
+                raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted/discontinued plans")
 
             # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
             amount = plan_financing.monthly_price
@@ -851,11 +993,123 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_service_stock_scheduler_from_subscription(
-    self, subscription_id: int, user_id: Optional[int] = None, update_mode: Optional[bool] = False, **_: Any
+    self,
+    subscription_id: int,
+    user_id: Optional[int] = None,
+    update_mode: Optional[bool] = False,
+    seat_id: Optional[int] = None,
+    **_: Any,
 ):
     """Build service stock scheduler for a subscription."""
 
     logger.info(f"Starting build_service_stock_scheduler_from_subscription for subscription {subscription_id}")
+
+    def build_schedulers(allow_team=None, team_for_billing=None):
+        """
+        Build ServiceStockScheduler rows for a subscription according to the context.
+
+        This helper is used by `build_service_stock_scheduler_from_subscription` to create
+        schedulers for both subscription-level and plan-level service items. It supports
+        three issuance contexts controlled by the arguments and outer scope state:
+
+        - Owner context (no seat, no team):
+          When `allow_team is None`, create schedulers for ALL items (team-allowed and non-team).
+          When `allow_team is False`, create ONLY non-team items for the owner.
+
+        - Team-owned context (PER_TEAM):
+          When `allow_team is True` and `team_for_billing` is provided, create schedulers for
+          team-allowed items with `subscription_billing_team` set to that team and `user=None`
+          (consumables will be issued for the team, not a specific user).
+
+        - Seat context (PER_SEAT):
+          When building for a seat (outer `subscription_seat` is not None), this function will
+          create schedulers only for team-allowed items linked to that seat. The billing team is
+          derived from the seat, and the seat is recorded in `subscription_seat`.
+
+        Parameters
+        - allow_team: Optional[bool]
+          * None  -> include all items (owner context, used when no seats exist)
+          * False -> include only non-team items (owner context)
+          * True  -> include only team-allowed items (team/seat context)
+
+        - team_for_billing: Optional[SubscriptionBillingTeam]
+          Team to attach when creating team-owned schedulers in PER_TEAM context. If building for a
+          specific seat, this is ignored and derived from `subscription_seat`.
+
+        Notes
+        - Relies on outer-scope variables: `subscription`, `subscription_seat`, `utc_now`, and
+          `update_mode`.
+        - When `update_mode` is False, this function triggers a renewal via
+          `renew_subscription_consumables.delay(subscription.id, seat_id=seat_id)` after creating
+          schedulers so consumables are issued immediately.
+        """
+        # Determine billing team for schedulers
+        billing_team = None
+        if team_for_billing is not None:
+            billing_team = team_for_billing
+        elif subscription_seat:
+            # when building per-seat, derive team from the seat
+            billing_team = subscription_seat.billing_team
+
+        for handler in SubscriptionServiceItem.objects.filter(subscription=subscription).select_related("service_item"):
+            # Filter by team-allowed depending on context; applies to owner, team-owned, or seat
+            if allow_team is not None and handler.service_item.is_team_allowed is not allow_team:
+                continue
+            unit = handler.service_item.renew_at
+            unit_type = handler.service_item.renew_at_unit
+            delta = actions.calculate_relative_delta(unit, unit_type)
+            valid_until = utc_now + delta
+
+            if subscription.next_payment_at and valid_until > subscription.next_payment_at:
+                valid_until = subscription.next_payment_at
+
+            if subscription.valid_until and valid_until > subscription.valid_until:
+                valid_until = subscription.valid_until
+
+            # Do not set both seat and billing team simultaneously
+            ServiceStockScheduler.objects.get_or_create(
+                subscription_handler=handler,
+                subscription_seat=subscription_seat,
+                subscription_billing_team=(billing_team if subscription_seat is None else None),
+            )
+
+        for plan in subscription.plans.all():
+            for handler in PlanServiceItem.objects.filter(plan=plan).select_related("service_item"):
+                # Filter by team-allowed depending on context; applies to owner, team-owned, or seat
+                if allow_team is not None and handler.service_item.is_team_allowed is not allow_team:
+                    continue
+                unit = handler.service_item.renew_at
+                unit_type = handler.service_item.renew_at_unit
+                delta = actions.calculate_relative_delta(unit, unit_type)
+                valid_until = utc_now + delta
+
+                if valid_until > subscription.next_payment_at:
+                    valid_until = subscription.next_payment_at
+
+                if subscription.valid_until and valid_until > subscription.valid_until:
+                    valid_until = subscription.valid_until
+
+                handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription, handler=handler)
+
+                # Do not set both seat and billing team simultaneously
+                ServiceStockScheduler.objects.get_or_create(
+                    plan_handler=handler,
+                    subscription_seat=subscription_seat,
+                    subscription_billing_team=(billing_team if subscription_seat is None else None),
+                )
+
+        if not update_mode:
+            renew_subscription_consumables.delay(subscription.id, seat_id=seat_id)
+
+    team = None
+    subscription_seat = None
+    if seat_id:
+        # SubscriptionSeat does not link directly to Subscription; it links via billing_team
+        subscription_seat = SubscriptionSeat.objects.filter(
+            billing_team__subscription__id=subscription_id, id=seat_id
+        ).first()
+        if not subscription_seat:
+            raise RetryTask(f"SubscriptionSeat with id {seat_id} not found")
 
     k = {
         "subscription": "user__id",
@@ -865,6 +1119,7 @@ def build_service_stock_scheduler_from_subscription(
             "of_plan": "plan_handler__subscription__user__id",
         },
     }
+    # seat_service_item
 
     additional_args = {
         "subscription": {k["subscription"]: user_id} if user_id else {},
@@ -882,41 +1137,40 @@ def build_service_stock_scheduler_from_subscription(
     if not (subscription := Subscription.objects.filter(id=subscription_id, **additional_args["subscription"]).first()):
         raise RetryTask(f"Subscription with id {subscription_id} not found")
 
+    # Determine if subscription has seats configured
+    has_seats = bool(subscription.seat_service_item and subscription.seat_service_item.how_many > 0)
+
+    # When seats exist and we are building for the owner (no seat_id), we must:
+    # - If PER_TEAM: create team-owned schedulers for team-allowed items and owner schedulers for non-team items
+    # - If PER_SEAT: create owner schedulers ONLY for non-team items, then schedule per-seat builds for team items
     utc_now = timezone.now()
+    if not seat_id and has_seats:
+        # `defaults` is only valid for get_or_create; use a simple filter here
+        team = SubscriptionBillingTeam.objects.filter(subscription=subscription).first()
+        if not team:
+            raise RetryTask(f"SubscriptionBillingTeam with id {subscription_id} not found")
 
-    for handler in SubscriptionServiceItem.objects.filter(subscription=subscription):
-        unit = handler.service_item.renew_at
-        unit_type = handler.service_item.renew_at_unit
-        delta = actions.calculate_relative_delta(unit, unit_type)
-        valid_until = utc_now + delta
+        if team.consumption_strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+            # Build team-owned schedulers for team-allowed items
+            update_mode = True
+            build_schedulers(True, team_for_billing=team)
+            # Build owner schedulers for non-team items
+            update_mode = False
+            build_schedulers(False, team_for_billing=None)
+            return
 
-        if subscription.next_payment_at and valid_until > subscription.next_payment_at:
-            valid_until = subscription.next_payment_at
+        utc_now = timezone.now()
+        # TODO: it changed the scheduler from None to False, check if this is the correct behavior
+        # Build owner schedulers for non-team items only; team items will be handled per-seat
+        build_schedulers(False, team_for_billing=None)
+        # Schedule per-seat builds (these runs will create schedulers only for team-allowed items)
+        for seat in SubscriptionSeat.objects.filter(billing_team=team):
+            build_service_stock_scheduler_from_subscription.delay(subscription_id, seat_id=seat.id)
 
-        if subscription.valid_until and valid_until > subscription.valid_until:
-            valid_until = subscription.valid_until
+        return
 
-        ServiceStockScheduler.objects.get_or_create(subscription_handler=handler)
-
-    for plan in subscription.plans.all():
-        for handler in PlanServiceItem.objects.filter(plan=plan):
-            unit = handler.service_item.renew_at
-            unit_type = handler.service_item.renew_at_unit
-            delta = actions.calculate_relative_delta(unit, unit_type)
-            valid_until = utc_now + delta
-
-            if valid_until > subscription.next_payment_at:
-                valid_until = subscription.next_payment_at
-
-            if subscription.valid_until and valid_until > subscription.valid_until:
-                valid_until = subscription.valid_until
-
-            handler, _ = PlanServiceItemHandler.objects.get_or_create(subscription=subscription, handler=handler)
-
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
-
-    if not update_mode:
-        renew_subscription_consumables.delay(subscription.id)
+    # If building for a seat, only build team-allowed items; for owner without seats, build all
+    build_schedulers(True if seat_id is not None else None)
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
@@ -960,18 +1214,29 @@ def build_service_stock_scheduler_from_plan_financing(
             delta = actions.calculate_relative_delta(unit, unit_type)
             valid_until = plan_financing.created_at + delta
 
-            if valid_until > plan_financing.next_payment_at:
+            if (
+                plan_financing.status != PlanFinancing.Status.FULLY_PAID
+                and valid_until > plan_financing.next_payment_at
+            ):
                 valid_until = plan_financing.next_payment_at
 
             if plan_financing.plan_expires_at and valid_until > plan_financing.plan_expires_at:
                 valid_until = plan_financing.plan_expires_at
 
-            if plan_financing.valid_until and valid_until > plan_financing.valid_until:
+            if (
+                plan_financing.valid_until
+                and valid_until > plan_financing.valid_until
+                and plan_financing.status != PlanFinancing.Status.FULLY_PAID
+            ):
                 valid_until = plan_financing.valid_until
+
+            if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
+                utc_now = timezone.now()
+                valid_until = utc_now + delta
 
             handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing, handler=handler)
 
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler)
+            ServiceStockScheduler.objects.get_or_create(plan_handler=handler, defaults={"valid_until": valid_until})
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
@@ -1045,9 +1310,18 @@ def build_subscription(
         pay_every_unit=pay_every_unit,
         pay_every=pay_every,
         currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
+        seat_service_item=bag.seat_service_item,
     )
 
+    if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+        subscription.seat_service_item = bag.seat_service_item
+        subscription.save()
+
     subscription.plans.set(bag.plans.all())
+
+    # Persist add-ons (bag.service_items) into the subscription so they renew and can be billed monthly
+    for service_item in bag.service_items.all():
+        SubscriptionServiceItem.objects.get_or_create(subscription=subscription, service_item=service_item)
 
     # Add coupons from the bag to the subscription
     bag_coupons = bag.coupons.all()
@@ -1060,6 +1334,29 @@ def build_subscription(
 
     bag.was_delivered = True
     bag.save()
+
+    plan = bag.plans.first()
+
+    if plan and subscription.seat_service_item and subscription.seat_service_item.how_many > 0:
+        team, _ = SubscriptionBillingTeam.objects.get_or_create(
+            subscription=subscription,
+            defaults={
+                "name": f"Team {subscription.id}",
+                "additional_seats": subscription.seat_service_item.how_many,
+                "consumption_strategy": (
+                    # if BOTH is implemented should be required to get the strategy from the bag
+                    Plan.ConsumptionStrategy.PER_SEAT
+                    if plan.consumption_strategy == Plan.ConsumptionStrategy.BOTH
+                    else plan.consumption_strategy
+                ),
+            },
+        )
+
+        SubscriptionSeat.objects.get_or_create(
+            billing_team=team,
+            user=bag.user,
+            defaults={"email": subscription.user.email, "is_active": True},
+        )
 
     build_service_stock_scheduler_from_subscription.delay(subscription.id)
 
@@ -1143,7 +1440,12 @@ def build_plan_financing(
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
         currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
+        seat_service_item=bag.seat_service_item,
     )
+
+    if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+        financing.seat_service_item = bag.seat_service_item
+        financing.save()
 
     if cohorts:
         financing.joined_cohorts.set(cohorts)
@@ -1578,3 +1880,36 @@ def check_and_retry_pending_bags(**_: Any):
         retry_pending_bag_delivery.delay(bag_id=bag.id)
 
     return count
+
+
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def process_auto_recharge(
+    consumable_id: int,
+    **_: Any,
+):
+    """
+    Process automatic consumable recharge for a billing team.
+
+    This task:
+    1. Acquires Redis lock to prevent concurrent recharges
+    2. Creates consumables for team-allowed services
+    3. Charges the subscription owner via Stripe
+    4. Tracks spending via invoices
+
+    Args:
+        team_id: SubscriptionBillingTeam ID
+        recharge_amount: Amount in subscription currency to recharge
+        seat_id: Optional SubscriptionSeat ID for per-seat recharge
+        service_id: Optional Service ID to restrict the recharge to a single service
+
+    Note:
+        Uses Redis lock to prevent race conditions when multiple
+        consumptions trigger recharge simultaneously.
+    """
+
+    try:
+        consumable = Consumable.objects.select_related("subscription").get(id=consumable_id)
+    except Consumable.DoesNotExist:
+        raise AbortTask(f"Consumable {consumable_id} not found")
+
+    actions.process_auto_recharge(consumable)

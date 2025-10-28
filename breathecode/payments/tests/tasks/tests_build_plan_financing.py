@@ -6,6 +6,7 @@ import datetime
 import logging
 import random
 from datetime import timezone as dt_timezone
+from decimal import Decimal
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -25,6 +26,7 @@ UTC_NOW = timezone.now()
 def plan_financing_item(data={}):
     return {
         "id": 1,
+        "seat_service_item_id": None,
         "academy_id": 1,
         "monthly_price": 0,
         "plan_expires_at": UTC_NOW,
@@ -41,6 +43,10 @@ def plan_financing_item(data={}):
         "country_code": "",
         "currency_id": 1,
         "conversion_info": None,
+        "auto_recharge_enabled": False,
+        "recharge_threshold_amount": Decimal("10.00"),
+        "recharge_amount": Decimal("10.00"),
+        "max_period_spend": None,
         **data,
     }
 

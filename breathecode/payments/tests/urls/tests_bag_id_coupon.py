@@ -7,6 +7,7 @@ import pytest
 from django.db.models.query import QuerySet
 from django.urls import reverse_lazy
 from rest_framework import status
+from breathecode.payments.models import ServiceItem
 
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
@@ -115,6 +116,7 @@ def put_serializer(bag, plans=[], coupons=[], data={}):
         "type": bag.type,
         "was_delivered": bag.was_delivered,
         "coupons": [format_coupon(x) for x in coupons],
+        "seat_service_item": None,
         **data,
     }
 

@@ -32,6 +32,7 @@ from breathecode.utils import (
     capable_of,
     localize_query,
 )
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import render_message
 
@@ -40,22 +41,27 @@ from .models import (
     DELETED,
     STUDENT,
     Academy,
+    City,
     Cohort,
     CohortTimeSlot,
     CohortUser,
+    Country,
     Syllabus,
     SyllabusSchedule,
     SyllabusScheduleTimeSlot,
     SyllabusVersion,
 )
 from .serializers import (
+    AcademyPOSTSerializer,
     AcademyReportSerializer,
     AcademySerializer,
+    CitySerializer,
     CohortPUTSerializer,
     CohortSerializer,
     CohortTimeSlotSerializer,
     CohortUserPUTSerializer,
     CohortUserSerializer,
+    CountrySerializer,
     GetAcademyWithStatusSerializer,
     GetBigAcademySerializer,
     GetCohortSerializer,
@@ -138,6 +144,66 @@ def render_syllabus_preview(request, syllabus_id, version):
 def get_timezones(request, id=None):
     # timezones = [(x, x) for x in pytz.common_timezones]
     return Response(pytz.common_timezones)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_countries(request):
+    """Get all countries available in the system."""
+    countries = Country.objects.all().order_by("name")
+    serializer = CountrySerializer(countries, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_cities(request):
+    """Get all cities available in the system."""
+    cities = City.objects.all().select_related("country").order_by("name")
+    serializer = CitySerializer(cities, many=True)
+    return Response(serializer.data)
+
+
+class AcademyListView(APIView):
+    """
+    List all academies or create a new academy.
+    
+    GET: List all academies (public)
+    POST: Create a new academy (requires 'manage_organizations' permission)
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """List all academies with optional filters."""
+        items = Academy.objects.all()
+
+        status_filter = request.GET.get("status")
+        if status_filter:
+            items = items.filter(status__in=status_filter.upper().split(","))
+
+        academy_ids = request.GET.get("academy_id")
+        if academy_ids:
+            items = items.filter(id__in=academy_ids.split(","))
+
+        serializer = AcademySerializer(items, many=True)
+        return Response(serializer.data)
+
+    @has_permission("manage_organizations")
+    def post(self, request):
+        """Create a new academy."""
+        lang = get_user_language(request)
+        
+        serializer = AcademyPOSTSerializer(data=request.data, context={"request": request, "lang": lang})
+        
+        if serializer.is_valid():
+            academy = serializer.save()
+            
+            # Return the created academy with the standard serializer
+            response_serializer = GetBigAcademySerializer(academy)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])
@@ -2144,3 +2210,121 @@ class CohortJoinView(APIView):
         serializer = GetAbstractIOweYouSerializer(resource, many=False)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class UserMicroCohortsSyncView(APIView):
+    """
+    API endpoint for users to sync themselves to missing micro-cohorts.
+    This allows users who are in macro-cohorts to automatically join
+    their related micro-cohorts that they might be missing.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, macro_cohort_slug):
+        """
+        Sync the authenticated user to all missing micro-cohorts
+        from a specific macro-cohort.
+        """
+        user = request.user
+        lang = get_user_language(request)
+
+        if not macro_cohort_slug:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="macro_cohort_slug is required",
+                    es="macro_cohort_slug es requerido",
+                    slug="macro-cohort-slug-required",
+                )
+            )
+
+        macro_cohort = Cohort.objects.filter(slug=macro_cohort_slug).first()
+
+        if not macro_cohort:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Macro-cohort with slug '{macro_cohort_slug}' not found",
+                    es=f"Macro-cohort con slug '{macro_cohort_slug}' no encontrada",
+                    slug="macro-cohort-not-found",
+                )
+            )
+
+        user_macro_cohort = CohortUser.objects.filter(user=user, cohort=macro_cohort).first()
+
+        if not user_macro_cohort:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"You are not enrolled in the macro-cohort '{macro_cohort.name}'",
+                    es=f"No estás inscrito en la macro-cohort '{macro_cohort.name}'",
+                    slug="not-enrolled-in-macro-cohort",
+                )
+            )
+
+        micro_cohorts = macro_cohort.micro_cohorts.all()
+        print(micro_cohorts)
+
+        if not micro_cohorts.exists():
+            return Response(
+                {
+                    "detail": translation(
+                        lang,
+                        en=f"Macro-cohort '{macro_cohort.name}' has no micro-cohorts",
+                        es=f"La macro-cohort '{macro_cohort.name}' no tiene micro-cohorts",
+                        slug="no-micro-cohorts",
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        added_count = 0
+        already_existing_count = 0
+        micro_cohorts_added = []
+
+        for micro_cohort in micro_cohorts:
+            micro_cohort_user = CohortUser.objects.filter(
+                user=user, cohort=micro_cohort, role=user_macro_cohort.role
+            ).first()
+
+            if micro_cohort_user is None:
+                micro_cohort_user = CohortUser.objects.create(
+                    user=user,
+                    cohort=micro_cohort,
+                    role=user_macro_cohort.role,
+                    finantial_status=user_macro_cohort.finantial_status,
+                    educational_status=user_macro_cohort.educational_status,
+                )
+                added_count += 1
+                micro_cohorts_added.append(
+                    {
+                        "id": micro_cohort.id,
+                        "name": micro_cohort.name,
+                        "slug": micro_cohort.slug,
+                        "role": micro_cohort_user.role,
+                    }
+                )
+                logger.info(f"Added user {user.email} to micro-cohort {micro_cohort.name}")
+            else:
+                already_existing_count += 1
+
+        return Response(
+            {
+                "detail": translation(
+                    lang,
+                    en=f"Successfully added to {added_count} micro-cohorts from '{macro_cohort.name}'. {already_existing_count} were already enrolled.",
+                    es=f"Agregado exitosamente a {added_count} micro-cohorts de '{macro_cohort.name}'. {already_existing_count} ya estaban inscritos.",
+                    slug="micro-cohorts-sync-success",
+                ),
+                "macro_cohort": {
+                    "id": macro_cohort.id,
+                    "name": macro_cohort.name,
+                    "slug": macro_cohort.slug,
+                },
+                "added_count": added_count,
+                "already_existing_count": already_existing_count,
+                "micro_cohorts_added": micro_cohorts_added,
+            },
+            status=status.HTTP_200_OK,
+        )

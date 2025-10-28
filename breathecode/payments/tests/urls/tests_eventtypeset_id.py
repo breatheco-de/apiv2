@@ -31,11 +31,15 @@ def event_type_serializer(event_type, academy):
 
 def service_serializer(service):
     return {
+        "consumer": "NO_SET",
         "groups": [],
+        "icon_url": service.icon_url,
+        "id": service.id,
         "private": service.private,
+        "session_duration": None,
         "slug": service.slug,
         "title": service.title,
-        "icon_url": service.icon_url,
+        "type": "COHORT_SET",
     }
 
 

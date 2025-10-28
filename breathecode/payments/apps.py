@@ -6,6 +6,9 @@ class PaymentsConfig(AppConfig):
     name = "breathecode.payments"
 
     def ready(self):
+        # always register generic flags
         from . import flags  # noqa: F401
+
+        # register non-team receivers always
         from . import receivers  # noqa: F401
         from . import supervisors  # noqa: F401

@@ -20,6 +20,7 @@ lint = "scripts.cmd:lint"
 update-sql-keywords = "scripts.update_sql_keywords_json:write_json"
 "precommit:install" = "scripts.cmd:install_precommit"
 "docker:build" = "scripts.docker_build:run"
+"fttests" = "scripts.cmd:fttests"
 # flake8 = "scripts.cmd:flake8"
 
 [tool.poetry.requires-plugins]
@@ -156,6 +157,7 @@ dependencies = [
     "flower (>=2.0.1,<3.0.0)",
     "amqp (>=5.3.1,<6.0.0)",
     "tomli (>=2.2.1,<3.0.0)",
+    "google-auth (>=2.41.1,<3.0.0)",
 ]
 
 

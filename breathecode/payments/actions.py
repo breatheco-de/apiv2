@@ -1,25 +1,35 @@
 import os
 import re
+import uuid
 from datetime import datetime, timedelta
+from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
-from typing import Literal, Optional, Tuple, Type, TypedDict, Union
+from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
 
+import redis
+import redis.lock
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
+from django.db import transaction
 from django.db.models import Q, QuerySet, Sum
 from django.http import HttpRequest
 from django.utils import timezone
+from django_redis import get_redis_connection
 from pytz import UTC
 from rest_framework.request import Request
+from task_manager.core.exceptions import AbortTask, RetryTask
 
+from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import UserSetting
+from breathecode.authenticate.actions import get_api_url, get_app_url, get_user_settings
+from breathecode.authenticate.models import UserInvite, UserSetting
+from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
+from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.validate_conversion_info import validate_conversion_info
@@ -44,6 +54,8 @@ from .models import (
     Service,
     ServiceItem,
     Subscription,
+    SubscriptionBillingTeam,
+    SubscriptionSeat,
 )
 
 logger = getLogger(__name__)
@@ -289,6 +301,8 @@ class BagHandler:
         self.selected_event_type_set = request.data.get("event_type_set")
         self.selected_mentorship_service_set = request.data.get("mentorship_service_set")
         self.country_code = request.data.get("country_code")
+        # NEW: team seats for seat add-ons
+        self.team_seats = request.data.get("team_seats")
 
         self.plans_not_found = set()
         self.service_items_not_found = set()
@@ -402,6 +416,16 @@ class BagHandler:
                         slug="service-item-malformed",
                     )
 
+                if "is_team_allowed" in item and not isinstance(item["is_team_allowed"], bool):
+                    raise ValidationException(
+                        translation(
+                            self.lang,
+                            en="The service item only accepts boolean type for is_team_allowed",
+                            es="El service item solo acepta el tipo booleano para is_team_allowed",
+                        ),
+                        slug="service-item-is-team-allowed-malformed",
+                    )
+
     def _get_service_items_that_not_found(self):
         if isinstance(self.service_items, list):
             for service_item in self.service_items:
@@ -478,7 +502,11 @@ class BagHandler:
                 args, kwargs = self._lookups(service_item["service"])
 
                 service = Service.objects.filter(*args, **kwargs).first()
-                service_item, _ = ServiceItem.objects.get_or_create(service=service, how_many=service_item["how_many"])
+                service_item, _ = ServiceItem.objects.get_or_create(
+                    service=service,
+                    how_many=service_item["how_many"],
+                    is_team_allowed=service_item.get("is_team_allowed", True),
+                )
                 self.bag.service_items.add(service_item)
 
     def _add_plans_to_bag(self):
@@ -500,6 +528,70 @@ class BagHandler:
 
             raise ValidationException(self._more_than_one_generator(en="plan", es="plan"), code=400)
 
+    # NEW: validate team seat add-ons for selected plan
+    def _validate_seat_add_ons(self):
+        if not self.team_seats:
+            return
+
+        # normalize
+        try:
+            seats = int(self.team_seats)
+        except Exception:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="Seats must be an integer",
+                    es="Los asientos deben ser un número entero",
+                    slug="seats-must-be-an-integer",
+                ),
+                code=400,
+            )
+
+        if seats <= 0:
+            return
+
+        plan: Plan | None = self.bag.plans.first()
+        if not plan:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="You must select a plan to add seats",
+                    es="Debes seleccionar un plan para agregar asientos",
+                    slug="plan-required-for-seats",
+                ),
+                code=400,
+            )
+
+        if not plan.seat_service_price:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="This plan does not support teams",
+                    es="Este plan no soporta equipos",
+                    slug="plan-not-support-teams",
+                ),
+                code=400,
+            )
+
+    # NEW: add seat add-ons as ServiceItems into the bag
+    def _add_seat_add_ons(self):
+
+        if not self.team_seats:
+            return
+
+        seats = int(self.team_seats)
+
+        if seats <= 0:
+            return
+
+        plan: Plan | None = self.bag.plans.first()
+        service_item, _ = ServiceItem.objects.get_or_create(
+            service=plan.seat_service_price.service, how_many=seats, is_renewable=False, is_team_allowed=True
+        )
+
+        self.bag.seat_service_item = service_item
+        self.bag.save()
+
     def _ask_to_add_plan_and_charge_it_in_the_bag(self):
         for plan in self.bag.plans.all():
             ask_to_add_plan_and_charge_it_in_the_bag(plan, self.bag.user, self.lang)
@@ -514,6 +606,10 @@ class BagHandler:
         self._get_plans_that_not_found()
         self._report_items_not_found()
         self._add_plans_to_bag()
+        # validate and add seat add-ons if requested
+        self._validate_just_one_plan()
+        self._validate_seat_add_ons()
+        self._add_seat_add_ons()
         self._add_service_items_to_bag()
         self._validate_just_one_plan()
 
@@ -667,6 +763,31 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
         bag.currency = currency
         bag.save()
 
+    if bag.seat_service_item:
+        academy_service = AcademyService.objects.filter(
+            service=bag.seat_service_item.service, academy=bag.academy
+        ).first()
+        if not academy_service:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Price are not configured for per-seat purchases",
+                    es="Precio no configurado para compras por asiento",
+                    slug="price-not-configured-for-per-seat-purchases",
+                ),
+                code=400,
+            )
+
+        how_many_seats = bag.seat_service_item.how_many
+        if how_many_seats > 0 and price_per_month != 0:
+            price_per_month += academy_service.price_per_unit * how_many_seats
+        if how_many_seats > 0 and price_per_quarter != 0:
+            price_per_quarter += academy_service.price_per_unit * how_many_seats * 3
+        if how_many_seats > 0 and price_per_half != 0:
+            price_per_half += academy_service.price_per_unit * how_many_seats * 6
+        if how_many_seats > 0 and price_per_year != 0:
+            price_per_year += academy_service.price_per_unit * how_many_seats * 12
+
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
 
@@ -738,16 +859,43 @@ def get_bag_from_subscription(
     for plan in subscription.plans.all():
         bag.plans.add(plan)
 
+    # Include persisted subscription add-ons (SubscriptionServiceItem) in the bag so they are billed monthly
+    for handler in subscription.subscriptionserviceitem_set.select_related("service_item").all():
+        service_item = handler.service_item
+        # Attach the same service_item reference into bag so pricing logic picks it up via plan.add_ons mapping
+        bag.service_items.add(service_item)
+
     # Add only valid (non-expired) coupons from the subscription to the bag
     # Also exclude coupons where the user is the seller
     utc_now = timezone.now()
 
-    subscription_coupons = subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now)).exclude(
-        seller__user=subscription.user
+    # Add valid (non-expired and with remaining uses) coupons from the subscription and from auto applied user restricted coupons
+    subscription_coupons = (
+        subscription.coupons.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=utc_now))
+        .exclude(seller__user=subscription.user)
+        .exclude(~Q(referral_type=Coupon.Referral.NO_REFERRAL))
+    )
+    user_coupons = Coupon.objects.filter(
+        Q(offered_at=None) | Q(offered_at__lte=utc_now),
+        Q(expires_at=None) | Q(expires_at__gte=utc_now),
+        allowed_user=subscription.user,
+        auto=True,
+    ).exclude(how_many_offers=0)
+    coupon_slugs = list(
+        set(
+            list(subscription_coupons.values_list("slug", flat=True))
+            + list(user_coupons.values_list("slug", flat=True))
+        )
     )
 
-    if subscription_coupons.exists():
-        bag.coupons.set(subscription_coupons)
+    if subscription_coupons.exists() or user_coupons.exists():
+        valid_coupons = get_available_coupons(
+            subscription.plans.first(),
+            coupon_slugs,
+            subscription.user,
+            only_sent_coupons=True,
+        )
+        bag.coupons.set(valid_coupons)
 
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
         bag, subscription.currency or last_invoice.currency, lang
@@ -865,6 +1013,13 @@ def filter_void_consumable_balance(request: WSGIRequest, items: QuerySet[Consuma
                 "how_many": consumable.how_many,
                 "unit_type": consumable.unit_type,
                 "valid_until": consumable.valid_until,
+                "subscription_seat": consumable.subscription_seat.id if consumable.subscription_seat else None,
+                "subscription_billing_team": (
+                    consumable.subscription_billing_team.id if consumable.subscription_billing_team else None
+                ),
+                "user": consumable.user.id if consumable.user else None,
+                "subscription": consumable.subscription.id if consumable.subscription else None,
+                "plan_financing": consumable.plan_financing.id if consumable.plan_financing else None,
             }
         )
 
@@ -902,6 +1057,14 @@ def get_balance_by_resource(
                     "how_many": x.how_many,
                     "unit_type": x.unit_type,
                     "valid_until": x.valid_until,
+                    # identity info
+                    "subscription_seat": x.subscription_seat.id if x.subscription_seat else None,
+                    "subscription_billing_team": (
+                        x.subscription_billing_team.id if x.subscription_billing_team else None
+                    ),
+                    "user": x.user.id if x.user else None,
+                    "subscription": x.subscription.id if x.subscription else None,
+                    "plan_financing": x.plan_financing.id if x.plan_financing else None,
                 }
             )
 
@@ -925,13 +1088,15 @@ def max_coupons_allowed():
         return 1
 
 
-def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user: Optional[User] = None) -> list[Coupon]:
+def get_available_coupons(
+    plan: Plan,
+    coupons: Optional[list[str]] = None,
+    user: Optional[User] = None,
+    only_sent_coupons: bool = False,
+) -> list[Coupon]:
 
     def get_total_spent_coupons(coupon: Coupon) -> int:
         sub_kwargs = {"invoices__bag__coupons": coupon}
-        if coupon.offered_at:
-            sub_kwargs["created_at__gte"] = coupon.offered_at
-
         if coupon.expires_at:
             sub_kwargs["created_at__lte"] = coupon.expires_at
 
@@ -951,6 +1116,16 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
         if coupon.allowed_user and (not user or coupon.allowed_user != user):
             founded_coupon_slugs.append(coupon.slug)
             return
+        # Check if coupon is restricted to a specific plan
+        if coupon.referral_type != Coupon.Referral.NO_REFERRAL:
+            if coupon.plans.exists():
+                if coupon.plans.filter(exclude_from_referral_program=True).exists():
+                    founded_coupon_slugs.append(coupon.slug)
+                    return
+            else:
+                if plan and plan.exclude_from_referral_program:
+                    founded_coupon_slugs.append(coupon.slug)
+                    return
 
         if coupon.slug not in founded_coupon_slugs:
             if coupon.how_many_offers == -1:
@@ -963,7 +1138,7 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
                 return
 
             total_spent_coupons = get_total_spent_coupons(coupon)
-            if coupon.how_many_offers >= total_spent_coupons:
+            if coupon.how_many_offers > total_spent_coupons:
                 founded_coupons.append(coupon)
 
             founded_coupon_slugs.append(coupon.slug)
@@ -976,17 +1151,23 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
         Q(offered_at=None) | Q(offered_at__lte=timezone.now()),
         Q(expires_at=None) | Q(expires_at__gte=timezone.now()),
     )
+
     cou_fields = ("id", "slug", "how_many_offers", "offered_at", "expires_at", "seller", "allowed_user")
 
-    special_offers = (
-        Coupon.objects.filter(*cou_args, auto=True)
-        .exclude(Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT))
-        .select_related("seller__user", "allowed_user")
-        .only(*cou_fields)
-    )
+    if not only_sent_coupons:
+        special_offer = (
+            Coupon.objects.filter(*cou_args, auto=True)
+            .exclude(
+                Q(how_many_offers=0) | Q(discount_type=Coupon.Discount.NO_DISCOUNT) | Q(allowed_user__isnull=False)
+            )
+            .select_related("seller__user", "allowed_user")
+            .only(*cou_fields)
+            .first()
+        )
+        print("special_offers", special_offer)
 
-    for coupon in special_offers:
-        manage_coupon(coupon)
+        if special_offer:
+            manage_coupon(special_offer)
 
     valid_coupons = (
         Coupon.objects.filter(*cou_args, slug__in=coupons, auto=False)
@@ -994,10 +1175,18 @@ def get_available_coupons(plan: Plan, coupons: Optional[list[str]] = None, user:
         .select_related("seller__user", "allowed_user")
         .only(*cou_fields)
     )
+    print("cupones no expirados", valid_coupons)
 
     max = max_coupons_allowed()
-    for coupon in valid_coupons[0:max]:
-        manage_coupon(coupon)
+
+    if only_sent_coupons:
+        sent_coupons = Coupon.objects.filter(*cou_args, slug__in=coupons).only(*cou_fields)
+
+        for coupon in sent_coupons:
+            manage_coupon(coupon)
+    else:
+        for coupon in valid_coupons[0:max]:
+            manage_coupon(coupon)
 
     return founded_coupons
 
@@ -1396,6 +1585,11 @@ def set_virtual_balance(balance: ConsumableBalance, user: User) -> None:
                 "how_many": how_many,
                 "unit_type": unit_type.upper(),
                 "valid_until": valid_until,
+                "subscription_seat": None,
+                "subscription_billing_team": None,
+                "user": user.id,
+                "subscription": None,
+                "plan_financing": None,
             }
         )
 
@@ -1630,10 +1824,10 @@ def is_plan_paid(plan: Plan) -> bool:
 
     # For renewable plans, check if any pricing field is greater than 0
     return (
-        getattr(plan, "price_per_month", 0) > 0
-        or getattr(plan, "price_per_quarter", 0) > 0
-        or getattr(plan, "price_per_half", 0) > 0
-        or getattr(plan, "price_per_year", 0) > 0
+        (getattr(plan, "price_per_month", 0) or 0) > 0
+        or (getattr(plan, "price_per_quarter", 0) or 0) > 0
+        or (getattr(plan, "price_per_half", 0) or 0) > 0
+        or (getattr(plan, "price_per_year", 0) or 0) > 0
     )
 
 
@@ -1725,14 +1919,15 @@ def user_has_active_paid_plans(user: User) -> bool:
     Returns:
         bool: True if the user has active paid plans, False otherwise
     """
-    # Check for active PAID subscriptions
-    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
-        if is_subscription_paid(subscription):
-            return True
+    # Check for active PAID subscriptions owned by the user or where the user has a seat
+    owned_subscriptions = Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE)
+    seated_subscription_ids = SubscriptionSeat.objects.filter(user=user).values_list(
+        "billing_team__subscription_id", flat=True
+    )
+    seat_subscriptions = Subscription.objects.filter(id__in=seated_subscription_ids, status=Subscription.Status.ACTIVE)
 
-    # Check for active PAID plan financings
-    for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
-        if is_plan_financing_paid(plan_financing):
+    for subscription in owned_subscriptions.union(seat_subscriptions):
+        if is_subscription_paid(subscription):
             return True
 
     return False
@@ -1758,3 +1953,677 @@ def user_has_active_4geeks_plus_plans(user: User) -> bool:
             return True
 
     return False
+
+
+# ------------------------------
+# Team member consumables (per-member issuance from JSON)
+# ------------------------------
+
+type SeatLogAction = Literal["ADDED", "REMOVED", "REPLACED"]
+
+
+class SeatLogEntry(TypedDict):
+    email: str
+    action: SeatLogAction
+    created_at: str
+
+
+def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> SeatLogEntry:
+    utc_now = timezone.now()
+    entry = {
+        "email": (seat.email or "").strip().lower(),
+        "action": action,
+        "created_at": utc_now.isoformat().replace("+00:00", "Z"),
+    }
+    return entry
+
+
+# seats management
+
+
+class SeatDict(TypedDict, total=False):
+    email: str
+    first_name: str | None
+    last_name: str | None
+
+
+class AddSeat(TypedDict):
+    email: str
+    first_name: str
+    last_name: str
+
+
+class ReplaceSeat(TypedDict):
+    from_email: str
+    to_email: str
+    first_name: str
+    last_name: str
+
+
+def notify_user_was_added_to_subscription_team(
+    subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
+):
+    """
+    Send a notification email to an existing user that was added to a subscription team.
+
+    This function notifies users who already exist in the platform and were directly assigned
+    to a subscription team seat. It sends a welcome notification informing them they've been
+    added to the team with immediate access to consumables and services.
+
+    Args:
+        subscription: The Subscription the user is being added to
+        subscription_seat: The SubscriptionSeat with an assigned user (must have user != None)
+        lang: Language code for email localization (e.g., 'en', 'es')
+
+    Returns:
+        None. Returns early without sending email if subscription_seat.user is None.
+
+    Note:
+        This function is the opposite of invite_user_to_subscription_team:
+        - This handles seats WITH users (existing platform users)
+        - invite_user_to_subscription_team handles seats WITHOUT users (pending invitations)
+
+    See Also:
+        invite_user_to_subscription_team: For inviting non-existent users
+    """
+    if subscription_seat.user is None:
+        return
+
+    billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
+    notify_actions.send_email_message(
+        "welcome_academy",
+        subscription_seat.email,
+        {
+            "email": subscription_seat.email,
+            "subject": translation(
+                lang,
+                en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
+                es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
+            ),
+            "LINK": get_app_url(),
+            "FIST_NAME": subscription_seat.user.first_name or "",
+        },
+        academy=subscription.academy,
+    )
+
+
+def invite_user_to_subscription_team(
+    obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
+):
+    """
+    Create and send an invitation for a non-existent user to join a subscription team.
+
+    This function handles the invitation flow for users who don't exist in the platform yet.
+    It creates a UserInvite record and sends a welcome email with an invitation link. When the
+    user accepts the invite, the related consumables (created with user=None) will be automatically
+    assigned to them via the handle_seat_invite_accepted receiver.
+
+    Args:
+        obj: Dictionary containing user information (email, first_name, last_name)
+        subscription: The Subscription the user is being invited to
+        subscription_seat: The SubscriptionSeat reserved for this user (user=None until accepted)
+        lang: Language code for email localization (e.g., 'en', 'es')
+
+    Behavior:
+        - Creates a UserInvite if one doesn't exist, or reuses existing pending invite
+        - Sends welcome email only if invite is newly created or still pending
+        - The subscription_seat remains with user=None until the invite is accepted
+        - Upon acceptance, consumables are automatically assigned via signal receiver
+
+    Related:
+        - See handle_seat_invite_accepted in receivers.py for post-acceptance logic
+        - See Issue #9973 for the complete invitation flow
+    """
+    invite, created = UserInvite.objects.get_or_create(
+        email=obj.get("email", ""),
+        academy=subscription.academy,
+        subscription_seat=subscription_seat,
+        role="student",
+        defaults={
+            "status": "PENDING",
+            "author": subscription.user,
+            "role": "student",
+            "token": str(uuid.uuid4()),
+            "sent_at": timezone.now(),
+            "first_name": obj.get("first_name", ""),
+            "last_name": obj.get("last_name", ""),
+        },
+    )
+    if created or invite.status == "PENDING":
+        billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
+        notify_actions.send_email_message(
+            "welcome_academy",
+            obj.get("email", ""),
+            {
+                "email": obj.get("email", ""),
+                "subject": translation(
+                    lang,
+                    en=f"Invitation to join {billing_team_name} at {subscription.academy.name}",
+                    es=f"Invitación para unirse a {billing_team_name} en {subscription.academy.name}",
+                ),
+                "LINK": get_api_url() + "/v1/auth/member/invite/" + invite.token,
+                "FIST_NAME": invite.first_name or "",
+            },
+            academy=subscription.academy,
+        )
+
+
+def _validate_email(email: str, lang: str):
+    email_status = validate_email(email, lang)
+    if email_status["score"] <= 0.60:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address seems to have poor quality. Are you able to provide a different email address?",
+                es="El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?",
+                slug="poor-quality-email",
+            ),
+            data=email_status,
+        )
+
+
+def create_seat(email: str, user: User | None, billing_team: SubscriptionBillingTeam, lang: str):
+    _validate_email(email, lang)
+
+    if SubscriptionSeat.objects.filter(billing_team=billing_team, email=email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="User already has a seat for this team",
+                es="El usuario ya tiene un asiento para esta equipo",
+                slug="duplicate-team-seat",
+            ),
+            code=400,
+        )
+
+    seat = SubscriptionSeat(
+        billing_team=billing_team,
+        user=user,
+        email=email,
+    )
+    seat_log_entry = create_seat_log_entry(seat, "ADDED")
+    seat.seat_log.append(seat_log_entry)
+    seat.is_active = True
+    seat.save()
+
+    if not user:
+        invite_user_to_subscription_team(
+            {"email": email, "first_name": None, "last_name": None},
+            seat.billing_team.subscription,
+            seat,
+            lang,
+        )
+
+    else:
+        notify_user_was_added_to_subscription_team(
+            seat.billing_team.subscription,
+            seat,
+            lang,
+        )
+        for plan in seat.billing_team.subscription.plans.all():
+            grant_student_capabilities(user, plan)
+
+    # create consumables unless shared per team
+    strategy = getattr(
+        billing_team,
+        "consumption_strategy",
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT,
+    )
+
+    # if strategy is not per team, create the individual consumables
+    if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+        tasks.build_service_stock_scheduler_from_subscription.delay(billing_team.subscription.id, seat_id=seat.id)
+
+    return seat
+
+
+def replace_seat(
+    from_email: str,
+    to_email: str,
+    to_user: User | None,
+    subscription_seat: SubscriptionSeat,
+    lang: str,
+):
+    _validate_email(to_email, lang)
+
+    seat = SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=from_email).first()
+    if not seat:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is no seat with this email {from_email}",
+                es=f"No hay un asiento con este email {from_email}",
+                slug="no-seat-with-this-email",
+            ),
+            code=400,
+        )
+
+    if SubscriptionSeat.objects.filter(billing_team=subscription_seat.billing_team, email=to_email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is already a seat with this email {to_email}",
+                es=f"Ya hay un asiento con este email {to_email}",
+                slug="seat-with-this-email-already-exists",
+            ),
+            code=400,
+        )
+
+    seat.email = to_user.email if to_user else to_email
+    seat.user = to_user
+    seat.is_active = True
+    seat_log_entry = create_seat_log_entry(seat, "REPLACED")
+    seat.seat_log.append(seat_log_entry)
+    seat.save(update_fields=["seat_log", "is_active", "email", "user"])
+
+    if not to_user:
+        invite_user_to_subscription_team(
+            {"email": to_email, "first_name": None, "last_name": None},
+            subscription_seat.billing_team.subscription,
+            subscription_seat,
+            lang,
+        )
+
+    else:
+        notify_user_was_added_to_subscription_team(
+            seat.billing_team.subscription,
+            seat,
+            lang,
+        )
+
+        for plan in subscription_seat.billing_team.subscription.plans.all():
+            grant_student_capabilities(to_user, plan)
+
+    # create consumables unless shared per team
+    strategy = getattr(
+        subscription_seat.billing_team,
+        "consumption_strategy",
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT,
+    )
+
+    # if strategy is not per team, reassign consumables from the seat to the new user (or None if pending invite)
+    if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
+        # Set user to the new user if exists, otherwise None (waiting for invitation acceptance)
+        Consumable.objects.filter(subscription_seat=seat).update(user=to_user)
+
+    return seat
+
+
+def normalize_email(email: str):
+    return email.strip().lower()
+
+
+def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
+    l: list[AddSeat] = []
+    for seat in add_seats:
+        serialized = {
+            "email": normalize_email(seat["email"]),
+            "user": seat.get("user", None),
+            "first_name": seat.get("first_name", ""),
+            "last_name": seat.get("last_name", ""),
+        }
+        l.append(serialized)
+    return l
+
+
+def normalize_replace_seat(replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
+    l: list[AddSeat] = []
+    for seat in replace_seats:
+        serialized = {
+            "from_email": normalize_email(seat["from_email"]),
+            "to_email": normalize_email(seat["to_email"]),
+            "to_user": seat.get("to_user", None),
+            "first_name": seat.get("first_name", ""),
+            "last_name": seat.get("last_name", ""),
+        }
+        l.append(serialized)
+    return l
+
+
+def validate_seats_limit(
+    team: SubscriptionBillingTeam, add_seats: list[AddSeat], replace_seats: list[ReplaceSeat], lang: str
+):
+    seats = {}
+    for seat in SubscriptionSeat.objects.filter(billing_team=team):
+        seats[seat.email] = 1
+
+    for seat in add_seats:
+        # seat is a dict-like (TypedDict)
+        seats[seat["email"]] = 1
+
+    for seat in replace_seats:
+        # carry forward the existing multiplier when replacing an email
+        prev = seats.pop(seat["from_email"], None)
+        if prev is not None:
+            seats[seat["to_email"]] = prev
+
+    value = 0
+    for seat in seats.values():
+        value += seat
+
+    if team.additional_seats and value > team.seats_limit:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Seats limit exceeded: {value} > {team.seats_limit}",
+                es=f"Límite de asientos excedido: {value} > {team.seats_limit}",
+                slug="seats-limit-exceeded",
+            ),
+            code=400,
+        )
+
+
+def grant_student_capabilities(user: User, plan: Plan, selected_cohort: Optional[str] = None):
+    if plan.owner:
+        admissions_tasks.build_profile_academy.delay(plan.owner.id, user.id)
+
+    if not plan.cohort_set or not selected_cohort:
+        return
+
+    cohort = plan.cohort_set.cohorts.filter(slug=selected_cohort).first()
+    if not cohort:
+        return
+
+    admissions_tasks.build_cohort_user.delay(cohort.id, user.id)
+
+    if plan.owner != cohort.academy:
+        admissions_tasks.build_profile_academy.delay(cohort.academy.id, user.id)
+
+
+def get_user_from_consumable_to_be_charged(
+    instance: Consumable,
+) -> User | None:
+    """
+    Resolve the user that should be considered the consumer for charging/notifications.
+
+    Rules:
+    - For `PlanFinancing` (always individual) or when the service is not team‑allowed,
+      the user is the resource owner (`resource.user`).
+    - For team‑allowed services with PER_SEAT strategy, it is the seat user if present,
+      otherwise it falls back to the resource owner.
+
+    Parameters:
+    - instance: The `Consumable` linked to either a `Subscription` or `PlanFinancing`.
+
+    Returns:
+    - A `User` instance or `None` when team‑shared without a specific user.
+    """
+    resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
+    is_team_allowed = instance.service_item.is_team_allowed
+
+    user = None
+    seat = getattr(instance, "subscription_seat", None)
+    team: SubscriptionBillingTeam | None = getattr(instance, "subscription_billing_team", None) or (
+        seat.billing_team if seat else None
+    )
+    strategy = team.consumption_strategy if team else None
+
+    if is_team_allowed is False or isinstance(resource, PlanFinancing):
+        user = resource.user
+    elif is_team_allowed and strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT:
+        # Seat user if present, otherwise fallback to resource owner
+        user = seat.user if (seat and seat.user) else resource.user
+
+    return user
+
+
+def validate_auto_recharge_service_units(
+    instance: Consumable,
+) -> tuple[float, int, str | None]:  # price, amount, error
+    """
+    Decide whether an auto‑recharge should happen and, if so, how many units to buy.
+
+    The decision takes into account:
+    - Auto‑recharge enablement on the owning resource (`Subscription` or `PlanFinancing`).
+    - Whether a seat is inactive (no recharge for inactive seats).
+    - Presence of a main currency in the academy (required to price the units).
+    - The effective user to consider for spending (derived from
+      `get_user_from_consumable_to_be_charged`).
+    - Current period spend for the service/user/team and configured thresholds/limits
+      (`recharge_threshold_amount`, `max_period_spend`).
+    - Academy price per unit for the service.
+    - Remaining balance heuristics (e.g., more than 20% left).
+
+    Parameters:
+    - instance: The `Consumable` being consumed.
+
+    Returns:
+    - (price_per_unit, units_to_buy, None) when allowed.
+    - (0.0, 0, "<slug>") when not allowed, where the slug explains the reason
+      (e.g., "main-currency-not-found", "auto-recharge-threshold-reached",
+      "max-period-spend-reached", "price-per-unit-not-found").
+    """
+    resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
+    if (
+        resource is None
+        or resource.auto_recharge_enabled is False
+        or (instance.subscription_seat and instance.subscription_seat.is_active is False)
+    ):
+        return 0.0, 0, None
+
+    if resource.academy.main_currency is None:
+        return 0.0, 0, "main-currency-not-found"
+
+    user = get_user_from_consumable_to_be_charged(instance)
+    service = instance.service_item.service
+
+    # Normalize spends to Decimal
+    _user_spend = resource.get_current_period_spend(service, user)
+    user_spend: Decimal = Decimal(str(_user_spend)) if _user_spend is not None else Decimal("0")
+
+    team_spend: Decimal = user_spend
+    if user:
+        _team_spend = resource.get_current_period_spend(service)
+        team_spend = Decimal(str(_team_spend)) if _team_spend is not None else Decimal("0")
+
+    # Thresholds may come as DecimalField (DB) or float in stubs; normalize to Decimal
+    threshold_dec = (
+        Decimal(str(resource.recharge_threshold_amount))
+        if resource.recharge_threshold_amount is not None
+        else Decimal("0")
+    )
+
+    if team_spend >= threshold_dec:
+        return 0.0, 0, "auto-recharge-threshold-reached"
+
+    max_spend_dec = Decimal(str(resource.max_period_spend)) if getattr(resource, "max_period_spend", None) else None
+
+    recharge_amount: Decimal = Decimal(str(resource.recharge_amount))
+
+    if max_spend_dec and (team_spend >= max_spend_dec or team_spend + recharge_amount >= max_spend_dec):
+        return 0.0, 0, "max-period-spend-reached"
+
+    if max_spend_dec and team_spend + recharge_amount > max_spend_dec:
+        recharge_amount = max_spend_dec - team_spend
+
+    price_qs = AcademyService.objects.filter(service=service, academy=resource.academy)
+    if (price := price_qs.first()) is None:
+        return 0.0, 0, "academy-service-not-found"
+
+    if price.price_per_unit is None:
+        return 0.0, 0, "price-per-unit-not-found"
+
+    price_per_unit_dec = Decimal(str(price.price_per_unit))
+    if price_per_unit_dec <= 0:
+        return 0.0, 0, "price-per-unit-not-found"
+
+    if price_per_unit_dec > recharge_amount:
+        return 0.0, 0, "price-per-unit-exceeded"
+
+    consumables = Consumable.list(user=user, service=instance.service_item.service)
+    total = 0
+    available = 0
+    for consumable in consumables:
+        if consumable.how_many == -1:
+            return 0.0, 0, None
+
+        available += consumable.how_many
+        total += consumable.service_item.how_many
+
+    # Use Decimal for ratio comparison to avoid float mixing
+    if len(consumables) > 0 and available > 1 and (Decimal(total) / Decimal(available) > Decimal("0.2")):
+        return 0.0, 0, "more-than-20-percent-left"
+
+    if Decimal(available) * price_per_unit_dec > threshold_dec:
+        return 0.0, 0, None
+
+    # Compute units using Decimal and return price as float for compatibility
+    units = int((Decimal(str(recharge_amount)) / price_per_unit_dec).to_integral_value(rounding=ROUND_FLOOR))
+    return float(price.price_per_unit), units, None
+
+
+def process_auto_recharge(
+    consumable: Consumable,
+):
+    """
+    Execute the auto‑recharge workflow for the resource that owns a consumable.
+
+    This is an ACTION (not a Celery task). The Celery entry point that calls this is
+    `breathecode.payments.tasks.process_auto_recharge`. This function:
+
+    1) Resolves the owning resource from the `consumable` (either `Subscription` or `PlanFinancing`).
+    2) Acquires a Redis lock to avoid concurrent recharges per resource.
+    3) Validates the recharge using `validate_auto_recharge_service_units` which returns
+       the unit price and number of units to buy or an error slug.
+    4) Performs the payment (Stripe) by creating a temporary `Bag` and charging the
+       subscription owner. The charged user in emails can be the seat holder depending on the
+       service/team strategy.
+    5) Sends notification emails to the resource owner and, when applicable, the charged user.
+
+    Parameters:
+    - consumable: The `Consumable` instance that triggered the recharge path.
+
+    Returns:
+    - None. Side‑effects include DB writes (Bag/Invoice), Stripe charge and notifications.
+
+    Raises:
+    - AbortTask: When the flow cannot proceed (e.g., configuration, payment or validation issues).
+
+    Concurrency:
+    - Guarded by a Redis lock named `process_auto_recharge:<ResourceClass>:<resource_id>`.
+    """
+
+    resource: Subscription | PlanFinancing | None = consumable.subscription or consumable.plan_financing
+    if not resource:
+        return
+
+    currency: Currency | None = resource.academy.main_currency
+    if not currency:
+        return
+
+    # Connect to Redis
+    redis_client = get_redis_connection("default")
+    team = consumable.subscription_billing_team or (
+        consumable.subscription_seat.billing_team if consumable.subscription_seat else None
+    )
+    seat = consumable.subscription_seat
+
+    lock_key = f"process_auto_recharge:{resource.__class__.__name__}:{resource.id}"
+    lock_timeout = 300  # 5 minutes max lock time
+
+    # Try to acquire lock
+    lock: redis.lock.Lock | None = redis_client.lock(lock_key, timeout=lock_timeout, blocking_timeout=5)
+    # lock.release()
+
+    if lock.acquire(blocking=False) is False:
+        raise RetryTask(f"Auto-recharge already in progress for {resource.__class__.__name__} {resource.id}")
+
+    try:
+        logger.info(f"Processing auto-recharge for {resource.__class__.__name__} {resource.id}")
+
+        price, amount, error = validate_auto_recharge_service_units(consumable)
+        if error:
+            logger.warning(f"Auto-recharge not allowed for consumable {consumable.id}: {error}")
+            return
+
+        if amount <= 0:
+            logger.warning(f"Auto-recharge not allowed for consumable {consumable.id}: amount is zero or negative")
+            return
+
+        try:
+            with transaction.atomic():
+                # Create invoice via Stripe payment
+                from .services.stripe import Stripe
+
+                charged_user = get_user_from_consumable_to_be_charged(consumable)
+
+                # Create a temporary bag for the auto-recharge
+                bag = Bag.objects.create(
+                    user=resource.user,  # it must be charged to the owner
+                    academy=resource.academy,
+                    currency=currency,
+                    type="CHARGE",
+                    status="PAID",
+                    was_delivered=True,
+                )
+
+                # Process payment via Stripe
+                # If this fails, the entire transaction will rollback
+                s = Stripe(academy=resource.academy)
+                context_desc = f"auto-recharge for {charged_user.email}"
+                s.pay(
+                    resource.user,  # it must be charged to the owner
+                    bag,
+                    price * amount,
+                    currency=currency.code,
+                    description=f"Auto-recharge for {context_desc}",
+                    subscription_billing_team=team,
+                    subscription_seat=seat,
+                )
+
+                emails = [resource.user.email]
+                if charged_user.email not in resource.user.email:
+                    if charged_user:
+                        emails.append(charged_user.email)
+
+                if charged_user is None:
+                    charged_user = resource.user
+
+                user_settings = get_user_settings(charged_user)
+                lang = user_settings.lang
+
+                subject = translation(
+                    lang,
+                    en=f"Consumables Auto-Recharged for {charged_user.email}",
+                    es=f"Consumibles Auto-Recargados para {charged_user.email}",
+                )
+                message = translation(
+                    lang,
+                    en=f"The consumables have been auto-recharged for {charged_user.email}",
+                    es=f"Los consumibles han sido auto-recargados para {charged_user.email}",
+                )
+
+                for email in emails:
+                    notify_actions.send_email_message(
+                        "message",
+                        email,
+                        {
+                            "SUBJECT": subject,
+                            "MESSAGE": message,
+                        },
+                        academy=resource.academy,
+                    )
+
+                attrs = consumable.service_item.__dict__.copy()
+                attrs.pop("id")
+                attrs.pop("_state")
+                attrs.pop("how_many")
+
+                si, _ = ServiceItem.objects.get_or_create(
+                    **attrs,
+                    how_many=amount,
+                )
+
+                attrs = consumable.__dict__.copy()
+                attrs.pop("id")
+                attrs.pop("_state")
+                attrs.pop("service_item")
+
+                Consumable.objects.create(**attrs, service_item=si)
+
+        except Exception as e:
+            raise AbortTask(f"Consumable auto-recharge failed for {resource.__class__.__name__} {resource.id}: {e}")
+
+    finally:
+        # Always release the lock
+        lock.release()

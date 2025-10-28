@@ -47,6 +47,14 @@ def get_app_url():
     return url
 
 
+def get_api_url():
+    url = os.getenv("API_URL", "https://breathecode.herokuapp.com/")
+    if url and url[-1] == "/":
+        url = url[:-1]
+
+    return url
+
+
 def get_github_scopes(user, default_scopes=""):
     # Start with mandatory "user" scope and add any additional default scopes
     scopes = {"user:email"}  # Always include "user"
@@ -131,12 +139,16 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     params = {"callback": "https://admin.4geeks.com"}
     querystr = urllib.parse.urlencode(params)
     url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
+    subject = "Invitation to join 4Geeks"
+    if academy and getattr(academy, "white_labeled", False):
+        subject = f"Invitation to join {academy.name}"
+
     notify_actions.send_email_message(
         "welcome_academy",
         email,
         {
             "email": email,
-            "subject": "Invitation to join 4Geeks",
+            "subject": subject,
             "LINK": url,
             "FIST_NAME": first_name,
             **extra,
@@ -859,6 +871,7 @@ JWT_LIFETIME = 10
 
 
 def accept_invite_action(data=None, token=None, lang="en"):
+    from breathecode.payments import actions as payments_actions
     from breathecode.payments import tasks as payments_tasks
     from breathecode.payments.models import Bag, Invoice, Plan
 
@@ -928,6 +941,14 @@ def accept_invite_action(data=None, token=None, lang="en"):
         profile.status = "ACTIVE"
         profile.save()
 
+    if invite.subscription_seat is not None:
+        if invite.subscription_seat.user is None:
+            invite.subscription_seat.user = user
+            invite.subscription_seat.save()
+
+        for plan in invite.subscription_seat.billing_team.plans.all():
+            payments_actions.grant_student_capabilities(user, plan)
+
     if invite.cohort is not None:
         role = "student"
         if invite.role is not None and invite.role.slug != "student":
@@ -988,8 +1009,8 @@ def accept_invite_action(data=None, token=None, lang="en"):
     return invite
 
 
-async def sync_with_rigobot(token_key):
-    rigobot_payload = {"organization": "4geeks", "user_token": token_key}
+async def sync_with_rigobot(token_key, organization="4geeks"):
+    rigobot_payload = {"organization": organization, "user_token": token_key}
     rigobot_host = os.getenv("RIGOBOT_HOST", "https://rigobot.herokuapp.com")
 
     async with aiohttp.ClientSession() as session:
@@ -1047,9 +1068,11 @@ def get_academy_from_body(body: dict[str, Any], lang: str = "en", raise_exceptio
     academy = None
 
     if isinstance(academy_slug, int):
-        academy = Academy.objects.get(id=academy_slug)
+        academy = Academy.objects.filter(id=academy_slug).first()
+    elif isinstance(academy_slug, str) and academy_slug.isnumeric():
+        academy = Academy.objects.filter(id=academy_slug).first()
     elif isinstance(academy_slug, str):
-        academy = Academy.objects.get(slug=academy_slug)
+        academy = Academy.objects.filter(slug=academy_slug).first()
 
     if raise_exception and academy is None:
         raise ValidationException(

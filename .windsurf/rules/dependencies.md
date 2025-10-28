@@ -1,0 +1,67 @@
+---
+trigger: always_on
+description:
+globs:
+---
+# Main dependencies
+
+## Rules for new dependencies
+
+- Do not use dependencies in maintenance mode
+- Do not use deprecated dependencies
+- Do not use archived dependencies
+- Do not insist in the community side when the dependency is abandoned
+- Do not use dependencies with very low activity in the main repository (check last commit and last pull request date)
+- Avoid Dependency Confusion Attacks
+- Check if there are any reference about that dependency is trying to attack they users
+- Prevent Dependency chain abuse risk
+
+## dependency file
+
+[pyproject.toml](mdc:pyproject.toml)
+
+## Package manager
+
+- Poetry
+
+## 4Geeks dependencies
+
+- capy-core https://breatheco-de.github.io/capy-core/
+- celery-task-manager https://breatheco-de.github.io/celery-task-manager-django-plugin/
+- linked-services https://breatheco-de.github.io/linked-services-django-plugin/
+
+## Third party dependencies
+
+- django
+- djangorestframework (pending to be deprecated)
+- serpy (maintenance mode, for GET requests, use Capy Serializers https://breatheco-de.github.io/capy-core/ for new endpoints)
+- amqp
+
+## Testing dependencies
+
+- pytest
+- pytest-cov
+- pytest-xdist
+- pytest-django
+- pytest-env
+- pytest-asyncio
+- coverage
+- mixer (package deprecated, maintenance mode in our code)
+- capy-core fixtures https://breatheco-de.github.io/capy-core/
+
+## Linter
+
+- flake8
+- flake8-docstrings
+- mccabe
+- pep8-naming
+- flake8-bugbear
+- black
+- pre-commit
+
+## Docs
+
+- mkdocs
+- mkdocs-material
+- mkdocstrings
+- mkdocstrings-python

@@ -172,21 +172,55 @@ def async_update_frontend_asset_cache(asset_slug):
         logger.error(str(e))
 
 
-@shared_task(priority=TaskPriority.ACADEMY.value)
-def async_regenerate_asset_readme(asset_slug):
-    a = Asset.objects.filter(slug=asset_slug).first()
-    if a is None:
-        logger.debug(f"Error: Error running SEO report for asset with slug {asset_slug}, does not exist.")
+@shared_task(bind=True, priority=TaskPriority.ACADEMY.value, soft_time_limit=300, time_limit=600)
+def async_regenerate_asset_readme(self, asset_slug):
+    """
+    Regenerate asset readme with timeout protection.
+
+    Args:
+        asset_slug: The slug of the asset to regenerate readme for
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    logger.info(f"Starting async_regenerate_asset_readme for asset: {asset_slug}")
+
+    try:
+        a = Asset.objects.filter(slug=asset_slug).first()
+        if a is None:
+            logger.warning(f"Asset with slug {asset_slug} not found")
+            return False
+
+        logger.info(f"Processing asset {asset_slug} - readme_raw length: {len(a.readme_raw or '')}")
+
+        a.readme = a.readme_raw
+        a.save()
+
+        logger.info(f"Starting clean_asset_readme for {asset_slug}")
+        clean_asset_readme(a)
+        logger.info(f"Completed clean_asset_readme for {asset_slug}")
+
+        logger.info(f"Scheduling async tasks for {asset_slug}")
+        async_download_readme_images.delay(a.slug)
+        async_update_frontend_asset_cache.delay(a.slug)
+
+        success = a.cleaning_status == "OK"
+        logger.info(f"Completed async_regenerate_asset_readme for {asset_slug} - Success: {success}")
+        return success
+
+    except Exception as e:
+        logger.error(f"Error in async_regenerate_asset_readme for {asset_slug}: {str(e)}")
+        # Update asset with error status
+        try:
+            a = Asset.objects.filter(slug=asset_slug).first()
+            if a:
+                a.cleaning_status = "ERROR"
+                a.cleaning_status_details = f"Task error: {str(e)}"
+                a.save()
+        except Exception as save_error:
+            logger.error(f"Failed to save error status for {asset_slug}: {str(save_error)}")
+
         return False
-
-    a.readme = a.readme_raw
-    a.save()
-    clean_asset_readme(a)
-
-    async_download_readme_images.delay(a.slug)
-    async_update_frontend_asset_cache.delay(a.slug)
-
-    return a.cleaning_status == "OK"
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)

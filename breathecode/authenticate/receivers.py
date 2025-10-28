@@ -14,25 +14,29 @@ from breathecode.authenticate.models import ProfileAcademy, UserInvite
 from breathecode.authenticate.signals import (
     cohort_user_deleted,
     invite_status_updated,
+    invite_email_validated,
     user_info_deleted,
     user_info_updated,
     profile_academy_role_changed,
 )
 from breathecode.mentorship.models import MentorProfile
+from breathecode.payments.models import SubscriptionSeat
 
 from .tasks import async_add_to_organization, async_remove_from_organization
 
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save)
+@receiver(post_save, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
 def update_user_group(sender, instance, created: bool, **_):
     # redirect to other signal to be able to mock it
     user_info_updated.send_robust(sender=sender, instance=instance, created=created)
 
 
-@receiver(user_info_updated)
+@receiver(user_info_updated, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
 def set_user_group(sender, instance, created: bool, **_):
+    from breathecode.payments import actions as payments_actions
+
     group = None
     groups = None
 
@@ -41,6 +45,13 @@ def set_user_group(sender, instance, created: bool, **_):
 
     # prevent errors with migrations
     try:
+        if sender == SubscriptionSeat and instance.user:
+            group = Group.objects.filter(name="Student").first()
+            groups = instance.user.groups
+
+            for plan in instance.billing_team.plans.all():
+                payments_actions.grant_student_capabilities(instance.user, plan)
+
         if sender == User:
             group = Group.objects.filter(name="Default").first()
             groups = instance.groups
@@ -205,3 +216,30 @@ def handle_profile_academy_role_change(instance, old_role, new_role, **kwargs):
         logger.info(
             f"Added user {instance.user.id} to group {new_group_name} (role changed from {old_role.slug} to {new_role.slug})"
         )
+
+
+@receiver(invite_email_validated, sender=UserInvite)
+def sync_email_validation_across_invites(sender, instance, **kwargs):
+    """
+    When an invite's email is validated, automatically validate all other invites with the same email.
+    This ensures consistency across all invites for the same email address.
+
+    This receiver is triggered by the custom signal 'invite_email_validated' which is sent
+    from the UserInvite model when is_email_validated changes from False to True.
+    """
+    if not instance.email:
+        return
+
+    other_invites = UserInvite.objects.filter(email=instance.email, is_email_validated=False).exclude(id=instance.id)
+
+    if not other_invites.exists():
+        return
+
+    updated_count = other_invites.update(
+        is_email_validated=True, email_quality=instance.email_quality, email_status=instance.email_status
+    )
+
+    logger.info(
+        f"Email validation synced: {updated_count} invites with email '{instance.email}' "
+        f"were automatically validated based on invite {instance.id}"
+    )
