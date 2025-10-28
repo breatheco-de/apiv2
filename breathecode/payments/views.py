@@ -856,6 +856,7 @@ class MeSubscriptionView(APIView):
 
         if plan_financing := request.GET.get("plan-financing"):
             plan_financings = plan_financings.filter(id=int(plan_financing))
+            print("el plan financing es", plan_financing)
 
         if subscription and not plan_financing:
             plan_financings = PlanFinancing.objects.none()
@@ -3237,11 +3238,6 @@ class CoinbaseChargeView(APIView):
                     if subscription_id:
                         try:
                             subscription = Subscription.objects.get(id=int(float(subscription_id)))
-                            subscription.invoices.add(invoice)
-                            logger.info(
-                                f"handle_paid_charge: Invoice {invoice.id} linked to subscription {subscription.id} "
-                                f"(from metadata)"
-                            )
                         except Subscription.DoesNotExist:
                             logger.error(
                                 f"handle_paid_charge: Subscription {subscription_id} from metadata not found - "
@@ -3250,12 +3246,8 @@ class CoinbaseChargeView(APIView):
                             subscription = None
                     elif plan_financing_id:
                         try:
-                            plan_financing = PlanFinancing.objects.get(id=int(plan_financing_id))
-                            plan_financing.invoices.add(invoice)
-                            logger.info(
-                                f"handle_paid_charge: Invoice {invoice.id} linked to plan_financing {plan_financing.id} "
-                                f"(from metadata)"
-                            )
+                            plan_financing = PlanFinancing.objects.get(id=int(float(plan_financing_id)))
+
                         except PlanFinancing.DoesNotExist:
                             logger.error(
                                 f"handle_paid_charge: PlanFinancing {plan_financing_id} from metadata not found - "
@@ -3299,6 +3291,12 @@ class CoinbaseChargeView(APIView):
                             f"status={subscription.status}, next_payment_at={subscription.next_payment_at}, "
                             f"invoice_id={invoice.id}"
                         )
+                        subscription.invoices.add(invoice)
+                        subscription.save()
+                        logger.info(
+                            f"handle_paid_charge: Invoice {invoice.id} linked to subscription {subscription.id} "
+                            f"(from metadata)"
+                        )
 
                         # Determine if charge_subscription should be called immediately
                         should_charge_now = (
@@ -3326,7 +3324,12 @@ class CoinbaseChargeView(APIView):
                             f"status={plan_financing.status}, next_payment_at={plan_financing.next_payment_at}, "
                             f"invoice_id={invoice.id}"
                         )
-
+                        plan_financing.invoices.add(invoice)
+                        plan_financing.save()
+                        logger.info(
+                            f"handle_paid_charge: Invoice {invoice.id} linked to plan_financing {plan_financing.id} "
+                            f"(from metadata)"
+                        )
                         # Determine if charge_plan_financing should be called immediately
                         should_charge_now = (
                             utc_now >= plan_financing.next_payment_at
@@ -3800,7 +3803,7 @@ class CoinbaseWebhookView(CoinbaseChargeView):
                     if created:
                         logger.info(
                             f"CoinbaseWebhookView: PENDING invoice created - "
-                            f"invoice_id={invoice.id}, bag_id={bag.id}, charge_id={charge_id}"
+                            f"invoice_id={invoice.id}, amount={amount} bag_id={bag.id}, charge_id={charge_id}"
                         )
                     else:
                         logger.info(
@@ -4380,10 +4383,10 @@ class RenewPlanFinancingView(APIView):
                             user=plan_financing.user,
                             status="RENEWAL",
                             plans=plan_financing.plans.first(),
-                            amount_per_month=plan_financing.plans.first().amount_per_month,
-                            amount_per_quarter=plan_financing.plans.first().amount_per_quarter,
-                            amount_per_half=plan_financing.plans.first().amount_per_half,
-                            amount_per_year=plan_financing.plans.first().amount_per_year,
+                            amount_per_month=plan_financing.plans.first().price_per_month,
+                            amount_per_quarter=plan_financing.plans.first().price_per_quarter,
+                            amount_per_half=plan_financing.plans.first().price_per_half,
+                            amount_per_year=plan_financing.plans.first().price_per_year,
                             was_delivered=False,
                             created_at__gte=utc_now - timedelta(hours=24),
                         )
