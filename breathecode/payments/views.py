@@ -1646,9 +1646,9 @@ class AcademyPlanFinancingView(APIView):
             values = plan_param.split(",")
             # Check if all values are numeric (IDs) or strings (slugs)
             if all(v.strip().isdigit() for v in values):
-                items = items.filter(plan__id__in=[int(v) for v in values])
+                items = items.filter(plans__id__in=[int(v) for v in values])
             else:
-                items = items.filter(plan__slug__in=values)
+                items = items.filter(plans__slug__in=values)
 
         # Apply pagination and sorting
         items = handler.queryset(items)
