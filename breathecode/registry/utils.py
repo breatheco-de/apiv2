@@ -12,6 +12,9 @@ Configuration is done through TRUSTED_DOMAINS and TRUSTED_URLS sets in breatheco
 """
 
 import logging
+import re
+import requests
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
 from breathecode.authenticate.models import CredentialsGithub
