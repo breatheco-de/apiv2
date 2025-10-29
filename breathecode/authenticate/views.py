@@ -519,7 +519,8 @@ class MemberView(APIView, GenerateLookupsMixin):
 
         status = request.GET.get("status", None)
         if status is not None:
-            items = items.filter(status__iexact=status)
+            status_list = [s.strip() for s in status.split(",")]
+            items = items.filter(status__in=status_list)
 
         like = request.GET.get("like", None)
         if like is not None:
