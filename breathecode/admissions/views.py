@@ -1414,6 +1414,19 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
             elif available_as_saas.lower() == "false":
                 items = items.filter(available_as_saas=False)
 
+        # Filter by kickoff_date
+        kickoff_date = request.GET.get("kickoff_date", None)
+        if kickoff_date is not None:
+            items = items.filter(kickoff_date=kickoff_date)
+
+        # Filter by ending_date (supports ending_date=null for never-ending cohorts)
+        ending_date = request.GET.get("ending_date", None)
+        if ending_date is not None:
+            if ending_date.lower() == "null":
+                items = items.filter(ending_date__isnull=True)
+            else:
+                items = items.filter(ending_date=ending_date)
+
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)
 
