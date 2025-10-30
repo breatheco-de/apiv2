@@ -1189,6 +1189,26 @@ class UserMeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class CapabilityCheckView(APIView):
+    """Check if the authenticated user has a specific capability within an academy context.
+
+    Requires:
+    - Authorization header (Token)
+    - Academy context via 'Academy' header or querystring (?academy=<id>)
+    Returns 200 if user has the capability for that academy; otherwise 403/400 from validators.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, capability_slug: str):
+        from breathecode.utils.decorators.capable_of import get_academy_from_capability
+
+        # Will raise if missing/invalid academy or user lacks capability
+        get_academy_from_capability({}, request, capability_slug)
+
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+
+
 class UserSettingsView(APIView):
 
     def get(self, request, format=None):
