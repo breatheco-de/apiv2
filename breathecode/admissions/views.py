@@ -2366,10 +2366,18 @@ class SyllabusVersionForkView(APIView):
             source_version = _src
 
         # Build new version (inherits from source_version, version number set to 1)
+        # Handle both formats: version.json or version.days (flatten days into json)
+        version_json = source_version.json
+        if "json" in version_payload:
+            version_json = version_payload["json"]
+        elif "days" in version_payload:
+            # Merge days into the source json structure
+            version_json = {**source_version.json, "days": version_payload["days"]}
+        
         new_version = SyllabusVersion(
             syllabus=new_syllabus,
             version=1,
-            json=version_payload.get("json", source_version.json),
+            json=version_json,
             status=version_payload.get("status", source_version.status),
             change_log_details=None,
             integrity_status=source_version.integrity_status,
