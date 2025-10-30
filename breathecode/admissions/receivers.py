@@ -6,10 +6,12 @@ from typing import Any, Type
 from asgiref.sync import sync_to_async
 from django.dispatch import receiver
 
+import breathecode.authenticate.tasks as auth_tasks
 from breathecode.admissions import tasks
 from breathecode.assignments.models import Task
 from breathecode.assignments.signals import revision_status_updated
-from breathecode.certificate.actions import how_many_pending_tasks, get_assets_from_syllabus
+from breathecode.authenticate.models import CredentialsDiscord
+from breathecode.certificate.actions import get_assets_from_syllabus, how_many_pending_tasks
 
 from ..activity import tasks as activity_tasks
 from .models import Cohort, CohortUser, Syllabus, SyllabusVersion
@@ -63,6 +65,27 @@ async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
     # )
 
     tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, "student")
+
+
+@receiver(cohort_user_created, sender=CohortUser)
+def grant_discord_roles(sender, instance, **kwargs):
+    if instance.cohort.shortcuts != None:
+        discord_creds = CredentialsDiscord.objects.filter(user=instance.user).first()
+        if not discord_creds:
+            logger.debug(f"User {instance.user.id} has no Discord credentials, skipping grant")
+            return
+        for shortcut in instance.cohort.shortcuts:
+            if shortcut.get("label", None) != "Discord":
+                continue
+            try:
+                auth_tasks.assign_discord_role_task.delay(
+                    shortcut.get("server_id", None),
+                    int(discord_creds.discord_id),
+                    shortcut.get("role_id", None),
+                    instance.cohort.academy.id,
+                )
+            except Exception as e:
+                logger.error(f"Error assigning Discord role: {e}")
 
 
 @receiver(revision_status_updated, sender=Task, weak=False)

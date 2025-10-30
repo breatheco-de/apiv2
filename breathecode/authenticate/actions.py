@@ -20,6 +20,7 @@ from django.utils import timezone
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, CohortUser
+from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.services.github import Github
 
 from .models import (
@@ -540,6 +541,57 @@ def remove_from_organization(cohort_id, user_id, force=False):
         github_user.log(str(e))
         github_user.save()
         return False
+
+
+def save_discord_credentials(user_id, discord_user_id, guild_id, cohort_slug):
+    try:
+        user = User.objects.get(id=user_id)
+        credentials, created = CredentialsDiscord.objects.get_or_create(
+            user=user,
+            defaults={
+                "discord_id": discord_user_id,
+                "joined_servers": [guild_id],
+            },
+        )
+        if not created:
+
+            import breathecode.authenticate.tasks as auth_tasks
+            from breathecode.authenticate.models import Cohort
+
+            cohort_academy = Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").first()
+            cohorts = Cohort.objects.filter(cohortuser__user=user, academy=cohort_academy.academy.id).all()
+            for cohort in cohorts:
+                if cohort.shortcuts:
+                    for shortcut in cohort.shortcuts:
+                        if shortcut.get("label", None) == "Discord" and shortcut.get("server_id", None) is not None:
+                            auth_tasks.remove_discord_role_task.delay(
+                                guild_id=guild_id,
+                                discord_user_id=int(credentials.discord_id),
+                                role_id=shortcut.get("role_id", None),
+                                academy_id=cohort_academy.academy.id,
+                            )
+
+            credentials.discord_id = discord_user_id
+
+            server_exists = False
+            for server in credentials.joined_servers:
+                if server == guild_id:
+                    server_exists = True
+                    break
+
+            if not server_exists:
+                credentials.joined_servers.append(server_id)
+
+            credentials.save()
+            logger.info(f"Discord credentials saved for user {user_id} (Discord ID: {discord_user_id})")
+
+        return True
+    except User.DoesNotExist:
+        logger.error(f"User {user_id} not found when saving Discord credentials")
+        raise ValidationException(f"User {user_id} not found", slug="user-not-found")
+    except Exception as e:
+        logger.error(f"Error saving Discord credentials for user {user_id}: {str(e)}")
+        raise ValidationException(str(e))
 
 
 def delete_from_github(github_user: GithubAcademyUser):
@@ -1177,3 +1229,93 @@ def replace_user_email(requesting_user, target_user_id, new_email):
             ),
             code=500,
         )
+
+
+def revoke_user_discord_permissions(user, academy):
+    import breathecode.authenticate.tasks as auth_tasks
+    from breathecode.authenticate.models import Cohort, CredentialsDiscord
+    from breathecode.services.discord import Discord
+
+    cohort_academy = Cohort.objects.filter(academy=academy).prefetch_related("academy").first()
+    if not cohort_academy:
+        logger.debug(f"No cohorts found for academy {academy.id}, skipping Discord revoke")
+        return False
+
+    cohorts = Cohort.objects.filter(cohortuser__user=user, academy=cohort_academy.academy.id).all()
+
+    discord_creds = CredentialsDiscord.objects.filter(user=user).first()
+    if not discord_creds:
+        logger.debug(f"User {user.id} has no Discord credentials, skipping revoke")
+        return False
+
+    # Collect all Discord shortcuts grouped by server_id to minimize API calls
+    discord_shortcuts = {}
+    for cohort in cohorts:
+        if cohort.shortcuts:
+            for shortcut in cohort.shortcuts:
+                if (
+                    shortcut.get("label") == "Discord"
+                    and shortcut.get("server_id") is not None
+                    and shortcut.get("role_id") is not None
+                ):
+
+                    server_id = shortcut.get("server_id")
+                    role_id = shortcut.get("role_id")
+
+                    if server_id not in discord_shortcuts:
+                        discord_shortcuts[server_id] = []
+                    discord_shortcuts[server_id].append(role_id)
+
+    if not discord_shortcuts:
+        logger.debug(f"User {user.id} has no valid Discord shortcuts, skipping revoke")
+        return False
+
+    discord_service = Discord(academy_id=academy.id)
+    discord_user_id = int(discord_creds.discord_id)
+    user_had_roles = False
+
+    for server_id, role_ids in discord_shortcuts.items():
+        try:
+            response = discord_service.get_member_in_server(discord_user_id, server_id)
+
+            if response.status_code == 200:
+                user_roles = response.json().get("roles", [])
+                for role_id in role_ids:
+                    if role_id in user_roles:
+                        user_had_roles = True
+                        logger.info(
+                            f"Removing role {role_id} from user {discord_user_id} in guild {server_id} for academy {cohort_academy.academy.id}"
+                        )
+                        auth_tasks.remove_discord_role_task.delay(
+                            server_id,
+                            discord_user_id,
+                            role_id,
+                            academy_id=cohort_academy.academy.id,
+                        )
+            else:
+                logger.warning(
+                    f"Could not get user {discord_user_id} info from server {server_id}: {response.status_code}"
+                )
+                # If we can't verify for the Discord user, schedule removal for all roles as safety measure
+                for role_id in role_ids:
+                    logger.info(
+                        f"Removing role {role_id} from user {discord_user_id} in guild {server_id} for academy {cohort_academy.academy.id} (API verification failed)"
+                    )
+                    auth_tasks.remove_discord_role_task.delay(
+                        server_id,
+                        discord_user_id,
+                        role_id,
+                        academy_id=cohort_academy.academy.id,
+                    )
+
+        except Exception as e:
+            logger.error(f"Error checking/removing Discord roles for server {server_id}: {e}")
+
+    if user_had_roles:
+        auth_tasks.send_discord_dm_task.delay(
+            discord_user_id,
+            "Your 4Geeks Plus subscription has ended, your roles have been removed. Renew your subscription to get them back: https://4geeks.com/checkout?plan=4geeks-plus-subscription",
+            cohort_academy.academy.id,
+        )
+
+    return user_had_roles
