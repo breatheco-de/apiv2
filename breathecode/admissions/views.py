@@ -118,6 +118,16 @@ def render_syllabus_preview(request, syllabus_id, version):
             .first()
         )
 
+    # Block DEPRECATED/DELETED unless explicitly requested via status param
+    if syllabus_version is not None:
+        requested_statuses_param = request.GET.get("status", None)
+        requested_statuses = set()
+        if requested_statuses_param is not None:
+            requested_statuses = set(s.strip().upper() for s in requested_statuses_param.split(","))
+
+        if syllabus_version.status in {"DEPRECATED", "DELETED"} and syllabus_version.status not in requested_statuses:
+            return render_message(request, f"Syllabus Version {syllabus_id} {version} has been deprecated/deleted")
+
     if syllabus_version is None:
         return render_message(request, f"Syllabus Version {syllabus_id} {version} not found")
 
@@ -1920,6 +1930,19 @@ class SyllabusVersionView(APIView):
             Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
         ).order_by("version")
 
+        # Optional filter: only show versions owned by the academy (exclude public versions from other academies)
+        owner_filter = request.GET.get("owner", None)
+        if owner_filter is not None:
+            # If owner=true/me/current, filter to academy_id; if owner=<id>, filter to that id
+            if owner_filter.lower() in ["true", "me", "current"]:
+                items = items.filter(syllabus__academy_owner__id=academy_id)
+            else:
+                try:
+                    owner_id = int(owner_filter)
+                    items = items.filter(syllabus__academy_owner__id=owner_id)
+                except ValueError:
+                    pass  # Invalid owner value, ignore filter
+
         _status = request.GET.get("status", None)
         if _status is not None:
             items = items.filter(status__in=_status.upper().split(","))
@@ -2094,6 +2117,34 @@ class SyllabusVersionCSVView(APIView):
                 Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
                 version=version,
             ).first()
+
+        # Block DEPRECATED/DELETED unless explicitly requested via status param
+        if syllabus_version is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found",
+                    es="Versión del syllabus no encontrada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
+
+        requested_statuses_param = request.GET.get("status", None)
+        requested_statuses = set()
+        if requested_statuses_param is not None:
+            requested_statuses = set(s.strip().upper() for s in requested_statuses_param.split(","))
+
+        if syllabus_version.status in {"DEPRECATED", "DELETED"} and syllabus_version.status not in requested_statuses:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found or was deprecated/deleted",
+                    es="Versión del syllabus no encontrada o fue desaprobada/eliminada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
 
         # Create an HTTP response object and set the content type to CSV
         response = HttpResponse(content_type="text/csv")
@@ -2355,12 +2406,24 @@ class AllSyllabusVersionsView(APIView):
             param = self.request.GET.get("academy")
             lookup["syllabus__academy_owner__id__in"] = [p for p in param.split(",")]
 
+        # Backwards/alias support: allow filtering by owner (academy_owner)
+        if "owner" in self.request.GET:
+            param = self.request.GET.get("owner")
+            lookup["syllabus__academy_owner__id__in"] = [p for p in param.split(",")]
+
         if "is_documentation" in self.request.GET:
             param = self.request.GET.get("is_documentation")
             if param == "True":
                 lookup["syllabus__is_documentation"] = True
 
         items = items.filter(syllabus__private=False, **lookup).order_by("version")
+
+        # Respect status filter: exclude DEPRECATED/DELETED by default unless explicitly requested
+        _status = request.GET.get("status", None)
+        if _status is not None:
+            items = items.filter(status__in=_status.upper().split(","))
+        else:
+            items = items.exclude(status__in=["DEPRECATED", "DELETED"])
 
         serializer = GetSyllabusVersionSerializer(items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
