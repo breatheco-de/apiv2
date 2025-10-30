@@ -2048,7 +2048,7 @@ class SyllabusVersionForkView(APIView):
     """Create a new syllabus by forking from an existing syllabus/version."""
 
     @capable_of("crud_syllabus")
-    def post(self, request, syllabus_id, version):
+    def post(self, request, syllabus_id, version, academy_id=None):
         lang = get_user_language(request)
 
         # Resolve original syllabus by id or slug
@@ -2132,7 +2132,30 @@ class SyllabusVersionForkView(APIView):
                 code=400,
             )
 
-        # Build new syllabus (inherit from original unless overridden)
+        # Resolve target academy (the requester's academy) and assign as owner of the fork
+        if not academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing academy id in request",
+                    es="Falta el id de la academia en la solicitud",
+                    slug="missing-academy-id",
+                )
+            )
+
+        target_academy = Academy.objects.filter(id=academy_id).first()
+        if not target_academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                code=404,
+            )
+
+        # Build new syllabus (academy owner is the requester's academy)
         new_syllabus = Syllabus(
             slug=new_slug,
             name=new_title,
@@ -2142,15 +2165,11 @@ class SyllabusVersionForkView(APIView):
             duration_in_days=syllabus_payload.get("duration_in_days", original_syllabus.duration_in_days),
             week_hours=syllabus_payload.get("week_hours", original_syllabus.week_hours),
             logo=syllabus_payload.get("logo", original_syllabus.logo),
-            private=syllabus_payload.get("private", original_syllabus.private),
+            private=syllabus_payload.get("private", True),
             is_documentation=syllabus_payload.get("is_documentation", original_syllabus.is_documentation),
-            academy_owner=original_syllabus.academy_owner,
+            academy_owner=target_academy,
             forked_from=original_syllabus,
         )
-
-        # Override academy_owner only if explicitly provided
-        if "academy_owner" in syllabus_payload and syllabus_payload["academy_owner"]:
-            new_syllabus.academy_owner_id = syllabus_payload["academy_owner"]
 
         new_syllabus.save()
 
