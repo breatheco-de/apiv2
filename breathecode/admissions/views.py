@@ -2061,7 +2061,7 @@ class SyllabusVersionForkView(APIView):
                 code=404,
             )
 
-        # Resolve original version
+        # Resolve baseline original version from path
         if version == "latest":
             original_version = (
                 SyllabusVersion.objects.filter(syllabus=original_syllabus)
@@ -2154,17 +2154,46 @@ class SyllabusVersionForkView(APIView):
 
         new_syllabus.save()
 
-        # Build new version (inherits integrity fields, json by default, version set to 1)
+        # Determine the source version for JSON/integrity inheritance
+        source_version = original_version
+        requested_source_version = version_payload.get("version")
+        if requested_source_version is not None and "json" not in version_payload:
+            if not str(requested_source_version).isnumeric():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Version must be numeric when provided in payload",
+                        es="La versión debe ser numérica cuando se provee en el payload",
+                        slug="bad-payload-version",
+                    ),
+                    code=400,
+                )
+            _src = SyllabusVersion.objects.filter(
+                syllabus=original_syllabus, version=int(requested_source_version)
+            ).first()
+            if not _src:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Specified source version not found",
+                        es="Versión fuente especificada no encontrada",
+                        slug="payload-version-not-found",
+                    ),
+                    code=404,
+                )
+            source_version = _src
+
+        # Build new version (inherits from source_version, version number set to 1)
         new_version = SyllabusVersion(
             syllabus=new_syllabus,
             version=1,
-            json=version_payload.get("json", original_version.json),
-            status=version_payload.get("status", original_version.status),
+            json=version_payload.get("json", source_version.json),
+            status=version_payload.get("status", source_version.status),
             change_log_details=None,
-            integrity_status=original_version.integrity_status,
-            integrity_check_at=original_version.integrity_check_at,
-            integrity_report=original_version.integrity_report,
-            forked_from=original_version,
+            integrity_status=source_version.integrity_status,
+            integrity_check_at=source_version.integrity_check_at,
+            integrity_report=source_version.integrity_report,
+            forked_from=source_version,
         )
         new_version.save()
 
