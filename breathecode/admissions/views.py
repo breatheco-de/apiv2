@@ -1749,6 +1749,18 @@ class SyllabusView(APIView):
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
 
+        owner_filter = request.GET.get("owner", None)
+        if owner_filter is not None:
+            # If owner=true/me/current, filter to academy_id; if owner=<id>, filter to that id
+            if owner_filter.lower() in ["true", "me", "current"]:
+                items = items.filter(academy_owner__id=academy_id)
+            else:
+                try:
+                    owner_id = int(owner_filter)
+                    items = items.filter(academy_owner__id=owner_id)
+                except ValueError:
+                    pass  # Invalid owner value, ignore filter
+
         items = handler.queryset(items)
         serializer = GetSyllabusSerializer(items, many=True)
 
@@ -2318,23 +2330,41 @@ class SyllabusVersionForkView(APIView):
                 code=404,
             )
 
-        # Build new syllabus (academy owner is the requester's academy)
-        new_syllabus = Syllabus(
+        # Check if syllabus with this slug already exists for this academy
+        existing_syllabus = Syllabus.objects.filter(
             slug=new_slug,
-            name=new_title,
-            main_technologies=syllabus_payload.get("main_technologies", original_syllabus.main_technologies),
-            github_url=None,  # force null per spec
-            duration_in_hours=syllabus_payload.get("duration_in_hours", original_syllabus.duration_in_hours),
-            duration_in_days=syllabus_payload.get("duration_in_days", original_syllabus.duration_in_days),
-            week_hours=syllabus_payload.get("week_hours", original_syllabus.week_hours),
-            logo=syllabus_payload.get("logo", original_syllabus.logo),
-            private=syllabus_payload.get("private", True),
-            is_documentation=syllabus_payload.get("is_documentation", original_syllabus.is_documentation),
-            academy_owner=target_academy,
-            forked_from=original_syllabus,
-        )
+            academy_owner=target_academy
+        ).first()
 
-        new_syllabus.save()
+        if existing_syllabus:
+            # Update the existing syllabus with new data
+            existing_syllabus.name = new_title
+            existing_syllabus.main_technologies = syllabus_payload.get("main_technologies", existing_syllabus.main_technologies)
+            existing_syllabus.duration_in_hours = syllabus_payload.get("duration_in_hours", existing_syllabus.duration_in_hours)
+            existing_syllabus.duration_in_days = syllabus_payload.get("duration_in_days", existing_syllabus.duration_in_days)
+            existing_syllabus.week_hours = syllabus_payload.get("week_hours", existing_syllabus.week_hours)
+            existing_syllabus.logo = syllabus_payload.get("logo", existing_syllabus.logo)
+            existing_syllabus.private = syllabus_payload.get("private", existing_syllabus.private)
+            existing_syllabus.is_documentation = syllabus_payload.get("is_documentation", existing_syllabus.is_documentation)
+            existing_syllabus.save()
+            new_syllabus = existing_syllabus
+        else:
+            # Build new syllabus (academy owner is the requester's academy)
+            new_syllabus = Syllabus(
+                slug=new_slug,
+                name=new_title,
+                main_technologies=syllabus_payload.get("main_technologies", original_syllabus.main_technologies),
+                github_url=None,  # force null per spec
+                duration_in_hours=syllabus_payload.get("duration_in_hours", original_syllabus.duration_in_hours),
+                duration_in_days=syllabus_payload.get("duration_in_days", original_syllabus.duration_in_days),
+                week_hours=syllabus_payload.get("week_hours", original_syllabus.week_hours),
+                logo=syllabus_payload.get("logo", original_syllabus.logo),
+                private=syllabus_payload.get("private", True),
+                is_documentation=syllabus_payload.get("is_documentation", original_syllabus.is_documentation),
+                academy_owner=target_academy,
+                forked_from=original_syllabus,
+            )
+            new_syllabus.save()
 
         # Determine the source version for JSON/integrity inheritance
         source_version = original_version
@@ -2365,7 +2395,11 @@ class SyllabusVersionForkView(APIView):
                 )
             source_version = _src
 
-        # Build new version (inherits from source_version, version number set to 1)
+        # Calculate next version number for this syllabus
+        latest_version = SyllabusVersion.objects.filter(syllabus=new_syllabus).order_by("-version").first()
+        next_version_number = 1 if latest_version is None else latest_version.version + 1
+
+        # Build new version (inherits from source_version)
         # Handle both formats: version.json or version.days (flatten days into json)
         version_json = source_version.json
         if "json" in version_payload:
@@ -2376,7 +2410,7 @@ class SyllabusVersionForkView(APIView):
         
         new_version = SyllabusVersion(
             syllabus=new_syllabus,
-            version=1,
+            version=next_version_number,
             json=version_json,
             status=version_payload.get("status", source_version.status),
             change_log_details=None,
