@@ -353,6 +353,95 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
         renew_consumables.delay(scheduler.id)
 
 
+@task(bind=True, priority=TaskPriority.NOTIFICATION.value)
+def notify_subscription_renewal(self, subscription_id: int, **_: Any):
+    """
+    Notify user before subscription renewal with an early payment link.
+    """
+
+    if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
+        raise AbortTask(f"Subscription {subscription_id} not found")
+
+    utc_now = timezone.now()
+
+    if subscription.next_payment_at > utc_now:
+
+        period_timedelta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
+        cycle_start = (subscription.next_payment_at - period_timedelta) + 1
+
+        recent_payment = (
+            subscription.invoices.filter(
+                status="FULFILLED",
+                paid_at__gte=cycle_start,
+                paid_at__lte=subscription.next_payment_at,
+            )
+            .order_by("-paid_at")
+            .first()
+        )
+
+        if recent_payment:
+            raise AbortTask(f"Subscription {subscription_id} already renewed for current cycle")
+
+    no_charge_statuses = [
+        Subscription.Status.CANCELLED,
+        Subscription.Status.DEPRECATED,
+        Subscription.Status.EXPIRED,
+    ]
+
+    if subscription.status in no_charge_statuses:
+        raise AbortTask(f"Subscription {subscription_id} is {subscription.status}, skipping notification")
+
+    settings = get_user_settings(subscription.user.id)
+
+    payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
+    early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 0
+
+    if early_renewal_window_days == 0:
+        raise AbortTask(f"Early renewal not allowed for academy with id {subscription.academy.id}")
+
+    if utc_now > subscription.next_payment_at:
+        raise AbortTask(f"Subscription {subscription_id} renewal already passed")
+
+    if utc_now < subscription.next_payment_at - timedelta(days=early_renewal_window_days):
+        raise AbortTask(f"Subscription {subscription_id} renewal is scheduled too early")
+
+    renewal_date = subscription.next_payment_at.strftime("%B %d, %Y")
+    params = {
+        "plan": subscription.plans.first().slug,
+        "subscription_id": subscription.id,
+        "early_renewal_window_days": early_renewal_window_days,
+    }
+
+    days_until_renewal = (subscription.next_payment_at - utc_now).days
+    subject = translation(
+        settings.lang,
+        en=f"Your 4Geeks subscription renews in {days_until_renewal} days",
+        es=f"Tu suscripción 4Geeks se renueva en {days_until_renewal} días",
+    )
+
+    message = translation(
+        settings.lang,
+        en=f"Your subscription will renew on {renewal_date}. If you have a credit card registered, it will be used automatically, or you can pay in advance with another method:",
+        es=f"Tu suscripción se renovará el {renewal_date}. Si tienes una tarjeta de crédito registrada, se utilizará automáticamente, o puedes pagar por adelantado con otro método:",
+    )
+
+    button = translation(settings.lang, en="Pay Now", es="Pagar Ahora")
+
+    notify_actions.send_email_message(
+        "message",
+        subscription.user.email,
+        {
+            "SUBJECT": subject,
+            "MESSAGE": message,
+            "BUTTON": button,
+            "LINK": f"{get_app_url()}/renew?{urlencode(params)}",
+        },
+        academy=subscription.academy,
+    )
+
+    logger.info(f"Sent renewal notification for subscription {subscription_id}")
+
+
 def fallback_charge_subscription(self, subscription_id: int, exception: Exception, **_: Any):
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         return
@@ -375,262 +464,6 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
             s = Stripe(academy=subscription.academy)
             s.set_language(settings.lang)
             s.refund_payment(invoice)
-
-
-@task(bind=True, priority=TaskPriority.NOTIFICATION.value)
-def remind_subscription_renewal(self, subscription_id: int, **_: Any):
-    """
-    Remind user 2 days before subscription renewal with payment link.
-    Allows early payment via Stripe or Coinbase.
-    Performs same validations as charge_subscription to avoid sending
-    reminders for cancelled/expired/deprecated subscriptions.
-    """
-    logger.info(f"Starting remind_subscription_renewal for subscription {subscription_id}")
-
-    # Get subscription
-    if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
-        raise AbortTask(f"Subscription {subscription_id} not found")
-
-    utc_now = timezone.now()
-
-    # Verify if subscription was already renewed for this cycle
-    # Only check if next_payment_at is in the future (pending cycle)
-    if subscription.next_payment_at > utc_now:
-        period_timedelta = actions.get_period_timedelta(subscription.chosen_period)
-        cycle_start = subscription.next_payment_at - period_timedelta
-
-        recent_payment = (
-            subscription.invoices.filter(
-                status="FULFILLED",
-                paid_at__gte=cycle_start,  # From cycle start
-                paid_at__lte=subscription.next_payment_at,  # Until next_payment_at
-            )
-            .order_by("-paid_at")
-            .first()
-        )
-
-        if recent_payment:
-            logger.info(
-                f"Subscription {subscription_id} already has a payment for current cycle "
-                f"(invoice {recent_payment.id}, paid_at: {recent_payment.paid_at}), skipping reminder"
-            )
-            raise AbortTask(f"Subscription {subscription_id} already renewed for current cycle")
-
-    # Define no-charge statuses (same as charge_subscription)
-    no_charge_statuses = [
-        Subscription.Status.CANCELLED,
-        Subscription.Status.DEPRECATED,
-        Subscription.Status.EXPIRED,
-    ]
-
-    # Skip if in no-charge status
-    if subscription.status in no_charge_statuses:
-        raise AbortTask(f"Subscription {subscription_id} is {subscription.status}, skipping notification")
-
-    settings = get_user_settings(subscription.user.id)
-
-    # Check if already deprecated
-    if subscription.status == Subscription.Status.DEPRECATED:
-        actions.handle_deprecated_subscription(subscription, settings)
-
-    # Check if plan is discontinued
-    if subscription.plans.filter(status=Plan.Status.DISCONTINUED).exists():
-        subscription.status = Subscription.Status.DEPRECATED
-        subscription.save()
-        actions.handle_deprecated_subscription(subscription, settings)
-
-    # Check if expired by valid_until
-    if subscription.valid_until and subscription.valid_until < utc_now:
-        subscription.status = Subscription.Status.EXPIRED
-        subscription.save()
-        raise AbortTask(f"Subscription {subscription_id} has expired (valid_until)")
-
-    # Verify we're in the correct time window (1-3 days before renewal)
-    days_until_renewal = (subscription.next_payment_at - utc_now).days
-    if days_until_renewal < 1:
-        raise AbortTask(f"Subscription {subscription_id} renewal already passed")
-
-    if days_until_renewal > 3:
-        raise AbortTask(
-            f"Subscription {subscription_id} renewal is in {days_until_renewal} days, "
-            f"notification scheduled too early"
-        )
-
-    # Calculate amount (same as charge_subscription)
-    try:
-        bag = actions.get_bag_from_subscription(subscription, settings)
-        amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
-
-        coupons = bag.coupons.all()
-        if coupons:
-            amount = actions.get_discounted_price(amount, coupons)
-
-        # Cleanup temporary bag
-        bag.delete()
-
-    except Exception as e:
-        logger.error(f"Error calculating renewal amount: {str(e)}", exc_info=True)
-        raise AbortTask(f"Cannot calculate renewal amount for subscription {subscription_id}")
-
-    # Prepare email data
-    value = subscription.currency.format_price(amount)
-    renewal_date = subscription.next_payment_at.strftime("%B %d, %Y")
-
-    subject = translation(
-        settings.lang,
-        en=f"Your 4Geeks subscription renews in {days_until_renewal} days - {value}",
-        es=f"Tu suscripción 4Geeks se renueva en {days_until_renewal} días - {value}",
-    )
-
-    message = translation(
-        settings.lang,
-        en=f"Your subscription will renew on {renewal_date} for {value}. Choose your payment method:",
-        es=f"Tu suscripción se renovará el {renewal_date} por {value}. Elige tu método de pago:",
-    )
-
-    button = translation(settings.lang, en="Pay Now", es="Pagar Ahora")
-
-    # Send email
-    notify_actions.send_email_message(
-        "message",
-        subscription.user.email,
-        {
-            "SUBJECT": subject,
-            "MESSAGE": message,
-            "BUTTON": button,
-            "LINK": f"{get_app_url()}/subscription/{subscription.id}/renew",
-        },
-        academy=subscription.academy,
-    )
-
-    logger.info(f"Sent renewal notification for subscription {subscription_id}")
-
-
-@task(bind=True, priority=TaskPriority.NOTIFICATION.value)
-def remind_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
-    """
-    Remind user 2 days before plan financing installment with payment link.
-    Allows early payment via Stripe or Coinbase.
-    Performs same validations as charge_plan_financing to avoid sending
-    reminders for cancelled/expired/deprecated plan financings.
-    """
-    logger.info(f"Starting remind_plan_financing_renewal for plan_financing {plan_financing_id}")
-
-    # Get plan financing
-    if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
-        raise AbortTask(f"PlanFinancing {plan_financing_id} not found")
-
-    utc_now = timezone.now()
-
-    # Verify if plan financing was already renewed for this cycle
-    # Only check if next_payment_at is in the future (pending cycle)
-    if plan_financing.next_payment_at > utc_now:
-        period_timedelta = actions.get_period_timedelta(plan_financing.chosen_period)
-        cycle_start = plan_financing.next_payment_at - period_timedelta
-
-        recent_payment = (
-            plan_financing.invoices.filter(
-                status="FULFILLED",
-                paid_at__gte=cycle_start,  # From cycle start
-                paid_at__lte=plan_financing.next_payment_at,  # Until next_payment_at
-            )
-            .order_by("-paid_at")
-            .first()
-        )
-
-        if recent_payment:
-            logger.info(
-                f"PlanFinancing {plan_financing_id} already has a payment for current cycle "
-                f"(invoice {recent_payment.id}, paid_at: {recent_payment.paid_at}), skipping reminder"
-            )
-            raise AbortTask(f"PlanFinancing {plan_financing_id} already renewed for current cycle")
-
-    # Define no-charge statuses (same as charge_plan_financing)
-    no_charge_statuses = [
-        PlanFinancing.Status.CANCELLED,
-        PlanFinancing.Status.DEPRECATED,
-        PlanFinancing.Status.EXPIRED,
-    ]
-
-    # Skip if in no-charge status
-    if plan_financing.status in no_charge_statuses:
-        raise AbortTask(f"PlanFinancing {plan_financing_id} is {plan_financing.status}, skipping notification")
-
-    # Check if expired by plan_expires_at AND valid_until
-    if (
-        plan_financing.plan_expires_at
-        and plan_financing.plan_expires_at < utc_now
-        and plan_financing.valid_until
-        and plan_financing.valid_until < utc_now
-    ):
-        if plan_financing.status != PlanFinancing.Status.EXPIRED:
-            plan_financing.status = PlanFinancing.Status.EXPIRED
-            plan_financing.save()
-        raise AbortTask(f"PlanFinancing {plan_financing_id} has expired")
-
-    # Verify we're in the correct time window (1-3 days before renewal)
-    days_until_renewal = (plan_financing.next_payment_at - utc_now).days
-    if days_until_renewal < 1:
-        raise AbortTask(f"PlanFinancing {plan_financing_id} payment already passed")
-
-    if days_until_renewal > 3:
-        raise AbortTask(
-            f"PlanFinancing {plan_financing_id} payment is in {days_until_renewal} days, "
-            f"notification scheduled too early"
-        )
-
-    # Get settings
-    settings = get_user_settings(plan_financing.user.id)
-
-    # For plan financing, amount is fixed (monthly_price already includes discounts)
-    amount = plan_financing.monthly_price
-
-    # Calculate installment info
-    invoices = plan_financing.invoices.order_by("created_at")
-    first_invoice = invoices.first()
-
-    if first_invoice is None:
-        raise AbortTask(f"No invoices found for PlanFinancing {plan_financing_id}")
-
-    installments = first_invoice.bag.how_many_installments
-    paid_installments = plan_financing.invoices.filter(status="FULFILLED").count()
-    remaining = installments - paid_installments
-    next_installment = paid_installments + 1
-
-    # Prepare email data
-    value = plan_financing.currency.format_price(amount)
-    renewal_date = plan_financing.next_payment_at.strftime("%B %d, %Y")
-
-    subject = translation(
-        settings.lang,
-        en=f"Your installment payment is due in {days_until_renewal} days - {value}",
-        es=f"Tu pago de cuota vence en {days_until_renewal} días - {value}",
-    )
-
-    message = translation(
-        settings.lang,
-        en=f"Installment {next_installment} of {installments} is due on {renewal_date} for {value}. "
-        f"{remaining} installments remaining. Choose your payment method:",
-        es=f"La cuota {next_installment} de {installments} vence el {renewal_date} por {value}. "
-        f"Quedan {remaining} cuotas. Elige tu método de pago:",
-    )
-
-    button = translation(settings.lang, en="Pay Now", es="Pagar Ahora")
-
-    # Send email
-    notify_actions.send_email_message(
-        "message",
-        plan_financing.user.email,
-        {
-            "SUBJECT": subject,
-            "MESSAGE": message,
-            "BUTTON": button,
-            "LINK": f"{get_app_url()}/plan-financing/{plan_financing.id}/renew",
-        },
-        academy=plan_financing.academy,
-    )
-
-    logger.info(f"Sent installment notification for plan_financing {plan_financing_id}")
 
 
 @task(
@@ -962,6 +795,113 @@ def charge_subscription(self, subscription_id: int, **_: Any):
         raise RetryTask("Could not acquire lock for activity, operation timed out.")
 
 
+@task(bind=True, priority=TaskPriority.NOTIFICATION.value)
+def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
+    "Notify user before plan financing installment with payment link."
+
+    if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
+        raise AbortTask(f"PlanFinancing {plan_financing_id} not found")
+
+    utc_now = timezone.now()
+
+    if plan_financing.next_payment_at > utc_now:
+        period_timedelta = actions.calculate_relative_delta(plan_financing.pay_every, plan_financing.pay_every_unit)
+        cycle_start = (plan_financing.next_payment_at - period_timedelta) + 1
+
+        recent_payment = (
+            plan_financing.invoices.filter(
+                status="FULFILLED",
+                paid_at__gte=cycle_start,
+                paid_at__lte=plan_financing.next_payment_at,
+            )
+            .order_by("-paid_at")
+            .first()
+        )
+
+        if recent_payment:
+            raise AbortTask(f"PlanFinancing {plan_financing_id} already renewed for current cycle")
+
+    no_charge_statuses = [
+        PlanFinancing.Status.CANCELLED,
+        PlanFinancing.Status.DEPRECATED,
+        PlanFinancing.Status.EXPIRED,
+    ]
+
+    if plan_financing.status in no_charge_statuses:
+        raise AbortTask(f"PlanFinancing {plan_financing_id} is {plan_financing.status}, skipping notification")
+
+    if (
+        plan_financing.plan_expires_at
+        and plan_financing.plan_expires_at < utc_now
+        and plan_financing.valid_until
+        and plan_financing.valid_until < utc_now
+    ):
+        raise AbortTask(f"PlanFinancing {plan_financing_id} has expired")
+
+    payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
+    early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 0
+
+    if early_renewal_window_days == 0:
+        raise AbortTask(f"Early renewal not allowed for academy with id {plan_financing.academy.id}")
+
+    if utc_now > plan_financing.next_payment_at:
+        raise AbortTask(f"PlanFinancing {plan_financing_id} renewal already passed")
+
+    if utc_now < plan_financing.next_payment_at - timedelta(days=early_renewal_window_days):
+        raise AbortTask(f"PlanFinancing {plan_financing_id} renewal is scheduled too early")
+
+    settings = get_user_settings(plan_financing.user.id)
+
+    invoices = plan_financing.invoices.order_by("created_at")
+    first_invoice = invoices.first()
+
+    if first_invoice is None:
+        raise AbortTask(f"No invoices found for PlanFinancing {plan_financing_id}")
+
+    paid_installments = plan_financing.invoices.filter(status="FULFILLED", bag__was_delivered=True).count()
+    next_installment = paid_installments + 1
+
+    renewal_date = plan_financing.next_payment_at.strftime("%B %d, %Y")
+
+    days_until_renewal = (plan_financing.next_payment_at - utc_now).days
+
+    subject = translation(
+        settings.lang,
+        en=f"Your installment payment is due in {days_until_renewal} days",
+        es=f"Tu pago de cuota vence en {days_until_renewal} días",
+    )
+
+    message = translation(
+        settings.lang,
+        en=f"On {renewal_date}, you need to pay the installment {next_installment} of your plan. If you have a credit card registered, "
+        "it will be used automatically, or you can pay in advance with another method",
+        es=f"El {renewal_date} debes realizar el pago de la cuota {next_installment} de tu plan. Si tienes una tarjeta de crédito registrada, "
+        "se utilizará automáticamente, o puedes pagar por adelantado con otro método:",
+    )
+
+    button = translation(settings.lang, en="Pay Now", es="Pagar Ahora")
+
+    params = {
+        "plan": plan_financing.plans.first().slug,
+        "plan_financing_id": plan_financing.id,
+        "early_renewal_window_days": early_renewal_window_days,
+    }
+
+    notify_actions.send_email_message(
+        "message",
+        plan_financing.user.email,
+        {
+            "SUBJECT": subject,
+            "MESSAGE": message,
+            "BUTTON": button,
+            "LINK": f"{get_app_url()}/renew?{urlencode(params)}",
+        },
+        academy=plan_financing.academy,
+    )
+
+    logger.info(f"Sent installment notification for plan_financing {plan_financing_id}")
+
+
 def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exception, **_: Any):
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
         return
@@ -1088,6 +1028,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             settings = get_user_settings(plan_financing.user.id)
 
+            payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
+            early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 2
+            if early_renewal_window_days == 0:
+                cooldown_days = 5
+            else:
+                cooldown_days = early_renewal_window_days
+
             # Check if plan financing has deleted or discontinued plans
             if plan_financing.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
                 plan_financing.status = PlanFinancing.Status.DEPRECATED
@@ -1144,7 +1091,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
             amount = plan_financing.monthly_price
 
-            invoices = plan_financing.invoices.order_by("created_at")
+            invoices = plan_financing.invoices.filter(bag__was_delivered=True).order_by("created_at")
             first_invoice = invoices.first()
             last_invoice = invoices.filter(bag__was_delivered=True).last()
 
@@ -1158,131 +1105,82 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             installments = first_invoice.bag.how_many_installments
 
-            if utc_now - last_invoice.created_at < timedelta(days=5):
+            if utc_now - last_invoice.paid_at < timedelta(days=cooldown_days):
                 raise AbortTask(f"PlanFinancing with id {plan_financing_id} was paid earlier")
 
             remaining_installments = installments - invoices.count()
 
             if remaining_installments > 0:
-                if plan_financing.externally_managed:
-                    invoice = (
-                        plan_financing.invoices.filter(
-                            paid_at__lte=utc_now, status="FULFILLED", bag__was_delivered=False
-                        )
-                        .order_by("-paid_at")
-                        .first()
-                    )
+                # Look for existing payment that hasn't been delivered yet
+                invoice = (
+                    plan_financing.invoices.filter(paid_at__lte=utc_now, status="FULFILLED", bag__was_delivered=False)
+                    .order_by("-paid_at")
+                    .first()
+                )
 
-                    if invoice is None:
-                        last_paid_invoice = (
-                            plan_financing.invoices.filter(status="FULFILLED").order_by("-paid_at").first()
-                        )
-                        is_coinbase = (
-                            last_paid_invoice
-                            and last_paid_invoice.payment_method
-                            and last_paid_invoice.payment_method.is_coinbase
-                        )
-
-                        if is_coinbase:
-                            # 🌐 COINBASE: Calculate amount and send payment reminder
-                            # For plan financing, use the fixed monthly_price (installment amount)
-                            amount = plan_financing.monthly_price
-                            value = plan_financing.currency.format_price(amount)
-                            renewal_date = plan_financing.next_payment_at.strftime("%B %d, %Y")
-
-                            # Calculate installment info
-                            invoices = plan_financing.invoices.order_by("created_at")
-                            first_invoice = invoices.first()
-                            installments = first_invoice.bag.how_many_installments
-                            paid_installments = plan_financing.invoices.filter(status="FULFILLED").count()
-                            next_installment = paid_installments + 1
-
-                            message = translation(
-                                settings.lang,
-                                en=f"Your installment payment ({next_installment} of {installments}) is due on {renewal_date} for {value}. "
-                                f"Choose your preferred payment method to complete the payment.",
-                                es=f"Tu pago de cuota ({next_installment} de {installments}) vence el {renewal_date} por {value}. "
-                                f"Elige tu método de pago preferido para completar el pago.",
-                            )
-
-                            button = translation(
-                                settings.lang,
-                                en="Pay Now",
-                                es="Pagar Ahora",
-                            )
-
-                            alert_payment_issue(message, button)
-
-                            # Reschedule for 1 day
-                            if plan_financing.status not in no_charge_statuses:
-                                manager = schedule_task(charge_plan_financing, "1d")
-                                if not manager.exists(plan_financing.id):
-                                    manager.call(plan_financing.id)
-                            raise AbortTask(f"Waiting for payment for PlanFinancing {plan_financing_id}")
-                        else:
-                            message = translation(
-                                settings.lang,
-                                en="Please make your payment in your academy or use another payment method",
-                                es="Por favor realiza tu pago en tu academia o utiliza otro método de pago",
-                            )
-
-                            button = translation(
-                                settings.lang,
-                                en="Renew with another method",
-                                es="Renovar con otro método",
-                            )
-                            alert_payment_issue(message, button)
-
-                        if plan_financing.status not in no_charge_statuses:
-                            manager = schedule_task(charge_plan_financing, "1d")
-                            if not manager.exists(plan_financing.id):
-                                manager.call(plan_financing.id)
-
-                        raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
-
+                if invoice:
                     bag = invoice.bag
 
                 else:
-                    try:
-                        bag = actions.get_bag_from_plan_financing(plan_financing, settings)
-                    except Exception as e:
-                        plan_financing.status = "ERROR"
-                        plan_financing.status_message = str(e)
-                        plan_financing.save()
-
-                        if plan_financing.status not in no_charge_statuses:
-                            manager = schedule_task(charge_plan_financing, "1d")
-                            if not manager.exists(plan_financing.id):
-                                manager.call(plan_financing.id)
-
-                        raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
-
-                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, settings.lang)
-
-                    try:
-                        s = Stripe(academy=plan_financing.academy)
-                        s.set_language(settings.lang)
-                        invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
-
-                    except Exception:
+                    if plan_financing.externally_managed:
                         message = translation(
                             settings.lang,
-                            en="Your payment with credit card was declined, please update your card or use another payment method",
-                            es="Tu pago con tarjeta de crédito fue rechazado, por favor update tu tarjeta o utiliza otro método de pago",
+                            en="Please make your payment in your academy or use another payment method",
+                            es="Por favor realiza tu pago en tu academia o utiliza otro método de pago",
                         )
 
                         button = translation(
                             settings.lang,
-                            en="Change payment method",
-                            es="Cambiar método de pago",
+                            en="Renew with another method",
+                            es="Renovar con otro método",
                         )
                         alert_payment_issue(message, button)
 
-                        manager = schedule_task(charge_plan_financing, "1d")
-                        if not manager.exists(plan_financing.id):
-                            manager.call(plan_financing.id)
+                        if plan_financing.status not in no_charge_statuses:
+                            manager = schedule_task(charge_plan_financing, "1d")
+                            if not manager.exists(plan_financing.id):
+                                manager.call(plan_financing.id)
 
                         raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
+                    else:
+                        try:
+                            bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+                        except Exception as e:
+                            plan_financing.status = "ERROR"
+                            plan_financing.status_message = str(e)
+                            plan_financing.save()
+
+                            if plan_financing.status not in no_charge_statuses:
+                                manager = schedule_task(charge_plan_financing, "1d")
+                                if not manager.exists(plan_financing.id):
+                                    manager.call(plan_financing.id)
+
+                            raise AbortTask(f"Error getting bag from plan financing {plan_financing_id}: {e}")
+
+                        try:
+                            s = Stripe(academy=plan_financing.academy)
+                            s.set_language(settings.lang)
+                            invoice = s.pay(plan_financing.user, bag, amount, currency=bag.currency)
+
+                        except Exception:
+                            message = translation(
+                                settings.lang,
+                                en="Your payment with credit card was declined, please update your card or use another payment method",
+                                es="Tu pago con tarjeta de crédito fue rechazado, por favor update tu tarjeta o utiliza otro método de pago",
+                            )
+
+                            button = translation(
+                                settings.lang,
+                                en="Change payment method",
+                                es="Cambiar método de pago",
+                            )
+                            alert_payment_issue(message, button)
+
+                            manager = schedule_task(charge_plan_financing, "1d")
+                            if not manager.exists(plan_financing.id):
+                                manager.call(plan_financing.id)
+
+                            raise AbortTask(f"Payment to PlanFinancing {plan_financing_id} failed")
 
                 if utc_now > plan_financing.valid_until:
                     remaining_installments -= 1
@@ -1343,7 +1241,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
             if days_until_next_payment > 2:
                 notification_day = days_until_next_payment - 2
-                manager = schedule_task(remind_plan_financing_renewal, f"{notification_day}d")
+                manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
                 if not manager.exists(plan_financing_id):
                     manager.call(plan_financing_id)
 
@@ -1730,7 +1628,7 @@ def build_subscription(
 
     if days_until_next_payment > 2:
         notification_day = days_until_next_payment - 2
-        manager = schedule_task(remind_subscription_renewal, f"{notification_day}d")
+        manager = schedule_task(notify_subscription_renewal, f"{notification_day}d")
         if not manager.exists(subscription.id):
             manager.call(subscription.id)
 
@@ -1844,7 +1742,7 @@ def build_plan_financing(
 
     if days_until_next_payment > 2:
         notification_day = days_until_next_payment - 2
-        manager = schedule_task(remind_plan_financing_renewal, f"{notification_day}d")
+        manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
         if not manager.exists(financing.id):
             manager.call(financing.id)
 

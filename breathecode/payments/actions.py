@@ -79,20 +79,6 @@ def calculate_relative_delta(unit: float, unit_type: str):
     return relativedelta(**delta_args)
 
 
-def get_period_timedelta(chosen_period):
-    """Get timedelta for a given period"""
-    if chosen_period == Bag.ChosenPeriod.MONTH:
-        return timedelta(days=30)
-    elif chosen_period == Bag.ChosenPeriod.QUARTER:
-        return timedelta(days=90)
-    elif chosen_period == Bag.ChosenPeriod.HALF:
-        return timedelta(days=180)
-    elif chosen_period == Bag.ChosenPeriod.YEAR:
-        return timedelta(days=365)
-    else:
-        return timedelta(days=30)  # default
-
-
 class PlanFinder:
     cohort: Optional[Cohort] = None
     syllabus: Optional[Syllabus] = None

@@ -4178,8 +4178,9 @@ class RenewSubscriptionView(APIView):
                     )
 
                     data = serializer.data
-                    serializer = GetCouponSerializer(coupons, many=True)
-                    data["coupons"] = serializer.data
+                    if coupons:
+                        serializer = GetCouponSerializer(coupons, many=True)
+                        data["coupons"] = serializer.data
 
                     return Response(data, status=201)
         except ValidationException:
@@ -4406,11 +4407,8 @@ class RenewPlanFinancingView(APIView):
                             code=404,
                         )
 
-                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
-
-                    coupons = bag.coupons.all()
-                    if coupons:
-                        amount = actions.get_discounted_price(amount, coupons)
+                    # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
+                    amount = plan_financing.monthly_price
 
                     return_url = request.data.get("return_url")
                     cancel_url = request.data.get("cancel_url")
@@ -4448,11 +4446,9 @@ class RenewPlanFinancingView(APIView):
 
                 else:
                     bag = actions.get_bag_from_plan_financing(plan_financing, settings)
-                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
 
-                    coupons = bag.coupons.all()
-                    if coupons:
-                        amount = actions.get_discounted_price(amount, coupons)
+                    # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
+                    amount = plan_financing.monthly_price
 
                     s = Stripe(academy=plan_financing.academy)
                     s.set_language(lang)
@@ -4483,11 +4479,7 @@ class RenewPlanFinancingView(APIView):
                         related_id=serializer.instance.id,
                     )
 
-                    data = serializer.data
-                    serializer = GetCouponSerializer(coupons, many=True)
-                    data["coupons"] = serializer.data
-
-                    return Response(data, status=201)
+                    return Response(serializer.data, status=201)
 
         except ValidationException:
             raise
