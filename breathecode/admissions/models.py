@@ -282,9 +282,13 @@ class Syllabus(models.Model):
 
 PUBLISHED = "PUBLISHED"
 DRAFT = "DRAFT"
+DEPRECATED = "DEPRECATED"
+DELETED = "DELETED"
 VERSION_STATUS = (
     (PUBLISHED, "Published"),
     (DRAFT, "Draft"),
+    (DEPRECATED, "Deprecated"),
+    (DELETED, "Deleted"),
 )
 
 ERROR = "ERROR"

@@ -1790,6 +1790,42 @@ class SyllabusView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of("crud_syllabus")
+    def delete(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Resolve syllabus by id or slug and enforce ownership
+        syllabus = (
+            Syllabus.objects.filter(Q(id=syllabus_id) | Q(slug=syllabus_slug, slug__isnull=False))
+            .filter(academy_owner__id=academy_id)
+            .first()
+        )
+        if not syllabus:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus not found for this academy",
+                    es="Syllabus no encontrado para esta academia",
+                    slug="syllabus-not-found",
+                ),
+                code=404,
+            )
+
+        # Block delete if any cohort uses any version of this syllabus
+        if Cohort.objects.filter(syllabus_version__syllabus=syllabus).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete: syllabus is in use by one or more cohorts",
+                    es="No se puede eliminar: el syllabus está en uso por uno o más cohortes",
+                    slug="syllabus-in-use",
+                ),
+                code=400,
+            )
+
+        syllabus.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
 
@@ -1859,6 +1895,18 @@ class SyllabusVersionView(APIView):
                     version=version,
                 ).first()
 
+            # If a specific version is requested and exists, block DEPRECATED/DELETED unless explicitly requested
+            if syllabus_version is not None and version != "latest":
+                requested_statuses_param = request.GET.get("status", None)
+                requested_statuses = set()
+                if requested_statuses_param is not None:
+                    requested_statuses = set(s.strip().upper() for s in requested_statuses_param.split(","))
+
+                if syllabus_version.status in {"DEPRECATED", "DELETED"} and syllabus_version.status not in requested_statuses:
+                    raise ValidationException(
+                        f'Syllabus version "{version}" not found', code=404, slug="syllabus-version-not-found"
+                    )
+
             if syllabus_version is None:
                 raise ValidationException(
                     f'Syllabus version "{version}" not found or is a draft', code=404, slug="syllabus-version-not-found"
@@ -1875,6 +1923,9 @@ class SyllabusVersionView(APIView):
         _status = request.GET.get("status", None)
         if _status is not None:
             items = items.filter(status__in=_status.upper().split(","))
+        else:
+            # Exclude DEPRECATED/DELETED by default unless explicitly requested via status param
+            items = items.exclude(status__in=["DEPRECATED", "DELETED"])
 
         items = handler.queryset(items)
         serializer = GetSyllabusVersionSerializer(items, many=True)
@@ -1945,6 +1996,67 @@ class SyllabusVersionView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_syllabus")
+    def delete(self, request, syllabus_id=None, syllabus_slug=None, version=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Require a specific version to delete
+        if version is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You must specify a version to delete",
+                    es="Debes especificar una versión para eliminar",
+                    slug="missing-version",
+                ),
+                code=400,
+            )
+
+        # Resolve syllabus by id or slug and enforce ownership
+        syllabus = (
+            Syllabus.objects.filter(Q(id=syllabus_id) | Q(slug=syllabus_slug, slug__isnull=False))
+            .filter(academy_owner__id=academy_id)
+            .first()
+        )
+        if not syllabus:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus not found for this academy",
+                    es="Syllabus no encontrado para esta academia",
+                    slug="syllabus-not-found",
+                ),
+                code=404,
+            )
+
+        sv = SyllabusVersion.objects.filter(syllabus=syllabus, version=version).first()
+        if not sv:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found",
+                    es="Versión de syllabus no encontrada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
+
+        # Block delete if any cohort uses this version
+        if Cohort.objects.filter(syllabus_version=sv).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete: syllabus version is in use by one or more cohorts",
+                    es="No se puede eliminar: la versión del syllabus está en uso por uno o más cohortes",
+                    slug="syllabus-version-in-use",
+                ),
+                code=400,
+            )
+
+        sv.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 
 class SyllabusVersionCSVView(APIView):
@@ -2297,7 +2409,6 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
         items = handler.queryset(items)
         serializer = GetPublicCohortUserSerializer(items, many=True)
         return handler.response(serializer.data)
-
 
 class AcademyCohortHistoryView(APIView):
     """List all snippets, or create a new snippet."""
