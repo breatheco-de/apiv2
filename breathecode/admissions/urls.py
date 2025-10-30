@@ -76,6 +76,7 @@ from .views import (
     SyllabusAssetView,
     SyllabusScheduleView,
     SyllabusVersionCSVView,
+    SyllabusVersionForkView,
     SyllabusVersionView,
     SyllabusView,
     UserMeView,
@@ -182,6 +183,11 @@ urlpatterns = [
         "syllabus/<str:syllabus_id>/version/<str:version>/preview",
         render_syllabus_preview,
         name="syllabus_id_version_preview",
+    ),
+    path(
+        "syllabus/<str:syllabus_id>/version/<str:version>/fork",
+        SyllabusVersionForkView.as_view(),
+        name="syllabus_version_fork",
     ),
     path(
         "syllabus/<int:syllabus_id>/version/<int:version>",

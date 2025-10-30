@@ -17,6 +17,7 @@ from breathecode.payments.models import (
     ServiceItem,
     ServiceItemFeature,
     Bag,
+    CohortSet,
 )
 from breathecode.utils import serializers, serpy
 
@@ -594,6 +595,14 @@ class GetCohortSetSerializer(serpy.Serializer):
 
     def get_cohorts(self, obj):
         return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+
+class CohortSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating CohortSet."""
+
+    class Meta:
+        model = CohortSet
+        fields = ("slug",)
 
 
 class GetEventTypeSerializer(serpy.Serializer):

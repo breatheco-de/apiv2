@@ -2044,6 +2044,135 @@ class SyllabusVersionCSVView(APIView):
         return response
 
 
+class SyllabusVersionForkView(APIView):
+    """Create a new syllabus by forking from an existing syllabus/version."""
+
+    @capable_of("crud_syllabus")
+    def post(self, request, syllabus_id, version):
+        lang = get_user_language(request)
+
+        # Resolve original syllabus by id or slug
+        original_syllabus = (
+            Syllabus.objects.filter(Q(id=syllabus_id) | Q(slug=syllabus_id)).first()
+        )
+        if not original_syllabus:
+            raise ValidationException(
+                translation(lang, en="Syllabus not found", es="Syllabus no encontrado", slug="syllabus-not-found"),
+                code=404,
+            )
+
+        # Resolve original version
+        if version == "latest":
+            original_version = (
+                SyllabusVersion.objects.filter(syllabus=original_syllabus)
+                .order_by("-version")
+                .first()
+            )
+        else:
+            if not str(version).isnumeric():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Version must be numeric or 'latest'",
+                        es="La versión debe ser numérica o 'latest'",
+                        slug="bad-version",
+                    ),
+                    code=400,
+                )
+            original_version = SyllabusVersion.objects.filter(syllabus=original_syllabus, version=int(version)).first()
+
+        if not original_version:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found",
+                    es="Versión de syllabus no encontrada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
+
+        payload = request.data or {}
+
+        # Split payload into syllabus and version parts (both optional except slug/name for syllabus)
+        syllabus_payload = payload.get("syllabus", {}) if isinstance(payload.get("syllabus"), dict) else {}
+        version_payload = payload.get("version", {}) if isinstance(payload.get("version"), dict) else {}
+
+        # Allow flat payload too; merge any top-level syllabus fields if provided
+        flat_fields = {
+            k: v
+            for k, v in payload.items()
+            if k in {
+                "slug",
+                "title",
+                "name",
+                "main_technologies",
+                "duration_in_hours",
+                "duration_in_days",
+                "week_hours",
+                "logo",
+                "private",
+                "is_documentation",
+                "academy_owner",
+            }
+        }
+        syllabus_payload = {**syllabus_payload, **flat_fields}
+
+        # Validate required fields for syllabus
+        new_slug = syllabus_payload.get("slug")
+        new_title = syllabus_payload.get("title") or syllabus_payload.get("name")
+        if not new_slug or not new_title:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing slug or title in syllabus payload",
+                    es="Falta slug o título en el payload de syllabus",
+                    slug="missing-syllabus-fields",
+                ),
+                code=400,
+            )
+
+        # Build new syllabus (inherit from original unless overridden)
+        new_syllabus = Syllabus(
+            slug=new_slug,
+            name=new_title,
+            main_technologies=syllabus_payload.get("main_technologies", original_syllabus.main_technologies),
+            github_url=None,  # force null per spec
+            duration_in_hours=syllabus_payload.get("duration_in_hours", original_syllabus.duration_in_hours),
+            duration_in_days=syllabus_payload.get("duration_in_days", original_syllabus.duration_in_days),
+            week_hours=syllabus_payload.get("week_hours", original_syllabus.week_hours),
+            logo=syllabus_payload.get("logo", original_syllabus.logo),
+            private=syllabus_payload.get("private", original_syllabus.private),
+            is_documentation=syllabus_payload.get("is_documentation", original_syllabus.is_documentation),
+            academy_owner=original_syllabus.academy_owner,
+            forked_from=original_syllabus,
+        )
+
+        # Override academy_owner only if explicitly provided
+        if "academy_owner" in syllabus_payload and syllabus_payload["academy_owner"]:
+            new_syllabus.academy_owner_id = syllabus_payload["academy_owner"]
+
+        new_syllabus.save()
+
+        # Build new version (inherits integrity fields, json by default, version set to 1)
+        new_version = SyllabusVersion(
+            syllabus=new_syllabus,
+            version=1,
+            json=version_payload.get("json", original_version.json),
+            status=version_payload.get("status", original_version.status),
+            change_log_details=None,
+            integrity_status=original_version.integrity_status,
+            integrity_check_at=original_version.integrity_check_at,
+            integrity_report=original_version.integrity_report,
+            forked_from=original_version,
+        )
+        new_version.save()
+
+        # Respond with the new syllabus version payload
+        data = GetSyllabusVersionSerializer(new_version, many=False).data
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
 class AllSyllabusVersionsView(APIView):
     """List all snippets, or create a new snippet."""
 

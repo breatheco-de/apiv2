@@ -946,7 +946,7 @@ Body:
 
 ### What are Cohort Sets?
 
-**Cohort Sets** group cohorts together so they can be sold as a package.
+**Cohort Sets** group cohorts together so they can be sold as a package. They allow you to bundle multiple cohorts into a single offering that students can purchase through a plan.
 
 **Example:**
 - CohortSet: "Full Stack Program"
@@ -954,21 +954,418 @@ Body:
   - Cohort: "Advanced JavaScript"
   - Cohort: "React & Backend"
 
-### Manage Cohorts in Set
+**Key Benefits:**
+- Package multiple cohorts together
+- Sell as a single unit through plans
+- Automatically grant access to all cohorts when plan is purchased
+- Flexible management - add/remove cohorts anytime
 
-**Endpoint:** `PUT /v1/payments/academy/cohortset/{cohort_set_id}/cohort`
+---
+
+### Managing Cohort Sets
+
+#### Create a Cohort Set
+
+**Endpoint:** `POST /v1/payments/academy/cohortset`
+
+**Authentication:** Required - `crud_plan` capability
+
+**Headers:**
+- `Academy: {academy_id}` - Required
+- `Authorization: Token {your-token}` - Required
+
+**Request Body:**
+```json
+{
+  "slug": "full-stack-bootcamp-2025"
+}
+```
+
+**Required Fields:**
+- `slug` (string) - Unique identifier for the cohort set (letters, numbers, hyphens only)
+
+**Response:** `201 CREATED`
+```json
+{
+  "id": 5,
+  "slug": "full-stack-bootcamp-2025",
+  "academy": {
+    "id": 1,
+    "name": "4Geeks Academy",
+    "slug": "4geeks"
+  },
+  "cohorts": []
+}
+```
+
+**Example:**
+```bash
+POST /v1/payments/academy/cohortset
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "slug": "full-stack-bootcamp-2025"
+}
+```
+
+---
+
+#### List Cohort Sets
+
+**Endpoint:** `GET /v1/payments/academy/cohortset`
+
+**Authentication:** Required - `read_plan` capability
+
+**Query Parameters:**
+- `limit={number}` - Results per page
+- `offset={number}` - Pagination offset
+
+**Response:** Array of cohort sets
+```json
+[
+  {
+    "id": 5,
+    "slug": "full-stack-bootcamp-2025",
+    "academy": {
+      "id": 1,
+      "name": "4Geeks Academy",
+      "slug": "4geeks"
+    },
+    "cohorts": [
+      {
+        "id": 123,
+        "name": "Web Development Fundamentals",
+        "slug": "web-dev-fundamentals"
+      },
+      {
+        "id": 456,
+        "name": "Advanced JavaScript",
+        "slug": "advanced-javascript"
+      }
+    ]
+  }
+]
+```
+
+**Example:**
+```bash
+GET /v1/payments/academy/cohortset
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+---
+
+#### Get a Single Cohort Set
+
+**Endpoint:** `GET /v1/payments/academy/cohortset/{cohort_set_id}`  
+**Or:** `GET /v1/payments/academy/cohortset/{cohort_set_slug}`
+
+**Authentication:** Required - `read_plan` capability
+
+**Response:** Single cohort set object with all cohorts
+
+**Example:**
+```bash
+GET /v1/payments/academy/cohortset/full-stack-bootcamp-2025
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+---
+
+#### Update a Cohort Set
+
+**Endpoint:** `PUT /v1/payments/academy/cohortset/{cohort_set_id}`  
+**Or:** `PUT /v1/payments/academy/cohortset/{cohort_set_slug}`
 
 **Authentication:** Required - `crud_plan` capability
 
 **Request Body:**
 ```json
 {
-  "cohorts": [123, 456, 789]  // Array of cohort IDs
+  "slug": "updated-bootcamp-slug"
 }
 ```
 
-**Use Case:**
-When a student purchases a plan with this cohort set, they get access to all included cohorts.
+**Example:**
+```bash
+PUT /v1/payments/academy/cohortset/full-stack-bootcamp-2025
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "slug": "full-stack-bootcamp-2025-v2"
+}
+```
+
+**Note:** Only the slug can be updated. To manage cohorts in the set, use the cohort management endpoints below.
+
+---
+
+#### Delete a Cohort Set
+
+**Endpoint:** `DELETE /v1/payments/academy/cohortset/{cohort_set_id}`  
+**Or:** `DELETE /v1/payments/academy/cohortset/{cohort_set_slug}`
+
+**Authentication:** Required - `crud_plan` capability
+
+**Response:** `204 No Content`
+
+**Example:**
+```bash
+DELETE /v1/payments/academy/cohortset/old-bootcamp-2024
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+**Warning:** ⚠️ Deleting a cohort set will remove it from all plans that reference it. Ensure no active plans are using this cohort set before deleting.
+
+---
+
+### Managing Cohorts in a Cohort Set
+
+#### Get All Cohorts in a Cohort Set
+
+**Endpoint:** `GET /v1/payments/academy/cohortset/{cohort_set_id}/cohort`  
+**Or:** `GET /v1/payments/academy/cohortset/{cohort_set_slug}/cohort`
+
+**Authentication:** Required - `read_plan` capability
+
+**Response:** Array of cohorts
+```json
+[
+  {
+    "id": 123,
+    "name": "Web Development Fundamentals",
+    "slug": "web-dev-fundamentals"
+  },
+  {
+    "id": 456,
+    "name": "Advanced JavaScript",
+    "slug": "advanced-javascript"
+  },
+  {
+    "id": 789,
+    "name": "React & Backend",
+    "slug": "react-backend"
+  }
+]
+```
+
+**Example:**
+```bash
+GET /v1/payments/academy/cohortset/full-stack-bootcamp-2025/cohort
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+```
+
+---
+
+#### Add Cohorts to a Cohort Set
+
+**Endpoint:** `PUT /v1/payments/academy/cohortset/{cohort_set_id}/cohort`  
+**Or:** `PUT /v1/payments/academy/cohortset/{cohort_set_slug}/cohort`
+
+**Authentication:** Required - `crud_plan` capability
+
+**Request Body (Query Parameters):**
+```json
+{
+  "id__in": [123, 456, 789]  // Array of cohort IDs to add
+}
+```
+
+**Or using slugs:**
+```json
+{
+  "slug__in": ["web-dev-fundamentals", "advanced-javascript", "react-backend"]
+}
+```
+
+**Supported Query Parameters:**
+- `id__in` - Array of cohort IDs to add
+- `slug__in` - Array of cohort slugs to add
+
+**Response:**
+```json
+{
+  "status": "ok"
+}
+```
+
+**Example with IDs:**
+```bash
+PUT /v1/payments/academy/cohortset/5/cohort
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "id__in": [123, 456, 789]
+}
+```
+
+**Example with slugs:**
+```bash
+PUT /v1/payments/academy/cohortset/full-stack-bootcamp-2025/cohort
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "slug__in": ["web-dev-fundamentals", "advanced-javascript", "react-backend"]
+}
+```
+
+**Notes:**
+- Cohorts must belong to the same academy as the cohort set
+- Cohorts must have `available_as_saas=true` or belong to an academy with `available_as_saas=true`
+- Duplicate cohorts are automatically ignored (won't create duplicates)
+- Returns `201 CREATED` if cohorts were added, `200 OK` if all cohorts were already in the set
+
+---
+
+#### Remove Cohorts from a Cohort Set
+
+**Endpoint:** `DELETE /v1/payments/academy/cohortset/{cohort_set_id}/cohort`  
+**Or:** `DELETE /v1/payments/academy/cohortset/{cohort_set_slug}/cohort`
+
+**Authentication:** Required - `crud_plan` capability
+
+**Request Body (Query Parameters):**
+```json
+{
+  "id__in": [123, 456]  // Array of cohort IDs to remove
+}
+```
+
+**Or using slugs:**
+```json
+{
+  "slug__in": ["web-dev-fundamentals", "advanced-javascript"]
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok"
+}
+```
+
+**Example:**
+```bash
+DELETE /v1/payments/academy/cohortset/full-stack-bootcamp-2025/cohort
+Headers:
+  Academy: 1
+  Authorization: Token {token}
+
+Body:
+{
+  "slug__in": ["web-dev-fundamentals"]
+}
+```
+
+---
+
+### Complete Cohort Set Workflow
+
+**Step 1: Create a cohort set**
+```bash
+POST /v1/payments/academy/cohortset
+Body: {"slug": "full-stack-bootcamp-2025"}
+# Response: { "id": 5, ... }
+```
+
+**Step 2: Add cohorts to the set**
+```bash
+PUT /v1/payments/academy/cohortset/5/cohort
+Body: {"id__in": [123, 456, 789]}
+# Response: { "status": "ok" }
+```
+
+**Step 3: Verify cohorts are added**
+```bash
+GET /v1/payments/academy/cohortset/5/cohort
+# Response: [{"id": 123, ...}, {"id": 456, ...}, {"id": 789, ...}]
+```
+
+**Step 4: Link cohort set to a plan**
+```bash
+POST /v1/payments/academy/plan
+Body: {
+  "slug": "bootcamp-plan",
+  "cohort_set": 5,  // ← Use the cohort set ID
+  ...
+}
+```
+
+**Step 5: Students purchase plan → Automatically get access to all cohorts in the set**
+
+---
+
+### Cohort Set Validation Rules
+
+1. ✅ `slug` must be unique across all cohort sets
+2. ✅ `slug` can only contain: letters, numbers, hyphens
+3. ✅ Cohorts must belong to the same academy as the cohort set
+4. ✅ Cohorts must have `available_as_saas=true` or academy must have `available_as_saas=true`
+5. ❌ Cannot add cohorts from different academies
+6. ❌ Cannot remove cohort set if linked to active plans (delete the plans first)
+
+---
+
+### Use Cases
+
+#### Bootcamp Program
+Bundle multiple cohorts into a single bootcamp program:
+```json
+{
+  "slug": "full-stack-bootcamp-2025",
+  "cohorts": [
+    "html-css-fundamentals",
+    "javascript-basics",
+    "react-intro",
+    "backend-with-python",
+    "final-project"
+  ]
+}
+```
+
+#### Certification Path
+Group cohorts for a certification track:
+```json
+{
+  "slug": "aws-cloud-practitioner-cert",
+  "cohorts": [
+    "aws-fundamentals",
+    "ec2-and-networking",
+    "databases-and-storage",
+    "security-and-compliance"
+  ]
+}
+```
+
+#### Multi-Cohort Subscription
+Offer access to multiple cohorts through a subscription:
+```json
+{
+  "slug": "all-access-pass",
+  "cohorts": ["python-101", "python-102", "python-201", "python-202"]
+}
+```
 
 ---
 

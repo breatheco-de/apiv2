@@ -241,6 +241,16 @@ class Syllabus(models.Model):
         max_length=150, blank=True, null=True, default=None, help_text="Coma separated, E.g: HTML, CSS, Javascript"
     )
 
+    forked_from = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name='forks',
+        help_text="If this syllabus was forked/created based another one",
+    )
+
     github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
     duration_in_hours = models.IntegerField(null=True, default=None)
     duration_in_days = models.IntegerField(null=True, default=None)
@@ -294,6 +304,15 @@ class SyllabusVersion(models.Model):
 
     version = models.PositiveSmallIntegerField(db_index=True)
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+    forked_from = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="If this syllabus version was forked/created based another one",
+        related_name='forks',
+    )
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
 

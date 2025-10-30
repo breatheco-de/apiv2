@@ -524,7 +524,15 @@ class MemberView(APIView, GenerateLookupsMixin):
 
         like = request.GET.get("like", None)
         if like is not None:
-            items = query_like_by_full_name(like=like, items=items)
+            for query in like.split():
+                items = items.filter(
+                    Q(first_name__icontains=query)
+                    | Q(last_name__icontains=query)
+                    | Q(email__icontains=query)
+                    | Q(user__first_name__icontains=query)
+                    | Q(user__last_name__icontains=query)
+                    | Q(user__email__icontains=query)
+                )
 
         items = items.exclude(user__email__contains="@token.com")
 

@@ -66,6 +66,7 @@ from breathecode.payments.models import (
 )
 from breathecode.payments.serializers import (
     BillingTeamAutoRechargeSerializer,
+    CohortSetSerializer,
     FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
@@ -73,6 +74,8 @@ from breathecode.payments.serializers import (
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
     GetCouponWithPlansSerializer,
+    GetCohortSerializer,
+    GetCohortSetSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetFinancingOptionSerializer,
@@ -485,11 +488,125 @@ class AcademyFinancingOptionView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AcademyCohortSetCohortView(APIView):
+class AcademyCohortSetView(APIView):
+    """Manage CohortSets for an academy."""
+
     extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_plan")
+    def get(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Get all cohort sets or a specific one."""
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if cohort_set_id or cohort_set_slug:
+            # Get specific cohort set
+            cohort_set = (
+                CohortSet.objects.filter(
+                    Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
+                ).first()
+            )
+            if not cohort_set:
+                raise ValidationException(
+                    translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"),
+                    code=404,
+                )
+
+            serializer = GetCohortSetSerializer(cohort_set, many=False)
+            return handler.response(serializer.data)
+
+        # Get all cohort sets
+        items = CohortSet.objects.filter(academy__id=academy_id)
+        items = handler.queryset(items)
+        serializer = GetCohortSetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        """Create a new CohortSet."""
+        lang = get_user_language(request)
+
+        data = request.data.copy()
+        data["academy"] = academy_id
+
+        serializer = CohortSetSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            # Fetch the created cohort set with relationships
+            cohort_set = CohortSet.objects.get(id=serializer.data["id"])
+            return Response(GetCohortSetSerializer(cohort_set, many=False).data, status=201)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_plan")
     def put(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Update a CohortSet."""
+        lang = get_user_language(request)
+
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            raise ValidationException(
+                translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
+            )
+
+        serializer = CohortSetSerializer(cohort_set, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            # Fetch the updated cohort set with relationships
+            cohort_set = CohortSet.objects.get(id=cohort_set.id)
+            return Response(GetCohortSetSerializer(cohort_set, many=False).data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_plan")
+    def delete(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Delete a CohortSet."""
+        lang = get_user_language(request)
+
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            raise ValidationException(
+                translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
+            )
+
+        cohort_set.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCohortSetCohortView(APIView):
+    """Manage cohorts in a CohortSet."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_plan")
+    def get(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Get all cohorts in a CohortSet."""
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            raise ValidationException(
+                translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
+            )
+
+        cohorts = cohort_set.cohorts.all()
+        cohorts = handler.queryset(cohorts)
+        serializer = GetCohortSerializer(cohorts, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_plan")
+    def put(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Add cohorts to a CohortSet."""
         lang = get_user_language(request)
 
         handler = self.extensions(request)
@@ -509,12 +626,11 @@ class AcademyCohortSetCohortView(APIView):
         )
 
         errors = []
-        if not (
-            cohort_set := CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), owner__id=academy_id)
-            .exclude(status="DELETED")
-            .first()
-        ):
-            errors.append(C(translation(lang, en="Plan not found", es="Plan no encontrado", slug="not-found")))
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            errors.append(C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found")))
 
         if not (items := Cohort.objects.filter(query)):
             errors.append(
@@ -533,6 +649,46 @@ class AcademyCohortSetCohortView(APIView):
             cohort_set.cohorts.add(*to_add)
 
         return Response({"status": "ok"}, status=status.HTTP_201_CREATED if to_add else status.HTTP_200_OK)
+
+    @capable_of("crud_plan")
+    def delete(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Remove cohorts from a CohortSet."""
+        lang = get_user_language(request)
+
+        handler = self.extensions(request)
+        query = handler.lookup.build(
+            lang,
+            ints={
+                "in": [
+                    "id",
+                ],
+            },
+            strings={
+                "in": [
+                    "slug",
+                ],
+            },
+            fix={"lower": "slug"},
+        )
+
+        errors = []
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            errors.append(C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found")))
+
+        if not (items := Cohort.objects.filter(query)):
+            errors.append(
+                C(translation(lang, en="Cohort not found", es="Cohort no encontrada", slug="cohort-not-found"))
+            )
+
+        if errors:
+            raise ValidationException(errors, code=404)
+
+        cohort_set.cohorts.remove(*items)
+
+        return Response({"status": "ok"})
 
 
 class ServiceView(APIView):
