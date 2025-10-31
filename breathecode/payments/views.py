@@ -850,7 +850,6 @@ class MeSubscriptionView(APIView):
 
         # NOTE: this is before feature/add-plan-duration branch, this will be outdated
         plan_financings = PlanFinancing.objects.filter(user=request.user)
-
         if subscription := request.GET.get("subscription"):
             subscriptions = subscriptions.filter(id=int(subscription))
 
@@ -4376,6 +4375,26 @@ class RenewPlanFinancingView(APIView):
                 code=400,
             )
 
+        # Derive the display price per installment from the first invoice amount, but exclude reward coupons
+        amount = first_invoice.amount
+        coupons = first_invoice.bag.coupons.all() if first_invoice.bag else []
+
+        reward_coupons = [
+            coupon
+            for coupon in coupons
+            if coupon and coupon.allowed_user_id is not None and coupon.referral_type == Coupon.Referral.NO_REFERRAL
+        ]
+
+        for coupon in reward_coupons:
+            v = coupon.discount_value or 0
+
+            if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
+                factor = 1 - v
+                if factor > 0:
+                    amount /= factor
+            elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
+                amount += v
+
         try:
             with transaction.atomic():
                 if payment_method == "coinbase":
@@ -4406,9 +4425,6 @@ class RenewPlanFinancingView(APIView):
                             slug="error-getting-bag",
                             code=404,
                         )
-
-                    # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
-                    amount = plan_financing.monthly_price
 
                     return_url = request.data.get("return_url")
                     cancel_url = request.data.get("cancel_url")
@@ -4446,9 +4462,6 @@ class RenewPlanFinancingView(APIView):
 
                 else:
                     bag = actions.get_bag_from_plan_financing(plan_financing, settings)
-
-                    # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
-                    amount = plan_financing.monthly_price
 
                     s = Stripe(academy=plan_financing.academy)
                     s.set_language(lang)

@@ -34,6 +34,7 @@ from .models import (
     CohortSet,
     Consumable,
     ConsumptionSession,
+    Coupon,
     Invoice,
     PaymentMethod,
     Plan,
@@ -1088,9 +1089,6 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 )
                 raise AbortTask(f"PlanFinancing with id {plan_financing.id} has deleted/discontinued plans")
 
-            # Use the stored monthly price, which already includes any coupon discounts applied during initial setup
-            amount = plan_financing.monthly_price
-
             invoices = plan_financing.invoices.filter(bag__was_delivered=True).order_by("created_at")
             first_invoice = invoices.first()
             last_invoice = invoices.filter(bag__was_delivered=True).last()
@@ -1102,6 +1100,26 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 plan_financing.save()
 
                 raise AbortTask(msg)
+
+            # Derive the display price per installment from the first invoice amount, but exclude reward coupons
+            amount = first_invoice.amount
+            coupons = first_invoice.bag.coupons.all() if first_invoice.bag else []
+
+            reward_coupons = [
+                coupon
+                for coupon in coupons
+                if coupon and coupon.allowed_use_id is not None and coupon.referral_type == Coupon.Referral.NO_REFERRAL
+            ]
+
+            for coupon in reward_coupons:
+                v = coupon.discount_value or 0
+
+                if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
+                    factor = 1 - v
+                    if factor > 0:
+                        amount /= factor
+                elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
+                    amount += v
 
             installments = first_invoice.bag.how_many_installments
 

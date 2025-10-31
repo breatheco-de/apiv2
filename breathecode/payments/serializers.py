@@ -420,6 +420,7 @@ class GetCouponSerializer(serpy.Serializer):
     referral_type = serpy.Field()
     referral_value = serpy.Field()
     auto = serpy.Field()
+    allowed_user = GetUserSmallSerializer(many=False, required=False)
     offered_at = serpy.Field()
     expires_at = serpy.Field()
 
