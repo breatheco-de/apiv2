@@ -1593,7 +1593,12 @@ class Invoice(models.Model):
         if self.payment_method and self.externally_managed is False:
             raise forms.ValidationError("Payment method cannot be setted if the billing isn't managed externally")
 
-        if self.payment_method and self.proof is None and self.status == self.Status.FULFILLED:
+        if (
+            self.payment_method
+            and self.proof is None
+            and self.status == self.Status.FULFILLED
+            and not self.payment_method.is_coinbase
+        ):
             raise forms.ValidationError(
                 "Proof of payment must be provided when payment method is setted and status is FULFILLED"
             )

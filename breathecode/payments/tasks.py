@@ -1108,7 +1108,7 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
             reward_coupons = [
                 coupon
                 for coupon in coupons
-                if coupon and coupon.allowed_use_id is not None and coupon.referral_type == Coupon.Referral.NO_REFERRAL
+                if coupon and coupon.allowed_user_id is not None and coupon.referral_type == Coupon.Referral.NO_REFERRAL
             ]
 
             for coupon in reward_coupons:
@@ -2238,11 +2238,14 @@ def send_coinbase_error_email(
         user_setting = UserSetting.objects.filter(user=user).first()
         lang = user_setting.lang if user_setting and user_setting.lang else "en"
 
-        # Use Redis lock to ensure only ONE email is sent
         lock_key = f"payment_error_email:{invoice_id}:{error_type}"
 
+        client = None
+        if IS_DJANGO_REDIS:
+            client = get_redis_connection("default")
+
         try:
-            with Lock(lock_key, timeout=300, sleep=0.1):  # 5 minute timeout, 100ms retry
+            with Lock(client, lock_key, timeout=300, blocking_timeout=300):
                 # Check if email was already sent
                 sent_key = f"payment_error_email_sent:{invoice_id}"
                 if cache.get(sent_key):

@@ -850,6 +850,7 @@ class MeSubscriptionView(APIView):
 
         # NOTE: this is before feature/add-plan-duration branch, this will be outdated
         plan_financings = PlanFinancing.objects.filter(user=request.user)
+
         if subscription := request.GET.get("subscription"):
             subscriptions = subscriptions.filter(id=int(subscription))
 
@@ -3201,7 +3202,11 @@ class CoinbaseChargeView(APIView):
                 )
 
                 bag = invoice.bag
-                is_renewal = bag.status == Bag.Status.RENEWAL
+
+                subscription_id = metadata.get("subscription_id")
+                plan_financing_id = metadata.get("plan_financing_id")
+
+                is_renewal = subscription_id or plan_financing_id
 
                 logger.info(
                     f"handle_paid_charge: Bag retrieved - bag_id={bag.id if bag else None}, "
@@ -3226,10 +3231,6 @@ class CoinbaseChargeView(APIView):
                         f"handle_paid_charge: RENEWAL flow - searching for subscription or plan_financing - "
                         f"invoice_id={invoice.id}, user_id={invoice.user.id}"
                     )
-
-                    # Get subscription/plan_financing ID from metadata
-                    subscription_id = metadata.get("subscription_id")
-                    plan_financing_id = metadata.get("plan_financing_id")
 
                     subscription = None
                     plan_financing = None
@@ -3264,7 +3265,6 @@ class CoinbaseChargeView(APIView):
                             Subscription.objects.filter(
                                 user=invoice.user,
                                 plans__in=bag.plans.all(),
-                                invoices=invoice,
                             )
                             .exclude(status__in=["EXPIRED", "CANCELLED", "DEPRECATED"])
                             .first()
@@ -3273,7 +3273,6 @@ class CoinbaseChargeView(APIView):
                             PlanFinancing.objects.filter(
                                 user=invoice.user,
                                 plans__in=bag.plans.all(),
-                                invoices=invoice,
                             )
                             .exclude(status__in=["EXPIRED", "CANCELLED", "DEPRECATED"])
                             .first()
@@ -3290,12 +3289,6 @@ class CoinbaseChargeView(APIView):
                             f"status={subscription.status}, next_payment_at={subscription.next_payment_at}, "
                             f"invoice_id={invoice.id}"
                         )
-                        subscription.invoices.add(invoice)
-                        subscription.save()
-                        logger.info(
-                            f"handle_paid_charge: Invoice {invoice.id} linked to subscription {subscription.id} "
-                            f"(from metadata)"
-                        )
 
                         # Determine if charge_subscription should be called immediately
                         should_charge_now = (
@@ -3304,6 +3297,11 @@ class CoinbaseChargeView(APIView):
                         )
 
                         transaction.savepoint_commit(sid)
+
+                        transaction.on_commit(lambda: subscription.invoices.add(invoice))
+                        logger.info(
+                            f"handle_paid_charge: Invoice {invoice.id} will be linked to subscription {subscription.id} after commit"
+                        )
 
                         if should_charge_now:
                             logger.info(
@@ -3323,12 +3321,7 @@ class CoinbaseChargeView(APIView):
                             f"status={plan_financing.status}, next_payment_at={plan_financing.next_payment_at}, "
                             f"invoice_id={invoice.id}"
                         )
-                        plan_financing.invoices.add(invoice)
-                        plan_financing.save()
-                        logger.info(
-                            f"handle_paid_charge: Invoice {invoice.id} linked to plan_financing {plan_financing.id} "
-                            f"(from metadata)"
-                        )
+
                         # Determine if charge_plan_financing should be called immediately
                         should_charge_now = (
                             utc_now >= plan_financing.next_payment_at
@@ -3336,6 +3329,11 @@ class CoinbaseChargeView(APIView):
                         )
 
                         transaction.savepoint_commit(sid)
+
+                        transaction.on_commit(lambda: plan_financing.invoices.add(invoice))
+                        logger.info(
+                            f"handle_paid_charge: Invoice {invoice.id} will be linked to plan_financing {plan_financing.id} after commit"
+                        )
 
                         if should_charge_now:
                             logger.info(
