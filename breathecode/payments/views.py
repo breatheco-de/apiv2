@@ -1653,6 +1653,8 @@ class AcademySubscriptionView(APIView):
                 .exclude(status="ERROR")
                 .exclude(status="EXPIRED")
                 .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
+                .select_related('subscriptionbillingteam')
+                .prefetch_related('subscriptionbillingteam__seats')
                 .first()
             )
 
@@ -1704,6 +1706,9 @@ class AcademySubscriptionView(APIView):
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
+
+        # Optimize query to include billing team for seat information
+        items = items.select_related('subscriptionbillingteam').prefetch_related('subscriptionbillingteam__seats')
 
         items = handler.queryset(items)
 

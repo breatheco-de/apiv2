@@ -116,13 +116,13 @@ Authorization: Token {your-login-token}
 
 ## Authentication Flows
 
-### Flow 1: Email/Password Login
+### Flow 1: Email/Password Login (API)
 
 #### Step 1: Login
 
 **Endpoint:** `POST /v1/auth/login/`
 
-**Purpose:** Authenticate user with email and password.
+**Purpose:** Authenticate user with email and password programmatically.
 
 **Headers:**
 ```http
@@ -247,6 +247,162 @@ Authorization: Token {your-token}
   }
 }
 ```
+
+---
+
+### Flow 1B: HTML Login Form with Redirect
+
+For applications that need to redirect users to a login page and receive the token back via URL parameter, use the HTML login form endpoint.
+
+**Endpoint:** `GET /v1/auth/view/login`
+
+**Purpose:** Display an HTML login form that redirects back to your application with an authentication token after successful login.
+
+**Query Parameters:**
+- `url` (required) - The callback URL to redirect to after successful authentication. Can be:
+  - Plain URL: `https://yourapp.com/callback`
+  - Base64 encoded URL: The endpoint will automatically detect and decode base64-encoded URLs
+
+**Example Usage:**
+
+```
+https://breathecode.herokuapp.com/v1/auth/view/login?url=https://yourapp.com/auth/callback
+```
+
+**User Flow:**
+1. User is redirected to the login form
+2. User enters email and password
+3. After successful authentication, user is redirected to your callback URL with token appended
+
+**Redirect After Success:**
+```
+https://yourapp.com/auth/callback?token=9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b&attempt=1
+```
+
+**Query Parameters in Redirect:**
+- `token` - The authentication token (same format as API login response)
+- `attempt` - Always set to `1`, indicates login attempt
+
+**Frontend Implementation:**
+
+```javascript
+// Redirect user to login form
+const redirectToLogin = () => {
+  const callbackUrl = `${window.location.origin}/auth/callback`;
+  // URL can be plain or base64 encoded
+  const loginUrl = `https://breathecode.herokuapp.com/v1/auth/view/login?url=${encodeURIComponent(callbackUrl)}`;
+  
+  window.location.href = loginUrl;
+};
+
+// Handle callback in your app
+// Route: /auth/callback
+const handleAuthCallback = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  const attempt = urlParams.get('attempt');
+  
+  if (token) {
+    // Store token
+    localStorage.setItem('authToken', token);
+    
+    // Validate token and get user info
+    fetch('https://breathecode.herokuapp.com/v1/auth/user/me', {
+      headers: {
+        'Authorization': `Token ${token}`
+      }
+    })
+    .then(response => response.json())
+    .then(user => {
+      localStorage.setItem('userId', user.id);
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
+    })
+    .catch(error => {
+      console.error('Token validation failed:', error);
+      // Redirect back to login
+      window.location.href = '/login?error=invalid_token';
+    });
+  } else {
+    // No token received, login failed
+    window.location.href = '/login?error=authentication_failed';
+  }
+};
+```
+
+**Complete React Example:**
+
+```javascript
+import { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+
+const AuthCallback = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const token = searchParams.get('token');
+    
+    if (!token) {
+      navigate('/login?error=no_token');
+      return;
+    }
+
+    // Validate and store token
+    fetch('https://breathecode.herokuapp.com/v1/auth/user/me', {
+      headers: {
+        'Authorization': `Token ${token}`
+      }
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Invalid token');
+        
+        const user = await response.json();
+        
+        // Store authentication data
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userId', user.id);
+        
+        // Redirect to dashboard
+        navigate('/dashboard');
+      })
+      .catch((error) => {
+        console.error('Authentication error:', error);
+        navigate('/login?error=invalid_token');
+      });
+  }, [searchParams, navigate]);
+
+  return (
+    <div>
+      <h2>Authenticating...</h2>
+      <p>Please wait while we log you in.</p>
+    </div>
+  );
+};
+
+export default AuthCallback;
+```
+
+**Error Handling:**
+
+If login fails, the user is shown an error message on the login form page. Common errors include:
+- Invalid credentials
+- Email not validated
+- Missing email or password
+
+After a failed login attempt, the user remains on the login form to retry.
+
+**Use Cases:**
+- Third-party applications that need BreatheCode authentication
+- Mobile apps using webviews for authentication
+- Applications that cannot implement the API login endpoint
+- Legacy systems requiring URL-based token delivery
+
+**Security Notes:**
+- Always use HTTPS for the callback URL in production
+- Validate the token immediately after receiving it
+- Store tokens securely (use httpOnly cookies when possible)
+- The token is visible in the URL, so ensure the callback page clears it from history
 
 ---
 
@@ -1108,7 +1264,8 @@ export const ProtectedRoute = ({ children }) => {
 
 | Endpoint | Method | Purpose | Auth Required |
 |----------|--------|---------|---------------|
-| `/v1/auth/login/` | POST | Login with email/password | No |
+| `/v1/auth/login/` | POST | Login with email/password (API) | No |
+| `/v1/auth/view/login` | GET | HTML login form with redirect | No |
 | `/v1/auth/logout/` | POST | Logout and invalidate token | Yes |
 | `/v1/auth/user/me` | GET | Get current user info | Yes |
 | `/v1/auth/user/me` | PUT | Update user info | Yes |

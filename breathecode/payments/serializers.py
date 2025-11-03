@@ -713,6 +713,23 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
+    
+    # Billing team and seat information
+    has_billing_team = serpy.Field()
+    seats_count = serpy.MethodField()
+    seats_limit = serpy.MethodField()
+
+    def get_seats_count(self, obj):
+        """Get number of active seats in the billing team."""
+        if hasattr(obj, 'subscriptionbillingteam'):
+            return obj.subscriptionbillingteam.seats.filter(is_active=True).count()
+        return None
+
+    def get_seats_limit(self, obj):
+        """Get total seat limit for the billing team."""
+        if hasattr(obj, 'subscriptionbillingteam'):
+            return obj.subscriptionbillingteam.seats_limit
+        return None
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
