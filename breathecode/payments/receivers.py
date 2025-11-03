@@ -1,41 +1,35 @@
 import logging
 from typing import Type
 
+from django.contrib.auth.models import Group, User
 from django.db.models import Q
-from django.db.models.signals import m2m_changed
+from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django.contrib.auth.models import Group, User
+from task_manager.django.actions import schedule_task
 
-from breathecode.authenticate.models import GoogleWebhook, UserInvite
+import breathecode.authenticate.tasks as auth_tasks
+from breathecode.authenticate.actions import revoke_user_discord_permissions
+from breathecode.authenticate.models import Cohort, CredentialsDiscord, GoogleWebhook, UserInvite
 from breathecode.authenticate.signals import google_webhook_saved, invite_status_updated
-from breathecode.monitoring.models import StripeEvent
-from breathecode.monitoring import signals as monitoring_signals
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_status
+from breathecode.monitoring import signals as monitoring_signals
+from breathecode.monitoring.models import StripeEvent
+from breathecode.payments import actions, tasks
 from breathecode.payments.models import Invoice
-from breathecode.payments import tasks, actions
-from django.db.models.signals import post_save
 
-
-from .models import (
-    Consumable,
-    Plan,
-    PlanFinancing,
-    Subscription,
-    SubscriptionSeat,
-    SubscriptionBillingTeam,
-)
+from .actions import validate_auto_recharge_service_units
+from .models import Consumable, Plan, PlanFinancing, Subscription, SubscriptionBillingTeam, SubscriptionSeat
 from .signals import (
     consume_service,
+    grant_plan_permissions,
     grant_service_permissions,
     lose_service_permissions,
     reimburse_service_units,
-    update_plan_m2m_service_items,
-    grant_plan_permissions,
     revoke_plan_permissions,
+    update_plan_m2m_service_items,
 )
-from .actions import validate_auto_recharge_service_units
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +247,105 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
 
 # to be able to use unittest instead of integration test
 invite_status_updated.connect(handle_seat_invite_accepted, sender=UserInvite)
+
+
+@receiver(revoke_plan_permissions, sender=Subscription)
+@receiver(revoke_plan_permissions, sender=PlanFinancing)
+def revoke_discord_permissions_receiver(sender, instance, **kwargs):
+    """
+    Remove the user from the Discord server only if the user has
+    NO other active 4Geeks Plus PAID subscriptions or plan financings.
+    """
+
+    def schedule_delayed_revoke(date_field, date_value):
+        if date_value and date_value >= timezone.now():
+            days_until = int((date_value - timezone.now()).total_seconds() / (24 * 60 * 60)) + 1
+            entity_type = "subscription" if isinstance(instance, Subscription) else "plan_financing"
+            manager = schedule_task(auth_tasks.delayed_revoke_discord_permissions, f"{days_until}d")
+            if not manager.exists(instance.id, entity_type, date_field):
+                manager.call(instance.id, entity_type, date_field)
+            return True
+        return False
+
+    from .actions import user_has_active_4geeks_plus_plans
+
+    if user_has_active_4geeks_plus_plans(instance.user):
+        logger.info(f"User {instance.user.id} still has active paid plans, skipping Discord permissions revoke")
+        return
+    entity_type = "subscription" if isinstance(instance, Subscription) else "plan_financing"
+    if entity_type == "subscription":
+        plan_slug = Plan.objects.filter(subscription=instance).first().slug
+    else:
+        plan_slug = Plan.objects.filter(planfinancing=instance).first().slug
+    if plan_slug == "4geeks-plus-subscription" or plan_slug == "4geeks-plus-planfinancing":
+        if instance.status == "CANCELLED":
+            if instance.valid_until:
+                if instance.valid_until >= timezone.now():
+                    logger.debug(
+                        "The user still has time to pay the subscription after being cancelled, scheduling Discord revoke"
+                    )
+                    schedule_delayed_revoke("valid_until", instance.valid_until)
+                    return
+                else:
+                    revoke_user_discord_permissions(instance.user, instance.academy)
+                    return
+
+            if instance.next_payment_at:
+                if instance.next_payment_at >= timezone.now():
+                    logger.debug(
+                        "The user still has time to pay the subscription after being cancelled, scheduling Discord revoke"
+                    )
+                    schedule_delayed_revoke("next_payment_at", instance.next_payment_at)
+                    return
+                else:
+                    revoke_user_discord_permissions(instance.user, instance.academy)
+                    return
+        else:
+
+            if instance.valid_until:
+                if instance.valid_until >= timezone.now():
+
+                    logger.debug("The user still has time to pay the subscription, scheduling Discord revoke")
+                    schedule_delayed_revoke("valid_until", instance.valid_until)
+                    return
+                else:
+
+                    revoke_user_discord_permissions(instance.user, instance.academy)
+                    return
+            else:
+                revoke_user_discord_permissions(instance.user, instance.academy)
+                return
+
+
+@receiver(grant_plan_permissions, sender=Subscription)
+@receiver(grant_plan_permissions, sender=PlanFinancing)
+def grant_discord_permissions_receiver(sender, instance, **kwargs):
+    discord_creds = CredentialsDiscord.objects.filter(user=instance.user).first()
+    if not discord_creds:
+        logger.debug(f"User {instance.user.id} has no Discord credentials, skipping grant")
+        return False
+    cohort_academy = Cohort.objects.filter(academy=instance.academy).prefetch_related("academy").first()
+    if not cohort_academy:
+        return False
+    cohorts = Cohort.objects.filter(cohortuser__user=instance.user, academy=cohort_academy.academy.id).all()
+
+    plan_slug = Plan.objects.filter(subscription=instance).first().slug
+    if plan_slug == "4geeks-plus-subscription" or plan_slug == "4geeks-plus-planfinancing":
+        for cohort in cohorts:
+            if cohort.shortcuts:
+                for shortcut in cohort.shortcuts:
+                    if shortcut.get("label", None) != "Discord":
+                        continue
+
+                    try:
+                        auth_tasks.assign_discord_role_task.delay(
+                            shortcut.get("server_id", None),
+                            int(discord_creds.discord_id),
+                            shortcut.get("role_id", None),
+                            cohort_academy.academy.id,
+                        )
+                    except Exception as e:
+                        logger.error(str(e))
 
 
 @receiver(mentorship_session_status, sender=MentorshipSession)
