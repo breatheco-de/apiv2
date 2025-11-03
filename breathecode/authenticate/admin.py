@@ -30,6 +30,7 @@ from .models import (
     AcademyAuthSettings,
     AcademyProxy,
     Capability,
+    CredentialsDiscord,
     CredentialsFacebook,
     CredentialsGithub,
     CredentialsGoogle,
@@ -97,6 +98,13 @@ class CredentialsSlackAdmin(admin.ModelAdmin):
 @admin.register(CredentialsFacebook)
 class CredentialsFacebookAdmin(admin.ModelAdmin):
     list_display = ("facebook_id", "user", "email", "academy", "expires_at")
+
+
+@admin.register(CredentialsDiscord)
+class CredentialsDiscordAdmin(admin.ModelAdmin):
+    list_display = ("discord_id", "user", "created_at", "updated_at")
+    search_fields = ["user__first_name", "user__last_name", "user__email", "discord_id"]
+    raw_id_fields = ["user"]
 
 
 @admin.register(Token)
