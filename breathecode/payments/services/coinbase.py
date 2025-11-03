@@ -17,6 +17,7 @@ __all__ = ["CoinbaseCommerce"]
 
 
 class CoinbaseCommerce:
+    api_url: str
     api_key: str
     webhook_secret: str
     language: str
@@ -37,9 +38,10 @@ class CoinbaseCommerce:
             academy (Academy, optional): The academy instance to fetch specific payment settings.
                                         Defaults to None.
         """
+        self.api_url = os.getenv("COINBASE_API_URL")
         self.api_key = api_key
         self.webhook_secret = None
-        self.language = "en"  # Default language
+        self.language = "en"
         self.academy = academy
 
         # If academy is provided and no explicit api_key, try to get academy-specific settings
@@ -69,7 +71,7 @@ class CoinbaseCommerce:
         """
         self.language = lang
 
-    def create_charge(self, bag, amount, metadata, return_url, cancel_url):
+    def create_charge(self, bag, amount, metadata, return_url):
         """
         Create a Coinbase Commerce charge for a payment.
 
@@ -86,7 +88,6 @@ class CoinbaseCommerce:
                 - subscription_id (int, optional): Only for renewal flows
                 - plan_financing_id (int, optional): Only for plan financing renewal flows
             return_url (str): URL to redirect user after successful payment
-            cancel_url (str): URL to redirect user if payment is cancelled
         """
 
         if not self.api_key:
@@ -116,7 +117,6 @@ class CoinbaseCommerce:
             },
             "metadata": metadata,
             "redirect_url": return_url,
-            "cancel_url": cancel_url,
         }
         logger.info(
             f"CoinbaseCommerce: Calling Coinbase API - "
@@ -124,7 +124,7 @@ class CoinbaseCommerce:
             f"currency={charge_body['local_price']['currency']}, "
             f"bag_id={bag.id}"
         )
-        response = requests.post("https://api.commerce.coinbase.com/charges", headers=headers, json=charge_body)
+        response = requests.post(f"{self.api_url}/charges", headers=headers, json=charge_body)
         logger.info(f"CoinbaseCommerce: Coinbase API response status: {response.status_code}")
 
         if response.status_code != 201:
@@ -184,7 +184,7 @@ class CoinbaseCommerce:
                 "X-CC-Api-Key": self.api_key,
             }
             response = requests.get(
-                f"https://api.commerce.coinbase.com/charges/{charge_id}",
+                f"{self.api_url}/charges/{charge_id}",
                 headers=headers,
             )
 

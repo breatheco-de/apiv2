@@ -2991,8 +2991,6 @@ class PayView(APIView):
                 if payment_method == "coinbase" and amount > 0:
 
                     return_url = request.data.get("return_url")
-                    cancel_url = request.data.get("cancel_url")
-                    logger.info(f"Coinbase payment URLs - return_url={return_url}, cancel_url={cancel_url}")
 
                     if not return_url:
                         logger.warning(
@@ -3022,16 +3020,19 @@ class PayView(APIView):
                             "is_recurrent": recurrent,
                             "original_price": original_price,
                             "selected_cohort": request.GET.get("selected_cohort"),
+                            "user_email": request.user.email,
                         },
                         return_url=return_url,
-                        cancel_url=cancel_url,
                     )
 
                     # Stop the flow here, a webhook will finish the process and create the invoice
                     logger.info(
                         f"PayView: Coinbase charge created - charge_id={charge['id']}, hosted_url={charge.get('hosted_url')}"
                     )
-                    return Response({"hosted_url": charge.get("hosted_url")}, status=status.HTTP_201_CREATED)
+                    return Response(
+                        {"hosted_url": charge.get("hosted_url"), "charge_id": charge.get("id")},
+                        status=status.HTTP_201_CREATED,
+                    )
 
                 if amount >= 0.50:
                     s = Stripe(academy=bag.academy)
@@ -3130,6 +3131,44 @@ class PayView(APIView):
 
 
 class CoinbaseChargeView(APIView):
+
+    def get(self, request, charge_id):
+        lang = get_user_language(request)
+        academy_id = request.GET.get("academy")
+        academy = None
+
+        if academy_id:
+            academy = Academy.objects.filter(id=academy_id).first()
+            print(f"academy: {academy}")
+            if not academy:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Academy not found",
+                        es="Academia no encontrada",
+                    ),
+                    code=404,
+                    slug="academy-not-found",
+                )
+
+        coinbase = CoinbaseCommerce(academy=academy)
+        coinbase.set_language(lang)
+
+        try:
+            charge = coinbase.get_charge(charge_id)
+            logger.info(f"CoinbaseChargeView.get: Successfully retrieved charge - charge_id={charge_id}")
+            return Response(charge, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error retrieving charge: {str(e)}",
+                    es=f"Error obteniendo cargo: {str(e)}",
+                ),
+                code=500,
+                slug="charge-retrieval-error",
+            )
 
     def handle_paid_charge(self, request):
         """
@@ -4085,7 +4124,6 @@ class RenewSubscriptionView(APIView):
                         amount = actions.get_discounted_price(amount, coupons)
 
                     return_url = request.data.get("return_url")
-                    cancel_url = request.data.get("cancel_url")
 
                     coinbase = CoinbaseCommerce(academy=subscription.academy)
                     coinbase.set_language(lang)
@@ -4101,7 +4139,6 @@ class RenewSubscriptionView(APIView):
                             "subscription_id": subscription.id,
                         },
                         return_url=return_url,
-                        cancel_url=cancel_url,
                     )
 
                     logger.info(
@@ -4114,6 +4151,7 @@ class RenewSubscriptionView(APIView):
                     return Response(
                         {
                             "hosted_url": charge["hosted_url"],
+                            "charge_id": charge["id"],
                         },
                         status=status.HTTP_200_OK,
                     )
@@ -4425,7 +4463,6 @@ class RenewPlanFinancingView(APIView):
                         )
 
                     return_url = request.data.get("return_url")
-                    cancel_url = request.data.get("cancel_url")
 
                     coinbase = CoinbaseCommerce(academy=plan_financing.academy)
                     coinbase.set_language(lang)
@@ -4441,7 +4478,6 @@ class RenewPlanFinancingView(APIView):
                             "plan_financing_id": plan_financing.id,
                         },
                         return_url=return_url,
-                        cancel_url=cancel_url,
                     )
 
                     logger.info(
@@ -4454,6 +4490,7 @@ class RenewPlanFinancingView(APIView):
                     return Response(
                         {
                             "hosted_url": charge["hosted_url"],
+                            "charge_id": charge["id"],
                         },
                         status=status.HTTP_200_OK,
                     )

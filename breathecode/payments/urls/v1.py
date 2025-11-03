@@ -19,6 +19,7 @@ from ..views import (
     CancelConsumptionView,
     CardView,
     CheckingView,
+    CoinbaseChargeView,
     CoinbaseWebhookView,
     ConsumableCheckoutView,
     ConsumeView,
@@ -159,6 +160,7 @@ urlpatterns = [
     path("checking", CheckingView.as_view(), name="checking"),
     path("pay", PayView.as_view(), name="pay"),
     path("coinbase/callback", CoinbaseWebhookView.as_view(), name="coinbase_callback"),
+    path("coinbase/charge/<str:charge_id>", CoinbaseChargeView.as_view(), name="coinbase_charge_info"),
     path("renew/subscription", RenewSubscriptionView.as_view(), name="renew_subscription"),
     path("renew/planfinancing", RenewPlanFinancingView.as_view(), name="renew_plan_financing"),
     path(
