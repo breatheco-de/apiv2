@@ -856,7 +856,6 @@ class MeSubscriptionView(APIView):
 
         if plan_financing := request.GET.get("plan-financing"):
             plan_financings = plan_financings.filter(id=int(plan_financing))
-            print("el plan financing es", plan_financing)
 
         if subscription and not plan_financing:
             plan_financings = PlanFinancing.objects.none()
@@ -885,7 +884,6 @@ class MeSubscriptionView(APIView):
 
         if invoice := request.GET.get("invoice"):
             ids = [int(x) for x in invoice.split(",") if x.isnumeric()]
-            print(ids)
             subscriptions = subscriptions.filter(invoices__id__in=ids)
             plan_financings = plan_financings.filter(invoices__id__in=ids)
 
@@ -2905,9 +2903,6 @@ class PayView(APIView):
 
                 if not available_for_free_trial and not available_free and not chosen_period and how_many_installments:
                     bag.how_many_installments = how_many_installments
-                    print(
-                        f"how_many_installments para coinbase: {bag.how_many_installments}, hmn: {how_many_installments}, id: {bag.id}"
-                    )
 
                 coupons = bag.coupons.none()
 
@@ -3045,7 +3040,6 @@ class PayView(APIView):
                     )
                 if amount >= 0.50:
                     s = Stripe(academy=bag.academy)
-                    print(f"academy para stripe: {bag.academy}")
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
 
@@ -3148,7 +3142,6 @@ class CoinbaseChargeView(APIView):
 
         if academy_id:
             academy = Academy.objects.filter(id=academy_id).first()
-            print(f"academy: {academy}")
             if not academy:
                 raise ValidationException(
                     translation(
