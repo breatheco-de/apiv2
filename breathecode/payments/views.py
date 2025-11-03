@@ -4850,29 +4850,27 @@ class SubscriptionSeatView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class MePaymentCardsView(APIView):
+class MePaymentMethodView(APIView):
     """
-    API View to retrieve the authenticated user's saved credit/debit cards.
+    API View to retrieve the authenticated user's default payment method information.
 
-    GET /v1/payments/me/cards
-    - Returns saved cards for the academy specified in header or query param
-    - If no academy specified, returns empty list
+    GET /v1/payments/me/payment-method
+    - Returns default payment method info for the academy specified in header or query param
     - Includes card details for display (brand, last4, expiration)
-    - Marks which card is default
     """
 
     def get(self, request):
         """
-        Get saved payment cards for the authenticated user.
+        Get default payment method information for the authenticated user.
 
         The academy is obtained from:
         1. Header 'Academy'
         2. Query parameter 'academy'
 
         Returns:
-            200: List of saved cards with details
+            200: Payment method information dict or None if no payment method exists
             404: Academy not found
-            500: Error retrieving cards from Stripe
+            500: Error retrieving payment method from Stripe
         """
         lang = get_user_language(request)
         user = request.user
@@ -4896,26 +4894,24 @@ class MePaymentCardsView(APIView):
                     code=404,
                 )
 
-        # Initialize Stripe service with the academy
         s = Stripe(academy=academy)
         s.set_language(lang)
 
         try:
-            cards = s.get_user_saved_cards(user)
-            return Response(cards, status=status.HTTP_200_OK)
+            payment_method_info = s.get_payment_method_info(user)
+            print(payment_method_info)
+            return Response(payment_method_info, status=status.HTTP_200_OK)
 
         except PaymentException as e:
-            # Already translated and formatted
             raise e
-
         except Exception as e:
-            logger.error(f"Error retrieving payment cards for user {user.id}: {str(e)}")
+            logger.error(f"Error retrieving payment method info for user {user.id}: {str(e)}")
             raise ValidationException(
                 translation(
                     lang,
-                    en="Unable to retrieve saved payment methods. Please try again later.",
-                    es="No se pudieron obtener los métodos de pago guardados. Inténtalo de nuevo más tarde.",
-                    slug="error-retrieving-cards",
+                    en="Unable to retrieve payment method information. Please try again later.",
+                    es="No se pudo obtener la información del método de pago. Inténtalo de nuevo más tarde.",
+                    slug="error-retrieving-payment-method",
                 ),
                 code=500,
             )
