@@ -271,140 +271,82 @@ Create the quiz as an asset first, then populate questions.
 
 **Step 2: Create Assessment and Link**
 
-After creating the asset, use the assessment endpoint to create questions:
+**Endpoint:** `PUT /v1/assessment/python-basics-quiz`
 
-```javascript
-// Create questions via assessment endpoint
-await fetch(
-  `https://breathecode.herokuapp.com/v1/assessment/python-basics-quiz`,
-  {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Token ${token}`,
-      'Academy': academyId,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      title: 'Python Basics Quiz',
-      questions: [/* questions array */]
-    })
-  }
-);
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+Content-Type: application/json
 ```
 
-### Example: Create Assessment with JavaScript
-
-```javascript
-const createAssessment = async (academyId, assessmentData) => {
-  const token = localStorage.getItem('authToken');
-  
-  const response = await fetch(
-    `https://breathecode.herokuapp.com/v1/assessment/${assessmentData.slug}`,
+**Payload:**
+```json
+{
+  "title": "Python Basics Quiz",
+  "questions": [
     {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Token ${token}`,
-        'Academy': academyId,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(assessmentData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to create assessment');
-  }
-
-  return await response.json();
-};
-
-// Usage
-const quiz = await createAssessment(1, {
-  slug: 'python-basics-quiz',
-  title: 'Python Basics Quiz',
-  lang: 'us',
-  is_instant_feedback: true,
-  questions: [
-    {
-      title: 'What is Python?',
-      question_type: 'SELECT',
-      options: [
-        { title: 'A programming language', score: 1.0 },
-        { title: 'A snake', score: 0.0 }
+      "title": "What is Python?",
+      "question_type": "SELECT",
+      "options": [
+        { "title": "A programming language", "score": 1.0 },
+        { "title": "A snake", "score": 0.0 }
       ]
     }
   ]
-});
+}
 ```
 
 ---
 
 ## Managing Questions & Options
 
-### Add New Question
+### Overview of Question/Option Endpoints
 
-Add a question to an existing assessment:
+There are **two approaches** to manage questions and options:
 
-```javascript
-const addQuestion = async (academyId, assessmentSlug, questionData) => {
-  const token = localStorage.getItem('authToken');
-  
-  // Get current assessment
-  const assessment = await fetch(
-    `https://breathecode.herokuapp.com/v1/assessment/${assessmentSlug}`,
-    {
-      headers: { 'Authorization': `Token ${token}` }
-    }
-  ).then(r => r.json());
+#### Approach 1: Bulk Operations (Legacy)
+- `PUT /v1/assessment/{slug}` - Update entire assessment with all questions
+- ⚠️ **Less efficient**: Must send entire questions array
+- ✅ **Use when**: Creating new assessment or updating multiple questions at once
 
-  // Add new question
-  assessment.questions.push(questionData);
+#### Approach 2: Granular Operations (Recommended) ⭐
+- `PUT /v1/assessment/{slug}/question/{id}` - Update single question
+- `POST /v1/assessment/{slug}/question/{id}/option` - Add option to question
+- ✅ **More efficient**: Only send what you're changing
+- ✅ **Use when**: Updating individual questions or adding options
 
-  // Update assessment
-  const response = await fetch(
-    `https://breathecode.herokuapp.com/v1/assessment/${assessmentSlug}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Token ${token}`,
-        'Academy': academyId,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(assessment)
-    }
-  );
+---
 
-  return await response.json();
-};
+### Add New Question (Bulk Method)
 
-// Usage
-await addQuestion(1, 'python-basics-quiz', {
-  title: 'What is a Python list?',
-  question_type: 'SELECT',
-  position: 3,
-  options: [
-    { title: 'An ordered collection', score: 1.0 },
-    { title: 'A dictionary', score: 0.0 }
-  ]
-});
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}`
+
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+Content-Type: application/json
 ```
 
-### Update Existing Question
-
-Update a question by including its `id` in the request:
-
+**Payload:**
 ```json
 {
   "questions": [
     {
-      "id": 456,
-      "title": "Updated question text",
+      "title": "What is a Python list?",
+      "question_type": "SELECT",
+      "position": 3,
       "options": [
         {
-          "id": 789,
-          "title": "Updated option",
-          "score": 1.0
+          "title": "An ordered collection",
+          "score": 1.0,
+          "position": 1
+        },
+        {
+          "title": "A dictionary",
+          "score": 0.0,
+          "position": 2
         }
       ]
     }
@@ -412,53 +354,281 @@ Update a question by including its `id` in the request:
 }
 ```
 
+**⚠️ Important:** Include existing questions in the array if you want to preserve them, or fetch current assessment first and append to the questions array.
+
+### Update Existing Question (Bulk Method)
+
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}`
+
+**Payload:**
+```json
+{
+  "questions": [
+    {
+      "id": 456,
+      "title": "Updated question text",
+      "question_type": "SELECT",
+      "position": 1
+    }
+  ]
+}
+```
+
+**Note:** Include the question `id` to update an existing question.
+
+**⚠️ Limitation:** Must include ALL questions you want to keep in the array.
+
+### Update Single Question (Recommended) ⭐
+
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}/question/{question_id}`
+
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+Content-Type: application/json
+```
+
+**Use Case 1: Update question metadata only**
+
+```json
+{
+  "title": "Updated question text",
+  "help_text": "Optional hint for students",
+  "position": 2
+}
+```
+
+**Use Case 2: Update question and modify existing options**
+
+```json
+{
+  "title": "Updated question text",
+  "options": [
+    {
+      "id": 789,
+      "title": "Updated existing option",
+      "score": 1.0,
+      "position": 1
+    },
+    {
+      "id": 790,
+      "title": "Another updated option",
+      "score": 0.0,
+      "position": 2
+    }
+  ]
+}
+```
+
+**Use Case 3: Update question and add new options simultaneously**
+
+```json
+{
+  "title": "Updated question text",
+  "options": [
+    {
+      "id": 789,
+      "title": "Keep this existing option",
+      "score": 1.0
+    },
+    {
+      "title": "Create this new option",
+      "score": 0.0
+    }
+  ]
+}
+```
+
+**Key Behavior:**
+- **Option with `id` field**: Updates the existing option
+- **Option without `id` field**: Creates a new option
+- **Partial updates**: Only send fields you want to change
+- **Validation**: Ensures at least one option has positive score (when options provided)
+
+**Benefits:**
+- ✅ More efficient than bulk update
+- ✅ Partial update support - only send what changes
+- ✅ Single request for question + options
+- ✅ Mix updates and creates in one call
+- ✅ No need to fetch entire assessment first
+
+**Example Response:**
+```json
+{
+  "id": 456,
+  "title": "Updated question text",
+  "help_text": "Optional hint for students",
+  "question_type": "SELECT",
+  "position": 2,
+  "lang": "en",
+  "is_deleted": false,
+  "created_at": "2024-01-15T10:30:00Z",
+  "updated_at": "2024-01-15T14:45:00Z"
+}
+```
+
+### Update Question Options (Bulk Method)
+
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}`
+
+**Payload:**
+```json
+{
+  "questions": [
+    {
+      "id": 456,
+      "options": [
+        {
+          "id": 789,
+          "title": "Updated option text",
+          "score": 1.0,
+          "position": 1
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Note:** Include option `id` to update existing options.
+
+**⚠️ Limitation:** Must include ALL questions and options you want to keep.
+
+### Reorder Options
+
+**Method 1: Update single question (Recommended)** ⭐
+
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}/question/{question_id}`
+
+**Payload:**
+```json
+{
+  "options": [
+    {
+      "id": 790,
+      "position": 1
+    },
+    {
+      "id": 791,
+      "position": 2
+    },
+    {
+      "id": 789,
+      "position": 3
+    }
+  ]
+}
+```
+
+**Method 2: Bulk update**
+
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}`
+
+**Payload:**
+```json
+{
+  "questions": [
+    {
+      "id": 456,
+      "options": [
+        {
+          "id": 790,
+          "position": 1
+        },
+        {
+          "id": 791,
+          "position": 2
+        },
+        {
+          "id": 789,
+          "position": 3
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Note:** The `position` property determines display order. Options are displayed according to their `position` value, not array order.
+
+### Add New Option to Question (Recommended) ⭐
+
+**Endpoint:** `POST /v1/assessment/{assessment_slug}/question/{question_id}/option`
+
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+Content-Type: application/json
+```
+
+**Payload:**
+```json
+{
+  "title": "New answer option",
+  "help_text": "Optional hint for this option",
+  "score": 0.5,
+  "position": 3
+}
+```
+
+**Example Response (201 Created):**
+```json
+{
+  "id": 123,
+  "title": "New answer option",
+  "help_text": "Optional hint for this option",
+  "score": 0.5,
+  "position": 3,
+  "lang": "en",
+  "is_deleted": false,
+  "created_at": "2024-01-15T15:30:00Z",
+  "updated_at": "2024-01-15T15:30:00Z"
+}
+```
+
+**When to Use:**
+- Adding a single new option to existing question
+- Building questions incrementally
+- Simple, focused operation
+
+**Benefits:**
+- ✅ Proper REST resource nesting (`/question/{id}/option`)
+- ✅ Single focused operation
+- ✅ Returns created option with ID
+- ✅ No need to send existing options
+- ✅ Clean and simple payload
+
+**Alternative:** You can also add options via `PUT /question/{id}` with options array (see above).
+
 ### Delete Question
 
 **Endpoint:** `DELETE /v1/assessment/{assessment_slug}/question/{question_id}`
 
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+```
+
 **Note:** Questions with collected answers cannot be deleted, they will be marked as `is_deleted=true` instead.
 
-```javascript
-const deleteQuestion = async (assessmentSlug, questionId) => {
-  const token = localStorage.getItem('authToken');
-  
-  const response = await fetch(
-    `https://breathecode.herokuapp.com/v1/assessment/${assessmentSlug}/question/${questionId}`,
-    {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Token ${token}`,
-        'Academy': academyId
-      }
-    }
-  );
-
-  if (response.status === 204) {
-    console.log('Question deleted successfully');
-  }
-};
-```
+**Response:** `204 No Content` on success.
 
 ### Delete Option
 
 **Endpoint:** `DELETE /v1/assessment/{assessment_slug}/option/{option_id}`
 
-```javascript
-const deleteOption = async (assessmentSlug, optionId) => {
-  const token = localStorage.getItem('authToken');
-  
-  await fetch(
-    `https://breathecode.herokuapp.com/v1/assessment/${assessmentSlug}/option/${optionId}`,
-    {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Token ${token}`,
-        'Academy': academyId
-      }
-    }
-  );
-};
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
 ```
+
+**Note:** Options with collected answers cannot be deleted, they will be marked as `is_deleted=true` instead.
+
+**Response:** `204 No Content` on success.
 
 ### Question Types
 
@@ -551,30 +721,144 @@ The system auto-links them on save.
 ### View Asset-Assessment Connection
 
 **Get Asset:**
-```javascript
-const asset = await fetch(
-  `/v1/registry/academy/1/asset/python-basics-quiz`,
-  { headers: { 'Authorization': `Token ${token}`, 'Academy': '1' } }
-).then(r => r.json());
 
-console.log(asset.assessment);  // Assessment object
+**Endpoint:** `GET /v1/registry/academy/{academy_id}/asset/python-basics-quiz`
+
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+```
+
+**Response includes `assessment` field:**
+```json
+{
+  "id": 123,
+  "slug": "python-basics-quiz",
+  "assessment": {
+    "id": 456,
+    "slug": "python-basics-quiz"
+  }
+}
 ```
 
 **Get Assessment:**
-```javascript
-const assessment = await fetch(
-  `/v1/assessment/python-basics-quiz`,
-  { headers: { 'Authorization': `Token ${token}` } }
-).then(r => r.json());
 
-console.log(assessment.asset_set);  // Related assets
+**Endpoint:** `GET /v1/assessment/python-basics-quiz`
+
+**Headers:**
+```http
+Authorization: Token {your-token}
 ```
+
+**Response includes `asset_set` field** with related assets.
 
 ---
 
 ## GitHub Integration
 
 Quiz assessments can sync with GitHub for version control and content management.
+
+### ⚠️ Important: GitHub Sync Limitations
+
+**Critical:** When pulling a QUIZ asset from GitHub, the behavior differs based on whether the assessment already has questions:
+
+#### First Pull (No Assessment Exists)
+
+When you pull for the first time:
+
+✅ **Creates Assessment** with all questions from `learn.json`
+✅ **Asset.config and Assessment are in sync**
+✅ **All questions and options created**
+
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/{asset_slug}/action/pull`
+
+**Result:** Asset created, Assessment created with all questions from config.
+
+#### Subsequent Pulls (Assessment Has Questions)
+
+When you pull after questions exist:
+
+✅ **Updates `asset.config`** with latest from GitHub
+❌ **Does NOT update Assessment** questions/options
+⚠️ **Asset and Assessment become out of sync**
+
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/{asset_slug}/action/pull`
+
+**Result:** `asset.config` updated, but Assessment questions remain unchanged.
+
+**Why This Limitation?**
+
+To protect student submission data. Updating questions would invalidate existing student answers and corrupt historical data.
+
+#### How to Update Existing Assessment Questions
+
+If you need to update questions after students have taken the quiz:
+
+**Option 1: Create New Version (Recommended)**
+
+Step 1: Create new asset with updated slug
+
+**Endpoint:** `POST /v1/registry/academy/{academy_id}/asset`
+
+**Payload:**
+```json
+{
+  "slug": "python-quiz-v2",
+  "title": "Python Quiz (Updated 2024)",
+  "asset_type": "QUIZ",
+  "readme_url": "https://github.com/.../learn.json"
+}
+```
+
+Step 2: Pull to create new assessment
+
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/python-quiz-v2/action/pull`
+
+Step 3: Mark old version as superseded
+
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/python-quiz`
+
+**Payload:**
+```json
+{
+  "superseded_by": 789,
+  "status": "DRAFT"
+}
+```
+
+**Option 2: Manual Update via API**
+
+Step 1: Pull to get latest `asset.config`
+
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/{asset_slug}/action/pull`
+
+Step 2: Get updated config
+
+**Endpoint:** `GET /v1/registry/academy/{academy_id}/asset/{asset_slug}`
+
+Step 3: Update assessment with transformed questions
+
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}`
+
+**Payload:**
+```json
+{
+  "questions": [
+    // Transform asset.config.questions to assessment format
+  ]
+}
+```
+
+**Option 3: Delete and Recreate (Only if NO student submissions)**
+
+Step 1: Delete all questions via Django admin or API
+
+Step 2: Pull from GitHub again
+
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/{asset_slug}/action/pull`
+
+Questions will be recreated from config.
 
 ### Store Quiz in GitHub (learn.json format)
 
@@ -607,32 +891,20 @@ Quizzes are typically stored as `learn.json` in a LearnPack repository:
 
 ### Pull from GitHub
 
-**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/python-basics-quiz/action/pull`
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/{asset_slug}/action/pull`
+
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+```
 
 **Purpose:** Pull quiz questions from GitHub `learn.json`
 
-```javascript
-const pullQuizFromGitHub = async (academyId, assetSlug) => {
-  const token = localStorage.getItem('authToken');
-  
-  const response = await fetch(
-    `https://breathecode.herokuapp.com/v1/registry/academy/${academyId}/asset/${assetSlug}/action/pull`,
-    {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Token ${token}`,
-        'Academy': academyId
-      }
-    }
-  );
-
-  return await response.json();
-};
-```
-
 **What Gets Synced:**
-- Questions and options from `learn.json`
-- Quiz metadata (title, description)
+- Questions and options from `learn.json` (only if assessment doesn't exist yet)
+- Quiz metadata (title, description, technologies)
+- Asset config updated
 - README content (if exists)
 
 ### Push to GitHub
@@ -649,19 +921,20 @@ Assessments support multiple language translations.
 
 **Endpoint:** `GET /v1/assessment/{assessment_slug}?lang={lang_code}`
 
-```javascript
-// Get Spanish translation
-const spanishQuiz = await fetch(
-  '/v1/assessment/python-basics-quiz?lang=es',
-  { headers: { 'Authorization': `Token ${token}` } }
-).then(r => r.json());
+**Headers:**
+```http
+Authorization: Token {your-token}
 ```
+
+**Example:** `GET /v1/assessment/python-basics-quiz?lang=es`
+
+Returns the Spanish translation of the assessment if it exists.
 
 ### Create Translation
 
-1. Create a new assessment with different `lang` code
-2. Link it to original via `original` field
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}`
 
+**Payload:**
 ```json
 {
   "slug": "python-basics-quiz-es",
@@ -680,20 +953,20 @@ const spanishQuiz = await fetch(
 }
 ```
 
-### Link Assets for Translations
+Link to original via `original` field (assessment ID).
 
-If you have assets for each translation, link them:
+### Link Asset Translations
 
-```javascript
-// Link English and Spanish assets
-await updateAsset(1, 'python-basics-quiz', {
-  all_translations: ['python-basics-quiz', 'python-basics-quiz-es']
-});
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/python-basics-quiz`
 
-await updateAsset(1, 'python-basics-quiz-es', {
-  all_translations: ['python-basics-quiz', 'python-basics-quiz-es']
-});
+**Payload:**
+```json
+{
+  "all_translations": ["python-basics-quiz", "python-basics-quiz-es"]
+}
 ```
+
+Repeat for each translation asset to create bidirectional links.
 
 ---
 
@@ -761,23 +1034,43 @@ You can have multiple threshold groups for different use cases:
 
 **Endpoint:** `GET /v1/assessment/{assessment_slug}/threshold`
 
-```javascript
-const getThresholds = async (assessmentSlug) => {
-  const response = await fetch(
-    `https://breathecode.herokuapp.com/v1/assessment/${assessmentSlug}/threshold`
-  );
-  
-  return await response.json();
-};
+**Headers:**
+```http
+Authorization: Token {your-token}
 ```
+
+Returns array of all thresholds for the assessment.
 
 ### Update Threshold
 
 **Endpoint:** `PUT /v1/assessment/{assessment_slug}/threshold/{threshold_id}`
 
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+Content-Type: application/json
+```
+
+**Payload:**
+```json
+{
+  "score_threshold": 80,
+  "success_message": "Updated message"
+}
+```
+
 ### Delete Threshold
 
 **Endpoint:** `DELETE /v1/assessment/{assessment_slug}/threshold/{threshold_id}`
+
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+```
+
+**Response:** `204 No Content` on success.
 
 ---
 
@@ -824,28 +1117,18 @@ Link the layout when creating/updating an assessment:
 
 **Endpoint:** `GET /v1/assessment/academy/user/assessment`
 
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+```
+
 **Query Parameters:**
 - `assessment` - Filter by assessment ID
 - `status` - Filter by status (DRAFT, SENT, ANSWERED, ERROR, EXPIRED)
 - `user` - Filter by user ID
 
-```javascript
-const getStudentAttempts = async (academyId, assessmentId) => {
-  const token = localStorage.getItem('authToken');
-  
-  const response = await fetch(
-    `https://breathecode.herokuapp.com/v1/assessment/academy/user/assessment?assessment=${assessmentId}`,
-    {
-      headers: {
-        'Authorization': `Token ${token}`,
-        'Academy': academyId
-      }
-    }
-  );
-
-  return await response.json();
-};
-```
+**Example:** `GET /v1/assessment/academy/user/assessment?assessment=123`
 
 **Response:**
 
@@ -908,26 +1191,16 @@ assessment.delete()  # Automatically archives if has submissions
 
 **Endpoint:** `GET /v1/assessment?include_archived=true`
 
-```javascript
-const getArchivedQuizzes = async () => {
-  const response = await fetch(
-    '/v1/assessment?include_archived=true',
-    { headers: { 'Authorization': `Token ${token}` } }
-  );
-  
-  return await response.json();
-};
+**Headers:**
+```http
+Authorization: Token {your-token}
 ```
+
+Returns all assessments including archived ones.
 
 ### Hard Delete
 
-Only possible if NO student submissions exist:
-
-```python
-assessment = Assessment.objects.get(slug='unused-quiz')
-if assessment.userassessment_set.count() == 0:
-    assessment.delete()  # Truly deletes
-```
+Only possible if NO student submissions exist. Hard deletion must be done via Django admin or database directly. Assessments with submissions are automatically soft-deleted (archived) instead.
 
 ---
 
@@ -935,7 +1208,13 @@ if assessment.userassessment_set.count() == 0:
 
 ### Test Quiz Integrity
 
-**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/python-basics-quiz/action/test`
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/{asset_slug}/action/test`
+
+**Headers:**
+```http
+Authorization: Token {your-token}
+Academy: {academy_id}
+```
 
 **What It Checks:**
 - Each question has at least one correct answer (score > 0)
@@ -943,25 +1222,6 @@ if assessment.userassessment_set.count() == 0:
 - Option scores sum correctly
 - No orphaned questions/options
 - README links work
-
-```javascript
-const testQuiz = async (academyId, assetSlug) => {
-  const token = localStorage.getItem('authToken');
-  
-  const response = await fetch(
-    `https://breathecode.herokuapp.com/v1/registry/academy/${academyId}/asset/${assetSlug}/action/test`,
-    {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Token ${token}`,
-        'Academy': academyId
-      }
-    }
-  );
-
-  return await response.json();
-};
-```
 
 **Response:**
 
@@ -1002,16 +1262,26 @@ const testQuiz = async (academyId, assetSlug) => {
 
 ### Update Status
 
-```javascript
-// Archive assessment
-await updateAssessment(1, 'old-quiz', {
-  is_archived: true
-});
+**Archive Assessment:**
 
-// Publish asset
-await updateAsset(1, 'python-basics-quiz', {
-  status: 'PUBLISHED'
-});
+**Endpoint:** `PUT /v1/assessment/old-quiz`
+
+**Payload:**
+```json
+{
+  "is_archived": true
+}
+```
+
+**Publish Asset:**
+
+**Endpoint:** `PUT /v1/registry/academy/{academy_id}/asset/python-basics-quiz`
+
+**Payload:**
+```json
+{
+  "status": "PUBLISHED"
+}
 ```
 
 ---
@@ -1020,149 +1290,198 @@ await updateAsset(1, 'python-basics-quiz', {
 
 ### Workflow 1: Create Quiz from Scratch
 
-```javascript
-// Step 1: Create assessment with questions
-const assessment = await createAssessment(1, {
-  slug: 'javascript-fundamentals',
-  title: 'JavaScript Fundamentals Quiz',
-  lang: 'us',
-  is_instant_feedback: true,
-  max_session_duration: '00:45:00',
-  questions: [
+**Step 1: Create Assessment**
+
+**Endpoint:** `PUT /v1/assessment/javascript-fundamentals`
+
+**Payload:**
+```json
+{
+  "slug": "javascript-fundamentals",
+  "title": "JavaScript Fundamentals Quiz",
+  "lang": "us",
+  "is_instant_feedback": true,
+  "max_session_duration": "00:45:00",
+  "questions": [
     {
-      title: 'What is a variable?',
-      question_type: 'SELECT',
-      options: [
-        { title: 'A container for data', score: 1.0 },
-        { title: 'A function', score: 0.0 },
-        { title: 'A loop', score: 0.0 }
-      ]
-    },
-    {
-      title: 'What keyword declares a constant?',
-      question_type: 'SELECT',
-      options: [
-        { title: 'const', score: 1.0 },
-        { title: 'let', score: 0.0 },
-        { title: 'var', score: 0.0 }
+      "title": "What is a variable?",
+      "question_type": "SELECT",
+      "options": [
+        { "title": "A container for data", "score": 1.0 },
+        { "title": "A function", "score": 0.0 }
       ]
     }
   ]
-});
+}
+```
 
-// Step 2: Create asset wrapper
-const asset = await createAsset(1, {
-  slug: 'javascript-fundamentals',
-  title: 'JavaScript Fundamentals Quiz',
-  asset_type: 'QUIZ',
-  description: 'Test your JavaScript knowledge',
-  technologies: ['javascript'],
-  category: 1,
-  status: 'DRAFT'
-});
+**Step 2: Create Asset Wrapper**
 
-// Step 3: Set threshold
-await createThreshold('javascript-fundamentals', {
-  score_threshold: 70,
-  success_message: 'Great job! You understand JavaScript basics.',
-  fail_message: 'Review the material and try again.'
-});
+**Endpoint:** `POST /v1/registry/academy/1/asset`
 
-// Step 4: Test integrity
-const testResults = await testQuiz(1, 'javascript-fundamentals');
+**Payload:**
+```json
+{
+  "slug": "javascript-fundamentals",
+  "title": "JavaScript Fundamentals Quiz",
+  "asset_type": "QUIZ",
+  "description": "Test your JavaScript knowledge",
+  "technologies": ["javascript"],
+  "category": 1,
+  "status": "DRAFT"
+}
+```
 
-if (testResults.test_status === 'OK') {
-  // Step 5: Publish
-  await updateAsset(1, 'javascript-fundamentals', {
-    status: 'PUBLISHED',
-    visibility: 'PUBLIC'
-  });
-  
-  console.log('✅ Quiz published!');
+**Step 3: Set Threshold**
+
+**Endpoint:** `POST /v1/assessment/javascript-fundamentals/threshold`
+
+**Payload:**
+```json
+{
+  "score_threshold": 70,
+  "success_message": "Great job! You understand JavaScript basics.",
+  "fail_message": "Review the material and try again."
+}
+```
+
+**Step 4: Test Integrity**
+
+**Endpoint:** `PUT /v1/registry/academy/1/asset/javascript-fundamentals/action/test`
+
+**Step 5: Publish** (if tests pass)
+
+**Endpoint:** `PUT /v1/registry/academy/1/asset/javascript-fundamentals`
+
+**Payload:**
+```json
+{
+  "status": "PUBLISHED",
+  "visibility": "PUBLIC"
 }
 ```
 
 ### Workflow 2: Sync Quiz from GitHub
 
-```javascript
-// Step 1: Create asset pointing to GitHub
-const asset = await createAsset(1, {
-  slug: 'python-advanced-quiz',
-  title: 'Advanced Python Quiz',
-  asset_type: 'QUIZ',
-  readme_url: 'https://github.com/4GeeksAcademy/python-quiz/blob/master/learn.json',
-  technologies: ['python'],
-  status: 'DRAFT'
-});
+**Step 1: Create Asset**
 
-// Step 2: Pull questions from GitHub
-await pullFromGitHub(1, 'python-advanced-quiz');
+**Endpoint:** `POST /v1/registry/academy/1/asset`
 
-// Step 3: The assessment is auto-created from learn.json
-const assessment = await fetch(
-  '/v1/assessment/python-advanced-quiz'
-).then(r => r.json());
+**Payload:**
+```json
+{
+  "slug": "python-advanced-quiz",
+  "title": "Advanced Python Quiz",
+  "asset_type": "QUIZ",
+  "readme_url": "https://github.com/4GeeksAcademy/python-quiz/blob/master/learn.json",
+  "technologies": ["python"],
+  "status": "DRAFT"
+}
+```
 
-console.log(`Imported ${assessment.questions.length} questions`);
+**Step 2: Pull from GitHub**
 
-// Step 4: Add custom threshold
-await createThreshold('python-advanced-quiz', {
-  score_threshold: 80,
-  success_message: 'Excellent! You mastered advanced Python.'
-});
+**Endpoint:** `PUT /v1/registry/academy/1/asset/python-advanced-quiz/action/pull`
 
-// Step 5: Publish
-await updateAsset(1, 'python-advanced-quiz', {
-  status: 'PUBLISHED'
-});
+Assessment is auto-created from `learn.json`.
+
+**Step 3: Verify Import**
+
+**Endpoint:** `GET /v1/assessment/python-advanced-quiz`
+
+Check that questions were imported correctly.
+
+**Step 4: Add Threshold**
+
+**Endpoint:** `POST /v1/assessment/python-advanced-quiz/threshold`
+
+**Payload:**
+```json
+{
+  "score_threshold": 80,
+  "success_message": "Excellent! You mastered advanced Python."
+}
+```
+
+**Step 5: Publish**
+
+**Endpoint:** `PUT /v1/registry/academy/1/asset/python-advanced-quiz`
+
+**Payload:**
+```json
+{
+  "status": "PUBLISHED"
+}
 ```
 
 ### Workflow 3: Create Translation
 
-```javascript
-// Step 1: Get original quiz
-const originalQuiz = await fetch(
-  '/v1/assessment/react-basics-quiz'
-).then(r => r.json());
+**Step 1: Get Original Quiz**
 
-// Step 2: Create Spanish version
-const spanishQuiz = await createAssessment(1, {
-  slug: 'react-basics-quiz-es',
-  title: 'Cuestionario de React Básico',
-  lang: 'es',
-  original: originalQuiz.id,
-  is_instant_feedback: originalQuiz.is_instant_feedback,
-  questions: [
+**Endpoint:** `GET /v1/assessment/react-basics-quiz`
+
+Note the original assessment ID.
+
+**Step 2: Create Spanish Assessment**
+
+**Endpoint:** `PUT /v1/assessment/react-basics-quiz-es`
+
+**Payload:**
+```json
+{
+  "slug": "react-basics-quiz-es",
+  "title": "Cuestionario de React Básico",
+  "lang": "es",
+  "original": 123,
+  "is_instant_feedback": true,
+  "questions": [
     {
-      title: '¿Qué es React?',
-      question_type: 'SELECT',
-      options: [
-        { title: 'Una librería de JavaScript', score: 1.0 },
-        { title: 'Un lenguaje de programación', score: 0.0 }
+      "title": "¿Qué es React?",
+      "question_type": "SELECT",
+      "options": [
+        { "title": "Una librería de JavaScript", "score": 1.0 },
+        { "title": "Un lenguaje de programación", "score": 0.0 }
       ]
     }
   ]
-});
+}
+```
 
-// Step 3: Create Spanish asset
-const spanishAsset = await createAsset(1, {
-  slug: 'react-basics-quiz-es',
-  title: 'Cuestionario de React Básico',
-  asset_type: 'QUIZ',
-  lang: 'es',
-  technologies: ['react']
-});
+**Step 3: Create Spanish Asset**
 
-// Step 4: Link translations (bidirectional)
-await updateAsset(1, 'react-basics-quiz', {
-  all_translations: ['react-basics-quiz', 'react-basics-quiz-es']
-});
+**Endpoint:** `POST /v1/registry/academy/1/asset`
 
-await updateAsset(1, 'react-basics-quiz-es', {
-  all_translations: ['react-basics-quiz', 'react-basics-quiz-es']
-});
+**Payload:**
+```json
+{
+  "slug": "react-basics-quiz-es",
+  "title": "Cuestionario de React Básico",
+  "asset_type": "QUIZ",
+  "lang": "es",
+  "technologies": ["react"]
+}
+```
 
-console.log('✅ Translation created and linked!');
+**Step 4: Link Translations (English Asset)**
+
+**Endpoint:** `PUT /v1/registry/academy/1/asset/react-basics-quiz`
+
+**Payload:**
+```json
+{
+  "all_translations": ["react-basics-quiz", "react-basics-quiz-es"]
+}
+```
+
+**Step 5: Link Translations (Spanish Asset)**
+
+**Endpoint:** `PUT /v1/registry/academy/1/asset/react-basics-quiz-es`
+
+**Payload:**
+```json
+{
+  "all_translations": ["react-basics-quiz", "react-basics-quiz-es"]
+}
 ```
 
 ---
@@ -1176,7 +1495,9 @@ console.log('✅ Translation created and linked!');
 | `/v1/assessment` | GET | List assessments | ❌ Public |
 | `/v1/assessment/{slug}` | GET | Get single assessment | ❌ Public |
 | `/v1/assessment/{slug}` | PUT | Create/update assessment | ✅ crud_assessment |
+| `/v1/assessment/{slug}/question/{id}` | PUT | Update single question | ✅ crud_assessment |
 | `/v1/assessment/{slug}/question/{id}` | DELETE | Delete question | ✅ crud_assessment |
+| `/v1/assessment/{slug}/question/{id}/option` | POST | Add new option to question | ✅ crud_assessment |
 | `/v1/assessment/{slug}/option/{id}` | DELETE | Delete option | ✅ crud_assessment |
 | `/v1/assessment/{slug}/threshold` | GET | List thresholds | ❌ Public |
 | `/v1/assessment/{slug}/threshold` | POST | Create threshold | ✅ crud_assessment |
@@ -1226,79 +1547,78 @@ console.log('✅ Translation created and linked!');
 
 ## Best Practices
 
-### 1. Always Link Asset and Assessment
+### 1. Use Granular Endpoints for Updates ⭐
 
-```javascript
-// Create both for every quiz
-const assessment = await createAssessment(/*...*/);
-const asset = await createAsset({
-  slug: assessment.slug,
-  asset_type: 'QUIZ'
-  // ...
-});
-```
+**Prefer:**
+- `PUT /v1/assessment/{slug}/question/{id}` - Update single question
+- `POST /v1/assessment/{slug}/question/{id}/option` - Add option
 
-### 2. Validate Scoring
+**Over:**
+- `PUT /v1/assessment/{slug}` with entire questions array
+
+**Why?**
+- ✅ Fewer bytes transferred
+- ✅ No risk of accidentally removing questions
+- ✅ Clearer intent
+- ✅ Easier to debug
+
+### 2. Always Link Asset and Assessment
+
+Create both for every quiz:
+- Assessment via `PUT /v1/assessment/{slug}`
+- Asset via `POST /v1/registry/academy/{academy_id}/asset` with matching slug and `asset_type: "QUIZ"`
+
+### 3. Validate Scoring
 
 Ensure questions have valid scoring:
+- At least ONE option per question must have `score > 0`
+- Total positive scores should ideally equal 1.0 (for percentage scoring)
+- The API validates this automatically when using `PUT /question/{id}` with options
 
-```javascript
-const validateQuestionScoring = (question) => {
-  const totalPositiveScore = question.options
-    .filter(o => o.score > 0)
-    .reduce((sum, o) => sum + o.score, 0);
-  
-  if (totalPositiveScore === 0) {
-    throw new Error('Question must have at least one correct answer');
-  }
-  
-  return true;
-};
-```
+### 4. Use Thresholds
 
-### 3. Use Thresholds
+Always define success criteria using `POST /v1/assessment/{slug}/threshold` with appropriate `score_threshold` value.
 
-Always define success criteria:
+### 5. Test Before Publishing
 
-```javascript
-// Set passing threshold
-await createThreshold(assessmentSlug, {
-  score_threshold: 70,
-  success_message: 'You passed!',
-  fail_message: 'Try again'
-});
-```
+1. Test: `PUT /v1/registry/academy/{academy_id}/asset/{slug}/action/test`
+2. Check `test_status` in response
+3. Only publish if status is `OK` or `WARNING`
+4. Publish: `PUT /v1/registry/academy/{academy_id}/asset/{slug}` with `status: "PUBLISHED"`
 
-### 4. Test Before Publishing
-
-```javascript
-const safePublish = async (academyId, assetSlug) => {
-  // Test first
-  const testResults = await testQuiz(academyId, assetSlug);
-  
-  if (testResults.test_status === 'ERROR') {
-    throw new Error('Cannot publish: quiz has errors');
-  }
-  
-  // Then publish
-  await updateAsset(academyId, assetSlug, {
-    status: 'PUBLISHED'
-  });
-};
-```
-
-### 5. Handle Translations Properly
+### 6. Handle Translations Properly
 
 Link translations bidirectionally:
+- Update each asset with `all_translations` array containing all translation slugs
+- Repeat for every translation to ensure bidirectional linking
 
-```javascript
-const linkQuizTranslations = async (academyId, slugs) => {
-  for (const slug of slugs) {
-    await updateAsset(academyId, slug, {
-      all_translations: slugs
-    });
-  }
-};
+### 7. When to Use Each Endpoint
+
+**Creating new assessment:**
+```bash
+PUT /v1/assessment/{slug}  # With full questions array
+```
+
+**Adding a question:**
+```bash
+PUT /v1/assessment/{slug}  # Include existing + new questions
+```
+
+**Updating one question:**
+```bash
+PUT /v1/assessment/{slug}/question/{id}  # ⭐ More efficient
+```
+
+**Adding an option:**
+```bash
+POST /v1/assessment/{slug}/question/{id}/option  # ⭐ Cleanest
+# OR
+PUT /v1/assessment/{slug}/question/{id}  # With options array, omit id for new
+```
+
+**Updating an option:**
+```bash
+PUT /v1/assessment/{slug}/question/{id}  # Include option with id
 ```
 
 ---
@@ -1311,13 +1631,7 @@ const linkQuizTranslations = async (academyId, slugs) => {
 
 **Cause:** Trying to create assessment with existing slug.
 
-**Solution:** Use PUT to update instead, or check for archived assessments:
-
-```javascript
-const assessment = await fetch(
-  '/v1/assessment?include_archived=true'
-).then(r => r.json());
-```
+**Solution:** Use PUT to update instead, or check for archived assessments via `GET /v1/assessment?include_archived=true`
 
 #### Issue: "Question total score must be greater than 0"
 
