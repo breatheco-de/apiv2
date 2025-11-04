@@ -24,6 +24,7 @@ from breathecode.authenticate.actions import get_user_language
 from ..views import (
     AcademyAuthSettingsLogView,
     AcademyAuthSettingsView,
+    AcademyCapabilitiesView,
     AcademyGithubSyncView,
     AcademyInviteView,
     AcademyTokenView,
@@ -107,6 +108,7 @@ urlpatterns = [
     path("user/me", UserMeView.as_view(), name="user_me"),
     path("user/me/capability/<slug:capability_slug>", CapabilityCheckView.as_view(), name="user_me_capability"),
     path("user/me/settings", UserSettingsView.as_view(), name="user_me_settings"),
+    path("me/academy/<str:slug_or_id>/capabilities", AcademyCapabilitiesView.as_view(), name="me_academy_capabilities"),
     path("user/<str:id_or_email>", get_user_by_id_or_email),
     path("role", get_roles, name="role"),
     path("role/<str:role_slug>", get_roles, name="role_slug"),

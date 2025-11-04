@@ -182,19 +182,19 @@ class GetAssessmentView(APIView):
                             )
                         )
 
-                    q_serializer = QuestionSerializer(question, data=q)
+                    q_serializer = QuestionSerializer(question, data=q, partial=True)
 
                 if "title" in q and q_serializer is None:
                     question = Question.objects.filter(title=q["title"], assessment=_assessment).first()
                     if question is not None:
-                        q_serializer = QuestionSerializer(question, data=q)
+                        q_serializer = QuestionSerializer(question, data=q, partial=True)
 
                 if q_serializer is None:
                     q_serializer = QuestionSerializer(data=q)
 
                 all_serializers.append(q_serializer)
                 if not q_serializer.is_valid():
-                    return Response(assessment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(q_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
                 total_score = 0
                 if "options" in q:
@@ -213,12 +213,12 @@ class GetAssessmentView(APIView):
                                     )
                                 )
 
-                            opt_serializer = OptionSerializer(option, data=opt)
+                            opt_serializer = OptionSerializer(option, data=opt, partial=True)
 
                         if "title" in opt and opt_serializer is None:
                             option = Option.objects.filter(title=opt["title"], question=question).first()
                             if option is not None:
-                                opt_serializer = OptionSerializer(option, data=opt)
+                                opt_serializer = OptionSerializer(option, data=opt, partial=True)
 
                         if opt_serializer is None:
                             opt_serializer = OptionSerializer(data=opt)
@@ -369,7 +369,155 @@ class AssessmentOptionView(APIView):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+class AssessmentQuestionOptionView(APIView):
+    """Manage options for a specific question within an assessment."""
+
+    @capable_of("crud_assessment")
+    def post(self, request, assessment_slug, question_id=None, academy_id=None):
+        """Add a new option to an existing question."""
+        
+        lang = get_user_language(request)
+
+        # Verify assessment exists and belongs to academy
+        assessment = Assessment.objects.filter(slug=assessment_slug, academy__id=academy_id, is_archived=False).first()
+        if assessment is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Assessment {assessment_slug} not found or archived for academy {academy_id}",
+                    es=f"La evaluación {assessment_slug} no se encontró o está archivada para la academia {academy_id}",
+                    slug="not-found",
+                )
+            )
+
+        # Verify question exists and belongs to assessment
+        question = Question.objects.filter(id=question_id, assessment=assessment).first()
+        if question is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Question {question_id} not found on assessment {assessment_slug}",
+                    es=f"La pregunta {question_id} no fue encontrada para el assessment {assessment_slug}",
+                    slug="not-found",
+                )
+            )
+
+        # Validate and create the new option
+        option_serializer = OptionSerializer(data=request.data)
+        if not option_serializer.is_valid():
+            return Response(option_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save the option and assign it to the question
+        new_option = option_serializer.save()
+        new_option.question = question
+        new_option.save()
+
+        # Return the created option
+        return Response(option_serializer.data, status=status.HTTP_201_CREATED)
+
+
 class AssessmentQuestionView(APIView):
+
+    @capable_of("crud_assessment")
+    def put(self, request, assessment_slug, question_id=None, academy_id=None):
+        """Update a single question and its options within an assessment."""
+        
+        lang = get_user_language(request)
+
+        # Verify assessment exists and belongs to academy
+        assessment = Assessment.objects.filter(slug=assessment_slug, academy__id=academy_id, is_archived=False).first()
+        if assessment is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Assessment {assessment_slug} not found or archived for academy {academy_id}",
+                    es=f"La evaluación {assessment_slug} no se encontró o está archivada para la academia {academy_id}",
+                    slug="not-found",
+                )
+            )
+
+        # Verify question exists and belongs to assessment
+        question = Question.objects.filter(id=question_id, assessment=assessment).first()
+        if question is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Question {question_id} not found on assessment {assessment_slug}",
+                    es=f"La pregunta {question_id} no fue encontrada para el assessment {assessment_slug}",
+                    slug="not-found",
+                )
+            )
+
+        # Validate and update question
+        question_serializer = QuestionSerializer(question, data=request.data, partial=True)
+        if not question_serializer.is_valid():
+            return Response(question_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Handle options if provided
+        all_serializers = [question_serializer]
+        total_score = 0
+        
+        if "options" in request.data:
+            for opt in request.data["options"]:
+                opt_serializer = None
+                
+                # Update existing option if ID provided
+                if "id" in opt:
+                    option = Option.objects.filter(id=opt["id"], question=question).first()
+                    if option is None:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en=f'Option {opt["id"]} not found on this question',
+                                es=f'No se ha encontrado la opción {opt["id"]} en esta pregunta',
+                                slug="not-found",
+                            )
+                        )
+                    opt_serializer = OptionSerializer(option, data=opt, partial=True)
+                
+                # Try to match by title if no ID
+                elif "title" in opt:
+                    option = Option.objects.filter(title=opt["title"], question=question).first()
+                    if option is not None:
+                        opt_serializer = OptionSerializer(option, data=opt, partial=True)
+                
+                # Create new option if not found
+                if opt_serializer is None:
+                    opt_serializer = OptionSerializer(data=opt)
+                
+                all_serializers.append(opt_serializer)
+                if not opt_serializer.is_valid():
+                    return Response(opt_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Calculate total score
+                score = float(opt["score"]) if "score" in opt else float(opt_serializer.data.get("score", 0))
+                if score > 0:
+                    total_score += score
+            
+            # Validate that at least one option has positive score
+            if total_score <= 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Question {question_id} total score must be greater than 0",
+                        es=f"El score de la pregunta {question_id} debe ser mayor a 0",
+                        slug="bigger-than-zero",
+                    )
+                )
+
+        # Save all changes
+        updated_question = question_serializer.save()
+        
+        for s in all_serializers[1:]:  # Skip question serializer (already saved)
+            option_instance = s.save()
+            # Assign question to newly created options
+            if isinstance(option_instance, Option) and option_instance.question_id is None:
+                option_instance.question = updated_question
+                option_instance.save()
+
+        # Return updated question with options
+        serializer = QuestionSerializer(updated_question)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of("crud_assessment")
     def delete(self, request, assessment_slug, question_id=None, academy_id=None):

@@ -237,9 +237,15 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
+    cohort_set = serpy.MethodField()
 
     def get_has_available_cohorts(self, obj):
         return bool(obj.cohort_set)
+
+    def get_cohort_set(self, obj):
+        if not obj.cohort_set:
+            return None
+        return GetTinyCohortSetSerializer(obj.cohort_set, many=False).data
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -596,6 +602,14 @@ class GetCohortSetSerializer(serpy.Serializer):
     def get_cohorts(self, obj):
         return GetCohortSerializer(obj.cohorts.filter(), many=True).data
 
+class GetTinyCohortSetSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    cohorts = serpy.MethodField()
+
+    def get_cohorts(self, obj):
+        return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
 
 class CohortSetSerializer(serializers.ModelSerializer):
     """Serializer for creating and updating CohortSet."""
@@ -713,6 +727,27 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
+    
+    # Billing team and seat information
+    # has_billing_team = serpy.MethodField()
+    seats_count = serpy.MethodField()
+    seats_limit = serpy.MethodField()
+
+    def get_has_billing_team(self, obj):
+        """Check if this financing/subscription has a billing team."""
+        return hasattr(obj, 'subscriptionbillingteam')
+
+    def get_seats_count(self, obj):
+        """Get number of active seats in the billing team."""
+        if hasattr(obj, 'subscriptionbillingteam'):
+            return obj.subscriptionbillingteam.seats.filter(is_active=True).count()
+        return None
+
+    def get_seats_limit(self, obj):
+        """Get total seat limit for the billing team."""
+        if hasattr(obj, 'subscriptionbillingteam'):
+            return obj.subscriptionbillingteam.seats_limit
+        return None
 
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
