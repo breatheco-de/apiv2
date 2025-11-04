@@ -591,19 +591,9 @@ def charge_subscription(self, subscription_id: int, **_: Any):
     try:
         with Lock(client, f"lock:subscription:{subscription_id}", timeout=30, blocking_timeout=30):
             if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
-                logger.error(f"charge_subscription: Subscription with id {subscription_id} not found")
                 raise AbortTask(f"Subscription with id {subscription_id} not found")
 
-            logger.info(
-                f"charge_subscription: Processing subscription {subscription_id} - "
-                f"status={subscription.status}, next_payment_at={subscription.next_payment_at}, "
-                f"valid_until={subscription.valid_until}, externally_managed={subscription.externally_managed}"
-            )
-
             if subscription.status in no_charge_statuses:
-                logger.warning(
-                    f"charge_subscription: Subscription {subscription_id} is in status {subscription.status} and cannot be charged"
-                )
                 raise AbortTask(
                     f"Subscription with id {subscription_id} is in status {subscription.status} and cannot be charged"
                 )
@@ -612,10 +602,6 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             if subscription.status == Subscription.Status.PAYMENT_ISSUE:
                 days_overdue = (utc_now - subscription.next_payment_at).days
-                logger.info(
-                    f"charge_subscription: Subscription {subscription_id} has PAYMENT_ISSUE status, "
-                    f"days overdue: {days_overdue}"
-                )
                 if days_overdue >= 5:
                     logger.warning(
                         f"charge_subscription: Subscription {subscription_id} cancelled after 5 days of payment failure"
@@ -628,31 +614,20 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             settings = get_user_settings(subscription.user.id)
 
             if subscription.status == Subscription.Status.DEPRECATED:
-                logger.info(f"charge_subscription: Handling deprecated subscription {subscription_id}")
-                actions.handle_deprecated_subscription(subscription, settings)
+                handle_deprecated_subscription(subscription, settings)
 
             elif subscription.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
-                logger.info(
-                    f"charge_subscription: Subscription {subscription_id} has discontinued/deleted plans, marking as deprecated"
-                )
                 subscription.status = Subscription.Status.DEPRECATED
                 subscription.save()
-                actions.handle_deprecated_subscription(subscription, settings)
+                handle_deprecated_subscription(subscription, settings)
 
             if subscription.valid_until and subscription.valid_until < utc_now and subscription.status in statuses:
-                logger.warning(
-                    f"charge_subscription: Subscription {subscription_id} is over (valid_until={subscription.valid_until})"
-                )
                 if subscription.status != Subscription.Status.EXPIRED:
                     subscription.status = Subscription.Status.EXPIRED
                     subscription.save()
                 raise AbortTask(f"The subscription {subscription.id} is over")
 
             if subscription.next_payment_at > utc_now:
-                logger.info(
-                    f"charge_subscription: Subscription {subscription_id} was paid this month "
-                    f"(next_payment_at={subscription.next_payment_at} > utc_now={utc_now})"
-                )
                 raise AbortTask(f"The subscription with id {subscription_id} was paid this month")
 
             invoice = (
@@ -671,13 +646,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 bag = invoice.bag
 
             else:
-                logger.info(
-                    f"charge_subscription: No existing payment found for subscription {subscription_id}, creating new payment"
-                )
                 if subscription.externally_managed:
-                    logger.info(
-                        f"charge_subscription: Subscription {subscription_id} is externally managed, sending payment issue alert"
-                    )
                     message = translation(
                         settings.lang,
                         en="Please make your payment in your academy or use another payment method",
@@ -699,12 +668,8 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     raise AbortTask(f"Payment to Subscription {subscription_id} failed")
 
                 else:
-                    logger.info(f"charge_subscription: Creating new bag for subscription {subscription_id}")
                     try:
                         bag = actions.get_bag_from_subscription(subscription, settings)
-                        logger.info(
-                            f"charge_subscription: Successfully created bag {bag.id} for subscription {subscription_id}"
-                        )
                     except Exception as e:
                         logger.error(f"charge_subscription: Error getting bag from subscription {subscription_id}: {e}")
                         subscription.status = "ERROR"
@@ -725,15 +690,7 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                     coupons = bag.coupons.all()
 
                     if coupons:
-                        original_amount = amount
                         amount = actions.get_discounted_price(amount, coupons)
-                        logger.info(
-                            f"Applied coupon discount: original={original_amount}, discounted={amount} for subscription {subscription_id}"
-                        )
-
-                    logger.info(
-                        f"charge_subscription: Attempting Stripe payment for subscription {subscription_id}, amount={amount}"
-                    )
                     try:
                         s = Stripe(academy=subscription.academy)
                         s.set_language(settings.lang)
@@ -741,14 +698,8 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                         invoice = s.pay(
                             subscription.user, bag, amount, currency=bag.currency, subscription_billing_team=team
                         )
-                        logger.info(
-                            f"charge_subscription: Successfully processed Stripe payment for subscription {subscription_id}, invoice {invoice.id}"
-                        )
 
-                    except Exception as e:
-                        logger.error(
-                            f"charge_subscription: Stripe payment failed for subscription {subscription_id}: {e}"
-                        )
+                    except Exception:
                         message = translation(
                             settings.lang,
                             en="Your payment with credit card was declined, please update your card or use another payment method",
@@ -781,9 +732,6 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             if subscription.valid_until and subscription.next_payment_at > subscription.valid_until:
                 subscription.next_payment_at = subscription.valid_until
 
-            logger.info(
-                f"charge_subscription: Updating subscription {subscription_id} status to ACTIVE, next_payment_at={subscription.next_payment_at}"
-            )
             subscription.invoices.add(invoice)
             subscription.status = "ACTIVE"
             subscription.status_message = None
@@ -813,12 +761,10 @@ def charge_subscription(self, subscription_id: int, **_: Any):
                 academy=subscription.academy,
             )
 
-            logger.info(f"charge_subscription: Marking bag {bag.id} as delivered for subscription {subscription_id}")
             bag.was_delivered = True
             bag.save()
 
             if subscription.seat_service_item and subscription.seat_service_item.how_many > 0:
-                logger.info(f"charge_subscription: Processing seat service items for subscription {subscription_id}")
                 team = SubscriptionBillingTeam.objects.filter(
                     subscription=subscription, defaults={"name": f"Team {subscription.id}"}
                 ).first()
@@ -830,19 +776,13 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
                 return
 
-            logger.info(f"charge_subscription: Scheduling consumables renewal for subscription {subscription_id}")
             renew_subscription_consumables.delay(subscription.id)
 
             # Schedule next charge based on days until next_payment_at
             days_until_next_payment = (subscription.next_payment_at - utc_now).days
-            logger.info(
-                f"charge_subscription: Scheduling next charge for subscription {subscription_id} in {days_until_next_payment} days"
-            )
             manager = schedule_task(charge_subscription, f"{days_until_next_payment}d")
             if not manager.exists(subscription.id):
                 manager.call(subscription.id)
-
-            logger.info(f"charge_subscription: Successfully completed processing subscription {subscription_id}")
 
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")
