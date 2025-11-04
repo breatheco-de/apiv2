@@ -729,7 +729,7 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
     valid_until = serpy.Field()
     
     # Billing team and seat information
-    has_billing_team = serpy.MethodField()
+    # has_billing_team = serpy.MethodField()
     seats_count = serpy.MethodField()
     seats_limit = serpy.MethodField()
 
