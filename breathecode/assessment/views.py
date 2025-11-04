@@ -158,7 +158,7 @@ class GetAssessmentView(APIView):
 
         all_serializers = []
         assessment_serializer = AssessmentPUTSerializer(
-            _assessment, data=request.data, context={"request": request, "academy": academy_id, "lang": lang}
+            _assessment, data=request.data, context={"request": request, "academy": academy_id, "lang": lang}, partial=True
         )
         if not assessment_serializer.is_valid():
             return Response(assessment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -227,7 +227,17 @@ class GetAssessmentView(APIView):
                         if not opt_serializer.is_valid():
                             return Response(opt_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                        score = float(opt["score"]) if "score" in opt else float(opt_serializer.data["score"])
+                        # Calculate total score
+                        # Priority: 1) request data, 2) existing instance (partial update), 3) validated_data (new option)
+                        if "score" in opt:
+                            score = float(opt["score"])
+                        elif opt_serializer.instance is not None:
+                            # For partial updates, get score from existing instance
+                            score = float(opt_serializer.instance.score)
+                        else:
+                            # For new options, get score from validated_data
+                            score = float(opt_serializer.validated_data.get("score", 0))
+                        
                         if score > 0:
                             total_score += score
 
@@ -489,8 +499,17 @@ class AssessmentQuestionView(APIView):
                 if not opt_serializer.is_valid():
                     return Response(opt_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 
-                # Calculate total score using validated_data (not .data to avoid caching)
-                score = float(opt["score"]) if "score" in opt else float(opt_serializer.validated_data.get("score", 0))
+                # Calculate total score
+                # Priority: 1) request data, 2) existing instance (partial update), 3) validated_data (new option)
+                if "score" in opt:
+                    score = float(opt["score"])
+                elif opt_serializer.instance is not None:
+                    # For partial updates, get score from existing instance
+                    score = float(opt_serializer.instance.score)
+                else:
+                    # For new options, get score from validated_data
+                    score = float(opt_serializer.validated_data.get("score", 0))
+                
                 if score > 0:
                     total_score += score
             
