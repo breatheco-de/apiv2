@@ -118,14 +118,7 @@ class CoinbaseCommerce:
             "metadata": metadata,
             "redirect_url": return_url,
         }
-        logger.info(
-            f"CoinbaseCommerce: Calling Coinbase API - "
-            f"amount={charge_body['local_price']['amount']}, "
-            f"currency={charge_body['local_price']['currency']}, "
-            f"bag_id={bag.id}"
-        )
         response = requests.post(f"{self.api_url}/charges", headers=headers, json=charge_body)
-        logger.info(f"CoinbaseCommerce: Coinbase API response status: {response.status_code}")
 
         if response.status_code != 201:
             error_msg = "Unknown error"

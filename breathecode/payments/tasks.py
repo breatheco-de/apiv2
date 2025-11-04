@@ -368,7 +368,7 @@ def notify_subscription_renewal(self, subscription_id: int, **_: Any):
     if subscription.next_payment_at > utc_now:
 
         period_timedelta = actions.calculate_relative_delta(subscription.pay_every, subscription.pay_every_unit)
-        cycle_start = (subscription.next_payment_at - period_timedelta) + 1
+        cycle_start = (subscription.next_payment_at - period_timedelta) + timedelta(days=1)
 
         recent_payment = (
             subscription.invoices.filter(
@@ -799,7 +799,7 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
 
     if plan_financing.next_payment_at > utc_now:
         period_timedelta = actions.calculate_relative_delta(plan_financing.pay_every, plan_financing.pay_every_unit)
-        cycle_start = (plan_financing.next_payment_at - period_timedelta) + 1
+        cycle_start = (plan_financing.next_payment_at - period_timedelta) + timedelta(days=1)
 
         recent_payment = (
             plan_financing.invoices.filter(

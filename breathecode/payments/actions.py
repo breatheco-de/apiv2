@@ -1208,7 +1208,6 @@ def get_available_coupons(
             .only(*cou_fields)
             .first()
         )
-        print("special_offers", special_offer)
 
         if special_offer:
             manage_coupon(special_offer)

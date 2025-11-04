@@ -3839,6 +3839,7 @@ class RenewSubscriptionView(APIView):
                             "chosen_period": bag.chosen_period,
                             "is_recurrent": True,
                             "subscription_id": subscription.id,
+                            "user_email": request.user.email,
                         },
                         return_url=return_url,
                     )
@@ -4164,6 +4165,7 @@ class RenewPlanFinancingView(APIView):
                             "chosen_period": bag.chosen_period,
                             "is_recurrent": True,
                             "plan_financing_id": plan_financing.id,
+                            "user_email": request.user.email,
                         },
                         return_url=return_url,
                     )
@@ -4899,7 +4901,6 @@ class MePaymentMethodView(APIView):
 
         try:
             payment_method_info = s.get_payment_method_info(user)
-            print(payment_method_info)
             return Response(payment_method_info, status=status.HTTP_200_OK)
 
         except PaymentException as e:
