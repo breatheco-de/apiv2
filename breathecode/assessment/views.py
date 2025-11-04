@@ -489,8 +489,8 @@ class AssessmentQuestionView(APIView):
                 if not opt_serializer.is_valid():
                     return Response(opt_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 
-                # Calculate total score
-                score = float(opt["score"]) if "score" in opt else float(opt_serializer.data.get("score", 0))
+                # Calculate total score using validated_data (not .data to avoid caching)
+                score = float(opt["score"]) if "score" in opt else float(opt_serializer.validated_data.get("score", 0))
                 if score > 0:
                     total_score += score
             
