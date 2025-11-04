@@ -50,7 +50,6 @@ from .models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
-    PlanOffer,
     ProofOfPayment,
     Service,
     ServiceItem,
@@ -2018,70 +2017,6 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
         "created_at": utc_now.isoformat().replace("+00:00", "Z"),
     }
     return entry
-
-
-def handle_deprecated_subscription(subscription, settings):
-    """
-    Notify user about deprecated subscription and suggest alternatives.
-    Used by charge_subscription and notify_upcoming_subscription_renewal.
-
-    Args:
-        subscription: Subscription object
-        settings: UserSetting object with language preference
-
-    Raises:
-        AbortTask: Always raises after sending notification
-    """
-    plan = subscription.plans.first()
-    link = None
-
-    if plan and (offer := PlanOffer.objects.filter(original_plan=plan).first()):
-        link = f"{get_app_url()}/checkout?plan={offer.suggested_plan.slug}"
-
-    elif plan is None:
-        raise AbortTask(f"Deprecated subscription with id {subscription.id} has no plan")
-
-    subject = translation(
-        settings.lang,
-        en=f"Your 4Geeks subscription to {plan.slug} has been discontinued",
-        es=f"Tu suscripción 4Geeks a {plan.slug} ha sido descontinuada",
-    )
-
-    obj = {
-        "SUBJECT": subject,
-    }
-
-    if link:
-        button = translation(
-            settings.lang,
-            en="See suggested plan",
-            es="Ver plan sugerido",
-        )
-        obj["LINK"] = link
-        obj["BUTTON"] = button
-
-        message = translation(
-            settings.lang,
-            en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued. Please check our suggested plans for alternatives.",
-            es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido descontinuada. Por favor, revisa nuestros planes sugeridos para alternativas.",
-        )
-
-    else:
-        message = translation(
-            settings.lang,
-            en=f"We regret to inform you that your 4Geeks subscription to {plan.slug} has been discontinued.",
-            es=f"Lamentamos informarte que tu suscripción 4Geeks a {plan.slug} ha sido descontinuada.",
-        )
-
-    obj["MESSAGE"] = message
-
-    notify_actions.send_email_message(
-        "message",
-        subscription.user.email,
-        obj,
-        academy=subscription.academy,
-    )
-    raise AbortTask(f"Subscription with id {subscription.id} is deprecated")
 
 
 # seats management

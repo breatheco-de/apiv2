@@ -363,6 +363,15 @@ def notify_subscription_renewal(self, subscription_id: int, **_: Any):
     if not (subscription := Subscription.objects.filter(id=subscription_id).first()):
         raise AbortTask(f"Subscription {subscription_id} not found")
 
+    no_charge_statuses = [
+        Subscription.Status.CANCELLED,
+        Subscription.Status.DEPRECATED,
+        Subscription.Status.EXPIRED,
+    ]
+
+    if subscription.status in no_charge_statuses:
+        raise AbortTask(f"Subscription {subscription_id} is {subscription.status}, skipping notification")
+
     utc_now = timezone.now()
 
     if subscription.next_payment_at > utc_now:
@@ -382,15 +391,6 @@ def notify_subscription_renewal(self, subscription_id: int, **_: Any):
 
         if recent_payment:
             raise AbortTask(f"Subscription {subscription_id} already renewed for current cycle")
-
-    no_charge_statuses = [
-        Subscription.Status.CANCELLED,
-        Subscription.Status.DEPRECATED,
-        Subscription.Status.EXPIRED,
-    ]
-
-    if subscription.status in no_charge_statuses:
-        raise AbortTask(f"Subscription {subscription_id} is {subscription.status}, skipping notification")
 
     settings = get_user_settings(subscription.user.id)
 
@@ -614,12 +614,12 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             settings = get_user_settings(subscription.user.id)
 
             if subscription.status == Subscription.Status.DEPRECATED:
-                handle_deprecated_subscription(subscription, settings)
+                handle_deprecated_subscription()
 
             elif subscription.plans.filter(status__in=[Plan.Status.DISCONTINUED, Plan.Status.DELETED]).exists():
                 subscription.status = Subscription.Status.DEPRECATED
                 subscription.save()
-                handle_deprecated_subscription(subscription, settings)
+                handle_deprecated_subscription()
 
             if subscription.valid_until and subscription.valid_until < utc_now and subscription.status in statuses:
                 if subscription.status != Subscription.Status.EXPIRED:
@@ -795,6 +795,16 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
     if not (plan_financing := PlanFinancing.objects.filter(id=plan_financing_id).first()):
         raise AbortTask(f"PlanFinancing {plan_financing_id} not found")
 
+    no_charge_statuses = [
+        PlanFinancing.Status.CANCELLED,
+        PlanFinancing.Status.DEPRECATED,
+        PlanFinancing.Status.EXPIRED,
+        PlanFinancing.Status.FULLY_PAID,
+    ]
+
+    if plan_financing.status in no_charge_statuses:
+        raise AbortTask(f"PlanFinancing {plan_financing_id} is {plan_financing.status}, skipping notification")
+
     utc_now = timezone.now()
 
     if plan_financing.next_payment_at > utc_now:
@@ -813,15 +823,6 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
 
         if recent_payment:
             raise AbortTask(f"PlanFinancing {plan_financing_id} already renewed for current cycle")
-
-    no_charge_statuses = [
-        PlanFinancing.Status.CANCELLED,
-        PlanFinancing.Status.DEPRECATED,
-        PlanFinancing.Status.EXPIRED,
-    ]
-
-    if plan_financing.status in no_charge_statuses:
-        raise AbortTask(f"PlanFinancing {plan_financing_id} is {plan_financing.status}, skipping notification")
 
     if (
         plan_financing.plan_expires_at
@@ -852,6 +853,10 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
         raise AbortTask(f"No invoices found for PlanFinancing {plan_financing_id}")
 
     paid_installments = plan_financing.invoices.filter(status="FULFILLED", bag__was_delivered=True).count()
+
+    if paid_installments == plan_financing.how_many_installments:
+        raise AbortTask(f"PlanFinancing {plan_financing_id} is fully paid")
+
     next_installment = paid_installments + 1
 
     renewal_date = plan_financing.next_payment_at.strftime("%B %d, %Y")
