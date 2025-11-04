@@ -182,19 +182,19 @@ class GetAssessmentView(APIView):
                             )
                         )
 
-                    q_serializer = QuestionSerializer(question, data=q)
+                    q_serializer = QuestionSerializer(question, data=q, partial=True)
 
                 if "title" in q and q_serializer is None:
                     question = Question.objects.filter(title=q["title"], assessment=_assessment).first()
                     if question is not None:
-                        q_serializer = QuestionSerializer(question, data=q)
+                        q_serializer = QuestionSerializer(question, data=q, partial=True)
 
                 if q_serializer is None:
                     q_serializer = QuestionSerializer(data=q)
 
                 all_serializers.append(q_serializer)
                 if not q_serializer.is_valid():
-                    return Response(assessment_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(q_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
                 total_score = 0
                 if "options" in q:
@@ -213,12 +213,12 @@ class GetAssessmentView(APIView):
                                     )
                                 )
 
-                            opt_serializer = OptionSerializer(option, data=opt)
+                            opt_serializer = OptionSerializer(option, data=opt, partial=True)
 
                         if "title" in opt and opt_serializer is None:
                             option = Option.objects.filter(title=opt["title"], question=question).first()
                             if option is not None:
-                                opt_serializer = OptionSerializer(option, data=opt)
+                                opt_serializer = OptionSerializer(option, data=opt, partial=True)
 
                         if opt_serializer is None:
                             opt_serializer = OptionSerializer(data=opt)

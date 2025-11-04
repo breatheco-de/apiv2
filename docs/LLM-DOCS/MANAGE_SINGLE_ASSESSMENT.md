@@ -495,7 +495,73 @@ Content-Type: application/json
 
 **⚠️ Limitation:** Must include ALL questions and options you want to keep.
 
-### Reorder Options
+### Swap or Reorder Question Positions
+
+**Method 1: Individual updates (Simple swaps)** ⭐
+
+Update each question separately:
+
+```bash
+# Swap question 123 (position 1) with question 456 (position 2)
+PUT /v1/assessment/python-basics/question/123
+{
+  "position": 2
+}
+
+PUT /v1/assessment/python-basics/question/456
+{
+  "position": 1
+}
+```
+
+**Pros:**
+- ✅ Only send what changes
+- ✅ Clear and explicit
+- ✅ Partial update - just position field
+
+**Cons:**
+- ❌ Multiple API calls (one per question)
+
+**Best for:** Swapping 2 questions or updating 1-2 positions
+
+---
+
+**Method 2: Bulk update (Multiple reorders)**
+
+**Endpoint:** `PUT /v1/assessment/{assessment_slug}`
+
+**Payload:**
+```json
+{
+  "questions": [
+    {"id": 123, "position": 2},
+    {"id": 456, "position": 1},
+    {"id": 789, "position": 3},
+    {"id": 801, "position": 4}
+  ]
+}
+```
+
+**Pros:**
+- ✅ Single API call
+- ✅ Atomic operation
+- ✅ Efficient for reordering many questions
+
+**Cons:**
+- ❌ Must include ALL questions being reordered
+
+**Best for:** Reordering 3+ questions at once
+
+---
+
+**Recommendation:**
+- **Swap 2 questions?** Use individual PUT requests
+- **Reorder 3+ questions?** Use bulk update
+- **Move 1 question?** Use individual PUT request
+
+---
+
+### Reorder Options Within a Question
 
 **Method 1: Update single question (Recommended)** ⭐
 
