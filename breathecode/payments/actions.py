@@ -1,26 +1,27 @@
 import os
 import re
-from decimal import Decimal, ROUND_FLOOR
-import redis
-import redis.lock
+import uuid
 from datetime import datetime, timedelta
+from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
-import uuid
-from django.db import transaction
-from task_manager.core.exceptions import AbortTask, RetryTask
 
+import redis
+import redis.lock
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
+from django.db import transaction
 from django.db.models import Q, QuerySet, Sum
 from django.http import HttpRequest
 from django.utils import timezone
+from django_redis import get_redis_connection
 from pytz import UTC
 from rest_framework.request import Request
+from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
@@ -33,7 +34,6 @@ from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
-from django_redis import get_redis_connection
 
 from .models import (
     SERVICE_UNITS,
@@ -1928,6 +1928,28 @@ def user_has_active_paid_plans(user: User) -> bool:
 
     for subscription in owned_subscriptions.union(seat_subscriptions):
         if is_subscription_paid(subscription):
+            return True
+
+    return False
+
+
+def user_has_active_4geeks_plus_plans(user: User) -> bool:
+    """
+    Check if a user has any active paid subscriptions or plan financings for 4Geeks Plus.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if the user has active paid plans, False otherwise
+    """
+    # Check for active subscriptions with 4Geeks Plus
+    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
+        if subscription.plans.filter(slug="4geeks-plus-subscription").exists():
+            return True
+    # Check for active plan financings with 4Geeks Plus
+    for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
+        if plan_financing.plans.filter(slug="4geeks-plus-planfinancing").exists():
             return True
 
     return False
