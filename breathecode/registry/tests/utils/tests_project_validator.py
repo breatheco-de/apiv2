@@ -39,4 +39,5 @@ def test_project_validator_errors_property():
         "description",
         "readme",
         "preview",
+        "telemetry",
     ]

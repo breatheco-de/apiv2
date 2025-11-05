@@ -132,6 +132,34 @@ class Command(BaseCommand):
             if verbosity >= 2:
                 self.stdout.write(self.style.SUCCESS("✓ Signals restored"))
 
+        # Create UserInvite records for all staff users
+        if verbosity >= 1:
+            self.stdout.write("\n" + "=" * 70)
+            self.stdout.write("Creating UserInvite records for staff users...")
+        
+        call_command("create_staff_invites", verbosity=0)
+        
+        if verbosity >= 1:
+            self.stdout.write(self.style.SUCCESS("✓ Staff UserInvites created"))
+
+        # Assign Admin group to all staff users
+        if verbosity >= 1:
+            self.stdout.write("\nAssigning groups to staff users...")
+        
+        call_command("assign_staff_groups", verbosity=0)
+        
+        if verbosity >= 1:
+            self.stdout.write(self.style.SUCCESS("✓ Staff groups assigned"))
+
+        # Populate academy owners from ProfileAcademy
+        if verbosity >= 1:
+            self.stdout.write("\nPopulating academy owners...")
+        
+        call_command("populate_academy_owners", verbosity=0)
+        
+        if verbosity >= 1:
+            self.stdout.write(self.style.SUCCESS("✓ Academy owners populated"))
+
         # Print summary
         if verbosity >= 1:
             self.stdout.write("\n" + "=" * 70)
@@ -140,6 +168,7 @@ class Command(BaseCommand):
 
             # Show what was loaded
             from breathecode.admissions.models import Country, City, Academy, Cohort
+            from breathecode.authenticate.models import UserInvite
             from django.contrib.auth.models import User
 
             self.stdout.write(f"\nData summary:")
@@ -148,4 +177,5 @@ class Command(BaseCommand):
             self.stdout.write(f"  Academies: {Academy.objects.count()}")
             self.stdout.write(f"  Cohorts: {Cohort.objects.count()}")
             self.stdout.write(f"  Users: {User.objects.count()}")
+            self.stdout.write(f"  Staff UserInvites: {UserInvite.objects.filter(user__is_staff=True).count()}")
 

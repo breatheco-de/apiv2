@@ -21,6 +21,7 @@ from .models import (
     Answer,
     CohortProxy,
     CohortUserProxy,
+    FeedbackTag,
     Review,
     ReviewPlatform,
     Survey,
@@ -437,3 +438,18 @@ class AcademyFeedbackSettingsAdmin(admin.ModelAdmin):
     search_fields = ("academy__name", "academy__slug")
     raw_id_fields = ("academy",)
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(FeedbackTag)
+class FeedbackTagAdmin(admin.ModelAdmin):
+    list_display = ("slug", "title", "priority", "academy", "is_private", "created_at")
+    list_filter = ("is_private", "academy")
+    search_fields = ("slug", "title", "description")
+    ordering = ("priority", "title")
+    raw_id_fields = ("academy",)
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (None, {"fields": ("slug", "title", "description", "priority")}),
+        ("Visibility", {"fields": ("academy", "is_private")}),
+        ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )

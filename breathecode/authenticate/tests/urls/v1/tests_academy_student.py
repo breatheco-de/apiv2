@@ -28,6 +28,7 @@ def generate_user_invite(data: dict) -> dict:
         "academy_id": None,
         "author_id": None,
         "cohort_id": None,
+        "course_id": None,
         "email": None,
         "is_email_validated": False,
         "conversion_info": None,
@@ -41,6 +42,8 @@ def generate_user_invite(data: dict) -> dict:
         "role_id": None,
         "sent_at": None,
         "status": "PENDING",
+        "subscription_seat_id": None,
+        "syllabus_id": None,
         "token": "",
         "process_message": "",
         "process_status": "PENDING",
@@ -51,6 +54,7 @@ def generate_user_invite(data: dict) -> dict:
         "longitude": None,
         "email_quality": None,
         "email_status": None,
+        "expires_at": None,
         **data,
     }
 
@@ -1163,7 +1167,7 @@ class StudentPostTestSuite(AuthTestCase):
     @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_academy_student__post__with_user__it_ignore_the_param_plans(self):
-        """Test /academy/:id/member"""
+        """Test that adding plans to existing user throws error"""
 
         roles = [{"name": "konan", "slug": "konan"}, {"name": "student", "slug": "student"}]
 
@@ -1184,105 +1188,29 @@ class StudentPostTestSuite(AuthTestCase):
         response = self.client.post(url, data, format="json", headers={"academy": 1})
         json = response.json()
 
-        created_at = UTC_NOW.replace(tzinfo=None).isoformat(timespec="microseconds") + "Z"
-
         expected = {
-            "address": None,
-            "email": model.user[1].email,
-            "first_name": "Kenny",
-            "last_name": "McKornick",
-            "phone": "",
-            "status": "INVITED",
-            "id": 2,
-            "created_at": created_at,
-            "role": {
-                "id": "student",
-                "slug": "student",
-                "name": "student",
-            },
-            "user": {
-                "id": model.user[1].id,
-                "email": model.user[1].email,
-                "first_name": model.user[1].first_name,
-                "last_name": model.user[1].last_name,
-                "profile": None,
-            },
-            "academy": {
-                "id": model.academy.id,
-                "name": model.academy.name,
-                "slug": model.academy.slug,
-            },
+            "detail": "cannot-add-plans-to-existing-user",
+            "status_code": 400,
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # Verify no new ProfileAcademy was created (only the original one from setup)
         self.assertEqual(
             self.bc.database.list_of("authenticate.ProfileAcademy"),
             [
                 self.bc.format.to_dict(model.profile_academy),
-                {
-                    "academy_id": 1,
-                    "address": None,
-                    "email": model.user[1].email,
-                    "first_name": "Kenny",
-                    "id": 2,
-                    "last_name": "McKornick",
-                    "phone": "",
-                    "role_id": "student",
-                    "status": "INVITED",
-                    "user_id": 2,
-                },
             ],
         )
 
-        token = self.bc.database.get("authenticate.Token", 1, dict=False)
-        querystr = urllib.parse.urlencode(
-            {
-                "callback": os.getenv("APP_URL", "")[:-1]
-                + f'?{urllib.parse.urlencode(
-            {
-                "utm_medium": "academy",
-                "utm_source": model.academy.slug,
-            }
-        )}',
-                "token": token,
-            }
-        )
-        url = os.getenv("API_URL") + "/v1/auth/academy/html/invite?" + querystr
-
+        # Verify no UserInvite was created
         self.assertEqual(self.bc.database.list_of("authenticate.UserInvite"), [])
-        assert actions.send_email_message.call_args_list == [
-            call(
-                "academy_invite",
-                model.user[1].email,
-                {
-                    "subject": f"Invitation to study at {model.academy.name}",
-                    "invites": [
-                        {
-                            "id": 2,
-                            "academy": {
-                                "id": 1,
-                                "name": model.academy.name,
-                                "slug": model.academy.slug,
-                                "timezone": None,
-                            },
-                            "role": "student",
-                            "created_at": UTC_NOW,
-                        }
-                    ],
-                    "user": {
-                        "id": 2,
-                        "email": model.user[1].email,
-                        "first_name": model.user[1].first_name,
-                        "last_name": model.user[1].last_name,
-                        "github": None,
-                        "profile": None,
-                    },
-                    "LINK": url,
-                },
-                academy=model.academy,
-            ),
-        ]
+        
+        # Verify no email was sent
+        assert actions.send_email_message.call_args_list == []
+        
+        # Verify no plans were created
         self.assertEqual(self.bc.database.list_of("payments.Plan"), [])
 
     """
@@ -1390,9 +1318,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude@dude.dude",
                 {
                     "email": "dude@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             )
@@ -1557,9 +1485,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude@dude.dude",
                 {
                     "email": "dude@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             ),
@@ -1752,9 +1680,9 @@ class StudentPostTestSuite(AuthTestCase):
                 "dude2@dude.dude",
                 {
                     "email": "dude2@dude.dude",
-                    "subject": "Welcome to " + model.academy.name,
+                    "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                     "LINK": url,
-                    "FIST_NAME": "Kenny",
+                    "FIRST_NAME": "Kenny",
                 },
                 academy=model.academy,
             )
