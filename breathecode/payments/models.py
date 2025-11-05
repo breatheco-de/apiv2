@@ -5,9 +5,9 @@ import json
 import logging
 import math
 import os
-from datetime import datetime, timedelta
-from typing import Any, Optional, TYPE_CHECKING, Protocol, TypeVar, Awaitable
 import random
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, Awaitable, Optional, Protocol, TypeVar
 
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -16,6 +16,7 @@ from currencies import Currency as CurrencyFormatter
 from django import forms
 from django.contrib.auth.models import Group, Permission, User
 from django.core.handlers.wsgi import WSGIRequest
+from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Q, QuerySet
 from django.utils import timezone
@@ -1619,6 +1620,7 @@ class PaymentMethod(models.Model):
 
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
+    is_coinbase = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
@@ -1772,17 +1774,35 @@ class Invoice(models.Model):
         default=0, help_text="Amount refunded, this field will only be set when the invoice is refunded"
     )
 
+    coinbase_charge_id = models.CharField(
+        max_length=40, null=True, default=None, blank=True, help_text="Coinbase charge id"
+    )
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["coinbase_charge_id"],
+                condition=models.Q(coinbase_charge_id__isnull=False),
+                name="unique_coinbase_charge_id",
+            )
+        ]
+
     def clean(self) -> None:
         if self.payment_method and self.externally_managed is False:
             raise forms.ValidationError("Payment method cannot be setted if the billing isn't managed externally")
 
-        if self.payment_method and self.proof is None and self.status == self.Status.FULFILLED:
+        if (
+            self.payment_method
+            and self.proof is None
+            and self.status == self.Status.FULFILLED
+            and not self.payment_method.is_coinbase
+        ):
             raise forms.ValidationError(
                 "Proof of payment must be provided when payment method is setted and status is FULFILLED"
             )
@@ -1832,7 +1852,7 @@ class AbstractIOweYou(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Academy owner")
 
     externally_managed = models.BooleanField(
-        default=False, help_text="If the billing is managed externally outside of the system"
+        default=False, help_text="If the payment method is different than credit card this will be set to true"
     )
 
     selected_cohort_set = models.ForeignKey(
@@ -1999,6 +2019,7 @@ class AbstractIOweYou(models.Model):
             - Independent of payment frequency and service regeneration schedules.
         """
         from django.db.models import Sum
+
         from breathecode.payments.models import Invoice
 
         period_start, period_end = self.get_current_monthly_period_dates()
@@ -2363,6 +2384,7 @@ class SubscriptionBillingTeam(models.Model):
             Total spending for this team in current period
         """
         from django.db.models import Sum
+
         from breathecode.payments.models import Invoice
 
         period_start, period_end = self.get_current_monthly_period_dates()
@@ -3367,6 +3389,7 @@ class AcademyPaymentSettings(models.Model):
 
     class POSVendor(models.TextChoices):
         STRIPE = "STRIPE", "Stripe"
+        COINBASE = "COINBASE", "Coinbase Commerce"
 
     academy = models.OneToOneField(
         Academy, on_delete=models.CASCADE, related_name="payment_settings", help_text="Academy"
@@ -3378,6 +3401,18 @@ class AcademyPaymentSettings(models.Model):
         help_text="Point of Sale vendor like Stripe, etc.",
     )
     pos_api_key = models.CharField(max_length=255, blank=True, help_text="API key for the POS vendor")
+    coinbase_api_key = models.CharField(
+        max_length=255, blank=True, null=True, help_text="API key for Coinbase Commerce"
+    )
+    coinbase_webhook_secret = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Webhook secret for Coinbase Commerce"
+    )
+
+    early_renewal_window_days = models.PositiveIntegerField(
+        default=2,
+        validators=[MaxValueValidator(14)],
+        help_text="Days before expiration when early renewal is allowed, 0 means it is not allowed",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
