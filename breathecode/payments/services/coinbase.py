@@ -112,7 +112,7 @@ class CoinbaseCommerce:
             "description": description,
             "pricing_type": "fixed_price",
             "local_price": {
-                "amount": "0.001",
+                "amount": amount,
                 "currency": bag.currency.code,
             },
             "metadata": metadata,
