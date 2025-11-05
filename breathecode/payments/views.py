@@ -49,6 +49,7 @@ from breathecode.payments.models import (
     Coupon,
     Currency,
     EventTypeSet,
+    FinancingOption,
     FinancialReputation,
     Invoice,
     MentorshipServiceSet,
@@ -66,14 +67,19 @@ from breathecode.payments.models import (
 )
 from breathecode.payments.serializers import (
     BillingTeamAutoRechargeSerializer,
+    CohortSetSerializer,
+    FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
     GetCouponWithPlansSerializer,
+    GetCohortSerializer,
+    GetCohortSetSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
+    GetFinancingOptionSerializer,
     GetInvoiceSerializer,
     GetInvoiceSmallSerializer,
     GetMentorshipServiceSetSerializer,
@@ -89,6 +95,7 @@ from breathecode.payments.serializers import (
     PlanSerializer,
     POSTAcademyServiceSerializer,
     PUTAcademyServiceSerializer,
+    ServiceItemSerializer,
     ServiceSerializer,
 )
 from breathecode.payments.services.coinbase import CoinbaseCommerce
@@ -229,6 +236,10 @@ class AcademyPlanView(APIView):
         else:
             items = Plan.objects.filter(query, Q(owner__id=academy_id) | Q(owner=None)).exclude(status="DELETED")
 
+        # Add "like" search filter for slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
         items = handler.queryset(items)
         serializer = GetPlanSerializer(
             items,
@@ -276,13 +287,13 @@ class AcademyPlanView(APIView):
         lang = get_user_language(request)
 
         plan = (
-            Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug), Q(owner__id=academy_id) | Q(owner=None), id=plan_id)
+            Plan.objects.filter(Q(id=plan_id) | Q(slug=plan_slug), Q(owner__id=academy_id) | Q(owner=None))
             .exclude(status="DELETED")
             .first()
         )
         if not plan:
             raise ValidationException(
-                translation(lang, en="Plan not found", es="Plan no existe", slug="not-found"), code=404
+                translation(lang, en="Plan not found", es="El plan no existe", slug="not-found"), code=404
             )
 
         data = {}
@@ -323,38 +334,317 @@ class AcademyPlanView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AcademyCohortSetCohortView(APIView):
+class AcademyFinancingOptionView(APIView):
+    """Manage financing options for academy plans"""
+
     extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_subscription")
+    def get(self, request, financing_option_id=None, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if financing_option_id:
+            # Only return if owned by this academy OR is global (academy=None)
+            item = FinancingOption.objects.filter(
+                Q(academy__id=academy_id) | Q(academy=None), id=financing_option_id
+            ).first()
+            if not item:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Financing option not found or does not belong to this academy",
+                        es="Opción de financiamiento no encontrada o no pertenece a esta academia",
+                        slug="not-found",
+                    ),
+                    code=404,
+                )
+
+            serializer = GetFinancingOptionSerializer(
+                item, many=False, context={"lang": lang, "country_code": request.GET.get("country_code")}
+            )
+            return Response(serializer.data)
+
+        # List financing options for this academy and global ones
+        items = FinancingOption.objects.filter(Q(academy__id=academy_id) | Q(academy=None))
+
+        # Filter by currency if provided
+        currency_code = request.GET.get("currency")
+        if currency_code:
+            items = items.filter(currency__code__iexact=currency_code)
+
+        # Filter by months if provided
+        how_many_months = request.GET.get("how_many_months")
+        if how_many_months:
+            items = items.filter(how_many_months=int(how_many_months))
+
+        items = handler.queryset(items)
+        serializer = GetFinancingOptionSerializer(
+            items, many=True, context={"lang": lang, "country_code": request.GET.get("country_code")}
+        )
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_subscription")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        # Validate and convert currency code to ID
+        data = request.data.copy()
+        currency_code = data.get("currency", "")
+
+        if currency_code:
+            currency = Currency.objects.filter(code__iexact=currency_code).first()
+            if not currency:
+                raise ValidationException(
+                    translation(lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"),
+                    code=400,
+                )
+            data["currency"] = currency.id
+        else:
+            raise ValidationException(
+                translation(lang, en="Currency is required", es="Divisa es requerida", slug="currency-required"),
+                code=400,
+            )
+
+        serializer = FinancingOptionSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        # Set academy ownership
+        financing_option = serializer.save(academy_id=academy_id)
+
+        # Return using GET serializer for consistent response
+        response_serializer = GetFinancingOptionSerializer(financing_option, many=False, context={"lang": lang})
+
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    @capable_of("crud_subscription")
+    def put(self, request, financing_option_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Only allow updating financing options owned by this academy (not global ones)
+        financing_option = FinancingOption.objects.filter(academy__id=academy_id, id=financing_option_id).first()
+        if not financing_option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing option not found or does not belong to this academy",
+                    es="Opción de financiamiento no encontrada o no pertenece a esta academia",
+                ),
+                slug="not-found",
+                code=404,
+            )
+
+        # Validate and convert currency code to ID if provided
+        data = request.data.copy()
+        if "currency" in data and isinstance(data["currency"], str):
+            currency = Currency.objects.filter(code__iexact=data["currency"]).first()
+            if not currency:
+                raise ValidationException(
+                    translation(lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"),
+                    code=400,
+                )
+            data["currency"] = currency.id
+
+        serializer = FinancingOptionSerializer(financing_option, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Return using GET serializer for consistent response
+        response_serializer = GetFinancingOptionSerializer(serializer.instance, many=False, context={"lang": lang})
+
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def delete(self, request, financing_option_id=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Only allow deleting financing options owned by this academy
+        financing_option = FinancingOption.objects.filter(academy__id=academy_id, id=financing_option_id).first()
+        if not financing_option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing option not found or does not belong to this academy",
+                    es="Opción de financiamiento no encontrada o no pertenece a esta academia",
+                ),
+                slug="not-found",
+                code=404,
+            )
+
+        # Check if financing option is being used by any plans
+        plans_using = Plan.objects.filter(financing_options=financing_option).count()
+        if plans_using > 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cannot delete financing option. It is being used by {plans_using} plan(s)",
+                    es=f"No se puede eliminar la opción de financiamiento. Está siendo usada por {plans_using} plan(es)",
+                ),
+                slug="financing-option-in-use",
+                code=400,
+            )
+
+        financing_option.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCohortSetView(APIView):
+    """Manage CohortSets for an academy."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_plan")
+    def get(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Get all cohort sets or a specific one."""
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if cohort_set_id or cohort_set_slug:
+            # Get specific cohort set
+            cohort_set = (
+                CohortSet.objects.filter(
+                    Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
+                ).first()
+            )
+            if not cohort_set:
+                raise ValidationException(
+                    translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"),
+                    code=404,
+                )
+
+            serializer = GetCohortSetSerializer(cohort_set, many=False)
+            return handler.response(serializer.data)
+
+        # Get all cohort sets
+        items = CohortSet.objects.filter(academy__id=academy_id)
+        items = handler.queryset(items)
+        serializer = GetCohortSetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        """Create a new CohortSet."""
+        lang = get_user_language(request)
+
+        data = request.data.copy()
+        data["academy"] = academy_id
+
+        serializer = CohortSetSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            # Fetch the created cohort set with relationships
+            cohort_set = CohortSet.objects.get(id=serializer.data["id"])
+            return Response(GetCohortSetSerializer(cohort_set, many=False).data, status=201)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_plan")
     def put(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Update a CohortSet."""
         lang = get_user_language(request)
 
-        handler = self.extensions(request)
-        query = handler.lookup.build(
-            lang,
-            ints={
-                "in": [
-                    "id",
-                ],
-            },
-            strings={
-                "in": [
-                    "slug",
-                ],
-            },
-            fix={"lower": "slug"},
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
         )
+        if not cohort_set:
+            raise ValidationException(
+                translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
+            )
+
+        serializer = CohortSetSerializer(cohort_set, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            # Fetch the updated cohort set with relationships
+            cohort_set = CohortSet.objects.get(id=cohort_set.id)
+            return Response(GetCohortSetSerializer(cohort_set, many=False).data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_plan")
+    def delete(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Delete a CohortSet."""
+        lang = get_user_language(request)
+
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            raise ValidationException(
+                translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
+            )
+
+        cohort_set.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCohortSetCohortView(APIView):
+    """Manage cohorts in a CohortSet."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_plan")
+    def get(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Get all cohorts in a CohortSet."""
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            raise ValidationException(
+                translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
+            )
+
+        cohorts = cohort_set.cohorts.all()
+        cohorts = handler.queryset(cohorts)
+        serializer = GetCohortSerializer(cohorts, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_plan")
+    def put(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Add cohorts to a CohortSet."""
+        lang = get_user_language(request)
 
         errors = []
-        if not (
-            cohort_set := CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), owner__id=academy_id)
-            .exclude(status="DELETED")
-            .first()
-        ):
-            errors.append(C(translation(lang, en="Plan not found", es="Plan no encontrado", slug="not-found")))
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            errors.append(C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found")))
 
-        if not (items := Cohort.objects.filter(query)):
+        # Build query for cohorts
+        cohort_ids = request.GET.get("id")
+        cohort_slugs = request.GET.get("slug")
+        
+        query = Q()
+        if cohort_ids:
+            # Handle comma-separated IDs or single ID
+            ids = [int(x.strip()) for x in cohort_ids.split(",")] if "," in cohort_ids else [int(cohort_ids)]
+            query |= Q(id__in=ids)
+        
+        if cohort_slugs:
+            # Handle comma-separated slugs or single slug
+            slugs = [x.strip().lower() for x in cohort_slugs.split(",")] if "," in cohort_slugs else [cohort_slugs.lower()]
+            query |= Q(slug__in=slugs)
+        
+        if not query:
+            errors.append(
+                C(translation(lang, en="Missing id or slug parameter", es="Falta el parámetro id o slug", slug="missing-params"))
+            )
+        
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        # Filter cohorts by academy
+        items = Cohort.objects.filter(query, academy__id=academy_id)
+        
+        if not items.exists():
             errors.append(
                 C(translation(lang, en="Cohort not found", es="Cohort no encontrada", slug="cohort-not-found"))
             )
@@ -372,6 +662,56 @@ class AcademyCohortSetCohortView(APIView):
 
         return Response({"status": "ok"}, status=status.HTTP_201_CREATED if to_add else status.HTTP_200_OK)
 
+    @capable_of("crud_plan")
+    def delete(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
+        """Remove cohorts from a CohortSet."""
+        lang = get_user_language(request)
+
+        errors = []
+        cohort_set = (
+            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
+        )
+        if not cohort_set:
+            errors.append(C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found")))
+
+        # Build query for cohorts
+        cohort_ids = request.GET.get("id")
+        cohort_slugs = request.GET.get("slug")
+        
+        query = Q()
+        if cohort_ids:
+            # Handle comma-separated IDs or single ID
+            ids = [int(x.strip()) for x in cohort_ids.split(",")] if "," in cohort_ids else [int(cohort_ids)]
+            query |= Q(id__in=ids)
+        
+        if cohort_slugs:
+            # Handle comma-separated slugs or single slug
+            slugs = [x.strip().lower() for x in cohort_slugs.split(",")] if "," in cohort_slugs else [cohort_slugs.lower()]
+            query |= Q(slug__in=slugs)
+        
+        if not query:
+            errors.append(
+                C(translation(lang, en="Missing id or slug parameter", es="Falta el parámetro id o slug", slug="missing-params"))
+            )
+        
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        # Filter cohorts by academy
+        items = Cohort.objects.filter(query, academy__id=academy_id)
+        
+        if not items.exists():
+            errors.append(
+                C(translation(lang, en="Cohort not found", es="Cohort no encontrada", slug="cohort-not-found"))
+            )
+
+        if errors:
+            raise ValidationException(errors, code=404)
+
+        cohort_set.cohorts.remove(*items)
+
+        return Response({"status": "ok"})
+
 
 class ServiceView(APIView):
     permission_classes = [AllowAny]
@@ -382,8 +722,24 @@ class ServiceView(APIView):
 
         lang = get_user_language(request)
 
+        # Check if user has read_service capability to view private services
+        can_view_private = False
+        if request.user and request.user.is_authenticated:
+            academy_id = request.GET.get("academy")
+            if academy_id and str(academy_id).isdigit():
+                from breathecode.authenticate.models import ProfileAcademy
+
+                capable = ProfileAcademy.objects.filter(
+                    user=request.user.id, academy__id=int(academy_id), role__capabilities__slug="read_service"
+                )
+                can_view_private = capable.exists()
+
         if service_slug:
-            item = Service.objects.filter(slug=service_slug).first()
+            # Filter by private status if user doesn't have capability
+            if can_view_private:
+                item = Service.objects.filter(slug=service_slug).first()
+            else:
+                item = Service.objects.filter(slug=service_slug, private=False).first()
 
             if not item:
                 raise ValidationException(
@@ -395,16 +751,29 @@ class ServiceView(APIView):
             )
             return handler.response(serializer.data)
 
-        items = Service.objects.filter()
+        # Filter services based on capability
+        if can_view_private:
+            items = Service.objects.filter()
+        else:
+            items = Service.objects.filter(private=False)
+
+        # Add optional academy owner filter
+        if academy_id := request.GET.get("academy"):
+            if str(academy_id).isdigit():
+                items = items.filter(Q(owner__id=int(academy_id)) | Q(owner=None))
 
         if group := request.GET.get("group"):
-            items = items.filter(group__codename=group)
+            items = items.filter(groups__name=group)
 
         if cohort_slug := request.GET.get("cohort_slug"):
             items = items.filter(cohorts__slug=cohort_slug)
 
         if mentorship_service_slug := request.GET.get("mentorship_service_slug"):
             items = items.filter(mentorship_services__slug=mentorship_service_slug)
+
+        # Add "like" search filter for slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
 
         items = handler.queryset(items)
         serializer = GetServiceSerializer(
@@ -440,13 +809,17 @@ class AcademyServiceView(APIView):
         items = Service.objects.filter(Q(owner__id=academy_id) | Q(owner=None) | Q(private=False))
 
         if group := request.GET.get("group"):
-            items = items.filter(group__codename=group)
+            items = items.filter(groups__name=group)
 
         if cohort_slug := request.GET.get("cohort_slug"):
             items = items.filter(cohorts__slug=cohort_slug)
 
         if mentorship_service_slug := request.GET.get("mentorship_service_slug"):
             items = items.filter(mentorship_services__slug=mentorship_service_slug)
+
+        # Add "like" search filter for slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
 
         items = handler.queryset(items)
         serializer = GetServiceSerializer(
@@ -531,6 +904,10 @@ class AcademyAcademyServiceView(APIView):
         if event_type_set := request.GET.get("event_type_set"):
             items = items.filter(available_event_type_sets__slug__exact=event_type_set)
 
+        # Add "like" search filter for service slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(service__slug__icontains=like) | Q(service__title__icontains=like))
+
         items = handler.queryset(items)
         serializer = GetAcademyServiceSmallSerializer(items, many=True, context={"country_code": country_code})
 
@@ -538,11 +915,28 @@ class AcademyAcademyServiceView(APIView):
 
     @capable_of("crud_academyservice")
     def post(self, request, academy_id=None):
-        data = request.data
+        lang = get_user_language(request)
+        data = request.data.copy()
 
         data["academy"] = academy_id
 
-        serializer = POSTAcademyServiceSerializer(data=request.data)
+        # Convert currency code to ID
+        currency_code = data.get("currency", "")
+        if currency_code:
+            currency = Currency.objects.filter(code__iexact=currency_code).first()
+            if not currency:
+                raise ValidationException(
+                    translation(lang, en="Currency not found", es="Divisa no encontrada", slug="currency-not-found"),
+                    code=400,
+                )
+            data["currency"] = currency.id
+        else:
+            raise ValidationException(
+                translation(lang, en="Currency is required", es="Divisa es requerida", slug="currency-required"),
+                code=400,
+            )
+
+        serializer = POSTAcademyServiceSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -618,6 +1012,137 @@ class ServiceItemView(APIView):
         serializer = GetServiceItemWithFeaturesSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+
+class AcademyServiceItemView(APIView):
+    """
+    Academy endpoint to manage ServiceItems.
+    GET: List and filter service items
+    POST: Create new service items (immutable after creation)
+    """
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_service")
+    def get(self, request, academy_id=None):
+        """
+        List and filter ServiceItems for an academy.
+
+        Query Parameters:
+        - service: Filter by service ID or slug
+        - is_renewable: Filter by renewable status (true/false)
+        - is_team_allowed: Filter by team allowed status (true/false)
+        - renew_at: Filter by renewal period number
+        - renew_at_unit: Filter by renewal unit (DAY/WEEK/MONTH/YEAR)
+        - how_many: Filter by quantity (use -1 for unlimited)
+        - unit_type: Filter by unit type (UNIT/CREDIT/other)
+        - how_many_gt: Filter items with how_many greater than value
+        - how_many_lt: Filter items with how_many less than value
+        """
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        # Start with service items from services owned by the academy or global services
+        items = ServiceItem.objects.filter(Q(service__owner__id=academy_id) | Q(service__owner=None))
+
+        # Filter by service (ID or slug)
+        if service := request.GET.get("service"):
+            if service.isdigit():
+                items = items.filter(service__id=int(service))
+            else:
+                items = items.filter(service__slug=service)
+
+        # Filter by boolean fields
+        if is_renewable := request.GET.get("is_renewable"):
+            items = items.filter(is_renewable=is_renewable.lower() == "true")
+
+        if is_team_allowed := request.GET.get("is_team_allowed"):
+            items = items.filter(is_team_allowed=is_team_allowed.lower() == "true")
+
+        # Filter by renewal parameters
+        if renew_at := request.GET.get("renew_at"):
+            if renew_at.isdigit():
+                items = items.filter(renew_at=int(renew_at))
+
+        if renew_at_unit := request.GET.get("renew_at_unit"):
+            items = items.filter(renew_at_unit=renew_at_unit.upper())
+
+        # Filter by how_many (quantity)
+        if how_many := request.GET.get("how_many"):
+            if how_many.lstrip("-").isdigit():
+                items = items.filter(how_many=int(how_many))
+
+        # Range filters for how_many
+        if how_many_gt := request.GET.get("how_many_gt"):
+            if how_many_gt.lstrip("-").isdigit():
+                items = items.filter(how_many__gt=int(how_many_gt))
+
+        if how_many_lt := request.GET.get("how_many_lt"):
+            if how_many_lt.lstrip("-").isdigit():
+                items = items.filter(how_many__lt=int(how_many_lt))
+
+        # Filter by unit_type
+        if unit_type := request.GET.get("unit_type"):
+            items = items.filter(unit_type__in=unit_type.upper().split(","))
+
+        # Add language annotation for serializer
+        items = items.annotate(lang=Value(lang, output_field=CharField()))
+
+        items = handler.queryset(items)
+        serializer = GetServiceItemWithFeaturesSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_service")
+    def post(self, request, academy_id=None):
+        """
+        Create a new ServiceItem.
+
+        Required fields:
+        - service: Service ID
+        - how_many: Number of units (-1 for unlimited, must be > 0)
+
+        Optional fields:
+        - unit_type: Default "UNIT"
+        - sort_priority: Default 1
+        - is_renewable: Default False
+        - is_team_allowed: Default False (auto-set to True for SEAT type services)
+        - renew_at: Default 1 (relevant only if is_renewable=True)
+        - renew_at_unit: Default "MONTH" (relevant only if is_renewable=True)
+        """
+        lang = get_user_language(request)
+
+        # Validate service exists
+        service_id = request.data.get("service")
+        if not service_id:
+            raise ValidationException(
+                translation(lang, en="service is required", es="service es requerido", slug="service-required"),
+                code=400,
+            )
+
+        service = Service.objects.filter(id=service_id).first()
+        if not service:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Service with id {service_id} not found",
+                    es=f"No se encontró el servicio con id {service_id}",
+                    slug="service-not-found",
+                ),
+                code=404,
+            )
+
+        # Create ServiceItem
+        serializer = ServiceItemSerializer(data=request.data)
+        if serializer.is_valid():
+            service_item = serializer.save()
+
+            # Return with features if available
+            service_item.lang = lang
+            response_serializer = GetServiceItemWithFeaturesSerializer(service_item)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MeConsumableView(APIView):
@@ -1150,6 +1675,8 @@ class AcademySubscriptionView(APIView):
                 .exclude(status="ERROR")
                 .exclude(status="EXPIRED")
                 .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
+                .select_related('subscriptionbillingteam')
+                .prefetch_related('subscriptionbillingteam__seats')
                 .first()
             )
 
@@ -1175,17 +1702,35 @@ class AcademySubscriptionView(APIView):
                 .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
             )
 
-        if invoice_ids := request.GET.get("invoice_ids"):
-            items = items.filter(invoices__id__in=invoice_ids.split(","))
+        if invoice_param := request.GET.get("invoice"):
+            values = invoice_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(invoices__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(invoices__slug__in=values)
 
-        if service_slugs := request.GET.get("service_slugs"):
-            items = items.filter(services__slug__in=service_slugs.split(","))
+        if service_param := request.GET.get("service"):
+            values = service_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(services__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(services__slug__in=values)
 
-        if plan_slugs := request.GET.get("plan_slugs"):
-            items = items.filter(plans__slug__in=plan_slugs.split(","))
+        if plan_param := request.GET.get("plan"):
+            values = plan_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(plans__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(plans__slug__in=values)
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
+
+        # Optimize query to include billing team for seat information
+        items = items.select_related('subscriptionbillingteam').prefetch_related('subscriptionbillingteam__seats')
 
         items = handler.queryset(items)
 
@@ -1271,6 +1816,22 @@ class AcademyPlanFinancingView(APIView):
 
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
+
+        if invoice_param := request.GET.get("invoice"):
+            values = invoice_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(invoices__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(invoices__slug__in=values)
+
+        if plan_param := request.GET.get("plan"):
+            values = plan_param.split(",")
+            # Check if all values are numeric (IDs) or strings (slugs)
+            if all(v.strip().isdigit() for v in values):
+                items = items.filter(plans__id__in=[int(v) for v in values])
+            else:
+                items = items.filter(plans__slug__in=values)
 
         # Apply pagination and sorting
         items = handler.queryset(items)
@@ -2583,7 +3144,7 @@ class ConsumableCheckoutView(APIView):
                             ),
                         )
 
-                        service_item, _ = ServiceItem.objects.get_or_create(
+                        service_item, _ = ServiceItem.get_or_create_for_service(
                             service=service,
                             how_many=desired_limit,
                             is_team_allowed=True,
@@ -2686,7 +3247,7 @@ class ConsumableCheckoutView(APIView):
             try:
                 s.set_language(lang)
                 s.add_contact(request.user)
-                service_item, _ = ServiceItem.objects.get_or_create(
+                service_item, _ = ServiceItem.get_or_create_for_service(
                     service=service, how_many=total_items, is_team_allowed=is_team_allowed
                 )
 
@@ -4291,6 +4852,60 @@ class PaymentMethodView(APIView):
 class AcademyPaymentMethodView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
+    @capable_of("read_paymentmethod")
+    def get(self, request, paymentmethod_id=None, academy_id=None):
+        """
+        Get payment methods for the academy.
+        Returns both academy-specific and global payment methods (where academy=null).
+        """
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if paymentmethod_id:
+            # Get specific payment method
+            method = PaymentMethod.objects.filter(
+                Q(academy__id=academy_id) | Q(academy__isnull=True), id=paymentmethod_id
+            ).first()
+
+            if not method:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Payment method not found",
+                        es="Método de pago no encontrado",
+                        slug="payment-method-not-found",
+                    ),
+                    code=404,
+                )
+
+            serializer = GetPaymentMethod(method, many=False)
+            return Response(serializer.data)
+
+        # List payment methods for this academy and global ones
+        items = PaymentMethod.objects.filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+
+        # Optional filters
+        visibility = request.GET.get("visibility")
+        if visibility:
+            items = items.filter(visibility=visibility)
+
+        currency_code = request.GET.get("currency_code")
+        if currency_code:
+            items = items.filter(currency__code__iexact=currency_code)
+
+        lang_filter = request.GET.get("lang")
+        if lang_filter:
+            items = items.filter(lang=lang_filter)
+
+        deprecated = request.GET.get("deprecated")
+        if deprecated is not None:
+            items = items.filter(deprecated=deprecated.lower() in ["true", "1", "yes"])
+
+        items = handler.queryset(items)
+        serializer = GetPaymentMethod(items, many=True)
+
+        return handler.response(serializer.data)
+
     @capable_of("crud_paymentmethod")
     def post(self, request, academy_id):
         academy = Academy.objects.filter(id=academy_id).first()
@@ -4406,6 +5021,7 @@ class AcademyPlanServiceItemView(APIView):
                 code=400,
             )
 
+        # Handle different input formats for service_item
         if isinstance(service_item, int):
             service_item_ids = [service_item]
         elif isinstance(service_item, str):
@@ -4413,6 +5029,44 @@ class AcademyPlanServiceItemView(APIView):
                 service_item_ids = [int(x.strip()) for x in service_item.split(",") if x.strip().isdigit()]
             else:
                 service_item_ids = [int(service_item)]
+        elif isinstance(service_item, list):
+            # Validate that list doesn't contain null values
+            if None in service_item or any(x is None for x in service_item):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="service_item array cannot contain null values. Use an empty array [] or omit the field if you don't want to add service items.",
+                        es="El array service_item no puede contener valores null. Use un array vacío [] u omita el campo si no desea agregar service items.",
+                        slug="service-item-contains-null",
+                    ),
+                    code=400,
+                )
+
+            # Validate that all items are valid integers
+            service_item_ids = []
+            for x in service_item:
+                try:
+                    service_item_ids.append(int(x))
+                except (ValueError, TypeError):
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Invalid service_item value: {x}. All values must be valid integers.",
+                            es=f"Valor service_item inválido: {x}. Todos los valores deben ser enteros válidos.",
+                            slug="invalid-service-item-value",
+                        ),
+                        code=400,
+                    )
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="service_item must be an integer, string, or list",
+                    es="service_item debe ser un entero, cadena o lista",
+                    slug="invalid-service-item-format",
+                ),
+                code=400,
+            )
 
         service_items = ServiceItem.objects.filter(id__in=service_item_ids)
         if len(service_items) != len(service_item_ids):

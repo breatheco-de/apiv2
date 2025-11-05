@@ -324,6 +324,7 @@ class GetLiveClassSerializer(serpy.Serializer):
     ended_at = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
+    remote_meeting_url = serpy.Field()
     cohort = serpy.MethodField()
 
     def get_cohort(self, obj):

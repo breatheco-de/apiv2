@@ -69,24 +69,20 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = "STUDENT", **_: 
     if created:
         logger.info("User added to cohort")
 
-    if role == "TEACHER":
-        role = "teacher"
+    # Map CohortUser role to ProfileAcademy role slug using the model's mapping
+    role_slug = CohortUser.map_role_to_profile_academy_slug(role)
 
-    elif role == "ASSISTANT":
-        role = "assistant"
+    role_obj = Role.objects.filter(slug=role_slug).first()
+    if not role_obj:
+        raise AbortTask(f"Role with slug {role_slug} not found")
 
-    elif role == "REVIEWER":
-        role = "homework_reviewer"
-
-    else:
-        role = "student"
-
-    role = Role.objects.filter(slug=role).first()
-
+    # Check if user already has a ProfileAcademy for this specific role in this academy
+    # We allow multiple ProfileAcademy records for the same user-academy with different roles
+    # This ensures that each role's permission groups are properly assigned
     profile, created = ProfileAcademy.objects.get_or_create(
         academy=cohort.academy,
         user=user,
-        role=role,
+        role=role_obj,
         defaults={
             "email": user.email,
             "first_name": user.first_name,
@@ -95,20 +91,22 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = "STUDENT", **_: 
         },
     )
 
-    if profile.status != "ACTIVE":
+    # Ensure the profile is active even if it already existed
+    if not created and profile.status != "ACTIVE":
         profile.status = "ACTIVE"
         profile.save()
-        logger.info("ProfileAcademy mark as active")
-
-    if created:
-        logger.info("ProfileAcademy added")
+        logger.info("ProfileAcademy reactivated")
+    elif created:
+        logger.info("ProfileAcademy created")
+    else:
+        logger.info("ProfileAcademy already exists and is active")
 
     tasks_activity.add_activity.delay(
         user_id, "joined_cohort", related_type="admissions.CohortUser", related_id=cohort_user.id
     )
 
 
-@task(priority=TaskPriority.STUDENT.value)
+@shared_task(priority=TaskPriority.STUDENT.value)
 def build_profile_academy(academy_id: int, user_id: int, role: str = "student", **_: Any) -> None:
     logger.info(f"Starting build_profile_academy for cohort {academy_id} and user {user_id}")
 
@@ -118,13 +116,16 @@ def build_profile_academy(academy_id: int, user_id: int, role: str = "student", 
     if not (academy := Academy.objects.filter(id=academy_id).first()):
         raise AbortTask(f"Academy with id {academy_id} not found")
 
-    if not (role := Role.objects.filter(slug=role).first()):
+    if not (role_obj := Role.objects.filter(slug=role).first()):
         raise AbortTask(f"Role with slug {role} not found")
 
+    # Check if user already has a ProfileAcademy for this specific role in this academy
+    # We allow multiple ProfileAcademy records for the same user-academy with different roles
+    # This ensures that each role's permission groups are properly assigned
     profile, created = ProfileAcademy.objects.get_or_create(
         academy=academy,
         user=user,
-        role=role,
+        role=role_obj,
         defaults={
             "email": user.email,
             "first_name": user.first_name,
@@ -133,10 +134,12 @@ def build_profile_academy(academy_id: int, user_id: int, role: str = "student", 
         },
     )
 
-    if profile.status != "ACTIVE":
+    # Ensure the profile is active even if it already existed
+    if not created and profile.status != "ACTIVE":
         profile.status = "ACTIVE"
         profile.save()
-        logger.info("ProfileAcademy mark as active")
-
-    if created:
-        logger.info("ProfileAcademy added")
+        logger.info("ProfileAcademy reactivated")
+    elif created:
+        logger.info("ProfileAcademy created")
+    else:
+        logger.info("ProfileAcademy already exists and is active")

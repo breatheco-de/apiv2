@@ -26,6 +26,25 @@ def default_syllabus_version_json():
     return {"days": []}
 
 
+def default_white_label_features():
+    """Default value for `Academy.white_label_features` field."""
+    return {
+        "navigation": {
+            "show_marketing_navigation": False,  # show marketing navigation (url to 4geeks programs)
+            "custom_links": [],  # Aditional links added to white label academy navbar (follow frontend structure)
+        },
+        "features": {
+            "allow_referral_program": False,  # allow referral program
+            "allow_events": True,  # allow events
+            "allow_mentoring": False,  # allow mentoring
+            "allow_feedback_widget": False,  # allow feedback widget
+            "allow_community_widget": False,  # allow community widget
+            "allow_other_academy_courses": False,  # allow other academy courses on dashboard
+            "allow_other_academy_events": False,  # allow other academy events
+        },
+    }
+
+
 User.add_to_class("__str__", get_user_label)
 
 __all__ = ["UserAdmissions", "Country", "City", "Academy", "Syllabus", "Cohort", "CohortUser", "CohortTimeSlot"]
@@ -103,6 +122,11 @@ class Academy(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, db_index=True)
     zip_code = models.IntegerField(blank=True, null=True, db_index=True)
     white_labeled = models.BooleanField(default=False)
+    white_label_features = models.JSONField(
+        default=default_white_label_features,
+        blank=True,
+        help_text="JSON field to store white label feature configurations for example: eliminate dashboard widgets, include custom links, etc.",
+    )
 
     active_campaign_slug = models.SlugField(
         max_length=100, unique=False, null=True, default=None, blank=True, db_index=True
@@ -132,8 +156,41 @@ class Academy(models.Model):
 
     logistical_information = models.CharField(max_length=150, blank=True, null=True)
 
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="owned_academies",
+        help_text="Primary owner of the academy, typically the first admin with role 'admin'",
+        db_index=True,
+    )
+
     def default_ac_slug(self):
         return self.slug
+
+    def get_white_label_features(self):
+        """
+        Returns white_label_features merged with defaults.
+        This ensures that if new fields are added to the default structure,
+        existing academies will automatically get them.
+        """
+        return self._deep_merge_dict(default_white_label_features(), self.white_label_features or {})
+
+    @staticmethod
+    def _deep_merge_dict(default, override):
+        """
+        Deep merge two dictionaries, with override taking precedence.
+        If a key exists in both and both values are dicts, merge recursively.
+        """
+        result = default.copy()
+        for key, value in override.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = Academy._deep_merge_dict(result[key], value)
+            else:
+                result[key] = value
+        return result
 
     def __str__(self):
         return self.name
@@ -184,6 +241,16 @@ class Syllabus(models.Model):
         max_length=150, blank=True, null=True, default=None, help_text="Coma separated, E.g: HTML, CSS, Javascript"
     )
 
+    forked_from = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name='forks',
+        help_text="If this syllabus was forked/created based another one",
+    )
+
     github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
     duration_in_hours = models.IntegerField(null=True, default=None)
     duration_in_days = models.IntegerField(null=True, default=None)
@@ -206,17 +273,22 @@ class Syllabus(models.Model):
     def save(self, *args, **kwargs):
         created = not self.id
         super().save(*args, **kwargs)
-        
+
         if created:
             from .signals import syllabus_created
+
             syllabus_created.send_robust(instance=self, sender=self.__class__)
 
 
 PUBLISHED = "PUBLISHED"
 DRAFT = "DRAFT"
+DEPRECATED = "DEPRECATED"
+DELETED = "DELETED"
 VERSION_STATUS = (
     (PUBLISHED, "Published"),
     (DRAFT, "Draft"),
+    (DEPRECATED, "Deprecated"),
+    (DELETED, "Deleted"),
 )
 
 ERROR = "ERROR"
@@ -236,6 +308,15 @@ class SyllabusVersion(models.Model):
 
     version = models.PositiveSmallIntegerField(db_index=True)
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+    forked_from = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="If this syllabus version was forked/created based another one",
+        related_name='forks',
+    )
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
 
@@ -501,6 +582,20 @@ EDU_STATUS = (
 
 
 class CohortUser(models.Model):
+    """
+    Represents a user's membership in a cohort with a specific role.
+    
+    The role determines the user's permissions and responsibilities within the cohort,
+    and maps to a corresponding ProfileAcademy role for academy-wide permissions.
+    """
+
+    # Mapping of CohortUser roles to ProfileAcademy role slugs
+    ROLE_TO_PROFILE_ACADEMY_SLUG = {
+        TEACHER: "teacher",
+        ASSISTANT: "assistant",
+        REVIEWER: "homework_reviewer",
+        STUDENT: "student",
+    }
 
     def __init__(self, *args, **kwargs):
         super(CohortUser, self).__init__(*args, **kwargs)
@@ -532,6 +627,28 @@ class CohortUser(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def get_profile_academy_role_slug(self) -> str:
+        """
+        Get the ProfileAcademy role slug corresponding to this CohortUser's role.
+        
+        Returns:
+            str: The role slug for ProfileAcademy (e.g., 'teacher', 'student')
+        """
+        return self.ROLE_TO_PROFILE_ACADEMY_SLUG.get(self.role, "student")
+
+    @classmethod
+    def map_role_to_profile_academy_slug(cls, cohort_user_role: str) -> str:
+        """
+        Map a CohortUser role to its corresponding ProfileAcademy role slug.
+        
+        Args:
+            cohort_user_role: The CohortUser role (e.g., 'TEACHER', 'ASSISTANT')
+            
+        Returns:
+            str: The role slug for ProfileAcademy (e.g., 'teacher', 'assistant')
+        """
+        return cls.ROLE_TO_PROFILE_ACADEMY_SLUG.get(cohort_user_role, "student")
 
     def clean(self):
         if self.role:

@@ -829,6 +829,10 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     raise ValidationException("Cohort not found", slug="cohort-not-found")
                 cohort.append(cohort_search)
 
+        # Remove 'invite' field as it's not a ProfileAcademy model field
+        # It's only used for validation logic
+        invite = validated_data.pop("invite", None)
+
         user = None
         email = None
         status = "INVITED"
@@ -860,7 +864,6 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         # if there is not user (first time) it will be considere an invite
         if "user" not in validated_data:
-            validated_data.pop("invite")  # the front end sends invite=true so we need to remove it
             email = validated_data["email"].lower()
 
             if len(cohort) == 0:
@@ -917,9 +920,9 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     email,
                     {
                         "email": email,
-                        "subject": "Welcome to " + academy.name,
+                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
-                        "FIST_NAME": validated_data["first_name"],
+                        "FIRST_NAME": validated_data["first_name"],
                     },
                     academy=academy,
                 )
@@ -1043,6 +1046,17 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if user is None:
                 raise ValidationException("User not found", slug="user-not-found")
 
+            # Validate that plans are not being added to existing users
+            if "plans" in validated_data and validated_data["plans"]:
+                raise ValidationException(
+                    translation(
+                        en=f"Cannot add payment plans when user already exists. User {user.id} ({user.email}) should be enrolled through their existing account or payment system.",
+                        es=f"No se pueden agregar planes de pago cuando el usuario ya existe. El usuario {user.id} ({user.email}) debe inscribirse a través de su cuenta existente o sistema de pago.",
+                    ),
+                    slug="cannot-add-plans-to-existing-user",
+                    code=400,
+                )
+
             email = user.email
             token, created = Token.get_or_create(user, token_type="temporal")
             querystr = urllib.parse.urlencode(
@@ -1164,9 +1178,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     email,
                     {
                         "email": email,
-                        "subject": "Welcome to " + academy.name,
+                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
-                        "FIST_NAME": validated_data["first_name"],
+                        "FIRST_NAME": validated_data["first_name"],
                     },
                     academy=academy,
                 )
