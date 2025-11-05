@@ -31,8 +31,6 @@ ENV PGHOSTADDR="127.0.0.1"
 ENV PGDATABASE="postgres"
 COPY --chown=gitpod:gitpod postgresql-hook.bash $HOME/.bashrc.d/200-postgresql-launch
 
-# RUN pip install pipenv
-
 USER gitpod
 
 RUN rm -rf $HOME/.pyenv

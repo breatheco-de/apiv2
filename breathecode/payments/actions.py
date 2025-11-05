@@ -25,7 +25,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_api_url, get_app_url, get_user_settings
+from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
@@ -531,7 +531,7 @@ class BagHandler:
                 args, kwargs = self._lookups(service_item["service"])
 
                 service = Service.objects.filter(*args, **kwargs).first()
-                service_item, _ = ServiceItem.objects.get_or_create(
+                service_item, _ = ServiceItem.get_or_create_for_service(
                     service=service,
                     how_many=service_item["how_many"],
                     is_team_allowed=service_item.get("is_team_allowed", True),
@@ -2134,16 +2134,16 @@ def invite_user_to_subscription_team(
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
         notify_actions.send_email_message(
             "welcome_academy",
-            obj.get("email", ""),
+            subscription_seat.email,
             {
-                "email": obj.get("email", ""),
+                "email": subscription_seat.email,
                 "subject": translation(
                     lang,
-                    en=f"Invitation to join {billing_team_name} at {subscription.academy.name}",
-                    es=f"Invitación para unirse a {billing_team_name} en {subscription.academy.name}",
+                    en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
+                    es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
                 ),
-                "LINK": get_api_url() + "/v1/auth/member/invite/" + invite.token,
-                "FIST_NAME": invite.first_name or "",
+                "LINK": get_app_url(),
+                "FIST_NAME": subscription_seat.user.first_name or "",
             },
             academy=subscription.academy,
         )
@@ -2645,14 +2645,17 @@ def process_auto_recharge(
                         academy=resource.academy,
                     )
 
-                attrs = consumable.service_item.__dict__.copy()
-                attrs.pop("id")
-                attrs.pop("_state")
-                attrs.pop("how_many")
-
-                si, _ = ServiceItem.objects.get_or_create(
-                    **attrs,
+                # Clone the existing ServiceItem with a different how_many
+                original = consumable.service_item
+                si, _ = ServiceItem.get_or_create_for_service(
+                    service=original.service,
                     how_many=amount,
+                    unit_type=original.unit_type,
+                    is_renewable=original.is_renewable,
+                    is_team_allowed=original.is_team_allowed,
+                    renew_at=original.renew_at,
+                    renew_at_unit=original.renew_at_unit,
+                    sort_priority=original.sort_priority,
                 )
 
                 attrs = consumable.__dict__.copy()

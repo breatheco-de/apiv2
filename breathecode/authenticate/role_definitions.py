@@ -1,0 +1,814 @@
+"""
+Central role and capability definitions for the authentication system.
+
+This module serves as the single source of truth for:
+- All system capabilities
+- All role definitions
+- Role inheritance hierarchy
+- Role priority calculation based on inheritance
+"""
+
+from typing import TypedDict
+
+CAPABILITIES = [
+    {"slug": "read_my_academy", "description": "Read your academy information"},
+    {
+        "slug": "crud_my_academy",
+        "description": "Read, or update your academy information (very high level, almost the academy admin)",
+    },
+    {
+        "slug": "crud_member",
+        "description": "Create, update or delete academy members (very high level, almost the academy admin)",
+    },
+    {"slug": "read_member", "description": "Read academy staff member information"},
+    {"slug": "crud_student", "description": "Create, update or delete students"},
+    {"slug": "read_student", "description": "Read student information"},
+    {"slug": "read_invite", "description": "Read invites from users"},
+    {"slug": "crud_invite", "description": "Create, update or delete invites from users"},
+    {"slug": "invite_resend", "description": "Resent invites for user academies"},
+    {"slug": "read_assignment", "description": "Read assignment information"},
+    {
+        "slug": "read_assignment_sensitive_details",
+        "description": 'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"',
+    },
+    {"slug": "read_downloads", "description": "Access the list of downloads"},
+    {"slug": "read_shortlink", "description": "Access the list of marketing shortlinks"},
+    {"slug": "crud_shortlink", "description": "Create, update and delete marketing short links"},
+    {"slug": "crud_assignment", "description": "Update assignments"},
+    {
+        "slug": "task_delivery_details",
+        "description": "Get delivery URL for a task, that url can be sent to students for delivery",
+    },
+    {"slug": "read_certificate", "description": "List and read all academy certificates"},
+    {"slug": "crud_certificate", "description": "Create, update or delete student certificates"},
+    {"slug": "read_layout", "description": "Read layouts to generate new certificates"},
+    {"slug": "read_syllabus", "description": "List and read syllabus information"},
+    {"slug": "crud_syllabus", "description": "Create, update or delete syllabus versions"},
+    {"slug": "read_organization", "description": "Read academy organization details"},
+    {"slug": "crud_organization", "description": "Update, create or delete academy organization details"},
+    {"slug": "read_event", "description": "List and retrieve event information"},
+    {"slug": "crud_event", "description": "Create, update or delete event information"},
+    {"slug": "read_event_type", "description": "List and retrieve event type information"},
+    {"slug": "crud_event_type", "description": "Create, update or delete event type information"},
+    {"slug": "read_all_cohort", "description": "List all the cohorts or single cohort information"},
+    {"slug": "read_single_cohort", "description": "single cohort information related to a user"},
+    {"slug": "crud_cohort", "description": "Create, update or delete cohort info"},
+    {"slug": "read_eventcheckin", "description": "List and read all the event_checkins"},
+    {"slug": "read_survey", "description": "List all the nps answers"},
+    {"slug": "crud_survey", "description": "Create, update or delete surveys"},
+    {"slug": "read_survey_template", "description": "Read all the templates available for surveys"},
+    {"slug": "read_nps_answers", "description": "List all the nps answers"},
+    {"slug": "read_lead", "description": "List all the leads"},
+    {"slug": "read_won_lead", "description": "List all the won leads"},
+    {"slug": "crud_lead", "description": "Create, update or delete academy leads"},
+    {"slug": "read_review", "description": "Read review for a particular academy"},
+    {"slug": "crud_review", "description": "Create, update or delete academy reviews"},
+    {"slug": "read_media", "description": "List all the medias"},
+    {"slug": "crud_media", "description": "Create, update or delete academy medias"},
+    {"slug": "read_media_resolution", "description": "List all the medias resolutions"},
+    {"slug": "crud_media_resolution", "description": "Create, update or delete academy media resolutions"},
+    {"slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)"},
+    {"slug": "generate_academy_token", "description": "Create a new token only to be used by the academy"},
+    {"slug": "get_academy_token", "description": "Read the academy token"},
+    {"slug": "send_reset_password", "description": "Generate a temporal token and resend forgot password link"},
+    {"slug": "read_activity", "description": "List all the user activities"},
+    {"slug": "crud_activity", "description": "Create, update or delete a user activities"},
+    {"slug": "read_assignment", "description": "List all the assignments"},
+    {"slug": "crud_assignment", "description": "Create, update or delete a assignment"},
+    {
+        "slug": "classroom_activity",
+        "description": "To report student activities during the classroom or cohorts (Specially meant for teachers)",
+    },
+    {"slug": "academy_reporting", "description": "Get detailed reports about the academy activity"},
+    {
+        "slug": "generate_temporal_token",
+        "description": "Generate a temporal token to reset github credential or forgot password",
+    },
+    {"slug": "read_mentorship_service", "description": "Get all mentorship services from one academy"},
+    {
+        "slug": "crud_mentorship_service",
+        "description": "Create, delete or update all mentorship services from one academy",
+    },
+    {"slug": "read_mentorship_agent", "description": "Get all mentorship agents from one academy"},
+    {"slug": "read_mentorship_mentor", "description": "Get all mentorship mentors from one academy"},
+    {
+        "slug": "crud_mentorship_mentor",
+        "description": "Create, delete or update all mentorship mentors from one academy",
+    },
+    {"slug": "read_mentorship_session", "description": "Get all session from one academy"},
+    {"slug": "crud_mentorship_session", "description": "Create, delete or update all session from one academy"},
+    {"slug": "crud_freelancer_bill", "description": "Create, delete or update all freelancer bills from one academy"},
+    {"slug": "read_freelancer_bill", "description": "Read all all freelancer bills from one academy"},
+    {"slug": "crud_mentorship_bill", "description": "Create, delete or update all mentroship bills from one academy"},
+    {"slug": "read_mentorship_bill", "description": "Read all mentroship bills from one academy"},
+    {"slug": "read_asset", "description": "Read all academy registry assets"},
+    {"slug": "crud_asset", "description": "Update, create and delete registry assets"},
+    {"slug": "read_asset_error", "description": "Update, create and delete asset errors"},
+    {"slug": "crud_asset_error", "description": "Update, create and delete asset errors"},
+    {"slug": "read_content_variables", "description": "Read all academy content variables used in the asset markdowns"},
+    {
+        "slug": "crud_content_variables",
+        "description": "Update, create and delete content variables used in the asset markdowns",
+    },
+    {"slug": "webmaster", "description": "Manage the academy website and blog"},
+    {"slug": "read_tag", "description": "Read marketing tags and their details"},
+    {"slug": "crud_tag", "description": "Update, create and delete a marketing tag and its details"},
+    {"slug": "get_gitpod_user", "description": "List gitpod user the academy is consuming"},
+    {"slug": "update_gitpod_user", "description": "Update gitpod user expiration based on available information"},
+    {"slug": "get_github_user", "description": "List github user the academy is consuming"},
+    {"slug": "update_github_user", "description": "Update github user expiration based on available information"},
+    {
+        "slug": "sync_organization_users",
+        "description": "Calls for the github API and brings all org users, then tries to synch them",
+    },
+    {"slug": "read_technology", "description": "Read asset technologies"},
+    {"slug": "crud_technology", "description": "Update, create and delete asset technologies"},
+    {"slug": "read_keyword", "description": "Read SEO keywords"},
+    {"slug": "crud_keyword", "description": "Update, create and delete SEO keywords"},
+    {"slug": "read_keywordcluster", "description": "Update, create and delete asset technologies"},
+    {"slug": "crud_keywordcluster", "description": "Update, create and delete asset technologies"},
+    {
+        "slug": "read_cohort_log",
+        "description": "Read the cohort logo that contains attendance and other info logged each day",
+    },
+    {
+        "slug": "crud_cohort_log",
+        "description": "Update and delete things like the cohort attendance, teacher comments, etc",
+    },
+    {"slug": "read_category", "description": "Read categories from the content registry"},
+    {"slug": "crud_category", "description": "Update and delete categories from the content registry"},
+    {"slug": "read_project_invoice", "description": "Read the financial status of a project and invoices"},
+    {"slug": "crud_project_invoice", "description": "Create, Update and delete project invoices"},
+    {"slug": "read_freelance_projects", "description": "Read project details without financials"},
+    {"slug": "read_lead_gen_app", "description": "Read lead generation apps"},
+    {"slug": "chatbot_message", "description": "Speak with a chatbot"},
+    {"slug": "start_or_end_class", "description": "start or end a class"},
+    {
+        "slug": "get_academy_auth_settings",
+        "description": "Settings related to authentication, for example the github auth integration",
+    },
+    {
+        "slug": "crud_academy_auth_settings",
+        "description": "Settings related to authentication, for example the github auth integration",
+    },
+    {
+        "slug": "get_academy_feedback_settings",
+        "description": "Settings related to feedback module, for example the chosen template for a cohort survey",
+    },
+    {
+        "slug": "crud_academy_feedback_settings",
+        "description": "Settings related to feedback module, for example the chosen template for a cohort survey",
+    },
+    {"slug": "start_or_end_event", "description": "Start or end event"},
+    {"slug": "read_provisioning_bill", "description": "Read provisioning activities and bills"},
+    {"slug": "crud_provisioning_activity", "description": "Create, update or delete provisioning activities"},
+    {"slug": "read_service", "description": "Read service details"},
+    {"slug": "crud_service", "description": "Create, update or delete service definitions"},
+    {"slug": "read_academyservice", "description": "Read Academy Service details"},
+    {"slug": "crud_academyservice", "description": "Crud Academy Service details"},
+    {
+        "slug": "crud_provisioning_bill",
+        "description": "Crud Provisioning Bills",
+    },
+    {"slug": "read_calendly_organization", "description": "Access info about the calendly integration"},
+    {"slug": "create_calendly_organization", "description": "Add a new calendly integration"},
+    {"slug": "reset_calendly_organization", "description": "Reset the calendly token"},
+    {"slug": "delete_calendly_organization", "description": "Delete calendly integration"},
+    {"slug": "crud_assessment", "description": "Manage student quizzes and assessments"},
+    {"slug": "read_user_assessment", "description": "Read user assessment submissions"},
+    {"slug": "read_talent_pipeline", "description": "Read users from the talent pipeline"},
+    {"slug": "read_subscription", "description": "Read subscriptions and plan financings of other users"},
+    {
+        "slug": "crud_subscription",
+        "description": "Create, update or delete subscriptions and plan financings of other users",
+    },
+    {"slug": "crud_plan", "description": "Create, update or delete plans and services related to them"},
+    {"slug": "read_paymentmethod", "description": "Read payment methods for the academy"},
+    {"slug": "crud_paymentmethod", "description": "Create, update or delete payment methods for the academy"},
+    {
+        "slug": "upload_assignment_telemetry",
+        "description": "Allow upload the user's telemetry in a LearnPack assignment",
+    },
+    {
+        "slug": "validate_assignment_flag",
+        "description": "Ideal for CTFs and other assignments that require flag validation",
+    },
+    {
+        "slug": "crud_flag",
+        "description": "Create flags for the assets and assignments",
+    },
+    {
+        "slug": "read_commission",
+        "description": "Read commission reports and data for geek creators",
+    },
+    {
+        "slug": "crud_commission",
+        "description": "Create, update or delete commission data and reports",
+    },
+    {
+        "slug": "read_consumable",
+        "description": "Read user service consumables to understand how many units are available",
+    },
+]
+
+BASE_ROLES = [
+    {
+        "slug": "admin",
+        "name": "Admin",
+        "caps": [c["slug"] for c in CAPABILITIES],
+    },
+    {
+        "slug": "academy_token",
+        "name": "Academy Token",
+        "caps": [
+            "read_member",
+            "read_downloads",
+            "read_syllabus",
+            "read_student",
+            "read_all_cohort",
+            "read_media",
+            "read_my_academy",
+            "read_invite",
+            "read_lead",
+            "crud_lead",
+            "crud_tag",
+            "read_tag",
+            "read_technology",
+            "read_review",
+            "read_shortlink",
+            "read_nps_answers",
+            "read_survey_template",
+            "read_won_lead",
+            "read_asset",
+            "read_category",
+            "read_cohort_log",
+            "read_subscription",
+            "read_lead_gen_app",
+            "read_mentorship_service",
+            "read_mentorship_mentor",
+            "read_freelancer_bill",
+            "read_keywordcluster",
+            "crud_academyservice",
+            "crud_event",
+            "crud_flag",
+            "crud_mentorship_session",
+            "read_calendly_organization",
+            "crud_subscription",
+            "read_paymentmethod",
+            "crud_paymentmethod",
+            "read_consumable",
+            "validate_assignment_flag",
+        ],
+    },
+    {
+        "slug": "basic",
+        "name": "Basic (Base)",
+        "caps": [
+            "read_media",
+            "read_my_academy",
+            "read_invite",
+            "crud_activity",
+            "read_tag",
+            "academy_reporting",
+            "read_activity",
+            "read_technology",
+            "read_academyservice",
+            "read_subscription",
+            "upload_assignment_telemetry",
+        ],
+    },
+    {
+        "slug": "read_only",
+        "name": "Read Only (Base)",
+        "caps": [
+            "read_academyservice",
+            "read_member",
+            "read_syllabus",
+            "read_student",
+            "read_all_cohort",
+            "read_media",
+            "read_my_academy",
+            "read_survey_template",
+            "read_invite",
+            "read_survey",
+            "read_tag",
+            "read_layout",
+            "read_event",
+            "read_event_type",
+            "read_certificate",
+            "read_won_lead",
+            "read_eventcheckin",
+            "read_review",
+            "read_activity",
+            "read_shortlink",
+            "read_mentorship_service",
+            "read_mentorship_mentor",
+            "read_lead_gen_app",
+            "read_technology",
+            "read_subscription",
+            "read_service",
+        ],
+    },
+    {
+        "slug": "staff",
+        "name": "Staff (Base)",
+        "caps": [
+            "chatbot_message",
+            "read_member",
+            "read_syllabus",
+            "read_student",
+            "read_all_cohort",
+            "read_media",
+            "read_my_academy",
+            "read_invite",
+            "get_academy_token",
+            "crud_activity",
+            "read_survey",
+            "read_tag",
+            "read_layout",
+            "read_event",
+            "read_event_type",
+            "read_certificate",
+            "academy_reporting",
+            "crud_media",
+            "read_won_lead",
+            "read_eventcheckin",
+            "read_review",
+            "read_activity",
+            "read_shortlink",
+            "read_mentorship_service",
+            "read_mentorship_mentor",
+            "read_lead_gen_app",
+            "read_technology",
+            "read_service",
+            "read_subscription",
+            "read_survey_template",
+        ],
+    },
+    {
+        "slug": "student",
+        "name": "Student",
+        "caps": [
+            "crud_assignment",
+            "chatbot_message",
+            "read_syllabus",
+            "read_assignment",
+            "read_single_cohort",
+            "read_asset",
+            "read_my_academy",
+            "read_all_cohort",
+            "crud_activity",
+            "read_mentorship_service",
+            "read_mentorship_mentor",
+            "read_cohort_log",
+            "read_service",
+            "read_subscription",
+            "read_academyservice",
+            "upload_assignment_telemetry",
+            "validate_assignment_flag",
+        ],
+    },
+]
+
+
+class RoleType(TypedDict):
+    slug: str
+    name: str
+    caps: list[str]
+    extends: list[str]  # Track which roles this extends from
+
+
+def extend(roles, slugs):
+    """Get all capabilities from roles with given slugs."""
+    caps_groups = [item["caps"] for item in roles if item["slug"] in slugs]
+    inhered_caps = []
+    for roles in caps_groups:
+        inhered_caps = inhered_caps + roles
+    return list(dict.fromkeys(inhered_caps))
+
+
+def remove_duplicates(slugs):
+    """Remove duplicate slugs from a list."""
+    return list(dict.fromkeys(slugs))
+
+
+def get_extended_roles():
+    """
+    Get all roles including base roles and extended roles.
+    Each role includes an 'extends' field listing which roles it inherits from.
+    """
+    # Start with base roles
+    roles = []
+    for role in BASE_ROLES:
+        roles.append({**role, "extends": []})
+
+    # Add extended roles with their inheritance information
+    roles.append(
+        {
+            "slug": "content_writer",
+            "name": "Content Writer",
+            "extends": ["basic"],
+            "caps": extend(roles, ["basic"])
+            + [
+                "read_keywordcluster",
+                "webmaster",
+                "read_member",
+                "read_media",
+                "read_keyword",
+                "read_my_academy",
+                "read_asset",
+                "crud_asset",
+                "read_asset_error",
+                "crud_asset_error",
+                "read_category",
+                "crud_category",
+                "read_content_variables",
+                "crud_content_variables",
+                "crud_assessment",
+                "crud_flag",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "assistant",
+            "name": "Teacher Assistant",
+            "extends": ["staff"],
+            "caps": extend(roles, ["staff"])
+            + [
+                "read_assignment",
+                "crud_assignment",
+                "read_subscription",
+                "read_cohort_activity",
+                "read_nps_answers",
+                "classroom_activity",
+                "read_event",
+                "read_event_type",
+                "task_delivery_details",
+                "crud_cohort",
+                "read_cohort_log",
+                "crud_cohort_log",
+                "start_or_end_class",
+                "start_or_end_event",
+                "read_user_assessment",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "career_support",
+            "name": "Career Support Specialist",
+            "extends": ["staff"],
+            "caps": extend(roles, ["staff"])
+            + [
+                "read_certificate",
+                "crud_certificate",
+                "crud_shortlink",
+                "crud_cohort",
+                "read_mentorship_mentor",
+                "crud_mentorship_mentor",
+                "read_mentorship_service",
+                "crud_mentorship_service",
+                "read_mentorship_session",
+                "crud_mentorship_session",
+                "read_assignment",
+                "crud_assignment",
+                "crud_mentorship_bill",
+                "read_mentorship_bill",
+                "classroom_activity",
+                "read_asset",
+                "task_delivery_details",
+                "read_talent_pipeline",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "career_support_head",
+            "name": "Career Support Head",
+            "extends": ["career_support", "content_writer"],
+            "caps": extend(roles, ["career_support", "content_writer"]) + ["crud_syllabus"],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "admissions_developer",
+            "name": "Admissions Developer",
+            "extends": ["staff"],
+            "caps": extend(roles, ["staff"])
+            + [
+                "crud_lead",
+                "crud_student",
+                "crud_cohort",
+                "read_all_cohort",
+                "read_lead",
+                "read_activity",
+                "invite_resend",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "syllabus_coordinator",
+            "name": "Syllabus Coordinator",
+            "extends": ["staff", "content_writer"],
+            "caps": extend(roles, ["staff", "content_writer"])
+            + [
+                "crud_syllabus",
+                "crud_certificate",
+                "crud_media",
+                "crud_technology",
+                "read_freelancer_bill",
+                "crud_freelancer_bill",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "culture_and_recruitment",
+            "name": "Culture and Recruitment",
+            "extends": ["staff"],
+            "caps": extend(roles, ["staff"]) + ["crud_member", "crud_media"],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "graphic_designer",
+            "name": "Graphic Designer",
+            "extends": ["staff"],
+            "caps": extend(roles, ["staff"])
+            + ["read_event", "read_event_type", "crud_media", "read_asset", "read_media"],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "community_manager",
+            "name": "Manage Syllabus, Exercises and all academy content",
+            "extends": ["staff", "graphic_designer"],
+            "caps": extend(roles, ["staff", "graphic_designer"])
+            + [
+                "crud_lead",
+                "crud_event",
+                "crud_event_type",
+                "read_eventcheckin",
+                "read_nps_answers",
+                "read_lead",
+                "read_all_cohort",
+                "crud_asset",
+                "read_keywordcluster",
+                "read_keyword",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "growth_manager",
+            "name": "Growth Manager",
+            "extends": ["staff", "community_manager"],
+            "caps": extend(roles, ["staff", "community_manager"])
+            + [
+                "crud_media",
+                "read_consumable",
+                "read_activity",
+                "read_lead",
+                "read_user_assessment",
+                "read_won_lead",
+                "crud_review",
+                "crud_shortlink",
+                "crud_tag",
+                "crud_keyword",
+                "crud_keywordcluster",
+                "crud_asset",
+                "read_category",
+                "read_asset_error",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "accountant",
+            "name": "Accountant",
+            "extends": ["staff"],
+            "caps": extend(roles, ["staff"])
+            + [
+                "read_freelancer_bill",
+                "crud_freelancer_bill",
+                "crud_mentorship_bill",
+                "read_mentorship_bill",
+                "read_project_invoice",
+                "crud_project_invoice",
+                "get_github_user",
+                "read_provisioning_bill",
+                "crud_provisioning_bill",
+                "read_commission",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "homework_reviewer",
+            "name": "Homework Reviewer",
+            "extends": ["assistant"],
+            "caps": extend(roles, ["assistant"]) + ["crud_student"],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "teacher",
+            "name": "Teacher",
+            "extends": ["assistant"],
+            "caps": extend(roles, ["assistant"]) + ["crud_cohort"],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "geek_creator",
+            "name": "Geek Creator",
+            "extends": ["teacher"],
+            "caps": extend(roles, ["teacher"])
+            + [
+                "read_commission",
+                "crud_commission",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "academy_coordinator",
+            "name": "Mentor in residence",
+            "extends": ["teacher"],
+            "caps": extend(roles, ["teacher"])
+            + [
+                "read_consumable",
+                "crud_syllabus",
+                "crud_cohort",
+                "crud_student",
+                "crud_survey",
+                "read_won_lead",
+                "crud_member",
+                "send_reset_password",
+                "generate_temporal_token",
+                "crud_certificate",
+                "crud_review",
+                "read_assignment_sensitive_details",
+                "crud_shortlink",
+                "invite_resend",
+                "crud_invite",
+                "crud_mentorship_mentor",
+                "read_mentorship_mentor",
+                "read_mentorship_service",
+                "crud_mentorship_service",
+                "read_mentorship_session",
+                "crud_mentorship_session",
+                "crud_mentorship_bill",
+                "read_mentorship_bill",
+                "crud_freelancer_bill",
+                "get_gitpod_user",
+                "update_gitpod_user",
+                "get_github_user",
+                "update_github_user",
+                "read_project_invoice",
+                "read_freelance_projects",
+                "sync_organization_users",
+                "read_provisioning_bill",
+                "read_calendly_organization",
+                "reset_calendly_organization",
+                "create_calendly_organization",
+                "delete_calendly_organization",
+                "get_academy_feedback_settings",
+                "crud_academy_feedback_settings",
+                "get_academy_auth_settings",
+                "crud_subscription",
+                "read_paymentmethod",
+                "crud_paymentmethod",
+                "read_commission",
+                "crud_commission",
+            ],
+        }
+    )
+
+    roles.append(
+        {
+            "slug": "country_manager",
+            "name": "Country Manager",
+            "extends": [
+                "academy_coordinator",
+                "student",
+                "career_support",
+                "growth_manager",
+                "admissions_developer",
+                "syllabus_coordinator",
+                "accountant",
+            ],
+            "caps": extend(
+                roles,
+                [
+                    "academy_coordinator",
+                    "student",
+                    "career_support",
+                    "growth_manager",
+                    "admissions_developer",
+                    "syllabus_coordinator",
+                    "accountant",
+                ],
+            )
+            + [
+                "crud_my_academy",
+                "crud_organization",
+                "generate_academy_token",
+                "send_reset_password",
+                "generate_temporal_token",
+                "read_organization",
+                "crud_provisioning_bill",
+                "crud_subscription",
+                "read_paymentmethod",
+                "crud_paymentmethod",
+            ],
+        }
+    )
+
+    return roles
+
+
+def calculate_role_hierarchy_depth(role_slug: str, roles: list[dict] = None, memo: dict = None) -> int:
+    """
+    Calculate the hierarchy depth of a role based on its inheritance chain.
+    Higher depth means higher priority (more powerful role).
+
+    Args:
+        role_slug: The slug of the role to calculate depth for
+        roles: List of all role definitions (fetched if not provided)
+        memo: Memoization dictionary to avoid recalculating
+
+    Returns:
+        int: The depth in the hierarchy (0 for base roles, higher for extended roles)
+    """
+    if memo is None:
+        memo = {}
+
+    if role_slug in memo:
+        return memo[role_slug]
+
+    if roles is None:
+        roles = get_extended_roles()
+
+    # Find the role definition
+    role = next((r for r in roles if r["slug"] == role_slug), None)
+    if not role:
+        memo[role_slug] = 0
+        return 0
+
+    # If role doesn't extend anything, it's a base role (depth 1)
+    if not role.get("extends") or len(role["extends"]) == 0:
+        memo[role_slug] = 1
+        return 1
+
+    # Calculate depth as 1 + max depth of parent roles
+    parent_depths = [calculate_role_hierarchy_depth(parent, roles, memo) for parent in role["extends"]]
+    depth = 1 + max(parent_depths)
+
+    memo[role_slug] = depth
+    return depth
+
+
+def get_role_priority(role_slug: str) -> int:
+    """
+    Get the priority of a role based on its hierarchy depth.
+    Higher priority means more permissions/higher in the hierarchy.
+
+    This replaces hardcoded priority mappings with dynamic calculation
+    based on the role inheritance structure.
+
+    Args:
+        role_slug: The slug of the role
+
+    Returns:
+        int: The priority (higher = more powerful role)
+    """
+    return calculate_role_hierarchy_depth(role_slug)
+
+
+def get_all_role_priorities() -> dict[str, int]:
+    """
+    Get a dictionary mapping all role slugs to their priorities.
+
+    Returns:
+        dict: Mapping of role_slug -> priority
+    """
+    roles = get_extended_roles()
+    return {role["slug"]: get_role_priority(role["slug"]) for role in roles}
+
