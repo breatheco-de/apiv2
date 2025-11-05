@@ -29,6 +29,24 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+class SyllabusVersionTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    version = serpy.Field()
+    slug = serpy.MethodField()
+    name = serpy.MethodField()
+    syllabus = serpy.MethodField()
+
+    def get_slug(self, obj):
+        return obj.syllabus.slug if obj.syllabus else None
+
+    def get_name(self, obj):
+        return obj.syllabus.name if obj.syllabus else None
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
 
 class GetTinyCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -37,6 +55,7 @@ class GetTinyCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
+    syllabus_version = SyllabusVersionTinySerializer(required=False)
 
 
 class CountrySerializer(serpy.Serializer):
@@ -164,6 +183,8 @@ class GetSyllabusScheduleSerializer(serpy.Serializer):
 class GetSmallSyllabusScheduleSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
+    schedule_type = serpy.Field()
+    description = serpy.Field()
     syllabus = serpy.MethodField()
 
     def get_syllabus(self, obj):
@@ -227,6 +248,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     country = CountrySerializer(required=False)
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
+    icon_url = serpy.Field()
     active_campaign_slug = serpy.Field()
     logistical_information = serpy.Field()
     latitude = serpy.Field()
@@ -242,6 +264,14 @@ class GetBigAcademySerializer(serpy.Serializer):
     linkedin_url = serpy.Field()
     youtube_url = serpy.Field()
     is_hidden_on_prework = serpy.Field()
+    white_labeled = serpy.Field()
+    white_label_url = serpy.Field()
+    white_label_features = serpy.MethodField()
+    owner = UserSmallSerializer(required=False)
+
+    def get_white_label_features(self, obj):
+        """Return white_label_features merged with defaults."""
+        return obj.get_white_label_features()
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
@@ -381,6 +411,32 @@ class GetCohortSerializer(serpy.Serializer):
     is_hidden_on_prework = serpy.Field()
     available_as_saas = serpy.Field()
     shortcuts = serpy.Field()
+
+    micro_cohorts = serpy.MethodField()
+    def get_micro_cohorts(self, obj):
+        cohorts = obj.micro_cohorts.all()
+        
+        # Sort by cohorts_order if it exists
+        if obj.cohorts_order:
+            # Parse the comma-separated IDs
+            order_ids = [int(id.strip()) for id in obj.cohorts_order.split(',') if id.strip().isdigit()]
+            
+            # Create a dictionary for quick lookup
+            cohort_dict = {cohort.id: cohort for cohort in cohorts}
+            
+            # Build sorted list based on order_ids
+            sorted_cohorts = []
+            for cohort_id in order_ids:
+                if cohort_id in cohort_dict:
+                    sorted_cohorts.append(cohort_dict[cohort_id])
+            
+            # Append any micro cohorts not in the order list at the end
+            remaining = [c for c in cohorts if c.id not in order_ids]
+            sorted_cohorts.extend(remaining)
+            
+            cohorts = sorted_cohorts
+        
+        return GetTinyCohortSerializer(cohorts, many=True).data
 
     def get_timeslots(self, obj):
         timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
@@ -724,22 +780,56 @@ class GetSyllabusSerializer(serpy.Serializer):
 #        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
     status_fields = ["status"]
-    country = CountrySerializer(required=True)
-    city = CitySerializer(required=True)
 
     class Meta:
         model = Academy
-        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework"]
+        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework", "logo_url", "icon_url"]
+        extra_kwargs = {
+            "name": {"required": False},
+            "street_address": {"required": False},
+            "country": {"required": False},
+            "city": {"required": False},
+            "logo_url": {"required": False},
+            "icon_url": {"required": False},
+            "slug": {"read_only": True},  # Prevent slug from being updated
+        }
+
+    def validate_logo_url(self, value):
+        """Validate that the logo_url is a valid and accessible URL."""
+        if value:
+            from breathecode.utils.url_validator import test_url
+
+            try:
+                test_url(value, allow_relative=False, allow_hash=False)
+            except Exception as e:
+                raise ValidationException(
+                    f"Invalid logo URL: {str(e)}", slug="invalid-logo-url", code=400
+                )
+        return value
+
+    def validate_icon_url(self, value):
+        """Validate that the icon_url is a valid and accessible URL."""
+        if value:
+            from breathecode.utils.url_validator import test_url
+
+            try:
+                test_url(value, allow_relative=False, allow_hash=False)
+            except Exception as e:
+                raise ValidationException(
+                    f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400
+                )
+        return value
 
     def validate(self, data):
-
-        if "slug" in data and data["slug"] != self.instance.slug:
-            raise ValidationException("Academy slug cannot be updated")
+        # Additional validation: ensure slug is never in the data
+        if "slug" in data:
+            raise ValidationException("Academy slug cannot be updated", slug="academy-slug-cannot-be-updated")
 
         return data
 
     def update(self, instance, validated_data):
-        del validated_data["slug"]
+        # Extra safety: remove slug if somehow it made it through
+        validated_data.pop("slug", None)
         return super().update(instance, validated_data)
 
 

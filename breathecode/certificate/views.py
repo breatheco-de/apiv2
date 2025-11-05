@@ -20,52 +20,75 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .actions import generate_certificate
 from .models import Badge, LayoutDesign, Specialty, UserSpecialty
-from .serializers import LayoutDesignSerializer, SpecialtySerializer, UserSpecialtySerializer
+from .serializers import BadgeSerializer, LayoutDesignSerializer, SpecialtySerializer, UserSpecialtySerializer
 from .tasks import async_generate_certificate
 
 logger = logging.getLogger(__name__)
 
 
-@api_view(["GET"])
-@permission_classes([AllowAny])
-@capable_of("read_certificate")
-def get_academy_specialties(request, academy_id=None):
+class AcademySpecialtiesView(APIView, GenerateLookupsMixin):
+    """List academy specialties with pagination and filtering."""
 
-    # Filter by the old syllabus (OneToOneField) and the new syllabuses (ManyToManyField)
-    items = Specialty.objects.filter(syllabuses__academy_owner=academy_id).distinct()
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(paginate=True)
 
-    like = request.GET.get("like")
-    if like:
-        items = items.filter(Q(name__icontains=like) | Q(syllabuses__name__icontains=like))
+    @capable_of("read_certificate")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
 
-    syllabus_slug = request.GET.get("syllabus_slug")
-    if syllabus_slug:
-        items = items.filter(syllabuses__slug=syllabus_slug).distinct()
+        # Filter by the old syllabus (OneToOneField) and the new syllabuses (ManyToManyField)
+        # Exclude deleted specialties
+        items = Specialty.objects.filter(
+            syllabuses__academy_owner=academy_id
+        ).exclude(status=Specialty.DELETED).distinct()
 
-    allowed_sort_fields = ["created_at", "-created_at", "name", "-name"]
-    sort = request.GET.get("sort", "-created_at")
-    if sort not in allowed_sort_fields:
-        return Response({"detail": "Invalid sort field"}, status=status.HTTP_400_BAD_REQUEST)
+        like = request.GET.get("like")
+        if like:
+            items = items.filter(Q(name__icontains=like) | Q(syllabuses__name__icontains=like))
 
-    items = items.order_by(sort)
+        syllabus_slug = request.GET.get("syllabus_slug")
+        if syllabus_slug:
+            items = items.filter(syllabuses__slug=syllabus_slug).distinct()
 
-    paginator = HeaderLimitOffsetPagination()
-    page = paginator.paginate_queryset(items, request)
+        # Custom sorting: by number of graduates (total_issued from metrics), then alphabetically
+        # Use JSON field operations to extract total_issued from metrics
+        items = items.extra(
+            select={
+                'total_issued': "COALESCE((metrics->>'total_issued')::integer, 0)"
+            }
+        ).order_by('-total_issued', 'name')
 
-    serializer = SpecialtySerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = SpecialtySerializer(items, many=True)
 
-    if paginator.is_paginate(request):
-        return paginator.get_paginated_response(serializer.data)
-
-    return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
 
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def get_badges(request):
-    items = Badge.objects.all()
-    serializer = SpecialtySerializer(items, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+class BadgesView(APIView, GenerateLookupsMixin):
+    """List badges with pagination and filtering."""
+
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        items = Badge.objects.all()
+        
+        # Add filtering by specialty if provided
+        specialty_slug = request.GET.get("specialty_slug")
+        if specialty_slug:
+            items = items.filter(specialties__slug=specialty_slug).distinct()
+        
+        # Add search functionality
+        like = request.GET.get("like")
+        if like:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+        
+        items = handler.queryset(items)
+        serializer = BadgeSerializer(items, many=True)
+
+        return handler.response(serializer.data)
 
 
 @api_view(["GET"])

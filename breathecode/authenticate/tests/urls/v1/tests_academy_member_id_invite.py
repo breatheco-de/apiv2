@@ -94,7 +94,7 @@ def generate_send_email_message(self, model):
             "academy_invite",
             email,
             {
-                "subject": f"Invitation to study at {model.academy.name}",
+                "subject": f"{model.academy.name} is inviting you to {model.academy.slug}.4Geeks.com",
                 "invites": [
                     {
                         "id": model.profile_academy.id,

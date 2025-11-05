@@ -346,6 +346,10 @@ class ProfileAcademy(models.Model):
                 instance=self, sender=ProfileAcademy, old_role=old_role, new_role=self.role
             )
 
+        # Update tracked fields after save
+        self.__old_status = self.status
+        self.__old_role = self.role
+
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)

@@ -71,7 +71,10 @@ def mark_as_unavailable_as_saas(modeladmin, request, queryset):
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):
     form = AcademyForm
-    list_display = ("id", "slug", "name", "city")
+    list_display = ("id", "slug", "name", "city", "owner")
+    list_filter = ("owner", "city", "country")
+    search_fields = ("slug", "name", "owner__email", "owner__first_name", "owner__last_name")
+    raw_id_fields = ("owner",)
     actions = [mark_as_available_as_saas, mark_as_unavailable_as_saas]
 
 
