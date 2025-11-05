@@ -609,22 +609,6 @@ class AcademyCohortSetCohortView(APIView):
         """Add cohorts to a CohortSet."""
         lang = get_user_language(request)
 
-        handler = self.extensions(request)
-        query = handler.lookup.build(
-            lang,
-            ints={
-                "in": [
-                    "id",
-                ],
-            },
-            strings={
-                "in": [
-                    "slug",
-                ],
-            },
-            fix={"lower": "slug"},
-        )
-
         errors = []
         cohort_set = (
             CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
@@ -632,7 +616,33 @@ class AcademyCohortSetCohortView(APIView):
         if not cohort_set:
             errors.append(C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found")))
 
-        if not (items := Cohort.objects.filter(query)):
+        # Build query for cohorts
+        cohort_ids = request.GET.get("id")
+        cohort_slugs = request.GET.get("slug")
+        
+        query = Q()
+        if cohort_ids:
+            # Handle comma-separated IDs or single ID
+            ids = [int(x.strip()) for x in cohort_ids.split(",")] if "," in cohort_ids else [int(cohort_ids)]
+            query |= Q(id__in=ids)
+        
+        if cohort_slugs:
+            # Handle comma-separated slugs or single slug
+            slugs = [x.strip().lower() for x in cohort_slugs.split(",")] if "," in cohort_slugs else [cohort_slugs.lower()]
+            query |= Q(slug__in=slugs)
+        
+        if not query:
+            errors.append(
+                C(translation(lang, en="Missing id or slug parameter", es="Falta el parámetro id o slug", slug="missing-params"))
+            )
+        
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        # Filter cohorts by academy
+        items = Cohort.objects.filter(query, academy__id=academy_id)
+        
+        if not items.exists():
             errors.append(
                 C(translation(lang, en="Cohort not found", es="Cohort no encontrada", slug="cohort-not-found"))
             )
@@ -655,22 +665,6 @@ class AcademyCohortSetCohortView(APIView):
         """Remove cohorts from a CohortSet."""
         lang = get_user_language(request)
 
-        handler = self.extensions(request)
-        query = handler.lookup.build(
-            lang,
-            ints={
-                "in": [
-                    "id",
-                ],
-            },
-            strings={
-                "in": [
-                    "slug",
-                ],
-            },
-            fix={"lower": "slug"},
-        )
-
         errors = []
         cohort_set = (
             CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
@@ -678,7 +672,33 @@ class AcademyCohortSetCohortView(APIView):
         if not cohort_set:
             errors.append(C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found")))
 
-        if not (items := Cohort.objects.filter(query)):
+        # Build query for cohorts
+        cohort_ids = request.GET.get("id")
+        cohort_slugs = request.GET.get("slug")
+        
+        query = Q()
+        if cohort_ids:
+            # Handle comma-separated IDs or single ID
+            ids = [int(x.strip()) for x in cohort_ids.split(",")] if "," in cohort_ids else [int(cohort_ids)]
+            query |= Q(id__in=ids)
+        
+        if cohort_slugs:
+            # Handle comma-separated slugs or single slug
+            slugs = [x.strip().lower() for x in cohort_slugs.split(",")] if "," in cohort_slugs else [cohort_slugs.lower()]
+            query |= Q(slug__in=slugs)
+        
+        if not query:
+            errors.append(
+                C(translation(lang, en="Missing id or slug parameter", es="Falta el parámetro id o slug", slug="missing-params"))
+            )
+        
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        # Filter cohorts by academy
+        items = Cohort.objects.filter(query, academy__id=academy_id)
+        
+        if not items.exists():
             errors.append(
                 C(translation(lang, en="Cohort not found", es="Cohort no encontrada", slug="cohort-not-found"))
             )
