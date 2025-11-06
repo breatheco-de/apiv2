@@ -22,7 +22,7 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.authenticate.actions import get_academy_from_body, get_user_language
+from breathecode.authenticate.actions import get_academy_from_body, get_user_language, get_user_settings
 from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
@@ -40,6 +40,7 @@ from breathecode.payments.actions import (
 )
 from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
+    AcademyPaymentSettings,
     AcademyService,
     Bag,
     CohortSet,
@@ -48,8 +49,8 @@ from breathecode.payments.models import (
     Coupon,
     Currency,
     EventTypeSet,
-    FinancingOption,
     FinancialReputation,
+    FinancingOption,
     Invoice,
     MentorshipServiceSet,
     PaymentMethod,
@@ -71,11 +72,11 @@ from breathecode.payments.serializers import (
     GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
     GetBagSerializer,
+    GetCohortSerializer,
+    GetCohortSetSerializer,
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
     GetCouponWithPlansSerializer,
-    GetCohortSerializer,
-    GetCohortSetSerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetFinancingOptionSerializer,
@@ -97,6 +98,7 @@ from breathecode.payments.serializers import (
     ServiceItemSerializer,
     ServiceSerializer,
 )
+from breathecode.payments.services.coinbase import CoinbaseCommerce
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
 from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
@@ -501,11 +503,9 @@ class AcademyCohortSetView(APIView):
 
         if cohort_set_id or cohort_set_slug:
             # Get specific cohort set
-            cohort_set = (
-                CohortSet.objects.filter(
-                    Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
-                ).first()
-            )
+            cohort_set = CohortSet.objects.filter(
+                Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
+            ).first()
             if not cohort_set:
                 raise ValidationException(
                     translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"),
@@ -525,7 +525,7 @@ class AcademyCohortSetView(APIView):
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
         """Create a new CohortSet."""
-        lang = get_user_language(request)
+        # lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
@@ -544,9 +544,9 @@ class AcademyCohortSetView(APIView):
         """Update a CohortSet."""
         lang = get_user_language(request)
 
-        cohort_set = (
-            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
-        )
+        cohort_set = CohortSet.objects.filter(
+            Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
+        ).first()
         if not cohort_set:
             raise ValidationException(
                 translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
@@ -566,9 +566,9 @@ class AcademyCohortSetView(APIView):
         """Delete a CohortSet."""
         lang = get_user_language(request)
 
-        cohort_set = (
-            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
-        )
+        cohort_set = CohortSet.objects.filter(
+            Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
+        ).first()
         if not cohort_set:
             raise ValidationException(
                 translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
@@ -590,9 +590,9 @@ class AcademyCohortSetCohortView(APIView):
         handler = self.extensions(request)
         lang = get_user_language(request)
 
-        cohort_set = (
-            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
-        )
+        cohort_set = CohortSet.objects.filter(
+            Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
+        ).first()
         if not cohort_set:
             raise ValidationException(
                 translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"), code=404
@@ -610,38 +610,49 @@ class AcademyCohortSetCohortView(APIView):
         lang = get_user_language(request)
 
         errors = []
-        cohort_set = (
-            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
-        )
+        cohort_set = CohortSet.objects.filter(
+            Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
+        ).first()
         if not cohort_set:
-            errors.append(C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found")))
+            errors.append(
+                C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"))
+            )
 
         # Build query for cohorts
         cohort_ids = request.GET.get("id")
         cohort_slugs = request.GET.get("slug")
-        
+
         query = Q()
         if cohort_ids:
             # Handle comma-separated IDs or single ID
             ids = [int(x.strip()) for x in cohort_ids.split(",")] if "," in cohort_ids else [int(cohort_ids)]
             query |= Q(id__in=ids)
-        
+
         if cohort_slugs:
             # Handle comma-separated slugs or single slug
-            slugs = [x.strip().lower() for x in cohort_slugs.split(",")] if "," in cohort_slugs else [cohort_slugs.lower()]
+            slugs = (
+                [x.strip().lower() for x in cohort_slugs.split(",")] if "," in cohort_slugs else [cohort_slugs.lower()]
+            )
             query |= Q(slug__in=slugs)
-        
+
         if not query:
             errors.append(
-                C(translation(lang, en="Missing id or slug parameter", es="Falta el parámetro id o slug", slug="missing-params"))
+                C(
+                    translation(
+                        lang,
+                        en="Missing id or slug parameter",
+                        es="Falta el parámetro id o slug",
+                        slug="missing-params",
+                    )
+                )
             )
-        
+
         if errors:
             raise ValidationException(errors, code=400)
 
         # Filter cohorts by academy
         items = Cohort.objects.filter(query, academy__id=academy_id)
-        
+
         if not items.exists():
             errors.append(
                 C(translation(lang, en="Cohort not found", es="Cohort no encontrada", slug="cohort-not-found"))
@@ -666,38 +677,49 @@ class AcademyCohortSetCohortView(APIView):
         lang = get_user_language(request)
 
         errors = []
-        cohort_set = (
-            CohortSet.objects.filter(Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id).first()
-        )
+        cohort_set = CohortSet.objects.filter(
+            Q(id=cohort_set_id) | Q(slug=cohort_set_slug), academy__id=academy_id
+        ).first()
         if not cohort_set:
-            errors.append(C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found")))
+            errors.append(
+                C(translation(lang, en="CohortSet not found", es="CohortSet no encontrado", slug="not-found"))
+            )
 
         # Build query for cohorts
         cohort_ids = request.GET.get("id")
         cohort_slugs = request.GET.get("slug")
-        
+
         query = Q()
         if cohort_ids:
             # Handle comma-separated IDs or single ID
             ids = [int(x.strip()) for x in cohort_ids.split(",")] if "," in cohort_ids else [int(cohort_ids)]
             query |= Q(id__in=ids)
-        
+
         if cohort_slugs:
             # Handle comma-separated slugs or single slug
-            slugs = [x.strip().lower() for x in cohort_slugs.split(",")] if "," in cohort_slugs else [cohort_slugs.lower()]
+            slugs = (
+                [x.strip().lower() for x in cohort_slugs.split(",")] if "," in cohort_slugs else [cohort_slugs.lower()]
+            )
             query |= Q(slug__in=slugs)
-        
+
         if not query:
             errors.append(
-                C(translation(lang, en="Missing id or slug parameter", es="Falta el parámetro id o slug", slug="missing-params"))
+                C(
+                    translation(
+                        lang,
+                        en="Missing id or slug parameter",
+                        es="Falta el parámetro id o slug",
+                        slug="missing-params",
+                    )
+                )
             )
-        
+
         if errors:
             raise ValidationException(errors, code=400)
 
         # Filter cohorts by academy
         items = Cohort.objects.filter(query, academy__id=academy_id)
-        
+
         if not items.exists():
             errors.append(
                 C(translation(lang, en="Cohort not found", es="Cohort no encontrada", slug="cohort-not-found"))
@@ -1406,7 +1428,7 @@ class MeSubscriptionView(APIView):
             )
 
         if invoice := request.GET.get("invoice"):
-            ids = [int(x) for x in invoice if x.isnumeric()]
+            ids = [int(x) for x in invoice.split(",") if x.isnumeric()]
             subscriptions = subscriptions.filter(invoices__id__in=ids)
             plan_financings = plan_financings.filter(invoices__id__in=ids)
 
@@ -1673,8 +1695,8 @@ class AcademySubscriptionView(APIView):
                 .exclude(status="ERROR")
                 .exclude(status="EXPIRED")
                 .exclude(Q(status="CANCELLED") & (Q(next_payment_at__lt=now) | Q(valid_until__lt=now)))
-                .select_related('subscriptionbillingteam')
-                .prefetch_related('subscriptionbillingteam__seats')
+                .select_related("subscriptionbillingteam")
+                .prefetch_related("subscriptionbillingteam__seats")
                 .first()
             )
 
@@ -1728,7 +1750,7 @@ class AcademySubscriptionView(APIView):
             items = items.filter(user__id=int(user_id))
 
         # Optimize query to include billing team for seat information
-        items = items.select_related('subscriptionbillingteam').prefetch_related('subscriptionbillingteam__seats')
+        items = items.select_related("subscriptionbillingteam").prefetch_related("subscriptionbillingteam__seats")
 
         items = handler.queryset(items)
 
@@ -3470,10 +3492,8 @@ class PayView(APIView):
                         plan = bag.plans.filter().first()
                         option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
                         original_price = option.monthly_price
-
                         # Apply pricing ratio first
                         adjusted_price, _, c = apply_pricing_ratio(original_price, bag.country_code, option)
-
                         if c and c.code != bag.currency.code:
                             bag.currency = c
                             bag.save()
@@ -3541,6 +3561,64 @@ class PayView(APIView):
                         )
                     )
 
+                payment_method = request.data.get("payment_method")
+
+                if payment_method == "coinbase" and amount > 0:
+
+                    return_url = request.data.get("return_url")
+
+                    if not return_url:
+                        logger.warning(
+                            f"Missing return_url for Coinbase payment - user_id={request.user.id}, bag_id={bag.id}"
+                        )
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Return url is required",
+                                es="Return url es requerido",
+                                slug="return-url-required",
+                            ),
+                            code=400,
+                        )
+
+                    coinbase = CoinbaseCommerce(academy=bag.academy)
+                    coinbase.set_language(lang)
+                    charge = coinbase.create_charge(
+                        bag=bag,
+                        amount=amount,
+                        metadata={
+                            "bag_id": bag.id,
+                            "user_id": request.user.id,
+                            "amount": str(amount),
+                            "chosen_period": chosen_period,
+                            "how_many_installments": bag.how_many_installments,
+                            "is_recurrent": recurrent,
+                            "original_price": original_price,
+                            "selected_cohort": request.GET.get("selected_cohort"),
+                            "user_email": request.user.email,
+                        },
+                        return_url=return_url,
+                    )
+
+                    # Stop the flow here, a webhook will finish the process and create the invoice
+                    logger.info(
+                        f"PayView: Coinbase charge created - charge_id={charge['id']}, hosted_url={charge.get('hosted_url')}"
+                    )
+                    return Response(
+                        {"hosted_url": charge.get("hosted_url"), "charge_id": charge.get("id")},
+                        status=status.HTTP_201_CREATED,
+                    )
+
+                elif payment_method != "stripe":
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Payment method not supported",
+                            es="Método de pago no soportado",
+                            slug="payment-method-not-supported",
+                        ),
+                        code=400,
+                    )
                 if amount >= 0.50:
                     s = Stripe(academy=bag.academy)
                     s.set_language(lang)
@@ -3634,6 +3712,1098 @@ class PayView(APIView):
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise e
+
+
+class CoinbaseChargeView(APIView):
+
+    def get(self, request, charge_id):
+        lang = get_user_language(request)
+        academy_id = request.GET.get("academy")
+        academy = None
+
+        if academy_id:
+            academy = Academy.objects.filter(id=academy_id).first()
+            if not academy:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Academy not found",
+                        es="Academia no encontrada",
+                    ),
+                    code=404,
+                    slug="academy-not-found",
+                )
+
+        coinbase = CoinbaseCommerce(academy=academy)
+        coinbase.set_language(lang)
+
+        try:
+            charge = coinbase.get_charge(charge_id)
+            return Response(charge, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error retrieving charge: {str(e)}",
+                    es=f"Error obteniendo cargo: {str(e)}",
+                ),
+                code=500,
+                slug="charge-retrieval-error",
+            )
+
+    def handle_paid_charge(self, request):
+        """
+        Handles successful charge events (pending/confirmed).
+        Updates PENDING invoice to FULFILLED and delivers service.
+        """
+
+        from django.utils import timezone
+
+        lang = get_user_language(request)
+        event_data = request.data.get("event", {})
+        charge_data = event_data.get("data", {})
+        charge_id = charge_data.get("id")
+        metadata = charge_data.get("metadata", {})
+        utc_now = timezone.now()
+
+        invoice = Invoice.objects.filter(coinbase_charge_id=charge_id).first()
+        if not invoice:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invoice not found",
+                    es="Invoice no encontrado",
+                ),
+                code=404,
+                slug="invoice-not-found",
+            )
+
+        # Check if already FULFILLED
+        if invoice.status == "FULFILLED":
+            return Response({"message": "Payment already processed"}, status=200)
+
+        with transaction.atomic():
+            sid = transaction.savepoint()
+
+            try:
+                updated_count = Invoice.objects.filter(id=invoice.id, status="PENDING").update(
+                    status="FULFILLED", paid_at=utc_now
+                )
+
+                # Avoid problems with duplicated webhooks calls at the same time
+                if updated_count == 0:
+                    transaction.savepoint_rollback(sid)
+                    return Response(
+                        {"message": "Payment already processed by another webhook"},
+                        status=200,
+                    )
+
+                # Refresh to get updated invoice
+                invoice.refresh_from_db()
+
+                bag = invoice.bag
+
+                subscription_id = metadata.get("subscription_id")
+                plan_financing_id = metadata.get("plan_financing_id")
+
+                is_renewal = subscription_id or plan_financing_id
+
+                if not bag:
+                    raise ValidationException(
+                        "Bag not found",
+                        code=404,
+                        slug="bag-not-found",
+                    )
+                bag.status = "PAID"
+                bag.save()
+
+                coupons = bag.coupons.all()
+
+                if is_renewal:
+                    subscription = None
+                    plan_financing = None
+
+                    if subscription_id:
+                        try:
+                            subscription = Subscription.objects.get(id=int(float(subscription_id)))
+                        except Subscription.DoesNotExist:
+                            subscription = None
+                    elif plan_financing_id:
+                        try:
+                            plan_financing = PlanFinancing.objects.get(id=int(float(plan_financing_id)))
+
+                        except PlanFinancing.DoesNotExist:
+                            plan_financing = None
+
+                    # Fallback: search by user and plans if not found via metadata
+                    if not subscription and not plan_financing:
+                        subscription = (
+                            Subscription.objects.filter(
+                                user=invoice.user,
+                                plans__in=bag.plans.all(),
+                            )
+                            .exclude(status__in=["EXPIRED", "CANCELLED", "DEPRECATED"])
+                            .first()
+                        )
+                        plan_financing = (
+                            PlanFinancing.objects.filter(
+                                user=invoice.user,
+                                plans__in=bag.plans.all(),
+                            )
+                            .exclude(status__in=["EXPIRED", "CANCELLED", "DEPRECATED"])
+                            .first()
+                        )
+
+                    if subscription:
+                        # Determine if charge_subscription should be called immediately
+                        should_charge_now = (
+                            utc_now >= subscription.next_payment_at
+                            and subscription.status == Subscription.Status.PAYMENT_ISSUE
+                        )
+
+                        transaction.savepoint_commit(sid)
+
+                        transaction.on_commit(lambda: subscription.invoices.add(invoice))
+
+                        if should_charge_now:
+                            transaction.on_commit(lambda: tasks.charge_subscription.delay(subscription.id))
+
+                    elif plan_financing:
+                        # Determine if charge_plan_financing should be called immediately
+                        should_charge_now = (
+                            utc_now >= plan_financing.next_payment_at
+                            and plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE
+                        )
+
+                        transaction.savepoint_commit(sid)
+
+                        transaction.on_commit(lambda: plan_financing.invoices.add(invoice))
+
+                        if should_charge_now:
+                            transaction.on_commit(lambda: tasks.charge_plan_financing.delay(plan_financing.id))
+
+                    else:
+                        # RENEWAL detected but no Subscription or PlanFinancing found
+
+                        transaction.savepoint_commit(sid)
+
+                        # Send error email to user
+                        transaction.on_commit(
+                            lambda inv_id=invoice.id: tasks.send_coinbase_error_email.delay(
+                                inv_id,
+                                "subscription_not_found",
+                                "Payment successful but subscription/plan_financing not found",
+                            )
+                        )
+
+                    return Response(status=status.HTTP_200_OK)
+                else:
+                    # Extract original_price from metadata
+                    original_price = metadata.get("original_price")
+                    if original_price is None:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Error processing payment: missing original_price",
+                                es="Error procesando pago: falta original_price",
+                            ),
+                            code=500,
+                            slug="payment-processing-error",
+                        )
+                    original_price = float(original_price)
+
+                    # Dispatch appropriate tasks based on bag configuration
+                    if bag:
+                        # Extract how_many_installments with default
+                        how_many_installments = metadata.get("how_many_installments", 0)
+                        how_many_installments = int(float(how_many_installments)) if how_many_installments else 0
+
+                        chosen_period = metadata.get("chosen_period")
+
+                        if chosen_period and chosen_period not in ["MONTH", "QUARTER", "HALF", "YEAR", "NO_SET"]:
+                            chosen_period = None
+
+                        bag.chosen_period = chosen_period or "NO_SET"
+                        bag.how_many_installments = how_many_installments
+                        bag.token = None
+                        bag.expires_at = None
+                        bag.save()
+
+                        if coupons.exists() and original_price:
+                            try:
+                                if original_price > 0:
+                                    actions.create_seller_reward_coupons(list(coupons), original_price, invoice.user)
+                            except Exception:
+                                pass
+
+                        transaction.savepoint_commit(sid)
+                        if original_price == 0:
+                            tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
+
+                        elif bag.how_many_installments > 0:
+                            tasks.build_plan_financing.delay(
+                                bag.id, invoice.id, conversion_info="", externally_managed=True
+                            )
+
+                        else:
+                            tasks.build_subscription.delay(
+                                bag.id, invoice.id, conversion_info="", externally_managed=True
+                            )
+
+                    if plans := bag.plans.all():
+                        for plan in plans:
+                            actions.grant_student_capabilities(
+                                invoice.user,
+                                plan,
+                                selected_cohort=metadata.get(
+                                    "selected_cohort"
+                                ),  # No selected_cohort in webhook context
+                            )
+
+                    has_referral_coupons = (
+                        invoice.status == Invoice.Status.FULFILLED
+                        and invoice.amount > 0
+                        and coupons.exclude(referral_type="NO_REFERRAL").exists()
+                    )
+
+                    if has_referral_coupons:
+                        # Use on_commit to ensure everything is saved first (same as PayView)
+                        transaction.on_commit(
+                            lambda inv_id=invoice.id: actions.register_referral_from_invoice.delay(inv_id)
+                        )
+                    tasks_activity.add_activity.delay(
+                        invoice.user.id,
+                        "checkout_completed",
+                        related_type="payments.Invoice",
+                        related_id=invoice.id,
+                    )
+
+                    return Response(status=status.HTTP_200_OK)
+
+            except Exception as e:
+                transaction.savepoint_rollback(sid)
+
+                # Send email to user (with Redis lock to prevent duplicates)
+                try:
+                    tasks.send_coinbase_error_email.delay(
+                        invoice_id=invoice.id,
+                        error_type="processing_error",
+                        error_summary=str(e)[:200],
+                    )
+                except Exception:
+                    pass
+
+                raise
+
+    def handle_failed_charge(self, request):
+        event_data = request.data.get("event", {})
+        charge_data = event_data.get("data", {})
+        charge_id = charge_data.get("id")
+        event_type = event_data.get("type")
+
+        # Find invoice by charge_id
+        invoice = Invoice.objects.filter(coinbase_charge_id=charge_id).first()
+
+        if not invoice:
+            # Payment failed before invoice was created
+            return
+
+        try:
+            with transaction.atomic():
+                sid = transaction.savepoint()
+
+                try:
+                    # Update invoice status to REJECTED
+                    Invoice.objects.filter(id=invoice.id).update(
+                        status="REJECTED",
+                        coinbase_charge_id=charge_id,
+                    )
+                    invoice.refresh_from_db()
+
+                    # Update bag
+                    bag = invoice.bag
+                    if bag:
+                        # Check if it's a renewal BEFORE changing the status
+                        is_renewal = bag.status == "RENEWAL"
+
+                        bag.status = "ERROR"
+                        bag.was_delivered = False
+                        bag.save()
+
+                        # Only revoke access for NEW PURCHASE, not RENEWAL
+                        # For RENEWAL, charge_subscription already handles PAYMENT_ISSUE
+                        if not is_renewal:
+                            # Revoke access: Mark subscription as ERROR (if it was already created)
+                            # Subscription only exists if charge:pending was already processed and build_subscription finished
+                            subscription = Subscription.objects.filter(invoices=invoice).first()
+                            if subscription:
+                                subscription.status = "ERROR"
+                                subscription.save()
+
+                                # Send email to user (only if subscription was already created)
+                                try:
+                                    tasks.send_coinbase_error_email.delay(
+                                        invoice_id=invoice.id,
+                                        error_type="failed_payment",
+                                        error_summary="Payment failed after subscription was created",
+                                    )
+                                except Exception:
+                                    pass
+
+                            # Revoke access: Mark plan financing as ERROR (if it was already created)
+                            plan_financing = PlanFinancing.objects.filter(invoices=invoice).first()
+                            if plan_financing:
+                                plan_financing.status = "ERROR"
+                                plan_financing.save()
+
+                    # Log critical activity
+                    try:
+                        tasks_activity.add_activity.delay(
+                            invoice.user.id,
+                            "payment_revoked",
+                            related_type="payments.Invoice",
+                            related_id=invoice.id,
+                        )
+                    except Exception:
+                        pass
+
+                    transaction.savepoint_commit(sid)
+
+                    return Response(
+                        {"status": "access_revoked", "event": event_type, "invoice_status": "REJECTED"}, status=200
+                    )
+
+                except Exception:
+                    transaction.savepoint_rollback(sid)
+                    raise
+
+        except Exception:
+            raise ValidationException(
+                "Error revoking access - manual intervention required",
+                code=500,
+                slug="revocation-error",
+            )
+
+
+class CoinbaseWebhookView(CoinbaseChargeView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            lang = get_user_language(request)
+            raw_body = request.body
+
+            signature = request.headers.get("X-CC-Webhook-Signature")
+            if not signature:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Missing signature",
+                        es="Falta la firma",
+                        slug="missing-signature",
+                    ),
+                    code=400,
+                )
+
+            event_data = request.data.get("event", {})
+            charge_data = event_data.get("data", {})
+            metadata = charge_data.get("metadata", {})
+            charge_id = charge_data.get("id")
+            event_type = event_data.get("type")
+
+            if event_type == "charge:created":
+                return Response(status=status.HTTP_200_OK)
+
+            # Extract bag_id from metadata
+            bag_id = metadata.get("bag_id")
+            if bag_id is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid webhook: missing bag_id",
+                        es="Webhook inválido: falta bag_id",
+                    ),
+                    code=400,
+                    slug="missing-bag-id",
+                )
+            bag_id = int(float(bag_id))
+
+            bag = Bag.objects.filter(id=bag_id).first()
+            if not bag:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Bag not found",
+                        es="Bolsa no encontrada",
+                    ),
+                    code=404,
+                    slug="bag-not-found",
+                )
+
+            coinbase_method = PaymentMethod.objects.filter(is_crypto=True, academy=bag.academy).first()
+
+            # Extract amount from metadata
+            amount = metadata.get("amount")
+            if amount is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid webhook: missing amount",
+                        es="Webhook inválido: falta amount",
+                    ),
+                    code=400,
+                    slug="missing-amount",
+                )
+            amount = float(amount)
+
+            utc_now = timezone.now()
+
+            invoice = Invoice.objects.filter(user=bag.user, coinbase_charge_id=charge_id).first()
+
+            if not invoice:
+                try:
+                    invoice, created = Invoice.objects.get_or_create(
+                        coinbase_charge_id=charge_id,
+                        defaults={
+                            "bag": bag,
+                            "user": bag.user,
+                            "amount": amount,
+                            "currency": bag.currency,
+                            "status": "PENDING",
+                            "externally_managed": True,
+                            "academy": bag.academy,
+                            "paid_at": utc_now,
+                            "payment_method": coinbase_method,
+                        },
+                    )
+                except Invoice.MultipleObjectsReturned:
+                    invoice = Invoice.objects.filter(coinbase_charge_id=charge_id).first()
+
+            coinbase = CoinbaseCommerce(academy=invoice.academy)
+            coinbase.set_language(lang)
+
+            if not coinbase.verify_webhook_signature(signature, raw_body):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid webhook signature",
+                        es="Firma de webhook inválida",
+                    ),
+                    slug="invalid-webhook-signature",
+                )
+
+            if event_type == "charge:pending":
+                return self.handle_paid_charge(request)
+
+            if event_type == "charge:confirmed":
+                if invoice.status == Invoice.Status.FULFILLED:
+                    return Response(status=status.HTTP_200_OK)
+
+                return self.handle_paid_charge(request)
+
+            if event_type == "charge:failed":
+                if invoice.status == Invoice.Status.FULFILLED:
+                    return self.handle_failed_charge(request)
+                return Response(status=status.HTTP_200_OK)
+
+            # Unknown or unhandled event type
+            return Response(status=status.HTTP_200_OK)
+        except ValidationException:
+            raise
+        except PaymentException:
+            raise
+        except Exception as e:
+            # Try to get invoice to send error email
+            try:
+                event_data = request.data.get("event", {})
+                charge_data = event_data.get("data", {})
+                charge_id = charge_data.get("id")
+                invoice = Invoice.objects.filter(coinbase_charge_id=charge_id).first()
+
+                if invoice:
+                    tasks.send_coinbase_error_email.delay(
+                        invoice_id=invoice.id,
+                        error_type="webhook_error",
+                        error_summary=str(e)[:200],
+                    )
+            except Exception:
+                pass
+
+            raise ValidationException(f"Webhook processing failed: {str(e)}", code=500, slug="webhook-error")
+
+
+class RenewSubscriptionView(APIView):
+    """
+    Renewal view for subscriptions, called from the renew view in the frontend.
+    """
+
+    def post(self, request):
+        lang = get_user_language(request)
+        settings = get_user_settings(request.user.id)
+        subscription_id = request.data.get("subscription")
+        payment_method = request.data.get("payment_method")
+
+        if not payment_method:
+            raise ValidationException(
+                translation(lang, en="Payment method is required", es="El método de pago es requerido"),
+                slug="payment-method-required",
+                code=404,
+            )
+
+        if not subscription_id:
+            raise ValidationException(
+                translation(lang, en="Subscription is required", es="La suscripción es requerida"),
+                slug="subscription-required",
+                code=400,
+            )
+
+        subscription = Subscription.objects.filter(id=subscription_id, user=request.user).first()
+
+        if not subscription:
+            raise ValidationException(
+                translation(lang, en="Subscription not found", es="Suscripción no encontrada"),
+                slug="subscription-not-found",
+                code=404,
+            )
+
+        utc_now = timezone.now()
+
+        if subscription.status in [
+            Subscription.Status.CANCELLED,
+            Subscription.Status.EXPIRED,
+            Subscription.Status.DEPRECATED,
+        ]:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cannot renew: subscription is {subscription.status.lower()}",
+                    es=f"No se puede renovar: la suscripción está {subscription.status.lower()}",
+                ),
+                slug="subscription-not-renewable",
+                code=400,
+            )
+
+        if subscription.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This plan has been discontinued. We will send you the migrating options soon.",
+                    es="Este plan ha sido discontinuado. Te enviaremos las opciones de migración pronto.",
+                ),
+                slug="plan-discontinued",
+                code=400,
+            )
+
+        if subscription.valid_until and subscription.valid_until < utc_now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This subscription has expired permanently",
+                    es="Esta suscripción ha expirado permanentemente",
+                ),
+                slug="subscription-expired-permanently",
+                code=400,
+            )
+
+        payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
+        if not payment_settings or not payment_settings.early_renewal_window_days:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy payment settings not configured. Please contact support.",
+                    es="Configuración de pagos de la academia no configurada. Por favor contacta a soporte.",
+                ),
+                slug="payment-settings-not-configured",
+                code=500,
+            )
+
+        early_renewal_window_days = payment_settings.early_renewal_window_days
+
+        renewal_window_start = subscription.next_payment_at - timedelta(days=early_renewal_window_days)
+        if utc_now < subscription.next_payment_at:
+            if early_renewal_window_days == 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Cannot renew before payment due date. Your next payment is due on {subscription.next_payment_at.strftime('%B %d, %Y')}.",
+                        es=f"No se puede renovar antes de la fecha de vencimiento. Tu próximo pago vence el {subscription.next_payment_at.strftime('%B %d, %Y')}.",
+                    ),
+                    slug="no-early-renewal-allowed",
+                    code=400,
+                )
+
+            if utc_now < renewal_window_start:
+                raise ValidationException(
+                    translation(lang, en="Too early to renew", es="Muy temprano para renovar"),
+                    slug="too-early-to-renew",
+                    code=400,
+                )
+
+        if utc_now <= subscription.next_payment_at or subscription.status == Subscription.Status.PAYMENT_ISSUE:
+            check_until = (
+                utc_now if subscription.status == Subscription.Status.PAYMENT_ISSUE else subscription.next_payment_at
+            )
+
+            recent_payment = (
+                subscription.invoices.filter(
+                    status="FULFILLED",
+                    bag__was_delivered=False,
+                    paid_at__gte=renewal_window_start,
+                    paid_at__lte=check_until,
+                )
+                .order_by("-paid_at")
+                .first()
+            )
+
+            if recent_payment:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"This subscription was already renewed on {recent_payment.paid_at.strftime('%B %d, %Y')}. "
+                        f"Your next payment is due on {subscription.next_payment_at.strftime('%B %d, %Y')}.",
+                        es=f"Esta suscripción ya fue renovada el {recent_payment.paid_at.strftime('%B %d, %Y')}. "
+                        f"Tu próximo pago vence el {subscription.next_payment_at.strftime('%B %d, %Y')}.",
+                    ),
+                    slug="already-renewed",
+                    code=400,
+                )
+
+        try:
+            with transaction.atomic():
+                if payment_method == "coinbase":
+                    existing_bag = (
+                        Bag.objects.filter(
+                            user=subscription.user,
+                            status="RENEWAL",
+                            plans=subscription.plans.first(),
+                            amount_per_month=subscription.plans.first().price_per_month,
+                            amount_per_quarter=subscription.plans.first().price_per_quarter,
+                            amount_per_half=subscription.plans.first().price_per_half,
+                            amount_per_year=subscription.plans.first().price_per_year,
+                            was_delivered=False,
+                            created_at__gte=utc_now - timedelta(hours=24),
+                        )
+                        .order_by("-created_at")
+                        .first()
+                    )
+
+                    if existing_bag:
+                        bag = existing_bag
+                    else:
+                        bag = actions.get_bag_from_subscription(subscription, settings)
+
+                    if not bag:
+                        raise ValidationException(
+                            translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
+                            slug="error-getting-bag",
+                            code=404,
+                        )
+
+                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+
+                    coupons = bag.coupons.all()
+                    if coupons:
+                        amount = actions.get_discounted_price(amount, coupons)
+
+                    return_url = request.data.get("return_url")
+
+                    coinbase = CoinbaseCommerce(academy=subscription.academy)
+                    coinbase.set_language(lang)
+                    charge = coinbase.create_charge(
+                        bag=bag,
+                        amount=amount,
+                        metadata={
+                            "bag_id": bag.id,
+                            "user_id": request.user.id,
+                            "amount": str(amount),
+                            "chosen_period": bag.chosen_period,
+                            "is_recurrent": True,
+                            "subscription_id": subscription.id,
+                            "user_email": request.user.email,
+                        },
+                        return_url=return_url,
+                    )
+
+                    subscription.externally_managed = True
+                    subscription.save()
+
+                    return Response(
+                        {
+                            "hosted_url": charge["hosted_url"],
+                            "charge_id": charge["id"],
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+
+                else:
+                    bag = actions.get_bag_from_subscription(subscription, settings)
+                    amount = actions.get_amount_by_chosen_period(bag, bag.chosen_period, lang)
+
+                    coupons = bag.coupons.all()
+                    if coupons:
+                        amount = actions.get_discounted_price(amount, coupons)
+
+                    try:
+                        s = Stripe(academy=subscription.academy)
+                        s.set_language(lang)
+                        invoice = s.pay(
+                            request.user,
+                            bag,
+                            amount,
+                            currency=bag.currency or subscription.academy.main_currency,
+                        )
+                    except Exception:
+                        raise ValidationException(
+                            translation(lang, en="Error paying with Stripe", es="Error al pagar con Stripe"),
+                            slug="error-paying-with-stripe",
+                            code=500,
+                        )
+
+                    subscription.invoices.add(invoice)
+                    subscription.externally_managed = False
+                    subscription.save()
+
+                    # Determine if charge_subscription should be called immediately
+                    should_charge_now = (
+                        utc_now >= subscription.next_payment_at
+                        and subscription.status == Subscription.Status.PAYMENT_ISSUE
+                    )
+
+                    if should_charge_now:
+
+                        transaction.on_commit(lambda: tasks.charge_subscription.delay(subscription.id))
+
+                    serializer = GetInvoiceSerializer(invoice, many=False)
+
+                    tasks_activity.add_activity.delay(
+                        request.user.id,
+                        "checkout_completed",
+                        related_type="payments.Invoice",
+                        related_id=serializer.instance.id,
+                    )
+
+                    data = serializer.data
+                    if coupons:
+                        serializer = GetCouponSerializer(coupons, many=True)
+                        data["coupons"] = serializer.data
+
+                    return Response(data, status=201)
+        except ValidationException:
+            raise
+        except Exception as e:
+            raise ValidationException(
+                translation(lang, en=f"Payment failed: {str(e)}", es=f"Pago falló: {str(e)}"),
+                slug="payment-failed",
+                code=500,
+            )
+
+
+class RenewPlanFinancingView(APIView):
+    """
+    Renewal view for plan financings.
+    Supports both Stripe (synchronous) and Coinbase (asynchronous) payments.
+    """
+
+    def post(self, request):
+        lang = get_user_language(request)
+        settings = get_user_settings(request.user.id)
+        plan_financing_id = request.data.get("planfinancing")
+        payment_method = request.data.get("payment_method")
+
+        if not payment_method:
+            raise ValidationException(
+                translation(lang, en="Payment method is required", es="El método de pago es requerido"),
+                slug="payment-method-required",
+                code=400,
+            )
+
+        if not plan_financing_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing is required",
+                    es="El financiamiento es requerido",
+                ),
+                slug="planfinancing-required",
+                code=400,
+            )
+
+        plan_financing = PlanFinancing.objects.filter(id=plan_financing_id, user=request.user).first()
+
+        if not plan_financing:
+            raise ValidationException(
+                translation(lang, en="Plan financing not found", es="Financiamiento no encontrado"),
+                slug="plan-financing-not-found",
+                code=404,
+            )
+
+        utc_now = timezone.now()
+
+        statuses = [
+            PlanFinancing.Status.ERROR,
+            PlanFinancing.Status.ACTIVE,
+            PlanFinancing.Status.PAYMENT_ISSUE,
+            PlanFinancing.Status.FULLY_PAID,
+        ]
+
+        no_charge_statuses = [
+            PlanFinancing.Status.CANCELLED,
+            PlanFinancing.Status.DEPRECATED,
+            PlanFinancing.Status.EXPIRED,
+        ]
+
+        if plan_financing.status in no_charge_statuses:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Cannot renew: plan financing is {plan_financing.status.lower()}",
+                    es=f"No se puede renovar: el financiamiento está {plan_financing.status.lower()}",
+                ),
+                slug="plan-financing-not-renewable",
+                code=400,
+            )
+
+        if plan_financing.plans.filter(status=Plan.Status.DISCONTINUED).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This plan has been discontinued. We will send you the migrating options soon.",
+                    es="Este plan ha sido discontinuado. Te enviaremos las opciones de migración pronto.",
+                ),
+                slug="plan-discontinued",
+                code=400,
+            )
+
+        if plan_financing.status in statuses and (
+            plan_financing.plan_expires_at < utc_now and plan_financing.valid_until < utc_now
+        ):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing with id {plan_financing_id} has expired permanently",
+                    es="El financiamiento con id {plan_financing_id} ha expirado permanentemente",
+                ),
+                slug="plan-financing-expired-permanently",
+                code=400,
+            )
+
+        payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
+        if not payment_settings:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy payment settings not configured. Please contact support.",
+                    es="Configuración de pagos de la academia no configurada. Por favor contacta a soporte.",
+                ),
+                slug="payment-settings-not-configured",
+                code=500,
+            )
+
+        early_renewal_window_days = payment_settings.early_renewal_window_days
+
+        renewal_window_start = plan_financing.next_payment_at - timedelta(days=early_renewal_window_days)
+
+        if utc_now < plan_financing.next_payment_at:
+            if early_renewal_window_days == 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Cannot renew before payment due date. Your next payment is due on {plan_financing.next_payment_at.strftime('%B %d, %Y')}.",
+                        es=f"No se puede renovar antes de la fecha de vencimiento. Tu próximo pago vence el {plan_financing.next_payment_at.strftime('%B %d, %Y')}.",
+                    ),
+                    slug="no-early-renewal-allowed",
+                    code=400,
+                )
+
+            if utc_now < renewal_window_start:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Too early to renew",
+                        es="Muy temprano para renovar",
+                    ),
+                    slug="too-early-to-renew",
+                    code=400,
+                )
+
+        invoices = plan_financing.invoices.order_by("created_at")
+        first_invoice = invoices.first()
+
+        if first_invoice is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"No invoices found for plan financing with id {plan_financing_id}",
+                    es=f"No se encontraron facturas para el financiamiento con id {plan_financing_id}",
+                ),
+                slug="no-invoices-found-for-plan-financing",
+                code=404,
+            )
+
+        if utc_now <= plan_financing.next_payment_at or plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE:
+            check_until = (
+                utc_now
+                if plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE
+                else plan_financing.next_payment_at
+            )
+
+            # Look for FULFILLED payments within the renewal window
+            recent_payment = (
+                plan_financing.invoices.filter(
+                    status="FULFILLED",
+                    paid_at__gte=renewal_window_start,
+                    paid_at__lte=check_until,
+                )
+                .order_by("-paid_at")
+                .first()
+            )
+
+            if recent_payment:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"This installment was already paid on {recent_payment.paid_at.strftime('%B %d, %Y')}. "
+                        f"Your next payment is due on {plan_financing.next_payment_at.strftime('%B %d, %Y')}.",
+                        es=f"Esta cuota ya fue pagada el {recent_payment.paid_at.strftime('%B %d, %Y')}. "
+                        f"Tu próximo pago vence el {plan_financing.next_payment_at.strftime('%B %d, %Y')}.",
+                    ),
+                    slug="already-renewed",
+                    code=400,
+                )
+
+        installments = first_invoice.bag.how_many_installments
+        remaining_installments = installments - invoices.count()
+        if remaining_installments == 0:
+            raise ValidationException(
+                translation(lang, en="All installments have been paid", es="Todas las cuotas han sido pagadas"),
+                slug="all-installments-paid",
+                code=400,
+            )
+
+        # Derive the display price per installment from the first invoice amount, but exclude reward coupons
+        amount = first_invoice.amount
+        coupons = first_invoice.bag.coupons.all() if first_invoice.bag else []
+
+        reward_coupons = [
+            coupon
+            for coupon in coupons
+            if coupon and coupon.allowed_user_id is not None and coupon.referral_type == Coupon.Referral.NO_REFERRAL
+        ]
+
+        for coupon in reward_coupons:
+            v = coupon.discount_value or 0
+
+            if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
+                factor = 1 - v
+                if factor > 0:
+                    amount /= factor
+            elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
+                amount += v
+
+        try:
+            with transaction.atomic():
+                if payment_method == "coinbase":
+                    existing_bag = (
+                        Bag.objects.filter(
+                            user=plan_financing.user,
+                            status="RENEWAL",
+                            plans=plan_financing.plans.first(),
+                            amount_per_month=plan_financing.plans.first().price_per_month,
+                            amount_per_quarter=plan_financing.plans.first().price_per_quarter,
+                            amount_per_half=plan_financing.plans.first().price_per_half,
+                            amount_per_year=plan_financing.plans.first().price_per_year,
+                            was_delivered=False,
+                            created_at__gte=utc_now - timedelta(hours=24),
+                        )
+                        .order_by("-created_at")
+                        .first()
+                    )
+
+                    if existing_bag:
+                        bag = existing_bag
+                    else:
+                        bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+
+                    if not bag:
+                        raise ValidationException(
+                            translation(lang, en="Error getting bag", es="Error al obtener la bolsa"),
+                            slug="error-getting-bag",
+                            code=404,
+                        )
+
+                    return_url = request.data.get("return_url")
+
+                    coinbase = CoinbaseCommerce(academy=plan_financing.academy)
+                    coinbase.set_language(lang)
+                    charge = coinbase.create_charge(
+                        bag=bag,
+                        amount=amount,
+                        metadata={
+                            "bag_id": bag.id,
+                            "user_id": request.user.id,
+                            "amount": str(amount),
+                            "chosen_period": bag.chosen_period,
+                            "is_recurrent": True,
+                            "plan_financing_id": plan_financing.id,
+                            "user_email": request.user.email,
+                        },
+                        return_url=return_url,
+                    )
+
+                    plan_financing.externally_managed = True
+                    plan_financing.save()
+
+                    return Response(
+                        {
+                            "hosted_url": charge["hosted_url"],
+                            "charge_id": charge["id"],
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+
+                else:
+                    bag = actions.get_bag_from_plan_financing(plan_financing, settings)
+
+                    s = Stripe(academy=plan_financing.academy)
+                    s.set_language(lang)
+
+                    invoice = s.pay(
+                        request.user, bag, amount, currency=bag.currency or plan_financing.academy.main_currency
+                    )
+
+                    plan_financing.invoices.add(invoice)
+                    plan_financing.externally_managed = False
+                    plan_financing.save()
+
+                    # Determine if charge_plan_financing should be called immediately
+                    should_charge_now = (
+                        utc_now >= plan_financing.next_payment_at
+                        and plan_financing.status == PlanFinancing.Status.PAYMENT_ISSUE
+                    )
+
+                    if should_charge_now:
+                        transaction.on_commit(lambda: tasks.charge_plan_financing.delay(plan_financing.id))
+
+                    serializer = GetInvoiceSerializer(invoice, many=False)
+
+                    tasks_activity.add_activity.delay(
+                        request.user.id,
+                        "checkout_completed",
+                        related_type="payments.Invoice",
+                        related_id=serializer.instance.id,
+                    )
+
+                    return Response(serializer.data, status=201)
+
+        except ValidationException:
+            raise
+        except Exception as e:
+            raise ValidationException(
+                translation(lang, en=f"Payment failed: {str(e)}", es=f"Pago falló: {str(e)}"),
+                slug="payment-failed",
+                code=500,
+            )
 
 
 class AcademyPlanSubscriptionView(APIView):
