@@ -1620,8 +1620,9 @@ def build_subscription(
     if not manager.exists(subscription.id):
         manager.call(subscription.id)
 
-    if days_until_next_payment > 2:
-        notification_day = days_until_next_payment - 2
+    payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
+    if payment_settings and payment_settings.early_renewal_window_days > 0:
+        notification_day = days_until_next_payment - payment_settings.early_renewal_window_days
         manager = schedule_task(notify_subscription_renewal, f"{notification_day}d")
         if not manager.exists(subscription.id):
             manager.call(subscription.id)
@@ -1734,8 +1735,9 @@ def build_plan_financing(
     if not manager.exists(financing.id):
         manager.call(financing.id)
 
-    if days_until_next_payment > 2:
-        notification_day = days_until_next_payment - 2
+    payment_settings = AcademyPaymentSettings.objects.filter(academy=financing.academy).first()
+    if payment_settings and payment_settings.early_renewal_window_days > 0:
+        notification_day = days_until_next_payment - payment_settings.early_renewal_window_days
         manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
         if not manager.exists(financing.id):
             manager.call(financing.id)
