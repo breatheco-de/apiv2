@@ -32,7 +32,6 @@ from ..views import (
     MeConsumableView,
     MeInvoiceView,
     MentorshipServiceSetView,
-    MePaymentMethodView,
     MePlanFinancingChargeView,
     MeSubscriptionCancelView,
     MeSubscriptionChargeView,
@@ -132,7 +131,6 @@ urlpatterns = [
     path("me/coupon", UserCouponView.as_view(), name="me_coupon"),
     path("me/user/coupons", MeUserCouponsView.as_view(), name="me_user_coupons"),
     path("me/user/coupons/<str:coupon_slug>", MeUserCouponsView.as_view(), name="me_user_coupons_detail"),
-    path("me/paymentmethod", MePaymentMethodView.as_view(), name="me_payment_method"),
     path(
         "me/service/blocked",
         ServiceBlocked.as_view(),

@@ -1620,7 +1620,7 @@ class PaymentMethod(models.Model):
 
     currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency", null=True, blank=True)
     is_credit_card = models.BooleanField(default=False, null=False, blank=False)
-    is_coinbase = models.BooleanField(default=False, null=False, blank=False)
+    is_crypto = models.BooleanField(default=False, null=False, blank=False)
     description = models.CharField(max_length=480, help_text="Description of the payment method")
     third_party_link = models.URLField(
         blank=True, null=True, default=None, help_text="Link of a third party payment method"
@@ -1801,7 +1801,7 @@ class Invoice(models.Model):
             self.payment_method
             and self.proof is None
             and self.status == self.Status.FULFILLED
-            and not self.payment_method.is_coinbase
+            and not self.payment_method.is_crypto
         ):
             raise forms.ValidationError(
                 "Proof of payment must be provided when payment method is setted and status is FULFILLED"

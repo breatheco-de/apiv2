@@ -460,7 +460,7 @@ def fallback_charge_subscription(self, subscription_id: int, exception: Exceptio
     invoice = subscription.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by("-id").first()
 
     if invoice:
-        coinbase_method = PaymentMethod.objects.filter(is_coinbase=True).first()
+        coinbase_method = PaymentMethod.objects.filter(is_crypto=True).first()
         if invoice.payment_method != coinbase_method and not invoice.coinbase_charge_id:
             s = Stripe(academy=subscription.academy)
             s.set_language(settings.lang)
@@ -477,23 +477,13 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
     def alert_payment_issue(message: str, button: str) -> None:
 
-        payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
-        if not payment_settings or not payment_settings.early_renewal_window_days:
-            raise AbortTask(f"Not found payment settings for academy with id {subscription.academy.id}")
-
-        early_renewal_window_days = payment_settings.early_renewal_window_days
-
         subject = translation(
             settings.lang,
             en="Your 4Geeks subscription could not be renewed",
             es="Tu suscripción 4Geeks no pudo ser renovada",
         )
 
-        params = {
-            "plan": subscription.plans.first().id,
-            "subscription_id": subscription.id,
-            "early_renewal_window_days": early_renewal_window_days,
-        }
+        params = {"plan": subscription.plans.first().id, "subscription_id": subscription.id}
 
         notify_actions.send_email_message(
             "message",
@@ -882,7 +872,6 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
     params = {
         "plan": plan_financing.plans.first().slug,
         "plan_financing_id": plan_financing.id,
-        "early_renewal_window_days": early_renewal_window_days,
     }
 
     notify_actions.send_email_message(
@@ -917,7 +906,7 @@ def fallback_charge_plan_financing(self, plan_financing_id: int, exception: Exce
     invoice = plan_financing.invoices.filter(paid_at__gte=utc_now - timedelta(days=1)).order_by("-id").first()
 
     if invoice:
-        coinbase_method = PaymentMethod.objects.filter(is_coinbase=True).first()
+        coinbase_method = PaymentMethod.objects.filter(is_crypto=True).first()
         if invoice.payment_method != coinbase_method and not invoice.coinbase_charge_id:
             s = Stripe(academy=plan_financing.academy)
             s.set_language(settings.lang)
@@ -937,23 +926,13 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
 
     def alert_payment_issue(message: str, button: str) -> None:
 
-        payment_settings = AcademyPaymentSettings.objects.filter(academy=plan_financing.academy).first()
-        if not payment_settings:
-            raise AbortTask(f"Not found payment settings for academy with id {plan_financing.academy.id}")
-
-        early_renewal_window_days = payment_settings.early_renewal_window_days or "payment_issue_status"
-
         subject = translation(
             settings.lang,
             en="Your 4Geeks subscription could not be renewed",
             es="Tu suscripción 4Geeks no pudo ser renovada",
         )
 
-        params = {
-            "plan": plan_financing.plans.first().id,
-            "plan_financing_id": plan_financing.id,
-            "early_renewal_window_days": early_renewal_window_days,
-        }
+        params = {"plan": plan_financing.plans.first().id, "plan_financing_id": plan_financing.id}
 
         notify_actions.send_email_message(
             "message",
