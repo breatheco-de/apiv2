@@ -4141,7 +4141,7 @@ class CoinbaseWebhookView(CoinbaseChargeView):
                     slug="bag-not-found",
                 )
 
-            coinbase_method = PaymentMethod.objects.filter(is_coinbase=True, academy=bag.academy).first()
+            coinbase_method = PaymentMethod.objects.filter(is_crypto=True, academy=bag.academy).first()
 
             # Extract amount from metadata
             amount = metadata.get("amount")
@@ -5524,69 +5524,3 @@ class SubscriptionSeatView(APIView):
         Consumable.objects.filter(subscription_seat_id=seat.id).update(user=None)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class MePaymentMethodView(APIView):
-    """
-    API View to retrieve the authenticated user's default payment method information.
-
-    GET /v1/payments/me/payment-method
-    - Returns default payment method info for the academy specified in header or query param
-    - Includes card details for display (brand, last4, expiration)
-    """
-
-    def get(self, request):
-        """
-        Get default payment method information for the authenticated user.
-
-        The academy is obtained from:
-        1. Header 'Academy'
-        2. Query parameter 'academy'
-
-        Returns:
-            200: Payment method information dict or None if no payment method exists
-            404: Academy not found
-            500: Error retrieving payment method from Stripe
-        """
-        lang = get_user_language(request)
-        user = request.user
-
-        from breathecode.payments.services.stripe import Stripe
-
-        # Get academy_id from header or query string
-        academy_id = request.headers.get("Academy") or request.GET.get("academy")
-
-        academy = None
-        if academy_id:
-            academy = Academy.objects.filter(id=academy_id).first()
-            if not academy:
-                raise ValidationException(
-                    translation(
-                        lang,
-                        en="Academy not found",
-                        es="Academia no encontrada",
-                        slug="academy-not-found",
-                    ),
-                    code=404,
-                )
-
-        s = Stripe(academy=academy)
-        s.set_language(lang)
-
-        try:
-            payment_method_info = s.get_payment_method_info(user)
-            return Response(payment_method_info, status=status.HTTP_200_OK)
-
-        except PaymentException as e:
-            raise e
-        except Exception as e:
-            logger.error(f"Error retrieving payment method info for user {user.id}: {str(e)}")
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Unable to retrieve payment method information. Please try again later.",
-                    es="No se pudo obtener la información del método de pago. Inténtalo de nuevo más tarde.",
-                    slug="error-retrieving-payment-method",
-                ),
-                code=500,
-            )

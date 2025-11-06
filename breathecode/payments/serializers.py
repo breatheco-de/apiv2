@@ -925,7 +925,7 @@ class GetPaymentMethod(serpy.Serializer):
     is_backed = serpy.Field()
     lang = serpy.Field()
     is_credit_card = serpy.Field()
-    is_coinbase = serpy.Field()
+    is_crypto = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
