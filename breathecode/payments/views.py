@@ -3563,7 +3563,17 @@ class PayView(APIView):
 
                 payment_method = request.data.get("payment_method")
 
-                if payment_method == "coinbase" and amount > 0:
+                if payment_method == "coinbase":
+                    if amount < 0.001:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Coinbase doesn't process amounts lower than 0.001",
+                                es="Coinbase no procesa montos menores a 0.001",
+                                slug="amount-is-too-low",
+                            ),
+                            code=400,
+                        )
 
                     return_url = request.data.get("return_url")
 
@@ -3640,7 +3650,7 @@ class PayView(APIView):
                 else:
                     raise ValidationException(
                         translation(lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"),
-                        code=500,
+                        code=400,
                     )
 
                 # Calculate is_recurrent based on:
