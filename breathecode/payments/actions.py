@@ -211,7 +211,12 @@ class PlanFinder:
         return self.get_plans_belongs(**additional_args)
 
 
-def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
+def ask_to_add_plan_and_charge_it_in_the_bag(
+    plan: Plan,
+    user: User,
+    lang: str,
+    early_renewal_subscription: Optional["Subscription"] = None,
+):
     """
     Ask to add plan to bag, and return if it must be charged or not.
     """
@@ -262,23 +267,47 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
             code=400,
         )
 
-    # avoid to buy a plan if exists a subscription with same plan with remaining days
-    if (
-        price
-        and plan.is_renewable
-        and subscriptions.filter(
-            Q(valid_until=None, next_payment_at__gte=utc_now) | Q(valid_until__gte=utc_now)
-        ).exclude(status__in=["CANCELLED", "DEPRECATED", "EXPIRED"])
-    ):
-        raise ValidationException(
-            translation(
-                lang,
-                en="You already have a subscription to this plan",
-                es="Ya tienes una suscripción a este plan",
-                slug="plan-already-bought",
-            ),
-            code=400,
-        )
+    # avoid to buy a plan if exists a subscription with same plan with remaining days, except for early renewals
+    active_subscriptions = subscriptions.filter(
+        Q(valid_until=None, next_payment_at__gte=utc_now) | Q(valid_until__gte=utc_now)
+    ).exclude(status__in=["CANCELLED", "DEPRECATED", "EXPIRED"])
+
+    if price and plan.is_renewable and active_subscriptions.exists():
+        if early_renewal_subscription:
+            if active_subscriptions.count() == 1:
+                active_sub = active_subscriptions.first()
+                if active_sub.id != early_renewal_subscription.id:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="You already have a different subscription to this plan",
+                            es="Ya tienes una suscripción diferente a este plan",
+                            slug="different-subscription-exists",
+                        ),
+                        code=400,
+                    )
+                # The active subscription IS the one being renewed - allow it (continue)
+            else:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Multiple active subscriptions found for this plan",
+                        es="Múltiples suscripciones activas encontradas para este plan",
+                        slug="multiple-active-subscriptions",
+                    ),
+                    code=400,
+                )
+        else:
+            # Not an early renewal - reject if any active subscription exists
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You already have a subscription to this plan",
+                    es="Ya tienes una suscripción a este plan",
+                    slug="plan-already-bought",
+                ),
+                code=400,
+            )
 
     # avoid to charge a plan if it has a free trial and was not bought before
     if not price or (plan_have_free_trial and not subscriptions.exists()):
@@ -626,7 +655,12 @@ def add_items_to_bag(request, bag: Bag, lang: str):
     return BagHandler(request, bag, lang).execute()
 
 
-def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, float, float, Currency]:
+def get_amount(
+    bag: Bag,
+    currency: Currency,
+    lang: str,
+    early_renewal_subscription: Optional["Subscription"] = None,
+) -> tuple[float, float, float, float, Currency]:
     def add_currency(currency: Optional[Currency] = None):
         if not currency and main_currency:
             currencies[main_currency.code.upper()] = main_currency
@@ -651,7 +685,12 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
     pricing_ratio_explanation = {"plans": [], "service_items": []}
 
     for plan in bag.plans.all():
-        must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(plan, user, lang)
+        must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(
+            plan,
+            user,
+            lang,
+            early_renewal_subscription=early_renewal_subscription,
+        )
 
         if not bag.how_many_installments and (bag.chosen_period != "NO_SET" or must_it_be_charged):
             # Get base prices
@@ -897,8 +936,12 @@ def get_bag_from_subscription(
         )
         bag.coupons.set(valid_coupons)
 
+    early_renewal_subscription = (
+        subscription if (subscription.next_payment_at and subscription.next_payment_at > utc_now) else None
+    )
+
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-        bag, subscription.currency or last_invoice.currency, lang
+        bag, subscription.currency or last_invoice.currency, lang, early_renewal_subscription=early_renewal_subscription
     )
 
     bag.save()
@@ -1164,7 +1207,6 @@ def get_available_coupons(
             .only(*cou_fields)
             .first()
         )
-        print("special_offers", special_offer)
 
         if special_offer:
             manage_coupon(special_offer)
@@ -1175,7 +1217,6 @@ def get_available_coupons(
         .select_related("seller__user", "allowed_user")
         .only(*cou_fields)
     )
-    print("cupones no expirados", valid_coupons)
 
     max = max_coupons_allowed()
 
