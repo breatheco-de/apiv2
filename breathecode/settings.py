@@ -19,13 +19,9 @@ import dj_database_url
 import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
-from dotenv import load_dotenv
 from linked_services.core import settings
 
 from breathecode.setup import configure_redis
-
-load_dotenv()
-
 
 settings.set_settings(app_name="breathecode")
 
@@ -585,10 +581,3 @@ django_heroku.settings(locals(), databases=False)
 
 # django_heroku does not support the new storages properly required by django 5.0
 del locals()["STATICFILES_STORAGE"]
-
-try:
-    from importlib import import_module
-
-    import_module("breathecode.settings.local_commands")
-except ModuleNotFoundError:
-    pass
