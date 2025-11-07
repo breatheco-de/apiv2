@@ -585,3 +585,10 @@ django_heroku.settings(locals(), databases=False)
 
 # django_heroku does not support the new storages properly required by django 5.0
 del locals()["STATICFILES_STORAGE"]
+
+try:
+    from importlib import import_module
+
+    import_module("breathecode.settings.local_commands")
+except ModuleNotFoundError:
+    pass
