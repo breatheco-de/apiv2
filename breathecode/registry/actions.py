@@ -601,26 +601,37 @@ def clean_asset_readme(asset: Asset, silent=True):
     Clean the asset readme, if silent is True, it will not raise an exception if the readme is not found
     """
     if asset.readme_raw is None or asset.readme_raw == "":
+        logger.info(f"Skipping clean_asset_readme for {asset.slug}: readme_raw is empty")
         return asset
 
+    logger.info(f"Cleaning readme for asset {asset.slug}")
     asset.last_cleaning_at = timezone.now()
     try:
+        logger.debug(f"Cleaning relative paths for {asset.slug}")
         asset = clean_readme_relative_paths(asset)
+        logger.debug(f"Hiding comments for {asset.slug}")
         asset = clean_readme_hide_comments(asset)
+        logger.debug(f"Replacing private GitHub urls for {asset.slug}")
         asset = replace_private_github_urls(asset)
+        logger.debug(f"Cleaning H1s for {asset.slug}")
         asset = clean_h1s(asset)
+        logger.debug(f"Replacing content variables for {asset.slug}")
         asset = clean_content_variables(asset)
 
         readme = asset.get_readme(parse=True, silent=silent)
         if "html" in readme:
             asset.html = readme["html"]
 
+        asset.readme = Asset.encode(readme.get("decoded", ""))
+
         asset.cleaning_status = "OK"
         asset.save()
+        logger.info(f"Finished clean_asset_readme for {asset.slug} with status {asset.cleaning_status}")
     except Exception as e:
         asset.cleaning_status = "ERROR"
         asset.cleaning_status_details = str(e)
         asset.save()
+        logger.exception(f"Error cleaning readme for {asset.slug}: {str(e)}")
 
     return asset
 
