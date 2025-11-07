@@ -10,7 +10,7 @@ from breathecode.admissions.actions import ImportCohortTimeSlots
 from breathecode.assignments.models import Task
 from breathecode.assignments.serializers import TaskGETSmallSerializer
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, CredentialsGoogle
+from breathecode.authenticate.models import CredentialsDiscord, CredentialsGithub, CredentialsGoogle, ProfileAcademy
 from breathecode.authenticate.serializers import GetPermissionSmallSerializer, SettingsSerializer
 from breathecode.utils import localize_query, serializers, serpy
 
@@ -211,6 +211,14 @@ class GoogleSmallSerializer(serpy.Serializer):
     google_id = serpy.Field()
     expires_at = serpy.Field()
     created_at = serpy.Field()
+
+
+class DiscordSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    discord_id = serpy.Field()
+    created_at = serpy.Field()
+    joined_servers = serpy.Field()
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -698,6 +706,7 @@ class UserMeSerializer(serpy.Serializer):
     date_joined = serpy.Field()
     github = serpy.MethodField()
     google = serpy.MethodField()
+    discord = serpy.MethodField()
     profile = ProfileSerializer(required=False)
     cohorts = serpy.MethodField()
     roles = serpy.MethodField()
@@ -715,6 +724,12 @@ class UserMeSerializer(serpy.Serializer):
         if google is None:
             return None
         return GoogleSmallSerializer(google).data
+
+    def get_discord(self, obj):
+        discord = CredentialsDiscord.objects.filter(user=obj.id).first()
+        if discord is None:
+            return None
+        return DiscordSmallSerializer(discord).data
 
     def get_roles(self, obj):
         roles = ProfileAcademy.objects.filter(user=obj.id)

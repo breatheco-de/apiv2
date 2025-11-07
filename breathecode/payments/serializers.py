@@ -7,17 +7,17 @@ from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
+    AcademyService,
+    Bag,
+    CohortSet,
     Currency,
     FinancingOption,
-    AcademyService,
     PaymentMethod,
     Plan,
     PlanOfferTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
-    Bag,
-    CohortSet,
 )
 from breathecode.utils import serializers, serpy
 
@@ -446,6 +446,7 @@ class GetCouponSerializer(serpy.Serializer):
     referral_type = serpy.Field()
     referral_value = serpy.Field()
     auto = serpy.Field()
+    allowed_user = GetUserSmallSerializer(many=False, required=False)
     offered_at = serpy.Field()
     expires_at = serpy.Field()
 
@@ -602,6 +603,7 @@ class GetCohortSetSerializer(serpy.Serializer):
     def get_cohorts(self, obj):
         return GetCohortSerializer(obj.cohorts.filter(), many=True).data
 
+
 class GetTinyCohortSetSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -727,25 +729,25 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
-    
+
     # Billing team and seat information
-    # has_billing_team = serpy.MethodField()
+    has_billing_team = serpy.MethodField()
     seats_count = serpy.MethodField()
     seats_limit = serpy.MethodField()
 
     def get_has_billing_team(self, obj):
         """Check if this financing/subscription has a billing team."""
-        return hasattr(obj, 'subscriptionbillingteam')
+        return hasattr(obj, "subscriptionbillingteam")
 
     def get_seats_count(self, obj):
         """Get number of active seats in the billing team."""
-        if hasattr(obj, 'subscriptionbillingteam'):
+        if hasattr(obj, "subscriptionbillingteam"):
             return obj.subscriptionbillingteam.seats.filter(is_active=True).count()
         return None
 
     def get_seats_limit(self, obj):
         """Get total seat limit for the billing team."""
-        if hasattr(obj, 'subscriptionbillingteam'):
+        if hasattr(obj, "subscriptionbillingteam"):
             return obj.subscriptionbillingteam.seats_limit
         return None
 
@@ -923,6 +925,7 @@ class GetPaymentMethod(serpy.Serializer):
     is_backed = serpy.Field()
     lang = serpy.Field()
     is_credit_card = serpy.Field()
+    is_crypto = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)
