@@ -27,6 +27,8 @@ from breathecode.payments.models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
     PlanOffer,
     PlanOfferTranslation,
     PlanServiceItem,
@@ -246,6 +248,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "unit_type",
         "how_many",
         "service_item",
+        "plan_financing_team",
+        "plan_financing_seat",
         "user",
         "subscription",
         "plan_financing",
@@ -257,6 +261,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "user__email",
         "subscription__user__email",
         "plan_financing__user__email",
+        "plan_financing_team__financing__user__email",
+        "plan_financing_seat__email",
     ]
     raw_id_fields = [
         "user",
@@ -266,8 +272,16 @@ class ConsumableAdmin(admin.ModelAdmin):
         "mentorship_service_set",
         "subscription_billing_team",
         "subscription_seat",
+        "plan_financing_team",
+        "plan_financing_seat",
     ]
     actions = [grant_service_permissions]
+
+    def plan_financing_team(self, obj):
+        return getattr(obj, "plan_financing_team", None)
+
+    def plan_financing_seat(self, obj):
+        return getattr(obj, "plan_financing_seat", None)
 
 
 @admin.register(Invoice)
@@ -380,6 +394,39 @@ class PlanFinancingAdmin(admin.ModelAdmin):
     actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
 
 
+@admin.register(PlanFinancingTeam)
+class PlanFinancingTeamAdmin(admin.ModelAdmin):
+    list_display = ("id", "financing", "name", "additional_seats", "consumption_strategy", "seats_count")
+    list_filter = ["consumption_strategy", "financing__status"]
+    search_fields = [
+        "name",
+        "financing__id",
+        "financing__user__email",
+        "financing__user__first_name",
+        "financing__user__last_name",
+    ]
+    raw_id_fields = ["financing"]
+
+    def seats_count(self, obj):
+        return obj.seats.filter(is_active=True).count()
+
+    seats_count.short_description = "Active seats"
+
+
+@admin.register(PlanFinancingSeat)
+class PlanFinancingSeatAdmin(admin.ModelAdmin):
+    list_display = ("id", "team", "email", "user", "is_active", "created_at", "updated_at")
+    list_filter = ["is_active", "team__consumption_strategy"]
+    search_fields = [
+        "email",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "team__financing__user__email",
+    ]
+    raw_id_fields = ["team", "user"]
+
+
 def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):
     if queryset.count() > 1:
         raise forms.ValidationError("You just can select one subscription at a time")
@@ -487,6 +534,7 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "id",
         "subscription",
         "plan_financing",
+        "service_type",
         "plan_financing_team",
         "plan_financing_seat",
         "subscription_billing_team",
@@ -582,6 +630,19 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     def plan_financing(self, obj):
         if obj.plan_handler:
             return obj.plan_handler.plan_financing
+
+    def service_type(self, obj):
+        handler = obj.plan_handler or obj.subscription_handler
+        if handler:
+            service_item = getattr(handler, "service_item", None)
+            if not service_item:
+                service_item = getattr(handler, "handler", None)
+                service_item = getattr(service_item, "service_item", None)
+            if service_item and service_item.service:
+                return service_item.service.type
+        return "-"
+
+    service_type.short_description = "Service type"
 
     def consumables_count(self, obj):
         # Use annotated value if available to avoid extra queries

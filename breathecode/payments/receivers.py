@@ -20,7 +20,16 @@ from breathecode.payments import actions, tasks
 from breathecode.payments.models import Invoice
 
 from .actions import validate_auto_recharge_service_units
-from .models import Consumable, Plan, PlanFinancing, Subscription, SubscriptionBillingTeam, SubscriptionSeat
+from .models import (
+    Consumable,
+    Plan,
+    PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
+    Subscription,
+    SubscriptionBillingTeam,
+    SubscriptionSeat,
+)
 from .signals import (
     consume_service,
     grant_plan_permissions,
@@ -210,7 +219,32 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
     if instance.status != "ACCEPTED" or not instance.user_id:
         return
 
-    # Find pending seats by email across subscriptions with team-enabled items
+    if instance.plan_financing_seat_id:
+        seat = instance.plan_financing_seat
+        team = seat.team
+        financing = team.financing
+
+        seat.user = instance.user
+        seat.email = instance.user.email.lower()
+        seat.save(update_fields=["user", "email"])
+
+        logger.info(
+            "Activated plan financing seat via invite: financing=%s user=%s",
+            financing.id,
+            instance.user_id,
+        )
+
+        per_team_strategy = team and team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM
+
+        if not per_team_strategy:
+            Consumable.objects.filter(plan_financing_seat=seat, user__isnull=True).update(user=instance.user)
+
+        for plan in financing.plans.all():
+            actions.grant_student_capabilities(instance.user, plan)
+
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(financing.id, seat_id=seat.id)
+        return
+
     seats = SubscriptionSeat.objects.filter(email__iexact=instance.email.strip(), user__isnull=True)
     for seat in seats.select_related("billing_team", "billing_team__subscription"):
         subscription = seat.billing_team.subscription
@@ -355,7 +389,7 @@ def post_mentoring_session_ended(sender: Type[MentorshipSession], instance: Ment
 
 
 @receiver(m2m_changed, sender=Plan.service_items.through)
-def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
+def plan_m2m_wrapper(sender, instance: Plan, **kwargs):
     if kwargs["action"] != "post_add":
         return
 
@@ -363,7 +397,7 @@ def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, *
 
 
 @receiver(update_plan_m2m_service_items, sender=Plan.service_items.through)
-def plan_m2m_changed(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
+def plan_m2m_changed(sender, instance: Plan, **kwargs):
     tasks.update_service_stock_schedulers.delay(instance.id)
 
 

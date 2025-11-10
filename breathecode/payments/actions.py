@@ -2220,7 +2220,73 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
     return seat
 
 
-def create_plan_financing_seat(email: str, user: User | None, team: PlanFinancingTeam, lang: str):
+def notify_user_was_added_to_plan_financing_team(team: PlanFinancingTeam, seat: PlanFinancingSeat, lang: str):
+    if seat.user is None:
+        return
+
+    financing = team.financing
+    notify_actions.send_email_message(
+        "welcome_academy",
+        seat.email,
+        {
+            "email": seat.email,
+            "subject": translation(
+                lang,
+                en=f"You've been added to {team.name} at {financing.academy.name}",
+                es=f"Has sido agregado a {team.name} en {financing.academy.name}",
+            ),
+            "LINK": get_app_url(),
+            "FIST_NAME": seat.user.first_name or "",
+        },
+        academy=financing.academy,
+    )
+
+
+def invite_user_to_plan_financing_team(
+    obj: SeatDict, team: PlanFinancingTeam, plan_financing_seat: PlanFinancingSeat, lang: str
+):
+    financing = team.financing
+    invite, created = UserInvite.objects.get_or_create(
+        email=obj.get("email", ""),
+        academy=financing.academy,
+        plan_financing_seat=plan_financing_seat,
+        defaults={
+            "status": "PENDING",
+            "author": financing.user,
+            "role": "student",
+            "token": str(uuid.uuid4()),
+            "sent_at": timezone.now(),
+            "first_name": obj.get("first_name", ""),
+            "last_name": obj.get("last_name", ""),
+        },
+    )
+
+    if created or invite.status == "PENDING":
+        notify_actions.send_email_message(
+            "welcome_academy",
+            plan_financing_seat.email,
+            {
+                "email": plan_financing_seat.email,
+                "subject": translation(
+                    lang,
+                    en=f"You've been invited to {team.name} at {financing.academy.name}",
+                    es=f"Has sido invitado a {team.name} en {financing.academy.name}",
+                ),
+                "LINK": get_app_url(),
+                "FIST_NAME": obj.get("first_name", "") or "",
+            },
+            academy=financing.academy,
+        )
+
+
+def create_plan_financing_seat(
+    email: str,
+    user: User | None,
+    team: PlanFinancingTeam,
+    lang: str,
+    first_name: str = "",
+    last_name: str = "",
+):
     _validate_email(email, lang)
 
     if PlanFinancingSeat.objects.filter(team=team, email=email).exists():
@@ -2247,6 +2313,14 @@ def create_plan_financing_seat(email: str, user: User | None, team: PlanFinancin
     if user:
         for plan in team.financing.plans.all():
             grant_student_capabilities(user, plan)
+        notify_user_was_added_to_plan_financing_team(team, seat, lang)
+    else:
+        invite_user_to_plan_financing_team(
+            {"email": email, "first_name": first_name or "", "last_name": last_name or ""},
+            team,
+            seat,
+            lang,
+        )
 
     if team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM:
         tasks.build_service_stock_scheduler_from_plan_financing.delay(team.financing.id)
@@ -2334,6 +2408,8 @@ def replace_plan_financing_seat(
     to_user: User | None,
     financing_seat: PlanFinancingSeat,
     lang: str,
+    first_name: str = "",
+    last_name: str = "",
 ):
     _validate_email(to_email, lang)
 
@@ -2370,6 +2446,14 @@ def replace_plan_financing_seat(
     if to_user:
         for plan in seat.team.financing.plans.all():
             grant_student_capabilities(to_user, plan)
+        notify_user_was_added_to_plan_financing_team(seat.team, seat, lang)
+    else:
+        invite_user_to_plan_financing_team(
+            {"email": to_email, "first_name": first_name or "", "last_name": last_name or ""},
+            seat.team,
+            seat,
+            lang,
+        )
 
     if seat.team.consumption_strategy != PlanFinancingTeam.ConsumptionStrategy.PER_TEAM:
         Consumable.objects.filter(plan_financing_seat=seat).update(user=to_user)

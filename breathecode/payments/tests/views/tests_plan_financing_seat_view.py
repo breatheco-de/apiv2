@@ -131,7 +131,7 @@ def test_put_plan_financing_add_seat(factory, plan_financing_setup):
 
     assert response.status_code == status.HTTP_207_MULTI_STATUS
     mock_validate.assert_called_once()
-    mock_create.assert_called_once_with("new@example.com", None, plan_financing_setup["team"], ANY)
+    mock_create.assert_called_once_with("new@example.com", None, plan_financing_setup["team"], ANY, "", "")
     assert response.data["data"][0]["email"] == "new@example.com"
 
 
@@ -176,6 +176,8 @@ def test_put_plan_financing_replace_seat(factory, plan_financing_setup):
     assert args[2] == plan_financing_setup["owner"]
     assert isinstance(args[3], PlanFinancingSeat)
     assert isinstance(args[4], str)
+    assert args[5] == ""
+    assert args[6] == ""
     assert response.data["data"][0]["email"] == "replacement@example.com"
 
 
