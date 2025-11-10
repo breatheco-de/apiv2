@@ -5803,7 +5803,16 @@ class PlanFinancingSeatView(APIView):
 
         for seat in add_seats:
             try:
-                result.append(actions.create_plan_financing_seat(seat["email"], seat["user"], team, lang))
+                result.append(
+                    actions.create_plan_financing_seat(
+                        seat["email"],
+                        seat["user"],
+                        team,
+                        lang,
+                        seat.get("first_name", ""),
+                        seat.get("last_name", ""),
+                    )
+                )
             except ValidationException as e:
                 errors.append(e)
 
@@ -5838,7 +5847,13 @@ class PlanFinancingSeatView(APIView):
 
                 result.append(
                     actions.replace_plan_financing_seat(
-                        seat["from_email"], seat["to_email"], new_user, financing_seat, lang
+                        seat["from_email"],
+                        seat["to_email"],
+                        new_user,
+                        financing_seat,
+                        lang,
+                        seat.get("first_name", ""),
+                        seat.get("last_name", ""),
                     )
                 )
             except ValidationException as e:
