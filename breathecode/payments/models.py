@@ -2085,8 +2085,15 @@ class AbstractIOweYou(models.Model):
                 )
             )
 
-        elif is_subscription is False:
-            filter_args.append(Q(user=user, subscription_billing_team__isnull=True, subscription_seat__isnull=True))
+        else:
+            if isinstance(user, str):
+                filter_args.append(Q(user__id=int(user)))
+            elif isinstance(user, int):
+                filter_args.append(Q(user__id=user))
+            elif isinstance(user, User):
+                filter_args.append(Q(user=user))
+            else:
+                filter_args.append(Q(user=user))
 
         filter_kwargs = {
             "status": Invoice.Status.FULFILLED,
@@ -2167,12 +2174,71 @@ class PlanFinancing(AbstractIOweYou):
 
         return super().clean()
 
+    def _sync_team(self) -> None:
+        seats = self.seat_service_item.how_many if self.seat_service_item else 0
+        if seats and seats > 0:
+            plan = self.plans.first()
+            if plan and plan.consumption_strategy == Plan.ConsumptionStrategy.BOTH:
+                consumption_strategy = Plan.ConsumptionStrategy.PER_SEAT
+            elif plan:
+                consumption_strategy = plan.consumption_strategy
+            else:
+                consumption_strategy = Plan.ConsumptionStrategy.PER_SEAT
+
+            defaults = {
+                "name": f"Financing Team {self.id}",
+                "additional_seats": seats,
+                "consumption_strategy": consumption_strategy,
+            }
+            team, created = PlanFinancingTeam.objects.get_or_create(financing=self, defaults=defaults)
+
+            update_fields = []
+            if not created:
+                if team.additional_seats != seats:
+                    team.additional_seats = seats
+                    update_fields.append("additional_seats")
+                if team.consumption_strategy != consumption_strategy:
+                    team.consumption_strategy = consumption_strategy
+                    update_fields.append("consumption_strategy")
+                if team.name != defaults["name"]:
+                    team.name = defaults["name"]
+                    update_fields.append("name")
+                if update_fields:
+                    team.save(update_fields=update_fields)
+
+            if self.user_id and self.user.email:
+                owner_email = (self.user.email or "").strip().lower()
+                seat, seat_created = PlanFinancingSeat.objects.get_or_create(
+                    team=team,
+                    user=self.user,
+                    defaults={
+                        "email": owner_email,
+                        "is_active": True,
+                    },
+                )
+
+                seat_update_fields = []
+                if not seat_created:
+                    if owner_email and seat.email != owner_email:
+                        seat.email = owner_email
+                        seat_update_fields.append("email")
+                    if seat.is_active is False:
+                        seat.is_active = True
+                        seat_update_fields.append("is_active")
+                    if seat_update_fields:
+                        seat.save(update_fields=seat_update_fields)
+
+        else:
+            PlanFinancingTeam.objects.filter(financing=self).delete()
+
     def save(self, *args, **kwargs) -> None:
         self.full_clean()
         on_create = self.pk is None
         old_instance = None if on_create else PlanFinancing.objects.get(pk=self.pk)
 
         super().save(*args, **kwargs)
+
+        self._sync_team()
 
         revoke_statuses = [
             self.Status.CANCELLED,
@@ -2196,6 +2262,99 @@ class PlanFinancing(AbstractIOweYou):
                 signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
             elif self.status in revoke_statuses:
                 signals.revoke_plan_permissions.send_robust(instance=self, sender=self.__class__)
+
+
+class PlanFinancingTeam(models.Model):
+    """Team entity per plan financing."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanFinancingTeam"]
+
+    class ConsumptionStrategy(models.TextChoices):
+        PER_TEAM = "PER_TEAM", "Per team"
+        PER_SEAT = "PER_SEAT", "Per seat"
+
+    financing = models.OneToOneField(
+        PlanFinancing, on_delete=models.CASCADE, related_name="team", help_text="Plan financing"
+    )
+    name = models.CharField(max_length=80, help_text="Team name")
+    seats_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this financing team")
+    additional_seats = models.PositiveIntegerField(
+        default=0, help_text="Additional seats for this team excluding the owner seat"
+    )
+    consumption_strategy = models.CharField(
+        max_length=8,
+        help_text="Consumption strategy",
+        choices=ConsumptionStrategy.choices,
+        default=ConsumptionStrategy.PER_SEAT,
+    )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    @property
+    def seats_limit(self) -> int:
+        return self.additional_seats + 1
+
+    def __str__(self) -> str:
+        return f"{self.financing_id}:{self.name}"
+
+
+class PlanFinancingSeat(models.Model):
+    """Seat assignment per plan financing."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["PlanFinancingSeat"]
+
+    team = models.ForeignKey(
+        PlanFinancingTeam,
+        on_delete=models.CASCADE,
+        help_text="Plan financing team",
+        related_name="seats",
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, help_text="Assigned user", null=True, blank=True, default=None
+    )
+    email = models.CharField(max_length=150, help_text="Email of the member (normalized)", db_index=True, default="")
+    is_active = models.BooleanField(default=True, help_text="if true, this user is able to access the plan financing")
+
+    seat_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this seat")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "user"],
+                name="uniq_plan_financing_seat_per_user",
+                condition=Q(user__isnull=False),
+            ),
+            models.UniqueConstraint(fields=["team", "email"], name="uniq_plan_financing_seat_per_email"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.team_id}:{self.user_id}"
+
+    def clean(self):
+        if self.email:
+            self.email = self.email.strip().lower()
+
+        if not self.email:
+            raise forms.ValidationError("Email is required for a plan financing seat")
+
+        if self.user_id and getattr(self.user, "email", None):
+            if (self.user.email or "").strip().lower() != self.email:
+                raise forms.ValidationError("User email does not match seat email")
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    @property
+    def billing_team(self) -> PlanFinancingTeam:
+        return self.team
 
 
 class Subscription(AbstractIOweYou):
@@ -2607,6 +2766,23 @@ class Consumable(AbstractServiceItem):
         help_text="Subscription seat associated to this consumable (if any)",
         db_index=True,
     )
+    plan_financing_team = models.ForeignKey(
+        PlanFinancingTeam,
+        on_delete=models.CASCADE,
+        help_text="Plan financing team associated to this consumable (if any)",
+        null=True,
+        blank=True,
+        default=None,
+    )
+    plan_financing_seat = models.ForeignKey(
+        PlanFinancingSeat,
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Plan financing seat associated to this consumable (if any)",
+        db_index=True,
+    )
 
     # this could be used for the queries on the consumer, to recognize which resource is belong the consumable
     cohort_set = models.ForeignKey(
@@ -2652,6 +2828,8 @@ class Consumable(AbstractServiceItem):
         permission: Optional[Permission | str | int] = None,
         subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
         subscription_seat: Optional["SubscriptionSeat" | int] = None,
+        plan_financing_team: Optional["PlanFinancingTeam" | int] = None,
+        plan_financing_seat: Optional["PlanFinancingSeat" | int] = None,
         extra: Optional[dict] = None,
     ) -> QuerySet["Consumable"]:
 
@@ -2677,11 +2855,18 @@ class Consumable(AbstractServiceItem):
             args.append(
                 Q(user__id=int(user))
                 | Q(subscription_seat__user__id=int(user), subscription_seat__is_active=True)
+                | Q(plan_financing_seat__user__id=int(user), plan_financing_seat__is_active=True)
                 | Q(
                     user__isnull=True,
                     subscription_billing_team__seats__user__id=int(user),
                     subscription_billing_team__seats__is_active=True,
                     subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+                | Q(
+                    user__isnull=True,
+                    plan_financing_team__seats__user__id=int(user),
+                    plan_financing_team__seats__is_active=True,
+                    plan_financing_team__consumption_strategy=PlanFinancingTeam.ConsumptionStrategy.PER_TEAM,
                 )
             )
 
@@ -2689,11 +2874,18 @@ class Consumable(AbstractServiceItem):
             args.append(
                 Q(user__id=user)
                 | Q(subscription_seat__user__id=user, subscription_seat__is_active=True)
+                | Q(plan_financing_seat__user__id=user, plan_financing_seat__is_active=True)
                 | Q(
                     user__isnull=True,
                     subscription_billing_team__seats__user__id=user,
                     subscription_billing_team__seats__is_active=True,
                     subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+                | Q(
+                    user__isnull=True,
+                    plan_financing_team__seats__user__id=user,
+                    plan_financing_team__seats__is_active=True,
+                    plan_financing_team__consumption_strategy=PlanFinancingTeam.ConsumptionStrategy.PER_TEAM,
                 )
             )
 
@@ -2701,11 +2893,18 @@ class Consumable(AbstractServiceItem):
             args.append(
                 Q(user=user)
                 | Q(subscription_seat__user=user, subscription_seat__is_active=True)
+                | Q(plan_financing_seat__user=user, plan_financing_seat__is_active=True)
                 | Q(
                     user__isnull=True,
                     subscription_billing_team__seats__user=user,
                     subscription_billing_team__seats__is_active=True,
                     subscription_billing_team__consumption_strategy=SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM,
+                )
+                | Q(
+                    user__isnull=True,
+                    plan_financing_team__seats__user=user,
+                    plan_financing_team__seats__is_active=True,
+                    plan_financing_team__consumption_strategy=PlanFinancingTeam.ConsumptionStrategy.PER_TEAM,
                 )
             )
 
@@ -2752,6 +2951,16 @@ class Consumable(AbstractServiceItem):
             param["subscription_seat__id"] = subscription_seat
         elif subscription_seat:
             param["subscription_seat"] = subscription_seat
+
+        if plan_financing_team and isinstance(plan_financing_team, int):
+            param["plan_financing_team__id"] = plan_financing_team
+        elif plan_financing_team:
+            param["plan_financing_team"] = plan_financing_team
+
+        if plan_financing_seat and isinstance(plan_financing_seat, int):
+            param["plan_financing_seat__id"] = plan_financing_seat
+        elif plan_financing_seat:
+            param["plan_financing_seat"] = plan_financing_seat
 
         return (
             cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
@@ -3230,15 +3439,22 @@ class ServiceStockScheduler(models.Model):
         null=True,
         help_text="Subscription billing team",
     )
-    # if is required PlanFinancing seats, add that field here like the subscription_seat
-    # plan_financing_seat = models.ForeignKey(
-    #     SubscriptionSeat,
-    #     on_delete=models.CASCADE,
-    #     default=None,
-    #     blank=True,
-    #     null=True,
-    #     help_text="Plan financing seat",
-    # )
+    plan_financing_team = models.ForeignKey(
+        PlanFinancingTeam,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Plan financing team",
+    )
+    plan_financing_seat = models.ForeignKey(
+        PlanFinancingSeat,
+        on_delete=models.CASCADE,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Plan financing seat",
+    )
 
     plan_handler = models.ForeignKey(
         PlanServiceItemHandler,
@@ -3267,6 +3483,17 @@ class ServiceStockScheduler(models.Model):
 
         if self.subscription_seat and self.subscription_billing_team:
             raise forms.ValidationError("A ServiceStockScheduler can only be associated with a seat or a billing team")
+
+        if self.plan_financing_seat and self.plan_financing_team:
+            raise forms.ValidationError("A ServiceStockScheduler can only be associated with a seat or a team")
+
+        if self.subscription_seat and self.plan_financing_seat:
+            raise forms.ValidationError("A ServiceStockScheduler cannot mix subscription and plan financing seats")
+
+        if self.subscription_billing_team and self.plan_financing_team:
+            raise forms.ValidationError(
+                "A ServiceStockScheduler cannot mix subscription and plan financing teams"
+            )
 
         return super().clean()
 
@@ -3387,20 +3614,12 @@ class AcademyPaymentSettings(models.Model):
     if TYPE_CHECKING:
         objects: TypedManager["AcademyPaymentSettings"]
 
-    class POSVendor(models.TextChoices):
-        STRIPE = "STRIPE", "Stripe"
-        COINBASE = "COINBASE", "Coinbase Commerce"
-
     academy = models.OneToOneField(
         Academy, on_delete=models.CASCADE, related_name="payment_settings", help_text="Academy"
     )
-    pos_vendor = models.CharField(
-        max_length=20,
-        choices=POSVendor.choices,
-        default=POSVendor.STRIPE,
-        help_text="Point of Sale vendor like Stripe, etc.",
-    )
-    pos_api_key = models.CharField(max_length=255, blank=True, help_text="API key for the POS vendor")
+    stripe_api_key = models.CharField(max_length=255, blank=True, help_text="API key for the POS vendor")
+    stripe_webhook_secret = models.CharField(max_length=255, blank=True, help_text="Webhook secret for Stripe")
+    stripe_publishable_key = models.CharField(max_length=255, blank=True, help_text="Publishable key for Stripe")
     coinbase_api_key = models.CharField(
         max_length=255, blank=True, null=True, help_text="API key for Coinbase Commerce"
     )

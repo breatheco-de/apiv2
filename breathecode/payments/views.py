@@ -56,6 +56,8 @@ from breathecode.payments.models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
     PlanOffer,
     PlanServiceItem,
     Seller,
@@ -2181,7 +2183,6 @@ class V2CardView(APIView):
 
         if info:
             return Response(info)
-
         return Response({"has_payment_method": False})
 
     def post(self, request):
@@ -2192,18 +2193,14 @@ class V2CardView(APIView):
         s.set_language(lang)
 
         token = request.data.get("token")
-        card_number = request.data.get("card_number")
-        exp_month = request.data.get("exp_month")
-        exp_year = request.data.get("exp_year")
-        cvc = request.data.get("cvc")
 
-        if not ((card_number and exp_month and exp_year and cvc) or token):
+        if not token:
             raise ValidationException(
                 translation(
                     lang,
-                    en="Missing card information",
-                    es="Falta la información de la tarjeta",
-                    slug="missing-card-information",
+                    en="Missing token",
+                    es="Falta el token",
+                    slug="missing-token",
                 ),
                 code=404,
             )
@@ -2212,14 +2209,9 @@ class V2CardView(APIView):
             s.add_contact(request.user)
 
         try:
-            if not token:
-                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+            error, details = s.add_payment_method(request.user, token)
 
-            success, errors, details = s.update_all_payment_methods(
-                user=request.user, token=token, card_number=card_number, exp_month=exp_month, exp_year=exp_year, cvc=cvc
-            )
-
-            if not success:
+            if error:
                 raise ValidationException(
                     translation(
                         lang,
@@ -2238,6 +2230,103 @@ class V2CardView(APIView):
             raise ValidationException(str(e), code=400)
 
         return Response({"status": "ok", "details": details})
+
+
+class AcademyPublishableKeyView(APIView):
+    """
+    Endpoint to get the Stripe publishable key for a specific academy.
+    This key is safe to expose publicly as it's designed for client-side use.
+    Note: This endpoint is public (AllowAny) as it's needed for frontend payment initialization.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """
+        Get Stripe publishable key for the specified academy.
+
+        Query Parameters:
+            - academy (required): ID of the academy
+
+        OR Header:
+            - Academy (required): ID of the academy
+
+        Returns:
+            200: Academy publishable key configuration
+            {
+                "academy_id": 1,
+                "academy_name": "4Geeks.com",
+                "academy_slug": "4geeks",
+                "stripe_publishable_key": "pk_test_xxx...",
+            }
+
+            404: Academy or payment settings not found
+
+        Example:
+            GET /v1/payments/academy/publishable-key?academy=1
+            GET /v1/payments/academy/publishable-key (with header Academy: 1)
+        """
+        lang = get_user_language(request)
+
+        # Get academy_id from query parameter or header (same as capable_of decorator)
+        academy_id = request.GET.get("academy")
+
+        if not academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing academy parameter expected in query string or 'Academy' header",
+                    es="Falta el parámetro academy esperado en la query string o el header 'Academy'",
+                    slug="missing-academy-id",
+                ),
+                code=400,
+            )
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy not found",
+                    es="Academia no encontrada",
+                    slug="academy-not-found",
+                ),
+                code=404,
+            )
+
+        # Get payment settings for this academy
+        payment_settings = AcademyPaymentSettings.objects.filter(academy__id=academy_id).first()
+        if not payment_settings:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment settings not configured for this academy",
+                    es="Configuración de pago no configurada para esta academia",
+                    slug="payment-settings-not-found",
+                ),
+                code=404,
+            )
+
+        # Validate publishable key exists
+        if not payment_settings.stripe_publishable_key:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Stripe publishable key not configured for this academy",
+                    es="Clave publicable de Stripe no configurada para esta academia",
+                    slug="publishable-key-not-configured",
+                ),
+                code=404,
+            )
+
+        return Response(
+            {
+                "academy_id": academy.id,
+                "academy_name": academy.name,
+                "academy_slug": academy.slug,
+                "stripe_publishable_key": payment_settings.stripe_publishable_key,
+            }
+        )
 
 
 class ServiceBlocked(APIView):
@@ -3563,7 +3652,17 @@ class PayView(APIView):
 
                 payment_method = request.data.get("payment_method")
 
-                if payment_method == "coinbase" and amount > 0:
+                if payment_method == "coinbase":
+                    if amount < 0.001:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Coinbase doesn't process amounts lower than 0.001",
+                                es="Coinbase no procesa montos menores a 0.001",
+                                slug="amount-is-too-low",
+                            ),
+                            code=400,
+                        )
 
                     return_url = request.data.get("return_url")
 
@@ -3640,7 +3739,7 @@ class PayView(APIView):
                 else:
                     raise ValidationException(
                         translation(lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"),
-                        code=500,
+                        code=400,
                     )
 
                 # Calculate is_recurrent based on:
@@ -5523,4 +5622,263 @@ class SubscriptionSeatView(APIView):
 
         Consumable.objects.filter(subscription_seat_id=seat.id).update(user=None)
 
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PlanFinancingTeamView(APIView):
+    """Manage PlanFinancing team (read-only for now)."""
+
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def _serializer(self, team: PlanFinancingTeam) -> dict[str, Any]:
+        financing = team.financing
+        return {
+            "id": team.id,
+            "plan_financing": financing.id,
+            "name": team.name,
+            "additional_seats": team.additional_seats,
+            "seats_limit": team.seats_limit,
+            "consumption_strategy": team.consumption_strategy,
+            "seats_count": team.seats.filter(is_active=True).count(),
+            "seats_log": team.seats_log,
+            "currency": financing.currency.code if financing.currency else None,
+        }
+
+    def get(self, request, plan_financing_id: int):
+        lang = get_user_language(request)
+        plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+        if not plan_financing:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing not found",
+                    es="Plan financiado no encontrado",
+                    slug="plan-financing-not-found",
+                ),
+                code=404,
+            )
+
+        if request.user.id != plan_financing.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage financing seats",
+                    es="Solo el dueño puede gestionar los asientos del financiamiento",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = getattr(plan_financing, "team", None)
+        if not team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing team not found",
+                    es="Equipo del financiamiento no encontrado",
+                    slug="plan-financing-team-not-found",
+                ),
+                code=404,
+            )
+
+        return Response(self._serializer(team), status=status.HTTP_200_OK)
+
+
+class PlanFinancingSeatView(APIView):
+    """CRUD for PlanFinancing seats."""
+
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def _get_plan_financing(self, plan_financing_id: int, lang: str) -> PlanFinancing:
+        financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+        if not financing:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing not found",
+                    es="Plan financiado no encontrado",
+                    slug="plan-financing-not-found",
+                ),
+                code=404,
+            )
+        return financing
+
+    def _get_team(self, financing: PlanFinancing, lang: str) -> PlanFinancingTeam:
+        team = getattr(financing, "team", None)
+        if not team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing team not found",
+                    es="Equipo del financiamiento no encontrado",
+                    slug="plan-financing-team-not-found",
+                ),
+                code=404,
+            )
+        return team
+
+    def _get_seats(self, team: PlanFinancingTeam) -> QuerySet[PlanFinancingSeat]:
+        return PlanFinancingSeat.objects.filter(team=team)
+
+    def _serialize_seat(self, seat: PlanFinancingSeat) -> dict[str, Any]:
+        return {
+            "id": seat.id,
+            "email": seat.email,
+            "user": seat.user_id,
+            "is_active": seat.is_active,
+            "seat_log": seat.seat_log,
+        }
+
+    def get(self, request, plan_financing_id: int, seat_id: int = None):
+        lang = get_user_language(request)
+
+        financing = self._get_plan_financing(plan_financing_id, lang)
+        if request.user.id != financing.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage financing seats",
+                    es="Solo el dueño puede gestionar los asientos del financiamiento",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = self._get_team(financing, lang)
+        qs = self._get_seats(team)
+
+        if seat_id:
+            seat = qs.filter(id=seat_id).first()
+            if not seat:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Seat not found",
+                        es="Asiento no encontrado",
+                        slug="seat-not-found",
+                    ),
+                    code=404,
+                )
+            return Response(self._serialize_seat(seat), status=status.HTTP_200_OK)
+
+        items = [self._serialize_seat(s) for s in qs]
+        return Response(items, status=status.HTTP_200_OK)
+
+    def put(self, request, plan_financing_id: int):
+        lang = get_user_language(request)
+        data = request.data or {}
+
+        financing = self._get_plan_financing(plan_financing_id, lang)
+        if request.user.id != financing.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage financing seats",
+                    es="Solo el dueño puede gestionar los asientos del financiamiento",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        add_seats = actions.normalize_add_seats(data.get("add_seats", []))
+        replace_seats = actions.normalize_replace_seat(data.get("replace_seats", []))
+
+        if not add_seats and not replace_seats:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Add seats or replace seats are required",
+                    es="Agregar asientos o reemplazar asientos son requeridos",
+                    slug="add-or-replace-seats-required",
+                ),
+                code=400,
+            )
+
+        team = self._get_team(financing, lang)
+
+        actions.validate_seats_limit(team, add_seats, replace_seats, lang)
+
+        result: list[PlanFinancingSeat] = []
+        errors: list[ValidationException] = []
+
+        for seat in add_seats:
+            try:
+                result.append(actions.create_plan_financing_seat(seat["email"], seat["user"], team, lang))
+            except ValidationException as e:
+                errors.append(e)
+
+        for seat in replace_seats:
+            try:
+                financing_seat = PlanFinancingSeat.objects.filter(team=team, email=seat["from_email"]).first()
+                if not financing_seat:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Seat not found",
+                            es="Asiento no encontrado",
+                            slug="seat-not-found",
+                        ),
+                        code=404,
+                    )
+                new_user = None
+                if seat["to_user"]:
+                    new_user = User.objects.filter(id=seat["to_user"]).first()
+                    if not new_user:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="User not found",
+                                es="Usuario no encontrado",
+                                slug="user-not-found",
+                            ),
+                            code=404,
+                        )
+                elif seat["to_email"]:
+                    new_user = User.objects.filter(email=seat["to_email"]).first()
+
+                result.append(
+                    actions.replace_plan_financing_seat(
+                        seat["from_email"], seat["to_email"], new_user, financing_seat, lang
+                    )
+                )
+            except ValidationException as e:
+                errors.append(e)
+
+        return Response(
+            {
+                "data": [self._serialize_seat(seat) for seat in result],
+                "errors": [
+                    {
+                        "message": getattr(e, "detail", str(e)),
+                        "code": getattr(e, "code", 400),
+                    }
+                    for e in errors
+                ],
+            },
+            status=status.HTTP_207_MULTI_STATUS,
+        )
+
+    def delete(self, request, plan_financing_id: int, seat_id: int):
+        lang = get_user_language(request)
+
+        financing = self._get_plan_financing(plan_financing_id, lang)
+        if request.user.id != financing.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage financing seats",
+                    es="Solo el dueño puede gestionar los asientos del financiamiento",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = self._get_team(financing, lang)
+        seat = PlanFinancingSeat.objects.filter(team=team, id=seat_id, is_active=True).first()
+        if not seat:
+            raise ValidationException(
+                translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"), code=404
+            )
+
+        actions.deactivate_plan_financing_seat(seat)
         return Response(status=status.HTTP_204_NO_CONTENT)

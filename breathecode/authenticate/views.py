@@ -518,9 +518,11 @@ class MemberView(APIView, GenerateLookupsMixin):
         if roles != "":
             items = items.filter(role__in=roles.lower().split(","))
 
-        status = request.GET.get("status", None)
-        if status is not None:
-            items = items.filter(status__iexact=status)
+        status_param = request.GET.get("status")
+        if status_param:
+            statuses = [value.strip().upper() for value in status_param.split(",") if value.strip()]
+            if statuses:
+                items = items.filter(status__in=statuses)
 
         like = request.GET.get("like", None)
         if like is not None:

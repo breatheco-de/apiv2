@@ -50,6 +50,8 @@ from .models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
     ProofOfPayment,
     Service,
     ServiceItem,
@@ -2218,6 +2220,42 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
     return seat
 
 
+def create_plan_financing_seat(email: str, user: User | None, team: PlanFinancingTeam, lang: str):
+    _validate_email(email, lang)
+
+    if PlanFinancingSeat.objects.filter(team=team, email=email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="User already has a seat for this financing",
+                es="El usuario ya tiene un asiento para este financiamiento",
+                slug="duplicate-financing-seat",
+            ),
+            code=400,
+        )
+
+    seat = PlanFinancingSeat(
+        team=team,
+        user=user,
+        email=email,
+    )
+    seat_log_entry = create_seat_log_entry(seat, "ADDED")
+    seat.seat_log.append(seat_log_entry)
+    seat.is_active = True
+    seat.save()
+
+    if user:
+        for plan in team.financing.plans.all():
+            grant_student_capabilities(user, plan)
+
+    if team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM:
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(team.financing.id)
+    else:
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(team.financing.id, seat_id=seat.id)
+
+    return seat
+
+
 def replace_seat(
     from_email: str,
     to_email: str,
@@ -2290,6 +2328,66 @@ def replace_seat(
     return seat
 
 
+def replace_plan_financing_seat(
+    from_email: str,
+    to_email: str,
+    to_user: User | None,
+    financing_seat: PlanFinancingSeat,
+    lang: str,
+):
+    _validate_email(to_email, lang)
+
+    seat = PlanFinancingSeat.objects.filter(team=financing_seat.team, email=from_email).first()
+    if not seat:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is no seat with this email {from_email}",
+                es=f"No hay un asiento con este email {from_email}",
+                slug="no-seat-with-this-email",
+            ),
+            code=404,
+        )
+
+    if PlanFinancingSeat.objects.filter(team=financing_seat.team, email=to_email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is already a seat with this email {to_email}",
+                es=f"Ya hay un asiento con este email {to_email}",
+                slug="seat-with-this-email-already-exists",
+            ),
+            code=400,
+        )
+
+    seat.email = to_user.email if to_user else to_email
+    seat.user = to_user
+    seat.is_active = True
+    seat_log_entry = create_seat_log_entry(seat, "REPLACED")
+    seat.seat_log.append(seat_log_entry)
+    seat.save(update_fields=["seat_log", "is_active", "email", "user"])
+
+    if to_user:
+        for plan in seat.team.financing.plans.all():
+            grant_student_capabilities(to_user, plan)
+
+    if seat.team.consumption_strategy != PlanFinancingTeam.ConsumptionStrategy.PER_TEAM:
+        Consumable.objects.filter(plan_financing_seat=seat).update(user=to_user)
+
+    tasks.build_service_stock_scheduler_from_plan_financing.delay(seat.team.financing.id, seat_id=seat.id)
+
+    return seat
+
+
+def deactivate_plan_financing_seat(financing_seat: PlanFinancingSeat):
+    financing_seat.user = None
+    financing_seat.is_active = False
+    financing_seat.save(update_fields=["is_active", "user"])
+
+    Consumable.objects.filter(plan_financing_seat_id=financing_seat.id).update(user=None)
+    tasks.build_service_stock_scheduler_from_plan_financing.delay(financing_seat.team.financing.id)
+
+
 def normalize_email(email: str):
     return email.strip().lower()
 
@@ -2322,10 +2420,18 @@ def normalize_replace_seat(replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
 
 
 def validate_seats_limit(
-    team: SubscriptionBillingTeam, add_seats: list[AddSeat], replace_seats: list[ReplaceSeat], lang: str
+    team: SubscriptionBillingTeam | PlanFinancingTeam,
+    add_seats: list[AddSeat],
+    replace_seats: list[ReplaceSeat],
+    lang: str,
 ):
     seats = {}
-    for seat in SubscriptionSeat.objects.filter(billing_team=team):
+    if isinstance(team, SubscriptionBillingTeam):
+        queryset = SubscriptionSeat.objects.filter(billing_team=team)
+    else:
+        queryset = PlanFinancingSeat.objects.filter(team=team)
+
+    for seat in queryset:
         seats[seat.email] = 1
 
     for seat in add_seats:
@@ -2392,20 +2498,41 @@ def get_user_from_consumable_to_be_charged(
     resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
     is_team_allowed = instance.service_item.is_team_allowed
 
-    user = None
-    seat = getattr(instance, "subscription_seat", None)
-    team: SubscriptionBillingTeam | None = getattr(instance, "subscription_billing_team", None) or (
-        seat.billing_team if seat else None
-    )
-    strategy = team.consumption_strategy if team else None
+    seat = instance.subscription_seat or instance.plan_financing_seat
 
-    if is_team_allowed is False or isinstance(resource, PlanFinancing):
-        user = resource.user
-    elif is_team_allowed and strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT:
-        # Seat user if present, otherwise fallback to resource owner
-        user = seat.user if (seat and seat.user) else resource.user
+    team: SubscriptionBillingTeam | PlanFinancingTeam | None = instance.subscription_billing_team
+    if not team and seat:
+        team = getattr(seat, "billing_team", None)
+    if not team:
+        team = getattr(instance, "plan_financing_team", None)
 
-    return user
+    strategy = getattr(team, "consumption_strategy", None)
+
+    if is_team_allowed is False:
+        return resource.user
+
+    if isinstance(resource, PlanFinancing) and team is None:
+        return resource.user
+
+    if strategy in (
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM
+        if isinstance(team, SubscriptionBillingTeam)
+        else PlanFinancingTeam.ConsumptionStrategy.PER_TEAM
+        if isinstance(team, PlanFinancingTeam)
+        else None
+    ):
+        return None
+
+    if strategy in (
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT
+        if isinstance(team, SubscriptionBillingTeam)
+        else PlanFinancingTeam.ConsumptionStrategy.PER_SEAT
+        if isinstance(team, PlanFinancingTeam)
+        else None
+    ):
+        return seat.user if (seat and seat.user) else resource.user
+
+    return resource.user
 
 
 def validate_auto_recharge_service_units(
@@ -2439,6 +2566,7 @@ def validate_auto_recharge_service_units(
         resource is None
         or resource.auto_recharge_enabled is False
         or (instance.subscription_seat and instance.subscription_seat.is_active is False)
+        or (instance.plan_financing_seat and instance.plan_financing_seat.is_active is False)
     ):
         return 0.0, 0, None
 
@@ -2554,10 +2682,13 @@ def process_auto_recharge(
 
     # Connect to Redis
     redis_client = get_redis_connection("default")
-    team = consumable.subscription_billing_team or (
-        consumable.subscription_seat.billing_team if consumable.subscription_seat else None
+    team = (
+        consumable.subscription_billing_team
+        or getattr(consumable, "plan_financing_team", None)
+        or (consumable.subscription_seat.billing_team if consumable.subscription_seat else None)
+        or (consumable.plan_financing_seat.team if getattr(consumable, "plan_financing_seat", None) else None)
     )
-    seat = consumable.subscription_seat
+    seat = consumable.subscription_seat or getattr(consumable, "plan_financing_seat", None)
 
     lock_key = f"process_auto_recharge:{resource.__class__.__name__}:{resource.id}"
     lock_timeout = 300  # 5 minutes max lock time
@@ -2602,14 +2733,17 @@ def process_auto_recharge(
                 # If this fails, the entire transaction will rollback
                 s = Stripe(academy=resource.academy)
                 context_desc = f"auto-recharge for {charged_user.email}"
+                stripe_team = team if isinstance(team, SubscriptionBillingTeam) else None
+                stripe_seat = consumable.subscription_seat
+
                 s.pay(
                     resource.user,  # it must be charged to the owner
                     bag,
                     price * amount,
                     currency=currency.code,
                     description=f"Auto-recharge for {context_desc}",
-                    subscription_billing_team=team,
-                    subscription_seat=seat,
+                    subscription_billing_team=stripe_team,
+                    subscription_seat=stripe_seat,
                 )
 
                 emails = [resource.user.email]

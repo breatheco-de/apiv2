@@ -57,7 +57,7 @@ class Stripe:
 
         The API key is determined in the following order of precedence:
         1. `api_key` parameter if provided.
-        2. Academy-specific `pos_api_key` from `AcademyPaymentSettings` if `academy` is provided
+        2. Academy-specific `stripe_api_key` from `AcademyPaymentSettings` if `academy` is provided
            and `api_key` is not.
         3. `STRIPE_API_KEY` environment variable as a fallback.
 
@@ -72,9 +72,9 @@ class Stripe:
 
         # If academy is provided and no explicit api_key, try to get academy-specific settings
         if academy and not api_key:
-            academy_settings = AcademyPaymentSettings.objects.filter(academy=academy).only("pos_api_key").first()
+            academy_settings = AcademyPaymentSettings.objects.filter(academy=academy).only("stripe_api_key").first()
             if academy_settings:
-                self.api_key = academy_settings.pos_api_key
+                self.api_key = academy_settings.stripe_api_key
 
         # Fallback to environment variable if no api_key is set yet
         if not self.api_key:
@@ -149,15 +149,33 @@ class Stripe:
                               if the token is invalid.
         """
         stripe.api_key = self.api_key
+        error = None
+        details = {}
 
-        contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
-        if not contact:
-            contact = self.add_contact(user)
+        try:
+            contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
+            if not contact:
+                contact = self.add_contact(user)
 
-        def callback():
-            return stripe.Customer.modify(contact.stripe_id, source=token)
+            def callback():
+                customer = stripe.Customer.modify(contact.stripe_id, source=token)
+                if not customer.get("default_source"):
+                    return None
+                return stripe.Customer.retrieve_source(customer.id, customer.default_source)
 
-        return self._i18n_validations(callback)
+            source = self._i18n_validations(callback)
+
+            details = {
+                "card_last4": source.last4,
+                "card_brand": source.brand,
+                "card_exp_month": source.exp_month,
+                "card_exp_year": source.exp_year,
+            }
+
+        except Exception as e:
+            error = str(e)
+
+        return error, details
 
     def add_contact(self, user: User) -> PaymentContact:
         """
@@ -481,7 +499,7 @@ class Stripe:
     def update_all_payment_methods(
         self,
         user: User,
-        token: str = None,
+        tokens: list[str] = None,
         card_number: str = None,
         exp_month: int = None,
         exp_year: int = None,
@@ -511,7 +529,7 @@ class Stripe:
         any_success = False
         errors = []
         details = {}
-
+        count = 0
         for contact in contacts:
             try:
                 # Get the academy's Stripe API key
@@ -520,10 +538,11 @@ class Stripe:
                 s.set_language(self.language)
 
                 # Create new token for this contact
-                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+                # token = s.create_card_token(card_number, exp_month, exp_year, cvc)
 
                 # Update payment method
-                customer = s.add_payment_method(user, token)
+                print("tokens[count] en el metodo es", tokens[count])
+                customer = s.add_payment_method(user, tokens[count])
 
                 # Get card details from customer's default source
                 stripe.api_key = s.api_key
@@ -541,7 +560,7 @@ class Stripe:
             except Exception as e:
                 errors.append(str(e))
                 continue
-
+            count += 1
         return any_success, errors, details
 
     def has_payment_method(self, user: User) -> bool:

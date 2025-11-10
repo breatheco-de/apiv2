@@ -647,6 +647,118 @@ def get_config(request, asset_slug):
         )
 
 
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@capable_of("crud_asset")
+def get_asset_meta_from_readme_url(request, academy_id=None):
+    """
+    Extract asset metadata from a GitHub readme URL.
+    
+    This endpoint analyzes a GitHub URL to determine:
+    - What type of asset it is (QUIZ, LESSON, EXERCISE_OR_PROJECT)
+    - Extract metadata from the file (title, description, technologies, etc.)
+    - Detect if learn.json exists
+    
+    Requires: crud_asset capability
+    
+    Query params:
+    - readme_url: The GitHub URL to analyze (required)
+    - token: GitHub token for private repos (optional, will use user's token if authenticated)
+    
+    Returns:
+        200: Asset metadata with all extracted information
+        400: Invalid request (missing readme_url, invalid URL format)
+        401: GitHub authentication required
+        403: Missing crud_asset capability
+        404: Repository or file not found
+        500: Server error
+        
+    Example usage:
+        GET /v1/registry/academy/asset/meta_from_readme_url?readme_url=https://github.com/owner/repo/blob/main/README.md
+        GET /v1/registry/academy/asset/meta_from_readme_url?readme_url=https://github.com/owner/repo/blob/main/quiz.json&token=ghp_xxx
+    """
+    from breathecode.registry.utils import AssetParser
+
+    lang = get_user_language(request)
+    
+    # Get and validate readme_url parameter
+    readme_url = request.GET.get("readme_url")
+    if not readme_url:
+        raise ValidationException(
+            translation(
+                en="Missing readme_url parameter",
+                es="Falta el parámetro readme_url"
+            ),
+            slug="missing-readme-url",
+            code=400
+        )
+    
+    # Validate it's a GitHub URL
+    if "github.com" not in readme_url:
+        raise ValidationException(
+            translation(
+                en="The readme_url must be a GitHub URL",
+                es="El readme_url debe ser una URL de GitHub"
+            ),
+            slug="invalid-github-url",
+            code=400
+        )
+    
+    # Get user's GitHub token (user must be authenticated due to capable_of)
+    github_token = None
+    credentials = CredentialsGithub.objects.filter(user=request.user).first()
+    if credentials:
+        github_token = credentials.token
+    
+    # Use provided token if available (overrides user's token)
+    if "token" in request.GET:
+        github_token = request.GET.get("token")
+    
+    if not github_token:
+        raise ValidationException(
+            translation(
+                en="GitHub credentials not found. Please connect your GitHub account or provide a token",
+                es="Credenciales de GitHub no encontradas. Por favor conecta tu cuenta de GitHub o proporciona un token"
+            ),
+            slug="github-credentials-not-found",
+            code=400
+        )
+    
+    try:
+        # Initialize parser and extract metadata
+        parser = AssetParser(github_token)
+        
+        # Validate URL first
+        is_valid, error_message = parser.validate_readme_url(readme_url)
+        if not is_valid:
+            raise ValidationException(
+                translation(
+                    en=error_message,
+                    es=error_message  # Spanish translation can be added
+                ),
+                slug="invalid-url",
+                code=400
+            )
+        
+        # Parse and extract metadata
+        metadata = parser.parse_readme_url(readme_url)
+        
+        return Response(metadata, status=status.HTTP_200_OK)
+        
+    except ValidationException:
+        raise
+    except Exception as e:
+        logger.exception(e)
+        raise ValidationException(
+            translation(
+                en=f"Error fetching metadata: {str(e)}",
+                es=f"Error al obtener metadatos: {str(e)}"
+            ),
+            slug="fetch-error",
+            code=500
+        )
+
+
 class AssetThumbnailView(APIView):
     """
     get:
