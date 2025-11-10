@@ -26,7 +26,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_user_settings
-from breathecode.authenticate.models import UserInvite, UserSetting
+from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
@@ -2090,6 +2090,10 @@ def notify_user_was_added_to_subscription_team(
     )
 
 
+def _get_student_role() -> Role | None:
+    return Role.objects.filter(slug="student").first()
+
+
 def invite_user_to_subscription_team(
     obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
 ):
@@ -2117,15 +2121,17 @@ def invite_user_to_subscription_team(
         - See handle_seat_invite_accepted in receivers.py for post-acceptance logic
         - See Issue #9973 for the complete invitation flow
     """
+    student_role = _get_student_role()
+
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=subscription.academy,
         subscription_seat=subscription_seat,
-        role="student",
+        role=student_role,
         defaults={
             "status": "PENDING",
             "author": subscription.user,
-            "role": "student",
+            "role": student_role,
             "token": str(uuid.uuid4()),
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
@@ -2246,14 +2252,16 @@ def invite_user_to_plan_financing_team(
     obj: SeatDict, team: PlanFinancingTeam, plan_financing_seat: PlanFinancingSeat, lang: str
 ):
     financing = team.financing
+    student_role = _get_student_role()
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=financing.academy,
         plan_financing_seat=plan_financing_seat,
+        role=student_role,
         defaults={
             "status": "PENDING",
             "author": financing.user,
-            "role": "student",
+            "role": student_role,
             "token": str(uuid.uuid4()),
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
