@@ -34,8 +34,63 @@ from .tasks import async_unsubscribe_repo
 logger = logging.getLogger(__name__)
 
 
-def get_stripe_webhook_secret():
-    return os.getenv("STRIPE_WEBHOOK_SECRET", "")
+def get_stripe_webhook_secret(payload=None):
+    """
+    Get appropriate Stripe webhook secret based on payload data.
+
+    If payload is provided, tries to identify the academy from the webhook data
+    and return its specific secret. Falls back to global secret if academy
+    cannot be identified.
+
+    Args:
+        payload: Optional webhook payload (bytes or dict)
+
+    Returns:
+        str: The webhook secret or None if no secret found
+    """
+    import json
+    import logging
+
+    from breathecode.payments.models import AcademyPaymentSettings, Invoice
+
+    logger = logging.getLogger(__name__)
+
+    if payload:
+        try:
+            if isinstance(payload, bytes):
+                payload_dict = json.loads(payload.decode("utf-8"))
+            else:
+                payload_dict = payload
+
+            event_data = payload_dict.get("data", {}).get("object", {})
+            charge_id = event_data.get("id")
+
+            if charge_id:
+                invoice = (
+                    Invoice.objects.filter(stripe_id=charge_id).select_related("academy__payment_settings").first()
+                )
+                if invoice and invoice.academy:
+                    academy_settings = (
+                        AcademyPaymentSettings.objects.filter(
+                            academy=invoice.academy, stripe_webhook_secret__isnull=False
+                        )
+                        .exclude(stripe_webhook_secret="")
+                        .first()
+                    )
+
+                    if academy_settings and academy_settings.stripe_webhook_secret:
+                        logger.info(f"Using webhook secret for academy: {invoice.academy.slug}")
+                        return academy_settings.stripe_webhook_secret
+        except Exception as e:
+            logger.debug(f"Could not identify academy from payload: {e}")
+            # Continue to fallback to global
+
+    global_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    if global_secret:
+        logger.info("Using global webhook secret")
+        return global_secret
+
+    return None
 
 
 class DjangoAdminView(APIView):
@@ -106,8 +161,9 @@ def get_download(request, download_id=None):
 
         raw = request.GET.get("raw", "")
         if raw == "true":
-            from ..services.google_cloud import Storage
             import os
+
+            from ..services.google_cloud import Storage
 
             try:
                 storage = Storage()
@@ -217,7 +273,7 @@ def process_stripe_webhook(request):
     event = None
     payload = request.body
     sig_header = request.headers.get("Stripe-Signature", None)
-    endpoint_secret = get_stripe_webhook_secret()
+    endpoint_secret = get_stripe_webhook_secret(payload)
 
     try:
         if not sig_header:
@@ -400,8 +456,9 @@ class AcademyDownloadSignedUrlView(APIView):
             )
 
         # Generate signed URL using Storage helper method
-        from ..services.google_cloud import Storage
         import os
+
+        from ..services.google_cloud import Storage
 
         expiration_hours = int(request.GET.get("expiration_hours", 1))
 

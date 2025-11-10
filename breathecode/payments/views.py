@@ -2183,7 +2183,6 @@ class V2CardView(APIView):
 
         if info:
             return Response(info)
-
         return Response({"has_payment_method": False})
 
     def post(self, request):
@@ -2194,18 +2193,14 @@ class V2CardView(APIView):
         s.set_language(lang)
 
         token = request.data.get("token")
-        card_number = request.data.get("card_number")
-        exp_month = request.data.get("exp_month")
-        exp_year = request.data.get("exp_year")
-        cvc = request.data.get("cvc")
 
-        if not ((card_number and exp_month and exp_year and cvc) or token):
+        if not token:
             raise ValidationException(
                 translation(
                     lang,
-                    en="Missing card information",
-                    es="Falta la información de la tarjeta",
-                    slug="missing-card-information",
+                    en="Missing token",
+                    es="Falta el token",
+                    slug="missing-token",
                 ),
                 code=404,
             )
@@ -2214,14 +2209,9 @@ class V2CardView(APIView):
             s.add_contact(request.user)
 
         try:
-            if not token:
-                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+            error, details = s.add_payment_method(request.user, token)
 
-            success, errors, details = s.update_all_payment_methods(
-                user=request.user, token=token, card_number=card_number, exp_month=exp_month, exp_year=exp_year, cvc=cvc
-            )
-
-            if not success:
+            if error:
                 raise ValidationException(
                     translation(
                         lang,
@@ -2240,6 +2230,103 @@ class V2CardView(APIView):
             raise ValidationException(str(e), code=400)
 
         return Response({"status": "ok", "details": details})
+
+
+class AcademyPublishableKeyView(APIView):
+    """
+    Endpoint to get the Stripe publishable key for a specific academy.
+    This key is safe to expose publicly as it's designed for client-side use.
+    Note: This endpoint is public (AllowAny) as it's needed for frontend payment initialization.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """
+        Get Stripe publishable key for the specified academy.
+
+        Query Parameters:
+            - academy (required): ID of the academy
+
+        OR Header:
+            - Academy (required): ID of the academy
+
+        Returns:
+            200: Academy publishable key configuration
+            {
+                "academy_id": 1,
+                "academy_name": "4Geeks.com",
+                "academy_slug": "4geeks",
+                "stripe_publishable_key": "pk_test_xxx...",
+            }
+
+            404: Academy or payment settings not found
+
+        Example:
+            GET /v1/payments/academy/publishable-key?academy=1
+            GET /v1/payments/academy/publishable-key (with header Academy: 1)
+        """
+        lang = get_user_language(request)
+
+        # Get academy_id from query parameter or header (same as capable_of decorator)
+        academy_id = request.GET.get("academy")
+
+        if not academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing academy parameter expected in query string or 'Academy' header",
+                    es="Falta el parámetro academy esperado en la query string o el header 'Academy'",
+                    slug="missing-academy-id",
+                ),
+                code=400,
+            )
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy not found",
+                    es="Academia no encontrada",
+                    slug="academy-not-found",
+                ),
+                code=404,
+            )
+
+        # Get payment settings for this academy
+        payment_settings = AcademyPaymentSettings.objects.filter(academy__id=academy_id).first()
+        if not payment_settings:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment settings not configured for this academy",
+                    es="Configuración de pago no configurada para esta academia",
+                    slug="payment-settings-not-found",
+                ),
+                code=404,
+            )
+
+        # Validate publishable key exists
+        if not payment_settings.stripe_publishable_key:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Stripe publishable key not configured for this academy",
+                    es="Clave publicable de Stripe no configurada para esta academia",
+                    slug="publishable-key-not-configured",
+                ),
+                code=404,
+            )
+
+        return Response(
+            {
+                "academy_id": academy.id,
+                "academy_name": academy.name,
+                "academy_slug": academy.slug,
+                "stripe_publishable_key": payment_settings.stripe_publishable_key,
+            }
+        )
 
 
 class ServiceBlocked(APIView):
@@ -5716,7 +5803,16 @@ class PlanFinancingSeatView(APIView):
 
         for seat in add_seats:
             try:
-                result.append(actions.create_plan_financing_seat(seat["email"], seat["user"], team, lang))
+                result.append(
+                    actions.create_plan_financing_seat(
+                        seat["email"],
+                        seat["user"],
+                        team,
+                        lang,
+                        seat.get("first_name", ""),
+                        seat.get("last_name", ""),
+                    )
+                )
             except ValidationException as e:
                 errors.append(e)
 
@@ -5749,7 +5845,17 @@ class PlanFinancingSeatView(APIView):
                 elif seat["to_email"]:
                     new_user = User.objects.filter(email=seat["to_email"]).first()
 
-                result.append(actions.replace_plan_financing_seat(seat["from_email"], seat["to_email"], new_user, financing_seat, lang))
+                result.append(
+                    actions.replace_plan_financing_seat(
+                        seat["from_email"],
+                        seat["to_email"],
+                        new_user,
+                        financing_seat,
+                        lang,
+                        seat.get("first_name", ""),
+                        seat.get("last_name", ""),
+                    )
+                )
             except ValidationException as e:
                 errors.append(e)
 
