@@ -139,18 +139,15 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     params = {"callback": "https://admin.4geeks.com"}
     querystr = urllib.parse.urlencode(params)
     url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
-    subject = "Invitation to join 4Geeks"
-    if academy and getattr(academy, "white_labeled", False):
-        subject = f"Invitation to join {academy.name}"
 
     notify_actions.send_email_message(
         "welcome_academy",
         email,
         {
             "email": email,
-            "subject": subject,
+            "subject": f"{academy.name if academy else '4Geeks'} is inviting you to {academy.slug if academy else '4geeks'}.4Geeks.com",
             "LINK": url,
-            "FIST_NAME": first_name,
+            "FIRST_NAME": first_name,
             **extra,
         },
         academy=academy,

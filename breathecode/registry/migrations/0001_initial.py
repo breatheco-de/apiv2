@@ -100,7 +100,7 @@ class Migration(migrations.Migration):
                     models.CharField(
                         blank=True,
                         default=None,
-                        help_text="Automatically calculated based on the package.json, pipfile or alternatives. String like: python=3.10,node=16.0",
+                        help_text="Automatically calculated based on the package.json, pyproject.toml or alternatives. String like: python=3.10,node=16.0",
                         max_length=50,
                         null=True,
                     ),

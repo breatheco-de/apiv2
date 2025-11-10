@@ -518,9 +518,11 @@ class MemberView(APIView, GenerateLookupsMixin):
         if roles != "":
             items = items.filter(role__in=roles.lower().split(","))
 
-        status = request.GET.get("status", None)
-        if status is not None:
-            items = items.filter(status__iexact=status)
+        status_param = request.GET.get("status")
+        if status_param:
+            statuses = [value.strip().upper() for value in status_param.split(",") if value.strip()]
+            if statuses:
+                items = items.filter(status__in=statuses)
 
         like = request.GET.get("like", None)
         if like is not None:
@@ -1175,6 +1177,69 @@ class UserMeView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CapabilityCheckView(APIView):
+    """Check if the authenticated user has a specific capability within an academy context.
+
+    Requires:
+    - Authorization header (Token)
+    - Academy context via 'Academy' header or querystring (?academy=<id>)
+    Returns 200 if user has the capability for that academy; otherwise 403/400 from validators.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, capability_slug: str):
+        from breathecode.utils.decorators.capable_of import get_academy_from_capability
+
+        # Will raise if missing/invalid academy or user lacks capability
+        get_academy_from_capability({}, request, capability_slug)
+
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+
+
+class AcademyCapabilitiesView(APIView):
+    """Get all capabilities for the authenticated user in a specific academy.
+
+    Returns a unique list of capabilities from all ProfileAcademy roles the user has for that academy.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, slug_or_id: str):
+        # Get the academy by slug or id
+        academy = None
+        if slug_or_id.isdigit():
+            academy = Academy.objects.filter(id=int(slug_or_id)).first()
+        else:
+            academy = Academy.objects.filter(slug=slug_or_id).first()
+
+        if not academy:
+            raise ValidationException(
+                translation(
+                    en=f"Academy with identifier '{slug_or_id}' not found",
+                    es=f"Academia con identificador '{slug_or_id}' no encontrada",
+                ),
+                slug="academy-not-found",
+                code=404,
+            )
+
+        # Get all ProfileAcademies for this user and academy
+        profile_academies = ProfileAcademy.objects.filter(
+            user=request.user, academy=academy
+        ).select_related("role").prefetch_related("role__capabilities")
+
+        # Collect all capabilities using a set to avoid duplicates
+        capabilities_set = set()
+        for profile_academy in profile_academies:
+            for capability in profile_academy.role.capabilities.all():
+                capabilities_set.add(capability.slug)
+
+        # Convert to sorted list for consistent output
+        capabilities_list = sorted(list(capabilities_set))
+
+        return Response(capabilities_list, status=status.HTTP_200_OK)
 
 
 class UserSettingsView(APIView):
@@ -3587,3 +3652,22 @@ class UpdateEmailEverywhereView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+class CapabilityCheckView(APIView):
+    """Check if the authenticated user has a specific capability within an academy context.
+
+    Requires:
+    - Authorization header (Token)
+    - Academy context via 'Academy' header or querystring (?academy=<id>)
+    Returns 200 if user has the capability for that academy; otherwise 403/400 from validators.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, capability_slug: str):
+        from breathecode.utils.decorators.capable_of import get_academy_from_capability
+
+        # Will raise if missing/invalid academy or user lacks capability
+        get_academy_from_capability({}, request, capability_slug)
+
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)

@@ -560,12 +560,14 @@ class V2MeActivityView(APIView):
         limit = int(request.GET.get("limit", 100))
         offset = (int(request.GET.get("page", 1)) - 1) * limit
         kind = request.GET.get("kind", None)
+        cohort = request.GET.get("cohort", None)
 
         query = f"""
             SELECT *
             FROM `{project_id}.{dataset}.activity`
             WHERE user_id = @user_id
                 {'AND kind = @kind' if kind else ''}
+                {'AND (meta.cohort = @cohort_slug OR meta.cohort = @cohort_id)' if cohort else ''}
             ORDER BY timestamp DESC
             LIMIT @limit
             OFFSET @offset
@@ -579,6 +581,16 @@ class V2MeActivityView(APIView):
 
         if kind:
             data.append(bigquery.ScalarQueryParameter("kind", "STRING", kind))
+
+        if cohort:
+            # Try to convert cohort to integer for ID comparison, fallback to slug
+            try:
+                cohort_id = int(cohort)
+                data.append(bigquery.ScalarQueryParameter("cohort_id", "INT64", cohort_id))
+                data.append(bigquery.ScalarQueryParameter("cohort_slug", "STRING", ""))
+            except (ValueError, TypeError):
+                data.append(bigquery.ScalarQueryParameter("cohort_id", "INT64", 0))
+                data.append(bigquery.ScalarQueryParameter("cohort_slug", "STRING", cohort))
 
         job_config = bigquery.QueryJobConfig(query_parameters=data)
 
@@ -640,6 +652,7 @@ class V2AcademyActivityView(APIView):
         kind = request.GET.get("kind", None)
         date_start = request.GET.get("date_start", None)
         date_end = request.GET.get("date_end", None)
+        cohort = request.GET.get("cohort_id", None)
 
         query = f"""
             SELECT *
@@ -649,6 +662,7 @@ class V2AcademyActivityView(APIView):
                 {'AND kind = @kind' if kind else ''}
                 {'AND timestamp >= @date_start' if date_start else ''}
                 {'AND timestamp <= @date_end' if date_end else ''}
+                {'AND meta.cohort = @cohort_id' if cohort else ''}
             ORDER BY timestamp DESC
             LIMIT @limit
             OFFSET @offset
@@ -669,6 +683,14 @@ class V2AcademyActivityView(APIView):
 
         if date_end:
             data.append(bigquery.ScalarQueryParameter("date_end", "TIMESTAMP", date_end))
+
+        if cohort:
+            # Try to convert cohort to integer for ID comparison, fallback to slug
+            try:
+                cohort_id = int(cohort)
+                data.append(bigquery.ScalarQueryParameter("cohort_id", "INT64", cohort_id))
+            except (ValueError, TypeError):
+                data.append(bigquery.ScalarQueryParameter("cohort_id", "INT64", 0))
 
         job_config = bigquery.QueryJobConfig(query_parameters=data)
 

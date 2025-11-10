@@ -1,3 +1,51 @@
+"""
+URL Configuration for Assignments App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/tasks, /academy/coderevisions
+   - Use singular nouns for individual resources: /task/<id>
+
+2. HTTP Methods:
+   - GET /academy/task - List all academy tasks
+   - POST /academy/task - Create new task
+   - GET /academy/task/<id> - Get specific task
+   - PUT/PATCH /academy/task/<id> - Update specific task
+   - DELETE /academy/task/<id> - Delete specific task
+
+3. Nested Resources:
+   - /user/me/task/<id> - Current user's specific task
+   - /academy/task/<id>/commitfile - Files for a specific task
+   - /academy/cohort/<id>/task - Tasks for a specific cohort
+
+4. Actions (Non-REST exceptions):
+   - /task/<id>/deliver - Deliver task assignment (POST)
+   - /task/<id>/deliver/<token> - Deliver with token (POST)
+   - /sync/cohort/<id>/task - Sync cohort tasks (POST)
+
+5. Special Endpoints:
+   - /user/me/* - Current user's assignments and tasks
+   - /academy/* - Academy-specific resources
+   - /me/* - Current user's resources (shorter prefix)
+   - /sync/* - Synchronization endpoints
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_task_id_commitfile
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_task_id_commitfile - Get/update commit files for specific task
+- user_me_task_id - Get/update current user's specific task
+- academy_coderevision_id - Get/update specific code revision
+- sync_cohort_id_task - Sync tasks for specific cohort
+"""
+
 from django.urls import path
 
 from .views import (

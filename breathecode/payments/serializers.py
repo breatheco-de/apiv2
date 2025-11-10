@@ -7,16 +7,17 @@ from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
+    AcademyService,
+    Bag,
+    CohortSet,
     Currency,
     FinancingOption,
-    AcademyService,
     PaymentMethod,
     Plan,
     PlanOfferTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
-    Bag,
 )
 from breathecode.utils import serializers, serpy
 
@@ -75,7 +76,7 @@ class GetServiceSmallSerializer(serpy.Serializer):
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
-    # owner = GetAcademySmallSerializer(many=False)
+    owner = serpy.MethodField()
     icon_url = serpy.Field()
     private = serpy.Field()
     groups = serpy.MethodField()
@@ -83,24 +84,36 @@ class GetServiceSmallSerializer(serpy.Serializer):
     consumer = serpy.Field()
     session_duration = serpy.Field()
 
+    def get_owner(self, obj):
+        if obj.owner:
+            return GetAcademySmallSerializer(obj.owner, many=False).data
+        return None
+
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
 
 
 class GetServiceSerializer(serpy.Serializer):
+    id = serpy.Field()
     title = serpy.Field()
     slug = serpy.Field()
     # description = serpy.Field()
 
-    owner = GetAcademySmallSerializer(many=False)
+    owner = serpy.MethodField()
     private = serpy.Field()
     groups = serpy.MethodField()
+
+    def get_owner(self, obj):
+        if obj.owner:
+            return GetAcademySmallSerializer(obj.owner, many=False).data
+        return None
 
     def get_groups(self, obj):
         return GetGroupSerializer(obj.groups.all(), many=True).data
 
 
 class GetServiceItemSerializer(serpy.Serializer):
+    id = serpy.Field()
     unit_type = serpy.Field()
     how_many = serpy.Field()
     sort_priority = serpy.Field()
@@ -129,6 +142,7 @@ class GetServiceItemWithFeaturesSerializer(GetServiceItemSerializer):
 
 
 class GetUserSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     email = serpy.Field()
@@ -140,9 +154,10 @@ class GetConsumableSerializer(GetServiceItemSerializer):
 
 
 class GetFinancingOptionSerializer(serpy.Serializer):
+    id = serpy.Field()
+    academy = serpy.MethodField()
     monthly_price = serpy.MethodField()
     how_many_months = serpy.Field()
-
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
 
@@ -166,6 +181,11 @@ class GetFinancingOptionSerializer(serpy.Serializer):
             slug = obj_currency.code.upper()  # Use code attribute
             if slug not in self.cache:
                 self.cache[slug] = obj_currency
+
+    def get_academy(self, obj: FinancingOption):
+        if obj.academy:
+            return GetAcademySmallSerializer(obj.academy).data
+        return None
 
     def get_currency(self, obj: FinancingOption):
         country_code = self.context.get("country_code")
@@ -217,9 +237,15 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
+    cohort_set = serpy.MethodField()
 
     def get_has_available_cohorts(self, obj):
         return bool(obj.cohort_set)
+
+    def get_cohort_set(self, obj):
+        if not obj.cohort_set:
+            return None
+        return GetTinyCohortSetSerializer(obj.cohort_set, many=False).data
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -420,6 +446,7 @@ class GetCouponSerializer(serpy.Serializer):
     referral_type = serpy.Field()
     referral_value = serpy.Field()
     auto = serpy.Field()
+    allowed_user = GetUserSmallSerializer(many=False, required=False)
     offered_at = serpy.Field()
     expires_at = serpy.Field()
 
@@ -577,6 +604,23 @@ class GetCohortSetSerializer(serpy.Serializer):
         return GetCohortSerializer(obj.cohorts.filter(), many=True).data
 
 
+class GetTinyCohortSetSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    cohorts = serpy.MethodField()
+
+    def get_cohorts(self, obj):
+        return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+
+class CohortSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating CohortSet."""
+
+    class Meta:
+        model = CohortSet
+        fields = ("slug",)
+
+
 class GetEventTypeSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -605,7 +649,6 @@ class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_event_type_sets=obj)
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
-
 
 
 class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
@@ -653,6 +696,7 @@ class GetBagSerializer(serpy.Serializer):
     def get_coupons(self, obj):
         return GetCouponSerializer(obj.coupons.filter(), many=True).data
 
+
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -665,6 +709,7 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     amount_refunded = serpy.Field()
     refund_stripe_id = serpy.Field()
     refunded_at = serpy.Field()
+
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
@@ -684,6 +729,28 @@ class GetAbstractIOweYouSerializer(serpy.Serializer):
 
     next_payment_at = serpy.Field()
     valid_until = serpy.Field()
+
+    # Billing team and seat information
+    has_billing_team = serpy.MethodField()
+    seats_count = serpy.MethodField()
+    seats_limit = serpy.MethodField()
+
+    def get_has_billing_team(self, obj):
+        """Check if this financing/subscription has a billing team."""
+        return hasattr(obj, "subscriptionbillingteam")
+
+    def get_seats_count(self, obj):
+        """Get number of active seats in the billing team."""
+        if hasattr(obj, "subscriptionbillingteam"):
+            return obj.subscriptionbillingteam.seats.filter(is_active=True).count()
+        return None
+
+    def get_seats_limit(self, obj):
+        """Get total seat limit for the billing team."""
+        if hasattr(obj, "subscriptionbillingteam"):
+            return obj.subscriptionbillingteam.seats_limit
+        return None
+
 
 class GetPlanFinancingSerializer(GetAbstractIOweYouSerializer):
     plan_expires_at = serpy.Field()
@@ -713,7 +780,7 @@ class GetSubscriptionSerializer(GetAbstractIOweYouSerializer):
         return GetServiceItemSerializer(obj.service_items.filter(), many=True).data
 
 
-class ServiceSerializer(serializers.Serializer):
+class ServiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Service
@@ -723,7 +790,7 @@ class ServiceSerializer(serializers.Serializer):
         return attrs
 
 
-class ServiceItemSerializer(serializers.Serializer):
+class ServiceItemSerializer(serializers.ModelSerializer):
     status_fields = ["unit_type"]
 
     class Meta:
@@ -732,6 +799,21 @@ class ServiceItemSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         return attrs
+
+    def create(self, validated_data):
+        # Use the model's get_or_create_for_service method which encapsulates
+        # the business logic for ServiceItem uniqueness
+        service_item, created = ServiceItem.get_or_create_for_service(
+            service=validated_data.get("service"),
+            how_many=validated_data.get("how_many"),
+            unit_type=validated_data.get("unit_type", "UNIT"),
+            is_renewable=validated_data.get("is_renewable", False),
+            is_team_allowed=validated_data.get("is_team_allowed", False),
+            renew_at=validated_data.get("renew_at", 1),
+            renew_at_unit=validated_data.get("renew_at_unit", "MONTH"),
+            sort_priority=validated_data.get("sort_priority", 1),
+        )
+        return service_item
 
 
 class PlanSerializer(serializers.ModelSerializer):
@@ -765,13 +847,74 @@ class PutPlanSerializer(PlanSerializer):
     def validate(self, attrs):
         return attrs
 
+
+class FinancingOptionSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating FinancingOption"""
+
+    class Meta:
+        model = FinancingOption
+        fields = ["id", "academy", "monthly_price", "how_many_months", "currency", "pricing_ratio_exceptions"]
+        read_only_fields = ["id", "academy"]
+
+    def validate_monthly_price(self, value):
+        if value <= 0:
+            raise ValidationException(
+                translation(
+                    en="Monthly price must be greater than 0",
+                    es="El precio mensual debe ser mayor que 0",
+                ),
+                slug="invalid-monthly-price",
+                code=400,
+            )
+        return value
+
+    def validate_how_many_months(self, value):
+        if value <= 0:
+            raise ValidationException(
+                translation(
+                    en="Number of months must be greater than 0",
+                    es="El número de meses debe ser mayor que 0",
+                ),
+                slug="invalid-months",
+                code=400,
+            )
+        return value
+
     def create(self, validated_data):
-        return Plan.objects.create(**validated_data)
+        from breathecode.admissions.models import Academy
+
+        # Get academy from validated_data or from save() kwargs
+        # The view calls serializer.save(academy_id=academy_id)
+        academy_id = validated_data.pop("academy_id", None)
+        academy = validated_data.get("academy")
+
+        # Convert academy_id to Academy instance if needed
+        if academy_id and not academy:
+            academy = Academy.objects.filter(id=academy_id).first()
+            if not academy:
+                raise ValidationException(
+                    translation(
+                        en="Academy not found",
+                        es="Academia no encontrada",
+                    ),
+                    slug="academy-not-found",
+                    code=404,
+                )
+
+        # Use the model's get_or_create_for_academy method which encapsulates
+        # the business logic for FinancingOption uniqueness
+        financing_option, created = FinancingOption.get_or_create_for_academy(
+            academy=academy,
+            monthly_price=validated_data.get("monthly_price"),
+            currency=validated_data.get("currency"),
+            how_many_months=validated_data.get("how_many_months"),
+            pricing_ratio_exceptions=validated_data.get("pricing_ratio_exceptions"),
+        )
+        return financing_option
 
     def update(self, instance, validated_data):
         for key in validated_data:
             setattr(instance, key, validated_data[key])
-
         instance.save()
         return instance
 
@@ -782,6 +925,7 @@ class GetPaymentMethod(serpy.Serializer):
     is_backed = serpy.Field()
     lang = serpy.Field()
     is_credit_card = serpy.Field()
+    is_crypto = serpy.Field()
     description = serpy.Field()
     third_party_link = serpy.Field()
     academy = GetAcademySmallSerializer(required=False, many=False)

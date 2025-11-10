@@ -19,13 +19,16 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .caches import AnswerCache
-from .models import AcademyFeedbackSettings, Answer, Review, ReviewPlatform, Survey, SurveyTemplate
+from .models import AcademyFeedbackSettings, Answer, FeedbackTag, Review, ReviewPlatform, Survey, SurveyTemplate
 from .serializers import (
     AcademyFeedbackSettingsPUTSerializer,
     AcademyFeedbackSettingsSerializer,
     AnswerPUTSerializer,
     AnswerSerializer,
     BigAnswerSerializer,
+    FeedbackTagPOSTSerializer,
+    FeedbackTagPUTSerializer,
+    FeedbackTagSerializer,
     GetSurveySerializer,
     ReviewPlatformSerializer,
     ReviewPUTSerializer,
@@ -570,3 +573,134 @@ class AcademySurveyTemplateView(APIView):
 
         serializer = SurveyTemplateSerializer(templates, many=True)
         return Response(serializer.data)
+
+
+class AcademyFeedbackTagView(APIView, GenerateLookupsMixin):
+    """
+    CRUD endpoints for managing FeedbackTag
+    """
+
+    @capable_of("read_nps_answers")
+    def get(self, request, academy_id=None, tag_id=None):
+        """
+        Get FeedbackTags. Returns academy-owned tags and public shared tags.
+        Sorted by priority (ascending) by default.
+        """
+        if tag_id is not None:
+            # Get single tag
+            tag = FeedbackTag.objects.filter(
+                Q(id=tag_id) & (Q(academy__id=academy_id) | (Q(academy__isnull=True) & Q(is_private=False)))
+            ).first()
+
+            if tag is None:
+                raise ValidationException("Tag not found or not accessible", code=404, slug="tag-not-found")
+
+            serializer = FeedbackTagSerializer(tag)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # List tags - include academy's tags and public shared tags
+        tags = FeedbackTag.objects.filter(Q(academy__id=academy_id) | (Q(academy__isnull=True) & Q(is_private=False)))
+
+        # Filter by academy if specified in query params
+        academy_filter = request.GET.get("academy", None)
+        if academy_filter is not None:
+            if academy_filter.lower() == "mine":
+                # Only tags owned by this academy
+                tags = tags.filter(academy__id=academy_id)
+            elif academy_filter.lower() == "shared":
+                # Only shared public tags
+                tags = tags.filter(academy__isnull=True, is_private=False)
+
+        # Default sort by priority, then title
+        sort = request.GET.get("sort", "priority")
+        tags = tags.order_by(sort)
+
+        serializer = FeedbackTagSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_survey")
+    def post(self, request, academy_id=None):
+        """
+        Create a new FeedbackTag
+        """
+        academy = Academy.objects.get(id=academy_id)
+
+        # If academy is not specified in payload, use the current academy
+        if "academy" not in request.data or request.data["academy"] is None:
+            data = request.data.copy()
+            data["academy"] = academy.id
+        else:
+            data = request.data
+
+        serializer = FeedbackTagPOSTSerializer(data=data, context={"request": request, "academy_id": academy_id})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(FeedbackTagSerializer(serializer.instance).data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_survey")
+    def put(self, request, academy_id=None, tag_id=None):
+        """
+        Update an existing FeedbackTag
+        """
+        if tag_id is None:
+            raise ValidationException("Missing tag_id", code=400, slug="missing-tag-id")
+
+        # Can only update tags owned by this academy
+        tag = FeedbackTag.objects.filter(id=tag_id, academy__id=academy_id).first()
+
+        if tag is None:
+            raise ValidationException(
+                "Tag not found or you don't have permission to edit it", code=404, slug="tag-not-found-or-forbidden"
+            )
+
+        serializer = FeedbackTagPUTSerializer(
+            tag, data=request.data, context={"request": request, "academy_id": academy_id}
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(FeedbackTagSerializer(serializer.instance).data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_survey")
+    def delete(self, request, academy_id=None, tag_id=None):
+        """
+        Delete FeedbackTag(s). Supports bulk delete via query string.
+        """
+        lookups = self.generate_lookups(request, many_fields=["id"])
+
+        if lookups and tag_id:
+            raise ValidationException(
+                "tag_id was provided in url in bulk mode request, use querystring style instead",
+                code=400,
+                slug="tag-id-and-lookups-together",
+            )
+
+        if not lookups and not tag_id:
+            raise ValidationException("tag_id was not provided in url", code=400, slug="without-tag-id-and-lookups")
+
+        if lookups:
+            # Bulk delete - only delete tags owned by this academy
+            items = FeedbackTag.objects.filter(**lookups, academy__id=academy_id)
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        # Single delete
+        tag = FeedbackTag.objects.filter(id=tag_id, academy__id=academy_id).first()
+
+        if tag is None:
+            raise ValidationException(
+                "Tag not found or you don't have permission to delete it",
+                code=404,
+                slug="tag-not-found-or-forbidden",
+            )
+
+        tag.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
