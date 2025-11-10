@@ -487,6 +487,8 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "id",
         "subscription",
         "plan_financing",
+        "plan_financing_team",
+        "plan_financing_seat",
         "subscription_billing_team",
         "subscription_seat",
         "consumables_count",
@@ -496,6 +498,8 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "valid_until",
         "subscription_billing_team",
         "subscription_seat",
+        "plan_financing_team",
+        "plan_financing_seat",
         "subscription_handler__subscription__status",
         "plan_handler__subscription__status",
         "plan_handler__plan_financing__status",
@@ -515,13 +519,18 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "plan_handler__plan_financing__user__last_name",
         "subscription_seat__email",
         "subscription_seat__user__email",
+        "plan_financing_seat__email",
+        "plan_financing_seat__user__email",
         "subscription_billing_team__name",
+        "plan_financing_team__name",
     ]
     raw_id_fields = [
         "subscription_handler",
         "plan_handler",
         "subscription_billing_team",
         "subscription_seat",
+        "plan_financing_team",
+        "plan_financing_seat",
     ]
     # Use autocomplete to avoid loading all consumables in memory and reduce cursor usage
     autocomplete_fields = ("consumables",)
@@ -536,6 +545,8 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "plan_handler__handler__service_item__service",
         "subscription_seat__user",
         "subscription_billing_team",
+        "plan_financing_team",
+        "plan_financing_seat__user",
     )
     date_hierarchy = "valid_until"
     actions = [renew_consumables]
@@ -557,6 +568,8 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
             "plan_handler__handler__service_item__service",
             "subscription_seat__user",
             "subscription_billing_team",
+            "plan_financing_team",
+            "plan_financing_seat__user",
         )
 
     def subscription(self, obj):
