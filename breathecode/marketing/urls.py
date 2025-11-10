@@ -77,6 +77,12 @@ from .views import (
     ActiveCampaignView,
     UploadView,
     CourseTranslationsView,
+    AcademyCourseView,
+    CoursePlanByCountryCodeView,
+    CourseTranslationView,
+    CourseTranslationCourseModulesView,
+    CourseTranslationLandingVariablesView,
+    CourseTranslationPrerequisiteView,
     validate_email_from_app,
     get_alias,
 )
@@ -125,4 +131,26 @@ urlpatterns = [
     path("course", CourseView.as_view(), name="course"),
     path("course/<slug:course_slug>", CourseView.as_view(), name="course_slug"),
     path("course/<slug:course_slug>/translations", CourseTranslationsView.as_view(), name="course_translations"),
+    path("academy/course/<int:course_id>", AcademyCourseView.as_view(), name="academy_course_id"),
+    path(
+        "academy/course/<int:course_id>/plan-by-country-code",
+        CoursePlanByCountryCodeView.as_view(),
+        name="academy_course_id_plan_by_country_code",
+    ),
+    path("academy/course/<int:course_id>/translation", CourseTranslationView.as_view(), name="academy_course_id_translation"),
+    path(
+        "academy/course/<int:course_id>/course_modules",
+        CourseTranslationCourseModulesView.as_view(),
+        name="academy_course_id_course_modules",
+    ),
+    path(
+        "academy/course/<int:course_id>/landing_variables",
+        CourseTranslationLandingVariablesView.as_view(),
+        name="academy_course_id_landing_variables",
+    ),
+    path(
+        "academy/course/<int:course_id>/prerequisite",
+        CourseTranslationPrerequisiteView.as_view(),
+        name="academy_course_id_prerequisite",
+    ),
 ]

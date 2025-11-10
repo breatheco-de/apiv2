@@ -65,6 +65,7 @@ CAPABILITIES = [
     {"slug": "crud_review", "description": "Create, update or delete academy reviews"},
     {"slug": "read_media", "description": "List all the medias"},
     {"slug": "crud_media", "description": "Create, update or delete academy medias"},
+    {"slug": "crud_course", "description": "Create, update or delete marketing courses"},
     {"slug": "read_media_resolution", "description": "List all the medias resolutions"},
     {"slug": "crud_media_resolution", "description": "Create, update or delete academy media resolutions"},
     {"slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)"},
@@ -697,6 +698,7 @@ def get_extended_roles():
                 "crud_paymentmethod",
                 "read_commission",
                 "crud_commission",
+                "crud_course",
             ],
         }
     )
