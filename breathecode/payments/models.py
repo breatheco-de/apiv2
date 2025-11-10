@@ -3614,20 +3614,12 @@ class AcademyPaymentSettings(models.Model):
     if TYPE_CHECKING:
         objects: TypedManager["AcademyPaymentSettings"]
 
-    class POSVendor(models.TextChoices):
-        STRIPE = "STRIPE", "Stripe"
-        COINBASE = "COINBASE", "Coinbase Commerce"
-
     academy = models.OneToOneField(
         Academy, on_delete=models.CASCADE, related_name="payment_settings", help_text="Academy"
     )
-    pos_vendor = models.CharField(
-        max_length=20,
-        choices=POSVendor.choices,
-        default=POSVendor.STRIPE,
-        help_text="Point of Sale vendor like Stripe, etc.",
-    )
-    pos_api_key = models.CharField(max_length=255, blank=True, help_text="API key for the POS vendor")
+    stripe_api_key = models.CharField(max_length=255, blank=True, help_text="API key for the POS vendor")
+    stripe_webhook_secret = models.CharField(max_length=255, blank=True, help_text="Webhook secret for Stripe")
+    stripe_publishable_key = models.CharField(max_length=255, blank=True, help_text="Publishable key for Stripe")
     coinbase_api_key = models.CharField(
         max_length=255, blank=True, null=True, help_text="API key for Coinbase Commerce"
     )
