@@ -708,5 +708,5 @@ class ProofOfPaymentAdmin(admin.ModelAdmin):
 
 @admin.register(AcademyPaymentSettings)
 class AcademyPaymentSettingsAdmin(admin.ModelAdmin):
-    list_display = ("academy", "pos_vendor", "created_at")
+    list_display = ("academy", "created_at")
     search_fields = ["academy__name", "academy__slug"]

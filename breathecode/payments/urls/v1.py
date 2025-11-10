@@ -12,6 +12,7 @@ from ..views import (
     AcademyPlanServiceItemView,
     AcademyPlanSubscriptionView,
     AcademyPlanView,
+    AcademyPublishableKeyView,
     AcademyServiceItemView,
     AcademyServiceView,
     AcademySubscriptionView,
@@ -83,6 +84,7 @@ urlpatterns = [
     path("academy/academyservice", AcademyAcademyServiceView.as_view()),
     path("academy/academyservice/<slug:service_slug>", AcademyAcademyServiceView.as_view()),
     path("academy/serviceitem", AcademyServiceItemView.as_view(), name="academy_serviceitem"),
+    path("academy/publishable-key", AcademyPublishableKeyView.as_view(), name="academy_publishable_key"),
     path("serviceitem", ServiceItemView.as_view(), name="serviceitem"),
     path("academy/paymentmethod", AcademyPaymentMethodView.as_view(), name="academy_paymentmethod"),
     path(
