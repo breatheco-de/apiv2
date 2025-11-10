@@ -150,16 +150,21 @@ class Stripe:
         """
         stripe.api_key = self.api_key
         error = None
+        details = {}
+
         try:
             contact = PaymentContact.objects.filter(user=user, academy=self.academy).first()
             if not contact:
                 contact = self.add_contact(user)
 
             def callback():
-                return stripe.Customer.modify(contact.stripe_id, source=token)
+                customer = stripe.Customer.modify(contact.stripe_id, source=token)
+                if not customer.get("default_source"):
+                    return None
+                return stripe.Customer.retrieve_source(customer.id, customer.default_source)
 
-            costumer = self._i18n_validations(callback)
-            source = stripe.Customer.retrieve_source(costumer.id, costumer.default_source)
+            source = self._i18n_validations(callback)
+
             details = {
                 "card_last4": source.last4,
                 "card_brand": source.brand,
@@ -169,6 +174,7 @@ class Stripe:
 
         except Exception as e:
             error = str(e)
+
         return error, details
 
     def add_contact(self, user: User) -> PaymentContact:

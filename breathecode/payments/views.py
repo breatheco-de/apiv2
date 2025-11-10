@@ -2183,7 +2183,6 @@ class V2CardView(APIView):
 
         if info:
             return Response(info)
-
         return Response({"has_payment_method": False})
 
     def post(self, request):
@@ -2194,15 +2193,14 @@ class V2CardView(APIView):
         s.set_language(lang)
 
         token = request.data.get("token")
-        print("tokens es", token)
 
         if not token:
             raise ValidationException(
                 translation(
                     lang,
-                    en="Missing tokens",
-                    es="Falta los tokens",
-                    slug="missing-tokens",
+                    en="Missing token",
+                    es="Falta el token",
+                    slug="missing-token",
                 ),
                 code=404,
             )
@@ -2272,7 +2270,6 @@ class AcademyPublishableKeyView(APIView):
 
         # Get academy_id from query parameter or header (same as capable_of decorator)
         academy_id = request.GET.get("academy")
-        print("academy_id es", academy_id)
 
         if not academy_id:
             raise ValidationException(
@@ -5839,7 +5836,11 @@ class PlanFinancingSeatView(APIView):
                 elif seat["to_email"]:
                     new_user = User.objects.filter(email=seat["to_email"]).first()
 
-                result.append(actions.replace_plan_financing_seat(seat["from_email"], seat["to_email"], new_user, financing_seat, lang))
+                result.append(
+                    actions.replace_plan_financing_seat(
+                        seat["from_email"], seat["to_email"], new_user, financing_seat, lang
+                    )
+                )
             except ValidationException as e:
                 errors.append(e)
 
