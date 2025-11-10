@@ -972,7 +972,14 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             if cohort is not None and self.instance.slug != data["slug"]:
                 raise ValidationException("Slug already exists for another cohort", slug="slug-already-exists")
 
-        if "available_as_saas" not in data or data["available_as_saas"] is None:
+        # For CREATE: use academy default if not provided or None
+        # For UPDATE: only use academy default if explicitly set to None
+        if not self.instance:
+            # Creating new cohort - use academy default if not provided or None
+            if "available_as_saas" not in data or data["available_as_saas"] is None:
+                data["available_as_saas"] = self.context["academy"].available_as_saas
+        elif "available_as_saas" in data and data["available_as_saas"] is None:
+            # Updating existing cohort - only use academy default if explicitly set to None
             data["available_as_saas"] = self.context["academy"].available_as_saas
 
         if self.instance:

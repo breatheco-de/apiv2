@@ -577,6 +577,21 @@ await removeSeat(123, 105);
 
 ---
 
+## Plan Financing Seats
+
+Plan financings now support their own team and seat management flow, separated from subscriptions.
+
+- **Team Endpoint:** `GET /v2/payments/plan-financing/{plan_financing_id}/team`
+- **Seat Endpoint:** `GET|PUT|DELETE /v2/payments/plan-financing/{plan_financing_id}/team/seat`
+- Only the financing owner can view or modify seats.
+- Seat limits mirror the purchased seats in the financing (owner seat + additional seats).
+- Seat operations reuse the same payload shape as subscription seats (`add_seats`, `replace_seats`).
+- Auto-recharge, when enabled on the financing, follows the same thresholds and spend limits as subscriptions.
+- When consumption strategy is `PER_SEAT`, consumables are tied to each financing seat.
+- When consumption strategy is `PER_TEAM`, consumables are shared across the financing team.
+
+> Note: Invitations for unregistered users are not yet available for plan financings; seats created without a user stay pending until manually reassigned.
+
 ## Team Settings & Auto-Recharge
 
 Billing teams can be configured to automatically recharge when running low on credits.

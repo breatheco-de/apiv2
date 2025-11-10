@@ -39,6 +39,8 @@ from .models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
     PlanOffer,
     PlanServiceItem,
     PlanServiceItemHandler,
@@ -84,6 +86,15 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
                 extras["subscription_seat_id"] = None
 
             extras["subscription_billing_team_id"] = scheduler.subscription_billing_team.id
+
+        if scheduler.plan_financing_seat:
+            extras["plan_financing_seat_id"] = scheduler.plan_financing_seat.id
+            extras["plan_financing_team_id"] = scheduler.plan_financing_seat.team_id
+
+        if scheduler.plan_financing_team:
+            extras["user"] = None
+            extras["plan_financing_team_id"] = scheduler.plan_financing_team.id
+
         return extras
 
     logger.info(f"Starting renew_consumables for service stock scheduler {scheduler_id}")
@@ -191,6 +202,12 @@ def renew_consumables(self, scheduler_id: int, **_: Any):
     if subscription and scheduler.subscription_seat:
         # Use the seat's user if assigned, otherwise None (waiting for invitation acceptance)
         user = scheduler.subscription_seat.user if scheduler.subscription_seat.user_id else None
+
+    if plan_financing and scheduler.plan_financing_seat:
+        user = scheduler.plan_financing_seat.user if scheduler.plan_financing_seat.user_id else None
+
+    if plan_financing and scheduler.plan_financing_team:
+        user = None
 
     unit = service_item.renew_at
     unit_type = service_item.renew_at_unit
@@ -1427,68 +1444,112 @@ def build_service_stock_scheduler_from_subscription(
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
 def build_service_stock_scheduler_from_plan_financing(
-    self, plan_financing_id: int, user_id: Optional[int] = None, **_: Any
+    self,
+    plan_financing_id: int,
+    seat_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    **_: Any,
 ):
     """Build service stock scheduler for a plan financing."""
 
     logger.info(f"Starting build_service_stock_scheduler_from_plan_financing for subscription {plan_financing_id}")
 
-    k = {
-        "plan_financing": "user__id",
-        # service items of
-        "handlers": {
-            "of_subscription": "subscription_handler__subscription__user__id",
-            "of_plan": "plan_handler__subscription__user__id",
-        },
-    }
+    filters = {"id": plan_financing_id}
+    if user_id:
+        filters["user__id"] = user_id
 
-    additional_args = {
-        "plan_financing": {k["plan_financing"]: user_id} if user_id else {},
-        # service items of
-        "handlers": {
-            "of_plan": {
-                k["handlers"]["of_plan"]: user_id,
-            },
-        },
-    }
-
-    if not (
-        plan_financing := PlanFinancing.objects.filter(
-            id=plan_financing_id, **additional_args["plan_financing"]
-        ).first()
-    ):
+    plan_financing = PlanFinancing.objects.filter(**filters).first()
+    if not plan_financing:
         raise RetryTask(f"PlanFinancing with id {plan_financing_id} not found")
 
+    team = getattr(plan_financing, "team", None)
+    per_team_strategy = (
+        team and team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM
+    )
+
+    seat_scope: list[PlanFinancingSeat] = []
+    if team:
+        seat_queryset = team.seats.filter(is_active=True)
+        if seat_id:
+            seat = seat_queryset.filter(id=seat_id).first()
+            if not seat and not per_team_strategy:
+                raise RetryTask(f"PlanFinancingSeat with id {seat_id} not found")
+            if seat:
+                seat_scope = [seat]
+        if not seat_scope and not per_team_strategy:
+            seat_scope = list(seat_queryset)
+
+    def upsert_scheduler(
+        handler_obj: PlanServiceItemHandler,
+        valid_until: datetime,
+        *,
+        seat: PlanFinancingSeat | None = None,
+    ) -> None:
+        scheduler, created = ServiceStockScheduler.objects.get_or_create(
+            plan_handler=handler_obj,
+            plan_financing_seat=seat,
+            plan_financing_team=team if (per_team_strategy and seat is None and team) else None,
+            defaults={"valid_until": valid_until},
+        )
+
+        update_fields: list[str] = []
+        if not created and scheduler.valid_until != valid_until:
+            scheduler.valid_until = valid_until
+            update_fields.append("valid_until")
+
+        if per_team_strategy and team and scheduler.plan_financing_team_id != team.id:
+            scheduler.plan_financing_team = team
+            update_fields.append("plan_financing_team")
+
+        if not per_team_strategy and scheduler.plan_financing_team_id is not None:
+            scheduler.plan_financing_team = None
+            update_fields.append("plan_financing_team")
+
+        if not created and update_fields:
+            scheduler.save(update_fields=update_fields)
+
+    def compute_valid_until(plan_service_item: PlanServiceItem) -> datetime:
+        unit = plan_service_item.service_item.renew_at
+        unit_type = plan_service_item.service_item.renew_at_unit
+        delta = actions.calculate_relative_delta(unit, unit_type)
+        valid_until = plan_financing.created_at + delta
+
+        if (
+            plan_financing.status != PlanFinancing.Status.FULLY_PAID
+            and valid_until > plan_financing.next_payment_at
+        ):
+            valid_until = plan_financing.next_payment_at
+
+        if plan_financing.plan_expires_at and valid_until > plan_financing.plan_expires_at:
+            valid_until = plan_financing.plan_expires_at
+
+        if (
+            plan_financing.valid_until
+            and valid_until > plan_financing.valid_until
+            and plan_financing.status != PlanFinancing.Status.FULLY_PAID
+        ):
+            valid_until = plan_financing.valid_until
+
+        if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
+            utc_now = timezone.now()
+            valid_until = utc_now + delta
+
+        return valid_until
+
     for plan in plan_financing.plans.all():
-        for handler in PlanServiceItem.objects.filter(plan=plan):
-            unit = handler.service_item.renew_at
-            unit_type = handler.service_item.renew_at_unit
-            delta = actions.calculate_relative_delta(unit, unit_type)
-            valid_until = plan_financing.created_at + delta
+        for plan_service_item in PlanServiceItem.objects.filter(plan=plan):
+            handler_obj, _ = PlanServiceItemHandler.objects.get_or_create(
+                plan_financing=plan_financing, handler=plan_service_item
+            )
+            valid_until = compute_valid_until(plan_service_item)
 
-            if (
-                plan_financing.status != PlanFinancing.Status.FULLY_PAID
-                and valid_until > plan_financing.next_payment_at
-            ):
-                valid_until = plan_financing.next_payment_at
-
-            if plan_financing.plan_expires_at and valid_until > plan_financing.plan_expires_at:
-                valid_until = plan_financing.plan_expires_at
-
-            if (
-                plan_financing.valid_until
-                and valid_until > plan_financing.valid_until
-                and plan_financing.status != PlanFinancing.Status.FULLY_PAID
-            ):
-                valid_until = plan_financing.valid_until
-
-            if plan_financing.status == PlanFinancing.Status.FULLY_PAID:
-                utc_now = timezone.now()
-                valid_until = utc_now + delta
-
-            handler, _ = PlanServiceItemHandler.objects.get_or_create(plan_financing=plan_financing, handler=handler)
-
-            ServiceStockScheduler.objects.get_or_create(plan_handler=handler, defaults={"valid_until": valid_until})
+            if team and per_team_strategy:
+                upsert_scheduler(handler_obj, valid_until)
+            elif seat_scope:
+                for seat in seat_scope:
+                    upsert_scheduler(handler_obj, valid_until, seat=seat)
+            else:
+                upsert_scheduler(handler_obj, valid_until)
 
     renew_plan_financing_consumables.delay(plan_financing.id)
 
