@@ -335,7 +335,12 @@ def renew_subscription_consumables(self, subscription_id: int, seat_id: Optional
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
-def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
+def renew_plan_financing_consumables(
+    self,
+    plan_financing_id: int,
+    seat_id: Optional[int] = None,
+    **_: Any,
+):
     """Renew consumables belongs to a plan financing."""
 
     logger.info(f"Starting renew_plan_financing_consumables for id {plan_financing_id}")
@@ -367,7 +372,28 @@ def renew_plan_financing_consumables(self, plan_financing_id: int, **_: Any):
         logger.info(f"The services related to PlanFinancing {plan_financing.id} is over")
         return
 
-    for scheduler in ServiceStockScheduler.objects.filter(plan_handler__plan_financing=plan_financing):
+    scheduler_filters = {"plan_handler__plan_financing": plan_financing}
+
+    if seat_id is not None:
+        if not PlanFinancingSeat.objects.filter(
+            id=seat_id,
+            team__plan_financing=plan_financing,
+        ).exists():
+            raise RetryTask(f"PlanFinancingSeat with id {seat_id} not found")
+
+        scheduler_filters["plan_financing_seat_id"] = seat_id
+
+    schedulers = ServiceStockScheduler.objects.filter(**scheduler_filters)
+
+    if seat_id is not None and not schedulers.exists():
+        logger.info(
+            "No schedulers found for seat %s in plan financing %s, skipping consumable renewal",
+            seat_id,
+            plan_financing.id,
+        )
+        return
+
+    for scheduler in schedulers:
         renew_consumables.delay(scheduler.id)
 
 
@@ -1551,7 +1577,10 @@ def build_service_stock_scheduler_from_plan_financing(
             else:
                 upsert_scheduler(handler_obj, valid_until)
 
-    renew_plan_financing_consumables.delay(plan_financing.id)
+    if seat_id:
+        renew_plan_financing_consumables.delay(plan_financing.id, seat_id=seat_id)
+    else:
+        renew_plan_financing_consumables.delay(plan_financing.id)
 
 
 @task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
