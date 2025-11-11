@@ -2026,21 +2026,27 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
 
 class SeatDict(TypedDict, total=False):
     email: str
+    user: int | None
     first_name: str | None
     last_name: str | None
+    role: str | None
 
 
 class AddSeat(TypedDict):
     email: str
+    user: int | None
     first_name: str
     last_name: str
+    role: str | None
 
 
 class ReplaceSeat(TypedDict):
     from_email: str
     to_email: str
+    to_user: int | None
     first_name: str
     last_name: str
+    role: str | None
 
 
 def notify_user_was_added_to_subscription_team(
@@ -2484,14 +2490,33 @@ def normalize_email(email: str):
     return email.strip().lower()
 
 
+def _normalize_role(role: Any) -> str | None:
+    if role is None:
+        return None
+    if isinstance(role, str):
+        return role.strip().lower() or None
+    return str(role).strip().lower()
+
+
+def _normalize_user_value(user_value: Any) -> int | None:
+    if user_value is None:
+        return None
+    if isinstance(user_value, int):
+        return user_value
+    if isinstance(user_value, str) and user_value.isdigit():
+        return int(user_value)
+    return None
+
+
 def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
     l: list[AddSeat] = []
     for seat in add_seats:
         serialized = {
             "email": normalize_email(seat["email"]),
-            "user": seat.get("user", None),
+            "user": _normalize_user_value(seat.get("user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
+            "role": _normalize_role(seat.get("role")),
         }
         l.append(serialized)
     return l
@@ -2503,9 +2528,10 @@ def normalize_replace_seat(replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
         serialized = {
             "from_email": normalize_email(seat["from_email"]),
             "to_email": normalize_email(seat["to_email"]),
-            "to_user": seat.get("to_user", None),
+            "to_user": _normalize_user_value(seat.get("to_user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
+            "role": _normalize_role(seat.get("role")),
         }
         l.append(serialized)
     return l
