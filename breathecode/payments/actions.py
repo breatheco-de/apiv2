@@ -25,7 +25,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_app_url, get_user_settings
+from breathecode.authenticate.actions import get_app_url, get_api_url, get_user_settings
 from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
@@ -2146,6 +2146,8 @@ def invite_user_to_subscription_team(
     )
     if created or invite.status == "PENDING":
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
+        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+
         notify_actions.send_email_message(
             "welcome_academy",
             subscription_seat.email,
@@ -2156,8 +2158,8 @@ def invite_user_to_subscription_team(
                     en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
                     es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
                 ),
-                "LINK": get_app_url(),
-                "FIST_NAME": subscription_seat.user.first_name or "",
+                "LINK": invite_link,
+                "FIST_NAME": obj.get("first_name", "") or "",
             },
             academy=subscription.academy,
         )
@@ -2276,6 +2278,8 @@ def invite_user_to_plan_financing_team(
     )
 
     if created or invite.status == "PENDING":
+        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+
         notify_actions.send_email_message(
             "welcome_academy",
             plan_financing_seat.email,
@@ -2286,7 +2290,7 @@ def invite_user_to_plan_financing_team(
                     en=f"You've been invited to {team.name} at {financing.academy.name}",
                     es=f"Has sido invitado a {team.name} en {financing.academy.name}",
                 ),
-                "LINK": get_app_url(),
+                "LINK": invite_link,
                 "FIST_NAME": obj.get("first_name", "") or "",
             },
             academy=financing.academy,
