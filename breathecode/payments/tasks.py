@@ -377,7 +377,7 @@ def renew_plan_financing_consumables(
     if seat_id is not None:
         if not PlanFinancingSeat.objects.filter(
             id=seat_id,
-            team__plan_financing=plan_financing,
+            team__financing=plan_financing,
         ).exists():
             raise RetryTask(f"PlanFinancingSeat with id {seat_id} not found")
 
