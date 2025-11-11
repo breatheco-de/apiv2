@@ -5803,10 +5803,23 @@ class PlanFinancingSeatView(APIView):
 
         for seat in add_seats:
             try:
+                new_user = None
+                if seat.get("user"):
+                    new_user = User.objects.filter(id=seat["user"]).first()
+                    if not new_user:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="User not found",
+                                es="Usuario no encontrado",
+                                slug="user-not-found",
+                            ),
+                            code=404,
+                        )
                 result.append(
                     actions.create_plan_financing_seat(
                         seat["email"],
-                        seat["user"],
+                        new_user,
                         team,
                         lang,
                         seat.get("first_name", ""),
