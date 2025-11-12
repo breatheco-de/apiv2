@@ -87,6 +87,7 @@ class Academy(models.Model):
     def __init__(self, *args, **kwargs):
         super(Academy, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
+        self.__old_white_labeled = self.reseller
 
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
     name = models.CharField(max_length=150, db_index=True)
@@ -205,7 +206,7 @@ class Academy(models.Model):
 
     def save(self, *args, **kwargs):
         from .actions import get_bucket_object
-        from .signals import academy_saved
+        from .signals import academy_reseller_changed, academy_saved
 
         self.full_clean()
         created = not self.id
@@ -218,12 +219,19 @@ class Academy(models.Model):
         if not created and self.__old_slug != self.slug:
             raise Exception("Academy slug cannot be updated")
 
+        reseller_changed = not created and self.__old_reseller != self.reseller
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
         if created:
             self.__old_slug = self.slug
+            self.__old_reseller = self.reseller
 
         academy_saved.send_robust(instance=self, sender=self.__class__, created=created)
+
+        if reseller_changed:
+            academy_reseller_changed.send_robust(instance=self, sender=self.__class__, value=self.reseller)
+            self.__old_reseller = self.reseller
 
 
 PARTIME = "PART-TIME"
@@ -242,12 +250,12 @@ class Syllabus(models.Model):
     )
 
     forked_from = models.ForeignKey(
-        'self',
+        "self",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
-        related_name='forks',
+        related_name="forks",
         help_text="If this syllabus was forked/created based another one",
     )
 
@@ -309,13 +317,13 @@ class SyllabusVersion(models.Model):
     version = models.PositiveSmallIntegerField(db_index=True)
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
     forked_from = models.ForeignKey(
-        'self',
+        "self",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
         help_text="If this syllabus version was forked/created based another one",
-        related_name='forks',
+        related_name="forks",
     )
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
@@ -584,7 +592,7 @@ EDU_STATUS = (
 class CohortUser(models.Model):
     """
     Represents a user's membership in a cohort with a specific role.
-    
+
     The role determines the user's permissions and responsibilities within the cohort,
     and maps to a corresponding ProfileAcademy role for academy-wide permissions.
     """
@@ -631,7 +639,7 @@ class CohortUser(models.Model):
     def get_profile_academy_role_slug(self) -> str:
         """
         Get the ProfileAcademy role slug corresponding to this CohortUser's role.
-        
+
         Returns:
             str: The role slug for ProfileAcademy (e.g., 'teacher', 'student')
         """
@@ -641,10 +649,10 @@ class CohortUser(models.Model):
     def map_role_to_profile_academy_slug(cls, cohort_user_role: str) -> str:
         """
         Map a CohortUser role to its corresponding ProfileAcademy role slug.
-        
+
         Args:
             cohort_user_role: The CohortUser role (e.g., 'TEACHER', 'ASSISTANT')
-            
+
         Returns:
             str: The role slug for ProfileAcademy (e.g., 'teacher', 'assistant')
         """
