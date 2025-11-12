@@ -87,7 +87,7 @@ class Academy(models.Model):
     def __init__(self, *args, **kwargs):
         super(Academy, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
-        self.__old_white_labeled = self.reseller
+        self.__old_reseller = self.reseller
 
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
     name = models.CharField(max_length=150, db_index=True)
