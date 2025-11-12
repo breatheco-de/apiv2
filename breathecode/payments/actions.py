@@ -25,8 +25,8 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_app_url, get_user_settings
-from breathecode.authenticate.models import UserInvite, UserSetting
+from breathecode.authenticate.actions import get_app_url, get_api_url, get_user_settings
+from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
@@ -2026,21 +2026,27 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
 
 class SeatDict(TypedDict, total=False):
     email: str
+    user: int | None
     first_name: str | None
     last_name: str | None
+    role: str | None
 
 
 class AddSeat(TypedDict):
     email: str
+    user: int | None
     first_name: str
     last_name: str
+    role: str | None
 
 
 class ReplaceSeat(TypedDict):
     from_email: str
     to_email: str
+    to_user: int | None
     first_name: str
     last_name: str
+    role: str | None
 
 
 def notify_user_was_added_to_subscription_team(
@@ -2090,6 +2096,10 @@ def notify_user_was_added_to_subscription_team(
     )
 
 
+def _get_student_role() -> Role | None:
+    return Role.objects.filter(slug="student").first()
+
+
 def invite_user_to_subscription_team(
     obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
 ):
@@ -2117,15 +2127,17 @@ def invite_user_to_subscription_team(
         - See handle_seat_invite_accepted in receivers.py for post-acceptance logic
         - See Issue #9973 for the complete invitation flow
     """
+    student_role = _get_student_role()
+
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=subscription.academy,
         subscription_seat=subscription_seat,
-        role="student",
+        role=student_role,
         defaults={
             "status": "PENDING",
             "author": subscription.user,
-            "role": "student",
+            "role": student_role,
             "token": str(uuid.uuid4()),
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
@@ -2134,6 +2146,8 @@ def invite_user_to_subscription_team(
     )
     if created or invite.status == "PENDING":
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
+        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+
         notify_actions.send_email_message(
             "welcome_academy",
             subscription_seat.email,
@@ -2144,8 +2158,8 @@ def invite_user_to_subscription_team(
                     en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
                     es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
                 ),
-                "LINK": get_app_url(),
-                "FIST_NAME": subscription_seat.user.first_name or "",
+                "LINK": invite_link,
+                "FIST_NAME": obj.get("first_name", "") or "",
             },
             academy=subscription.academy,
         )
@@ -2246,14 +2260,16 @@ def invite_user_to_plan_financing_team(
     obj: SeatDict, team: PlanFinancingTeam, plan_financing_seat: PlanFinancingSeat, lang: str
 ):
     financing = team.financing
+    student_role = _get_student_role()
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=financing.academy,
         plan_financing_seat=plan_financing_seat,
+        role=student_role,
         defaults={
             "status": "PENDING",
             "author": financing.user,
-            "role": "student",
+            "role": student_role,
             "token": str(uuid.uuid4()),
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
@@ -2262,6 +2278,8 @@ def invite_user_to_plan_financing_team(
     )
 
     if created or invite.status == "PENDING":
+        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+
         notify_actions.send_email_message(
             "welcome_academy",
             plan_financing_seat.email,
@@ -2272,7 +2290,7 @@ def invite_user_to_plan_financing_team(
                     en=f"You've been invited to {team.name} at {financing.academy.name}",
                     es=f"Has sido invitado a {team.name} en {financing.academy.name}",
                 ),
-                "LINK": get_app_url(),
+                "LINK": invite_link,
                 "FIST_NAME": obj.get("first_name", "") or "",
             },
             academy=financing.academy,
@@ -2466,7 +2484,8 @@ def replace_plan_financing_seat(
 def deactivate_plan_financing_seat(financing_seat: PlanFinancingSeat):
     financing_seat.user = None
     financing_seat.is_active = False
-    financing_seat.save(update_fields=["is_active", "user"])
+    financing_seat.seat_log.append(create_seat_log_entry(financing_seat, "REMOVED"))
+    financing_seat.save(update_fields=["is_active", "user", "seat_log"])
 
     Consumable.objects.filter(plan_financing_seat_id=financing_seat.id).update(user=None)
     tasks.build_service_stock_scheduler_from_plan_financing.delay(financing_seat.team.financing.id)
@@ -2476,14 +2495,33 @@ def normalize_email(email: str):
     return email.strip().lower()
 
 
+def _normalize_role(role: Any) -> str | None:
+    if role is None:
+        return None
+    if isinstance(role, str):
+        return role.strip().lower() or None
+    return str(role).strip().lower()
+
+
+def _normalize_user_value(user_value: Any) -> int | None:
+    if user_value is None:
+        return None
+    if isinstance(user_value, int):
+        return user_value
+    if isinstance(user_value, str) and user_value.isdigit():
+        return int(user_value)
+    return None
+
+
 def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
     l: list[AddSeat] = []
     for seat in add_seats:
         serialized = {
             "email": normalize_email(seat["email"]),
-            "user": seat.get("user", None),
+            "user": _normalize_user_value(seat.get("user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
+            "role": _normalize_role(seat.get("role")),
         }
         l.append(serialized)
     return l
@@ -2495,9 +2533,10 @@ def normalize_replace_seat(replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
         serialized = {
             "from_email": normalize_email(seat["from_email"]),
             "to_email": normalize_email(seat["to_email"]),
-            "to_user": seat.get("to_user", None),
+            "to_user": _normalize_user_value(seat.get("to_user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
+            "role": _normalize_role(seat.get("role")),
         }
         l.append(serialized)
     return l

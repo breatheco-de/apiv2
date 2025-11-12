@@ -999,6 +999,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
 
             payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
 
+    invite.user = user
     invite.status = "ACCEPTED"
     invite.is_email_validated = True
     invite.save()
