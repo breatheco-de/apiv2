@@ -10,12 +10,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name="academypaymentsettings",
-            name="pos_webhook_secret",
+        migrations.RunSQL(
+            sql="ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_webhook_secret;",
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        migrations.RemoveField(
-            model_name="academypaymentsettings",
-            name="pos_publishable_key",
+        migrations.RunSQL(
+            sql="ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_publishable_key;",
+            reverse_sql=migrations.RunSQL.noop,
         ),
     ]
