@@ -3587,6 +3587,25 @@ class PayView(APIView):
                             bag.currency = c
                             bag.save()
 
+                        if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+                            academy_service = AcademyService.objects.filter(
+                                service=bag.seat_service_item.service,
+                                academy=bag.academy,
+                            ).first()
+                            if not academy_service:
+                                raise ValidationException(
+                                    translation(
+                                        lang,
+                                        en="Price are not configured for per-seat purchases",
+                                        es="Precio no configurado para compras por asiento",
+                                        slug="price-not-configured-for-per-seat-purchases",
+                                    ),
+                                    code=400,
+                                )
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
+                            adjusted_price += seat_cost
+                            original_price += seat_cost
+
                         # Initialize add-ons to zero by default
                         add_ons_amount = 0
                         if request.data.get("add_ons"):

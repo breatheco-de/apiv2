@@ -29,6 +29,7 @@ Objective: align financing seats with subscription seats (team ownership, per-se
   - Shared validation (`validate_seats_limit`) now supports financing teams.
   - Grant capabilities to assigned users per plan; regenerate consumables when seats change.
   - When a seat is assigned or replaced with an email that does not belong to an existing academy member, the system issues a pending academy invite for that email (mirrors subscription seat invitations).
+  - Financing checkout now bills per-seat add-ons (team seats) the same way subscriptions do; the seat price is added to the installment amount before coupons.
 - **Consumable ownership**
   - `get_user_from_consumable_to_be_charged` handles financing seats/teams and per-seat/per-team contexts.
   - Auto-recharge validations now respect plan-financing seats and allow recharge when enabled.
