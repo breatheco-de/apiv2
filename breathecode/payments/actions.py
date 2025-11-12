@@ -2484,7 +2484,8 @@ def replace_plan_financing_seat(
 def deactivate_plan_financing_seat(financing_seat: PlanFinancingSeat):
     financing_seat.user = None
     financing_seat.is_active = False
-    financing_seat.save(update_fields=["is_active", "user"])
+    financing_seat.seat_log.append(create_seat_log_entry(financing_seat, "REMOVED"))
+    financing_seat.save(update_fields=["is_active", "user", "seat_log"])
 
     Consumable.objects.filter(plan_financing_seat_id=financing_seat.id).update(user=None)
     tasks.build_service_stock_scheduler_from_plan_financing.delay(financing_seat.team.financing.id)
