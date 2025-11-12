@@ -1324,8 +1324,41 @@ class CourseTranslationsView(APIView):
         return handler.response(serializer.data)
 
 
-def _get_course_translation_or_404(request, course_id, academy_id):
+def _get_course_or_404(course_identifier, academy_id, request_lang):
+    identifier = str(course_identifier)
+    lookup = {"slug": identifier}
+    identifier_kind = "slug"
+
+    if identifier.isdigit():
+        lookup = {"id": int(identifier)}
+        identifier_kind = "id"
+
+    course = Course.objects.filter(academy__id=academy_id, **lookup).first()
+
+    if not course:
+        if identifier_kind == "id":
+            en_message = f"Course {identifier} not found for academy {academy_id}"
+            es_message = f"Curso {identifier} no encontrado para la academia {academy_id}"
+        else:
+            en_message = f"Course with slug {identifier} not found for academy {academy_id}"
+            es_message = f"Curso con slug {identifier} no encontrado para la academia {academy_id}"
+
+        raise ValidationException(
+            translation(
+                request_lang,
+                en=en_message,
+                es=es_message,
+                slug="course-not-found",
+            ),
+            code=404,
+        )
+
+    return course
+
+
+def _get_course_translation_or_404(request, course_identifier, academy_id):
     request_lang = get_user_language(request)
+    course = _get_course_or_404(course_identifier, academy_id, request_lang)
     lang = request.data.get("lang")
 
     if not lang:
@@ -1339,11 +1372,7 @@ def _get_course_translation_or_404(request, course_id, academy_id):
             code=400,
         )
 
-    translation_instance = CourseTranslation.objects.filter(
-        course__id=course_id,
-        course__academy__id=academy_id,
-        lang=lang,
-    ).first()
+    translation_instance = CourseTranslation.objects.filter(course=course, lang=lang).first()
 
     if not translation_instance:
         raise ValidationException(
@@ -1363,20 +1392,9 @@ class AcademyCourseView(APIView):
     permission_classes = [IsAuthenticated]
 
     @capable_of("crud_course")
-    def put(self, request, course_id, academy_id=None):
+    def put(self, request, course_identifier, academy_id=None):
         request_lang = get_user_language(request)
-        course = Course.objects.filter(id=course_id, academy__id=academy_id).first()
-
-        if not course:
-            raise ValidationException(
-                translation(
-                    request_lang,
-                    en=f"Course {course_id} not found for academy {academy_id}",
-                    es=f"Curso {course_id} no encontrado para la academia {academy_id}",
-                    slug="course-not-found",
-                ),
-                code=404,
-            )
+        course = _get_course_or_404(course_identifier, academy_id, request_lang)
 
         serializer = CoursePUTSerializer(course, data=request.data, partial=True)
 
@@ -1402,20 +1420,9 @@ class CoursePlanByCountryCodeView(APIView):
     permission_classes = [IsAuthenticated]
 
     @capable_of("crud_course")
-    def put(self, request, course_id, academy_id=None):
+    def put(self, request, course_identifier, academy_id=None):
         request_lang = get_user_language(request)
-        course = Course.objects.filter(id=course_id, academy__id=academy_id).first()
-
-        if not course:
-            raise ValidationException(
-                translation(
-                    request_lang,
-                    en=f"Course {course_id} not found for academy {academy_id}",
-                    es=f"Curso {course_id} no encontrado para la academia {academy_id}",
-                    slug="course-not-found",
-                ),
-                code=404,
-            )
+        course = _get_course_or_404(course_identifier, academy_id, request_lang)
 
         if "plan_by_country_code" not in request.data:
             raise ValidationException(
@@ -1451,8 +1458,10 @@ class CourseTranslationView(APIView):
     permission_classes = [IsAuthenticated]
 
     @capable_of("crud_course")
-    def put(self, request, course_id, academy_id=None):
-        translation_instance, request_lang, _ = _get_course_translation_or_404(request, course_id, academy_id)
+    def put(self, request, course_identifier, academy_id=None):
+        translation_instance, request_lang, _ = _get_course_translation_or_404(
+            request, course_identifier, academy_id
+        )
 
         serializer = CourseTranslationPUTSerializer(translation_instance, data=request.data, partial=True)
 
@@ -1470,8 +1479,10 @@ class CourseTranslationCourseModulesView(APIView):
     permission_classes = [IsAuthenticated]
 
     @capable_of("crud_course")
-    def put(self, request, course_id, academy_id=None):
-        translation_instance, request_lang, _ = _get_course_translation_or_404(request, course_id, academy_id)
+    def put(self, request, course_identifier, academy_id=None):
+        translation_instance, request_lang, _ = _get_course_translation_or_404(
+            request, course_identifier, academy_id
+        )
 
         if "course_modules" not in request.data:
             raise ValidationException(
@@ -1508,8 +1519,10 @@ class CourseTranslationLandingVariablesView(APIView):
     permission_classes = [IsAuthenticated]
 
     @capable_of("crud_course")
-    def put(self, request, course_id, academy_id=None):
-        translation_instance, request_lang, _ = _get_course_translation_or_404(request, course_id, academy_id)
+    def put(self, request, course_identifier, academy_id=None):
+        translation_instance, request_lang, _ = _get_course_translation_or_404(
+            request, course_identifier, academy_id
+        )
 
         if "landing_variables" not in request.data:
             raise ValidationException(
@@ -1546,8 +1559,10 @@ class CourseTranslationPrerequisiteView(APIView):
     permission_classes = [IsAuthenticated]
 
     @capable_of("crud_course")
-    def put(self, request, course_id, academy_id=None):
-        translation_instance, request_lang, _ = _get_course_translation_or_404(request, course_id, academy_id)
+    def put(self, request, course_identifier, academy_id=None):
+        translation_instance, request_lang, _ = _get_course_translation_or_404(
+            request, course_identifier, academy_id
+        )
 
         if "prerequisite" not in request.data:
             raise ValidationException(
