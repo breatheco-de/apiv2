@@ -1238,7 +1238,6 @@ class CourseView(APIView):
                 Course.objects.filter(slug=course_slug)
                 .annotate(lang=Value(lang, output_field=CharField()))
                 .exclude(status="DELETED")
-                .exclude(visibility="PRIVATE")
                 .first()
             )
 
@@ -1251,7 +1250,7 @@ class CourseView(APIView):
             serializer = GetCourseSerializer(item, context={"lang": lang, "country_code": country_code}, many=False)
             return handler.response(serializer.data)
 
-        items = Course.objects.filter().exclude(status="DELETED").exclude(visibility="PRIVATE")
+        items = Course.objects.filter().exclude(status="DELETED")
 
         if academy := request.GET.get("academy"):
             args, kwargs = self.get_lookup("academy", academy)
@@ -1263,9 +1262,13 @@ class CourseView(APIView):
 
         if s := request.GET.get("status"):
             items = items.filter(status__in=s.split(","))
-
         else:
-            items = items.exclude(status="ARCHIVED")
+            items = items.exclude(status="DELETED")
+
+        if visibility := request.GET.get("visibility"):
+            items = items.filter(visibility__in=visibility.split(","))
+        else:
+            items = items.exclude(visibility="PRIVATE")
 
         if icon_url := request.GET.get("icon_url"):
             items = items.filter(icon_url__icontains=icon_url)
