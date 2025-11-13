@@ -23,7 +23,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.admissions.models import Academy, Cohort, Country
+from breathecode.admissions.models import Academy, Cohort, Country, Syllabus
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserInvite
 from breathecode.events.models import EventType
@@ -1237,11 +1237,18 @@ class PlanOffer(models.Model):
         related_name="plan_offer_to",
         help_text="Suggested plans",
         null=True,
-        blank=False,
+        blank=True,
         on_delete=models.CASCADE,
     )
     show_modal = models.BooleanField(default=False)
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
+    live_cohorts_syllabus = models.ManyToManyField(
+        Syllabus,
+        blank=True,
+        help_text=(
+            "If specified, highlight the syllabus that includes live classes relevant to this offer. "
+        ),
+    )
 
     def clean(self) -> None:
         utc_now = timezone.now()
