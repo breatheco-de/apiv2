@@ -137,6 +137,18 @@ class GetServiceItemSerializer(serpy.Serializer):
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
     is_team_allowed = serpy.Field()
+    plan_financing = serpy.MethodField()
+
+    def get_plan_financing(self, obj):
+        if not obj.plan_financing:
+            return None
+
+        plan = obj.plan_financing
+        return {
+            "id": plan.id,
+            "slug": plan.slug,
+            "title": plan.title,
+        }
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):

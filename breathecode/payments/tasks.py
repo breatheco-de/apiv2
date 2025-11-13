@@ -6,6 +6,7 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
 from django.utils import timezone
@@ -46,6 +47,7 @@ from .models import (
     PlanServiceItemHandler,
     ProofOfPayment,
     Service,
+    ServiceItem,
     ServiceStockScheduler,
     Subscription,
     SubscriptionBillingTeam,
@@ -1664,7 +1666,7 @@ def build_subscription(
     subscription.plans.set(bag.plans.all())
 
     # Persist add-ons (bag.service_items) into the subscription so they renew and can be billed monthly
-    for service_item in bag.service_items.all():
+    for service_item in bag.service_items.filter(plan_financing__isnull=True).all():
         SubscriptionServiceItem.objects.get_or_create(subscription=subscription, service_item=service_item)
 
     # Add coupons from the bag to the subscription
@@ -1831,6 +1833,41 @@ def build_plan_financing(
             manager.call(financing.id)
 
     logger.info(f"PlanFinancing was created with id {financing.id}")
+
+
+@task(bind=False, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
+def build_plan_financing_from_service_item(
+    invoice_id: int,
+    bag_id: int,
+    service_item_id: int,
+    lang: str = "en",
+    **_: Any,
+):
+    logger.info(
+        f"Starting build_plan_financing_from_service_item for bag {bag_id}, invoice {invoice_id}, "
+        f"service item {service_item_id}"
+    )
+
+    invoice = Invoice.objects.filter(id=invoice_id, status=Invoice.Status.FULFILLED).first()
+    if not invoice:
+        raise RetryTask(f"Invoice with id {invoice_id} not found")
+
+    bag = Bag.objects.filter(id=bag_id, status=Bag.Status.PAID).first()
+    if not bag:
+        raise RetryTask(f"Bag with id {bag_id} not found")
+
+    service_item = ServiceItem.objects.filter(id=service_item_id).first()
+    if not service_item or not service_item.plan_financing_id:
+        raise AbortTask(f"ServiceItem {service_item_id} does not trigger plan financing")
+
+    try:
+        financing = actions.create_plan_financing_from_service_item(bag, invoice, service_item, lang)
+    except ValidationException as e:
+        raise AbortTask(str(e))
+
+    if financing:
+        build_service_stock_scheduler_from_plan_financing.delay(financing.id)
+        logger.info(f"Plan financing {financing.id} created from service item {service_item_id}")
 
 
 @task(bind=True, priority=TaskPriority.WEB_SERVICE_PAYMENT.value)
