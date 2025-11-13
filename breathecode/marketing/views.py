@@ -45,17 +45,18 @@ from .models import (
     ActiveCampaignAcademy,
     Automation,
     Course,
+    CourseTranslation,
     Downloadable,
     FormEntry,
     LeadGenerationApp,
     ShortLink,
     Tag,
     UTMField,
-    CourseTranslation,
     ACTIVE,
     UNLISTED,
     PUBLIC,
 )
+from .schemas import export_course_translation_schemas
 from .serializers import (
     AcademyAliasSmallSerializer,
     ActiveCampaignAcademyBigSerializer,
@@ -1325,6 +1326,21 @@ class CourseTranslationsView(APIView):
         translations = CourseTranslation.objects.filter(course=course)
         serializer = GetCourseTranslationSerializer(translations, many=True)
         return handler.response(serializer.data)
+
+
+class CourseTranslationSchemaView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=CourseCache, paginate=False)
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        payload = {"schemas": export_course_translation_schemas()}
+        return handler.response(payload)
 
 
 def _get_course_or_404(course_identifier, academy_id, request_lang):
