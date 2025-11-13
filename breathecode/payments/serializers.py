@@ -567,6 +567,7 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
     discount_ratio = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
+    plan_financing = serpy.MethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -608,6 +609,20 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
 
         price, _, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
         return price
+
+    def get_plan_financing(self, obj):
+        service_item = (
+            ServiceItem.objects.filter(service=obj.service, plan_financing__isnull=False).select_related("plan_financing").first()
+        )
+        if not service_item or not service_item.plan_financing:
+            return None
+
+        plan = service_item.plan_financing
+        return {
+            "id": plan.id,
+            "slug": plan.slug,
+            "title": plan.title,
+        }
 
 
 class GetAcademyServiceSmallSerializer(GetAcademyServiceSmallReverseSerializer):
