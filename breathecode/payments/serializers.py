@@ -1,8 +1,10 @@
 import logging
+from collections import defaultdict
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.db.models.query_utils import Q
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
@@ -14,12 +16,15 @@ from breathecode.payments.models import (
     FinancingOption,
     PaymentMethod,
     Plan,
+    PlanOffer,
     PlanOfferTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
 )
 from breathecode.utils import serializers, serpy
+from breathecode.admissions.models import Cohort, Syllabus
+from breathecode.events.models import LiveClass
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +61,19 @@ class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
+
+
+class GetSyllabusSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class GetLiveClassSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
 
 
 class GetPermissionSerializer(serpy.Serializer):
@@ -391,6 +409,7 @@ class GetPlanOfferSerializer(serpy.Serializer):
     details = serpy.MethodField()
     show_modal = serpy.Field()
     expires_at = serpy.Field()
+    live_cohorts = serpy.MethodField()
 
     def get_details(self, obj):
         query_args = []
@@ -404,6 +423,64 @@ class GetPlanOfferSerializer(serpy.Serializer):
             return GetPlanOfferTranslationSerializer(item, many=False).data
 
         return None
+
+    def get_live_cohorts(self, obj: PlanOffer):
+        if not hasattr(obj, "live_cohorts_syllabus"):
+            return []
+
+        syllabi = obj.live_cohorts_syllabus.all()
+        if not syllabi:
+            return []
+
+        now = timezone.now()
+        response = []
+
+        for syllabus in syllabi:
+            classes = (
+                LiveClass.objects.filter(
+                    cohort_time_slot__cohort__syllabus_version__syllabus=syllabus,
+                    starting_at__gte=now,
+                )
+                .select_related(
+                    "cohort_time_slot__cohort__academy",
+                )
+                .order_by("starting_at")
+            )
+
+            cohorts_map: dict[int, dict[str, object]] = {}
+            for live_class in classes:
+                cohort = live_class.cohort_time_slot.cohort
+                if cohort.id not in cohorts_map:
+                    cohorts_map[cohort.id] = {
+                        "id": cohort.id,
+                        "slug": cohort.slug,
+                        "name": cohort.name,
+                        "kickoff_date": cohort.kickoff_date,
+                        "ending_date": cohort.ending_date,
+                        "timezone": cohort.timezone,
+                        "academy": GetAcademySmallSerializer(cohort.academy, many=False).data if cohort.academy else None,
+                        "live_classes": [],
+                    }
+
+                entry = cohorts_map[cohort.id]["live_classes"]
+                if len(entry) < 10:
+                    entry.append(
+                        {
+                            "id": live_class.id,
+                            "hash": live_class.hash,
+                            "starting_at": live_class.starting_at,
+                            "ending_at": live_class.ending_at,
+                        }
+                    )
+
+            response.append(
+                {
+                    "syllabus": GetSyllabusSmallSerializer(syllabus, many=False).data,
+                    "cohorts": list(cohorts_map.values()),
+                }
+            )
+
+        return response
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):

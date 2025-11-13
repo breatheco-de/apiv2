@@ -2518,7 +2518,9 @@ class PlanOfferView(APIView):
         utc_now = timezone.now()
 
         # do no show the bags of type preview they are build
-        items = PlanOffer.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now))
+        items = PlanOffer.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now)).prefetch_related(
+            "live_cohorts_syllabus"
+        )
 
         if suggested_plan := request.GET.get("suggested_plan"):
             args, kwargs = self.get_lookup("suggested_plan", suggested_plan)
