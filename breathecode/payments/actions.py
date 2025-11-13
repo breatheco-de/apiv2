@@ -1923,6 +1923,9 @@ def create_plan_financing_from_service_item(
         plan_expires_at=plan_expires_at,
         status=PlanFinancing.Status.FULLY_PAID,
         country_code=bag.country_code or "",
+        selected_cohort_set=financing_plan.cohort_set,
+        selected_event_type_set=financing_plan.event_type_set,
+        selected_mentorship_service_set=financing_plan.mentorship_service_set,
     )
 
     financing.plans.add(financing_plan)
