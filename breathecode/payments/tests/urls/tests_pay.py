@@ -16,7 +16,7 @@ import breathecode.activity.tasks as activity_tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import tasks
 from breathecode.payments.actions import apply_pricing_ratio, calculate_relative_delta
-from breathecode.payments.models import ServiceItem
+from breathecode.payments.models import FinancingOption, Plan, Service, ServiceItem, SubscriptionServiceItem
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
@@ -145,6 +145,7 @@ def get_patch(db, monkeypatch):
     monkeypatch.setattr("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     monkeypatch.setattr("breathecode.payments.tasks.build_subscription.delay", MagicMock())
     monkeypatch.setattr("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    monkeypatch.setattr("breathecode.payments.tasks.build_plan_financing_from_service_item.delay", MagicMock())
     monkeypatch.setattr("breathecode.payments.tasks.build_free_subscription.delay", MagicMock())
     monkeypatch.setattr("stripe.Charge.create", MagicMock(return_value={"id": 1}))
     monkeypatch.setattr("stripe.Customer.create", MagicMock(return_value={"id": 1}))
@@ -451,6 +452,8 @@ def test_free_trial__no_plan_offer(bc: Breathecode, client: APIClient):
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -506,6 +509,7 @@ def test_free_trial__with_plan_offer(bc: Breathecode, client: APIClient):
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == [call(1, 1, conversion_info="")]
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -620,6 +624,7 @@ def test_amount_set_with_subscription_seats(bc: Breathecode, client: APIClient):
     # build subscription must be called for chosen_period flow
     assert tasks.build_subscription.delay.call_args_list == [call(1, 1, conversion_info="")]
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -677,6 +682,7 @@ def test_free_trial__with_plan_offer_with_conversion_info(bc: Breathecode, clien
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == [
         call(1, 1, conversion_info="{'landing_url': '/home'}")
     ]
@@ -748,6 +754,7 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == [call(1, 1, conversion_info="")]
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -759,6 +766,68 @@ def test_with_chosen_period__amount_set(bc: Breathecode, client: APIClient):
             call(1, "checkout_completed", related_type="payments.Invoice", related_id=1),
         ],
     )
+
+
+def test_builds_plan_financing_when_addon_links_plan(
+    bc: Breathecode,
+    client: APIClient,
+    get_patch,
+):
+    chosen_period = "MONTH"
+    random_amount = random.random() * 100 + 100
+    bag = {
+        "token": "linked-addon-token",
+        "expires_at": UTC_NOW,
+        "status": "CHECKING",
+        "type": "BAG",
+        "amount_per_month": random_amount,
+        "chosen_period": chosen_period,
+    }
+
+    plan = {"is_renewable": True, "price_per_month": random_amount}
+
+    model = bc.database.create(
+        user=1,
+        bag=bag,
+        academy=1,
+        currency=1,
+        plan=plan,
+        service_item={"how_many": 1},
+        service={"consumer": Service.Consumer.LIVE_CLASS_JOIN, "type": Service.Type.VOID},
+        academy_service={"price_per_unit": random_amount},
+    )
+
+    client.force_authenticate(user=model.user)
+
+    financing_plan = Plan.objects.create(
+        slug="addon-plan",
+        title="Addon Plan",
+        is_renewable=False,
+        status=Plan.Status.ACTIVE,
+        time_of_life=1,
+        time_of_life_unit="MONTH",
+        currency=model.currency,
+        owner=model.academy,
+    )
+    financing_option = FinancingOption.objects.create(
+        monthly_price=random_amount,
+        how_many_months=1,
+        currency=model.currency,
+    )
+    financing_plan.financing_options.add(financing_option)
+
+    model.service_item.plan_financing = financing_plan
+    model.service_item.save()
+
+    url = reverse_lazy("payments:pay")
+    data = {"token": "linked-addon-token", "chosen_period": chosen_period}
+    response = client.post(url, data, format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == [
+        call(1, model.bag.id, model.service_item.id, "en")
+    ]
+    assert SubscriptionServiceItem.objects.count() == 0
 
 
 def test_with_chosen_period__amount_set_with_conversion_info(bc: Breathecode, client: APIClient):
@@ -818,6 +887,7 @@ def test_with_chosen_period__amount_set_with_conversion_info(bc: Breathecode, cl
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == [call(1, 1, conversion_info="{'landing_url': '/home'}")]
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -876,6 +946,7 @@ def test_with_chosen_period__amount_set_with_conversion_info_with_wrong_fields(b
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -932,6 +1003,7 @@ def test_installments_not_found(bc: Breathecode, client: APIClient):
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -1014,6 +1086,7 @@ def test_with_installments(bc: Breathecode, client: APIClient):
     assert tasks.build_plan_financing.delay.call_args_list == [
         call(1, 1, conversion_info=""),
     ]
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -1096,6 +1169,7 @@ def test_with_installments_with_conversion_info(bc: Breathecode, client: APIClie
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
     assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info="{'landing_url': '/home'}")]
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -1206,6 +1280,7 @@ def test_coupons__with_installments(bc: Breathecode, client: APIClient):
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == []
     assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info="")]
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -1300,6 +1375,7 @@ def test_coupons__with_chosen_period__amount_set(bc: Breathecode, client: APICli
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == [call(1, 1, conversion_info="")]
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -1395,6 +1471,7 @@ def test_coupons__with_chosen_period__amount_set_with_conversion_info(bc: Breath
     bc.check.queryset_with_pks(model.bag.service_items.all(), [1])
     assert tasks.build_subscription.delay.call_args_list == [call(1, 1, conversion_info="{'landing_url': '/home'}")]
     assert tasks.build_plan_financing.delay.call_args_list == []
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
     assert tasks.build_free_subscription.delay.call_args_list == []
 
     bc.check.calls(admissions_tasks.build_cohort_user.delay.call_args_list, [])
@@ -1553,6 +1630,7 @@ def test_pay_for_plan_financing_with_country_code_and_ratio(
 
     # Verify task call
     assert tasks.build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info="")]
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
 
     # Verify activity calls
     bc.check.calls(
@@ -1703,6 +1781,7 @@ def test_pay_for_plan_financing_with_country_code_and_price_override(
     assert tasks.build_plan_financing.delay.call_args_list == [
         call(1, 1, conversion_info=""),
     ]
+    assert tasks.build_plan_financing_from_service_item.delay.call_args_list == []
 
     # Verify activity calls
     bc.check.calls(

@@ -3806,6 +3806,14 @@ class PayView(APIView):
                         actions.grant_student_capabilities(
                             request.user, plan, selected_cohort=request.GET.get("selected_cohort")
                         )
+                linked_service_items = bag.service_items.filter(plan_financing__isnull=False)
+                if linked_service_items.exists():
+                    for item in linked_service_items:
+                        transaction.on_commit(
+                            lambda si_id=item.id: tasks.build_plan_financing_from_service_item.delay(
+                                invoice.id, bag.id, si_id, lang
+                            )
+                        )
 
                 has_referral_coupons = False
                 if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
