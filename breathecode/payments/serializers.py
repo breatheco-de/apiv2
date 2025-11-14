@@ -416,25 +416,24 @@ class GetPlanOfferTranslationSerializer(serpy.Serializer):
 
 
 class GetPlanOfferSerializer(serpy.Serializer):
-    original_plan = GetPlanSerializer(required=False, many=False)
-    suggested_plan = GetPlanSerializer(required=False, many=False)
+    original_plan = serpy.MethodField()
+    suggested_plan = serpy.MethodField()
     details = serpy.MethodField()
     show_modal = serpy.Field()
     expires_at = serpy.Field()
     live_cohorts = serpy.MethodField()
 
-    def __init__(self, *args, **kwargs):
-        context = kwargs.get("context")
-        super().__init__(*args, **kwargs)
+    def get_original_plan(self, obj: PlanOffer):
+        if not obj.original_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.original_plan, many=False, context=context).data
 
-        plan_kwargs = {}
-        if context:
-            plan_kwargs["context"] = context
-
-        self.original_plan = GetPlanSerializer(required=False, many=False, **plan_kwargs)
-        self.suggested_plan = GetPlanSerializer(required=False, many=False, **plan_kwargs)
-        self._field_map["original_plan"] = self.original_plan
-        self._field_map["suggested_plan"] = self.suggested_plan
+    def get_suggested_plan(self, obj: PlanOffer):
+        if not obj.suggested_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.suggested_plan, many=False, context=context).data
 
     def get_details(self, obj):
         query_args = []
