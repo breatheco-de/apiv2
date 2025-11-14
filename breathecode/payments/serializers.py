@@ -423,6 +423,19 @@ class GetPlanOfferSerializer(serpy.Serializer):
     expires_at = serpy.Field()
     live_cohorts = serpy.MethodField()
 
+    def __init__(self, *args, **kwargs):
+        context = kwargs.get("context")
+        super().__init__(*args, **kwargs)
+
+        plan_kwargs = {}
+        if context:
+            plan_kwargs["context"] = context
+
+        self.original_plan = GetPlanSerializer(required=False, many=False, **plan_kwargs)
+        self.suggested_plan = GetPlanSerializer(required=False, many=False, **plan_kwargs)
+        self._field_map["original_plan"] = self.original_plan
+        self._field_map["suggested_plan"] = self.suggested_plan
+
     def get_details(self, obj):
         query_args = []
         query_kwargs = {"offer": obj}
