@@ -2533,7 +2533,9 @@ class PlanOfferView(APIView):
         items = items.distinct()
         items = handler.queryset(items)
         items = items.annotate(lang=Value(lang, output_field=CharField()))
-        serializer = GetPlanOfferSerializer(items, many=True)
+
+        country_code = request.GET.get("country_code")
+        serializer = GetPlanOfferSerializer(items, many=True, context={"country_code": country_code})
 
         return handler.response(serializer.data)
 
