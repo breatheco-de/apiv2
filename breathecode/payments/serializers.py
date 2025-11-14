@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models.query_utils import Q
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -907,10 +908,32 @@ class PlanSerializer(serializers.ModelSerializer):
         return Plan.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        for key in validated_data:
-            setattr(instance, key, validated_data[key])
+        m2m_updates = {}
+
+        for key, value in validated_data.items():
+            try:
+                field = instance._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                setattr(instance, key, value)
+                continue
+
+            if field.many_to_many:
+                m2m_updates[key] = value
+                continue
+
+            setattr(instance, key, value)
 
         instance.save()
+
+        for key, value in m2m_updates.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
         return instance
 
 

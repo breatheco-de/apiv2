@@ -13,12 +13,13 @@ __all__ = [
 ]
 
 
-def _non_empty_string() -> Dict[str, Any]:
-    return {"type": "string", "minLength": 1}
+def _non_empty_string(label: str = None, description: str = None) -> Dict[str, Any]:
+    return {"type": "string", "minLength": 1, "label": label, "description": description}
 
 
 COURSE_TRANSLATION_SCHEMAS: Dict[str, Dict[str, Any]] = {
     "course_modules": {
+        "description": "All students want to know what they will learn in the course, this is shown in the course landing but also syllabus PDF..",
         "type": ["array", "null"],
         "items": {
             "type": "object",
@@ -50,6 +51,7 @@ COURSE_TRANSLATION_SCHEMAS: Dict[str, Dict[str, Any]] = {
         },
     },
     "landing_variables": {
+        "description": "A collection of key, value pairs that will be used to render the landing page.",
         "type": ["object", "null"],
         "properties": {
             "build-connector": {
@@ -96,8 +98,8 @@ COURSE_TRANSLATION_SCHEMAS: Dict[str, Dict[str, Any]] = {
                     "required": ["title", "description"],
                     "properties": {
                         "id": {"type": ["integer", "string", "null"]},
-                        "title": _non_empty_string(),
-                        "description": _non_empty_string(),
+                        "title": _non_empty_string(label="FAQ Title"),
+                        "description": _non_empty_string(label="FAQ Description"),
                     },
                     "additionalProperties": False,
                 },
@@ -195,8 +197,9 @@ COURSE_TRANSLATION_SCHEMAS: Dict[str, Dict[str, Any]] = {
         "additionalProperties": True,
     },
     "prerequisite": {
+        "description": "The prerequisites are a bullet list that will be shown to the student as a warning before they buy the course.",
         "type": ["array", "null"],
-        "items": _non_empty_string(),
+        "items": _non_empty_string(label="Prerequisite"),
     },
 }
 
