@@ -2533,7 +2533,9 @@ class PlanOfferView(APIView):
         items = items.distinct()
         items = handler.queryset(items)
         items = items.annotate(lang=Value(lang, output_field=CharField()))
-        serializer = GetPlanOfferSerializer(items, many=True)
+
+        country_code = request.GET.get("country_code")
+        serializer = GetPlanOfferSerializer(items, many=True, context={"country_code": country_code})
 
         return handler.response(serializer.data)
 
@@ -3805,6 +3807,14 @@ class PayView(APIView):
                     for plan in plans:
                         actions.grant_student_capabilities(
                             request.user, plan, selected_cohort=request.GET.get("selected_cohort")
+                        )
+                linked_service_items = bag.service_items.filter(plan_financing__isnull=False)
+                if linked_service_items.exists():
+                    for item in linked_service_items:
+                        transaction.on_commit(
+                            lambda si_id=item.id: tasks.build_plan_financing_from_service_item.delay(
+                                invoice.id, bag.id, si_id, lang
+                            )
                         )
 
                 has_referral_coupons = False

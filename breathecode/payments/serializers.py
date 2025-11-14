@@ -138,6 +138,18 @@ class GetServiceItemSerializer(serpy.Serializer):
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
     is_team_allowed = serpy.Field()
+    plan_financing = serpy.MethodField()
+
+    def get_plan_financing(self, obj):
+        if not obj.plan_financing:
+            return None
+
+        plan = obj.plan_financing
+        return {
+            "id": plan.id,
+            "slug": plan.slug,
+            "title": plan.title,
+        }
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
@@ -405,12 +417,24 @@ class GetPlanOfferTranslationSerializer(serpy.Serializer):
 
 
 class GetPlanOfferSerializer(serpy.Serializer):
-    original_plan = GetPlanSerializer(required=False, many=False)
-    suggested_plan = GetPlanSerializer(required=False, many=False)
+    original_plan = serpy.MethodField()
+    suggested_plan = serpy.MethodField()
     details = serpy.MethodField()
     show_modal = serpy.Field()
     expires_at = serpy.Field()
     live_cohorts = serpy.MethodField()
+
+    def get_original_plan(self, obj: PlanOffer):
+        if not obj.original_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.original_plan, many=False, context=context).data
+
+    def get_suggested_plan(self, obj: PlanOffer):
+        if not obj.suggested_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.suggested_plan, many=False, context=context).data
 
     def get_details(self, obj):
         query_args = []
@@ -556,6 +580,7 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
     discount_ratio = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
+    plan_financing = serpy.MethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -597,6 +622,20 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
 
         price, _, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
         return price
+
+    def get_plan_financing(self, obj):
+        service_item = (
+            ServiceItem.objects.filter(service=obj.service, plan_financing__isnull=False).select_related("plan_financing").first()
+        )
+        if not service_item or not service_item.plan_financing:
+            return None
+
+        plan = service_item.plan_financing
+        return {
+            "id": plan.id,
+            "slug": plan.slug,
+            "title": plan.title,
+        }
 
 
 class GetAcademyServiceSmallSerializer(GetAcademyServiceSmallReverseSerializer):

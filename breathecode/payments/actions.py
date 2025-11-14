@@ -901,7 +901,10 @@ def get_bag_from_subscription(
         bag.plans.add(plan)
 
     # Include persisted subscription add-ons (SubscriptionServiceItem) in the bag so they are billed monthly
-    for handler in subscription.subscriptionserviceitem_set.select_related("service_item").all():
+    qs = subscription.subscriptionserviceitem_set.select_related("service_item").filter(
+        service_item__plan_financing__isnull=True
+    )
+    for handler in qs:
         service_item = handler.service_item
         # Attach the same service_item reference into bag so pricing logic picks it up via plan.add_ons mapping
         bag.service_items.add(service_item)
@@ -1849,6 +1852,86 @@ def create_seller_reward_coupons(coupons: list[Coupon], original_price: float, b
             f"Created user-restricted reward coupon {reward_coupon.slug} of {reward_amount} "
             f"for seller {seller_user.id} from coupon {coupon.slug}"
         )
+
+
+def create_plan_financing_from_service_item(
+    bag: Bag,
+    invoice: Invoice,
+    service_item: ServiceItem,
+    lang: str = "en",
+) -> Optional[PlanFinancing]:
+    """Build a one-payment plan financing triggered by an add-on purchase."""
+
+    financing_plan = service_item.plan_financing
+    if not financing_plan:
+        return None
+
+    existing = PlanFinancing.objects.filter(invoices=invoice, plans=financing_plan).first()
+    if existing:
+        return existing
+
+    currency = bag.currency or bag.academy.main_currency
+    qs = AcademyService.objects.filter(academy=bag.academy, service=service_item.service)
+    if currency:
+        qs = qs.filter(currency=currency)
+
+    academy_service = qs.first()
+    if not academy_service:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy service not configured for this add-on",
+                es="El servicio de la academia no está configurado para este add-on",
+                slug="academy-service-not-configured",
+            ),
+            code=400,
+        )
+
+    academy_service.validate_transaction(service_item.how_many, lang=lang, country_code=bag.country_code)
+    amount, amount_currency, _ = academy_service.get_discounted_price(
+        service_item.how_many, bag.country_code, lang=lang
+    )
+
+    currency_obj = amount_currency or currency
+    if currency_obj is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Unable to determine currency for the linked financing plan",
+                es="No se pudo determinar la moneda para el plan de financiamiento vinculado",
+                slug="unknown-currency",
+            ),
+            code=400,
+        )
+
+    paid_at = invoice.paid_at or timezone.now()
+
+    plan_delta = None
+    if financing_plan.time_of_life and financing_plan.time_of_life_unit:
+        plan_delta = calculate_relative_delta(financing_plan.time_of_life, financing_plan.time_of_life_unit)
+
+    plan_expires_at = paid_at + plan_delta if plan_delta else paid_at
+
+    financing = PlanFinancing.objects.create(
+        user=bag.user,
+        academy=bag.academy,
+        currency=currency_obj,
+        monthly_price=amount,
+        how_many_installments=1,
+        next_payment_at=paid_at,
+        valid_until=plan_expires_at,
+        plan_expires_at=plan_expires_at,
+        status=PlanFinancing.Status.FULLY_PAID,
+        country_code=bag.country_code or "",
+        selected_cohort_set=financing_plan.cohort_set,
+        selected_event_type_set=financing_plan.event_type_set,
+        selected_mentorship_service_set=financing_plan.mentorship_service_set,
+    )
+
+    financing.plans.add(financing_plan)
+    financing.invoices.add(invoice)
+
+    return financing
 
 
 def is_plan_paid(plan: Plan) -> bool:
