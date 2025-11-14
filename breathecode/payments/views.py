@@ -2518,9 +2518,7 @@ class PlanOfferView(APIView):
         utc_now = timezone.now()
 
         # do no show the bags of type preview they are build
-        items = PlanOffer.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now)).prefetch_related(
-            "live_cohorts_syllabus"
-        )
+        items = PlanOffer.objects.filter(Q(expires_at=None) | Q(expires_at__gt=utc_now))
 
         if suggested_plan := request.GET.get("suggested_plan"):
             args, kwargs = self.get_lookup("suggested_plan", suggested_plan)
@@ -3807,14 +3805,6 @@ class PayView(APIView):
                     for plan in plans:
                         actions.grant_student_capabilities(
                             request.user, plan, selected_cohort=request.GET.get("selected_cohort")
-                        )
-                linked_service_items = bag.service_items.filter(plan_financing__isnull=False)
-                if linked_service_items.exists():
-                    for item in linked_service_items:
-                        transaction.on_commit(
-                            lambda si_id=item.id: tasks.build_plan_financing_from_service_item.delay(
-                                invoice.id, bag.id, si_id, lang
-                            )
                         )
 
                 has_referral_coupons = False

@@ -137,18 +137,6 @@ class GetServiceItemSerializer(serpy.Serializer):
     sort_priority = serpy.Field()
     service = GetServiceSmallSerializer()
     is_team_allowed = serpy.Field()
-    plan_financing = serpy.MethodField()
-
-    def get_plan_financing(self, obj):
-        if not obj.plan_financing:
-            return None
-
-        plan = obj.plan_financing
-        return {
-            "id": plan.id,
-            "slug": plan.slug,
-            "title": plan.title,
-        }
 
 
 class GetServiceItemFeatureShortSerializer(serpy.Serializer):
@@ -421,7 +409,6 @@ class GetPlanOfferSerializer(serpy.Serializer):
     details = serpy.MethodField()
     show_modal = serpy.Field()
     expires_at = serpy.Field()
-    live_cohorts = serpy.MethodField()
 
     def get_original_plan(self, obj: PlanOffer):
         if not obj.original_plan:
@@ -448,63 +435,6 @@ class GetPlanOfferSerializer(serpy.Serializer):
 
         return None
 
-    def get_live_cohorts(self, obj: PlanOffer):
-        if not hasattr(obj, "live_cohorts_syllabus"):
-            return []
-
-        syllabi = obj.live_cohorts_syllabus.all()
-        if not syllabi:
-            return []
-
-        now = timezone.now()
-        response = []
-
-        for syllabus in syllabi:
-            classes = (
-                LiveClass.objects.filter(
-                    cohort_time_slot__cohort__syllabus_version__syllabus=syllabus,
-                    starting_at__gte=now,
-                )
-                .select_related(
-                    "cohort_time_slot__cohort__academy",
-                )
-                .order_by("starting_at")
-            )
-
-            cohorts_map: dict[int, dict[str, object]] = {}
-            for live_class in classes:
-                cohort = live_class.cohort_time_slot.cohort
-                if cohort.id not in cohorts_map:
-                    cohorts_map[cohort.id] = {
-                        "id": cohort.id,
-                        "slug": cohort.slug,
-                        "name": cohort.name,
-                        "kickoff_date": cohort.kickoff_date,
-                        "ending_date": cohort.ending_date,
-                        "timezone": cohort.timezone,
-                        "academy": GetAcademySmallSerializer(cohort.academy, many=False).data if cohort.academy else None,
-                        "live_classes": [],
-                    }
-
-                entry = cohorts_map[cohort.id]["live_classes"]
-                if len(entry) < 10:
-                    entry.append(
-                        {
-                            "id": live_class.id,
-                            "hash": live_class.hash,
-                            "starting_at": live_class.starting_at,
-                            "ending_at": live_class.ending_at,
-                        }
-                    )
-
-            response.append(
-                {
-                    "syllabus": GetSyllabusSmallSerializer(syllabus, many=False).data,
-                    "cohorts": list(cohorts_map.values()),
-                }
-            )
-
-        return response
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
@@ -579,7 +509,6 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
     discount_ratio = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
-    plan_financing = serpy.MethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -621,21 +550,6 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
 
         price, _, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
         return price
-
-    def get_plan_financing(self, obj):
-        service_item = (
-            ServiceItem.objects.filter(service=obj.service, plan_financing__isnull=False).select_related("plan_financing").first()
-        )
-        if not service_item or not service_item.plan_financing:
-            return None
-
-        plan = service_item.plan_financing
-        return {
-            "id": plan.id,
-            "slug": plan.slug,
-            "title": plan.title,
-        }
-
 
 class GetAcademyServiceSmallSerializer(GetAcademyServiceSmallReverseSerializer):
     available_mentorship_service_sets = serpy.MethodField()
