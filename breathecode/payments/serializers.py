@@ -944,7 +944,29 @@ class PlanSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        return Plan.objects.create(**validated_data)
+        m2m_fields = {}
+
+        for key in list(validated_data.keys()):
+            try:
+                field = Plan._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                continue
+
+            if field.many_to_many:
+                m2m_fields[key] = validated_data.pop(key)
+
+        instance = Plan.objects.create(**validated_data)
+
+        for key, value in m2m_fields.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance
 
     def update(self, instance, validated_data):
         m2m_updates = {}

@@ -28,3 +28,25 @@ def test_update_clears_financing_options(database):
 
     assert updated_instance.financing_options.count() == 0
 
+
+def test_create_sets_financing_options(database):
+    model = database.create(academy=1, currency=1, financing_option=2)
+    options = _ensure_list(model.financing_option)
+
+    data = {
+        "slug": "test-plan",
+        "title": "Test Plan",
+        "currency": model.currency.id,
+        "owner": model.academy.id,
+        "is_renewable": False,
+        "time_of_life": 1,
+        "time_of_life_unit": "MONTH",
+        "financing_options": [option.id for option in options],
+    }
+
+    serializer = PlanSerializer(data=data)
+    serializer.is_valid(raise_exception=True)
+    instance = serializer.save()
+
+    assert list(instance.financing_options.order_by("id")) == options
+
