@@ -347,14 +347,6 @@ class ServiceItem(AbstractServiceItem):
         default=False,
         help_text="If it's marked, the consumables will be renewed according to the renew_at and renew_at_unit values.",
     )
-    plan_financing = models.ForeignKey(
-        "Plan",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        help_text="If set, purchasing an add-on with this service item will build the linked plan financing.",
-        related_name="service_items_creating_financing",
-    )
 
     # NEW: team settings
     is_team_allowed = models.BooleanField(default=False, db_index=True, help_text="Allow team seats for this item")
@@ -409,27 +401,6 @@ class ServiceItem(AbstractServiceItem):
         # Universal rule: allow -1 (infinite), otherwise must be >= 0
         if self.how_many < -1 or self.how_many == 0:
             raise forms.ValidationError(_("how_many must be -1 (infinite) or greater than 0"))
-
-        if self.plan_financing_id:
-            financing_plan = self.plan_financing
-
-            if self.unit_type != UNIT:
-                raise forms.ValidationError(
-                    "Service items linked to a plan financing must use unit_type=UNIT"
-                )
-
-            if self.how_many != 1:
-                raise forms.ValidationError(
-                    "Service items linked to a plan financing must have how_many=1"
-                )
-
-            if financing_plan.is_renewable:
-                raise forms.ValidationError("Linked plan financing must be non-renewable")
-
-            if not financing_plan.financing_options.filter(how_many_months=1).exists():
-                raise forms.ValidationError(
-                    "Linked plan financing must include a one-payment financing option"
-                )
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -1271,13 +1242,6 @@ class PlanOffer(models.Model):
     )
     show_modal = models.BooleanField(default=False)
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
-    live_cohorts_syllabus = models.ManyToManyField(
-        Syllabus,
-        blank=True,
-        help_text=(
-            "If specified, highlight the syllabus that includes live classes relevant to this offer. "
-        ),
-    )
 
     def clean(self) -> None:
         utc_now = timezone.now()

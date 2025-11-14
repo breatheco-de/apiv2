@@ -677,33 +677,7 @@ class PlanOfferForm(forms.ModelForm):
         model = PlanOffer
         fields = "__all__"
 
-    def clean(self):
-        cleaned_data = super().clean()
-        suggested_plan = cleaned_data.get("suggested_plan")
-        live_cohorts_syllabus = cleaned_data.get("live_cohorts_syllabus")
-        original_plan = cleaned_data.get("original_plan")
-
-        has_syllabus = (
-            live_cohorts_syllabus is not None
-            and hasattr(live_cohorts_syllabus, "exists")
-            and live_cohorts_syllabus.exists()
-        )
-
-        if not suggested_plan and not has_syllabus:
-            raise forms.ValidationError(
-                "You must select either a suggested plan or at least one syllabus for live cohorts."
-            )
-
-        if has_syllabus and original_plan:
-            has_live_class_add_on = original_plan.add_ons.filter(
-                service__consumer=Service.Consumer.LIVE_CLASS_JOIN
-            ).exists()
-            if not has_live_class_add_on:
-                raise forms.ValidationError(
-                    "The original plan must include a live-class add-on before linking cohorts."
-                )
-
-        return cleaned_data
+    pass
 
 
 @admin.register(PlanOffer)
@@ -713,7 +687,6 @@ class PlanOfferAdmin(admin.ModelAdmin):
     list_filter = ["show_modal"]
     search_fields = ["original_plan__slug", "suggested_plan__slug"]
     raw_id_fields = ["original_plan", "suggested_plan"]
-    filter_horizontal = ["live_cohorts_syllabus"]
 
 
 @admin.register(PlanOfferTranslation)
