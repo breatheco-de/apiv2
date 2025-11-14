@@ -412,11 +412,24 @@ class ServiceItem(AbstractServiceItem):
 
         if self.plan_financing_id:
             financing_plan = self.plan_financing
+
+            if self.unit_type != UNIT:
+                raise forms.ValidationError(
+                    "Service items linked to a plan financing must use unit_type=UNIT"
+                )
+
+            if self.how_many != 1:
+                raise forms.ValidationError(
+                    "Service items linked to a plan financing must have how_many=1"
+                )
+
             if financing_plan.is_renewable:
                 raise forms.ValidationError("Linked plan financing must be non-renewable")
 
             if not financing_plan.financing_options.filter(how_many_months=1).exists():
-                raise forms.ValidationError("Linked plan financing must include a one-payment financing option")
+                raise forms.ValidationError(
+                    "Linked plan financing must include a one-payment financing option"
+                )
 
     def save(self, *args, **kwargs):
         self.full_clean()
