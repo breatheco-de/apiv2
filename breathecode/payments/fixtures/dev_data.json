@@ -301,7 +301,10 @@
       "user": 1,
       "is_recurrent": true,
       "was_delivered": true,
-      "pricing_ratio_explanation": {"plans": [], "service_items": []},
+      "pricing_ratio_explanation": {
+        "plans": [],
+        "service_items": []
+      },
       "token": null,
       "expires_at": null,
       "country_code": "US",
@@ -498,10 +501,9 @@
     "pk": 1,
     "fields": {
       "academy": 1,
-      "pos_vendor": "STRIPE",
-      "pos_api_key": "sk_test_1234567890abcdefghijklmnopqrstuvwxyz",
+      "stripe_api_key": "sk_test_1234567890abcdefghijklmnopqrstuvwxyz",
       "created_at": "2023-01-01T00:00:00Z",
       "updated_at": "2023-01-01T00:00:00Z"
     }
   }
-] 
+]

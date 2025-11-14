@@ -25,8 +25,8 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_app_url, get_user_settings
-from breathecode.authenticate.models import UserInvite, UserSetting
+from breathecode.authenticate.actions import get_app_url, get_api_url, get_user_settings
+from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
@@ -50,6 +50,8 @@ from .models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
     ProofOfPayment,
     Service,
     ServiceItem,
@@ -899,9 +901,9 @@ def get_bag_from_subscription(
         bag.plans.add(plan)
 
     # Include persisted subscription add-ons (SubscriptionServiceItem) in the bag so they are billed monthly
-    for handler in subscription.subscriptionserviceitem_set.select_related("service_item").all():
+    qs = subscription.subscriptionserviceitem_set.select_related("service_item").all()
+    for handler in qs:
         service_item = handler.service_item
-        # Attach the same service_item reference into bag so pricing logic picks it up via plan.add_ons mapping
         bag.service_items.add(service_item)
 
     # Add only valid (non-expired) coupons from the subscription to the bag
@@ -2024,21 +2026,27 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
 
 class SeatDict(TypedDict, total=False):
     email: str
+    user: int | None
     first_name: str | None
     last_name: str | None
+    role: str | None
 
 
 class AddSeat(TypedDict):
     email: str
+    user: int | None
     first_name: str
     last_name: str
+    role: str | None
 
 
 class ReplaceSeat(TypedDict):
     from_email: str
     to_email: str
+    to_user: int | None
     first_name: str
     last_name: str
+    role: str | None
 
 
 def notify_user_was_added_to_subscription_team(
@@ -2088,6 +2096,10 @@ def notify_user_was_added_to_subscription_team(
     )
 
 
+def _get_student_role() -> Role | None:
+    return Role.objects.filter(slug="student").first()
+
+
 def invite_user_to_subscription_team(
     obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
 ):
@@ -2115,15 +2127,17 @@ def invite_user_to_subscription_team(
         - See handle_seat_invite_accepted in receivers.py for post-acceptance logic
         - See Issue #9973 for the complete invitation flow
     """
+    student_role = _get_student_role()
+
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=subscription.academy,
         subscription_seat=subscription_seat,
-        role="student",
+        role=student_role,
         defaults={
             "status": "PENDING",
             "author": subscription.user,
-            "role": "student",
+            "role": student_role,
             "token": str(uuid.uuid4()),
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
@@ -2132,6 +2146,8 @@ def invite_user_to_subscription_team(
     )
     if created or invite.status == "PENDING":
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
+        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+
         notify_actions.send_email_message(
             "welcome_academy",
             subscription_seat.email,
@@ -2142,8 +2158,8 @@ def invite_user_to_subscription_team(
                     en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
                     es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
                 ),
-                "LINK": get_app_url(),
-                "FIST_NAME": subscription_seat.user.first_name or "",
+                "LINK": invite_link,
+                "FIST_NAME": obj.get("first_name", "") or "",
             },
             academy=subscription.academy,
         )
@@ -2214,6 +2230,120 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
     # if strategy is not per team, create the individual consumables
     if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
         tasks.build_service_stock_scheduler_from_subscription.delay(billing_team.subscription.id, seat_id=seat.id)
+
+    return seat
+
+
+def notify_user_was_added_to_plan_financing_team(team: PlanFinancingTeam, seat: PlanFinancingSeat, lang: str):
+    if seat.user is None:
+        return
+
+    financing = team.financing
+    notify_actions.send_email_message(
+        "welcome_academy",
+        seat.email,
+        {
+            "email": seat.email,
+            "subject": translation(
+                lang,
+                en=f"You've been added to {team.name} at {financing.academy.name}",
+                es=f"Has sido agregado a {team.name} en {financing.academy.name}",
+            ),
+            "LINK": get_app_url(),
+            "FIST_NAME": seat.user.first_name or "",
+        },
+        academy=financing.academy,
+    )
+
+
+def invite_user_to_plan_financing_team(
+    obj: SeatDict, team: PlanFinancingTeam, plan_financing_seat: PlanFinancingSeat, lang: str
+):
+    financing = team.financing
+    student_role = _get_student_role()
+    invite, created = UserInvite.objects.get_or_create(
+        email=obj.get("email", ""),
+        academy=financing.academy,
+        plan_financing_seat=plan_financing_seat,
+        role=student_role,
+        defaults={
+            "status": "PENDING",
+            "author": financing.user,
+            "role": student_role,
+            "token": str(uuid.uuid4()),
+            "sent_at": timezone.now(),
+            "first_name": obj.get("first_name", ""),
+            "last_name": obj.get("last_name", ""),
+        },
+    )
+
+    if created or invite.status == "PENDING":
+        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+
+        notify_actions.send_email_message(
+            "welcome_academy",
+            plan_financing_seat.email,
+            {
+                "email": plan_financing_seat.email,
+                "subject": translation(
+                    lang,
+                    en=f"You've been invited to {team.name} at {financing.academy.name}",
+                    es=f"Has sido invitado a {team.name} en {financing.academy.name}",
+                ),
+                "LINK": invite_link,
+                "FIST_NAME": obj.get("first_name", "") or "",
+            },
+            academy=financing.academy,
+        )
+
+
+def create_plan_financing_seat(
+    email: str,
+    user: User | None,
+    team: PlanFinancingTeam,
+    lang: str,
+    first_name: str = "",
+    last_name: str = "",
+):
+    _validate_email(email, lang)
+
+    if PlanFinancingSeat.objects.filter(team=team, email=email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="User already has a seat for this financing",
+                es="El usuario ya tiene un asiento para este financiamiento",
+                slug="duplicate-financing-seat",
+            ),
+            code=400,
+        )
+
+    seat = PlanFinancingSeat(
+        team=team,
+        user=user,
+        email=email,
+    )
+    seat_log_entry = create_seat_log_entry(seat, "ADDED")
+    seat.seat_log.append(seat_log_entry)
+    seat.is_active = True
+    seat.save()
+
+    if user:
+        for plan in team.financing.plans.all():
+            grant_student_capabilities(user, plan)
+        notify_user_was_added_to_plan_financing_team(team, seat, lang)
+    else:
+        invite_user_to_plan_financing_team(
+            {"email": email, "first_name": first_name or "", "last_name": last_name or ""},
+            team,
+            seat,
+            lang,
+        )
+
+    if team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM:
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(team.financing.id)
+    else:
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(team.financing.id, seat_id=seat.id)
 
     return seat
 
@@ -2290,8 +2420,97 @@ def replace_seat(
     return seat
 
 
+def replace_plan_financing_seat(
+    from_email: str,
+    to_email: str,
+    to_user: User | None,
+    financing_seat: PlanFinancingSeat,
+    lang: str,
+    first_name: str = "",
+    last_name: str = "",
+):
+    _validate_email(to_email, lang)
+
+    seat = PlanFinancingSeat.objects.filter(team=financing_seat.team, email=from_email).first()
+    if not seat:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is no seat with this email {from_email}",
+                es=f"No hay un asiento con este email {from_email}",
+                slug="no-seat-with-this-email",
+            ),
+            code=404,
+        )
+
+    if PlanFinancingSeat.objects.filter(team=financing_seat.team, email=to_email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is already a seat with this email {to_email}",
+                es=f"Ya hay un asiento con este email {to_email}",
+                slug="seat-with-this-email-already-exists",
+            ),
+            code=400,
+        )
+
+    seat.email = to_user.email if to_user else to_email
+    seat.user = to_user
+    seat.is_active = True
+    seat_log_entry = create_seat_log_entry(seat, "REPLACED")
+    seat.seat_log.append(seat_log_entry)
+    seat.save(update_fields=["seat_log", "is_active", "email", "user"])
+
+    if to_user:
+        for plan in seat.team.financing.plans.all():
+            grant_student_capabilities(to_user, plan)
+        notify_user_was_added_to_plan_financing_team(seat.team, seat, lang)
+    else:
+        invite_user_to_plan_financing_team(
+            {"email": to_email, "first_name": first_name or "", "last_name": last_name or ""},
+            seat.team,
+            seat,
+            lang,
+        )
+
+    if seat.team.consumption_strategy != PlanFinancingTeam.ConsumptionStrategy.PER_TEAM:
+        Consumable.objects.filter(plan_financing_seat=seat).update(user=to_user)
+
+    tasks.build_service_stock_scheduler_from_plan_financing.delay(seat.team.financing.id, seat_id=seat.id)
+
+    return seat
+
+
+def deactivate_plan_financing_seat(financing_seat: PlanFinancingSeat):
+    financing_seat.user = None
+    financing_seat.is_active = False
+    financing_seat.seat_log.append(create_seat_log_entry(financing_seat, "REMOVED"))
+    financing_seat.save(update_fields=["is_active", "user", "seat_log"])
+
+    Consumable.objects.filter(plan_financing_seat_id=financing_seat.id).update(user=None)
+    tasks.build_service_stock_scheduler_from_plan_financing.delay(financing_seat.team.financing.id)
+
+
 def normalize_email(email: str):
     return email.strip().lower()
+
+
+def _normalize_role(role: Any) -> str | None:
+    if role is None:
+        return None
+    if isinstance(role, str):
+        return role.strip().lower() or None
+    return str(role).strip().lower()
+
+
+def _normalize_user_value(user_value: Any) -> int | None:
+    if user_value is None:
+        return None
+    if isinstance(user_value, int):
+        return user_value
+    if isinstance(user_value, str) and user_value.isdigit():
+        return int(user_value)
+    return None
 
 
 def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
@@ -2299,9 +2518,10 @@ def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
     for seat in add_seats:
         serialized = {
             "email": normalize_email(seat["email"]),
-            "user": seat.get("user", None),
+            "user": _normalize_user_value(seat.get("user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
+            "role": _normalize_role(seat.get("role")),
         }
         l.append(serialized)
     return l
@@ -2313,19 +2533,28 @@ def normalize_replace_seat(replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
         serialized = {
             "from_email": normalize_email(seat["from_email"]),
             "to_email": normalize_email(seat["to_email"]),
-            "to_user": seat.get("to_user", None),
+            "to_user": _normalize_user_value(seat.get("to_user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
+            "role": _normalize_role(seat.get("role")),
         }
         l.append(serialized)
     return l
 
 
 def validate_seats_limit(
-    team: SubscriptionBillingTeam, add_seats: list[AddSeat], replace_seats: list[ReplaceSeat], lang: str
+    team: SubscriptionBillingTeam | PlanFinancingTeam,
+    add_seats: list[AddSeat],
+    replace_seats: list[ReplaceSeat],
+    lang: str,
 ):
     seats = {}
-    for seat in SubscriptionSeat.objects.filter(billing_team=team):
+    if isinstance(team, SubscriptionBillingTeam):
+        queryset = SubscriptionSeat.objects.filter(billing_team=team)
+    else:
+        queryset = PlanFinancingSeat.objects.filter(team=team)
+
+    for seat in queryset:
         seats[seat.email] = 1
 
     for seat in add_seats:
@@ -2392,20 +2621,41 @@ def get_user_from_consumable_to_be_charged(
     resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
     is_team_allowed = instance.service_item.is_team_allowed
 
-    user = None
-    seat = getattr(instance, "subscription_seat", None)
-    team: SubscriptionBillingTeam | None = getattr(instance, "subscription_billing_team", None) or (
-        seat.billing_team if seat else None
-    )
-    strategy = team.consumption_strategy if team else None
+    seat = instance.subscription_seat or instance.plan_financing_seat
 
-    if is_team_allowed is False or isinstance(resource, PlanFinancing):
-        user = resource.user
-    elif is_team_allowed and strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT:
-        # Seat user if present, otherwise fallback to resource owner
-        user = seat.user if (seat and seat.user) else resource.user
+    team: SubscriptionBillingTeam | PlanFinancingTeam | None = instance.subscription_billing_team
+    if not team and seat:
+        team = getattr(seat, "billing_team", None)
+    if not team:
+        team = getattr(instance, "plan_financing_team", None)
 
-    return user
+    strategy = getattr(team, "consumption_strategy", None)
+
+    if is_team_allowed is False:
+        return resource.user
+
+    if isinstance(resource, PlanFinancing) and team is None:
+        return resource.user
+
+    if strategy in (
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM
+        if isinstance(team, SubscriptionBillingTeam)
+        else PlanFinancingTeam.ConsumptionStrategy.PER_TEAM
+        if isinstance(team, PlanFinancingTeam)
+        else None
+    ):
+        return None
+
+    if strategy in (
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT
+        if isinstance(team, SubscriptionBillingTeam)
+        else PlanFinancingTeam.ConsumptionStrategy.PER_SEAT
+        if isinstance(team, PlanFinancingTeam)
+        else None
+    ):
+        return seat.user if (seat and seat.user) else resource.user
+
+    return resource.user
 
 
 def validate_auto_recharge_service_units(
@@ -2439,6 +2689,7 @@ def validate_auto_recharge_service_units(
         resource is None
         or resource.auto_recharge_enabled is False
         or (instance.subscription_seat and instance.subscription_seat.is_active is False)
+        or (instance.plan_financing_seat and instance.plan_financing_seat.is_active is False)
     ):
         return 0.0, 0, None
 
@@ -2554,10 +2805,13 @@ def process_auto_recharge(
 
     # Connect to Redis
     redis_client = get_redis_connection("default")
-    team = consumable.subscription_billing_team or (
-        consumable.subscription_seat.billing_team if consumable.subscription_seat else None
+    team = (
+        consumable.subscription_billing_team
+        or getattr(consumable, "plan_financing_team", None)
+        or (consumable.subscription_seat.billing_team if consumable.subscription_seat else None)
+        or (consumable.plan_financing_seat.team if getattr(consumable, "plan_financing_seat", None) else None)
     )
-    seat = consumable.subscription_seat
+    seat = consumable.subscription_seat or getattr(consumable, "plan_financing_seat", None)
 
     lock_key = f"process_auto_recharge:{resource.__class__.__name__}:{resource.id}"
     lock_timeout = 300  # 5 minutes max lock time
@@ -2602,14 +2856,17 @@ def process_auto_recharge(
                 # If this fails, the entire transaction will rollback
                 s = Stripe(academy=resource.academy)
                 context_desc = f"auto-recharge for {charged_user.email}"
+                stripe_team = team if isinstance(team, SubscriptionBillingTeam) else None
+                stripe_seat = consumable.subscription_seat
+
                 s.pay(
                     resource.user,  # it must be charged to the owner
                     bag,
                     price * amount,
                     currency=currency.code,
                     description=f"Auto-recharge for {context_desc}",
-                    subscription_billing_team=team,
-                    subscription_seat=seat,
+                    subscription_billing_team=stripe_team,
+                    subscription_seat=stripe_seat,
                 )
 
                 emails = [resource.user.email]

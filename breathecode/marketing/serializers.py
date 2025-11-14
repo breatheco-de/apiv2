@@ -13,7 +13,16 @@ from breathecode.services.activecampaign.client import acp_ids
 from breathecode.utils import serpy
 from breathecode.utils.integer_to_base import to_base
 
-from .models import AcademyAlias, ActiveCampaignAcademy, Automation, CourseTranslation, FormEntry, ShortLink, Tag
+from .models import (
+    AcademyAlias,
+    ActiveCampaignAcademy,
+    Automation,
+    Course,
+    CourseTranslation,
+    FormEntry,
+    ShortLink,
+    Tag,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -472,6 +481,47 @@ class GetCourseSerializer(GetCourseSmallSerializer):
                 return plan_slug
 
         return obj.plan_slug
+
+
+class CoursePUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = (
+            "slug",
+            "syllabus",
+            "cohort",
+            "is_listed",
+            "plan_slug",
+            "status",
+            "color",
+            "status_message",
+            "visibility",
+            "icon_url",
+            "banner_image",
+            "technologies",
+            "has_waiting_list",
+        )
+        extra_kwargs = {
+            "slug": {"required": False},
+            "technologies": {"required": False},
+            "icon_url": {"required": False},
+        }
+        read_only_fields = ()
+
+
+class CourseTranslationPUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseTranslation
+        fields = (
+            "title",
+            "heading",
+            "description",
+            "short_description",
+            "video_url",
+            "featured_assets",
+            "landing_url",
+            "preview_url",
+        )
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):

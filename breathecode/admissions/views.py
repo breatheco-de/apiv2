@@ -1804,7 +1804,7 @@ class SyllabusView(APIView):
         }
 
         if not syllabus:
-            raise ValidationException("Syllabus details not found", code=404, slug="syllabus-not-found")
+            raise ValidationException("Syllabus not found, maybe it exists in another academy?", code=404, slug="syllabus-not-found")
 
         serializer = SyllabusSerializer(syllabus, data=data, many=False)
         if serializer.is_valid():

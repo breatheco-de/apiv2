@@ -240,6 +240,15 @@ class UserInvite(models.Model):
         help_text="Related subscription seat for team invitations",
         db_index=True,
     )
+    plan_financing_seat = models.ForeignKey(
+        "payments.PlanFinancingSeat",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Related plan financing seat for team invitations",
+        db_index=True,
+    )
 
     def __str__(self):
         return f"Invite for {self.email}"

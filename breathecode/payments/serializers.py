@@ -1,8 +1,11 @@
 import logging
+from collections import defaultdict
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models.query_utils import Q
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
@@ -14,12 +17,15 @@ from breathecode.payments.models import (
     FinancingOption,
     PaymentMethod,
     Plan,
+    PlanOffer,
     PlanOfferTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
 )
 from breathecode.utils import serializers, serpy
+from breathecode.admissions.models import Cohort, Syllabus
+from breathecode.events.models import LiveClass
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +62,19 @@ class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
+
+
+class GetSyllabusSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class GetLiveClassSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
 
 
 class GetPermissionSerializer(serpy.Serializer):
@@ -386,11 +405,23 @@ class GetPlanOfferTranslationSerializer(serpy.Serializer):
 
 
 class GetPlanOfferSerializer(serpy.Serializer):
-    original_plan = GetPlanSerializer(required=False, many=False)
-    suggested_plan = GetPlanSerializer(required=False, many=False)
+    original_plan = serpy.MethodField()
+    suggested_plan = serpy.MethodField()
     details = serpy.MethodField()
     show_modal = serpy.Field()
     expires_at = serpy.Field()
+
+    def get_original_plan(self, obj: PlanOffer):
+        if not obj.original_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.original_plan, many=False, context=context).data
+
+    def get_suggested_plan(self, obj: PlanOffer):
+        if not obj.suggested_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.suggested_plan, many=False, context=context).data
 
     def get_details(self, obj):
         query_args = []
@@ -404,6 +435,7 @@ class GetPlanOfferSerializer(serpy.Serializer):
             return GetPlanOfferTranslationSerializer(item, many=False).data
 
         return None
+
 
 
 class GetInvoiceSmallSerializer(serpy.Serializer):
@@ -519,7 +551,6 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
 
         price, _, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
         return price
-
 
 class GetAcademyServiceSmallSerializer(GetAcademyServiceSmallReverseSerializer):
     available_mentorship_service_sets = serpy.MethodField()
@@ -827,13 +858,57 @@ class PlanSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        return Plan.objects.create(**validated_data)
+        m2m_fields = {}
+
+        for key in list(validated_data.keys()):
+            try:
+                field = Plan._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                continue
+
+            if field.many_to_many:
+                m2m_fields[key] = validated_data.pop(key)
+
+        instance = Plan.objects.create(**validated_data)
+
+        for key, value in m2m_fields.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance
 
     def update(self, instance, validated_data):
-        for key in validated_data:
-            setattr(instance, key, validated_data[key])
+        m2m_updates = {}
+
+        for key, value in validated_data.items():
+            try:
+                field = instance._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                setattr(instance, key, value)
+                continue
+
+            if field.many_to_many:
+                m2m_updates[key] = value
+                continue
+
+            setattr(instance, key, value)
 
         instance.save()
+
+        for key, value in m2m_updates.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
         return instance
 
 

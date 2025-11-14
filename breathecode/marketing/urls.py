@@ -77,6 +77,13 @@ from .views import (
     ActiveCampaignView,
     UploadView,
     CourseTranslationsView,
+    CourseTranslationSchemaView,
+    AcademyCourseView,
+    CoursePlanByCountryCodeView,
+    CourseTranslationView,
+    CourseTranslationCourseModulesView,
+    CourseTranslationLandingVariablesView,
+    CourseTranslationPrerequisiteView,
     validate_email_from_app,
     get_alias,
 )
@@ -123,6 +130,29 @@ urlpatterns = [
     path("googleads/enrollments/<str:academy_slugs>", googleads_enrollments, name="activecampaign_webhook"),
     path("googleads/data", googleads_csv, name="googleads_csv"),
     path("course", CourseView.as_view(), name="course"),
+    path("course/translation-schemas", CourseTranslationSchemaView.as_view(), name="course_translation_schemas"),
     path("course/<slug:course_slug>", CourseView.as_view(), name="course_slug"),
     path("course/<slug:course_slug>/translations", CourseTranslationsView.as_view(), name="course_translations"),
+    path("academy/course/<slug:course_identifier>", AcademyCourseView.as_view(), name="academy_course_id"),
+    path(
+        "academy/course/<slug:course_identifier>/plan-by-country-code",
+        CoursePlanByCountryCodeView.as_view(),
+        name="academy_course_id_plan_by_country_code",
+    ),
+    path("academy/course/<slug:course_identifier>/translation", CourseTranslationView.as_view(), name="academy_course_id_translation"),
+    path(
+        "academy/course/<slug:course_identifier>/course_modules",
+        CourseTranslationCourseModulesView.as_view(),
+        name="academy_course_id_course_modules",
+    ),
+    path(
+        "academy/course/<slug:course_identifier>/landing_variables",
+        CourseTranslationLandingVariablesView.as_view(),
+        name="academy_course_id_landing_variables",
+    ),
+    path(
+        "academy/course/<slug:course_identifier>/prerequisite",
+        CourseTranslationPrerequisiteView.as_view(),
+        name="academy_course_id_prerequisite",
+    ),
 ]
