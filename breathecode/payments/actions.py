@@ -328,6 +328,7 @@ class BagHandler:
 
         self.service_items = request.data.get("service_items")
         self.plans = request.data.get("plans")
+        self.plan_addons = request.data.get("plan_addons")
         self.selected_cohort_set = request.data.get("cohort_set")
         self.selected_event_type_set = request.data.get("event_type_set")
         self.selected_mentorship_service_set = request.data.get("mentorship_service_set")
@@ -336,6 +337,7 @@ class BagHandler:
         self.team_seats = request.data.get("team_seats")
 
         self.plans_not_found = set()
+        self.plan_addons_not_found = set()
         self.service_items_not_found = set()
         self.cohort_sets_not_found = set()
 
@@ -416,6 +418,7 @@ class BagHandler:
         if "checking" in self.request.build_absolute_uri():
             self.bag.service_items.clear()
             self.bag.plans.clear()
+            self.bag.plan_addons.clear()
             self.bag.token = None
             self.bag.expires_at = None
 
@@ -492,15 +495,41 @@ class BagHandler:
                 if Plan.objects.filter(**kwargs).exclude(**exclude).count() == 0:
                     self.plans_not_found.add(plan)
 
+    def _get_plan_addons_that_not_found(self):
+        if isinstance(self.plan_addons, list):
+            for addon in self.plan_addons:
+                kwargs = {}
+
+                if addon and (isinstance(addon, int) or (isinstance(addon, str) and addon.isnumeric())):
+                    kwargs["id"] = int(addon)
+                else:
+                    kwargs["slug"] = addon
+
+                if Plan.objects.filter(**kwargs).count() == 0:
+                    self.plan_addons_not_found.add(addon)
+
     def _report_items_not_found(self):
-        if self.service_items_not_found or self.plans_not_found or self.cohort_sets_not_found:
+        if (
+            self.service_items_not_found
+            or self.plans_not_found
+            or self.cohort_sets_not_found
+            or self.plan_addons_not_found
+        ):
             raise ValidationException(
                 translation(
                     self.lang,
-                    en=f"Items not found: services={self.service_items_not_found}, plans={self.plans_not_found}, "
-                    f"cohorts={self.cohort_sets_not_found}",
-                    es=f"Elementos no encontrados: servicios={self.service_items_not_found}, "
-                    f"planes={self.plans_not_found}, cohortes={self.cohort_sets_not_found}",
+                    en=(
+                        f"Items not found: services={self.service_items_not_found}, "
+                        f"plans={self.plans_not_found}, "
+                        f"cohorts={self.cohort_sets_not_found}, "
+                        f"plan_addons={self.plan_addons_not_found}"
+                    ),
+                    es=(
+                        f"Elementos no encontrados: servicios={self.service_items_not_found}, "
+                        f"planes={self.plans_not_found}, "
+                        f"cohortes={self.cohort_sets_not_found}, "
+                        f"plan_addons={self.plan_addons_not_found}"
+                    ),
                     slug="some-items-not-found",
                 ),
                 code=404,
@@ -551,6 +580,45 @@ class BagHandler:
 
                 if p and p not in self.bag.plans.filter():
                     self.bag.plans.add(p)
+
+    def _add_plan_addons_to_bag(self):
+        if not isinstance(self.plan_addons, list):
+            return
+
+        main_plan: Plan | None = self.bag.plans.first()
+
+        if self.plan_addons and not main_plan:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="You must select a main plan to add plan addons",
+                    es="Debes seleccionar un plan principal para agregar plan addons",
+                    slug="plan-required-for-plan-addons",
+                ),
+                code=400,
+            )
+
+        for addon in self.plan_addons:
+            args, kwargs = self._lookups(addon)
+            addon_plan = Plan.objects.filter(*args, **kwargs).first()
+
+            if not addon_plan:
+                # already handled in _get_plan_addons_that_not_found
+                continue
+
+            if main_plan and not main_plan.plan_addons.filter(id=addon_plan.id).exists():
+                raise ValidationException(
+                    translation(
+                        self.lang,
+                        en=f"The plan {addon_plan.slug} is not allowed as addon for the selected plan",
+                        es=f"El plan {addon_plan.slug} no está permitido como addon para el plan seleccionado",
+                        slug="plan-addon-not-allowed",
+                    ),
+                    code=400,
+                )
+
+            if addon_plan not in self.bag.plan_addons.filter():
+                self.bag.plan_addons.add(addon_plan)
 
     def _validate_just_one_plan(self):
         how_many_plans = self.bag.plans.count()
@@ -635,12 +703,14 @@ class BagHandler:
 
         self._get_service_items_that_not_found()
         self._get_plans_that_not_found()
+        self._get_plan_addons_that_not_found()
         self._report_items_not_found()
         self._add_plans_to_bag()
         # validate and add seat add-ons if requested
         self._validate_just_one_plan()
         self._validate_seat_add_ons()
         self._add_seat_add_ons()
+        self._add_plan_addons_to_bag()
         self._add_service_items_to_bag()
         self._validate_just_one_plan()
 
@@ -684,7 +754,7 @@ def get_amount(
     main_currency = currency
 
     # Initialize pricing ratio explanation with proper format
-    pricing_ratio_explanation = {"plans": [], "service_items": []}
+    pricing_ratio_explanation = {"plans": [], "service_items": [], "plan_addons": []}
 
     for plan in bag.plans.all():
         must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(
@@ -797,6 +867,7 @@ def get_amount(
     if (
         pricing_ratio_explanation["plans"]
         or pricing_ratio_explanation["service_items"]
+        or pricing_ratio_explanation.get("plan_addons")
         or not bag.currency
         or bag.currency.id != currency.id
     ):
@@ -828,6 +899,8 @@ def get_amount(
             price_per_half += academy_service.price_per_unit * how_many_seats * 6
         if how_many_seats > 0 and price_per_year != 0:
             price_per_year += academy_service.price_per_unit * how_many_seats * 12
+
+    get_plan_addons_amount(bag, lang)
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -1250,6 +1323,30 @@ def get_discounted_price(price: float, coupons: list[Coupon]) -> float:
         price = 0
 
     return price
+
+
+def get_coupons_for_plan(plan: Plan, coupons: list[Coupon]) -> list[Coupon]:
+    """
+    Filter coupons that are eligible for a given plan.
+
+    Rules:
+      - If coupon.plans is empty -> global coupon, applies to all plans.
+      - If coupon.plans is not empty -> applies only if the plan is in coupon.plans.
+    """
+
+    eligible: list[Coupon] = []
+
+    for coupon in coupons:
+        # scoped coupon
+        if coupon.plans.exists():
+            if coupon.plans.filter(id=plan.id).exists():
+                eligible.append(coupon)
+            continue
+
+        # global coupon
+        eligible.append(coupon)
+
+    return eligible
 
 
 def validate_and_create_proof_of_payment(
@@ -1932,6 +2029,330 @@ def manage_plan_financing_add_ons(request: Request, bag: Bag, lang: str) -> floa
 
         price, _, _ = add_on.get_discounted_price(qty, bag.country_code, lang)
         total += float(price or 0)
+
+    return total
+
+
+def get_plan_addons_amount(bag: Bag, lang: str) -> float:
+    """
+    Calculate the total one-shot amount for all plan addons in a bag.
+
+    Rules:
+      - Each addon plan must have a FinancingOption with how_many_months=1.
+      - Pricing ratio is applied using bag.country_code and the FinancingOption.
+      - All addons must share the same currency as the academy/bag.
+      - The result is stored in bag.plan_addons_amount.
+    """
+
+    addons = bag.plan_addons.all()
+    if not addons.exists():
+        if bag.plan_addons_amount:
+            bag.plan_addons_amount = 0
+            bag.save(update_fields=["plan_addons_amount"])
+        return 0.0
+
+    main_currency = bag.currency or bag.academy.main_currency
+    if not main_currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy does not have a main currency configured",
+                es="La academia no tiene una moneda principal configurada",
+                slug="academy-without-main-currency",
+            ),
+            code=500,
+        )
+
+    currencies: dict[str, Currency] = {main_currency.code.upper(): main_currency}
+    total = 0.0
+    pricing_explanation: list[dict[str, Any]] = []
+
+    for plan in addons:
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if not option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan addon {plan.slug} does not have a one-payment financing option configured",
+                    es=f"El plan addon {plan.slug} no tiene configurada una opción de financiamiento de un solo pago",
+                    slug="plan-addon-without-one-payment-option",
+                ),
+                code=400,
+            )
+
+        base_price = option.monthly_price or 0
+
+        if bag.country_code:
+            adjusted_price, ratio, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+            if c:
+                currencies[c.code.upper()] = c
+
+            if adjusted_price != base_price and base_price > 0 and ratio:
+                pricing_explanation.append({"plan": plan.slug, "ratio": ratio})
+
+            price = adjusted_price
+        else:
+            price = base_price
+
+        total += float(price or 0)
+
+    if len(currencies.keys()) > 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Multiple currencies found, it means that the pricing ratio exceptions have a wrong configuration",
+                es="Múltiples monedas encontradas, lo que significa que las excepciones de ratio de precios tienen una configuración incorrecta",
+                slug="multiple-currencies-found",
+            ),
+            code=500,
+        )
+
+    # Update pricing ratio explanation for plan_addons without touching plans/service_items keys
+    explanation = bag.pricing_ratio_explanation or {"plans": [], "service_items": [], "plan_addons": []}
+    if "plan_addons" not in explanation:
+        explanation["plan_addons"] = []
+
+    if pricing_explanation:
+        explanation["plan_addons"] = pricing_explanation
+        bag.pricing_ratio_explanation = explanation
+
+    bag.plan_addons_amount = total
+    bag.save(update_fields=["pricing_ratio_explanation", "plan_addons_amount"])
+
+    return total
+
+
+def get_plan_addons_amounts_with_coupons(
+    bag: Bag, coupons: list[Coupon], lang: str
+) -> tuple[float, float]:
+    """
+    Calculate the total one-shot amount for all plan addons in a bag,
+    returning both:
+      - total_before: sum before coupons
+      - total_after: sum after applying eligible coupons per addon
+
+    Coupons are filtered per addon using get_coupons_for_plan, so a coupon
+    only discounts an addon if it is configured to work with that plan.
+    """
+
+    addons = bag.plan_addons.all()
+    if not addons.exists():
+        return 0.0, 0.0
+
+    main_currency = bag.currency or bag.academy.main_currency
+    if not main_currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy does not have a main currency configured",
+                es="La academia no tiene una moneda principal configurada",
+                slug="academy-without-main-currency",
+            ),
+            code=500,
+        )
+
+    currencies: dict[str, Currency] = {main_currency.code.upper(): main_currency}
+    total_before = 0.0
+    total_after = 0.0
+
+    for plan in addons:
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if not option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan addon {plan.slug} does not have a one-payment financing option configured",
+                    es=f"El plan addon {plan.slug} no tiene configurada una opción de financiamiento de un solo pago",
+                    slug="plan-addon-without-one-payment-option",
+                ),
+                code=400,
+            )
+
+        base_price = option.monthly_price or 0
+
+        if bag.country_code:
+            base_price, _, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+            if c:
+                currencies[c.code.upper()] = c
+
+        total_before += float(base_price or 0)
+
+        addon_coupons = get_coupons_for_plan(plan, coupons)
+        price_after = get_discounted_price(base_price, addon_coupons)
+        total_after += price_after
+
+    if len(currencies.keys()) > 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Multiple currencies found, it means that the pricing ratio exceptions have a wrong configuration",
+                es="Múltiples monedas encontradas, lo que significa que las excepciones de ratio de precios tienen una configuración incorrecta",
+                slug="multiple-currencies-found",
+            ),
+            code=500,
+        )
+
+    return total_before, total_after
+
+
+def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversion_info: str | None = "") -> None:
+    """
+    Create a PlanFinancing (one payment) for each plan addon in the bag.
+
+    This is used when plan addons are sold either standalone or together with a main plan.
+    """
+
+    addons = bag.plan_addons.all()
+    if not addons.exists():
+        return
+
+    utc_now = timezone.now()
+    coupons = list(bag.coupons.all())
+
+    for plan in addons:
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if not option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan addon {plan.slug} does not have a one-payment financing option configured",
+                    es=f"El plan addon {plan.slug} no tiene configurada una opción de financiamiento de un solo pago",
+                    slug="plan-addon-without-one-payment-option",
+                ),
+                code=400,
+            )
+
+        base_price = option.monthly_price or 0
+
+        if bag.country_code:
+            base_price, _, _ = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+        # Apply only coupons that are eligible for this addon plan
+        addon_coupons = get_coupons_for_plan(plan, coupons)
+        price = get_discounted_price(base_price, addon_coupons)
+
+        # Compute plan_expires_at from plan's own lifetime if configured
+        if plan.time_of_life and plan.time_of_life_unit:
+            delta = calculate_relative_delta(plan.time_of_life, plan.time_of_life_unit)
+            plan_expires_at = invoice.paid_at + delta
+        else:
+            plan_expires_at = invoice.paid_at
+
+        financing = PlanFinancing.objects.create(
+            user=bag.user,
+            how_many_installments=1,
+            next_payment_at=utc_now + relativedelta(months=1),
+            academy=bag.academy,
+            selected_cohort_set=plan.cohort_set,
+            selected_event_type_set=plan.event_type_set,
+            selected_mentorship_service_set=plan.mentorship_service_set,
+            valid_until=invoice.paid_at,
+            plan_expires_at=plan_expires_at,
+            monthly_price=price,
+            status=PlanFinancing.Status.ACTIVE,
+            currency=invoice.currency or bag.currency or bag.academy.main_currency,
+        )
+
+        financing.plans.set([plan])
+
+        bag_coupons = bag.coupons.all()
+        if bag_coupons.exists():
+            financing.coupons.set(bag_coupons)
+
+        financing.invoices.add(invoice)
+        financing.save()
+
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(plan_financing_id=financing.id)
+
+
+def get_plan_addons_amount(bag: Bag, lang: str) -> float:
+    """
+    Calculate the total one-shot amount for all plan addons in a bag.
+
+    Rules:
+      - Each addon plan must have a FinancingOption with how_many_months=1.
+      - Pricing ratio is applied using bag.country_code and the FinancingOption.
+      - All addons must share the same currency as the academy/bag.
+      - The result is stored in bag.plan_addons_amount.
+    """
+
+    addons = bag.plan_addons.all()
+    if not addons.exists():
+        if bag.plan_addons_amount:
+            bag.plan_addons_amount = 0
+            bag.save(update_fields=["plan_addons_amount"])
+        return 0.0
+
+    main_currency = bag.currency or bag.academy.main_currency
+    if not main_currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy does not have a main currency configured",
+                es="La academia no tiene una moneda principal configurada",
+                slug="academy-without-main-currency",
+            ),
+            code=500,
+        )
+
+    currencies: dict[str, Currency] = {main_currency.code.upper(): main_currency}
+    total = 0.0
+    pricing_explanation: list[dict[str, Any]] = []
+
+    for plan in addons:
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if not option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan addon {plan.slug} does not have a one-payment financing option configured",
+                    es=f"El plan addon {plan.slug} no tiene configurada una opción de financiamiento de un solo pago",
+                    slug="plan-addon-without-one-payment-option",
+                ),
+                code=400,
+            )
+
+        base_price = option.monthly_price or 0
+
+        if bag.country_code:
+            adjusted_price, ratio, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+            if c:
+                currencies[c.code.upper()] = c
+
+            if adjusted_price != base_price and base_price > 0 and ratio:
+                pricing_explanation.append({"plan": plan.slug, "ratio": ratio})
+
+            price = adjusted_price
+        else:
+            price = base_price
+
+        total += float(price or 0)
+
+    if len(currencies.keys()) > 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Multiple currencies found, it means that the pricing ratio exceptions have a wrong configuration",
+                es="Múltiples monedas encontradas, lo que significa que las excepciones de ratio de precios tienen una configuración incorrecta",
+                slug="multiple-currencies-found",
+            ),
+            code=500,
+        )
+
+    # Update pricing ratio explanation for plan_addons without touching plans/service_items keys
+    explanation = bag.pricing_ratio_explanation or {"plans": [], "service_items": [], "plan_addons": []}
+    if "plan_addons" not in explanation:
+        explanation["plan_addons"] = []
+
+    if pricing_explanation:
+        explanation["plan_addons"] = pricing_explanation
+        bag.pricing_ratio_explanation = explanation
+
+    bag.plan_addons_amount = total
+    bag.save(update_fields=["pricing_ratio_explanation", "plan_addons_amount"])
 
     return total
 
