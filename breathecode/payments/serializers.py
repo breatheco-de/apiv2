@@ -693,6 +693,7 @@ class GetBagSerializer(serpy.Serializer):
     id = serpy.Field()
     service_items = serpy.MethodField()
     plans = serpy.MethodField()
+    plan_addons = serpy.MethodField()
     coupons = serpy.MethodField()
     status = serpy.Field()
     type = serpy.Field()
@@ -702,6 +703,8 @@ class GetBagSerializer(serpy.Serializer):
     amount_per_quarter = serpy.Field()
     amount_per_half = serpy.Field()
     amount_per_year = serpy.Field()
+    plan_addons_amount = serpy.Field()
+    discounted_plan_addons_amount = serpy.MethodField()
     discounted_amount_per_month = serpy.Field()
     discounted_amount_per_quarter = serpy.Field()
     discounted_amount_per_half = serpy.Field()
@@ -723,8 +726,45 @@ class GetBagSerializer(serpy.Serializer):
     def get_plans(self, obj):
         return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
 
+    def get_plan_addons(self, obj):
+        from . import actions
+
+        coupons = list(obj.coupons.all())
+        items = []
+
+        for plan in obj.plan_addons.all():
+            data = GetPlanSmallSerializer(plan, many=False).data
+
+            option = plan.financing_options.filter(how_many_months=1).first()
+            if not option:
+                data["price_before_coupon"] = None
+                data["price_after_coupon"] = None
+                items.append(data)
+                continue
+
+            base_price = option.monthly_price or 0
+            if obj.country_code:
+                base_price, _, _ = actions.apply_pricing_ratio(base_price, obj.country_code, option, lang="en")
+
+            addon_coupons = actions.get_coupons_for_plan(plan, coupons)
+            price_after = actions.get_discounted_price(base_price, addon_coupons)
+
+            data["price_before_coupon"] = base_price
+            data["price_after_coupon"] = price_after
+
+            items.append(data)
+
+        return items
+
     def get_coupons(self, obj):
         return GetCouponSerializer(obj.coupons.filter(), many=True).data
+
+    def get_discounted_plan_addons_amount(self, obj: Bag):
+        from . import actions
+
+        coupons = list(obj.coupons.all())
+        _, total_after = actions.get_plan_addons_amounts_with_coupons(obj, coupons, lang="en")
+        return total_after
 
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
