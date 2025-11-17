@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from typing import Any
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
@@ -294,6 +295,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
     add_ons = serpy.MethodField()
+    plan_addons = serpy.MethodField()
     seat_service_price = serpy.MethodField()
     consumption_strategy = serpy.Field()
 
@@ -395,6 +397,37 @@ class GetPlanSerializer(GetPlanSmallSerializer):
             context["country_code"] = self.context.get("country_code")
 
         return GetAcademyServiceSmallReverseSerializer(obj.add_ons.all(), many=True, context=context).data
+
+    def get_plan_addons(self, obj: Plan):
+        """
+        Expose plan_addons (other Plan objects that can be purchased as one-shot bundles)
+        with their marketing information and one-shot pricing (including country ratios).
+        """
+        addons = obj.plan_addons.all()
+        items: list[dict[str, Any]] = []
+
+        for plan in addons:
+            # Base marketing info (PlanTranslation) via GetPlanSmallSerializer
+            data = GetPlanSmallSerializer(plan, many=False, context=self.context).data
+
+            # One-shot price: FinancingOption with how_many_months=1
+            option = plan.financing_options.filter(how_many_months=1).first()
+            if option:
+                country_code = (self.context.get("country_code") or "").lower()
+                base_price = option.monthly_price or 0
+                if country_code:
+                    price, _, _ = apply_pricing_ratio(
+                        base_price, country_code, option, lang=self.lang, cache=self.cache
+                    )
+                else:
+                    price = base_price
+                data["one_shot_price"] = price
+            else:
+                data["one_shot_price"] = None
+
+            items.append(data)
+
+        return items
 
 
 class GetPlanOfferTranslationSerializer(serpy.Serializer):
