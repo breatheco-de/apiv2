@@ -20,6 +20,7 @@ from breathecode.payments.models import (
     Plan,
     PlanOffer,
     PlanOfferTranslation,
+    PlanTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
@@ -254,6 +255,7 @@ class GetPlanSmallTinySerializer(serpy.Serializer):
 
 
 class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
+    translations = serpy.MethodField()
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
@@ -280,6 +282,16 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
             context["country_code"] = self.context.get("country_code")
 
         return GetFinancingOptionSerializer(obj.financing_options.all(), many=True, context=context).data
+
+    def get_translations(self, obj: Plan):
+        qs = PlanTranslation.objects.filter(plan=obj)
+        return GetPlanTranslationSerializer(qs, many=True).data
+
+
+class GetPlanTranslationSerializer(serpy.Serializer):
+    lang = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
 
 
 class GetPlanSerializer(GetPlanSmallSerializer):
@@ -407,10 +419,8 @@ class GetPlanSerializer(GetPlanSmallSerializer):
         items: list[dict[str, Any]] = []
 
         for plan in addons:
-            # Base marketing info (PlanTranslation) via GetPlanSmallSerializer
             data = GetPlanSmallSerializer(plan, many=False, context=self.context).data
 
-            # One-shot price: FinancingOption with how_many_months=1
             option = plan.financing_options.filter(how_many_months=1).first()
             if option:
                 country_code = (self.context.get("country_code") or "").lower()
