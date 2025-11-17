@@ -45,17 +45,18 @@ from .models import (
     ActiveCampaignAcademy,
     Automation,
     Course,
+    CourseTranslation,
     Downloadable,
     FormEntry,
     LeadGenerationApp,
     ShortLink,
     Tag,
     UTMField,
-    CourseTranslation,
     ACTIVE,
     UNLISTED,
     PUBLIC,
 )
+from .schemas import export_course_translation_schemas
 from .serializers import (
     AcademyAliasSmallSerializer,
     ActiveCampaignAcademyBigSerializer,
@@ -1238,7 +1239,6 @@ class CourseView(APIView):
                 Course.objects.filter(slug=course_slug)
                 .annotate(lang=Value(lang, output_field=CharField()))
                 .exclude(status="DELETED")
-                .exclude(visibility="PRIVATE")
                 .first()
             )
 
@@ -1251,7 +1251,7 @@ class CourseView(APIView):
             serializer = GetCourseSerializer(item, context={"lang": lang, "country_code": country_code}, many=False)
             return handler.response(serializer.data)
 
-        items = Course.objects.filter().exclude(status="DELETED").exclude(visibility="PRIVATE")
+        items = Course.objects.filter().exclude(status="DELETED")
 
         if academy := request.GET.get("academy"):
             args, kwargs = self.get_lookup("academy", academy)
@@ -1263,9 +1263,13 @@ class CourseView(APIView):
 
         if s := request.GET.get("status"):
             items = items.filter(status__in=s.split(","))
-
         else:
-            items = items.exclude(status="ARCHIVED")
+            items = items.exclude(status="DELETED")
+
+        if visibility := request.GET.get("visibility"):
+            items = items.filter(visibility__in=visibility.split(","))
+        else:
+            items = items.exclude(visibility="PRIVATE")
 
         if icon_url := request.GET.get("icon_url"):
             items = items.filter(icon_url__icontains=icon_url)
@@ -1322,6 +1326,21 @@ class CourseTranslationsView(APIView):
         translations = CourseTranslation.objects.filter(course=course)
         serializer = GetCourseTranslationSerializer(translations, many=True)
         return handler.response(serializer.data)
+
+
+class CourseTranslationSchemaView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=CourseCache, paginate=False)
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        payload = {"schemas": export_course_translation_schemas()}
+        return handler.response(payload)
 
 
 def _get_course_or_404(course_identifier, academy_id, request_lang):

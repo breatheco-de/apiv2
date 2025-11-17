@@ -1804,7 +1804,7 @@ class SyllabusView(APIView):
         }
 
         if not syllabus:
-            raise ValidationException("Syllabus details not found", code=404, slug="syllabus-not-found")
+            raise ValidationException("Syllabus not found, maybe it exists in another academy?", code=404, slug="syllabus-not-found")
 
         serializer = SyllabusSerializer(syllabus, data=data, many=False)
         if serializer.is_valid():
@@ -2755,7 +2755,6 @@ class UserMicroCohortsSyncView(APIView):
             )
 
         micro_cohorts = macro_cohort.micro_cohorts.all()
-        print(micro_cohorts)
 
         if not micro_cohorts.exists():
             return Response(
@@ -2771,41 +2770,72 @@ class UserMicroCohortsSyncView(APIView):
             )
 
         added_count = 0
+        updated_count = 0
         already_existing_count = 0
         micro_cohorts_added = []
 
         for micro_cohort in micro_cohorts:
-            micro_cohort_user = CohortUser.objects.filter(
-                user=user, cohort=micro_cohort, role=user_macro_cohort.role
-            ).first()
+            micro_cohort_user = CohortUser.objects.filter(user=user, cohort=micro_cohort).first()
 
-            if micro_cohort_user is None:
-                micro_cohort_user = CohortUser.objects.create(
-                    user=user,
-                    cohort=micro_cohort,
-                    role=user_macro_cohort.role,
-                    finantial_status=user_macro_cohort.finantial_status,
-                    educational_status=user_macro_cohort.educational_status,
-                )
-                added_count += 1
-                micro_cohorts_added.append(
-                    {
-                        "id": micro_cohort.id,
-                        "name": micro_cohort.name,
-                        "slug": micro_cohort.slug,
-                        "role": micro_cohort_user.role,
-                    }
-                )
-                logger.info(f"Added user {user.email} to micro-cohort {micro_cohort.name}")
-            else:
-                already_existing_count += 1
+            if micro_cohort_user:
+                fields_to_update: list[str] = []
+
+                if micro_cohort_user.role != user_macro_cohort.role:
+                    micro_cohort_user.role = user_macro_cohort.role
+                    fields_to_update.append("role")
+
+                if micro_cohort_user.finantial_status != user_macro_cohort.finantial_status:
+                    micro_cohort_user.finantial_status = user_macro_cohort.finantial_status
+                    fields_to_update.append("finantial_status")
+
+                if micro_cohort_user.educational_status != user_macro_cohort.educational_status:
+                    micro_cohort_user.educational_status = user_macro_cohort.educational_status
+                    fields_to_update.append("educational_status")
+
+                if fields_to_update:
+                    micro_cohort_user.save(update_fields=fields_to_update + ["updated_at"])
+                    updated_count += 1
+                    logger.info(
+                        "Updated user %s in micro-cohort %s (fields: %s)",
+                        user.email,
+                        micro_cohort.name,
+                        ", ".join(fields_to_update),
+                    )
+                else:
+                    already_existing_count += 1
+
+                continue
+
+            micro_cohort_user = CohortUser.objects.create(
+                user=user,
+                cohort=micro_cohort,
+                role=user_macro_cohort.role,
+                finantial_status=user_macro_cohort.finantial_status,
+                educational_status=user_macro_cohort.educational_status,
+            )
+            added_count += 1
+            micro_cohorts_added.append(
+                {
+                    "id": micro_cohort.id,
+                    "name": micro_cohort.name,
+                    "slug": micro_cohort.slug,
+                    "role": micro_cohort_user.role,
+                }
+            )
+            logger.info(f"Added user {user.email} to micro-cohort {micro_cohort.name}")
 
         return Response(
             {
                 "detail": translation(
                     lang,
-                    en=f"Successfully added to {added_count} micro-cohorts from '{macro_cohort.name}'. {already_existing_count} were already enrolled.",
-                    es=f"Agregado exitosamente a {added_count} micro-cohorts de '{macro_cohort.name}'. {already_existing_count} ya estaban inscritos.",
+                    en=(
+                        f"Successfully added to {added_count} micro-cohorts from '{macro_cohort.name}'. "
+                        f"{updated_count} were updated and {already_existing_count} were already enrolled."
+                    ),
+                    es=(
+                        f"Agregado exitosamente a {added_count} micro-cohorts de '{macro_cohort.name}'. "
+                        f"{updated_count} fueron actualizados y {already_existing_count} ya estaban inscritos."
+                    ),
                     slug="micro-cohorts-sync-success",
                 ),
                 "macro_cohort": {
@@ -2814,6 +2844,7 @@ class UserMicroCohortsSyncView(APIView):
                     "slug": macro_cohort.slug,
                 },
                 "added_count": added_count,
+                "updated_count": updated_count,
                 "already_existing_count": already_existing_count,
                 "micro_cohorts_added": micro_cohorts_added,
             },

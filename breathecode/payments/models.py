@@ -1128,7 +1128,15 @@ class Plan(AbstractPriceByTime):
     )
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
-    is_onboarding = models.BooleanField(default=False, help_text="Is onboarding plan?", db_index=True)
+    is_onboarding = models.BooleanField(
+        default=False,
+        help_text=(
+            "If the plan is tagged for onboarding, the front end will include it in the plans that are meant to be "
+            "used as first payment plans for users; other plans focus on upsell or cross-sell so they can be ignored "
+            "by first-time users"
+        ),
+        db_index=True,
+    )
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
 
     pricing_ratio_exceptions = models.JSONField(

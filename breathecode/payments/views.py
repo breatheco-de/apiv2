@@ -5322,6 +5322,49 @@ class AcademyPlanServiceItemView(APIView):
         )
 
 
+class AcademyPlanSpecificServiceItemView(APIView):
+    @capable_of("crud_plan")
+    def delete(self, request, academy_id=None, plan_id=None, service_item_id=None):
+        lang = get_user_language(request)
+
+        plan = (
+            Plan.objects.filter(id=plan_id)
+            .filter(Q(owner__id=academy_id) | Q(owner=None))
+            .exclude(status=Plan.Status.DELETED)
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(lang, en="Plan not found", es="Plan no encontrado", slug="plan-not-found"),
+                code=404,
+            )
+
+        plan_service_item = PlanServiceItem.objects.filter(plan=plan, service_item_id=service_item_id).first()
+        if not plan_service_item:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="This service item is not attached to the selected plan",
+                    es="Este service item no está asociado al plan seleccionado",
+                    slug="plan-service-item-not-found",
+                ),
+                code=404,
+            )
+
+        plan_service_item_id = plan_service_item.id
+        plan_service_item.delete()
+
+        return Response(
+            {
+                "status": "ok",
+                "deleted": True,
+                "plan_id": plan.id,
+                "service_item_id": service_item_id,
+                "plan_service_item_id": plan_service_item_id,
+            }
+        )
+
+
 # ------------------------------
 # Team member endpoints (scaffold)
 # ------------------------------
