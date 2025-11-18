@@ -2262,6 +2262,10 @@ def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversi
             financing.coupons.set(bag_coupons)
 
         financing.invoices.add(invoice)
+        
+        if financing.how_many_installments == 1 and invoice.status == Invoice.Status.FULFILLED:
+            financing.status = PlanFinancing.Status.FULLY_PAID
+        
         financing.save()
 
         tasks.build_service_stock_scheduler_from_plan_financing.delay(plan_financing_id=financing.id)
