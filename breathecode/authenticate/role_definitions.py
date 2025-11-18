@@ -160,6 +160,10 @@ CAPABILITIES = [
         "slug": "crud_academy_feedback_settings",
         "description": "Settings related to feedback module, for example the chosen template for a cohort survey",
     },
+    {
+        "slug": "crud_academy_payment_settings",
+        "description": "Update payment settings for the academy (Stripe, Coinbase API keys, webhooks, etc.)",
+    },
     {"slug": "start_or_end_event", "description": "Start or end event"},
     {"slug": "read_provisioning_bill", "description": "Read provisioning activities and bills"},
     {"slug": "crud_provisioning_activity", "description": "Create, update or delete provisioning activities"},
@@ -739,6 +743,7 @@ def get_extended_roles():
                 "crud_subscription",
                 "read_paymentmethod",
                 "crud_paymentmethod",
+                "crud_academy_payment_settings",
             ],
         }
     )
@@ -813,4 +818,3 @@ def get_all_role_priorities() -> dict[str, int]:
     """
     roles = get_extended_roles()
     return {role["slug"]: get_role_priority(role["slug"]) for role in roles}
-
