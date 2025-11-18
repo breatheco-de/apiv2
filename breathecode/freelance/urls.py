@@ -1,3 +1,53 @@
+"""
+URL Configuration for Freelance App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /bills, /academy/projects
+   - Use singular nouns for individual resources: /bill/<id>
+
+2. HTTP Methods:
+   - GET /bills - List all bills
+   - POST /bills - Create new bill
+   - GET /bills/<id> - Get specific bill
+   - PUT/PATCH /bills/<id> - Update specific bill
+   - DELETE /bills/<id> - Delete specific bill
+
+3. Nested Resources:
+   - /academy/project/<id>/invoice - Invoices for specific project
+   - /academy/project/invoice/<id>/member - Members for specific invoice
+   - /academy/project/member - Project members management
+
+4. Actions (Non-REST exceptions):
+   - /bills/html - Render all bills as HTML (GET)
+   - /bills/<id>/html - Render specific bill as HTML (GET)
+   - /sync/user - Sync user issues (POST)
+   - /sync/user/<id>/bill - Get latest bill for user (GET)
+
+5. Special Endpoints:
+   - /academy/* - Academy-specific resources
+   - /bills/* - Bill management and rendering
+   - /invoice/* - Invoice management
+   - /issues - Issue tracking
+   - /sync/* - Synchronization endpoints
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_project_id
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_project_id - Get/update specific academy project
+- academy_project_invoice_id - Get/update specific project invoice
+- academy_project_invoice_id_member - Get/update invoice members
+- bills_html - Render all bills as HTML
+"""
+
 from django.urls import path
 
 from .views import (

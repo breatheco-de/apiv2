@@ -80,7 +80,7 @@ def asset_title_was_updated(sender, instance, **kwargs):
 @receiver(asset_readme_modified, sender=Asset)
 def post_asset_readme_modified(sender, instance: Asset, **kwargs):
     logger.debug("Cleaning asset raw readme")
-    async_regenerate_asset_readme(instance.slug)
+    async_regenerate_asset_readme.delay(instance.slug)
 
 
 @receiver(post_delete, sender=Asset)

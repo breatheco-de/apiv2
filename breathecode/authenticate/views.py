@@ -42,13 +42,16 @@ from rest_framework.response import Response
 from rest_framework.schemas.openapi import AutoSchema
 
 import breathecode.activity.tasks as tasks_activity
+import breathecode.authenticate.tasks as auth_tasks
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.authenticate.actions import get_user_settings, replace_user_email, sync_with_rigobot
 from breathecode.marketing.models import Course
-from breathecode.authenticate.actions import get_user_settings, sync_with_rigobot, replace_user_email
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from breathecode.notify.models import SlackTeam
+from breathecode.payments.actions import user_has_active_4geeks_plus_plans
+from breathecode.services.discord import Discord
 
 # from breathecode.services.google_apps.google_apps import GoogleApps
 from breathecode.services.google_cloud import FunctionV1, FunctionV2
@@ -85,6 +88,7 @@ from .forms import (
 )
 from .models import (
     AcademyAuthSettings,
+    CredentialsDiscord,
     CredentialsFacebook,
     CredentialsGithub,
     CredentialsGoogle,
@@ -316,7 +320,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             if v and str(v).strip():
                 try:
                     args = {}
-                    if isinstance(v, int) or v.isnumeric():
+                    if isinstance(v, int):
                         args["id"] = v
                     else:
                         args["slug"] = v
@@ -326,7 +330,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
                 except Exception:
                     raise ValidationException(
                         translation(
-                            lang, en="The academy could not be found", es="La academia no existe o no se pudo encontrar", slug="academy-not-found"
+                            lang, en="The academy does not exist", es="La academia no existe", slug="academy-not-found"
                         )
                     )
 
@@ -514,9 +518,11 @@ class MemberView(APIView, GenerateLookupsMixin):
         if roles != "":
             items = items.filter(role__in=roles.lower().split(","))
 
-        status = request.GET.get("status", None)
-        if status is not None:
-            items = items.filter(status__iexact=status)
+        status_param = request.GET.get("status")
+        if status_param:
+            statuses = [value.strip().upper() for value in status_param.split(",") if value.strip()]
+            if statuses:
+                items = items.filter(status__in=statuses)
 
         like = request.GET.get("like", None)
         if like is not None:
@@ -1173,6 +1179,69 @@ class UserMeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class CapabilityCheckView(APIView):
+    """Check if the authenticated user has a specific capability within an academy context.
+
+    Requires:
+    - Authorization header (Token)
+    - Academy context via 'Academy' header or querystring (?academy=<id>)
+    Returns 200 if user has the capability for that academy; otherwise 403/400 from validators.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, capability_slug: str):
+        from breathecode.utils.decorators.capable_of import get_academy_from_capability
+
+        # Will raise if missing/invalid academy or user lacks capability
+        get_academy_from_capability({}, request, capability_slug)
+
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+
+
+class AcademyCapabilitiesView(APIView):
+    """Get all capabilities for the authenticated user in a specific academy.
+
+    Returns a unique list of capabilities from all ProfileAcademy roles the user has for that academy.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, slug_or_id: str):
+        # Get the academy by slug or id
+        academy = None
+        if slug_or_id.isdigit():
+            academy = Academy.objects.filter(id=int(slug_or_id)).first()
+        else:
+            academy = Academy.objects.filter(slug=slug_or_id).first()
+
+        if not academy:
+            raise ValidationException(
+                translation(
+                    en=f"Academy with identifier '{slug_or_id}' not found",
+                    es=f"Academia con identificador '{slug_or_id}' no encontrada",
+                ),
+                slug="academy-not-found",
+                code=404,
+            )
+
+        # Get all ProfileAcademies for this user and academy
+        profile_academies = ProfileAcademy.objects.filter(
+            user=request.user, academy=academy
+        ).select_related("role").prefetch_related("role__capabilities")
+
+        # Collect all capabilities using a set to avoid duplicates
+        capabilities_set = set()
+        for profile_academy in profile_academies:
+            for capability in profile_academy.role.capabilities.all():
+                capabilities_set.add(capability.slug)
+
+        # Convert to sorted list for consistent output
+        capabilities_list = sorted(list(capabilities_set))
+
+        return Response(capabilities_list, status=status.HTTP_200_OK)
+
+
 class UserSettingsView(APIView):
 
     def get(self, request, format=None):
@@ -1312,8 +1381,6 @@ def get_github_token(request, token=None):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 async def save_github_token(request):
-
-    companyName = "4Geeks"
     def error_message(obj: Any, default: str):
         if isinstance(obj, dict):
             return obj.get("error_description") or obj.get("error") or default
@@ -1452,6 +1519,7 @@ async def save_github_token(request):
         if invite:
             academy = invite.academy
 
+        companyName = "4Geeks"
         if "4geeks" not in url:
             parsed_url = urlparse(url)
             domain = (
@@ -1556,7 +1624,7 @@ async def save_github_token(request):
         token, _ = await Token.aget_or_create(user=user, token_type="login")
 
     # register user in rigobot
-    await sync_with_rigobot(token.key, organization=companyName.lower())
+    await sync_with_rigobot(token.key)
 
     redirect_url = set_query_parameter(url, "token", token.key)
     return HttpResponseRedirect(redirect_to=redirect_url)
@@ -1847,7 +1915,7 @@ def save_facebook_token(request):
             user=user,
             academy=academy,
             expires_at=expires_at,
-            token=facebook_data["access_token"],
+            token=facebook_data["acScess_token"],
         )
         credentials.save()
 
@@ -1868,6 +1936,178 @@ def save_facebook_token(request):
         return HttpResponseRedirect(redirect_to=payload["url"][0])
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def check_discord_server(request, server_id, cohort_slug):
+    if not server_id:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    if not user_has_active_4geeks_plus_plans(request.user):
+        logger.debug("User does not have an active 4Geeks Plus subscription")
+        return Response(status=status.HTTP_403_FORBIDDEN)
+    discord_creds = CredentialsDiscord.objects.filter(user=request.user).first()
+    if not discord_creds:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    for server in discord_creds.joined_servers:
+        if int(server) == server_id:
+            cohort = Cohort.objects.filter(slug=cohort_slug).first()
+            if not cohort:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            response = Discord(cohort.academy.id).get_member_in_server(discord_creds.discord_id, server_id)
+            if response.status_code == 200:
+                redirect = f"https://discord.com/channels/{server_id}"
+                return Response({"server_url": redirect})
+            if response.status_code == 404:
+                return Response(status=response.status_code)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_discord_token(request):
+    """Generate stack redirect url for authorize."""
+    url = request.query_params.get("url", None)
+    if url is None:
+        raise ValidationException("No callback URL specified", slug="no-callback-url")
+
+    # the url may or not be encoded
+    try:
+        url = base64.b64decode(url.encode("utf-8")).decode("utf-8")
+    except Exception:
+        pass
+
+    cohort_slug = request.query_params.get("cohort_slug", None)
+    if cohort_slug is None:
+        raise ValidationError("No cohort slug specified")
+
+    user = request.user
+    user_id = request.user.id
+
+    if user is None or user_id is None:
+        raise ValidationException("User not authenticated", "user-not-found")
+
+    if not user_has_active_4geeks_plus_plans(user):
+        logger.debug("User does not have an active 4Geeks Plus subscription")
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+    token, created = Token.get_or_create(user=user, token_type="temporal")
+    if not token:
+        raise ValidationError
+    query_string = f"token={token}|cohort_slug={cohort_slug}|url={url}".encode("utf-8")
+
+    cohort = Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").first()
+    if not cohort:
+        raise ValidationException(
+            translation(
+                en=f"Cohort with slug '{cohort_slug}' not found",
+                es=f"Cohort con slug '{cohort_slug}' no encontrado",
+            ),
+            slug="cohort-not-found",
+        )
+
+    settings = AcademyAuthSettings.objects.filter(academy_id=cohort.academy.id).first()
+
+    scopes = {"identify", "guilds", "guilds.join", "role_connections.write"}
+    params = {
+        "client_id": settings.discord_settings.get("discord_client_id", None),
+        "response_type": "code",
+        "redirect_uri": os.getenv("DISCORD_REDIRECT_URL", ""),
+        "scope": "+".join(scopes),
+        "state": query_string,
+    }
+
+    redirect = "https://discord.com/oauth2/authorize?"
+
+    for key in params:
+        redirect += f"{key}={params[key]}&"
+
+    return Response({"authorization_url": redirect})
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+async def process_discord_token(request):
+    """Save discord credentials, join the user to the discord server and assign the member role"""
+    logger.debug("Discord callback just landed")
+
+    state = request.query_params.get("state", None)
+    if not state:
+        raise ValidationError("No state specified")
+    logger.debug(f"Received state: {state}")
+
+    state_dict = dict(param.split("=") for param in state.split("'")[1].split("|"))
+
+    url = state_dict.get("url")
+    if not url:
+        logger.error("Missing redirect URL")
+        raise ValidationError("Missing redirect URL")
+
+    code = request.query_params.get("code", None)
+    if not code:
+        # No code specified, the user probably cancelled the authorization
+        return HttpResponseRedirect(url)
+
+    temporal_token = state_dict.get("token")
+    if not temporal_token:
+        logger.error("Missing token")
+        raise ValidationError("Missing token")
+
+    cohort_slug = state_dict.get("cohort_slug")
+    if not cohort_slug:
+        logger.error("Missing cohort slug")
+        raise ValidationError("Missing cohort slug")
+
+    token = await Token.objects.filter(key=temporal_token).prefetch_related("user").afirst()
+    if token:
+        user = token.user
+        cohort = await Cohort.objects.filter(slug=cohort_slug).prefetch_related("academy").afirst()
+        settings = await AcademyAuthSettings.objects.filter(academy_id=cohort.academy.id).afirst()
+        if not settings.discord_settings:
+            raise ValidationError("No Discord settings found")
+        params = {
+            "client_id": settings.discord_settings.get("discord_client_id", None),
+            "client_secret": settings.discord_settings.get("discord_secret", None),
+            "redirect_uri": os.getenv("DISCORD_REDIRECT_URL", ""),
+            "code": code,
+            "grant_type": "authorization_code",
+        }
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        async with aiohttp.ClientSession() as session:
+            try:
+                """Exchange code for access token"""
+
+                async with session.post(
+                    "https://discord.com/api/oauth2/token", data=params, headers=headers
+                ) as token_resp:
+                    discord_data = await token_resp.json()
+                    if token_resp.status != 200:
+                        raise APIException(f"Discord OAuth error: {discord_data}")
+                    if "access_token" not in discord_data:
+                        raise APIException("No access token received from Discord")
+                    access_token = discord_data["access_token"]
+
+                    """Get user information"""
+                    user_headers = {"Authorization": f"Bearer {access_token}"}
+                    async with session.get("https://discord.com/api/users/@me", headers=user_headers) as user_resp:
+                        user_data = await user_resp.json()
+                        if user_resp.status != 200:
+                            raise APIException(f"Failed to retrieve user information {user_data.get('message')}")
+
+                        auth_tasks.join_user_to_discord_guild.delay(
+                            user_id=user.id,
+                            access_token=access_token,
+                            discord_user_id=user_data["id"],
+                            cohort_slug=cohort_slug,
+                        )
+                        return HttpResponseRedirect(url)
+
+            except Exception as e:
+                raise APIException(f"Error while communicating with Discord: {str(e)}")
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
 def change_password(request, token):
     if request.method == "POST":
         form = PasswordChangeCustomForm(request.user, request.POST)
@@ -2060,21 +2300,16 @@ def pick_password(request, token):
 
                 # Determine app_url from invite's conversion_info if available
                 app_url = os.getenv("APP_URL", "https://4geeks.com")
-
                 if invite and invite.conversion_info and isinstance(invite.conversion_info, dict):
                     landing_url = invite.conversion_info.get("landing_url")
-
                     if landing_url:
                         try:
                             parsed_url = urlparse(landing_url)
-                            if parsed_url.scheme and parsed_url.netloc:
-                                app_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-                            elif landing_url.startswith("/es"):
-                                app_url.rstrip("/")
-                                app_url += "/es"
+                            app_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
                         except Exception:
                             # If any error parsing URL, fallback to default app_url
                             pass
+
                 return shortcuts.render(
                     request,
                     "message.html",
@@ -3417,3 +3652,22 @@ class UpdateEmailEverywhereView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+class CapabilityCheckView(APIView):
+    """Check if the authenticated user has a specific capability within an academy context.
+
+    Requires:
+    - Authorization header (Token)
+    - Academy context via 'Academy' header or querystring (?academy=<id>)
+    Returns 200 if user has the capability for that academy; otherwise 403/400 from validators.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, capability_slug: str):
+        from breathecode.utils.decorators.capable_of import get_academy_from_capability
+
+        # Will raise if missing/invalid academy or user lacks capability
+        get_academy_from_capability({}, request, capability_slug)
+
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)

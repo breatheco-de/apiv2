@@ -1,3 +1,55 @@
+"""
+URL Configuration for Marketing App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/leads, /academy/tags
+   - Use singular nouns for individual resources: /lead/<id>
+
+2. HTTP Methods:
+   - GET /academy/lead - List all academy leads
+   - POST /academy/lead - Create new lead
+   - GET /academy/lead/<id> - Get specific lead
+   - PUT/PATCH /academy/lead/<id> - Update specific lead
+   - DELETE /academy/lead/<id> - Delete specific lead
+
+3. Nested Resources:
+   - /academy/<id>/tag/sync - Sync tags for specific academy
+   - /academy/<id>/automation/sync - Sync automations for specific academy
+   - /app/<slug>/lead - Create lead from specific app
+
+4. Actions (Non-REST exceptions):
+   - /lead - Create lead (POST)
+   - /lead-captcha - Create lead with captcha (POST)
+   - /app/validateemail - Validate email from app (POST)
+   - /academy/lead/process - Process leads (POST)
+   - /academy/lead/won - Mark leads as won (POST)
+
+5. Special Endpoints:
+   - /academy/* - Academy-specific resources
+   - /app/* - App-specific resources
+   - /facebook/* - Facebook integration
+   - /activecampaign/* - ActiveCampaign integration
+   - /googleads/* - Google Ads integration
+   - /report/* - Reporting endpoints
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_lead_id
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_lead_id - Get/update specific academy lead
+- academy_id_tag_sync - Sync tags for specific academy
+- app_slug_lead - Create lead from specific app
+- activecampaign_webhook - ActiveCampaign webhook endpoint
+"""
+
 from django.urls import path
 from .views import (
     CourseView,
@@ -25,6 +77,13 @@ from .views import (
     ActiveCampaignView,
     UploadView,
     CourseTranslationsView,
+    CourseTranslationSchemaView,
+    AcademyCourseView,
+    CoursePlanByCountryCodeView,
+    CourseTranslationView,
+    CourseTranslationCourseModulesView,
+    CourseTranslationLandingVariablesView,
+    CourseTranslationPrerequisiteView,
     validate_email_from_app,
     get_alias,
 )
@@ -71,6 +130,29 @@ urlpatterns = [
     path("googleads/enrollments/<str:academy_slugs>", googleads_enrollments, name="activecampaign_webhook"),
     path("googleads/data", googleads_csv, name="googleads_csv"),
     path("course", CourseView.as_view(), name="course"),
+    path("course/translation-schemas", CourseTranslationSchemaView.as_view(), name="course_translation_schemas"),
     path("course/<slug:course_slug>", CourseView.as_view(), name="course_slug"),
     path("course/<slug:course_slug>/translations", CourseTranslationsView.as_view(), name="course_translations"),
+    path("academy/course/<slug:course_identifier>", AcademyCourseView.as_view(), name="academy_course_id"),
+    path(
+        "academy/course/<slug:course_identifier>/plan-by-country-code",
+        CoursePlanByCountryCodeView.as_view(),
+        name="academy_course_id_plan_by_country_code",
+    ),
+    path("academy/course/<slug:course_identifier>/translation", CourseTranslationView.as_view(), name="academy_course_id_translation"),
+    path(
+        "academy/course/<slug:course_identifier>/course_modules",
+        CourseTranslationCourseModulesView.as_view(),
+        name="academy_course_id_course_modules",
+    ),
+    path(
+        "academy/course/<slug:course_identifier>/landing_variables",
+        CourseTranslationLandingVariablesView.as_view(),
+        name="academy_course_id_landing_variables",
+    ),
+    path(
+        "academy/course/<slug:course_identifier>/prerequisite",
+        CourseTranslationPrerequisiteView.as_view(),
+        name="academy_course_id_prerequisite",
+    ),
 ]

@@ -8,7 +8,7 @@ from adrf.decorators import api_view
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import AnonymousUser, User
-from django.db.models import FloatField, Max, Q, Value
+from django.db.models import F, FloatField, Max, Q, Value
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -32,6 +32,7 @@ from breathecode.utils import (
     capable_of,
     localize_query,
 )
+from breathecode.utils.decorators import has_permission
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import render_message
 
@@ -40,22 +41,27 @@ from .models import (
     DELETED,
     STUDENT,
     Academy,
+    City,
     Cohort,
     CohortTimeSlot,
     CohortUser,
+    Country,
     Syllabus,
     SyllabusSchedule,
     SyllabusScheduleTimeSlot,
     SyllabusVersion,
 )
 from .serializers import (
+    AcademyPOSTSerializer,
     AcademyReportSerializer,
     AcademySerializer,
+    CitySerializer,
     CohortPUTSerializer,
     CohortSerializer,
     CohortTimeSlotSerializer,
     CohortUserPUTSerializer,
     CohortUserSerializer,
+    CountrySerializer,
     GetAcademyWithStatusSerializer,
     GetBigAcademySerializer,
     GetCohortSerializer,
@@ -112,6 +118,16 @@ def render_syllabus_preview(request, syllabus_id, version):
             .first()
         )
 
+    # Block DEPRECATED/DELETED unless explicitly requested via status param
+    if syllabus_version is not None:
+        requested_statuses_param = request.GET.get("status", None)
+        requested_statuses = set()
+        if requested_statuses_param is not None:
+            requested_statuses = set(s.strip().upper() for s in requested_statuses_param.split(","))
+
+        if syllabus_version.status in {"DEPRECATED", "DELETED"} and syllabus_version.status not in requested_statuses:
+            return render_message(request, f"Syllabus Version {syllabus_id} {version} has been deprecated/deleted")
+
     if syllabus_version is None:
         return render_message(request, f"Syllabus Version {syllabus_id} {version} not found")
 
@@ -138,6 +154,75 @@ def render_syllabus_preview(request, syllabus_id, version):
 def get_timezones(request, id=None):
     # timezones = [(x, x) for x in pytz.common_timezones]
     return Response(pytz.common_timezones)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_countries(request):
+    """Get all countries available in the system."""
+    countries = Country.objects.all().order_by("name")
+    serializer = CountrySerializer(countries, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_cities(request):
+    """Get all cities available in the system, optionally filtered by country."""
+    cities = City.objects.all().select_related("country")
+    
+    # Filter by country code/id if provided (country uses code as primary key)
+    country = request.GET.get("country")
+    if country:
+        cities = cities.filter(country__pk=country)
+    
+    cities = cities.order_by("name")
+    serializer = CitySerializer(cities, many=True)
+    return Response(serializer.data)
+
+
+class AcademyListView(APIView):
+    """
+    List all academies or create a new academy.
+    
+    GET: List all academies (public)
+    POST: Create a new academy (requires 'manage_organizations' permission)
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """List all academies with optional filters."""
+        items = Academy.objects.all()
+
+        status_filter = request.GET.get("status")
+        if status_filter:
+            items = items.filter(status__in=status_filter.upper().split(","))
+
+        academy_ids = request.GET.get("academy_id")
+        if academy_ids:
+            items = items.filter(id__in=academy_ids.split(","))
+
+        serializer = AcademySerializer(items, many=True)
+        return Response(serializer.data)
+
+    @has_permission("manage_organizations")
+    def post(self, request):
+        """Create a new academy."""
+        lang = get_user_language(request)
+        
+        serializer = AcademyPOSTSerializer(data=request.data, context={"request": request, "lang": lang})
+        
+        if serializer.is_valid():
+            # Set the creator as the owner before saving
+            # The academy_saved signal will automatically create ProfileAcademy with admin role
+            academy = serializer.save(owner=request.user)
+            
+            # Return the created academy with the standard serializer
+            response_serializer = GetBigAcademySerializer(academy)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])
@@ -271,6 +356,9 @@ class PublicCohortView(APIView):
         if upcoming == "true":
             now = timezone.now()
             items = items.filter(Q(kickoff_date__gte=now) | Q(never_ends=True))
+        elif upcoming == "false":
+            now = timezone.now()
+            items = items.filter(kickoff_date__lt=now, never_ends=False)
 
         never_ends = request.GET.get("never_ends", None)
         if never_ends == "false":
@@ -421,11 +509,12 @@ class AcademyView(APIView):
         for key in request.data:
             data[key] = request.data.get(key)
 
-        serializer = AcademySerializer(academy, data=data)
+        serializer = AcademySerializer(academy, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            # serializer = GetBigAcademySerializer(academy, data=data)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Return full academy data with nested objects for consistency with GET
+            response_serializer = GetBigAcademySerializer(academy)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1194,6 +1283,9 @@ class CohortMeView(APIView, GenerateLookupsMixin):
         if upcoming == "true":
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
+        elif upcoming == "false":
+            now = timezone.now()
+            items = items.filter(kickoff_date__lt=now)
 
         stage = request.GET.get("stage", None)
         if stage is not None:
@@ -1204,6 +1296,35 @@ class CohortMeView(APIView, GenerateLookupsMixin):
         like = request.GET.get("like", None)
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
+
+        # Filter by live cohorts (has online_meeting_url)
+        live = request.GET.get("live", None)
+        if live is not None:
+            if live.lower() == "true":
+                items = items.filter(online_meeting_url__isnull=False)
+            elif live.lower() == "false":
+                items = items.filter(online_meeting_url__isnull=True)
+
+        # Filter by remote available cohorts
+        remote = request.GET.get("remote", None)
+        if remote is not None:
+            if remote.lower() == "true":
+                items = items.filter(remote_available=True)
+            elif remote.lower() == "false":
+                items = items.filter(remote_available=False)
+
+        # Filter by available_as_saas (defaults to academy.available_as_saas if not specified)
+        available_as_saas = request.GET.get("available_as_saas", None)
+        if available_as_saas is not None:
+            if available_as_saas.lower() == "true":
+                items = items.filter(available_as_saas=True)
+            elif available_as_saas.lower() == "false":
+                items = items.filter(available_as_saas=False)
+        else:
+            # Default to academy's available_as_saas setting
+            # If academy.available_as_saas=True, show only cohorts with available_as_saas=True
+            # If academy.available_as_saas=False, show only cohorts with available_as_saas=False
+            items = items.filter(available_as_saas=F('academy__available_as_saas'))
 
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)
@@ -1244,6 +1365,9 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         if upcoming == "true":
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
+        elif upcoming == "false":
+            now = timezone.now()
+            items = items.filter(kickoff_date__lt=now)
 
         academy = request.GET.get("academy", None)
         if academy is not None:
@@ -1262,6 +1386,56 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         like = request.GET.get("like", None)
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
+
+        specialty = request.GET.get("specialty", None)
+        if specialty is not None:
+            # Filter by specialty slug through syllabus relationships
+            items = items.filter(
+                Q(syllabus_version__syllabus__specialty_with_one_syllabus__slug__in=specialty.split(",")) |
+                Q(syllabus_version__syllabus__specialties_with_many_syllabus__slug__in=specialty.split(","))
+            )
+
+        syllabus = request.GET.get("syllabus", None)
+        if syllabus is not None:
+            # Filter by syllabus slug
+            items = items.filter(syllabus_version__syllabus__slug__in=syllabus.split(","))
+
+        # Filter by live cohorts (has online_meeting_url)
+        live = request.GET.get("live", None)
+        if live is not None:
+            if live.lower() == "true":
+                items = items.filter(online_meeting_url__isnull=False)
+            elif live.lower() == "false":
+                items = items.filter(online_meeting_url__isnull=True)
+
+        # Filter by remote available cohorts
+        remote = request.GET.get("remote", None)
+        if remote is not None:
+            if remote.lower() == "true":
+                items = items.filter(remote_available=True)
+            elif remote.lower() == "false":
+                items = items.filter(remote_available=False)
+
+        # Filter by available_as_saas (defaults to academy.available_as_saas if not specified)
+        available_as_saas = request.GET.get("available_as_saas", None)
+        if available_as_saas is not None:
+            if available_as_saas.lower() == "true":
+                items = items.filter(available_as_saas=True)
+            elif available_as_saas.lower() == "false":
+                items = items.filter(available_as_saas=False)
+
+        # Filter by kickoff_date
+        kickoff_date = request.GET.get("kickoff_date", None)
+        if kickoff_date is not None:
+            items = items.filter(kickoff_date=kickoff_date)
+
+        # Filter by ending_date (supports ending_date=null for never-ending cohorts)
+        ending_date = request.GET.get("ending_date", None)
+        if ending_date is not None:
+            if ending_date.lower() == "null":
+                items = items.filter(ending_date__isnull=True)
+            else:
+                items = items.filter(ending_date=ending_date)
 
         items = handler.queryset(items)
         serializer = GetCohortSerializer(items, many=True)
@@ -1575,6 +1749,18 @@ class SyllabusView(APIView):
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=slugify(like)))
 
+        owner_filter = request.GET.get("owner", None)
+        if owner_filter is not None:
+            # If owner=true/me/current, filter to academy_id; if owner=<id>, filter to that id
+            if owner_filter.lower() in ["true", "me", "current"]:
+                items = items.filter(academy_owner__id=academy_id)
+            else:
+                try:
+                    owner_id = int(owner_filter)
+                    items = items.filter(academy_owner__id=owner_id)
+                except ValueError:
+                    pass  # Invalid owner value, ignore filter
+
         items = handler.queryset(items)
         serializer = GetSyllabusSerializer(items, many=True)
 
@@ -1618,13 +1804,49 @@ class SyllabusView(APIView):
         }
 
         if not syllabus:
-            raise ValidationException("Syllabus details not found", code=404, slug="syllabus-not-found")
+            raise ValidationException("Syllabus not found, maybe it exists in another academy?", code=404, slug="syllabus-not-found")
 
         serializer = SyllabusSerializer(syllabus, data=data, many=False)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_syllabus")
+    def delete(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Resolve syllabus by id or slug and enforce ownership
+        syllabus = (
+            Syllabus.objects.filter(Q(id=syllabus_id) | Q(slug=syllabus_slug, slug__isnull=False))
+            .filter(academy_owner__id=academy_id)
+            .first()
+        )
+        if not syllabus:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus not found for this academy",
+                    es="Syllabus no encontrado para esta academia",
+                    slug="syllabus-not-found",
+                ),
+                code=404,
+            )
+
+        # Block delete if any cohort uses any version of this syllabus
+        if Cohort.objects.filter(syllabus_version__syllabus=syllabus).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete: syllabus is in use by one or more cohorts",
+                    es="No se puede eliminar: el syllabus está en uso por uno o más cohortes",
+                    slug="syllabus-in-use",
+                ),
+                code=400,
+            )
+
+        syllabus.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
@@ -1695,6 +1917,18 @@ class SyllabusVersionView(APIView):
                     version=version,
                 ).first()
 
+            # If a specific version is requested and exists, block DEPRECATED/DELETED unless explicitly requested
+            if syllabus_version is not None and version != "latest":
+                requested_statuses_param = request.GET.get("status", None)
+                requested_statuses = set()
+                if requested_statuses_param is not None:
+                    requested_statuses = set(s.strip().upper() for s in requested_statuses_param.split(","))
+
+                if syllabus_version.status in {"DEPRECATED", "DELETED"} and syllabus_version.status not in requested_statuses:
+                    raise ValidationException(
+                        f'Syllabus version "{version}" not found', code=404, slug="syllabus-version-not-found"
+                    )
+
             if syllabus_version is None:
                 raise ValidationException(
                     f'Syllabus version "{version}" not found or is a draft', code=404, slug="syllabus-version-not-found"
@@ -1708,9 +1942,25 @@ class SyllabusVersionView(APIView):
             Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
         ).order_by("version")
 
+        # Optional filter: only show versions owned by the academy (exclude public versions from other academies)
+        owner_filter = request.GET.get("owner", None)
+        if owner_filter is not None:
+            # If owner=true/me/current, filter to academy_id; if owner=<id>, filter to that id
+            if owner_filter.lower() in ["true", "me", "current"]:
+                items = items.filter(syllabus__academy_owner__id=academy_id)
+            else:
+                try:
+                    owner_id = int(owner_filter)
+                    items = items.filter(syllabus__academy_owner__id=owner_id)
+                except ValueError:
+                    pass  # Invalid owner value, ignore filter
+
         _status = request.GET.get("status", None)
         if _status is not None:
             items = items.filter(status__in=_status.upper().split(","))
+        else:
+            # Exclude DEPRECATED/DELETED by default unless explicitly requested via status param
+            items = items.exclude(status__in=["DEPRECATED", "DELETED"])
 
         items = handler.queryset(items)
         serializer = GetSyllabusVersionSerializer(items, many=True)
@@ -1782,6 +2032,67 @@ class SyllabusVersionView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of("crud_syllabus")
+    def delete(self, request, syllabus_id=None, syllabus_slug=None, version=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Require a specific version to delete
+        if version is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You must specify a version to delete",
+                    es="Debes especificar una versión para eliminar",
+                    slug="missing-version",
+                ),
+                code=400,
+            )
+
+        # Resolve syllabus by id or slug and enforce ownership
+        syllabus = (
+            Syllabus.objects.filter(Q(id=syllabus_id) | Q(slug=syllabus_slug, slug__isnull=False))
+            .filter(academy_owner__id=academy_id)
+            .first()
+        )
+        if not syllabus:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus not found for this academy",
+                    es="Syllabus no encontrado para esta academia",
+                    slug="syllabus-not-found",
+                ),
+                code=404,
+            )
+
+        sv = SyllabusVersion.objects.filter(syllabus=syllabus, version=version).first()
+        if not sv:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found",
+                    es="Versión de syllabus no encontrada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
+
+        # Block delete if any cohort uses this version
+        if Cohort.objects.filter(syllabus_version=sv).exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete: syllabus version is in use by one or more cohorts",
+                    es="No se puede eliminar: la versión del syllabus está en uso por uno o más cohortes",
+                    slug="syllabus-version-in-use",
+                ),
+                code=400,
+            )
+
+        sv.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 
 class SyllabusVersionCSVView(APIView):
 
@@ -1818,6 +2129,34 @@ class SyllabusVersionCSVView(APIView):
                 Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
                 version=version,
             ).first()
+
+        # Block DEPRECATED/DELETED unless explicitly requested via status param
+        if syllabus_version is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found",
+                    es="Versión del syllabus no encontrada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
+
+        requested_statuses_param = request.GET.get("status", None)
+        requested_statuses = set()
+        if requested_statuses_param is not None:
+            requested_statuses = set(s.strip().upper() for s in requested_statuses_param.split(","))
+
+        if syllabus_version.status in {"DEPRECATED", "DELETED"} and syllabus_version.status not in requested_statuses:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found or was deprecated/deleted",
+                    es="Versión del syllabus no encontrada o fue desaprobada/eliminada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
 
         # Create an HTTP response object and set the content type to CSV
         response = HttpResponse(content_type="text/csv")
@@ -1880,6 +2219,213 @@ class SyllabusVersionCSVView(APIView):
         return response
 
 
+class SyllabusVersionForkView(APIView):
+    """Create a new syllabus by forking from an existing syllabus/version."""
+
+    @capable_of("crud_syllabus")
+    def post(self, request, syllabus_id, version, academy_id=None):
+        lang = get_user_language(request)
+
+        # Resolve original syllabus by id or slug
+        original_syllabus = (
+            Syllabus.objects.filter(Q(id=syllabus_id) | Q(slug=syllabus_id)).first()
+        )
+        if not original_syllabus:
+            raise ValidationException(
+                translation(lang, en="Syllabus not found", es="Syllabus no encontrado", slug="syllabus-not-found"),
+                code=404,
+            )
+
+        # Resolve baseline original version from path
+        if version == "latest":
+            original_version = (
+                SyllabusVersion.objects.filter(syllabus=original_syllabus)
+                .order_by("-version")
+                .first()
+            )
+        else:
+            if not str(version).isnumeric():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Version must be numeric or 'latest'",
+                        es="La versión debe ser numérica o 'latest'",
+                        slug="bad-version",
+                    ),
+                    code=400,
+                )
+            original_version = SyllabusVersion.objects.filter(syllabus=original_syllabus, version=int(version)).first()
+
+        if not original_version:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Syllabus version not found",
+                    es="Versión de syllabus no encontrada",
+                    slug="syllabus-version-not-found",
+                ),
+                code=404,
+            )
+
+        payload = request.data or {}
+
+        # Split payload into syllabus and version parts (both optional except slug/name for syllabus)
+        syllabus_payload = payload.get("syllabus", {}) if isinstance(payload.get("syllabus"), dict) else {}
+        version_payload = payload.get("version", {}) if isinstance(payload.get("version"), dict) else {}
+
+        # Allow flat payload too; merge any top-level syllabus fields if provided
+        flat_fields = {
+            k: v
+            for k, v in payload.items()
+            if k in {
+                "slug",
+                "title",
+                "name",
+                "main_technologies",
+                "duration_in_hours",
+                "duration_in_days",
+                "week_hours",
+                "logo",
+                "private",
+                "is_documentation",
+                "academy_owner",
+            }
+        }
+        syllabus_payload = {**syllabus_payload, **flat_fields}
+
+        # Validate required fields for syllabus
+        new_slug = syllabus_payload.get("slug")
+        new_title = syllabus_payload.get("title") or syllabus_payload.get("name")
+        if not new_slug or not new_title:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing slug or title in syllabus payload",
+                    es="Falta slug o título en el payload de syllabus",
+                    slug="missing-syllabus-fields",
+                ),
+                code=400,
+            )
+
+        # Resolve target academy (the requester's academy) and assign as owner of the fork
+        if not academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing academy id in request",
+                    es="Falta el id de la academia en la solicitud",
+                    slug="missing-academy-id",
+                )
+            )
+
+        target_academy = Academy.objects.filter(id=academy_id).first()
+        if not target_academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                code=404,
+            )
+
+        # Check if syllabus with this slug already exists for this academy
+        existing_syllabus = Syllabus.objects.filter(
+            slug=new_slug,
+            academy_owner=target_academy
+        ).first()
+
+        if existing_syllabus:
+            # Update the existing syllabus with new data
+            existing_syllabus.name = new_title
+            existing_syllabus.main_technologies = syllabus_payload.get("main_technologies", existing_syllabus.main_technologies)
+            existing_syllabus.duration_in_hours = syllabus_payload.get("duration_in_hours", existing_syllabus.duration_in_hours)
+            existing_syllabus.duration_in_days = syllabus_payload.get("duration_in_days", existing_syllabus.duration_in_days)
+            existing_syllabus.week_hours = syllabus_payload.get("week_hours", existing_syllabus.week_hours)
+            existing_syllabus.logo = syllabus_payload.get("logo", existing_syllabus.logo)
+            existing_syllabus.private = syllabus_payload.get("private", existing_syllabus.private)
+            existing_syllabus.is_documentation = syllabus_payload.get("is_documentation", existing_syllabus.is_documentation)
+            existing_syllabus.save()
+            new_syllabus = existing_syllabus
+        else:
+            # Build new syllabus (academy owner is the requester's academy)
+            new_syllabus = Syllabus(
+                slug=new_slug,
+                name=new_title,
+                main_technologies=syllabus_payload.get("main_technologies", original_syllabus.main_technologies),
+                github_url=None,  # force null per spec
+                duration_in_hours=syllabus_payload.get("duration_in_hours", original_syllabus.duration_in_hours),
+                duration_in_days=syllabus_payload.get("duration_in_days", original_syllabus.duration_in_days),
+                week_hours=syllabus_payload.get("week_hours", original_syllabus.week_hours),
+                logo=syllabus_payload.get("logo", original_syllabus.logo),
+                private=syllabus_payload.get("private", True),
+                is_documentation=syllabus_payload.get("is_documentation", original_syllabus.is_documentation),
+                academy_owner=target_academy,
+                forked_from=original_syllabus,
+            )
+            new_syllabus.save()
+
+        # Determine the source version for JSON/integrity inheritance
+        source_version = original_version
+        requested_source_version = version_payload.get("version")
+        if requested_source_version is not None and "json" not in version_payload:
+            if not str(requested_source_version).isnumeric():
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Version must be numeric when provided in payload",
+                        es="La versión debe ser numérica cuando se provee en el payload",
+                        slug="bad-payload-version",
+                    ),
+                    code=400,
+                )
+            _src = SyllabusVersion.objects.filter(
+                syllabus=original_syllabus, version=int(requested_source_version)
+            ).first()
+            if not _src:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Specified source version not found",
+                        es="Versión fuente especificada no encontrada",
+                        slug="payload-version-not-found",
+                    ),
+                    code=404,
+                )
+            source_version = _src
+
+        # Calculate next version number for this syllabus
+        latest_version = SyllabusVersion.objects.filter(syllabus=new_syllabus).order_by("-version").first()
+        next_version_number = 1 if latest_version is None else latest_version.version + 1
+
+        # Build new version (inherits from source_version)
+        # Handle both formats: version.json or version.days (flatten days into json)
+        version_json = source_version.json
+        if "json" in version_payload:
+            version_json = version_payload["json"]
+        elif "days" in version_payload:
+            # Merge days into the source json structure
+            version_json = {**source_version.json, "days": version_payload["days"]}
+        
+        new_version = SyllabusVersion(
+            syllabus=new_syllabus,
+            version=next_version_number,
+            json=version_json,
+            status=version_payload.get("status", source_version.status),
+            change_log_details=None,
+            integrity_status=source_version.integrity_status,
+            integrity_check_at=source_version.integrity_check_at,
+            integrity_report=source_version.integrity_report,
+            forked_from=source_version,
+        )
+        new_version.save()
+
+        # Respond with the new syllabus version payload
+        data = GetSyllabusVersionSerializer(new_version, many=False).data
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
 class AllSyllabusVersionsView(APIView):
     """List all snippets, or create a new snippet."""
 
@@ -1902,12 +2448,24 @@ class AllSyllabusVersionsView(APIView):
             param = self.request.GET.get("academy")
             lookup["syllabus__academy_owner__id__in"] = [p for p in param.split(",")]
 
+        # Backwards/alias support: allow filtering by owner (academy_owner)
+        if "owner" in self.request.GET:
+            param = self.request.GET.get("owner")
+            lookup["syllabus__academy_owner__id__in"] = [p for p in param.split(",")]
+
         if "is_documentation" in self.request.GET:
             param = self.request.GET.get("is_documentation")
             if param == "True":
                 lookup["syllabus__is_documentation"] = True
 
         items = items.filter(syllabus__private=False, **lookup).order_by("version")
+
+        # Respect status filter: exclude DEPRECATED/DELETED by default unless explicitly requested
+        _status = request.GET.get("status", None)
+        if _status is not None:
+            items = items.filter(status__in=_status.upper().split(","))
+        else:
+            items = items.exclude(status__in=["DEPRECATED", "DELETED"])
 
         serializer = GetSyllabusVersionSerializer(items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1956,7 +2514,6 @@ class PublicCohortUserView(APIView, GenerateLookupsMixin):
         items = handler.queryset(items)
         serializer = GetPublicCohortUserSerializer(items, many=True)
         return handler.response(serializer.data)
-
 
 class AcademyCohortHistoryView(APIView):
     """List all snippets, or create a new snippet."""
@@ -2198,7 +2755,6 @@ class UserMicroCohortsSyncView(APIView):
             )
 
         micro_cohorts = macro_cohort.micro_cohorts.all()
-        print(micro_cohorts)
 
         if not micro_cohorts.exists():
             return Response(
@@ -2214,41 +2770,72 @@ class UserMicroCohortsSyncView(APIView):
             )
 
         added_count = 0
+        updated_count = 0
         already_existing_count = 0
         micro_cohorts_added = []
 
         for micro_cohort in micro_cohorts:
-            micro_cohort_user = CohortUser.objects.filter(
-                user=user, cohort=micro_cohort, role=user_macro_cohort.role
-            ).first()
+            micro_cohort_user = CohortUser.objects.filter(user=user, cohort=micro_cohort).first()
 
-            if micro_cohort_user is None:
-                micro_cohort_user = CohortUser.objects.create(
-                    user=user,
-                    cohort=micro_cohort,
-                    role=user_macro_cohort.role,
-                    finantial_status=user_macro_cohort.finantial_status,
-                    educational_status=user_macro_cohort.educational_status,
-                )
-                added_count += 1
-                micro_cohorts_added.append(
-                    {
-                        "id": micro_cohort.id,
-                        "name": micro_cohort.name,
-                        "slug": micro_cohort.slug,
-                        "role": micro_cohort_user.role,
-                    }
-                )
-                logger.info(f"Added user {user.email} to micro-cohort {micro_cohort.name}")
-            else:
-                already_existing_count += 1
+            if micro_cohort_user:
+                fields_to_update: list[str] = []
+
+                if micro_cohort_user.role != user_macro_cohort.role:
+                    micro_cohort_user.role = user_macro_cohort.role
+                    fields_to_update.append("role")
+
+                if micro_cohort_user.finantial_status != user_macro_cohort.finantial_status:
+                    micro_cohort_user.finantial_status = user_macro_cohort.finantial_status
+                    fields_to_update.append("finantial_status")
+
+                if micro_cohort_user.educational_status != user_macro_cohort.educational_status:
+                    micro_cohort_user.educational_status = user_macro_cohort.educational_status
+                    fields_to_update.append("educational_status")
+
+                if fields_to_update:
+                    micro_cohort_user.save(update_fields=fields_to_update + ["updated_at"])
+                    updated_count += 1
+                    logger.info(
+                        "Updated user %s in micro-cohort %s (fields: %s)",
+                        user.email,
+                        micro_cohort.name,
+                        ", ".join(fields_to_update),
+                    )
+                else:
+                    already_existing_count += 1
+
+                continue
+
+            micro_cohort_user = CohortUser.objects.create(
+                user=user,
+                cohort=micro_cohort,
+                role=user_macro_cohort.role,
+                finantial_status=user_macro_cohort.finantial_status,
+                educational_status=user_macro_cohort.educational_status,
+            )
+            added_count += 1
+            micro_cohorts_added.append(
+                {
+                    "id": micro_cohort.id,
+                    "name": micro_cohort.name,
+                    "slug": micro_cohort.slug,
+                    "role": micro_cohort_user.role,
+                }
+            )
+            logger.info(f"Added user {user.email} to micro-cohort {micro_cohort.name}")
 
         return Response(
             {
                 "detail": translation(
                     lang,
-                    en=f"Successfully added to {added_count} micro-cohorts from '{macro_cohort.name}'. {already_existing_count} were already enrolled.",
-                    es=f"Agregado exitosamente a {added_count} micro-cohorts de '{macro_cohort.name}'. {already_existing_count} ya estaban inscritos.",
+                    en=(
+                        f"Successfully added to {added_count} micro-cohorts from '{macro_cohort.name}'. "
+                        f"{updated_count} were updated and {already_existing_count} were already enrolled."
+                    ),
+                    es=(
+                        f"Agregado exitosamente a {added_count} micro-cohorts de '{macro_cohort.name}'. "
+                        f"{updated_count} fueron actualizados y {already_existing_count} ya estaban inscritos."
+                    ),
                     slug="micro-cohorts-sync-success",
                 ),
                 "macro_cohort": {
@@ -2257,6 +2844,7 @@ class UserMicroCohortsSyncView(APIView):
                     "slug": macro_cohort.slug,
                 },
                 "added_count": added_count,
+                "updated_count": updated_count,
                 "already_existing_count": already_existing_count,
                 "micro_cohorts_added": micro_cohorts_added,
             },

@@ -6,14 +6,16 @@ from typing import Any, Type
 from asgiref.sync import sync_to_async
 from django.dispatch import receiver
 
+import breathecode.authenticate.tasks as auth_tasks
 from breathecode.admissions import tasks
 from breathecode.assignments.models import Task
 from breathecode.assignments.signals import revision_status_updated
-from breathecode.certificate.actions import how_many_pending_tasks, get_assets_from_syllabus
+from breathecode.authenticate.models import CredentialsDiscord
+from breathecode.certificate.actions import get_assets_from_syllabus, how_many_pending_tasks
 
 from ..activity import tasks as activity_tasks
-from .models import Cohort, CohortUser, Syllabus, SyllabusVersion
-from .signals import cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
+from .models import Academy, Cohort, CohortUser, Syllabus, SyllabusVersion
+from .signals import academy_saved, cohort_log_saved, cohort_user_created, student_edu_status_updated, syllabus_created
 
 # add your receives here
 logger = logging.getLogger(__name__)
@@ -62,7 +64,31 @@ async def new_cohort_user(sender: Type[CohortUser], instance: CohortUser, **kwar
     #     },
     # )
 
-    tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, "student")
+    # Get the ProfileAcademy role slug from the CohortUser model mapping
+    role_slug = instance.get_profile_academy_role_slug()
+
+    tasks.build_profile_academy.delay(instance.cohort.academy.id, instance.user.id, role_slug)
+
+
+@receiver(cohort_user_created, sender=CohortUser)
+def grant_discord_roles(sender, instance, **kwargs):
+    if instance.cohort.shortcuts != None:
+        discord_creds = CredentialsDiscord.objects.filter(user=instance.user).first()
+        if not discord_creds:
+            logger.debug(f"User {instance.user.id} has no Discord credentials, skipping grant")
+            return
+        for shortcut in instance.cohort.shortcuts:
+            if shortcut.get("label", None) != "Discord":
+                continue
+            try:
+                auth_tasks.assign_discord_role_task.delay(
+                    shortcut.get("server_id", None),
+                    int(discord_creds.discord_id),
+                    shortcut.get("role_id", None),
+                    instance.cohort.academy.id,
+                )
+            except Exception as e:
+                logger.error(f"Error assigning Discord role: {e}")
 
 
 @receiver(revision_status_updated, sender=Task, weak=False)
@@ -211,3 +237,39 @@ def create_initial_syllabus_version(sender: Type[Syllabus], instance: Syllabus, 
 
     # Create the first version (version 1) with default JSON
     SyllabusVersion.objects.create(syllabus=instance, version=1, status="PUBLISHED")
+
+
+@receiver(academy_saved, sender=Academy)
+def create_owner_profile_academy(sender: Type[Academy], instance: Academy, created: bool, **kwargs: Any):
+    """
+    When an academy is created with an owner, automatically create a ProfileAcademy
+    with admin role for that owner.
+    
+    This ensures the owner can manage the academy they created.
+    """
+    if created and instance.owner:
+        from breathecode.authenticate.models import ProfileAcademy, Role
+        
+        logger.info(f"Creating ProfileAcademy for academy owner: {instance.slug} -> {instance.owner.email}")
+        
+        admin_role = Role.objects.filter(slug="admin").first()
+        if not admin_role:
+            logger.warning(f"Admin role not found, cannot create ProfileAcademy for academy {instance.slug}")
+            return
+        
+        profile_academy, created_profile = ProfileAcademy.objects.get_or_create(
+            user=instance.owner,
+            academy=instance,
+            defaults={
+                "email": instance.owner.email,
+                "role": admin_role,
+                "first_name": instance.owner.first_name,
+                "last_name": instance.owner.last_name,
+                "status": "ACTIVE",
+            }
+        )
+        
+        if created_profile:
+            logger.info(f"Created ProfileAcademy for {instance.owner.email} at {instance.slug}")
+        else:
+            logger.info(f"ProfileAcademy already exists for {instance.owner.email} at {instance.slug}")

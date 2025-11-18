@@ -1,3 +1,56 @@
+"""
+URL Configuration for Admissions App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/cohorts, /syllabus/versions
+   - Use singular nouns for individual resources: /academy/cohort/<id>
+
+2. HTTP Methods:
+   - GET /academy/cohort - List all cohorts
+   - POST /academy/cohort - Create new cohort
+   - GET /academy/cohort/<id> - Get specific cohort
+   - PUT/PATCH /academy/cohort/<id> - Update specific cohort
+   - DELETE /academy/cohort/<id> - Delete specific cohort
+
+3. Nested Resources:
+   - /academy/cohort/<id>/user - Users in a specific cohort
+   - /academy/cohort/<id>/timeslot - Time slots for a specific cohort
+
+4. Actions (Non-REST exceptions):
+   - /academy/cohort/<id>/join - Join a cohort (POST)
+   - /academy/cohort/me - Get current user's cohort
+   - /academy/activate - Activate academy (POST)
+
+5. Special Endpoints:
+   - /me/* - Current user's resources
+   - /public/* - Publicly accessible endpoints
+   - /academy/* - Academy-only endpoints
+   - /admin/* - Admin-only endpoints
+   - /catalog/* - Reference data endpoints
+
+6. Deprecated Endpoints:
+   - Marked with 🔽 comments for gradual migration
+   - Maintained for backward compatibility
+
+7. URL Naming:
+   - Use snake_case for URL names: academy_cohort_id
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_cohort_id - Get/update specific cohort
+- academy_cohort_id_user_id - Get/update specific user in cohort
+- me_cohort_user_log - Current user's cohort history
+- public_cohort_user - Public cohort user data
+- admin_cohort - Admin cohort management
+"""
+
 from django.urls import path
 
 from .views import (
@@ -6,6 +59,7 @@ from .views import (
     AcademyCohortTimeSlotView,
     AcademyCohortUserView,
     AcademyCohortView,
+    AcademyListView,
     AcademyReportView,
     AcademySyllabusScheduleTimeSlotView,
     AcademySyllabusScheduleView,
@@ -22,12 +76,15 @@ from .views import (
     SyllabusAssetView,
     SyllabusScheduleView,
     SyllabusVersionCSVView,
+    SyllabusVersionForkView,
     SyllabusVersionView,
     SyllabusView,
     UserMeView,
     UserMicroCohortsSyncView,
     UserView,
     get_all_academies,
+    get_cities,
+    get_countries,
     get_public_syllabus,
     get_schedule,
     get_single_academy,
@@ -95,7 +152,7 @@ urlpatterns = [
         name="academy_schedule_id_timeslot_id",
     ),
     path("academy/teacher", AcademyTeacherView.as_view(), name="academy_teacher"),
-    path("academy/", get_all_academies, name="academy"),
+    path("academy", AcademyListView.as_view(), name="academy"),
     path("academy/<int:academy_id>", get_single_academy, name="single_academy"),
     path("academy/me", AcademyView.as_view(), name="academy_me"),
     path("academy/cohort", AcademyCohortView.as_view(), name="academy_cohort"),
@@ -126,6 +183,11 @@ urlpatterns = [
         "syllabus/<str:syllabus_id>/version/<str:version>/preview",
         render_syllabus_preview,
         name="syllabus_id_version_preview",
+    ),
+    path(
+        "syllabus/<str:syllabus_id>/version/<str:version>/fork",
+        SyllabusVersionForkView.as_view(),
+        name="syllabus_version_fork",
     ),
     path(
         "syllabus/<int:syllabus_id>/version/<int:version>",
@@ -165,6 +227,8 @@ urlpatterns = [
         name="academy_id_syllabus_slug_version_version",
     ),
     path("catalog/timezones", get_timezones, name="timezones_all"),
+    path("catalog/countries", get_countries, name="countries_all"),
+    path("catalog/cities", get_cities, name="cities_all"),
     path("report", AcademyReportView.as_view(), name="report_admissions"),
     # replaces an asset slug in all syllabus versions
     path("admin/syllabus/asset/<str:asset_slug>", SyllabusAssetView.as_view(), name="syllabus_asset"),

@@ -42,6 +42,7 @@ __all__ = [
     "CredentialsFacebook",
     "CredentialsQuickBooks",
     "CredentialsGoogle",
+    "CredentialsDiscord",
     "DeviceId",
     "Token",
 ]
@@ -239,6 +240,15 @@ class UserInvite(models.Model):
         help_text="Related subscription seat for team invitations",
         db_index=True,
     )
+    plan_financing_seat = models.ForeignKey(
+        "payments.PlanFinancingSeat",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Related plan financing seat for team invitations",
+        db_index=True,
+    )
 
     def __str__(self):
         return f"Invite for {self.email}"
@@ -345,6 +355,10 @@ class ProfileAcademy(models.Model):
                 instance=self, sender=ProfileAcademy, old_role=old_role, new_role=self.role
             )
 
+        # Update tracked fields after save
+        self.__old_status = self.status
+        self.__old_role = self.role
+
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
@@ -417,6 +431,9 @@ class AcademyAuthSettings(models.Model):
         blank=True,
         related_name="github_whitelist_exemptions",
         help_text="Users that will never be removed from GitHub organization regardless of their cohort status",
+    )
+    discord_settings = models.JSONField(
+        default=None, blank=True, null=True, help_text="Discord variables for this academy"
     )
 
     def add_error(self, msg):
@@ -615,6 +632,18 @@ class NotFoundAnonGoogleUser(models.Model):
     email = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class CredentialsDiscord(models.Model):
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    discord_id = models.CharField(max_length=64, unique=True)
+    joined_servers = models.JSONField(default=None, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.user.email} ({self.discord_id})"
 
 
 class TokenGetOrCreateArgs(TypedDict, total=False):

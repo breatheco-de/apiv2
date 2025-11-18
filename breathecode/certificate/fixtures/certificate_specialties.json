@@ -1,0 +1,146 @@
+[
+    {
+        "model": "certificate.specialty",
+        "pk": 2,
+        "fields": {
+            "slug": "full-stack-web-development",
+            "name": "Full Stack Web Development",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/full-stack-web-development-logo.png",
+            "duration_in_hours": 320,
+            "description": "Comprehensive full-stack web development program covering frontend and backend technologies including HTML/CSS, JavaScript, React.js, Python, Django, and database management.",
+            "expiration_day_delta": null,
+            "syllabus": null,
+            "syllabuses": [1],
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.specialty",
+        "pk": 3,
+        "fields": {
+            "slug": "data-science",
+            "name": "Data Science",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/data-science-logo.png",
+            "duration_in_hours": 400,
+            "description": "Advanced data science program covering statistical analysis, machine learning, data visualization, Python programming, and big data technologies.",
+            "expiration_day_delta": 1095,
+            "syllabus": 2,
+            "syllabuses": [2],
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.badge",
+        "pk": 1,
+        "fields": {
+            "slug": "html-css",
+            "name": "HTML & CSS",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/html-css-badge.png",
+            "duration_in_hours": 40,
+            "specialties": [2],
+            "expiration_day_delta": null,
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.badge",
+        "pk": 2,
+        "fields": {
+            "slug": "javascript",
+            "name": "JavaScript",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/javascript-badge.png",
+            "duration_in_hours": 60,
+            "specialties": [2],
+            "expiration_day_delta": null,
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.badge",
+        "pk": 3,
+        "fields": {
+            "slug": "react",
+            "name": "React.js",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/react-badge.png",
+            "duration_in_hours": 50,
+            "specialties": [2],
+            "expiration_day_delta": null,
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.badge",
+        "pk": 4,
+        "fields": {
+            "slug": "python",
+            "name": "Python",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/python-badge.png",
+            "duration_in_hours": 80,
+            "specialties": [2, 3],
+            "expiration_day_delta": null,
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.badge",
+        "pk": 5,
+        "fields": {
+            "slug": "django",
+            "name": "Django",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/django-badge.png",
+            "duration_in_hours": 60,
+            "specialties": [2],
+            "expiration_day_delta": null,
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.badge",
+        "pk": 6,
+        "fields": {
+            "slug": "machine-learning",
+            "name": "Machine Learning",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/machine-learning-badge.png",
+            "duration_in_hours": 100,
+            "specialties": [3],
+            "expiration_day_delta": 1095,
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.badge",
+        "pk": 7,
+        "fields": {
+            "slug": "data-analysis",
+            "name": "Data Analysis",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/data-analysis-badge.png",
+            "duration_in_hours": 80,
+            "specialties": [3],
+            "expiration_day_delta": 1095,
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    },
+    {
+        "model": "certificate.badge",
+        "pk": 8,
+        "fields": {
+            "slug": "statistics",
+            "name": "Statistics",
+            "logo_url": "https://storage.googleapis.com/certificates-breathecode/statistics-badge.png",
+            "duration_in_hours": 60,
+            "specialties": [3],
+            "expiration_day_delta": 1095,
+            "created_at": "2024-01-15T10:00:00.000Z",
+            "updated_at": "2024-01-15T10:00:00.000Z"
+        }
+    }
+]

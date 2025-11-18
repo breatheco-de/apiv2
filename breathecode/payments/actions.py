@@ -1,31 +1,32 @@
 import os
 import re
-from decimal import Decimal, ROUND_FLOOR
-import redis
-import redis.lock
+import uuid
 from datetime import datetime, timedelta
+from decimal import ROUND_FLOOR, Decimal
 from functools import lru_cache
 from typing import Any, Literal, Optional, Tuple, Type, TypedDict, Union
-import uuid
-from django.db import transaction
-from task_manager.core.exceptions import AbortTask, RetryTask
 
+import redis
+import redis.lock
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
+from django.db import transaction
 from django.db.models import Q, QuerySet, Sum
 from django.http import HttpRequest
 from django.utils import timezone
+from django_redis import get_redis_connection
 from pytz import UTC
 from rest_framework.request import Request
+from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_api_url, get_user_settings
-from breathecode.authenticate.models import UserInvite, UserSetting
+from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
@@ -33,7 +34,6 @@ from breathecode.payments import tasks
 from breathecode.utils import getLogger
 from breathecode.utils.validate_conversion_info import validate_conversion_info
 from settings import GENERAL_PRICING_RATIOS
-from django_redis import get_redis_connection
 
 from .models import (
     SERVICE_UNITS,
@@ -50,6 +50,8 @@ from .models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
     ProofOfPayment,
     Service,
     ServiceItem,
@@ -211,7 +213,12 @@ class PlanFinder:
         return self.get_plans_belongs(**additional_args)
 
 
-def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
+def ask_to_add_plan_and_charge_it_in_the_bag(
+    plan: Plan,
+    user: User,
+    lang: str,
+    early_renewal_subscription: Optional["Subscription"] = None,
+):
     """
     Ask to add plan to bag, and return if it must be charged or not.
     """
@@ -262,23 +269,47 @@ def ask_to_add_plan_and_charge_it_in_the_bag(plan: Plan, user: User, lang: str):
             code=400,
         )
 
-    # avoid to buy a plan if exists a subscription with same plan with remaining days
-    if (
-        price
-        and plan.is_renewable
-        and subscriptions.filter(
-            Q(valid_until=None, next_payment_at__gte=utc_now) | Q(valid_until__gte=utc_now)
-        ).exclude(status__in=["CANCELLED", "DEPRECATED", "EXPIRED"])
-    ):
-        raise ValidationException(
-            translation(
-                lang,
-                en="You already have a subscription to this plan",
-                es="Ya tienes una suscripción a este plan",
-                slug="plan-already-bought",
-            ),
-            code=400,
-        )
+    # avoid to buy a plan if exists a subscription with same plan with remaining days, except for early renewals
+    active_subscriptions = subscriptions.filter(
+        Q(valid_until=None, next_payment_at__gte=utc_now) | Q(valid_until__gte=utc_now)
+    ).exclude(status__in=["CANCELLED", "DEPRECATED", "EXPIRED"])
+
+    if price and plan.is_renewable and active_subscriptions.exists():
+        if early_renewal_subscription:
+            if active_subscriptions.count() == 1:
+                active_sub = active_subscriptions.first()
+                if active_sub.id != early_renewal_subscription.id:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="You already have a different subscription to this plan",
+                            es="Ya tienes una suscripción diferente a este plan",
+                            slug="different-subscription-exists",
+                        ),
+                        code=400,
+                    )
+                # The active subscription IS the one being renewed - allow it (continue)
+            else:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Multiple active subscriptions found for this plan",
+                        es="Múltiples suscripciones activas encontradas para este plan",
+                        slug="multiple-active-subscriptions",
+                    ),
+                    code=400,
+                )
+        else:
+            # Not an early renewal - reject if any active subscription exists
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="You already have a subscription to this plan",
+                    es="Ya tienes una suscripción a este plan",
+                    slug="plan-already-bought",
+                ),
+                code=400,
+            )
 
     # avoid to charge a plan if it has a free trial and was not bought before
     if not price or (plan_have_free_trial and not subscriptions.exists()):
@@ -297,6 +328,7 @@ class BagHandler:
 
         self.service_items = request.data.get("service_items")
         self.plans = request.data.get("plans")
+        self.plan_addons = request.data.get("plan_addons")
         self.selected_cohort_set = request.data.get("cohort_set")
         self.selected_event_type_set = request.data.get("event_type_set")
         self.selected_mentorship_service_set = request.data.get("mentorship_service_set")
@@ -305,6 +337,7 @@ class BagHandler:
         self.team_seats = request.data.get("team_seats")
 
         self.plans_not_found = set()
+        self.plan_addons_not_found = set()
         self.service_items_not_found = set()
         self.cohort_sets_not_found = set()
 
@@ -385,6 +418,7 @@ class BagHandler:
         if "checking" in self.request.build_absolute_uri():
             self.bag.service_items.clear()
             self.bag.plans.clear()
+            self.bag.plan_addons.clear()
             self.bag.token = None
             self.bag.expires_at = None
 
@@ -461,15 +495,41 @@ class BagHandler:
                 if Plan.objects.filter(**kwargs).exclude(**exclude).count() == 0:
                     self.plans_not_found.add(plan)
 
+    def _get_plan_addons_that_not_found(self):
+        if isinstance(self.plan_addons, list):
+            for addon in self.plan_addons:
+                kwargs = {}
+
+                if addon and (isinstance(addon, int) or (isinstance(addon, str) and addon.isnumeric())):
+                    kwargs["id"] = int(addon)
+                else:
+                    kwargs["slug"] = addon
+
+                if Plan.objects.filter(**kwargs).count() == 0:
+                    self.plan_addons_not_found.add(addon)
+
     def _report_items_not_found(self):
-        if self.service_items_not_found or self.plans_not_found or self.cohort_sets_not_found:
+        if (
+            self.service_items_not_found
+            or self.plans_not_found
+            or self.cohort_sets_not_found
+            or self.plan_addons_not_found
+        ):
             raise ValidationException(
                 translation(
                     self.lang,
-                    en=f"Items not found: services={self.service_items_not_found}, plans={self.plans_not_found}, "
-                    f"cohorts={self.cohort_sets_not_found}",
-                    es=f"Elementos no encontrados: servicios={self.service_items_not_found}, "
-                    f"planes={self.plans_not_found}, cohortes={self.cohort_sets_not_found}",
+                    en=(
+                        f"Items not found: services={self.service_items_not_found}, "
+                        f"plans={self.plans_not_found}, "
+                        f"cohorts={self.cohort_sets_not_found}, "
+                        f"plan_addons={self.plan_addons_not_found}"
+                    ),
+                    es=(
+                        f"Elementos no encontrados: servicios={self.service_items_not_found}, "
+                        f"planes={self.plans_not_found}, "
+                        f"cohortes={self.cohort_sets_not_found}, "
+                        f"plan_addons={self.plan_addons_not_found}"
+                    ),
                     slug="some-items-not-found",
                 ),
                 code=404,
@@ -502,7 +562,7 @@ class BagHandler:
                 args, kwargs = self._lookups(service_item["service"])
 
                 service = Service.objects.filter(*args, **kwargs).first()
-                service_item, _ = ServiceItem.objects.get_or_create(
+                service_item, _ = ServiceItem.get_or_create_for_service(
                     service=service,
                     how_many=service_item["how_many"],
                     is_team_allowed=service_item.get("is_team_allowed", True),
@@ -520,6 +580,45 @@ class BagHandler:
 
                 if p and p not in self.bag.plans.filter():
                     self.bag.plans.add(p)
+
+    def _add_plan_addons_to_bag(self):
+        if not isinstance(self.plan_addons, list):
+            return
+
+        main_plan: Plan | None = self.bag.plans.first()
+
+        if self.plan_addons and not main_plan:
+            raise ValidationException(
+                translation(
+                    self.lang,
+                    en="You must select a main plan to add plan addons",
+                    es="Debes seleccionar un plan principal para agregar plan addons",
+                    slug="plan-required-for-plan-addons",
+                ),
+                code=400,
+            )
+
+        for addon in self.plan_addons:
+            args, kwargs = self._lookups(addon)
+            addon_plan = Plan.objects.filter(*args, **kwargs).first()
+
+            if not addon_plan:
+                # already handled in _get_plan_addons_that_not_found
+                continue
+
+            if main_plan and not main_plan.plan_addons.filter(id=addon_plan.id).exists():
+                raise ValidationException(
+                    translation(
+                        self.lang,
+                        en=f"The plan {addon_plan.slug} is not allowed as addon for the selected plan",
+                        es=f"El plan {addon_plan.slug} no está permitido como addon para el plan seleccionado",
+                        slug="plan-addon-not-allowed",
+                    ),
+                    code=400,
+                )
+
+            if addon_plan not in self.bag.plan_addons.filter():
+                self.bag.plan_addons.add(addon_plan)
 
     def _validate_just_one_plan(self):
         how_many_plans = self.bag.plans.count()
@@ -604,12 +703,14 @@ class BagHandler:
 
         self._get_service_items_that_not_found()
         self._get_plans_that_not_found()
+        self._get_plan_addons_that_not_found()
         self._report_items_not_found()
         self._add_plans_to_bag()
         # validate and add seat add-ons if requested
         self._validate_just_one_plan()
         self._validate_seat_add_ons()
         self._add_seat_add_ons()
+        self._add_plan_addons_to_bag()
         self._add_service_items_to_bag()
         self._validate_just_one_plan()
 
@@ -626,7 +727,12 @@ def add_items_to_bag(request, bag: Bag, lang: str):
     return BagHandler(request, bag, lang).execute()
 
 
-def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, float, float, Currency]:
+def get_amount(
+    bag: Bag,
+    currency: Currency,
+    lang: str,
+    early_renewal_subscription: Optional["Subscription"] = None,
+) -> tuple[float, float, float, float, Currency]:
     def add_currency(currency: Optional[Currency] = None):
         if not currency and main_currency:
             currencies[main_currency.code.upper()] = main_currency
@@ -648,10 +754,15 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
     main_currency = currency
 
     # Initialize pricing ratio explanation with proper format
-    pricing_ratio_explanation = {"plans": [], "service_items": []}
+    pricing_ratio_explanation = {"plans": [], "service_items": [], "plan_addons": []}
 
     for plan in bag.plans.all():
-        must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(plan, user, lang)
+        must_it_be_charged = ask_to_add_plan_and_charge_it_in_the_bag(
+            plan,
+            user,
+            lang,
+            early_renewal_subscription=early_renewal_subscription,
+        )
 
         if not bag.how_many_installments and (bag.chosen_period != "NO_SET" or must_it_be_charged):
             # Get base prices
@@ -756,6 +867,7 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
     if (
         pricing_ratio_explanation["plans"]
         or pricing_ratio_explanation["service_items"]
+        or pricing_ratio_explanation.get("plan_addons")
         or not bag.currency
         or bag.currency.id != currency.id
     ):
@@ -787,6 +899,8 @@ def get_amount(bag: Bag, currency: Currency, lang: str) -> tuple[float, float, f
             price_per_half += academy_service.price_per_unit * how_many_seats * 6
         if how_many_seats > 0 and price_per_year != 0:
             price_per_year += academy_service.price_per_unit * how_many_seats * 12
+
+    get_plan_addons_amount(bag, lang)
 
     return price_per_month, price_per_quarter, price_per_half, price_per_year
 
@@ -860,9 +974,9 @@ def get_bag_from_subscription(
         bag.plans.add(plan)
 
     # Include persisted subscription add-ons (SubscriptionServiceItem) in the bag so they are billed monthly
-    for handler in subscription.subscriptionserviceitem_set.select_related("service_item").all():
+    qs = subscription.subscriptionserviceitem_set.select_related("service_item").all()
+    for handler in qs:
         service_item = handler.service_item
-        # Attach the same service_item reference into bag so pricing logic picks it up via plan.add_ons mapping
         bag.service_items.add(service_item)
 
     # Add only valid (non-expired) coupons from the subscription to the bag
@@ -897,8 +1011,12 @@ def get_bag_from_subscription(
         )
         bag.coupons.set(valid_coupons)
 
+    early_renewal_subscription = (
+        subscription if (subscription.next_payment_at and subscription.next_payment_at > utc_now) else None
+    )
+
     bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = get_amount(
-        bag, subscription.currency or last_invoice.currency, lang
+        bag, subscription.currency or last_invoice.currency, lang, early_renewal_subscription=early_renewal_subscription
     )
 
     bag.save()
@@ -1164,7 +1282,6 @@ def get_available_coupons(
             .only(*cou_fields)
             .first()
         )
-        print("special_offers", special_offer)
 
         if special_offer:
             manage_coupon(special_offer)
@@ -1175,7 +1292,6 @@ def get_available_coupons(
         .select_related("seller__user", "allowed_user")
         .only(*cou_fields)
     )
-    print("cupones no expirados", valid_coupons)
 
     max = max_coupons_allowed()
 
@@ -1207,6 +1323,30 @@ def get_discounted_price(price: float, coupons: list[Coupon]) -> float:
         price = 0
 
     return price
+
+
+def get_coupons_for_plan(plan: Plan, coupons: list[Coupon]) -> list[Coupon]:
+    """
+    Filter coupons that are eligible for a given plan.
+
+    Rules:
+      - If coupon.plans is empty -> global coupon, applies to all plans.
+      - If coupon.plans is not empty -> applies only if the plan is in coupon.plans.
+    """
+
+    eligible: list[Coupon] = []
+
+    for coupon in coupons:
+        # scoped coupon
+        if coupon.plans.exists():
+            if coupon.plans.filter(id=plan.id).exists():
+                eligible.append(coupon)
+            continue
+
+        # global coupon
+        eligible.append(coupon)
+
+    return eligible
 
 
 def validate_and_create_proof_of_payment(
@@ -1893,6 +2033,334 @@ def manage_plan_financing_add_ons(request: Request, bag: Bag, lang: str) -> floa
     return total
 
 
+def get_plan_addons_amount(bag: Bag, lang: str) -> float:
+    """
+    Calculate the total one-shot amount for all plan addons in a bag.
+
+    Rules:
+      - Each addon plan must have a FinancingOption with how_many_months=1.
+      - Pricing ratio is applied using bag.country_code and the FinancingOption.
+      - All addons must share the same currency as the academy/bag.
+      - The result is stored in bag.plan_addons_amount.
+    """
+
+    addons = bag.plan_addons.all()
+    if not addons.exists():
+        if bag.plan_addons_amount:
+            bag.plan_addons_amount = 0
+            bag.save(update_fields=["plan_addons_amount"])
+        return 0.0
+
+    main_currency = bag.currency or bag.academy.main_currency
+    if not main_currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy does not have a main currency configured",
+                es="La academia no tiene una moneda principal configurada",
+                slug="academy-without-main-currency",
+            ),
+            code=500,
+        )
+
+    currencies: dict[str, Currency] = {main_currency.code.upper(): main_currency}
+    total = 0.0
+    pricing_explanation: list[dict[str, Any]] = []
+
+    for plan in addons:
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if not option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan addon {plan.slug} does not have a one-payment financing option configured",
+                    es=f"El plan addon {plan.slug} no tiene configurada una opción de financiamiento de un solo pago",
+                    slug="plan-addon-without-one-payment-option",
+                ),
+                code=400,
+            )
+
+        base_price = option.monthly_price or 0
+
+        if bag.country_code:
+            adjusted_price, ratio, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+            if c:
+                currencies[c.code.upper()] = c
+
+            if adjusted_price != base_price and base_price > 0 and ratio:
+                pricing_explanation.append({"plan": plan.slug, "ratio": ratio})
+
+            price = adjusted_price
+        else:
+            price = base_price
+
+        total += float(price or 0)
+
+    if len(currencies.keys()) > 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Multiple currencies found, it means that the pricing ratio exceptions have a wrong configuration",
+                es="Múltiples monedas encontradas, lo que significa que las excepciones de ratio de precios tienen una configuración incorrecta",
+                slug="multiple-currencies-found",
+            ),
+            code=500,
+        )
+
+    # Update pricing ratio explanation for plan_addons without touching plans/service_items keys
+    explanation = bag.pricing_ratio_explanation or {"plans": [], "service_items": [], "plan_addons": []}
+    if "plan_addons" not in explanation:
+        explanation["plan_addons"] = []
+
+    if pricing_explanation:
+        explanation["plan_addons"] = pricing_explanation
+        bag.pricing_ratio_explanation = explanation
+
+    bag.plan_addons_amount = total
+    bag.save(update_fields=["pricing_ratio_explanation", "plan_addons_amount"])
+
+    return total
+
+
+def get_plan_addons_amounts_with_coupons(
+    bag: Bag, coupons: list[Coupon], lang: str
+) -> tuple[float, float]:
+    """
+    Calculate the total one-shot amount for all plan addons in a bag,
+    returning both:
+      - total_before: sum before coupons
+      - total_after: sum after applying eligible coupons per addon
+
+    Coupons are filtered per addon using get_coupons_for_plan, so a coupon
+    only discounts an addon if it is configured to work with that plan.
+    """
+
+    addons = bag.plan_addons.all()
+    if not addons.exists():
+        return 0.0, 0.0
+
+    main_currency = bag.currency or bag.academy.main_currency
+    if not main_currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy does not have a main currency configured",
+                es="La academia no tiene una moneda principal configurada",
+                slug="academy-without-main-currency",
+            ),
+            code=500,
+        )
+
+    currencies: dict[str, Currency] = {main_currency.code.upper(): main_currency}
+    total_before = 0.0
+    total_after = 0.0
+
+    for plan in addons:
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if not option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan addon {plan.slug} does not have a one-payment financing option configured",
+                    es=f"El plan addon {plan.slug} no tiene configurada una opción de financiamiento de un solo pago",
+                    slug="plan-addon-without-one-payment-option",
+                ),
+                code=400,
+            )
+
+        base_price = option.monthly_price or 0
+
+        if bag.country_code:
+            base_price, _, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+            if c:
+                currencies[c.code.upper()] = c
+
+        total_before += float(base_price or 0)
+
+        addon_coupons = get_coupons_for_plan(plan, coupons)
+        price_after = get_discounted_price(base_price, addon_coupons)
+        total_after += price_after
+
+    if len(currencies.keys()) > 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Multiple currencies found, it means that the pricing ratio exceptions have a wrong configuration",
+                es="Múltiples monedas encontradas, lo que significa que las excepciones de ratio de precios tienen una configuración incorrecta",
+                slug="multiple-currencies-found",
+            ),
+            code=500,
+        )
+
+    return total_before, total_after
+
+
+def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversion_info: str | None = "") -> None:
+    """
+    Create a PlanFinancing (one payment) for each plan addon in the bag.
+
+    This is used when plan addons are sold either standalone or together with a main plan.
+    """
+
+    addons = bag.plan_addons.all()
+    if not addons.exists():
+        return
+
+    utc_now = timezone.now()
+    coupons = list(bag.coupons.all())
+
+    for plan in addons:
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if not option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan addon {plan.slug} does not have a one-payment financing option configured",
+                    es=f"El plan addon {plan.slug} no tiene configurada una opción de financiamiento de un solo pago",
+                    slug="plan-addon-without-one-payment-option",
+                ),
+                code=400,
+            )
+
+        base_price = option.monthly_price or 0
+
+        if bag.country_code:
+            base_price, _, _ = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+        # Apply only coupons that are eligible for this addon plan
+        addon_coupons = get_coupons_for_plan(plan, coupons)
+        price = get_discounted_price(base_price, addon_coupons)
+
+        # Compute plan_expires_at from plan's own lifetime if configured
+        if plan.time_of_life and plan.time_of_life_unit:
+            delta = calculate_relative_delta(plan.time_of_life, plan.time_of_life_unit)
+            plan_expires_at = invoice.paid_at + delta
+        else:
+            plan_expires_at = invoice.paid_at
+
+        financing = PlanFinancing.objects.create(
+            user=bag.user,
+            how_many_installments=1,
+            next_payment_at=utc_now + relativedelta(months=1),
+            academy=bag.academy,
+            selected_cohort_set=plan.cohort_set,
+            selected_event_type_set=plan.event_type_set,
+            selected_mentorship_service_set=plan.mentorship_service_set,
+            valid_until=invoice.paid_at,
+            plan_expires_at=plan_expires_at,
+            monthly_price=price,
+            status=PlanFinancing.Status.ACTIVE,
+            currency=invoice.currency or bag.currency or bag.academy.main_currency,
+        )
+
+        financing.plans.set([plan])
+
+        bag_coupons = bag.coupons.all()
+        if bag_coupons.exists():
+            financing.coupons.set(bag_coupons)
+
+        financing.invoices.add(invoice)
+        
+        if financing.how_many_installments == 1 and invoice.status == Invoice.Status.FULFILLED:
+            financing.status = PlanFinancing.Status.FULLY_PAID
+        
+        financing.save()
+
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(plan_financing_id=financing.id)
+
+
+def get_plan_addons_amount(bag: Bag, lang: str) -> float:
+    """
+    Calculate the total one-shot amount for all plan addons in a bag.
+
+    Rules:
+      - Each addon plan must have a FinancingOption with how_many_months=1.
+      - Pricing ratio is applied using bag.country_code and the FinancingOption.
+      - All addons must share the same currency as the academy/bag.
+      - The result is stored in bag.plan_addons_amount.
+    """
+
+    addons = bag.plan_addons.all()
+    if not addons.exists():
+        if bag.plan_addons_amount:
+            bag.plan_addons_amount = 0
+            bag.save(update_fields=["plan_addons_amount"])
+        return 0.0
+
+    main_currency = bag.currency or bag.academy.main_currency
+    if not main_currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy does not have a main currency configured",
+                es="La academia no tiene una moneda principal configurada",
+                slug="academy-without-main-currency",
+            ),
+            code=500,
+        )
+
+    currencies: dict[str, Currency] = {main_currency.code.upper(): main_currency}
+    total = 0.0
+    pricing_explanation: list[dict[str, Any]] = []
+
+    for plan in addons:
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if not option:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Plan addon {plan.slug} does not have a one-payment financing option configured",
+                    es=f"El plan addon {plan.slug} no tiene configurada una opción de financiamiento de un solo pago",
+                    slug="plan-addon-without-one-payment-option",
+                ),
+                code=400,
+            )
+
+        base_price = option.monthly_price or 0
+
+        if bag.country_code:
+            adjusted_price, ratio, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+            if c:
+                currencies[c.code.upper()] = c
+
+            if adjusted_price != base_price and base_price > 0 and ratio:
+                pricing_explanation.append({"plan": plan.slug, "ratio": ratio})
+
+            price = adjusted_price
+        else:
+            price = base_price
+
+        total += float(price or 0)
+
+    if len(currencies.keys()) > 1:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Multiple currencies found, it means that the pricing ratio exceptions have a wrong configuration",
+                es="Múltiples monedas encontradas, lo que significa que las excepciones de ratio de precios tienen una configuración incorrecta",
+                slug="multiple-currencies-found",
+            ),
+            code=500,
+        )
+
+    # Update pricing ratio explanation for plan_addons without touching plans/service_items keys
+    explanation = bag.pricing_ratio_explanation or {"plans": [], "service_items": [], "plan_addons": []}
+    if "plan_addons" not in explanation:
+        explanation["plan_addons"] = []
+
+    if pricing_explanation:
+        explanation["plan_addons"] = pricing_explanation
+        bag.pricing_ratio_explanation = explanation
+
+    bag.plan_addons_amount = total
+    bag.save(update_fields=["pricing_ratio_explanation", "plan_addons_amount"])
+
+    return total
+
+
 def is_plan_financing_paid(plan_financing: PlanFinancing) -> bool:
     """
     Check if a plan financing is paid by examining its plans.
@@ -1933,6 +2401,28 @@ def user_has_active_paid_plans(user: User) -> bool:
     return False
 
 
+def user_has_active_4geeks_plus_plans(user: User) -> bool:
+    """
+    Check if a user has any active paid subscriptions or plan financings for 4Geeks Plus.
+
+    Args:
+        user: The user to check
+
+    Returns:
+        bool: True if the user has active paid plans, False otherwise
+    """
+    # Check for active subscriptions with 4Geeks Plus
+    for subscription in Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE):
+        if subscription.plans.filter(slug="4geeks-plus-subscription").exists():
+            return True
+    # Check for active plan financings with 4Geeks Plus
+    for plan_financing in PlanFinancing.objects.filter(user=user, status=PlanFinancing.Status.ACTIVE):
+        if plan_financing.plans.filter(slug="4geeks-plus-planfinancing").exists():
+            return True
+
+    return False
+
+
 # ------------------------------
 # Team member consumables (per-member issuance from JSON)
 # ------------------------------
@@ -1961,21 +2451,27 @@ def create_seat_log_entry(seat: SubscriptionSeat, action: SeatLogAction) -> Seat
 
 class SeatDict(TypedDict, total=False):
     email: str
+    user: int | None
     first_name: str | None
     last_name: str | None
+    role: str | None
 
 
 class AddSeat(TypedDict):
     email: str
+    user: int | None
     first_name: str
     last_name: str
+    role: str | None
 
 
 class ReplaceSeat(TypedDict):
     from_email: str
     to_email: str
+    to_user: int | None
     first_name: str
     last_name: str
+    role: str | None
 
 
 def notify_user_was_added_to_subscription_team(
@@ -2025,6 +2521,10 @@ def notify_user_was_added_to_subscription_team(
     )
 
 
+def _get_student_role() -> Role | None:
+    return Role.objects.filter(slug="student").first()
+
+
 def invite_user_to_subscription_team(
     obj: SeatDict, subscription: Subscription, subscription_seat: SubscriptionSeat, lang: str
 ):
@@ -2052,15 +2552,17 @@ def invite_user_to_subscription_team(
         - See handle_seat_invite_accepted in receivers.py for post-acceptance logic
         - See Issue #9973 for the complete invitation flow
     """
+    student_role = _get_student_role()
+
     invite, created = UserInvite.objects.get_or_create(
         email=obj.get("email", ""),
         academy=subscription.academy,
         subscription_seat=subscription_seat,
-        role="student",
+        role=student_role,
         defaults={
             "status": "PENDING",
             "author": subscription.user,
-            "role": "student",
+            "role": student_role,
             "token": str(uuid.uuid4()),
             "sent_at": timezone.now(),
             "first_name": obj.get("first_name", ""),
@@ -2069,18 +2571,20 @@ def invite_user_to_subscription_team(
     )
     if created or invite.status == "PENDING":
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
+        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+
         notify_actions.send_email_message(
             "welcome_academy",
-            obj.get("email", ""),
+            subscription_seat.email,
             {
-                "email": obj.get("email", ""),
+                "email": subscription_seat.email,
                 "subject": translation(
                     lang,
-                    en=f"Invitation to join {billing_team_name} at {subscription.academy.name}",
-                    es=f"Invitación para unirse a {billing_team_name} en {subscription.academy.name}",
+                    en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
+                    es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
                 ),
-                "LINK": get_api_url() + "/v1/auth/member/invite/" + invite.token,
-                "FIST_NAME": invite.first_name or "",
+                "LINK": invite_link,
+                "FIST_NAME": obj.get("first_name", "") or "",
             },
             academy=subscription.academy,
         )
@@ -2151,6 +2655,120 @@ def create_seat(email: str, user: User | None, billing_team: SubscriptionBilling
     # if strategy is not per team, create the individual consumables
     if strategy != SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM:
         tasks.build_service_stock_scheduler_from_subscription.delay(billing_team.subscription.id, seat_id=seat.id)
+
+    return seat
+
+
+def notify_user_was_added_to_plan_financing_team(team: PlanFinancingTeam, seat: PlanFinancingSeat, lang: str):
+    if seat.user is None:
+        return
+
+    financing = team.financing
+    notify_actions.send_email_message(
+        "welcome_academy",
+        seat.email,
+        {
+            "email": seat.email,
+            "subject": translation(
+                lang,
+                en=f"You've been added to {team.name} at {financing.academy.name}",
+                es=f"Has sido agregado a {team.name} en {financing.academy.name}",
+            ),
+            "LINK": get_app_url(),
+            "FIST_NAME": seat.user.first_name or "",
+        },
+        academy=financing.academy,
+    )
+
+
+def invite_user_to_plan_financing_team(
+    obj: SeatDict, team: PlanFinancingTeam, plan_financing_seat: PlanFinancingSeat, lang: str
+):
+    financing = team.financing
+    student_role = _get_student_role()
+    invite, created = UserInvite.objects.get_or_create(
+        email=obj.get("email", ""),
+        academy=financing.academy,
+        plan_financing_seat=plan_financing_seat,
+        role=student_role,
+        defaults={
+            "status": "PENDING",
+            "author": financing.user,
+            "role": student_role,
+            "token": str(uuid.uuid4()),
+            "sent_at": timezone.now(),
+            "first_name": obj.get("first_name", ""),
+            "last_name": obj.get("last_name", ""),
+        },
+    )
+
+    if created or invite.status == "PENDING":
+        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+
+        notify_actions.send_email_message(
+            "welcome_academy",
+            plan_financing_seat.email,
+            {
+                "email": plan_financing_seat.email,
+                "subject": translation(
+                    lang,
+                    en=f"You've been invited to {team.name} at {financing.academy.name}",
+                    es=f"Has sido invitado a {team.name} en {financing.academy.name}",
+                ),
+                "LINK": invite_link,
+                "FIST_NAME": obj.get("first_name", "") or "",
+            },
+            academy=financing.academy,
+        )
+
+
+def create_plan_financing_seat(
+    email: str,
+    user: User | None,
+    team: PlanFinancingTeam,
+    lang: str,
+    first_name: str = "",
+    last_name: str = "",
+):
+    _validate_email(email, lang)
+
+    if PlanFinancingSeat.objects.filter(team=team, email=email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="User already has a seat for this financing",
+                es="El usuario ya tiene un asiento para este financiamiento",
+                slug="duplicate-financing-seat",
+            ),
+            code=400,
+        )
+
+    seat = PlanFinancingSeat(
+        team=team,
+        user=user,
+        email=email,
+    )
+    seat_log_entry = create_seat_log_entry(seat, "ADDED")
+    seat.seat_log.append(seat_log_entry)
+    seat.is_active = True
+    seat.save()
+
+    if user:
+        for plan in team.financing.plans.all():
+            grant_student_capabilities(user, plan)
+        notify_user_was_added_to_plan_financing_team(team, seat, lang)
+    else:
+        invite_user_to_plan_financing_team(
+            {"email": email, "first_name": first_name or "", "last_name": last_name or ""},
+            team,
+            seat,
+            lang,
+        )
+
+    if team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM:
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(team.financing.id)
+    else:
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(team.financing.id, seat_id=seat.id)
 
     return seat
 
@@ -2227,8 +2845,97 @@ def replace_seat(
     return seat
 
 
+def replace_plan_financing_seat(
+    from_email: str,
+    to_email: str,
+    to_user: User | None,
+    financing_seat: PlanFinancingSeat,
+    lang: str,
+    first_name: str = "",
+    last_name: str = "",
+):
+    _validate_email(to_email, lang)
+
+    seat = PlanFinancingSeat.objects.filter(team=financing_seat.team, email=from_email).first()
+    if not seat:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is no seat with this email {from_email}",
+                es=f"No hay un asiento con este email {from_email}",
+                slug="no-seat-with-this-email",
+            ),
+            code=404,
+        )
+
+    if PlanFinancingSeat.objects.filter(team=financing_seat.team, email=to_email).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"There is already a seat with this email {to_email}",
+                es=f"Ya hay un asiento con este email {to_email}",
+                slug="seat-with-this-email-already-exists",
+            ),
+            code=400,
+        )
+
+    seat.email = to_user.email if to_user else to_email
+    seat.user = to_user
+    seat.is_active = True
+    seat_log_entry = create_seat_log_entry(seat, "REPLACED")
+    seat.seat_log.append(seat_log_entry)
+    seat.save(update_fields=["seat_log", "is_active", "email", "user"])
+
+    if to_user:
+        for plan in seat.team.financing.plans.all():
+            grant_student_capabilities(to_user, plan)
+        notify_user_was_added_to_plan_financing_team(seat.team, seat, lang)
+    else:
+        invite_user_to_plan_financing_team(
+            {"email": to_email, "first_name": first_name or "", "last_name": last_name or ""},
+            seat.team,
+            seat,
+            lang,
+        )
+
+    if seat.team.consumption_strategy != PlanFinancingTeam.ConsumptionStrategy.PER_TEAM:
+        Consumable.objects.filter(plan_financing_seat=seat).update(user=to_user)
+
+    tasks.build_service_stock_scheduler_from_plan_financing.delay(seat.team.financing.id, seat_id=seat.id)
+
+    return seat
+
+
+def deactivate_plan_financing_seat(financing_seat: PlanFinancingSeat):
+    financing_seat.user = None
+    financing_seat.is_active = False
+    financing_seat.seat_log.append(create_seat_log_entry(financing_seat, "REMOVED"))
+    financing_seat.save(update_fields=["is_active", "user", "seat_log"])
+
+    Consumable.objects.filter(plan_financing_seat_id=financing_seat.id).update(user=None)
+    tasks.build_service_stock_scheduler_from_plan_financing.delay(financing_seat.team.financing.id)
+
+
 def normalize_email(email: str):
     return email.strip().lower()
+
+
+def _normalize_role(role: Any) -> str | None:
+    if role is None:
+        return None
+    if isinstance(role, str):
+        return role.strip().lower() or None
+    return str(role).strip().lower()
+
+
+def _normalize_user_value(user_value: Any) -> int | None:
+    if user_value is None:
+        return None
+    if isinstance(user_value, int):
+        return user_value
+    if isinstance(user_value, str) and user_value.isdigit():
+        return int(user_value)
+    return None
 
 
 def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
@@ -2236,9 +2943,10 @@ def normalize_add_seats(add_seats: list[dict[str, Any]]) -> list[AddSeat]:
     for seat in add_seats:
         serialized = {
             "email": normalize_email(seat["email"]),
-            "user": seat.get("user", None),
+            "user": _normalize_user_value(seat.get("user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
+            "role": _normalize_role(seat.get("role")),
         }
         l.append(serialized)
     return l
@@ -2250,19 +2958,28 @@ def normalize_replace_seat(replace_seats: list[dict[str, Any]]) -> ReplaceSeat:
         serialized = {
             "from_email": normalize_email(seat["from_email"]),
             "to_email": normalize_email(seat["to_email"]),
-            "to_user": seat.get("to_user", None),
+            "to_user": _normalize_user_value(seat.get("to_user")),
             "first_name": seat.get("first_name", ""),
             "last_name": seat.get("last_name", ""),
+            "role": _normalize_role(seat.get("role")),
         }
         l.append(serialized)
     return l
 
 
 def validate_seats_limit(
-    team: SubscriptionBillingTeam, add_seats: list[AddSeat], replace_seats: list[ReplaceSeat], lang: str
+    team: SubscriptionBillingTeam | PlanFinancingTeam,
+    add_seats: list[AddSeat],
+    replace_seats: list[ReplaceSeat],
+    lang: str,
 ):
     seats = {}
-    for seat in SubscriptionSeat.objects.filter(billing_team=team):
+    if isinstance(team, SubscriptionBillingTeam):
+        queryset = SubscriptionSeat.objects.filter(billing_team=team)
+    else:
+        queryset = PlanFinancingSeat.objects.filter(team=team)
+
+    for seat in queryset:
         seats[seat.email] = 1
 
     for seat in add_seats:
@@ -2329,20 +3046,41 @@ def get_user_from_consumable_to_be_charged(
     resource: Subscription | PlanFinancing | None = instance.subscription or instance.plan_financing
     is_team_allowed = instance.service_item.is_team_allowed
 
-    user = None
-    seat = getattr(instance, "subscription_seat", None)
-    team: SubscriptionBillingTeam | None = getattr(instance, "subscription_billing_team", None) or (
-        seat.billing_team if seat else None
-    )
-    strategy = team.consumption_strategy if team else None
+    seat = instance.subscription_seat or instance.plan_financing_seat
 
-    if is_team_allowed is False or isinstance(resource, PlanFinancing):
-        user = resource.user
-    elif is_team_allowed and strategy == SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT:
-        # Seat user if present, otherwise fallback to resource owner
-        user = seat.user if (seat and seat.user) else resource.user
+    team: SubscriptionBillingTeam | PlanFinancingTeam | None = instance.subscription_billing_team
+    if not team and seat:
+        team = getattr(seat, "billing_team", None)
+    if not team:
+        team = getattr(instance, "plan_financing_team", None)
 
-    return user
+    strategy = getattr(team, "consumption_strategy", None)
+
+    if is_team_allowed is False:
+        return resource.user
+
+    if isinstance(resource, PlanFinancing) and team is None:
+        return resource.user
+
+    if strategy in (
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_TEAM
+        if isinstance(team, SubscriptionBillingTeam)
+        else PlanFinancingTeam.ConsumptionStrategy.PER_TEAM
+        if isinstance(team, PlanFinancingTeam)
+        else None
+    ):
+        return None
+
+    if strategy in (
+        SubscriptionBillingTeam.ConsumptionStrategy.PER_SEAT
+        if isinstance(team, SubscriptionBillingTeam)
+        else PlanFinancingTeam.ConsumptionStrategy.PER_SEAT
+        if isinstance(team, PlanFinancingTeam)
+        else None
+    ):
+        return seat.user if (seat and seat.user) else resource.user
+
+    return resource.user
 
 
 def validate_auto_recharge_service_units(
@@ -2376,6 +3114,7 @@ def validate_auto_recharge_service_units(
         resource is None
         or resource.auto_recharge_enabled is False
         or (instance.subscription_seat and instance.subscription_seat.is_active is False)
+        or (instance.plan_financing_seat and instance.plan_financing_seat.is_active is False)
     ):
         return 0.0, 0, None
 
@@ -2491,10 +3230,13 @@ def process_auto_recharge(
 
     # Connect to Redis
     redis_client = get_redis_connection("default")
-    team = consumable.subscription_billing_team or (
-        consumable.subscription_seat.billing_team if consumable.subscription_seat else None
+    team = (
+        consumable.subscription_billing_team
+        or getattr(consumable, "plan_financing_team", None)
+        or (consumable.subscription_seat.billing_team if consumable.subscription_seat else None)
+        or (consumable.plan_financing_seat.team if getattr(consumable, "plan_financing_seat", None) else None)
     )
-    seat = consumable.subscription_seat
+    seat = consumable.subscription_seat or getattr(consumable, "plan_financing_seat", None)
 
     lock_key = f"process_auto_recharge:{resource.__class__.__name__}:{resource.id}"
     lock_timeout = 300  # 5 minutes max lock time
@@ -2539,14 +3281,17 @@ def process_auto_recharge(
                 # If this fails, the entire transaction will rollback
                 s = Stripe(academy=resource.academy)
                 context_desc = f"auto-recharge for {charged_user.email}"
+                stripe_team = team if isinstance(team, SubscriptionBillingTeam) else None
+                stripe_seat = consumable.subscription_seat
+
                 s.pay(
                     resource.user,  # it must be charged to the owner
                     bag,
                     price * amount,
                     currency=currency.code,
                     description=f"Auto-recharge for {context_desc}",
-                    subscription_billing_team=team,
-                    subscription_seat=seat,
+                    subscription_billing_team=stripe_team,
+                    subscription_seat=stripe_seat,
                 )
 
                 emails = [resource.user.email]
@@ -2582,14 +3327,17 @@ def process_auto_recharge(
                         academy=resource.academy,
                     )
 
-                attrs = consumable.service_item.__dict__.copy()
-                attrs.pop("id")
-                attrs.pop("_state")
-                attrs.pop("how_many")
-
-                si, _ = ServiceItem.objects.get_or_create(
-                    **attrs,
+                # Clone the existing ServiceItem with a different how_many
+                original = consumable.service_item
+                si, _ = ServiceItem.get_or_create_for_service(
+                    service=original.service,
                     how_many=amount,
+                    unit_type=original.unit_type,
+                    is_renewable=original.is_renewable,
+                    is_team_allowed=original.is_team_allowed,
+                    renew_at=original.renew_at,
+                    renew_at_unit=original.renew_at_unit,
+                    sort_priority=original.sort_priority,
                 )
 
                 attrs = consumable.__dict__.copy()

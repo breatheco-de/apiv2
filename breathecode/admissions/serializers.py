@@ -10,7 +10,7 @@ from breathecode.admissions.actions import ImportCohortTimeSlots
 from breathecode.assignments.models import Task
 from breathecode.assignments.serializers import TaskGETSmallSerializer
 from breathecode.authenticate.actions import get_user_settings
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, CredentialsGoogle
+from breathecode.authenticate.models import CredentialsDiscord, CredentialsGithub, CredentialsGoogle, ProfileAcademy
 from breathecode.authenticate.serializers import GetPermissionSmallSerializer, SettingsSerializer
 from breathecode.utils import localize_query, serializers, serpy
 
@@ -29,6 +29,24 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+class SyllabusVersionTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    version = serpy.Field()
+    slug = serpy.MethodField()
+    name = serpy.MethodField()
+    syllabus = serpy.MethodField()
+
+    def get_slug(self, obj):
+        return obj.syllabus.slug if obj.syllabus else None
+
+    def get_name(self, obj):
+        return obj.syllabus.name if obj.syllabus else None
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
 
 class GetTinyCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -37,12 +55,15 @@ class GetTinyCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
+    syllabus_version = SyllabusVersionTinySerializer(required=False)
 
 
 class CountrySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
     # Use a Field subclass like IntField if you need more validation.
+    # Country uses 'code' as primary key, so we expose it as both id and code
+    id = serpy.Field(attr="pk")
     code = serpy.Field()
     name = serpy.Field()
 
@@ -62,7 +83,9 @@ class CitySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     name = serpy.Field()
+    country = CountrySerializer(required=False)
 
 
 class UserSmallSerializer(serpy.Serializer):
@@ -160,6 +183,8 @@ class GetSyllabusScheduleSerializer(serpy.Serializer):
 class GetSmallSyllabusScheduleSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
+    schedule_type = serpy.Field()
+    description = serpy.Field()
     syllabus = serpy.MethodField()
 
     def get_syllabus(self, obj):
@@ -186,6 +211,14 @@ class GoogleSmallSerializer(serpy.Serializer):
     google_id = serpy.Field()
     expires_at = serpy.Field()
     created_at = serpy.Field()
+
+
+class DiscordSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    discord_id = serpy.Field()
+    created_at = serpy.Field()
+    joined_servers = serpy.Field()
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -215,6 +248,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     country = CountrySerializer(required=False)
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
+    icon_url = serpy.Field()
     active_campaign_slug = serpy.Field()
     logistical_information = serpy.Field()
     latitude = serpy.Field()
@@ -230,6 +264,14 @@ class GetBigAcademySerializer(serpy.Serializer):
     linkedin_url = serpy.Field()
     youtube_url = serpy.Field()
     is_hidden_on_prework = serpy.Field()
+    white_labeled = serpy.Field()
+    white_label_url = serpy.Field()
+    white_label_features = serpy.MethodField()
+    owner = UserSmallSerializer(required=False)
+
+    def get_white_label_features(self, obj):
+        """Return white_label_features merged with defaults."""
+        return obj.get_white_label_features()
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
@@ -369,6 +411,32 @@ class GetCohortSerializer(serpy.Serializer):
     is_hidden_on_prework = serpy.Field()
     available_as_saas = serpy.Field()
     shortcuts = serpy.Field()
+
+    micro_cohorts = serpy.MethodField()
+    def get_micro_cohorts(self, obj):
+        cohorts = obj.micro_cohorts.all()
+        
+        # Sort by cohorts_order if it exists
+        if obj.cohorts_order:
+            # Parse the comma-separated IDs
+            order_ids = [int(id.strip()) for id in obj.cohorts_order.split(',') if id.strip().isdigit()]
+            
+            # Create a dictionary for quick lookup
+            cohort_dict = {cohort.id: cohort for cohort in cohorts}
+            
+            # Build sorted list based on order_ids
+            sorted_cohorts = []
+            for cohort_id in order_ids:
+                if cohort_id in cohort_dict:
+                    sorted_cohorts.append(cohort_dict[cohort_id])
+            
+            # Append any micro cohorts not in the order list at the end
+            remaining = [c for c in cohorts if c.id not in order_ids]
+            sorted_cohorts.extend(remaining)
+            
+            cohorts = sorted_cohorts
+        
+        return GetTinyCohortSerializer(cohorts, many=True).data
 
     def get_timeslots(self, obj):
         timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
@@ -638,6 +706,7 @@ class UserMeSerializer(serpy.Serializer):
     date_joined = serpy.Field()
     github = serpy.MethodField()
     google = serpy.MethodField()
+    discord = serpy.MethodField()
     profile = ProfileSerializer(required=False)
     cohorts = serpy.MethodField()
     roles = serpy.MethodField()
@@ -655,6 +724,12 @@ class UserMeSerializer(serpy.Serializer):
         if google is None:
             return None
         return GoogleSmallSerializer(google).data
+
+    def get_discord(self, obj):
+        discord = CredentialsDiscord.objects.filter(user=obj.id).first()
+        if discord is None:
+            return None
+        return DiscordSmallSerializer(discord).data
 
     def get_roles(self, obj):
         roles = ProfileAcademy.objects.filter(user=obj.id)
@@ -705,23 +780,112 @@ class GetSyllabusSerializer(serpy.Serializer):
 #        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
     status_fields = ["status"]
-    country = CountrySerializer(required=True)
-    city = CitySerializer(required=True)
 
     class Meta:
         model = Academy
-        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework"]
+        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework", "logo_url", "icon_url"]
+        extra_kwargs = {
+            "name": {"required": False},
+            "street_address": {"required": False},
+            "country": {"required": False},
+            "city": {"required": False},
+            "logo_url": {"required": False},
+            "icon_url": {"required": False},
+            "slug": {"read_only": True},  # Prevent slug from being updated
+        }
+
+    def validate_logo_url(self, value):
+        """Validate that the logo_url is a valid and accessible URL."""
+        if value:
+            from breathecode.utils.url_validator import test_url
+
+            try:
+                test_url(value, allow_relative=False, allow_hash=False)
+            except Exception as e:
+                raise ValidationException(
+                    f"Invalid logo URL: {str(e)}", slug="invalid-logo-url", code=400
+                )
+        return value
+
+    def validate_icon_url(self, value):
+        """Validate that the icon_url is a valid and accessible URL."""
+        if value:
+            from breathecode.utils.url_validator import test_url
+
+            try:
+                test_url(value, allow_relative=False, allow_hash=False)
+            except Exception as e:
+                raise ValidationException(
+                    f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400
+                )
+        return value
 
     def validate(self, data):
-
-        if "slug" in data and data["slug"] != self.instance.slug:
-            raise ValidationException("Academy slug cannot be updated")
+        # Additional validation: ensure slug is never in the data
+        if "slug" in data:
+            raise ValidationException("Academy slug cannot be updated", slug="academy-slug-cannot-be-updated")
 
         return data
 
     def update(self, instance, validated_data):
-        del validated_data["slug"]
+        # Extra safety: remove slug if somehow it made it through
+        validated_data.pop("slug", None)
         return super().update(instance, validated_data)
+
+
+class AcademyPOSTSerializer(serializers.ModelSerializer):
+    """Serializer for creating new academies."""
+
+    status_fields = ["status"]
+
+    class Meta:
+        model = Academy
+        fields = [
+            "slug",
+            "name",
+            "legal_name",
+            "logo_url",
+            "icon_url",
+            "website_url",
+            "white_label_url",
+            "street_address",
+            "marketing_email",
+            "feedback_email",
+            "marketing_phone",
+            "twitter_handle",
+            "facebook_handle",
+            "instagram_handle",
+            "github_handle",
+            "linkedin_url",
+            "youtube_url",
+            "city",
+            "country",
+            "latitude",
+            "longitude",
+            "zip_code",
+            "white_labeled",
+            "active_campaign_slug",
+            "available_as_saas",
+            "is_hidden_on_prework",
+            "status",
+            "main_currency",
+            "timezone",
+            "logistical_information",
+        ]
+        extra_kwargs = {
+            "slug": {"required": True},
+            "name": {"required": True},
+            "logo_url": {"required": True},
+            "street_address": {"required": True},
+            "city": {"required": True},
+            "country": {"required": True},
+        }
+
+    def validate_slug(self, value):
+        """Ensure slug is unique."""
+        if Academy.objects.filter(slug=value).exists():
+            raise ValidationException("Academy with this slug already exists", slug="academy-slug-exists")
+        return value
 
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
@@ -808,7 +972,14 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             if cohort is not None and self.instance.slug != data["slug"]:
                 raise ValidationException("Slug already exists for another cohort", slug="slug-already-exists")
 
-        if "available_as_saas" not in data or data["available_as_saas"] is None:
+        # For CREATE: use academy default if not provided or None
+        # For UPDATE: only use academy default if explicitly set to None
+        if not self.instance:
+            # Creating new cohort - use academy default if not provided or None
+            if "available_as_saas" not in data or data["available_as_saas"] is None:
+                data["available_as_saas"] = self.context["academy"].available_as_saas
+        elif "available_as_saas" in data and data["available_as_saas"] is None:
+            # Updating existing cohort - only use academy default if explicitly set to None
             data["available_as_saas"] = self.context["academy"].available_as_saas
 
         if self.instance:

@@ -14,7 +14,7 @@ from breathecode.feedback.utils import strings
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.registry.models import Asset
 
-__all__ = ["UserProxy", "CohortUserProxy", "CohortProxy", "Survey", "Answer", "SurveyTemplate"]
+__all__ = ["UserProxy", "CohortUserProxy", "CohortProxy", "Survey", "Answer", "SurveyTemplate", "FeedbackTag"]
 
 
 class UserProxy(User):
@@ -45,6 +45,45 @@ SURVEY_STATUS = (
     (PARTIAL, "Partial"),
     (FATAL, "Fatal"),
 )
+
+
+class FeedbackTag(models.Model):
+    """
+    Tags for categorizing and organizing feedback (answers, reviews, surveys).
+    Tags can be academy-specific or shared across all academies.
+    """
+
+    slug = models.SlugField(max_length=100, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True, help_text="Description of what this tag represents")
+    priority = models.IntegerField(
+        default=100, help_text="Lower numbers appear first. Use for sorting tags by importance"
+    )
+
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="If null, tag is available to all academies (when is_private=False)",
+    )
+    is_private = models.BooleanField(
+        default=False,
+        help_text="If False and academy is null, tag is shared among all academies. If True, tag is only visible to its academy",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        visibility = "private" if self.is_private else "public"
+        owner = f"{self.academy.name}" if self.academy else "shared"
+        return f"{self.title} ({owner}, {visibility})"
+
+    class Meta:
+        ordering = ["priority", "title"]
+        verbose_name = "Feedback Tag"
+        verbose_name_plural = "Feedback Tags"
 
 
 class Survey(models.Model):
@@ -129,6 +168,26 @@ class Answer(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     token = models.OneToOneField(Token, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
+    # Optional categorization fields
+    syllabus = models.ForeignKey(
+        "admissions.Syllabus",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Optional syllabus association for filtering and reporting",
+    )
+    course_slug = models.CharField(
+        max_length=150,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Optional course slug from marketing.Course model for filtering and reporting",
+    )
+    tags = models.ManyToManyField(
+        FeedbackTag, blank=True, related_name="answers", help_text="Tags for categorizing this answer"
+    )
+
     score = models.IntegerField(default=None, blank=True, null=True)
     comment = models.TextField(max_length=1000, default=None, blank=True, null=True)
 
@@ -212,6 +271,26 @@ class Review(models.Model):
     platform = models.ForeignKey(ReviewPlatform, on_delete=models.CASCADE)
     is_public = models.BooleanField(default=False)
     lang = models.CharField(max_length=3, blank=True, null=True)
+    
+    # Optional categorization fields
+    syllabus = models.ForeignKey(
+        "admissions.Syllabus",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Optional syllabus association for filtering and reporting",
+    )
+    course_slug = models.CharField(
+        max_length=150,
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Optional course slug from marketing.Course model for filtering and reporting",
+    )
+    tags = models.ManyToManyField(
+        FeedbackTag, blank=True, related_name="reviews", help_text="Tags for categorizing this review"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

@@ -1,3 +1,54 @@
+"""
+URL Configuration for Provisioning App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/bills, /academy/userconsumptions
+   - Use singular nouns for individual resources: /bill/<id>
+
+2. HTTP Methods:
+   - GET /academy/bill - List all academy bills
+   - POST /academy/bill - Create new bill
+   - GET /academy/bill/<id> - Get specific bill
+   - PUT/PATCH /academy/bill/<id> - Update specific bill
+   - DELETE /academy/bill/<id> - Delete specific bill
+
+3. Nested Resources:
+   - /academy/<id>/provisioningprofile - Provisioning profile for specific academy
+   - /me/container/new - Create new container for current user
+   - /me/workspaces - Get current user's workspaces
+
+4. Actions (Non-REST exceptions):
+   - /me/container/new - Redirect to new container (GET)
+   - /public/container/new - Public container creation (GET)
+   - /me/workspaces - Redirect to workspaces (GET)
+   - /bill/html - Render all bills as HTML (GET)
+   - /bill/<id>/html - Render specific bill as HTML (GET)
+
+5. Special Endpoints:
+   - /me/* - Current user's provisioning resources
+   - /public/* - Public provisioning endpoints
+   - /academy/* - Academy-specific resources
+   - /admin/* - Admin-only endpoints
+   - /bill/* - Bill management and rendering
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_bill_id
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_bill_id - Get/update specific academy bill
+- academy_id_provisioning_profile - Get/update provisioning profile for academy
+- bill_html - Render all bills as HTML
+- bill_id_html - Render specific bill as HTML
+"""
+
 from django.urls import path
 from .views import (
     AcademyProvisioningUserConsumptionView,

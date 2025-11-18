@@ -1,3 +1,55 @@
+"""
+URL Configuration for Monitoring App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/downloads, /applications
+   - Use singular nouns for individual resources: /download/<id>
+
+2. HTTP Methods:
+   - GET /academy/download - List all academy downloads
+   - POST /academy/download - Create new download
+   - GET /academy/download/<id> - Get specific download
+   - PUT/PATCH /academy/download/<id> - Update specific download
+   - DELETE /academy/download/<id> - Delete specific download
+
+3. Nested Resources:
+   - /academy/download/<id>/signed-url - Signed URL for specific download
+   - /reposubscription/<id> - Repository subscription management
+
+4. Actions (Non-REST exceptions):
+   - /admin/actions - Django admin actions (GET)
+   - /github/webhook/<token> - GitHub webhook (POST)
+   - /stripe/webhook - Stripe webhook (POST)
+
+5. Special Endpoints:
+   - /academy/* - Academy-specific resources
+   - /admin/* - Admin-only endpoints
+   - /application - Application monitoring
+   - /endpoint - Endpoint monitoring
+   - /download - Download management
+   - /upload - Upload management
+   - /reposubscription - Repository subscriptions
+   - /github/* - GitHub integration
+   - /stripe/* - Stripe integration
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_download_id
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_download_id - Get/update specific academy download
+- academy_download_signed_url - Get signed URL for specific download
+- stripe_webhook - Stripe webhook endpoint
+- admin_actions - Admin actions endpoint
+"""
+
 from django.urls import path
 
 from .views import (

@@ -1,3 +1,52 @@
+"""
+URL Configuration for Events App
+
+This module defines URL patterns following REST conventions with some specific exceptions
+for the BreatheCode API v2.
+
+REST Naming Conventions:
+========================
+
+1. Resource-based URLs:
+   - Use plural nouns for collections: /academy/events, /academy/venues
+   - Use singular nouns for individual resources: /event/<id>
+
+2. HTTP Methods:
+   - GET /academy/event - List all academy events
+   - POST /academy/event - Create new event
+   - GET /academy/event/<id> - Get specific event
+   - PUT/PATCH /academy/event/<id> - Update specific event
+   - DELETE /academy/event/<id> - Delete specific event
+
+3. Nested Resources:
+   - /academy/event/<id>/join - Join a specific event
+   - /me/event/<id>/checkin - Check in to an event
+   - /academy/organization/organizer - Event organizers
+
+4. Actions (Non-REST exceptions):
+   - /me/event/<id>/join - Join an event (POST)
+   - /me/event/<id>/checkin - Check in to event (POST)
+   - /academy/event/<id>/join - Academy event join (POST)
+
+5. Special Endpoints:
+   - /me/* - Current user's events and actions
+   - /academy/* - Academy-specific resources
+   - /ical/* - iCal feed endpoints
+   - /feed/* - RSS/Atom feeds
+   - /all - Public events listing
+
+6. URL Naming:
+   - Use snake_case for URL names: academy_event_id
+   - Include resource type and ID when applicable
+   - Be descriptive but concise
+
+Examples:
+- academy_event_id - Get/update specific academy event
+- me_event_id_checkin - Check in to specific event
+- academy_organization_organizer_id - Get/update specific organizer
+- ical_student_id - Get iCal feed for specific student
+"""
+
 from django.urls import path
 
 from .syndication import LatestEventsFeed
@@ -22,6 +71,7 @@ from .views import (
     ICalCohortsView,
     ICalEventView,
     ICalStudentView,
+    LiveKitTokenView,
     MeLiveClassView,
     OrganizationWebhookView,
     UserEventCheckinView,
@@ -95,4 +145,5 @@ urlpatterns = [
     path("academy/checkin.csv", AcademyEventCheckinView.as_view(), name="academy_checkin_csv"),
     path("eventbrite/webhook/<int:organization_id>", eventbrite_webhook, name="eventbrite_webhook_id"),
     path("live-workshop-status", live_workshop_status, name="live_workshop_status"),
+    path("event/<int:event_id>/livekit/token", LiveKitTokenView.as_view(), name="event_livekit_token"),
 ]

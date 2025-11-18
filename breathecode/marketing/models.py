@@ -3,14 +3,17 @@ import secrets
 import uuid
 from datetime import timedelta
 
+from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
+from django.forms import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 from breathecode.authenticate.models import UserInvite
 from breathecode.utils.validators.language import validate_language_code
 
+from .schemas import validate_course_translation_field
 from .signals import form_entry_won_or_lost, new_form_entry_deal
 
 __all__ = [
@@ -908,15 +911,22 @@ class CourseTranslation(models.Model):
     def __str__(self) -> str:
         return f"{self.lang}: {self.title}"
 
-    def save(self, *args, **kwargs):
-        course_modules = self.course_modules or []
-        for course_module in course_modules:
-            if course_module["name"] is None or course_module["name"] == "":
-                raise Exception("The module does not have a name.")
-            if course_module["slug"] is None or course_module["slug"] == "":
-                raise Exception(f'The module {course_module["name"]} does not have a slug.')
-            if course_module["description"] is None or course_module["description"] == "":
-                raise Exception(f'The module {course_module["name"]} does not have a description.')
+    def clean(self):
+        errors = {}
 
-        result = super().save(*args, **kwargs)
-        return result
+        for field_name in ("course_modules", "landing_variables", "prerequisite"):
+            value = getattr(self, field_name)
+
+            try:
+                validate_course_translation_field(field_name, value)
+            except ValidationError as exc:
+                errors[field_name] = exc.messages
+
+        if errors:
+            raise forms.ValidationError(errors)
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)

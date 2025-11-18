@@ -601,26 +601,37 @@ def clean_asset_readme(asset: Asset, silent=True):
     Clean the asset readme, if silent is True, it will not raise an exception if the readme is not found
     """
     if asset.readme_raw is None or asset.readme_raw == "":
+        logger.info(f"Skipping clean_asset_readme for {asset.slug}: readme_raw is empty")
         return asset
 
+    logger.info(f"Cleaning readme for asset {asset.slug}")
     asset.last_cleaning_at = timezone.now()
     try:
+        logger.debug(f"Cleaning relative paths for {asset.slug}")
         asset = clean_readme_relative_paths(asset)
+        logger.debug(f"Hiding comments for {asset.slug}")
         asset = clean_readme_hide_comments(asset)
+        logger.debug(f"Replacing private GitHub urls for {asset.slug}")
         asset = replace_private_github_urls(asset)
+        logger.debug(f"Cleaning H1s for {asset.slug}")
         asset = clean_h1s(asset)
+        logger.debug(f"Replacing content variables for {asset.slug}")
         asset = clean_content_variables(asset)
 
         readme = asset.get_readme(parse=True, silent=silent)
         if "html" in readme:
             asset.html = readme["html"]
 
+        asset.readme = Asset.encode(readme.get("decoded", ""))
+
         asset.cleaning_status = "OK"
         asset.save()
+        logger.info(f"Finished clean_asset_readme for {asset.slug} with status {asset.cleaning_status}")
     except Exception as e:
         asset.cleaning_status = "ERROR"
         asset.cleaning_status_details = str(e)
         asset.save()
+        logger.exception(f"Error cleaning readme for {asset.slug}: {str(e)}")
 
     return asset
 
@@ -739,7 +750,12 @@ def replace_private_github_urls(asset: Asset):
             url_info = github_service.parse_github_url(url)
 
             # Only replace URLs that point to files (blob, raw)
-            if url_info and not url_info["is_image"] and url_info["url_type"] in ["blob", "raw"] and url_info.get("path"):
+            if (
+                url_info
+                and not url_info["is_image"]
+                and url_info["url_type"] in ["blob", "raw"]
+                and url_info.get("path")
+            ):
                 # Create the internal link URL
                 # Token can be added as a query parameter when accessing the link
                 internal_url = f"{os.getenv('API_URL')}/asset/internal-link?id={asset.id}&path={url_info['path']}"
@@ -986,8 +1002,11 @@ def process_asset_config(asset, config):
         if isinstance(config["title"], str):
             if asset.lang in ["", "us", "en"] or asset.title == "" or asset.title is None:
                 asset.title = config["title"]
-        elif isinstance(config["title"], dict) and asset.lang in config["title"]:
-            asset.title = config["title"][asset.lang]
+        elif isinstance(config["title"], dict) and asset.lang:
+            if asset.lang in ["us", "en"]:
+                asset.title = config["title"].get("en") or config["title"].get("us")
+            elif asset.lang in config["title"]:
+                asset.title = config["title"][asset.lang]
 
     if "description" in config:
         if isinstance(config["description"], str):
@@ -995,8 +1014,11 @@ def process_asset_config(asset, config):
             if asset.lang in ["", "us", "en"] or asset.description == "" or asset.description is None:
                 asset.description = config["description"]
         # there are multiple translations, and the translation exists for this lang
-        elif isinstance(config["description"], dict) and asset.lang in config["description"]:
-            asset.description = config["description"][asset.lang]
+        elif isinstance(config["description"], dict) and asset.lang:
+            if asset.lang in ["us", "en"]:
+                asset.description = config["description"].get("en") or config["description"].get("us")
+            elif asset.lang in config["description"]:
+                asset.description = config["description"][asset.lang]
 
     if "preview" in config:
         asset.preview = config["preview"]
@@ -1376,7 +1398,7 @@ def pull_repo_dependencies(github, asset):
         raise Exception(f"Error retrieving programming languages from repository {org_name}/{repo_name}: {str(e)}")
 
     # Parse version from dependency files
-    dependency_files = ["requirements.txt", "pyproject.toml", "Pipfile", "package.json"]
+    dependency_files = ["requirements.txt", "pyproject.toml", "package.json"]
     language_versions = {}
 
     for file_name in dependency_files:
@@ -1443,13 +1465,6 @@ def detect_language_version(file_name, content):
         engines = data.get("engines", {})
         if "node" in engines:
             return {"javascript": engines["node"]}
-
-    if file_name == "Pipfile":
-
-        data = tomli.loads(content)
-        version = data.get("requires", {}).get("python_version", None)
-        if version:
-            return {"python": version}
 
     return {}
 

@@ -4,6 +4,7 @@ import logging
 import os
 import urllib.parse
 
+from asgiref.sync import async_to_sync
 from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
 from django.contrib.admin.models import LogEntry
@@ -23,11 +24,13 @@ from .actions import (
     reset_password,
     set_gitpod_user_expiration,
     sync_organization_members,
+    sync_with_rigobot,
 )
 from .models import (
     AcademyAuthSettings,
     AcademyProxy,
     Capability,
+    CredentialsDiscord,
     CredentialsFacebook,
     CredentialsGithub,
     CredentialsGoogle,
@@ -97,6 +100,13 @@ class CredentialsFacebookAdmin(admin.ModelAdmin):
     list_display = ("facebook_id", "user", "email", "academy", "expires_at")
 
 
+@admin.register(CredentialsDiscord)
+class CredentialsDiscordAdmin(admin.ModelAdmin):
+    list_display = ("discord_id", "user", "created_at", "updated_at")
+    search_fields = ["user__first_name", "user__last_name", "user__email", "discord_id"]
+    raw_id_fields = ["user"]
+
+
 @admin.register(Token)
 class TokenAdmin(admin.ModelAdmin):
     list_display = ("key", "token_type", "expires_at", "user")
@@ -162,10 +172,49 @@ def clear_user_password(modeladmin, request, queryset):
         u.save()
 
 
+@admin.display(description="Sync with RigoBot")
+def sync_users_with_rigobot(modeladmin, request, queryset):
+    """Sync selected users with RigoBot"""
+    success_count = 0
+    error_count = 0
+    
+    for user in queryset:
+        try:
+            # Get or create token for user
+            token, _ = Token.objects.get_or_create(
+                user=user,
+                token_type='login'
+            )
+            
+            # Sync with RigoBot
+            async_to_sync(sync_with_rigobot)(
+                token_key=token.key,
+                organization="4geeks"
+            )
+            success_count += 1
+            logger.info(f"User {user.email} synced with RigoBot successfully")
+            
+        except Exception as e:
+            logger.error(f"Error syncing user {user.email} with RigoBot: {str(e)}")
+            error_count += 1
+    
+    if success_count > 0:
+        messages.success(
+            request,
+            f"Successfully synced {success_count} user(s) with RigoBot."
+        )
+    
+    if error_count > 0:
+        messages.error(
+            request,
+            f"Failed to sync {error_count} user(s) with RigoBot. Check logs for details."
+        )
+
+
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ("username", "email", "first_name", "last_name", "is_staff", "github_login", "google_login")
-    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password]
+    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password, sync_users_with_rigobot]
 
     def get_queryset(self, request):
         self.callback_url = "https://4geeks.com"

@@ -324,6 +324,7 @@ class GetLiveClassSerializer(serpy.Serializer):
     ended_at = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
+    remote_meeting_url = serpy.Field()
     cohort = serpy.MethodField()
 
     def get_cohort(self, obj):
@@ -422,7 +423,12 @@ class EventSerializer(serializers.ModelSerializer):
 
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
-        if online_event == True and (live_stream_url is None or live_stream_url == ""):
+        allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
+        if (
+            online_event == True
+            and (live_stream_url is None or live_stream_url == "")
+            and not allow_missing_live_stream_url
+        ):
             raise ValidationException(
                 translation(
                     lang,
@@ -532,10 +538,12 @@ class EventPUTSerializer(serializers.ModelSerializer):
 
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
+        allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
         if (
             online_event == True
             and (live_stream_url is None or live_stream_url == "")
             and (self.instance.live_stream_url is None or self.instance.live_stream_url == "")
+            and not allow_missing_live_stream_url
         ):
             raise ValidationException(
                 translation(

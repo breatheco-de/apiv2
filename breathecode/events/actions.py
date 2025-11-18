@@ -5,18 +5,100 @@ import re
 from datetime import datetime, timedelta
 
 import pytz
+from django.conf import settings
 from django.db.models import QuerySet
 from django.db.models.query_utils import Q
 from django.utils import timezone
 
 from breathecode.admissions.models import Cohort, CohortTimeSlot, CohortUser, TimeSlot
+from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
+from breathecode.services.google_calendar.google_calendar import GoogleCalendar
+from breathecode.services.livekit.client import LiveKitAdmin
 from breathecode.utils.datetime_integer import DatetimeInteger
 
 from .models import Event, EventType, Organization, Organizer, Venue
 from .utils import Eventbrite
 
 logger = logging.getLogger(__name__)
+
+
+def ensure_calendar_event_for_event(event: Event, private: bool = True) -> str:
+    """
+    Ensure a Google Calendar event exists for the given Event and return its id.
+    Uses academy google_cloud_owner credentials.
+    """
+    if not event.academy:
+        raise Exception("Event has no academy")
+
+    settings = AcademyAuthSettings.objects.filter(academy=event.academy, google_cloud_owner__isnull=False).first()
+
+    if not settings or not hasattr(settings.google_cloud_owner, "credentialsgoogle"):
+        raise Exception("Academy has no google_cloud_owner with credentials")
+
+    owner_creds = settings.google_cloud_owner.credentialsgoogle
+    gc = GoogleCalendar(token=owner_creds.token, refresh_token=owner_creds.refresh_token)
+
+    body = {
+        "summary": event.title or f"Event {event.id}",
+        "description": (event.description or "")[:2000],
+        "start": {"dateTime": event.starting_at.isoformat()},
+        "end": {"dateTime": event.ending_at.isoformat()},
+        "location": event.live_stream_url or "",
+    }
+
+    if private:
+        body.update(
+            {
+                "visibility": "private",
+                "guestsCanInviteOthers": False,
+                "guestsCanModify": False,
+                "anyoneCanAddSelf": False,
+            }
+        )
+    else:
+        body.update(
+            {
+                "visibility": "public",
+                "anyoneCanAddSelf": True,
+            }
+        )
+
+    if not getattr(event, "calendar_event_id", None):
+        created = gc.insert_event_with_conference("primary", body)
+        event.calendar_event_id = created.get("id")
+        if created.get("hangoutLink"):
+            event.live_stream_url = created["hangoutLink"]
+            event.save(update_fields=["calendar_event_id", "live_stream_url"])
+        else:
+            event.save(update_fields=["calendar_event_id"])
+        return event.calendar_event_id
+
+    try:
+        updated = gc.add_conference("primary", event.calendar_event_id)
+        if updated.get("hangoutLink") and event.live_stream_url != updated["hangoutLink"]:
+            event.live_stream_url = updated["hangoutLink"]
+            event.save(update_fields=["live_stream_url"])
+    except Exception:
+        pass
+
+    return event.calendar_event_id
+
+
+def invite_emails_to_event_calendar(event: Event, emails: list[str]) -> None:
+    if not emails:
+        return
+
+    settings = AcademyAuthSettings.objects.filter(academy=event.academy, google_cloud_owner__isnull=False).first()
+    if not settings or not hasattr(settings.google_cloud_owner, "credentialsgoogle"):
+        return
+
+    owner_creds = settings.google_cloud_owner.credentialsgoogle
+    gc = GoogleCalendar(token=owner_creds.token, refresh_token=owner_creds.refresh_token)
+
+    event_id = ensure_calendar_event_for_event(event)
+    gc.add_attendees("primary", event_id, [e for e in emails if e])
+
 
 status_map = {
     "draft": "DRAFT",
@@ -175,6 +257,39 @@ def get_my_event_types(_user):
             return EventType.objects.none()
 
     return my_events()
+
+
+def create_google_meet_for_event(event: Event, private: bool = True) -> str:
+    """
+    Crea/asegura una conferencia de Google Meet adjunta al evento de Calendar y devuelve el hangoutLink.
+    La privacidad (privado) se controla invitando asistentes como guests del Calendar y por políticas del dominio.
+    """
+
+    target_academy = event.academy if event else None
+    if not target_academy:
+        raise Exception("Academy must be provided to create Google Meet")
+    if not event.online_event:
+        raise Exception("Event must be marked as online to create Google Meet")
+
+    settings = AcademyAuthSettings.objects.filter(academy=target_academy, google_cloud_owner__isnull=False).first()
+    if not settings:
+        raise Exception(f"Academy {target_academy.id} doesn't have auth settings for google cloud")
+    if not hasattr(settings.google_cloud_owner, "credentialsgoogle"):
+        raise Exception(f"Academy {target_academy.id} doesn't have a google cloud owner with credentials")
+
+    ensure_calendar_event_for_event(event, private=private)
+
+    try:
+        if event.host_user and event.host_user.email:
+            invite_emails_to_event_calendar(event, [event.host_user.email])
+    except Exception as e:
+        logger.warning(f"Calendar invite for host failed in event {event.id}: {e}")
+
+    event.refresh_from_db()
+    if not event.live_stream_url:
+        raise Exception("Meet hangoutLink was not created")
+    logger.info(f"Created Google Meet (Calendar) for event {event.id}: {event.live_stream_url}")
+    return event.live_stream_url
 
 
 def sync_org_venues(org):
@@ -729,3 +844,27 @@ def is_eventbrite_enabled():
         return True
 
     return os.getenv("EVENTBRITE", "0") == "1"
+
+
+def build_room_name(event: Event) -> str:
+    return f"event-{event.id}"
+
+
+def ensure_livekit_room_for_event(event: Event, empty_timeout: int = 900, max_participants: int = 300) -> str:
+    """Ensure a LiveKit room exists for the given event and return the meeting URL.
+
+    If the room already exists, any raised HTTP error should be ignored by callers when appropriate.
+    """
+
+    room_name = build_room_name(event)
+    try:
+        client = LiveKitAdmin()
+        client.create_room(room_name, empty_timeout=empty_timeout, max_participants=max_participants)
+    except Exception:
+        pass
+
+    meet_base = getattr(settings, "LIVEKIT_MEET_URL", "") or ""
+    meet_base = meet_base.rstrip("/")
+    if meet_base:
+        return f"{meet_base}/rooms/{room_name}"
+    return room_name
