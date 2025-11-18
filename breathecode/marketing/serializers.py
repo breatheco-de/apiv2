@@ -238,6 +238,7 @@ class FormEntryHookSerializer(serpy.Serializer):
     cohort = serpy.MethodField(required=False)
     is_won = serpy.MethodField(required=False)
     custom_fields = serpy.MethodField(required=False)
+    lead_generation_app = LeadgenAppSmallSerializer(required=False)
 
     def get_cohort(self, obj):
         _cohort = Cohort.objects.filter(slug=obj.ac_expected_cohort).first()
