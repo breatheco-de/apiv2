@@ -64,22 +64,31 @@ def test_no_academy_header(database, client):
     }
 
 
-def test_payment_settings_not_found(database, client):
-    """Test that returns 404 when payment settings don't exist for academy"""
+def test_auto_create_payment_settings(database, client):
+    """Test that payment settings are created automatically if they don't exist"""
     role = setup_capability_and_role(database)
     model = database.create(user=1, city=1, country=1, academy=1)
     ProfileAcademy.objects.create(user=model.user, academy=model.academy, role=role, email=model.user.email)
 
     client.force_authenticate(model.user)
 
+    # Verify payment settings don't exist yet
+    assert not AcademyPaymentSettings.objects.filter(academy=model.academy).exists()
+
     url = "/v1/payments/academy/paymentsettings"
     data = {"stripe_api_key": "sk_test_new"}
     response = client.put(url, data, format="json", HTTP_ACADEMY=model.academy.id)
 
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    # Should succeed and create settings automatically
+    assert response.status_code == status.HTTP_200_OK
     json = response.json()
-    assert json["status_code"] == 404
-    assert "payment-settings-not-found" in json["detail"] or "not found" in json["detail"].lower()
+    assert json["stripe_api_key"] == "sk_test_new"
+
+    # Verify payment settings were created in database
+    settings = AcademyPaymentSettings.objects.get(academy=model.academy)
+    assert settings.stripe_api_key == "sk_test_new"
+    assert settings.stripe_webhook_secret == ""
+    assert settings.stripe_publishable_key == ""
 
 
 def test_update_all_fields(database, client):

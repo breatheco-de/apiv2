@@ -6012,6 +6012,7 @@ class AcademyPaymentSettingsView(APIView):
         """
         Update payment settings for an academy.
         Allows partial updates of payment gateway configuration. Only provided fields will be updated.
+        If payment settings don't exist for the academy, they will be created automatically.
 
         Args:
             academy_id: Academy ID (injected automatically by @capable_of decorator from URL or Academy header)
@@ -6023,20 +6024,17 @@ class AcademyPaymentSettingsView(APIView):
             coinbase_api_key (str): Coinbase Commerce API key
             coinbase_webhook_secret (str): Coinbase webhook secret for signature verification
         """
-        lang = get_user_language(request)
 
-        payment_settings = AcademyPaymentSettings.objects.filter(academy__id=academy_id).first()
-
-        if not payment_settings:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Payment settings not found for this academy",
-                    es="Configuración de pagos no encontrada para esta academia",
-                    slug="payment-settings-not-found",
-                ),
-                code=404,
-            )
+        payment_settings, created = AcademyPaymentSettings.objects.get_or_create(
+            academy_id=academy_id,
+            defaults={
+                "stripe_api_key": "",
+                "stripe_webhook_secret": "",
+                "stripe_publishable_key": "",
+                "coinbase_api_key": None,
+                "coinbase_webhook_secret": None,
+            },
+        )
 
         serializer = AcademyPaymentSettingsPUTSerializer(payment_settings, data=request.data, partial=True)
 
