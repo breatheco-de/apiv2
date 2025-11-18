@@ -29,6 +29,7 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+
 class SyllabusVersionTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
@@ -47,6 +48,7 @@ class SyllabusVersionTinySerializer(serpy.Serializer):
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
+
 
 class GetTinyCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -413,29 +415,30 @@ class GetCohortSerializer(serpy.Serializer):
     shortcuts = serpy.Field()
 
     micro_cohorts = serpy.MethodField()
+
     def get_micro_cohorts(self, obj):
         cohorts = obj.micro_cohorts.all()
-        
+
         # Sort by cohorts_order if it exists
         if obj.cohorts_order:
             # Parse the comma-separated IDs
-            order_ids = [int(id.strip()) for id in obj.cohorts_order.split(',') if id.strip().isdigit()]
-            
+            order_ids = [int(id.strip()) for id in obj.cohorts_order.split(",") if id.strip().isdigit()]
+
             # Create a dictionary for quick lookup
             cohort_dict = {cohort.id: cohort for cohort in cohorts}
-            
+
             # Build sorted list based on order_ids
             sorted_cohorts = []
             for cohort_id in order_ids:
                 if cohort_id in cohort_dict:
                     sorted_cohorts.append(cohort_dict[cohort_id])
-            
+
             # Append any micro cohorts not in the order list at the end
             remaining = [c for c in cohorts if c.id not in order_ids]
             sorted_cohorts.extend(remaining)
-            
+
             cohorts = sorted_cohorts
-        
+
         return GetTinyCohortSerializer(cohorts, many=True).data
 
     def get_timeslots(self, obj):
@@ -541,6 +544,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     stage = serpy.Field()
     is_hidden_on_prework = serpy.Field()
     available_as_saas = serpy.Field()
+    enable_assessments_telemetry = serpy.Field()
     shortcuts = serpy.Field()
 
     def get_micro_cohorts(self, obj):
@@ -783,7 +787,17 @@ class AcademySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Academy
-        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework", "logo_url", "icon_url"]
+        fields = [
+            "id",
+            "slug",
+            "name",
+            "street_address",
+            "country",
+            "city",
+            "is_hidden_on_prework",
+            "logo_url",
+            "icon_url",
+        ]
         extra_kwargs = {
             "name": {"required": False},
             "street_address": {"required": False},
@@ -802,9 +816,7 @@ class AcademySerializer(serializers.ModelSerializer):
             try:
                 test_url(value, allow_relative=False, allow_hash=False)
             except Exception as e:
-                raise ValidationException(
-                    f"Invalid logo URL: {str(e)}", slug="invalid-logo-url", code=400
-                )
+                raise ValidationException(f"Invalid logo URL: {str(e)}", slug="invalid-logo-url", code=400)
         return value
 
     def validate_icon_url(self, value):
@@ -815,9 +827,7 @@ class AcademySerializer(serializers.ModelSerializer):
             try:
                 test_url(value, allow_relative=False, allow_hash=False)
             except Exception as e:
-                raise ValidationException(
-                    f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400
-                )
+                raise ValidationException(f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400)
         return value
 
     def validate(self, data):
