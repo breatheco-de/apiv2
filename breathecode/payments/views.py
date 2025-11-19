@@ -4083,6 +4083,9 @@ class CoinbaseChargeView(APIView):
                                 pass
 
                         transaction.savepoint_commit(sid)
+                        
+                        has_plan_addons = bag.plan_addons.exists()
+                        
                         if original_price == 0:
                             tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
 
@@ -4090,11 +4093,15 @@ class CoinbaseChargeView(APIView):
                             tasks.build_plan_financing.delay(
                                 bag.id, invoice.id, conversion_info="", externally_managed=True
                             )
+                            if has_plan_addons:
+                                actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
 
                         else:
                             tasks.build_subscription.delay(
                                 bag.id, invoice.id, conversion_info="", externally_managed=True
                             )
+                            if has_plan_addons:
+                                actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
 
                     if plans := bag.plans.all():
                         for plan in plans:
