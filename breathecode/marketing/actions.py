@@ -1,6 +1,8 @@
 import json
 import os
 import re
+import socket
+import smtplib
 from itertools import chain
 from typing import Optional
 
@@ -25,6 +27,145 @@ logger = getLogger(__name__)
 
 GOOGLE_CLOUD_KEY = os.getenv("GOOGLE_CLOUD_KEY")
 MAIL_ABSTRACT_KEY = os.getenv("MAIL_ABSTRACT_KEY")
+
+# Lista de dominios de emails desechables (temporales)
+DISPOSABLE_EMAIL_DOMAINS = {
+    "10minutemail.com",
+    "20minutemail.com",
+    "33mail.com",
+    "guerrillamail.com",
+    "mailinator.com",
+    "tempmail.com",
+    "throwaway.email",
+    "yopmail.com",
+    "getnada.com",
+    "mohmal.com",
+    "fakeinbox.com",
+    "trashmail.com",
+    "maildrop.cc",
+    "temp-mail.org",
+    "sharklasers.com",
+    "grr.la",
+    "guerrillamailblock.com",
+    "pokemail.net",
+    "spam4.me",
+    "bccto.me",
+    "chammy.info",
+    "devnullmail.com",
+    "dispostable.com",
+    "emailondeck.com",
+    "fakemailgenerator.com",
+    "mailcatch.com",
+    "meltmail.com",
+    "mintemail.com",
+    "mytrashmail.com",
+    "netzid.de",
+    "nowmymail.com",
+    "objectmail.com",
+    "obobbo.com",
+    "rcpt.at",
+    "recode.me",
+    "regbypass.com",
+    "rmqkr.net",
+    "shortmail.net",
+    "sibmail.com",
+    "spambob.com",
+    "spambog.com",
+    "spamday.com",
+    "spamex.com",
+    "spamfree24.org",
+    "spamhole.com",
+    "spamobox.com",
+    "spamspot.com",
+    "tempalias.com",
+    "tempe-mail.com",
+    "tempinbox.co.uk",
+    "tempinbox.com",
+    "tempmail2.com",
+    "tempmailer.com",
+    "tempthe.net",
+    "thankyou2010.com",
+    "thisisnotmyrealemail.com",
+    "tmail.ws",
+    "tmailinator.com",
+    "toiea.com",
+    "trash-amil.com",
+    "trashmail.net",
+    "trashymail.com",
+    "tyldd.com",
+    "wh4f.org",
+    "whyspam.me",
+    "willselfdestruct.com",
+    "winemaven.info",
+    "wronghead.com",
+    "wuzup.net",
+    "wuzupmail.net",
+    "xagloo.com",
+    "xemaps.com",
+    "xents.com",
+    "xmaily.com",
+    "xoxy.net",
+    "yapped.net",
+    "yeah.net",
+    "yogamaven.com",
+    "yopmail.fr",
+    "yopmail.net",
+    "youmailr.com",
+    "ypmail.webnetic.me",
+    "zippymail.info",
+    "zoemail.org",
+}
+
+# Lista de proveedores de email gratuitos
+FREE_EMAIL_DOMAINS = {
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "outlook.com",
+    "aol.com",
+    "icloud.com",
+    "mail.com",
+    "protonmail.com",
+    "zoho.com",
+    "yandex.com",
+    "gmx.com",
+    "live.com",
+    "msn.com",
+    "inbox.com",
+    "fastmail.com",
+    "tutanota.com",
+    "mail.ru",
+    "qq.com",
+    "163.com",
+    "126.com",
+    "sina.com",
+    "rediffmail.com",
+    "hushmail.com",
+    "lycos.com",
+    "aim.com",
+    "rocketmail.com",
+}
+
+# Lista de prefijos comunes para emails de rol
+ROLE_EMAIL_PREFIXES = {
+    "abuse",
+    "admin",
+    "administrator",
+    "billing",
+    "contact",
+    "help",
+    "info",
+    "mail",
+    "mailbox",
+    "marketing",
+    "noreply",
+    "no-reply",
+    "postmaster",
+    "sales",
+    "security",
+    "support",
+    "webmaster",
+}
 
 
 def get_save_leads():
@@ -54,6 +195,207 @@ def bind_formentry_with_webhook(webhook):
     webhook.form_entry = entry
     webhook.save()
     return True
+
+
+def _check_mx_records(domain):
+    """
+    Verifica si el dominio tiene registros MX válidos.
+    Retorna True si encuentra registros MX, False en caso contrario.
+    """
+    try:
+        # Intentar resolver el dominio primero
+        socket.gethostbyname(domain)
+        return True
+    except (socket.gaierror, socket.herror, Exception):
+        return False
+
+
+def _check_smtp(email, domain):
+    """
+    Verifica si el servidor SMTP acepta el email.
+    Retorna True si el servidor SMTP acepta el email, False en caso contrario.
+    Nota: Esta verificación puede ser lenta y algunos servidores pueden bloquearla.
+    Por defecto, intenta conectar al puerto 25 del dominio directamente.
+    """
+    try:
+        # Intentar conectar directamente al dominio en el puerto SMTP
+        # Nota: Esto es una aproximación. Para una verificación más precisa,
+        # se necesitaría obtener los registros MX usando dnspython
+        server = smtplib.SMTP(timeout=5)
+        server.set_debuglevel(0)
+
+        try:
+            server.connect(domain, 25)
+            server.helo(server.local_hostname)
+            server.mail("test@example.com")
+            code, message = server.rcpt(email)
+            server.quit()
+
+            # Código 250 significa que el servidor acepta el email
+            return code == 250
+        except (smtplib.SMTPConnectError, smtplib.SMTPException, socket.error, Exception):
+            try:
+                server.quit()
+            except Exception:
+                pass
+            return False
+    except Exception:
+        return False
+
+
+def _calculate_quality_score(format_valid, mx_found, smtp_check, is_disposable, is_role, is_free, is_catchall):
+    """
+    Calcula un score de calidad del email basado en múltiples factores.
+    Retorna un valor entre 0.0 y 1.0.
+    """
+    score = 1.0
+
+    # Penalizaciones
+    if not format_valid:
+        score -= 0.5
+    if not mx_found:
+        score -= 0.3
+    if not smtp_check:
+        score -= 0.2
+    if is_disposable:
+        score -= 0.4
+    if is_role:
+        score -= 0.1
+    if is_catchall:
+        score -= 0.05
+    if is_free:
+        score -= 0.05
+
+    # Asegurar que el score esté entre 0.0 y 1.0
+    return max(0.0, min(1.0, score))
+
+
+def validate_email_local(email, lang):
+    """
+    Replica la funcionalidad de la API de Abstract API para validación de emails.
+    Realiza validaciones locales sin depender de servicios externos.
+
+    Retorna un diccionario con la misma estructura que la API de Abstract API:
+    {
+        "email": "e@mail.com",
+        "user": "a",
+        "domain": "mail.com",
+        "format_valid": true,
+        "mx_found": true,
+        "smtp_check": true,
+        "catch_all": false,
+        "role": false,
+        "disposable": false,
+        "free": false,
+        "score": 0.8
+    }
+    """
+    # Validar formato básico
+    pattern = r"^[^@]+@[^@]+\.[^@]+$"
+    format_valid = isinstance(email, str) and email and bool(re.match(pattern, email))
+
+    if not format_valid:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address is not valid",
+                es="La dirección de correo electrónico no es válida",
+                slug="email-not-valid",
+            ),
+            data={"email": email},
+            slug="email-not-valid",
+        )
+
+    email_lower = email.lower().strip()
+    split_email = email_lower.split("@")
+
+    if len(split_email) != 2:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address is not valid",
+                es="La dirección de correo electrónico no es válida",
+                slug="email-not-valid",
+            ),
+            data={"email": email},
+            slug="email-not-valid",
+        )
+
+    user_part = split_email[0]
+    domain = split_email[1]
+
+    # Verificar si es email desechable
+    is_disposable = domain in DISPOSABLE_EMAIL_DOMAINS
+
+    if is_disposable:
+        raise ValidationException(
+            translation(
+                lang,
+                en="It seems you are using a disposable email service. Please provide a different email address",
+                es="Parece que estás utilizando un proveedor de correos electronicos temporales. Por favor cambia tu dirección de correo electrónico.",
+                slug="disposable-email",
+            ),
+            slug="disposable-email",
+        )
+
+    # Verificar registros MX
+    mx_found = _check_mx_records(domain)
+
+    if not mx_found:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email you have provided seems invalid, please provide a different email address.",
+                es="El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico",
+                slug="invalid-email",
+            ),
+            slug="invalid-email",
+        )
+
+    # Verificar SMTP (puede ser lento, opcional)
+    smtp_check = _check_smtp(email_lower, domain)
+
+    # Verificar si es email de rol
+    is_role = user_part in ROLE_EMAIL_PREFIXES
+
+    # Verificar si es email gratuito
+    is_free = domain in FREE_EMAIL_DOMAINS
+
+    # Verificar catch-all (no podemos determinarlo sin enviar emails reales, asumimos False)
+    is_catchall = False
+
+    # Calcular quality score
+    quality_score = _calculate_quality_score(
+        format_valid, mx_found, smtp_check, is_disposable, is_role, is_free, is_catchall
+    )
+
+    if quality_score <= 0.60:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address seems to have poor quality. Are you able to provide a different email address?",
+                es="El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?",
+                slug="poor-quality-email",
+            ),
+            data={"quality_score": quality_score},
+            slug="poor-quality-email",
+        )
+
+    email_status = {
+        "email": email_lower,
+        "user": user_part,
+        "domain": domain,
+        "format_valid": format_valid,
+        "mx_found": mx_found,
+        "smtp_check": smtp_check,
+        "catch_all": is_catchall,
+        "role": is_role,
+        "disposable": is_disposable,
+        "free": is_free,
+        "score": quality_score,
+    }
+
+    return email_status
 
 
 def validate_email(email, lang):

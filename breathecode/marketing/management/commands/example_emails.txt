@@ -1,0 +1,11 @@
+test@gmail.com
+user@yahoo.com
+john.doe@example.com
+info@example.com
+admin@company.com
+test@10minutemail.com
+invalid-email
+test@nonexistentdomain12345.com
+support@company.com
+user@hotmail.com
+zacharyjohnson@stanfordalumni.org
