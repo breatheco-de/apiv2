@@ -295,11 +295,16 @@ def _check_spf(domain):
         logger.debug(f"Error verificando registro SPF para {domain}: {e}")
     
     try:
-        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
         domain_obj.spf = spf_record
+        # Asegurar que next_check_at tenga un valor si es un registro nuevo
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
         domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (SPF) para {domain}: {spf_record is not None}")
     except Exception as e:
-        logger.debug(f"No se pudo guardar resultado de validación SPF en BD: {e}")
+        logger.error(f"No se pudo guardar resultado de validación SPF en BD para {domain}: {e}", exc_info=True)
     
     return spf_record
 
@@ -346,11 +351,16 @@ def _check_dmarc(domain):
         logger.debug(f"Error verificando registro DMARC para {domain}: {e}")
     
     try:
-        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
         domain_obj.dmarc = dmarc_record
+        # Asegurar que next_check_at tenga un valor si es un registro nuevo
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
         domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (DMARC) para {domain}: {dmarc_record is not None}")
     except Exception as e:
-        logger.debug(f"No se pudo guardar resultado de validación DMARC en BD: {e}")
+        logger.error(f"No se pudo guardar resultado de validación DMARC en BD para {domain}: {e}", exc_info=True)
     
     return dmarc_record
 
@@ -446,11 +456,15 @@ def validate_email_local(email, lang):
     is_disposable = domain in DISPOSABLE_EMAIL_DOMAINS
 
     try:
-        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
         domain_obj.disposable = is_disposable
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
         domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (disposable) para {domain}: {is_disposable}")
     except Exception as e:
-        logger.debug(f"No se pudo actualizar campo disposable en BD: {e}")
+        logger.error(f"No se pudo actualizar campo disposable en BD para {domain}: {e}", exc_info=True)
 
     if is_disposable:
         raise ValidationException(

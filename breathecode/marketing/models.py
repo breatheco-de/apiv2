@@ -959,7 +959,7 @@ class EmailDomainValidation(models.Model):
         auto_now=True, db_index=True, help_text="Fecha de la última verificación"
     )
     next_check_at = models.DateTimeField(
-        db_index=True, help_text="Fecha de la próxima verificación recomendada"
+        db_index=True, help_text="Fecha de la próxima verificación recomendada", null=True, blank=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
