@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+import random
 import re
 import urllib.parse
 from datetime import timedelta
@@ -991,6 +992,65 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         invite.save()
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
+
+    @capable_of("crud_invite")
+    def patch(self, request, invite_id=None, academy_id=None):
+        """
+        Update an invite. If status is set to PENDING, reset the token.
+        """
+        if invite_id is None:
+            raise ValidationException(
+                translation(
+                    en="Invite ID is required",
+                    es="El ID de la invitación es requerido",
+                ),
+                slug="invite-id-required",
+                code=400,
+            )
+
+        invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id).first()
+        if invite is None:
+            raise ValidationException(
+                translation(
+                    en="Invite not found or does not belong to this academy",
+                    es="Invitación no encontrada o no pertenece a esta academia",
+                ),
+                slug="user-invite-not-found",
+                code=404,
+            )
+
+        new_status = request.data.get("status")
+        if new_status:
+            new_status = new_status.upper()
+            # Validate status
+            valid_statuses = ["PENDING", "ACCEPTED", "REJECTED", "WAITING_LIST"]
+            if new_status not in valid_statuses:
+                raise ValidationException(
+                    translation(
+                        en=f"Invalid status. Must be one of: {', '.join(valid_statuses)}",
+                        es=f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}",
+                    ),
+                    slug="invalid-status",
+                    code=400,
+                )
+
+            invite.status = new_status
+
+            # Only reset token if status is being set to PENDING
+            if new_status == "PENDING":
+                # Generate a new unique token
+                while True:
+                    new_token = random.getrandbits(128)
+                    if not UserInvite.objects.filter(token=new_token).exists():
+                        break
+
+                invite.token = new_token
+                invite.sent_at = None  # Reset sent_at so it can be resent
+
+        invite.save()
+
+        serializer = UserInviteSerializer(invite, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class V2AppUserView(APIView):
