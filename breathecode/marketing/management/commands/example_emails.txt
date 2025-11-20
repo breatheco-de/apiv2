@@ -9,4 +9,3 @@ test@nonexistentdomain12345.com
 support@company.com
 user@hotmail.com
 zacharyjohnson@stanfordalumni.org
-ldelvalle@4geeksacademy.com

@@ -146,7 +146,9 @@ class Command(BaseCommand):
                     self.stdout.write(
                         f"  Format: {result['format_valid']}, "
                         f"MX: {result['mx_found']}, "
-                        f"SMTP: {result['smtp_check']}, "
+                        f"MX Records: {len(result.get('mx_records', []))}, "
+                        f"SPF: {'Yes' if result.get('spf') else 'No'}, "
+                        f"DMARC: {'Yes' if result.get('dmarc') else 'No'}, "
                         f"Free: {result['free']}, "
                         f"Role: {result['role']}, "
                         f"Disposable: {result['disposable']}, "

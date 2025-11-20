@@ -141,8 +141,9 @@ class TestValidateEmailLocal:
             "domain",
             "format_valid",
             "mx_found",
-            "smtp_check",
-            "catch_all",
+            "mx_records",
+            "spf",
+            "dmarc",
             "role",
             "disposable",
             "free",
@@ -154,8 +155,7 @@ class TestValidateEmailLocal:
         
         assert isinstance(result["format_valid"], bool)
         assert isinstance(result["mx_found"], bool)
-        assert isinstance(result["smtp_check"], bool)
-        assert isinstance(result["catch_all"], bool)
+        assert isinstance(result["mx_records"], list)
         assert isinstance(result["role"], bool)
         assert isinstance(result["disposable"], bool)
         assert isinstance(result["free"], bool)

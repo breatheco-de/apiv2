@@ -935,31 +935,31 @@ class CourseTranslation(models.Model):
 
 class EmailDomainValidation(models.Model):
     """
-    Almacena resultados de validación de DNS MX records y SMTP checks
-    para evitar verificaciones repetidas y saturar la cache.
+    Almacena resultados de validación de DNS para dominios de email.
+    Incluye validaciones de MX, SPF, DMARC y detección de correos temporales.
     
     Los registros expirados se pueden limpiar periódicamente.
     """
 
-    class ValidationType(models.TextChoices):
-        MX_RECORD = "MX_RECORD", "MX Record"
-        SMTP_CHECK = "SMTP_CHECK", "SMTP Check"
-
-    validation_type = models.CharField(
-        max_length=20, choices=ValidationType.choices, help_text="Tipo de validación realizada"
+    domain = models.CharField(max_length=255, db_index=True, unique=True, help_text="Dominio validado")
+    has_mx = models.BooleanField(help_text="True si el dominio tiene registros MX válidos")
+    mx_records = models.JSONField(
+        default=list, help_text="Lista de registros MX encontrados (ej: ['alt1.gmail-smtp-in.l.google.com'])"
     )
-    domain = models.CharField(max_length=255, db_index=True, help_text="Dominio validado")
-    email = models.CharField(
-        max_length=255,
-        null=True,
-        blank=True,
-        default=None,
-        db_index=True,
-        help_text="Email completo (solo para SMTP checks)",
+    spf = models.TextField(
+        null=True, blank=True, help_text="Registro SPF encontrado (ej: 'v=spf1 include:_spf.google.com ~all')"
     )
-    is_valid = models.BooleanField(help_text="Resultado de la validación")
-    valid_until = models.DateTimeField(
-        db_index=True, help_text="Fecha hasta la cual este resultado es válido"
+    dmarc = models.TextField(
+        null=True, blank=True, help_text="Registro DMARC encontrado (ej: 'v=DMARC1; p=reject; ...')"
+    )
+    disposable = models.BooleanField(
+        default=False, help_text="True si el dominio está en la lista de correos temporales"
+    )
+    last_checked_at = models.DateTimeField(
+        auto_now=True, db_index=True, help_text="Fecha de la última verificación"
+    )
+    next_check_at = models.DateTimeField(
+        db_index=True, help_text="Fecha de la próxima verificación recomendada"
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -968,29 +968,40 @@ class EmailDomainValidation(models.Model):
     class Meta:
         db_table = "marketing_email_domain_validation"
         indexes = [
-            models.Index(fields=["domain", "validation_type", "valid_until"]),
-            models.Index(fields=["email", "validation_type", "valid_until"]),
+            models.Index(fields=["domain", "next_check_at"]),
+            models.Index(fields=["last_checked_at"]),
         ]
 
     def __str__(self):
-        identifier = self.email or self.domain
-        return f"{self.validation_type} - {identifier} - Valid: {self.is_valid}"
+        return f"{self.domain} - MX: {self.has_mx} - Disposable: {self.disposable}"
 
     def is_expired(self):
         """Verifica si el resultado de validación ha expirado"""
         from django.utils import timezone
 
-        return timezone.now() > self.valid_until
+        return timezone.now() > self.next_check_at
 
     @classmethod
-    def get_valid_result(cls, validation_type, domain, email=None):
+    def get_or_create_domain(cls, domain):
+        """
+        Obtiene o crea un registro de validación para el dominio.
+        
+        Args:
+            domain: Dominio a verificar
+        
+        Returns:
+            tuple: (EmailDomainValidation, created) - El objeto y si fue creado
+        """
+        domain_lower = domain.lower()
+        return cls.objects.get_or_create(domain=domain_lower)
+
+    @classmethod
+    def get_valid_domain(cls, domain):
         """
         Obtiene un resultado de validación válido (no expirado) si existe.
         
         Args:
-            validation_type: ValidationType.MX_RECORD o ValidationType.SMTP_CHECK
             domain: Dominio a verificar
-            email: Email completo (solo para SMTP checks)
         
         Returns:
             EmailDomainValidation o None si no existe o está expirado
@@ -999,29 +1010,37 @@ class EmailDomainValidation(models.Model):
 
         utc_now = timezone.now()
 
-        query = cls.objects.filter(
-            validation_type=validation_type, domain=domain.lower(), valid_until__gt=utc_now
-        )
+        try:
+            obj = cls.objects.get(domain=domain.lower())
+            if obj.next_check_at > utc_now:
+                return obj
+        except cls.DoesNotExist:
+            pass
 
-        if email:
-            query = query.filter(email=email.lower())
-        else:
-            query = query.filter(email__isnull=True)
-
-        return query.first()
+        return None
 
     @classmethod
-    def save_result(cls, validation_type, domain, is_valid, email=None, valid_hours=720, is_catch_all=False):
+    def update_domain_validation(
+        cls,
+        domain,
+        has_mx,
+        mx_records=None,
+        spf=None,
+        dmarc=None,
+        disposable=None,
+        valid_days=180,
+    ):
         """
-        Guarda o actualiza un resultado de validación.
+        Actualiza o crea un registro de validación para el dominio.
         
         Args:
-            validation_type: ValidationType.MX_RECORD o ValidationType.SMTP_CHECK
             domain: Dominio validado
-            is_valid: Resultado de la validación
-            email: Email completo (solo para SMTP checks)
-            valid_hours: Horas de validez del resultado (default: 720, 1 mes)
-            is_catch_all: Si es True, guarda solo un registro por dominio (sin email específico)
+            has_mx: True si el dominio tiene registros MX válidos
+            mx_records: Lista de registros MX encontrados
+            spf: Registro SPF encontrado
+            dmarc: Registro DMARC encontrado
+            disposable: True si el dominio está en la lista de correos temporales
+            valid_days: Días de validez del resultado (default: 180, 6 meses)
         
         Returns:
             EmailDomainValidation creado o actualizado
@@ -1029,45 +1048,24 @@ class EmailDomainValidation(models.Model):
         from django.utils import timezone
 
         utc_now = timezone.now()
-        valid_until = utc_now + timedelta(hours=valid_hours)
+        next_check_at = utc_now + timedelta(days=valid_days)
 
         domain_lower = domain.lower()
-        
-        if is_catch_all:
-            email_lower = None
-        else:
-            email_lower = email.lower() if email else None
 
-        # Buscar registro existente
-        query = cls.objects.filter(validation_type=validation_type, domain=domain_lower)
-        
-        if email_lower:
-            query = query.filter(email=email_lower)
-        else:
-            query = query.filter(email__isnull=True)
+        obj, created = cls.get_or_create_domain(domain_lower)
 
-        obj = query.first()
+        obj.has_mx = has_mx
+        if mx_records is not None:
+            obj.mx_records = mx_records
+        if spf is not None:
+            obj.spf = spf
+        if dmarc is not None:
+            obj.dmarc = dmarc
+        if disposable is not None:
+            obj.disposable = disposable
 
-        if obj:
-            # Actualizar existente
-            obj.is_valid = is_valid
-            obj.valid_until = valid_until
-            obj.save()
-        else:
-            # Crear nuevo registro
-            # Nota: No hay límite artificial de emails por dominio. La protección real contra
-            # ataques es la detección automática de catch-all en _check_smtp(), que guarda
-            # solo un registro por dominio cuando detecta que acepta cualquier email.
-            # Esto permite casos legítimos masivos (ej: 2000 alumnos de una empresa grande)
-            # mientras protege contra dominios catch-all que aceptan emails aleatorios.
-            
-            obj = cls.objects.create(
-                validation_type=validation_type,
-                domain=domain_lower,
-                email=email_lower,
-                is_valid=is_valid,
-                valid_until=valid_until,
-            )
+        obj.next_check_at = next_check_at
+        obj.save()
 
         return obj
 

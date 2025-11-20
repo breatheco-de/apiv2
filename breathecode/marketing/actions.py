@@ -2,10 +2,16 @@ import json
 import os
 import re
 import socket
-import smtplib
 from datetime import timedelta
 from itertools import chain
 from typing import Optional
+
+try:
+    import dns.resolver  # type: ignore
+    import dns.exception  # type: ignore
+    DNS_AVAILABLE = True
+except ImportError:
+    DNS_AVAILABLE = False
 
 import numpy as np
 import requests
@@ -186,158 +192,181 @@ def bind_formentry_with_webhook(webhook):
     return True
 
 
-def _check_mx_records(domain, cache_timeout_hours=720):  # 30 días por defecto (dominios raramente cambian)
+def _check_mx_records(domain):
     """
-    Verifica si el dominio tiene registros MX válidos.
-    Retorna True si encuentra registros MX, False en caso contrario.
+    Verifica si el dominio tiene registros MX válidos y los retorna.
     
     Los resultados se almacenan en la base de datos con expiración
     para evitar verificaciones repetidas del mismo dominio.
     
     Args:
         domain: Dominio a verificar
-        cache_timeout_hours: Horas de validez del resultado (default: 720, 1 mes)
     
     Returns:
-        bool: True si el dominio tiene registros MX válidos
+        tuple: (bool, list) - (has_mx, mx_records)
+            - has_mx: True si el dominio tiene registros MX válidos
+            - mx_records: Lista de servidores MX encontrados
     """
-    # Intentar obtener resultado cacheado (si la BD está disponible)
     try:
-        cached_result = EmailDomainValidation.get_valid_result(
-            EmailDomainValidation.ValidationType.MX_RECORD, domain
-        )
+        import dns.resolver  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
         if cached_result is not None:
-            return cached_result.is_valid
+            if dns_available and (not cached_result.mx_records or len(cached_result.mx_records) == 0):
+                logger.debug(f"Cache tiene mx_records vacío pero dnspython está disponible, forzando nueva verificación para {domain}")
+            else:
+                return (cached_result.has_mx, cached_result.mx_records or [])
     except Exception as e:
-        # Si la BD no está disponible, continuar sin cache
         logger.debug(f"No se pudo acceder al cache de validaciones MX: {e}")
     
-    # Validar el dominio
-    try:
-        socket.gethostbyname(domain)
-        result = True
-    except (socket.gaierror, socket.herror, Exception):
-        result = False
+    mx_records = []
+    has_mx = False
     
-    # Intentar guardar en BD (si está disponible)
     try:
-        EmailDomainValidation.save_result(
-            EmailDomainValidation.ValidationType.MX_RECORD, domain, result, valid_hours=cache_timeout_hours
-        )
+        if dns_available:
+            answers = dns.resolver.resolve(domain, "MX")
+            mx_records = [str(rdata.exchange).rstrip(".") for rdata in answers]
+            has_mx = len(mx_records) > 0
+        else:
+            try:
+                socket.gethostbyname(domain)
+                has_mx = True
+            except (socket.gaierror, socket.herror, Exception):
+                has_mx = False
     except Exception as e:
-        # Si la BD no está disponible, continuar sin guardar
+        logger.debug(f"Error verificando registros MX para {domain}: {e}")
+        has_mx = False
+    
+    try:
+        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.has_mx = has_mx
+        domain_obj.mx_records = mx_records
+        from django.utils import timezone
+        domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+    except Exception as e:
         logger.debug(f"No se pudo guardar resultado de validación MX en BD: {e}")
     
-    return result
+    return (has_mx, mx_records)
 
 
-def _check_smtp(email, domain, cache_timeout_hours=720):  # 30 días por defecto (emails validados raramente cambian)
+def _check_spf(domain):
     """
-    Verifica si el servidor SMTP acepta el email y detecta si el dominio es catch-all.
-    
-    Los resultados se almacenan en la base de datos con expiración
-    para evitar verificaciones repetidas del mismo email/dominio.
-    
-    Nota: Esta verificación puede ser lenta y algunos servidores pueden bloquearla.
-    Por defecto, intenta conectar al puerto 25 del dominio directamente.
-    
-    Protección contra ataques:
-    - Detecta dominios catch-all mediante prueba con email aleatorio
-    - Si es catch-all, guarda solo un registro por dominio (sin email específico)
-    - No hay límite artificial: permite casos legítimos masivos (ej: 2000 alumnos de una empresa)
+    Verifica y obtiene el registro SPF del dominio.
     
     Args:
-        email: Email completo a verificar
-        domain: Dominio del email
-        cache_timeout_hours: Horas de validez del resultado (default: 24)
+        domain: Dominio a verificar
     
     Returns:
-        tuple: (bool, bool) - (smtp_check, is_catch_all)
-            - smtp_check: True si el servidor SMTP acepta el email
-            - is_catch_all: True si el dominio es catch-all (acepta cualquier email)
+        str o None: Registro SPF encontrado o None si no existe
     """
-    # Verificar si ya tenemos un resultado catch-all para este dominio (si la BD está disponible)
     try:
-        catch_all_result = EmailDomainValidation.get_valid_result(
-            EmailDomainValidation.ValidationType.SMTP_CHECK, domain, email=None
-        )
-        if catch_all_result is not None and catch_all_result.is_valid:
-            return (True, True)
+        import dns.resolver  # type: ignore
+        import dns.exception  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
+        if cached_result is not None and cached_result.spf:
+            return cached_result.spf
     except Exception as e:
-        logger.debug(f"No se pudo acceder al cache de validaciones SMTP (catch-all): {e}")
+        logger.debug(f"No se pudo acceder al cache de validaciones SPF: {e}")
     
-    # Intentar obtener resultado válido de la base de datos para este email específico
-    try:
-        cached_result = EmailDomainValidation.get_valid_result(
-            EmailDomainValidation.ValidationType.SMTP_CHECK, domain, email=email
-        )
-        if cached_result is not None:
-            return (cached_result.is_valid, False)
-    except Exception as e:
-        logger.debug(f"No se pudo acceder al cache de validaciones SMTP: {e}")
-    
-    result = False
-    is_catch_all = False
+    spf_record = None
     
     try:
-        server = smtplib.SMTP(timeout=5)
-        server.set_debuglevel(0)
-
-        try:
-            server.connect(domain, 25)
-            server.helo(server.local_hostname)
-            server.mail("test@example.com")
-            code, message = server.rcpt(email)
-            
-            # Código 250 significa que el servidor acepta el email
-            result = code == 250
-            
-            if result:
-                import random
-                test_email = f"nonexistentemailvalidation-{random.randint(100000, 999999)}@{domain}"
-                test_code, _ = server.rcpt(test_email)
-                
-                if test_code == 250:
-                    is_catch_all = True
-                    logger.info(f"Dominio {domain} detectado como catch-all")
-            
-            server.quit()
-        except (smtplib.SMTPConnectError, smtplib.SMTPException, socket.error, Exception):
+        if dns_available:
             try:
-                server.quit()
-            except Exception:
+                answers = dns.resolver.resolve(domain, "TXT")
+                for rdata in answers:
+                    txt_string = "".join([s.decode() if isinstance(s, bytes) else s for s in rdata.strings])
+                    if txt_string.startswith("v=spf1"):
+                        spf_record = txt_string
+                        break
+            except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.DNSException):
                 pass
-            result = False
-    except Exception:
-        result = False
-    
-    # Intentar guardar en base de datos con expiración (si está disponible)
-    try:
-        EmailDomainValidation.save_result(
-            EmailDomainValidation.ValidationType.SMTP_CHECK,
-            domain,
-            result,
-            email=email if not is_catch_all else None,
-            valid_hours=cache_timeout_hours,
-            is_catch_all=is_catch_all,
-        )
     except Exception as e:
-        # Si la BD no está disponible, continuar sin guardar
-        logger.debug(f"No se pudo guardar resultado de validación SMTP en BD: {e}")
+        logger.debug(f"Error verificando registro SPF para {domain}: {e}")
     
-    return (result, is_catch_all)
+    try:
+        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.spf = spf_record
+        domain_obj.save()
+    except Exception as e:
+        logger.debug(f"No se pudo guardar resultado de validación SPF en BD: {e}")
+    
+    return spf_record
 
 
-def _calculate_quality_score(smtp_check, is_role, is_free):
+def _check_dmarc(domain):
+    """
+    Verifica y obtiene el registro DMARC del dominio.
+    
+    Args:
+        domain: Dominio a verificar
+    
+    Returns:
+        str o None: Registro DMARC encontrado o None si no existe
+    """
+    try:
+        import dns.resolver  # type: ignore
+        import dns.exception  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
+        if cached_result is not None and cached_result.dmarc:
+            return cached_result.dmarc
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones DMARC: {e}")
+    
+    dmarc_record = None
+    
+    try:
+        if dns_available:
+            try:
+                dmarc_domain = f"_dmarc.{domain}"
+                answers = dns.resolver.resolve(dmarc_domain, "TXT")
+                for rdata in answers:
+                    txt_string = "".join([s.decode() if isinstance(s, bytes) else s for s in rdata.strings])
+                    if txt_string.startswith("v=DMARC1"):
+                        dmarc_record = txt_string
+                        break
+            except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.DNSException):
+                pass
+    except Exception as e:
+        logger.debug(f"Error verificando registro DMARC para {domain}: {e}")
+    
+    try:
+        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.dmarc = dmarc_record
+        domain_obj.save()
+    except Exception as e:
+        logger.debug(f"No se pudo guardar resultado de validación DMARC en BD: {e}")
+    
+    return dmarc_record
+
+
+def _calculate_quality_score(has_mx, has_spf, has_dmarc, is_role, is_free):
     """
     Calcula un score de calidad del email basado en múltiples factores.
     Retorna un valor entre 0.0 y 1.0.
     
-    Nota: format_valid, mx_found, is_disposable e is_catch_all no se incluyen porque
+    Nota: format_valid, is_disposable no se incluyen porque
     si alguno de estos falla, se lanza una excepción antes de llegar aquí.
     
     Args:
-        smtp_check: True si el servidor SMTP acepta el email
+        has_mx: True si el dominio tiene registros MX válidos
+        has_spf: True si el dominio tiene registro SPF
+        has_dmarc: True si el dominio tiene registro DMARC
         is_role: True si es un email de rol (info@, support@, etc.)
         is_free: True si es un email de proveedor gratuito (gmail.com, etc.)
     
@@ -346,8 +375,12 @@ def _calculate_quality_score(smtp_check, is_role, is_free):
     """
     score = 1.0
 
-    if not smtp_check:
-        score -= 0.2
+    if not has_mx:
+        score -= 0.3
+    if not has_spf:
+        score -= 0.1
+    if not has_dmarc:
+        score -= 0.05
     if is_role:
         score -= 0.1
     if is_free:
@@ -361,15 +394,16 @@ def validate_email_local(email, lang):
     Replica la funcionalidad de la API de Abstract API para validación de emails.
     Realiza validaciones locales sin depender de servicios externos.
 
-    Retorna un diccionario con la misma estructura que la API de Abstract API:
+    Retorna un diccionario con información de validación:
     {
         "email": "e@mail.com",
         "user": "a",
         "domain": "mail.com",
         "format_valid": true,
         "mx_found": true,
-        "smtp_check": true,
-        "catch_all": false,
+        "mx_records": ["alt1.gmail-smtp-in.l.google.com"],
+        "spf": "v=spf1 include:_spf.google.com ~all",
+        "dmarc": "v=DMARC1; p=reject; ...",
         "role": false,
         "disposable": false,
         "free": false,
@@ -411,6 +445,13 @@ def validate_email_local(email, lang):
 
     is_disposable = domain in DISPOSABLE_EMAIL_DOMAINS
 
+    try:
+        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.disposable = is_disposable
+        domain_obj.save()
+    except Exception as e:
+        logger.debug(f"No se pudo actualizar campo disposable en BD: {e}")
+
     if is_disposable:
         raise ValidationException(
             translation(
@@ -422,9 +463,9 @@ def validate_email_local(email, lang):
             slug="disposable-email",
         )
 
-    mx_found = _check_mx_records(domain)
+    has_mx, mx_records = _check_mx_records(domain)
 
-    if not mx_found:
+    if not has_mx:
         raise ValidationException(
             translation(
                 lang,
@@ -435,24 +476,20 @@ def validate_email_local(email, lang):
             slug="invalid-email",
         )
 
-    smtp_check, is_catch_all = _check_smtp(email_lower, domain)
-
-    if is_catch_all:
-        raise ValidationException(
-            translation(
-                lang,
-                en="We cannot verify if this email address actually exists. Please provide an email from a domain that validates individual addresses.",
-                es="No podemos verificar si esta dirección de correo electrónico realmente existe. Por favor proporciona un correo de un dominio que valide direcciones individuales.",
-                slug="catch-all-email",
-            ),
-            slug="catch-all-email",
-        )
+    spf_record = _check_spf(domain)
+    dmarc_record = _check_dmarc(domain)
 
     is_role = user_part in ROLE_EMAIL_PREFIXES
 
     is_free = domain in FREE_EMAIL_DOMAINS
 
-    quality_score = _calculate_quality_score(smtp_check, is_role, is_free)
+    quality_score = _calculate_quality_score(
+        has_mx=has_mx,
+        has_spf=spf_record is not None,
+        has_dmarc=dmarc_record is not None,
+        is_role=is_role,
+        is_free=is_free,
+    )
 
     if quality_score <= 0.60:
         raise ValidationException(
@@ -471,9 +508,10 @@ def validate_email_local(email, lang):
         "user": user_part,
         "domain": domain,
         "format_valid": format_valid,
-        "mx_found": mx_found,
-        "smtp_check": smtp_check,
-        "catch_all": is_catch_all,
+        "mx_found": has_mx,
+        "mx_records": mx_records,
+        "spf": spf_record,
+        "dmarc": dmarc_record,
         "role": is_role,
         "disposable": is_disposable,
         "free": is_free,
