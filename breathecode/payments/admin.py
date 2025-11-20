@@ -150,7 +150,7 @@ class PlanAdmin(admin.ModelAdmin):
         "mentorship_service_set",
         "event_type_set",
     ]
-    filter_horizontal = ("financing_options", "add_ons")
+    filter_horizontal = ("financing_options", "add_ons", "plan_addons")
     list_select_related = ("owner",)
 
     fieldsets = (
@@ -213,6 +213,7 @@ class PlanAdmin(admin.ModelAdmin):
                 "fields": (
                     "financing_options",
                     "add_ons",
+                    "plan_addons",
                     "invites",
                 )
             },
@@ -670,6 +671,8 @@ class BagAdmin(admin.ModelAdmin):
     list_filter = ["status", "type", "chosen_period", "academy", "is_recurrent"]
     search_fields = ["user__email", "user__first_name", "user__last_name"]
     raw_id_fields = ["user", "academy"]
+    # Allow editing related objects in the Bag admin
+    filter_horizontal = ("plans", "plan_addons", "service_items", "coupons")
 
 
 class PlanOfferForm(forms.ModelForm):

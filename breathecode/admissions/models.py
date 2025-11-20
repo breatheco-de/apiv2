@@ -242,12 +242,12 @@ class Syllabus(models.Model):
     )
 
     forked_from = models.ForeignKey(
-        'self',
+        "self",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
-        related_name='forks',
+        related_name="forks",
         help_text="If this syllabus was forked/created based another one",
     )
 
@@ -309,13 +309,13 @@ class SyllabusVersion(models.Model):
     version = models.PositiveSmallIntegerField(db_index=True)
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
     forked_from = models.ForeignKey(
-        'self',
+        "self",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
         help_text="If this syllabus version was forked/created based another one",
-        related_name='forks',
+        related_name="forks",
     )
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
@@ -419,6 +419,11 @@ class Cohort(models.Model):
     remote_available = models.BooleanField(
         default=True, help_text="True (default) if the students from other cities can take it from home", db_index=True
     )
+
+    enable_assessments_telemetry = models.BooleanField(
+        default=False, help_text="If true, the assessments will be tracked in the database", db_index=True
+    )
+
     online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
     timezone = models.CharField(max_length=50, null=True, default=None, blank=True, db_index=True)
@@ -584,7 +589,7 @@ EDU_STATUS = (
 class CohortUser(models.Model):
     """
     Represents a user's membership in a cohort with a specific role.
-    
+
     The role determines the user's permissions and responsibilities within the cohort,
     and maps to a corresponding ProfileAcademy role for academy-wide permissions.
     """
@@ -631,7 +636,7 @@ class CohortUser(models.Model):
     def get_profile_academy_role_slug(self) -> str:
         """
         Get the ProfileAcademy role slug corresponding to this CohortUser's role.
-        
+
         Returns:
             str: The role slug for ProfileAcademy (e.g., 'teacher', 'student')
         """
@@ -641,10 +646,10 @@ class CohortUser(models.Model):
     def map_role_to_profile_academy_slug(cls, cohort_user_role: str) -> str:
         """
         Map a CohortUser role to its corresponding ProfileAcademy role slug.
-        
+
         Args:
             cohort_user_role: The CohortUser role (e.g., 'TEACHER', 'ASSISTANT')
-            
+
         Returns:
             str: The role slug for ProfileAcademy (e.g., 'teacher', 'assistant')
         """

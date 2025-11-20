@@ -158,7 +158,12 @@ class Stripe:
                 contact = self.add_contact(user)
 
             def callback():
-                customer = stripe.Customer.modify(contact.stripe_id, source=token)
+                try:
+                    customer = stripe.Customer.modify(contact.stripe_id, source=token)
+                except stripe.error.StripeError:
+                    contact.delete()
+                    new_contact = self.add_contact(user)
+                    customer = stripe.Customer.modify(new_contact.stripe_id, source=token)
                 if not customer.get("default_source"):
                     return None
                 return stripe.Customer.retrieve_source(customer.id, customer.default_source)

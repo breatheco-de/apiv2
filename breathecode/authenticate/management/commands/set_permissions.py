@@ -105,6 +105,11 @@ PERMISSIONS = [
         "description": "Admin permission to manage organizations",
         "codename": "manage_organizations",
     },
+    {
+        "name": "CRUD career path",
+        "description": "Permission to create, read, update, and delete career paths and related global models (job families, job roles) that have academy=None",
+        "codename": "crud_career_path",
+    },
 ]
 
 GROUPS = [

@@ -1112,6 +1112,14 @@ class Plan(AbstractPriceByTime):
         related_name="plans_with_add_ons",
     )
 
+    plan_addons = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        blank=True,
+        related_name="parent_plans",
+        help_text="Addon plans that can be attached to this main plan",
+    )
+
     consumption_strategy = models.CharField(
         max_length=8,
         help_text="Consumption strategy",
@@ -1120,7 +1128,15 @@ class Plan(AbstractPriceByTime):
     )
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
-    is_onboarding = models.BooleanField(default=False, help_text="Is onboarding plan?", db_index=True)
+    is_onboarding = models.BooleanField(
+        default=False,
+        help_text=(
+            "If the plan is tagged for onboarding, the front end will include it in the plans that are meant to be "
+            "used as first payment plans for users; other plans focus on upsell or cross-sell so they can be ignored "
+            "by first-time users"
+        ),
+        db_index=True,
+    )
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
 
     pricing_ratio_exceptions = models.JSONField(
@@ -1199,6 +1215,13 @@ class Plan(AbstractPriceByTime):
 
         if self.consumption_strategy == Plan.ConsumptionStrategy.BOTH:
             raise forms.ValidationError("Consumption strategy BOTH is not implemented yet")
+
+        is_effectively_free = not have_price and not self.financing_options.exists()
+        if is_effectively_free and self.plan_addons.exists():
+            raise forms.ValidationError(
+                "Free plans or free trials cannot have plan addons configured; "
+                "please remove plan_addons or set a price/financing option"
+            )
 
         return super().clean()
 
@@ -1453,7 +1476,7 @@ def limit_coupon_choices():
 
 def _default_pricing_ratio_explanation():
     """Default empty pricing ratio explanation structure."""
-    return {"plans": [], "service_items": []}
+    return {"plans": [], "service_items": [], "plan_addons": []}
 
 
 class Bag(AbstractAmountByTime):
@@ -1505,9 +1528,18 @@ class Bag(AbstractAmountByTime):
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     service_items = models.ManyToManyField(ServiceItem, blank=True, help_text="Service items")
     plans = models.ManyToManyField(Plan, blank=True, help_text="Plans")
+    plan_addons = models.ManyToManyField(
+        Plan,
+        blank=True,
+        related_name="bags_as_addon",
+        help_text="Addon plans associated to this bag",
+    )
 
     is_recurrent = models.BooleanField(default=False, help_text="will it be a recurrent payment?")
     was_delivered = models.BooleanField(default=False, help_text="Was it delivered to the user?")
+    plan_addons_amount = models.FloatField(
+        default=0, help_text="One-shot amount to be charged for all plan addons in this bag"
+    )
 
     pricing_ratio_explanation = models.JSONField(
         default=_default_pricing_ratio_explanation,
