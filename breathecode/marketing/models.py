@@ -25,6 +25,7 @@ __all__ = [
     "FormEntry",
     "ShortLink",
     "ActiveCampaignWebhook",
+    "EmailDomainValidation",
 ]
 
 
@@ -930,3 +931,154 @@ class CourseTranslation(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class EmailDomainValidation(models.Model):
+    """
+    Almacena resultados de validación de DNS MX records y SMTP checks
+    para evitar verificaciones repetidas y saturar la cache.
+    
+    Los registros expirados se pueden limpiar periódicamente.
+    """
+
+    class ValidationType(models.TextChoices):
+        MX_RECORD = "MX_RECORD", "MX Record"
+        SMTP_CHECK = "SMTP_CHECK", "SMTP Check"
+
+    validation_type = models.CharField(
+        max_length=20, choices=ValidationType.choices, help_text="Tipo de validación realizada"
+    )
+    domain = models.CharField(max_length=255, db_index=True, help_text="Dominio validado")
+    email = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default=None,
+        db_index=True,
+        help_text="Email completo (solo para SMTP checks)",
+    )
+    is_valid = models.BooleanField(help_text="Resultado de la validación")
+    valid_until = models.DateTimeField(
+        db_index=True, help_text="Fecha hasta la cual este resultado es válido"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        db_table = "marketing_email_domain_validation"
+        indexes = [
+            models.Index(fields=["domain", "validation_type", "valid_until"]),
+            models.Index(fields=["email", "validation_type", "valid_until"]),
+        ]
+
+    def __str__(self):
+        identifier = self.email or self.domain
+        return f"{self.validation_type} - {identifier} - Valid: {self.is_valid}"
+
+    def is_expired(self):
+        """Verifica si el resultado de validación ha expirado"""
+        from django.utils import timezone
+
+        return timezone.now() > self.valid_until
+
+    @classmethod
+    def get_valid_result(cls, validation_type, domain, email=None):
+        """
+        Obtiene un resultado de validación válido (no expirado) si existe.
+        
+        Args:
+            validation_type: ValidationType.MX_RECORD o ValidationType.SMTP_CHECK
+            domain: Dominio a verificar
+            email: Email completo (solo para SMTP checks)
+        
+        Returns:
+            EmailDomainValidation o None si no existe o está expirado
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+
+        query = cls.objects.filter(
+            validation_type=validation_type, domain=domain.lower(), valid_until__gt=utc_now
+        )
+
+        if email:
+            query = query.filter(email=email.lower())
+        else:
+            query = query.filter(email__isnull=True)
+
+        return query.first()
+
+    @classmethod
+    def save_result(cls, validation_type, domain, is_valid, email=None, valid_hours=720, is_catch_all=False):
+        """
+        Guarda o actualiza un resultado de validación.
+        
+        Args:
+            validation_type: ValidationType.MX_RECORD o ValidationType.SMTP_CHECK
+            domain: Dominio validado
+            is_valid: Resultado de la validación
+            email: Email completo (solo para SMTP checks)
+            valid_hours: Horas de validez del resultado (default: 720, 1 mes)
+            is_catch_all: Si es True, guarda solo un registro por dominio (sin email específico)
+        
+        Returns:
+            EmailDomainValidation creado o actualizado
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+        valid_until = utc_now + timedelta(hours=valid_hours)
+
+        domain_lower = domain.lower()
+        
+        if is_catch_all:
+            email_lower = None
+        else:
+            email_lower = email.lower() if email else None
+
+        # Buscar registro existente
+        query = cls.objects.filter(validation_type=validation_type, domain=domain_lower)
+        
+        if email_lower:
+            query = query.filter(email=email_lower)
+        else:
+            query = query.filter(email__isnull=True)
+
+        obj = query.first()
+
+        if obj:
+            # Actualizar existente
+            obj.is_valid = is_valid
+            obj.valid_until = valid_until
+            obj.save()
+        else:
+            # Crear nuevo registro
+            # Nota: No hay límite artificial de emails por dominio. La protección real contra
+            # ataques es la detección automática de catch-all en _check_smtp(), que guarda
+            # solo un registro por dominio cuando detecta que acepta cualquier email.
+            # Esto permite casos legítimos masivos (ej: 2000 alumnos de una empresa grande)
+            # mientras protege contra dominios catch-all que aceptan emails aleatorios.
+            
+            obj = cls.objects.create(
+                validation_type=validation_type,
+                domain=domain_lower,
+                email=email_lower,
+                is_valid=is_valid,
+                valid_until=valid_until,
+            )
+
+        return obj
+
+    @classmethod
+    def clean_expired(cls):
+        """
+        Elimina registros expirados de la base de datos.
+        Debe ejecutarse periódicamente (por ejemplo, con un supervisor o tarea).
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+        deleted_count, _ = cls.objects.filter(valid_until__lt=utc_now).delete()
+        return deleted_count

@@ -119,8 +119,13 @@ class Command(BaseCommand):
         results = []
         valid_count = 0
         invalid_count = 0
+        total_emails = len(emails)
 
-        for email in emails:
+        for idx, email in enumerate(emails, 1):
+            if not output_json:
+                self.stdout.write(f"Validando {idx}/{total_emails}: {email}...", ending="\r")
+                self.stdout.flush()
+            
             try:
                 result = validate_email_local(email, lang)
                 results.append(
@@ -133,6 +138,8 @@ class Command(BaseCommand):
                 valid_count += 1
 
                 if not output_json:
+                    # Limpiar la línea de progreso
+                    self.stdout.write(" " * 80 + "\r", ending="")
                     self.stdout.write(
                         self.style.SUCCESS(f"✓ {email} - VALID")
                     )
@@ -160,6 +167,8 @@ class Command(BaseCommand):
                 invalid_count += 1
 
                 if not output_json:
+                    # Limpiar la línea de progreso
+                    self.stdout.write(" " * 80 + "\r", ending="")
                     self.stdout.write(self.style.ERROR(f"✗ {email} - INVALID"))
                     self.stdout.write(f"  Error: {e.slug} - {str(e)}")
 
@@ -177,6 +186,8 @@ class Command(BaseCommand):
                 invalid_count += 1
 
                 if not output_json:
+                    # Limpiar la línea de progreso
+                    self.stdout.write(" " * 80 + "\r", ending="")
                     self.stdout.write(self.style.ERROR(f"✗ {email} - ERROR"))
                     self.stdout.write(f"  Error: {type(e).__name__} - {str(e)}")
 

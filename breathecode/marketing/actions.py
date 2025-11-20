@@ -3,6 +3,7 @@ import os
 import re
 import socket
 import smtplib
+from datetime import timedelta
 from itertools import chain
 from typing import Optional
 
@@ -21,102 +22,91 @@ from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, Act
 from breathecode.services.brevo import Brevo
 from breathecode.utils import getLogger
 
-from .models import AcademyAlias, ActiveCampaignAcademy, Automation, FormEntry, Tag
+from .models import (
+    AcademyAlias,
+    ActiveCampaignAcademy,
+    Automation,
+    EmailDomainValidation,
+    FormEntry,
+    Tag,
+)
 
 logger = getLogger(__name__)
 
 GOOGLE_CLOUD_KEY = os.getenv("GOOGLE_CLOUD_KEY")
 MAIL_ABSTRACT_KEY = os.getenv("MAIL_ABSTRACT_KEY")
 
-# Lista de dominios de emails desechables (temporales)
-DISPOSABLE_EMAIL_DOMAINS = {
-    "10minutemail.com",
-    "20minutemail.com",
-    "33mail.com",
-    "guerrillamail.com",
-    "mailinator.com",
-    "tempmail.com",
-    "throwaway.email",
-    "yopmail.com",
-    "getnada.com",
-    "mohmal.com",
-    "fakeinbox.com",
-    "trashmail.com",
-    "maildrop.cc",
-    "temp-mail.org",
-    "sharklasers.com",
-    "grr.la",
-    "guerrillamailblock.com",
-    "pokemail.net",
-    "spam4.me",
-    "bccto.me",
-    "chammy.info",
-    "devnullmail.com",
-    "dispostable.com",
-    "emailondeck.com",
-    "fakemailgenerator.com",
-    "mailcatch.com",
-    "meltmail.com",
-    "mintemail.com",
-    "mytrashmail.com",
-    "netzid.de",
-    "nowmymail.com",
-    "objectmail.com",
-    "obobbo.com",
-    "rcpt.at",
-    "recode.me",
-    "regbypass.com",
-    "rmqkr.net",
-    "shortmail.net",
-    "sibmail.com",
-    "spambob.com",
-    "spambog.com",
-    "spamday.com",
-    "spamex.com",
-    "spamfree24.org",
-    "spamhole.com",
-    "spamobox.com",
-    "spamspot.com",
-    "tempalias.com",
-    "tempe-mail.com",
-    "tempinbox.co.uk",
-    "tempinbox.com",
-    "tempmail2.com",
-    "tempmailer.com",
-    "tempthe.net",
-    "thankyou2010.com",
-    "thisisnotmyrealemail.com",
-    "tmail.ws",
-    "tmailinator.com",
-    "toiea.com",
-    "trash-amil.com",
-    "trashmail.net",
-    "trashymail.com",
-    "tyldd.com",
-    "wh4f.org",
-    "whyspam.me",
-    "willselfdestruct.com",
-    "winemaven.info",
-    "wronghead.com",
-    "wuzup.net",
-    "wuzupmail.net",
-    "xagloo.com",
-    "xemaps.com",
-    "xents.com",
-    "xmaily.com",
-    "xoxy.net",
-    "yapped.net",
-    "yeah.net",
-    "yogamaven.com",
-    "yopmail.fr",
-    "yopmail.net",
-    "youmailr.com",
-    "ypmail.webnetic.me",
-    "zippymail.info",
-    "zoemail.org",
-}
+def _load_disposable_email_domains():
+    """
+    Carga la lista de dominios de emails desechables desde un archivo de texto.
+    El archivo debe estar en breathecode/marketing/data/disposable_email_domains.txt
+    Un dominio por línea, las líneas que empiezan con # son comentarios.
+    
+    Returns:
+        set: Conjunto de dominios desechables (en minúsculas)
+    
+    Raises:
+        FileNotFoundError: Si el archivo no existe
+        IOError: Si hay un error leyendo el archivo
+        Exception: Si ocurre cualquier otro error durante la carga
+    
+    Nota: Esta función NO tiene fallback. Si falla, se lanza una excepción
+    para evitar que la validación de emails funcione sin protección contra
+    correos desechables (fail-secure).
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(current_dir, "data")
+    file_path = os.path.join(data_dir, "disposable_email_domains.txt")
+    
+    if not os.path.exists(file_path):
+        error_msg = (
+            f"Archivo de dominios desechables no encontrado: {file_path}. "
+            "La validación de emails no puede funcionar sin este archivo."
+        )
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
+    
+    domains = set()
+    line_num = 0
+    
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line_num, line in enumerate(f, start=1):
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    domains.add(line.lower())
+    except Exception as e:
+        error_msg = (
+            f"Error cargando dominios desechables desde {file_path}"
+            + (f" (línea {line_num})" if line_num > 0 else "")
+            + f": {e}. "
+            "La validación de emails no puede funcionar sin este archivo."
+        )
+        logger.error(error_msg)
+        raise IOError(error_msg) from e
+    
+    if not domains:
+        error_msg = (
+            f"El archivo de dominios desechables está vacío: {file_path}. "
+            "La validación de emails no puede funcionar sin dominios desechables."
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+    
+    logger.info(f"Cargados {len(domains)} dominios desechables desde {file_path}")
+    return domains
 
-# Lista de proveedores de email gratuitos
+
+def get_disposable_email_domains():
+    """
+    Retorna el conjunto de dominios de emails desechables.
+    Los dominios se cargan desde un archivo de texto al importar el módulo.
+    """
+    return DISPOSABLE_EMAIL_DOMAINS
+
+
+DISPOSABLE_EMAIL_DOMAINS = _load_disposable_email_domains()
+
 FREE_EMAIL_DOMAINS = {
     "gmail.com",
     "yahoo.com",
@@ -146,7 +136,6 @@ FREE_EMAIL_DOMAINS = {
     "rocketmail.com",
 }
 
-# Lista de prefijos comunes para emails de rol
 ROLE_EMAIL_PREFIXES = {
     "abuse",
     "admin",
@@ -197,30 +186,100 @@ def bind_formentry_with_webhook(webhook):
     return True
 
 
-def _check_mx_records(domain):
+def _check_mx_records(domain, cache_timeout_hours=720):  # 30 días por defecto (dominios raramente cambian)
     """
     Verifica si el dominio tiene registros MX válidos.
     Retorna True si encuentra registros MX, False en caso contrario.
+    
+    Los resultados se almacenan en la base de datos con expiración
+    para evitar verificaciones repetidas del mismo dominio.
+    
+    Args:
+        domain: Dominio a verificar
+        cache_timeout_hours: Horas de validez del resultado (default: 720, 1 mes)
+    
+    Returns:
+        bool: True si el dominio tiene registros MX válidos
     """
+    # Intentar obtener resultado cacheado (si la BD está disponible)
     try:
-        # Intentar resolver el dominio primero
+        cached_result = EmailDomainValidation.get_valid_result(
+            EmailDomainValidation.ValidationType.MX_RECORD, domain
+        )
+        if cached_result is not None:
+            return cached_result.is_valid
+    except Exception as e:
+        # Si la BD no está disponible, continuar sin cache
+        logger.debug(f"No se pudo acceder al cache de validaciones MX: {e}")
+    
+    # Validar el dominio
+    try:
         socket.gethostbyname(domain)
-        return True
+        result = True
     except (socket.gaierror, socket.herror, Exception):
-        return False
+        result = False
+    
+    # Intentar guardar en BD (si está disponible)
+    try:
+        EmailDomainValidation.save_result(
+            EmailDomainValidation.ValidationType.MX_RECORD, domain, result, valid_hours=cache_timeout_hours
+        )
+    except Exception as e:
+        # Si la BD no está disponible, continuar sin guardar
+        logger.debug(f"No se pudo guardar resultado de validación MX en BD: {e}")
+    
+    return result
 
 
-def _check_smtp(email, domain):
+def _check_smtp(email, domain, cache_timeout_hours=720):  # 30 días por defecto (emails validados raramente cambian)
     """
-    Verifica si el servidor SMTP acepta el email.
-    Retorna True si el servidor SMTP acepta el email, False en caso contrario.
+    Verifica si el servidor SMTP acepta el email y detecta si el dominio es catch-all.
+    
+    Los resultados se almacenan en la base de datos con expiración
+    para evitar verificaciones repetidas del mismo email/dominio.
+    
     Nota: Esta verificación puede ser lenta y algunos servidores pueden bloquearla.
     Por defecto, intenta conectar al puerto 25 del dominio directamente.
+    
+    Protección contra ataques:
+    - Detecta dominios catch-all mediante prueba con email aleatorio
+    - Si es catch-all, guarda solo un registro por dominio (sin email específico)
+    - No hay límite artificial: permite casos legítimos masivos (ej: 2000 alumnos de una empresa)
+    
+    Args:
+        email: Email completo a verificar
+        domain: Dominio del email
+        cache_timeout_hours: Horas de validez del resultado (default: 24)
+    
+    Returns:
+        tuple: (bool, bool) - (smtp_check, is_catch_all)
+            - smtp_check: True si el servidor SMTP acepta el email
+            - is_catch_all: True si el dominio es catch-all (acepta cualquier email)
     """
+    # Verificar si ya tenemos un resultado catch-all para este dominio (si la BD está disponible)
     try:
-        # Intentar conectar directamente al dominio en el puerto SMTP
-        # Nota: Esto es una aproximación. Para una verificación más precisa,
-        # se necesitaría obtener los registros MX usando dnspython
+        catch_all_result = EmailDomainValidation.get_valid_result(
+            EmailDomainValidation.ValidationType.SMTP_CHECK, domain, email=None
+        )
+        if catch_all_result is not None and catch_all_result.is_valid:
+            return (True, True)
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones SMTP (catch-all): {e}")
+    
+    # Intentar obtener resultado válido de la base de datos para este email específico
+    try:
+        cached_result = EmailDomainValidation.get_valid_result(
+            EmailDomainValidation.ValidationType.SMTP_CHECK, domain, email=email
+        )
+        if cached_result is not None:
+            return (cached_result.is_valid, False)
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones SMTP: {e}")
+    
+    result = False
+    is_catch_all = False
+    
+    try:
         server = smtplib.SMTP(timeout=5)
         server.set_debuglevel(0)
 
@@ -229,44 +288,71 @@ def _check_smtp(email, domain):
             server.helo(server.local_hostname)
             server.mail("test@example.com")
             code, message = server.rcpt(email)
-            server.quit()
-
+            
             # Código 250 significa que el servidor acepta el email
-            return code == 250
+            result = code == 250
+            
+            if result:
+                import random
+                test_email = f"nonexistentemailvalidation-{random.randint(100000, 999999)}@{domain}"
+                test_code, _ = server.rcpt(test_email)
+                
+                if test_code == 250:
+                    is_catch_all = True
+                    logger.info(f"Dominio {domain} detectado como catch-all")
+            
+            server.quit()
         except (smtplib.SMTPConnectError, smtplib.SMTPException, socket.error, Exception):
             try:
                 server.quit()
             except Exception:
                 pass
-            return False
+            result = False
     except Exception:
-        return False
+        result = False
+    
+    # Intentar guardar en base de datos con expiración (si está disponible)
+    try:
+        EmailDomainValidation.save_result(
+            EmailDomainValidation.ValidationType.SMTP_CHECK,
+            domain,
+            result,
+            email=email if not is_catch_all else None,
+            valid_hours=cache_timeout_hours,
+            is_catch_all=is_catch_all,
+        )
+    except Exception as e:
+        # Si la BD no está disponible, continuar sin guardar
+        logger.debug(f"No se pudo guardar resultado de validación SMTP en BD: {e}")
+    
+    return (result, is_catch_all)
 
 
-def _calculate_quality_score(format_valid, mx_found, smtp_check, is_disposable, is_role, is_free, is_catchall):
+def _calculate_quality_score(smtp_check, is_role, is_free):
     """
     Calcula un score de calidad del email basado en múltiples factores.
     Retorna un valor entre 0.0 y 1.0.
+    
+    Nota: format_valid, mx_found, is_disposable e is_catch_all no se incluyen porque
+    si alguno de estos falla, se lanza una excepción antes de llegar aquí.
+    
+    Args:
+        smtp_check: True si el servidor SMTP acepta el email
+        is_role: True si es un email de rol (info@, support@, etc.)
+        is_free: True si es un email de proveedor gratuito (gmail.com, etc.)
+    
+    Returns:
+        float: Score entre 0.0 y 1.0
     """
     score = 1.0
 
-    # Penalizaciones
-    if not format_valid:
-        score -= 0.5
-    if not mx_found:
-        score -= 0.3
     if not smtp_check:
         score -= 0.2
-    if is_disposable:
-        score -= 0.4
     if is_role:
         score -= 0.1
-    if is_catchall:
-        score -= 0.05
     if is_free:
         score -= 0.05
 
-    # Asegurar que el score esté entre 0.0 y 1.0
     return max(0.0, min(1.0, score))
 
 
@@ -290,7 +376,6 @@ def validate_email_local(email, lang):
         "score": 0.8
     }
     """
-    # Validar formato básico
     pattern = r"^[^@]+@[^@]+\.[^@]+$"
     format_valid = isinstance(email, str) and email and bool(re.match(pattern, email))
 
@@ -324,7 +409,6 @@ def validate_email_local(email, lang):
     user_part = split_email[0]
     domain = split_email[1]
 
-    # Verificar si es email desechable
     is_disposable = domain in DISPOSABLE_EMAIL_DOMAINS
 
     if is_disposable:
@@ -338,7 +422,6 @@ def validate_email_local(email, lang):
             slug="disposable-email",
         )
 
-    # Verificar registros MX
     mx_found = _check_mx_records(domain)
 
     if not mx_found:
@@ -352,22 +435,24 @@ def validate_email_local(email, lang):
             slug="invalid-email",
         )
 
-    # Verificar SMTP (puede ser lento, opcional)
-    smtp_check = _check_smtp(email_lower, domain)
+    smtp_check, is_catch_all = _check_smtp(email_lower, domain)
 
-    # Verificar si es email de rol
+    if is_catch_all:
+        raise ValidationException(
+            translation(
+                lang,
+                en="We cannot verify if this email address actually exists. Please provide an email from a domain that validates individual addresses.",
+                es="No podemos verificar si esta dirección de correo electrónico realmente existe. Por favor proporciona un correo de un dominio que valide direcciones individuales.",
+                slug="catch-all-email",
+            ),
+            slug="catch-all-email",
+        )
+
     is_role = user_part in ROLE_EMAIL_PREFIXES
 
-    # Verificar si es email gratuito
     is_free = domain in FREE_EMAIL_DOMAINS
 
-    # Verificar catch-all (no podemos determinarlo sin enviar emails reales, asumimos False)
-    is_catchall = False
-
-    # Calcular quality score
-    quality_score = _calculate_quality_score(
-        format_valid, mx_found, smtp_check, is_disposable, is_role, is_free, is_catchall
-    )
+    quality_score = _calculate_quality_score(smtp_check, is_role, is_free)
 
     if quality_score <= 0.60:
         raise ValidationException(
@@ -388,7 +473,7 @@ def validate_email_local(email, lang):
         "format_valid": format_valid,
         "mx_found": mx_found,
         "smtp_check": smtp_check,
-        "catch_all": is_catchall,
+        "catch_all": is_catch_all,
         "role": is_role,
         "disposable": is_disposable,
         "free": is_free,
