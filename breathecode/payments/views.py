@@ -3494,6 +3494,7 @@ class PayView(APIView):
 
                 how_many_installments = request.data.get("how_many_installments")
                 chosen_period = request.data.get("chosen_period", "").upper()
+                has_plan_addons = bag.plan_addons.exists()
 
                 available_for_free_trial = False
                 available_free = False
@@ -3576,7 +3577,7 @@ class PayView(APIView):
                 if not available_for_free_trial and not available_free and not chosen_period and how_many_installments:
                     bag.how_many_installments = how_many_installments
 
-                coupons = bag.coupons.none()
+                coupons = bag.coupons.all()
 
                 if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
@@ -3608,16 +3609,21 @@ class PayView(APIView):
                             adjusted_price += seat_cost
                             original_price += seat_cost
 
-                        # Initialize add-ons to zero by default
                         add_ons_amount = 0
                         if request.data.get("add_ons"):
                             add_ons_amount = actions.manage_plan_financing_add_ons(request, bag, lang)
 
                         adjusted_price += add_ons_amount
 
-                        # Then apply coupons
-                        coupons = bag.coupons.all()
-                        amount = get_discounted_price(adjusted_price, coupons)
+                        base_coupons = actions.get_coupons_for_plan(plan, list(coupons))
+                        recurring_amount = get_discounted_price(adjusted_price, base_coupons)
+
+                        addons_before_total, plan_addons_amount = actions.get_plan_addons_amounts_with_coupons(
+                            bag, list(coupons), lang
+                        ) if has_plan_addons else (0.0, 0.0)
+
+                        original_price = adjusted_price + addons_before_total
+                        amount = recurring_amount + plan_addons_amount
 
                     except Exception:
                         raise ValidationException(
@@ -3631,10 +3637,20 @@ class PayView(APIView):
                         )
 
                 elif not available_for_free_trial and not available_free:
-                    amount = get_amount_by_chosen_period(bag, chosen_period, lang)
-                    coupons = bag.coupons.all()
-                    original_price = amount
-                    amount = get_discounted_price(amount, coupons)
+                    base_amount = get_amount_by_chosen_period(bag, chosen_period, lang)
+                    plan = bag.plans.first()
+
+                    # Apply coupons only to the base subscription plan
+                    base_coupons = actions.get_coupons_for_plan(plan, list(coupons)) if plan else list(coupons)
+                    base_after = get_discounted_price(base_amount, base_coupons)
+
+                    # Apply coupons per addon, respecting coupon.plan scope
+                    addons_before_total, plan_addons_amount = actions.get_plan_addons_amounts_with_coupons(
+                        bag, list(coupons), lang
+                    ) if has_plan_addons else (0.0, 0.0)
+
+                    original_price = base_amount + addons_before_total
+                    amount = base_after + plan_addons_amount
 
                 else:
                     original_price = 0
@@ -3796,10 +3812,19 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+                    tasks.build_plan_financing.delay(
+                        bag.id,
+                        invoice.id,
+                        conversion_info=conversion_info,
+                        principal_amount=recurring_amount,
+                    )
+                    if has_plan_addons:
+                        actions.build_plan_addons_financings(bag, invoice, lang, conversion_info=conversion_info)
 
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
+                    if has_plan_addons:
+                        actions.build_plan_addons_financings(bag, invoice, lang, conversion_info=conversion_info)
 
                 if plans := bag.plans.all():
                     for plan in plans:
@@ -4058,6 +4083,9 @@ class CoinbaseChargeView(APIView):
                                 pass
 
                         transaction.savepoint_commit(sid)
+                        
+                        has_plan_addons = bag.plan_addons.exists()
+                        
                         if original_price == 0:
                             tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
 
@@ -4065,11 +4093,15 @@ class CoinbaseChargeView(APIView):
                             tasks.build_plan_financing.delay(
                                 bag.id, invoice.id, conversion_info="", externally_managed=True
                             )
+                            if has_plan_addons:
+                                actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
 
                         else:
                             tasks.build_subscription.delay(
                                 bag.id, invoice.id, conversion_info="", externally_managed=True
                             )
+                            if has_plan_addons:
+                                actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
 
                     if plans := bag.plans.all():
                         for plan in plans:
