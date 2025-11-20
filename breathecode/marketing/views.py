@@ -39,7 +39,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.decorators import validate_captcha, validate_captcha_challenge
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
-from .actions import convert_data_frame, sync_automations, sync_tags, validate_email
+from .actions import convert_data_frame, sync_automations, sync_tags, validate_email_local
 from .models import (
     AcademyAlias,
     ActiveCampaignAcademy,
@@ -264,7 +264,7 @@ def validate_email_from_app(request):
         raise ValidationException("Please provide an email to validate", code=400, slug="without-email")
 
     try:
-        payload = validate_email(email, lang)
+        payload = validate_email_local(email, lang)
         return Response(payload, status=status.HTTP_200_OK)
     except ValidationException as e:
         raise e

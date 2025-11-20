@@ -132,7 +132,7 @@ def accept_all_users_from_waiting_list(modeladmin, request, queryset: QuerySet[U
 
 def validate_email(modeladmin, request, queryset: QuerySet[UserInvite]):
     for x in queryset:
-        email_status = marketing_actions.validate_email(x.email, "en")
+        email_status = marketing_actions.validate_email_local(x.email, "en")
         x.email_quality = email_status["score"]
         x.email_status = email_status
         x.save()

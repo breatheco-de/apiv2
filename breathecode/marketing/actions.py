@@ -1,8 +1,17 @@
 import json
 import os
 import re
+import socket
+from datetime import timedelta
 from itertools import chain
 from typing import Optional
+
+try:
+    import dns.resolver  # type: ignore
+    import dns.exception  # type: ignore
+    DNS_AVAILABLE = True
+except ImportError:
+    DNS_AVAILABLE = False
 
 import numpy as np
 import requests
@@ -19,12 +28,139 @@ from breathecode.services.activecampaign import ACOldClient, ActiveCampaign, Act
 from breathecode.services.brevo import Brevo
 from breathecode.utils import getLogger
 
-from .models import AcademyAlias, ActiveCampaignAcademy, Automation, FormEntry, Tag
+from .models import (
+    AcademyAlias,
+    ActiveCampaignAcademy,
+    Automation,
+    EmailDomainValidation,
+    FormEntry,
+    Tag,
+)
 
 logger = getLogger(__name__)
 
 GOOGLE_CLOUD_KEY = os.getenv("GOOGLE_CLOUD_KEY")
 MAIL_ABSTRACT_KEY = os.getenv("MAIL_ABSTRACT_KEY")
+
+def _load_disposable_email_domains():
+    """
+    Carga la lista de dominios de emails desechables desde un archivo de texto.
+    El archivo debe estar en breathecode/marketing/data/disposable_email_domains.txt
+    Un dominio por línea, las líneas que empiezan con # son comentarios.
+    
+    Returns:
+        set: Conjunto de dominios desechables (en minúsculas)
+    
+    Raises:
+        FileNotFoundError: Si el archivo no existe
+        IOError: Si hay un error leyendo el archivo
+        Exception: Si ocurre cualquier otro error durante la carga
+    
+    Nota: Esta función NO tiene fallback. Si falla, se lanza una excepción
+    para evitar que la validación de emails funcione sin protección contra
+    correos desechables (fail-secure).
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(current_dir, "data")
+    file_path = os.path.join(data_dir, "disposable_email_domains.txt")
+    
+    if not os.path.exists(file_path):
+        error_msg = (
+            f"Archivo de dominios desechables no encontrado: {file_path}. "
+            "La validación de emails no puede funcionar sin este archivo."
+        )
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
+    
+    domains = set()
+    line_num = 0
+    
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line_num, line in enumerate(f, start=1):
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    domains.add(line.lower())
+    except Exception as e:
+        error_msg = (
+            f"Error cargando dominios desechables desde {file_path}"
+            + (f" (línea {line_num})" if line_num > 0 else "")
+            + f": {e}. "
+            "La validación de emails no puede funcionar sin este archivo."
+        )
+        logger.error(error_msg)
+        raise IOError(error_msg) from e
+    
+    if not domains:
+        error_msg = (
+            f"El archivo de dominios desechables está vacío: {file_path}. "
+            "La validación de emails no puede funcionar sin dominios desechables."
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+    
+    logger.info(f"Cargados {len(domains)} dominios desechables desde {file_path}")
+    return domains
+
+
+def get_disposable_email_domains():
+    """
+    Retorna el conjunto de dominios de emails desechables.
+    Los dominios se cargan desde un archivo de texto al importar el módulo.
+    """
+    return DISPOSABLE_EMAIL_DOMAINS
+
+
+DISPOSABLE_EMAIL_DOMAINS = _load_disposable_email_domains()
+
+FREE_EMAIL_DOMAINS = {
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "outlook.com",
+    "aol.com",
+    "icloud.com",
+    "mail.com",
+    "protonmail.com",
+    "zoho.com",
+    "yandex.com",
+    "gmx.com",
+    "live.com",
+    "msn.com",
+    "inbox.com",
+    "fastmail.com",
+    "tutanota.com",
+    "mail.ru",
+    "qq.com",
+    "163.com",
+    "126.com",
+    "sina.com",
+    "rediffmail.com",
+    "hushmail.com",
+    "lycos.com",
+    "aim.com",
+    "rocketmail.com",
+}
+
+ROLE_EMAIL_PREFIXES = {
+    "abuse",
+    "admin",
+    "administrator",
+    "billing",
+    "contact",
+    "help",
+    "info",
+    "mail",
+    "mailbox",
+    "marketing",
+    "noreply",
+    "no-reply",
+    "postmaster",
+    "sales",
+    "security",
+    "support",
+    "webmaster",
+}
 
 
 def get_save_leads():
@@ -54,6 +190,349 @@ def bind_formentry_with_webhook(webhook):
     webhook.form_entry = entry
     webhook.save()
     return True
+
+
+def _check_mx_records(domain):
+    """
+    Verifica si el dominio tiene registros MX válidos y los retorna.
+    
+    Los resultados se almacenan en la base de datos con expiración
+    para evitar verificaciones repetidas del mismo dominio.
+    
+    Args:
+        domain: Dominio a verificar
+    
+    Returns:
+        tuple: (bool, list) - (has_mx, mx_records)
+            - has_mx: True si el dominio tiene registros MX válidos
+            - mx_records: Lista de servidores MX encontrados
+    """
+    try:
+        import dns.resolver  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
+        if cached_result is not None:
+            if dns_available and (not cached_result.mx_records or len(cached_result.mx_records) == 0):
+                logger.debug(f"Cache tiene mx_records vacío pero dnspython está disponible, forzando nueva verificación para {domain}")
+            else:
+                return (cached_result.has_mx, cached_result.mx_records or [])
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones MX: {e}")
+    
+    mx_records = []
+    has_mx = False
+    
+    try:
+        if dns_available:
+            answers = dns.resolver.resolve(domain, "MX")
+            mx_records = [str(rdata.exchange).rstrip(".") for rdata in answers]
+            has_mx = len(mx_records) > 0
+        else:
+            try:
+                socket.gethostbyname(domain)
+                has_mx = True
+            except (socket.gaierror, socket.herror, Exception):
+                has_mx = False
+    except Exception as e:
+        logger.debug(f"Error verificando registros MX para {domain}: {e}")
+        has_mx = False
+    
+    try:
+        domain_obj, _ = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.has_mx = has_mx
+        domain_obj.mx_records = mx_records
+        from django.utils import timezone
+        domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+    except Exception as e:
+        logger.debug(f"No se pudo guardar resultado de validación MX en BD: {e}")
+    
+    return (has_mx, mx_records)
+
+
+def _check_spf(domain):
+    """
+    Verifica y obtiene el registro SPF del dominio.
+    
+    Args:
+        domain: Dominio a verificar
+    
+    Returns:
+        str o None: Registro SPF encontrado o None si no existe
+    """
+    try:
+        import dns.resolver  # type: ignore
+        import dns.exception  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
+        if cached_result is not None and cached_result.spf:
+            return cached_result.spf
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones SPF: {e}")
+    
+    spf_record = None
+    
+    try:
+        if dns_available:
+            try:
+                answers = dns.resolver.resolve(domain, "TXT")
+                for rdata in answers:
+                    txt_string = "".join([s.decode() if isinstance(s, bytes) else s for s in rdata.strings])
+                    if txt_string.startswith("v=spf1"):
+                        spf_record = txt_string
+                        break
+            except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.DNSException):
+                pass
+    except Exception as e:
+        logger.debug(f"Error verificando registro SPF para {domain}: {e}")
+    
+    try:
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.spf = spf_record
+        # Asegurar que next_check_at tenga un valor si es un registro nuevo
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (SPF) para {domain}: {spf_record is not None}")
+    except Exception as e:
+        logger.error(f"No se pudo guardar resultado de validación SPF en BD para {domain}: {e}", exc_info=True)
+    
+    return spf_record
+
+
+def _check_dmarc(domain):
+    """
+    Verifica y obtiene el registro DMARC del dominio.
+    
+    Args:
+        domain: Dominio a verificar
+    
+    Returns:
+        str o None: Registro DMARC encontrado o None si no existe
+    """
+    try:
+        import dns.resolver  # type: ignore
+        import dns.exception  # type: ignore
+        dns_available = True
+    except ImportError:
+        dns_available = False
+    
+    try:
+        cached_result = EmailDomainValidation.get_valid_domain(domain)
+        if cached_result is not None and cached_result.dmarc:
+            return cached_result.dmarc
+    except Exception as e:
+        logger.debug(f"No se pudo acceder al cache de validaciones DMARC: {e}")
+    
+    dmarc_record = None
+    
+    try:
+        if dns_available:
+            try:
+                dmarc_domain = f"_dmarc.{domain}"
+                answers = dns.resolver.resolve(dmarc_domain, "TXT")
+                for rdata in answers:
+                    txt_string = "".join([s.decode() if isinstance(s, bytes) else s for s in rdata.strings])
+                    if txt_string.startswith("v=DMARC1"):
+                        dmarc_record = txt_string
+                        break
+            except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.DNSException):
+                pass
+    except Exception as e:
+        logger.debug(f"Error verificando registro DMARC para {domain}: {e}")
+    
+    try:
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.dmarc = dmarc_record
+        # Asegurar que next_check_at tenga un valor si es un registro nuevo
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (DMARC) para {domain}: {dmarc_record is not None}")
+    except Exception as e:
+        logger.error(f"No se pudo guardar resultado de validación DMARC en BD para {domain}: {e}", exc_info=True)
+    
+    return dmarc_record
+
+
+def _calculate_quality_score(has_mx, has_spf, has_dmarc, is_role, is_free):
+    """
+    Calcula un score de calidad del email basado en múltiples factores.
+    Retorna un valor entre 0.0 y 1.0.
+    
+    Nota: format_valid, is_disposable no se incluyen porque
+    si alguno de estos falla, se lanza una excepción antes de llegar aquí.
+    
+    Args:
+        has_mx: True si el dominio tiene registros MX válidos
+        has_spf: True si el dominio tiene registro SPF
+        has_dmarc: True si el dominio tiene registro DMARC
+        is_role: True si es un email de rol (info@, support@, etc.)
+        is_free: True si es un email de proveedor gratuito (gmail.com, etc.)
+    
+    Returns:
+        float: Score entre 0.0 y 1.0
+    """
+    score = 1.0
+
+    if not has_mx:
+        score -= 0.3
+    if not has_spf:
+        score -= 0.1
+    if not has_dmarc:
+        score -= 0.05
+    if is_role:
+        score -= 0.1
+    if is_free:
+        score -= 0.05
+
+    return max(0.0, min(1.0, score))
+
+
+def validate_email_local(email, lang):
+    """
+    Replica la funcionalidad de la API de Abstract API para validación de emails.
+    Realiza validaciones locales sin depender de servicios externos.
+
+    Retorna un diccionario con información de validación:
+    {
+        "email": "e@mail.com",
+        "user": "a",
+        "domain": "mail.com",
+        "format_valid": true,
+        "mx_found": true,
+        "mx_records": ["alt1.gmail-smtp-in.l.google.com"],
+        "spf": "v=spf1 include:_spf.google.com ~all",
+        "dmarc": "v=DMARC1; p=reject; ...",
+        "role": false,
+        "disposable": false,
+        "free": false,
+        "score": 0.8
+    }
+    """
+    pattern = r"^[^@]+@[^@]+\.[^@]+$"
+    format_valid = isinstance(email, str) and email and bool(re.match(pattern, email))
+
+    if not format_valid:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address is not valid",
+                es="La dirección de correo electrónico no es válida",
+                slug="email-not-valid",
+            ),
+            data={"email": email},
+            slug="email-not-valid",
+        )
+
+    email_lower = email.lower().strip()
+    split_email = email_lower.split("@")
+
+    if len(split_email) != 2:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address is not valid",
+                es="La dirección de correo electrónico no es válida",
+                slug="email-not-valid",
+            ),
+            data={"email": email},
+            slug="email-not-valid",
+        )
+
+    user_part = split_email[0]
+    domain = split_email[1]
+
+    is_disposable = domain in DISPOSABLE_EMAIL_DOMAINS
+
+    try:
+        domain_obj, created = EmailDomainValidation.get_or_create_domain(domain)
+        domain_obj.disposable = is_disposable
+        if created or domain_obj.next_check_at is None:
+            from django.utils import timezone
+            domain_obj.next_check_at = timezone.now() + timedelta(days=180)
+        domain_obj.save()
+        logger.info(f"EmailDomainValidation actualizado (disposable) para {domain}: {is_disposable}")
+    except Exception as e:
+        logger.error(f"No se pudo actualizar campo disposable en BD para {domain}: {e}", exc_info=True)
+
+    if is_disposable:
+        raise ValidationException(
+            translation(
+                lang,
+                en="It seems you are using a disposable email service. Please provide a different email address",
+                es="Parece que estás utilizando un proveedor de correos electronicos temporales. Por favor cambia tu dirección de correo electrónico.",
+                slug="disposable-email",
+            ),
+            slug="disposable-email",
+        )
+
+    has_mx, mx_records = _check_mx_records(domain)
+
+    if not has_mx:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email you have provided seems invalid, please provide a different email address.",
+                es="El correo electrónico que haz especificado parece inválido, por favor corrige tu correo electronico",
+                slug="invalid-email",
+            ),
+            slug="invalid-email",
+        )
+
+    spf_record = _check_spf(domain)
+    dmarc_record = _check_dmarc(domain)
+
+    is_role = user_part in ROLE_EMAIL_PREFIXES
+
+    is_free = domain in FREE_EMAIL_DOMAINS
+
+    quality_score = _calculate_quality_score(
+        has_mx=has_mx,
+        has_spf=spf_record is not None,
+        has_dmarc=dmarc_record is not None,
+        is_role=is_role,
+        is_free=is_free,
+    )
+
+    if quality_score <= 0.60:
+        raise ValidationException(
+            translation(
+                lang,
+                en="The email address seems to have poor quality. Are you able to provide a different email address?",
+                es="El correo electrónico que haz especificado parece de mala calidad. ¿Podrías especificarnos otra dirección?",
+                slug="poor-quality-email",
+            ),
+            data={"quality_score": quality_score},
+            slug="poor-quality-email",
+        )
+
+    email_status = {
+        "email": email_lower,
+        "user": user_part,
+        "domain": domain,
+        "format_valid": format_valid,
+        "mx_found": has_mx,
+        "mx_records": mx_records,
+        "spf": spf_record,
+        "dmarc": dmarc_record,
+        "role": is_role,
+        "disposable": is_disposable,
+        "free": is_free,
+        "score": quality_score,
+    }
+
+    return email_status
 
 
 def validate_email(email, lang):
