@@ -65,10 +65,37 @@ class Command(BaseCommand):
             # Note: The fixtures have circular dependencies, but we load what we can
             # Users need academies, cohorts need users - so we'll need to split them
             fixtures = [
-                # Level 1: Users first (authenticate fixture will fail on ProfileAcademy but that's OK)
-                ("authenticate", "Users", ["breathecode/authenticate/fixtures/dev_data.json"]),
-                # Level 2: Admissions (needs users for CohortUser)  
-                ("admissions", "Countries, Cities, Academies, Cohorts", ["breathecode/admissions/fixtures/dev_data.json"]),
+                # Load auth users first, everything else depends on them
+                (
+                    "auth",
+                    "Core auth users",
+                    [
+                        "breathecode/admissions/fixtures/dev_user.json",
+                    ],
+                ),
+                # Load admissions so academies/cities exist before authenticate references them
+                (
+                    "admissions",
+                    "Admissions data (countries, academies, cohorts)",
+                    [
+                        "breathecode/admissions/fixtures/dev_data.json",
+                    ],
+                ),
+                # Then load authenticate fixtures (profiles, invites, etc.)
+                (
+                    "authenticate",
+                    "Authenticate profiles, invites, roles",
+                    [
+                        "breathecode/authenticate/fixtures/dev_data.json",
+                    ],
+                ),
+                (
+                    "talent_development",
+                    "Talent development catalog data",
+                    [
+                        "breathecode/talent_development/fixtures/dev_data.json",
+                    ],
+                ),
             ]
 
             # Load each fixture group
@@ -142,6 +169,13 @@ class Command(BaseCommand):
         if verbosity >= 1:
             self.stdout.write(self.style.SUCCESS("✓ Staff UserInvites created"))
 
+        # Ensure permissions/groups exist before assigning them
+        if verbosity >= 1:
+            self.stdout.write("\nSyncing permissions & groups...")
+        call_command("set_permissions", verbosity=0)
+        if verbosity >= 1:
+            self.stdout.write(self.style.SUCCESS("✓ Permissions & groups synced"))
+
         # Assign Admin group to all staff users
         if verbosity >= 1:
             self.stdout.write("\nAssigning groups to staff users...")
@@ -155,6 +189,7 @@ class Command(BaseCommand):
         if verbosity >= 1:
             self.stdout.write("\nPopulating academy owners...")
         
+        call_command("create_academy_roles", verbosity=0)
         call_command("populate_academy_owners", verbosity=0)
         
         if verbosity >= 1:

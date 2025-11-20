@@ -1,0 +1,216 @@
+---
+description:
+globs: breathecode/*/urls.py
+alwaysApply: false
+---
+# URL Configuration Standards
+
+## File Structure
+
+Every `urls.py` file must follow this structure:
+
+```py
+from django.urls import path
+
+from .views import (
+    View1,
+    View2,
+    View3,
+)
+
+app_name = "app_name"
+urlpatterns = [
+    # Group comments for related endpoints
+    path("resource", View1.as_view(), name="resource"),
+    path("resource/<int:resource_id>", View2.as_view(), name="resource_id"),
+    path("resource/<str:resource_slug>", View3.as_view(), name="resource_slug"),
+]
+```
+
+## Required Elements
+
+### 1. App Name
+
+**Always include `app_name`** to enable namespaced URL reversing:
+
+```py
+app_name = "talent_development"
+```
+
+### 2. View Imports
+
+**Import views at the top** using grouped imports for clarity:
+
+```py
+# ✅ CORRECT - Grouped imports
+from .views import (
+    JobFamilyByIdView,
+    JobFamilyBySlugView,
+    JobFamilyView,
+    JobRoleByIdView,
+    JobRoleBySlugView,
+    JobRoleView,
+)
+
+# ❌ WRONG - Single line imports (hard to read with many views)
+from .views import JobFamilyView, JobFamilyByIdView, JobFamilyBySlugView, JobRoleView, JobRoleByIdView, JobRoleBySlugView
+```
+
+### 3. URL Patterns
+
+**Always use `.as_view()` without dictionary mapping:**
+
+```py
+# ✅ CORRECT
+path("job_family", JobFamilyView.as_view(), name="job_family"),
+path("job_family/<int:job_family_id>", JobFamilyByIdView.as_view(), name="job_family_id"),
+
+# ❌ WRONG - Dictionary mapping is only used in legacy media app
+path("job_family", JobFamilyView.as_view({"get": "get", "post": "post"}), name="job_family"),
+```
+
+**URL paths must match model names using snake_case:**
+- Model `JobFamily` → URL path `job_family` (not `job/family`)
+- Model `JobRole` → URL path `job_role` (not `job/role`)
+- Model `CareerPath` → URL path `career_path` (not `career/path`)
+- Use forward slashes (`/`) only for nested resources, not for compound model names
+
+### 4. Path Names
+
+**Always include descriptive `name` parameters** for URL reversing:
+
+```py
+# ✅ CORRECT
+path("job_family", JobFamilyView.as_view(), name="job_family"),
+path("job_family/<int:job_family_id>", JobFamilyByIdView.as_view(), name="job_family_id"),
+
+# ❌ WRONG - Missing name parameter
+path("job_family", JobFamilyView.as_view()),
+```
+
+**Naming conventions:**
+- Use `snake_case` for names
+- Include resource type: `job_family`, `job_role`
+- Include identifier type when applicable: `job_family_id`, `job_family_slug`
+- Be descriptive but concise
+
+### 5. Path Converters
+
+**Use appropriate path converters:**
+
+```py
+# Integer IDs
+path("resource/<int:resource_id>", View.as_view(), name="resource_id"),
+
+# String slugs
+path("resource/<str:resource_slug>", View.as_view(), name="resource_slug"),
+
+# Slug type (validates slug format)
+path("resource/<slug:resource_slug>", View.as_view(), name="resource_slug"),
+```
+
+### 6. Comments
+
+**Group related endpoints with comments:**
+
+```py
+urlpatterns = [
+    # Job Family endpoints
+    path("job_family", JobFamilyView.as_view(), name="job_family"),
+    path("job_family/<int:job_family_id>", JobFamilyByIdView.as_view(), name="job_family_id"),
+    path("job_family/<str:job_family_slug>", JobFamilyBySlugView.as_view(), name="job_family_slug"),
+    
+    # Job Role endpoints
+    path("job_role", JobRoleView.as_view(), name="job_role"),
+    path("job_role/<int:job_role_id>", JobRoleByIdView.as_view(), name="job_role_id"),
+    path("job_role/<str:job_role_slug>", JobRoleBySlugView.as_view(), name="job_role_slug"),
+]
+```
+
+## URL Pattern Conventions
+
+### Resource Endpoints
+
+Follow RESTful conventions:
+
+```py
+# List and create
+path("resource", ResourceView.as_view(), name="resource"),
+
+# By ID operations
+path("resource/<int:resource_id>", ResourceByIdView.as_view(), name="resource_id"),
+
+# By slug operations
+path("resource/<str:resource_slug>", ResourceBySlugView.as_view(), name="resource_slug"),
+```
+
+### Nested Resources
+
+Use clear nesting:
+
+```py
+path("academy/cohort/<int:cohort_id>/user", CohortUserView.as_view(), name="academy_cohort_id_user"),
+path("academy/cohort/<int:cohort_id>/user/<int:user_id>", CohortUserByIdView.as_view(), name="academy_cohort_id_user_id"),
+```
+
+### Special Endpoints
+
+Use prefixes for special endpoints:
+
+```py
+# User-specific endpoints
+path("me/resource", MeResourceView.as_view(), name="me_resource"),
+
+# Academy-specific endpoints
+path("academy/resource", AcademyResourceView.as_view(), name="academy_resource"),
+
+# Public endpoints
+path("public/resource", PublicResourceView.as_view(), name="public_resource"),
+```
+
+## Best Practices
+
+1. **Order matters**: More specific paths should come before less specific ones
+   ```py
+   # ✅ CORRECT - Specific before general
+   path("resource/<int:resource_id>/action", ActionView.as_view(), name="resource_id_action"),
+   path("resource/<int:resource_id>", ResourceByIdView.as_view(), name="resource_id"),
+   
+   # ❌ WRONG - General before specific (will never match action)
+   path("resource/<int:resource_id>", ResourceByIdView.as_view(), name="resource_id"),
+   path("resource/<int:resource_id>/action", ActionView.as_view(), name="resource_id_action"),
+   ```
+
+2. **Match model names**: URLs should match model names using snake_case
+   ```py
+   # ✅ CORRECT - Model name matches URL path
+   path("job_family", JobFamilyView.as_view(), name="job_family"),  # Model: JobFamily
+   path("job_role", JobRoleView.as_view(), name="job_role"),  # Model: JobRole
+   path("career_path", CareerPathView.as_view(), name="career_path"),  # Model: CareerPath
+   
+   # ❌ WRONG - Forward slash implies nested resource, not a compound model name
+   path("job/family", JobFamilyView.as_view(), name="job_family"),  # Suggests "family of job"
+   path("job/role", JobRoleView.as_view(), name="job_role"),  # Suggests "role of job"
+   ```
+
+3. **No trailing slashes**: Don't include trailing slashes in path strings (unless required)
+   ```py
+   # ✅ CORRECT
+   path("resource", View.as_view(), name="resource"),
+   
+   # ❌ WRONG (unless specifically needed)
+   path("resource/", View.as_view(), name="resource"),
+   ```
+
+4. **Multi-line paths**: Use multi-line format for long paths
+   ```py
+   # ✅ CORRECT - Readable
+   path(
+       "academy/organization/organizer/<int:organizer_id>",
+       AcademyOrganizationOrganizerView.as_view(),
+       name="academy_organization_organizer_id",
+   ),
+   
+   # ❌ WRONG - Hard to read
+   path("academy/organization/organizer/<int:organizer_id>", AcademyOrganizationOrganizerView.as_view(), name="academy_organization_organizer_id"),
+   ```

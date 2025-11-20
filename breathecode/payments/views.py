@@ -5310,7 +5310,7 @@ class AcademyPlanSpecificServiceItemView(APIView):
         )
         if not plan:
             raise ValidationException(
-                translation(lang, en="Plan not found", es="Plan no encontrado", slug="plan-not-found"),
+                translation(en="Plan not found", es="Plan no encontrado", slug="plan-not-found"),
                 code=404,
             )
 
@@ -5318,7 +5318,6 @@ class AcademyPlanSpecificServiceItemView(APIView):
         if not plan_service_item:
             raise ValidationException(
                 translation(
-                    lang,
                     en="This service item is not attached to the selected plan",
                     es="Este service item no está asociado al plan seleccionado",
                     slug="plan-service-item-not-found",

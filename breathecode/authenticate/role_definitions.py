@@ -210,6 +210,14 @@ CAPABILITIES = [
         "slug": "read_consumable",
         "description": "Read user service consumables to understand how many units are available",
     },
+    {
+        "slug": "read_career_path",
+        "description": "Read career paths, job families, job roles, skills, competencies, and related talent development information",
+    },
+    {
+        "slug": "crud_career_path",
+        "description": "Create, update, or delete career paths, job families, job roles, skills, competencies, and related talent development information",
+    },
 ]
 
 BASE_ROLES = [

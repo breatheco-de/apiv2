@@ -10,6 +10,27 @@ class CareerPathInline(admin.TabularInline):
     show_change_link = True
 
 
+class JobRoleInline(admin.TabularInline):
+    model = models.JobRole
+    extra = 0
+    fields = ("name", "is_active")
+    show_change_link = True
+
+
+@admin.register(models.JobFamily)
+class JobFamilyAdmin(admin.ModelAdmin):
+    list_display = ("name", "academy", "is_active", "updated_at")
+    list_filter = ("is_active", "academy")
+    search_fields = ("name", "description")
+    ordering = ("name",)
+    readonly_fields = ("created_at", "updated_at")
+    inlines = (JobRoleInline,)
+    fieldsets = (
+        (None, {"fields": ("name", "slug", "academy", "description", "is_active")}),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
+
+
 @admin.register(models.JobRole)
 class JobRoleAdmin(admin.ModelAdmin):
     list_display = ("name", "job_family", "is_active", "updated_at")
@@ -34,10 +55,10 @@ class CareerStageInline(admin.TabularInline):
 
 @admin.register(models.CareerPath)
 class CareerPathAdmin(admin.ModelAdmin):
-    list_display = ("name", "role", "is_active", "updated_at")
-    list_filter = ("is_active", "role__job_family")
-    search_fields = ("name", "description", "role__name")
-    ordering = ("role__name", "name")
+    list_display = ("name", "job_role", "is_active", "updated_at")
+    list_filter = ("is_active", "job_role__job_family")
+    search_fields = ("name", "description", "job_role__name")
+    ordering = ("job_role__name", "name")
     inlines = (CareerStageInline,)
     readonly_fields = ("created_at", "updated_at")
 
@@ -52,7 +73,7 @@ class StageCompetencyInline(admin.TabularInline):
 @admin.register(models.CareerStage)
 class CareerStageAdmin(admin.ModelAdmin):
     list_display = ("title", "career_path", "sequence", "updated_at")
-    list_filter = ("career_path__role__job_family",)
+    list_filter = ("career_path__job_role__job_family",)
     search_fields = ("title", "goal", "career_path__name")
     ordering = ("career_path", "sequence")
     readonly_fields = ("created_at", "updated_at")
@@ -75,27 +96,19 @@ class CompetencyAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
 
 
-class ModuleSkillInline(admin.TabularInline):
-    model = models.ModuleSkill
-    extra = 0
-    autocomplete_fields = ("skill",)
-    fields = ("skill", "weight")
-
-
-@admin.register(models.LearningModule)
-class LearningModuleAdmin(admin.ModelAdmin):
-    list_display = ("name", "learnpack_slug", "is_active", "updated_at")
-    list_filter = ("is_active",)
-    search_fields = ("name", "learnpack_slug", "description")
+@admin.register(models.SkillDomain)
+class SkillDomainAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "updated_at")
+    search_fields = ("name", "slug", "description")
     readonly_fields = ("created_at", "updated_at")
-    inlines = (ModuleSkillInline,)
 
 
 @admin.register(models.Skill)
 class SkillAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "updated_at")
-    list_filter = ("category",)
+    list_display = ("name", "domain", "updated_at")
+    list_filter = ("domain",)
     search_fields = ("name", "description")
+    autocomplete_fields = ("domain",)
     readonly_fields = ("created_at", "updated_at")
 
 
@@ -116,10 +129,4 @@ class CompetencySkillAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
 
 
-@admin.register(models.ModuleSkill)
-class ModuleSkillAdmin(admin.ModelAdmin):
-    list_display = ("module", "skill", "weight")
-    autocomplete_fields = ("module", "skill")
-    search_fields = ("module__name", "skill__name")
-    readonly_fields = ("created_at", "updated_at")
 

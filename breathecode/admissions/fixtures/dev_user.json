@@ -4467,7 +4467,7 @@
         "model": "auth.user",
         "pk": 1,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "aalejo@gmail.com",
@@ -4485,7 +4485,7 @@
         "model": "auth.user",
         "pk": 2,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "tgonzalez@4geeksacademy.com",
@@ -4503,7 +4503,7 @@
         "model": "auth.user",
         "pk": 3,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "gmarquez@4geeksacademy.com",
@@ -4521,7 +4521,7 @@
         "model": "auth.user",
         "pk": 4,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "acalisaya@4geeksacademy.com",
@@ -4539,7 +4539,7 @@
         "model": "auth.user",
         "pk": 5,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "jdefreitaspinto@gmail.com",
@@ -4557,7 +4557,7 @@
         "model": "auth.user",
         "pk": 6,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "german@4geeksacademy.com",
@@ -4575,7 +4575,7 @@
         "model": "auth.user",
         "pk": 7,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "joedoe@gmail.com",
@@ -4593,7 +4593,7 @@
         "model": "auth.user",
         "pk": 8,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "marydoe@gmail.com",
@@ -4611,7 +4611,7 @@
         "model": "auth.user",
         "pk": 9,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "allenmartinez@gmail.com",
@@ -4629,7 +4629,7 @@
         "model": "auth.user",
         "pk": 10,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "albertoperez@teacher.com",
@@ -4647,7 +4647,7 @@
         "model": "auth.user",
         "pk": 11,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "jesussolis@teacherassistant.com",
@@ -4665,7 +4665,7 @@
         "model": "auth.user",
         "pk": 12,
         "fields": {
-            "password": "pbkdf2_sha256$260000$8a48AXNxuvYzQQydm6PxD3$gb7KipoXPtC1Lc18JHuiM+L9oarBQvX/Q8/wYm9Yjik=",
+            "password": "pbkdf2_sha256$1000000$9FSCwJEW9o9U6zVOErHZ2q$GeQljpIYfFIiGpTaty7lXUxNfh2lporzuspBdz1iEgc=",
             "last_login": "2021-05-08T00:15:13.286Z",
             "is_superuser": true,
             "username": "carlossainz@gmail.com",
