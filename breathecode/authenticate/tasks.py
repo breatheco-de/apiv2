@@ -12,7 +12,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.authenticate.models import Cohort, CredentialsDiscord, UserInvite
-from breathecode.marketing.actions import validate_email
+from breathecode.marketing.actions import validate_email_local
 from breathecode.notify import actions as notify_actions
 from breathecode.payments.models import PlanFinancing, Subscription
 from breathecode.services.discord import Discord
@@ -41,7 +41,7 @@ def async_validate_email_invite(invite_id, **_):
         raise RetryTask(f"UserInvite {invite_id} not found")
 
     try:
-        email_status = validate_email(user_invite.email, "en")
+        email_status = validate_email_local(user_invite.email, "en")
         if email_status["score"] <= 0.60:
             user_invite.status = "REJECTED"
             user_invite.process_status = "ERROR"

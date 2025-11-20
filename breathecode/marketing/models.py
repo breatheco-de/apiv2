@@ -25,6 +25,7 @@ __all__ = [
     "FormEntry",
     "ShortLink",
     "ActiveCampaignWebhook",
+    "EmailDomainValidation",
 ]
 
 
@@ -930,3 +931,152 @@ class CourseTranslation(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class EmailDomainValidation(models.Model):
+    """
+    Almacena resultados de validación de DNS para dominios de email.
+    Incluye validaciones de MX, SPF, DMARC y detección de correos temporales.
+    
+    Los registros expirados se pueden limpiar periódicamente.
+    """
+
+    domain = models.CharField(max_length=255, db_index=True, unique=True, help_text="Dominio validado")
+    has_mx = models.BooleanField(help_text="True si el dominio tiene registros MX válidos")
+    mx_records = models.JSONField(
+        default=list, help_text="Lista de registros MX encontrados (ej: ['alt1.gmail-smtp-in.l.google.com'])"
+    )
+    spf = models.TextField(
+        null=True, blank=True, help_text="Registro SPF encontrado (ej: 'v=spf1 include:_spf.google.com ~all')"
+    )
+    dmarc = models.TextField(
+        null=True, blank=True, help_text="Registro DMARC encontrado (ej: 'v=DMARC1; p=reject; ...')"
+    )
+    disposable = models.BooleanField(
+        default=False, help_text="True si el dominio está en la lista de correos temporales"
+    )
+    last_checked_at = models.DateTimeField(
+        auto_now=True, db_index=True, help_text="Fecha de la última verificación"
+    )
+    next_check_at = models.DateTimeField(
+        db_index=True, help_text="Fecha de la próxima verificación recomendada"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        db_table = "marketing_email_domain_validation"
+        indexes = [
+            models.Index(fields=["domain", "next_check_at"]),
+            models.Index(fields=["last_checked_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.domain} - MX: {self.has_mx} - Disposable: {self.disposable}"
+
+    def is_expired(self):
+        """Verifica si el resultado de validación ha expirado"""
+        from django.utils import timezone
+
+        return timezone.now() > self.next_check_at
+
+    @classmethod
+    def get_or_create_domain(cls, domain):
+        """
+        Obtiene o crea un registro de validación para el dominio.
+        
+        Args:
+            domain: Dominio a verificar
+        
+        Returns:
+            tuple: (EmailDomainValidation, created) - El objeto y si fue creado
+        """
+        domain_lower = domain.lower()
+        return cls.objects.get_or_create(domain=domain_lower)
+
+    @classmethod
+    def get_valid_domain(cls, domain):
+        """
+        Obtiene un resultado de validación válido (no expirado) si existe.
+        
+        Args:
+            domain: Dominio a verificar
+        
+        Returns:
+            EmailDomainValidation o None si no existe o está expirado
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+
+        try:
+            obj = cls.objects.get(domain=domain.lower())
+            if obj.next_check_at > utc_now:
+                return obj
+        except cls.DoesNotExist:
+            pass
+
+        return None
+
+    @classmethod
+    def update_domain_validation(
+        cls,
+        domain,
+        has_mx,
+        mx_records=None,
+        spf=None,
+        dmarc=None,
+        disposable=None,
+        valid_days=180,
+    ):
+        """
+        Actualiza o crea un registro de validación para el dominio.
+        
+        Args:
+            domain: Dominio validado
+            has_mx: True si el dominio tiene registros MX válidos
+            mx_records: Lista de registros MX encontrados
+            spf: Registro SPF encontrado
+            dmarc: Registro DMARC encontrado
+            disposable: True si el dominio está en la lista de correos temporales
+            valid_days: Días de validez del resultado (default: 180, 6 meses)
+        
+        Returns:
+            EmailDomainValidation creado o actualizado
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+        next_check_at = utc_now + timedelta(days=valid_days)
+
+        domain_lower = domain.lower()
+
+        obj, created = cls.get_or_create_domain(domain_lower)
+
+        obj.has_mx = has_mx
+        if mx_records is not None:
+            obj.mx_records = mx_records
+        if spf is not None:
+            obj.spf = spf
+        if dmarc is not None:
+            obj.dmarc = dmarc
+        if disposable is not None:
+            obj.disposable = disposable
+
+        obj.next_check_at = next_check_at
+        obj.save()
+
+        return obj
+
+    @classmethod
+    def clean_expired(cls):
+        """
+        Elimina registros expirados de la base de datos.
+        Debe ejecutarse periódicamente (por ejemplo, con un supervisor o tarea).
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+        deleted_count, _ = cls.objects.filter(valid_until__lt=utc_now).delete()
+        return deleted_count
