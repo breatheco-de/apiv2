@@ -2994,9 +2994,17 @@ class Consumable(AbstractServiceItem):
         elif plan_financing_seat:
             param["plan_financing_seat"] = plan_financing_seat
 
+        invalid_statuses = [
+            Subscription.Status.EXPIRED,
+            Subscription.Status.DEPRECATED,
+        ]
+
         return (
             cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
             .exclude(how_many=0)
+            .exclude(
+                Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses)
+            )
             .order_by("id")
         )
 
