@@ -1811,8 +1811,6 @@ def build_plan_financing(
     if cohorts:
         financing.joined_cohorts.set(cohorts)
 
-    financing.plans.set(plans)
-
     # Add coupons from the bag to the plan financing
     bag_coupons = bag.coupons.all()
     if bag_coupons.exists():
@@ -1821,6 +1819,8 @@ def build_plan_financing(
 
     financing.save()
     financing.invoices.add(invoice)
+
+    financing.plans.set(plans)
 
     bag.was_delivered = True
     bag.save()

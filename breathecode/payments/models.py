@@ -2284,10 +2284,9 @@ class PlanFinancing(AbstractIOweYou):
 
         is_paid = is_plan_financing_paid(self)
 
-        if on_create:
-            signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
-            if is_paid:
-                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+        if on_create and is_paid:
+            # Now we don't send the signal planfinancing_created here, it will be sent by the m2m_changed signal
+            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:

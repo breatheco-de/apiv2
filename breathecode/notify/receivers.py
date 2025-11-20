@@ -188,9 +188,32 @@ def edu_status_updated(sender, instance, **kwargs):
     )
 
 
+@receiver(m2m_changed, sender=PlanFinancing.plans.through)
+def planfinancing_plans_added(sender, instance, action, **kwargs):
+    """
+    Detects when plans are added to a PlanFinancing for the first time.
+    Dispatches the planfinancing_created signal so other receivers can react.
+    """
+    # Only execute after plans are added
+    if action != "post_add":
+        return
+
+    plans_count = instance.plans.count()
+    pk_set = kwargs.get("pk_set", set())
+
+    if plans_count == len(pk_set):
+        logger.debug(f"Plans added to new PlanFinancing {instance.id}, dispatching planfinancing_created signal")
+
+        planfinancing_created.send_robust(sender=PlanFinancing, instance=instance)
+
+
 @receiver(planfinancing_created, sender=PlanFinancing)
 def new_planfinancing_created(sender, instance, **kwargs):
-    logger.debug("Sending new PlanFinancing to hook")
+    """
+    Sends the planfinancing_created webhook after a PlanFinancing is fully created.
+    This is triggered after plans have been assigned to ensure complete data.
+    """
+    logger.debug(f"Sending planfinancing_created webhook for PlanFinancing {instance.id}")
     model_label = get_model_label(instance)
     serializer = GetPlanFinancingSerializer(instance)
     HookManager.process_model_event(
