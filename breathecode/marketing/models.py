@@ -942,7 +942,7 @@ class EmailDomainValidation(models.Model):
     """
 
     domain = models.CharField(max_length=255, db_index=True, unique=True, help_text="Dominio validado")
-    has_mx = models.BooleanField(help_text="True si el dominio tiene registros MX válidos")
+    has_mx = models.BooleanField(default=False, help_text="True si el dominio tiene registros MX válidos")
     mx_records = models.JSONField(
         default=list, help_text="Lista de registros MX encontrados (ej: ['alt1.gmail-smtp-in.l.google.com'])"
     )
