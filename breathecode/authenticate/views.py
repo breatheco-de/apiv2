@@ -845,7 +845,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if profileacademy_id is not None:
             profile = ProfileAcademy.objects.filter(academy__id=academy_id, id=profileacademy_id).first()
             if profile is None:
-                raise ValidationException("Profile not found", code=404, slug="profile-academy-not-found")
+                raise ValidationException("Profile not found or does not belong to this academy", code=404, slug="profile-academy-not-found")
 
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email, status="PENDING").first()
 
@@ -880,6 +880,33 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         like = request.GET.get("like", None)
         if like is not None:
             invites = query_like_by_full_name(like=like, items=invites)
+
+        # Search by user_id
+        user_id_param = request.GET.get("user_id")
+        if user_id_param is not None:
+            user_ids = [int(v.strip()) for v in user_id_param.split(",") if v.strip().isdigit()]
+            if user_ids:
+                invites = invites.filter(user__id__in=user_ids)
+
+        # Search by invite_id
+        invite_id_param = request.GET.get("invite_id")
+        if invite_id_param is not None:
+            invite_ids = [int(v.strip()) for v in invite_id_param.split(",") if v.strip().isdigit()]
+            if invite_ids:
+                invites = invites.filter(id__in=invite_ids)
+
+        # Search by profile_academy_id
+        profile_academy_id_param = request.GET.get("profile_academy_id")
+        if profile_academy_id_param is not None:
+            profile_academy_ids = [int(v.strip()) for v in profile_academy_id_param.split(",") if v.strip().isdigit()]
+            if profile_academy_ids:
+                profile_emails = list(
+                    ProfileAcademy.objects.filter(academy__id=academy_id, id__in=profile_academy_ids).values_list(
+                        "email", flat=True
+                    )
+                )
+                if profile_emails:
+                    invites = invites.filter(email__in=profile_emails)
 
         invites = invites.order_by(request.GET.get("sort", "-created_at"))
 
