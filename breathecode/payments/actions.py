@@ -42,6 +42,7 @@ from .models import (
     CohortSet,
     Consumable,
     Coupon,
+    CreditNote,
     Currency,
     EventTypeSet,
     FinancingOption,
@@ -1595,6 +1596,42 @@ def validate_and_create_subscriptions(
 
     utc_now = timezone.now()
 
+    # Calculate breakdown for externally managed invoices
+    amount_breakdown = None
+    if bag.plans.exists() or bag.service_items.exists() or bag.plan_addons.exists():
+        try:
+            currency = bag.academy.main_currency
+            service_items_amount = calculate_service_items_amount(bag, currency, lang)
+            main_plan = bag.plans.first()
+            main_plan_amount = 0.0
+            main_plan_amount_before = 0.0
+            if main_plan:
+                if bag.chosen_period == "MONTH":
+                    main_plan_amount_before = main_plan.price_per_month or 0
+                elif bag.chosen_period == "QUARTER":
+                    main_plan_amount_before = main_plan.price_per_quarter or 0
+                elif bag.chosen_period == "HALF":
+                    main_plan_amount_before = main_plan.price_per_half or 0
+                elif bag.chosen_period == "YEAR":
+                    main_plan_amount_before = main_plan.price_per_year or 0
+                main_plan_amount = main_plan_amount_before
+
+            addons_before, plan_addons_amount = get_plan_addons_amounts_with_coupons(bag, list(coupons), lang) if bag.plan_addons.exists() else (0.0, 0.0)
+
+            amount_breakdown = calculate_invoice_amount_breakdown(
+                bag=bag,
+                main_plan_amount=main_plan_amount,
+                main_plan_amount_before_discount=main_plan_amount_before,
+                service_items_amount=service_items_amount,
+                plan_addons_amount=plan_addons_amount,
+                plan_addons_amount_before_discount=addons_before,
+                seat_costs=0.0,
+                lang=lang,
+            )
+        except Exception:
+            # If breakdown calculation fails, continue without it
+            pass
+
     invoice = Invoice(
         amount=amount,
         paid_at=utc_now,
@@ -1606,6 +1643,7 @@ def validate_and_create_subscriptions(
         externally_managed=True,
         proof=proof_of_payment,
         payment_method=payment_method,
+        amount_breakdown=amount_breakdown,
     )
     invoice.save()
 
@@ -2195,6 +2233,302 @@ def get_plan_addons_amounts_with_coupons(
         )
 
     return total_before, total_after
+
+
+def calculate_service_items_amount(bag: Bag, currency: Currency, lang: str) -> float:
+    """
+    Calculate the total amount for service items in a bag.
+
+    Args:
+        bag: The bag containing service items
+        currency: The currency to use
+        lang: Language code
+
+    Returns:
+        Total amount for service items
+    """
+    if not bag.service_items.exists():
+        return 0.0
+
+    plans = bag.plans.all()
+    add_ons: dict[int, AcademyService] = {}
+    for plan in plans:
+        for add_on in plan.add_ons.filter(currency=currency):
+            if add_on.service.id not in add_ons:
+                add_ons[add_on.service.id] = add_on
+
+    total = 0.0
+    for service_item in bag.service_items.all():
+        if service_item.service.id in add_ons:
+            add_on = add_ons[service_item.service.id]
+            try:
+                base_price, _, _ = add_on.get_discounted_price(service_item.how_many, bag.country_code, lang)
+                total += base_price
+            except Exception:
+                pass
+
+    return total
+
+
+def calculate_invoice_amount_breakdown(
+    bag: Bag,
+    main_plan_amount: float,
+    main_plan_amount_before_discount: float,
+    service_items_amount: float,
+    plan_addons_amount: float,
+    plan_addons_amount_before_discount: float,
+    seat_costs: float = 0.0,
+    lang: str = "en",
+) -> dict[str, Any]:
+    """
+    Calculate the amount breakdown for an invoice.
+
+    Args:
+        bag: The bag containing plans, service items, and plan addons
+        main_plan_amount: Final amount for main plan (after discounts)
+        main_plan_amount_before_discount: Amount for main plan before discounts
+        service_items_amount: Total amount for service items
+        plan_addons_amount: Final amount for plan addons (after discounts)
+        plan_addons_amount_before_discount: Amount for plan addons before discounts
+        seat_costs: Additional seat costs
+        lang: Language code
+
+    Returns:
+        Dictionary with breakdown structure
+    """
+    breakdown: dict[str, Any] = {
+        "main_plan": None,
+        "service_items": [],
+        "plan_addons": [],
+        "seat_costs": seat_costs,
+        "total": main_plan_amount + service_items_amount + plan_addons_amount + seat_costs,
+    }
+
+    # Main plan breakdown
+    main_plan = bag.plans.first()
+    if main_plan:
+        breakdown["main_plan"] = {
+            "amount": main_plan_amount,
+            "amount_before_discount": main_plan_amount_before_discount,
+            "plan_id": main_plan.id,
+            "plan_slug": main_plan.slug,
+        }
+
+    # Service items breakdown
+    plans = bag.plans.all()
+    add_ons: dict[int, AcademyService] = {}
+    for plan in plans:
+        for add_on in plan.add_ons.filter(currency=bag.currency or bag.academy.main_currency):
+            if add_on.service.id not in add_ons:
+                add_ons[add_on.service.id] = add_on
+
+    service_items_total = 0.0
+    for service_item in bag.service_items.all():
+        if service_item.service.id in add_ons:
+            add_on = add_ons[service_item.service.id]
+            try:
+                base_price, _, _ = add_on.get_discounted_price(service_item.how_many, bag.country_code, lang)
+                service_items_total += base_price
+                breakdown["service_items"].append(
+                    {
+                        "amount": base_price,
+                        "amount_before_discount": base_price,  # Service items don't have separate before/after in current flow
+                        "service_item_id": service_item.id,
+                        "service_id": service_item.service.id,
+                        "service_slug": service_item.service.slug,
+                        "how_many": service_item.how_many,
+                    }
+                )
+            except Exception:
+                # Skip if calculation fails
+                pass
+
+    # Plan addons breakdown
+    for plan in bag.plan_addons.all():
+        option = plan.financing_options.filter(how_many_months=1).first()
+        if option:
+            base_price = option.monthly_price or 0
+            if bag.country_code:
+                base_price, _, _ = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+
+            # Get coupon-discounted price for this specific addon
+            coupons = list(bag.coupons.all())
+            addon_coupons = get_coupons_for_plan(plan, coupons)
+            price_after = get_discounted_price(base_price, addon_coupons)
+
+            breakdown["plan_addons"].append(
+                {
+                    "amount": price_after,
+                    "amount_before_discount": base_price,
+                    "plan_id": plan.id,
+                    "plan_slug": plan.slug,
+                }
+            )
+
+    return breakdown
+
+
+def process_refund(
+    invoice: Invoice,
+    amount: float | None = None,
+    breakdown: dict[str, Any] | None = None,
+    reason: str = "",
+    country_code: str | None = None,
+    legal_text: str | None = None,
+    lang: str = "en",
+) -> "CreditNote":
+    """
+    Process a refund for an invoice.
+
+    Args:
+        invoice: The invoice to refund
+        amount: Amount to refund (if None, refunds full amount)
+        breakdown: Breakdown of what to refund (main_plan, service_items, plan_addons)
+        reason: Reason for the refund
+        country_code: Country code for legal compliance
+        legal_text: Country-specific legal text
+        lang: Language code
+
+    Returns:
+        CreditNote object created for the refund
+    """
+    from breathecode.payments.models import CreditNote, PlanFinancing, Subscription, SubscriptionServiceItem
+
+    if invoice.status == Invoice.Status.REFUNDED:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invoice has already been refunded",
+                es="La factura ya ha sido reembolsada",
+                slug="invoice-already-refunded",
+            ),
+            code=400,
+        )
+
+    if invoice.status != Invoice.Status.FULFILLED:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Only fulfilled invoices can be refunded",
+                es="Solo las facturas cumplidas pueden ser reembolsadas",
+                slug="invoice-not-fulfilled",
+            ),
+            code=400,
+        )
+
+    # Use invoice breakdown if breakdown not provided
+    if breakdown is None:
+        breakdown = invoice.amount_breakdown or {}
+
+    # Determine refund amount
+    if amount is None:
+        amount = invoice.amount
+
+    # Create credit note
+    credit_note = CreditNote.objects.create(
+        invoice=invoice,
+        amount=amount,
+        currency=invoice.currency,
+        reason=reason,
+        status=CreditNote.Status.ISSUED,
+        legal_text=legal_text,
+        country_code=country_code or invoice.bag.country_code,
+        breakdown=breakdown,
+    )
+
+    # Process refund through Stripe if applicable
+    if invoice.stripe_id:
+        from breathecode.payments.services.stripe import Stripe
+
+        stripe_service = Stripe(academy=invoice.academy)
+        stripe_service.set_language(lang)
+        try:
+            refund = stripe_service.refund_payment(invoice)
+            credit_note.refund_stripe_id = invoice.refund_stripe_id
+            credit_note.save()
+        except Exception as e:
+            # Log error but continue with refund processing
+            logger.error(f"Error processing Stripe refund: {str(e)}")
+
+    # Update invoice
+    invoice.status = Invoice.Status.REFUNDED
+    invoice.refunded_at = timezone.now()
+    invoice.amount_refunded = amount
+    invoice.save()
+
+    # Expire subscriptions/plan financings based on breakdown
+    bag = invoice.bag
+    user = invoice.user
+
+    # Determine what to expire based on breakdown
+    refund_main_plan = breakdown.get("main_plan") is not None
+    refund_service_items = breakdown.get("service_items") and len(breakdown.get("service_items", [])) > 0
+    refund_plan_addons = breakdown.get("plan_addons") and len(breakdown.get("plan_addons", [])) > 0
+
+    # If no breakdown provided, refund everything
+    if not breakdown:
+        refund_main_plan = True
+        refund_service_items = True
+        refund_plan_addons = True
+
+    # Expire main plan subscription/financing
+    if refund_main_plan and bag.plans.exists():
+        plan = bag.plans.first()
+        subscription = Subscription.objects.filter(
+            user=user, plans=plan, status__in=[Subscription.Status.ACTIVE]
+        ).first()
+
+        if subscription:
+            subscription.status = Subscription.Status.EXPIRED
+            subscription.status_message = f"Subscription expired due to refund of invoice {invoice.id}"
+            subscription.save()
+
+        plan_financing = PlanFinancing.objects.filter(
+            user=user, plans=plan, status__in=[PlanFinancing.Status.ACTIVE]
+        ).first()
+
+        if plan_financing:
+            plan_financing.status = PlanFinancing.Status.EXPIRED
+            plan_financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"
+            plan_financing.save()
+
+    # Remove service items from subscription
+    if refund_service_items and bag.service_items.exists():
+        service_item_ids = [item.get("service_item_id") for item in breakdown.get("service_items", [])]
+        if service_item_ids:
+            SubscriptionServiceItem.objects.filter(
+                subscription__user=user, service_item_id__in=service_item_ids
+            ).delete()
+        else:
+            # If no specific items, remove all service items from subscriptions
+            for service_item in bag.service_items.all():
+                SubscriptionServiceItem.objects.filter(
+                    subscription__user=user, service_item=service_item
+                ).delete()
+
+    # Expire plan addon financings
+    if refund_plan_addons and bag.plan_addons.exists():
+        plan_addon_ids = [item.get("plan_id") for item in breakdown.get("plan_addons", [])]
+        if plan_addon_ids:
+            plan_financings = PlanFinancing.objects.filter(
+                user=user, plans__id__in=plan_addon_ids, status__in=[PlanFinancing.Status.ACTIVE]
+            )
+            for financing in plan_financings:
+                financing.status = PlanFinancing.Status.EXPIRED
+                financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"
+                financing.save()
+        else:
+            # If no specific addons, expire all plan addon financings
+            for plan_addon in bag.plan_addons.all():
+                plan_financing = PlanFinancing.objects.filter(
+                    user=user, plans=plan_addon, status__in=[PlanFinancing.Status.ACTIVE]
+                ).first()
+                if plan_financing:
+                    plan_financing.status = PlanFinancing.Status.EXPIRED
+                    plan_financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"
+                    plan_financing.save()
+
+    return credit_note
 
 
 def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversion_info: str | None = "") -> None:

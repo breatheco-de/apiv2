@@ -933,6 +933,23 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     amount_refunded = serpy.Field()
     refund_stripe_id = serpy.Field()
     refunded_at = serpy.Field()
+    amount_breakdown = serpy.Field()
+
+
+class CreditNoteSerializer(serpy.Serializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    reason = serpy.Field()
+    issued_at = serpy.Field()
+    status = serpy.Field()
+    legal_text = serpy.Field()
+    country_code = serpy.Field()
+    breakdown = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    invoice = GetInvoiceSmallSerializer(many=False)
 
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):

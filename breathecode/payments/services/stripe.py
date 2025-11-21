@@ -353,6 +353,7 @@ class Stripe:
         description: str = "",
         subscription_billing_team: SubscriptionBillingTeam | None = None,
         subscription_seat: SubscriptionSeat | None = None,
+        amount_breakdown: dict | None = None,
     ) -> Invoice:
         """
         Processes a payment for a given user and bag.
@@ -423,6 +424,7 @@ class Stripe:
             status="FULFILLED",
             subscription_billing_team=subscription_billing_team,
             subscription_seat=subscription_seat,
+            amount_breakdown=amount_breakdown,
         )
         invoice.currency = currency
         invoice.bag = bag
