@@ -27,7 +27,7 @@ from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_app_url, get_api_url, get_user_settings
 from breathecode.authenticate.models import Role, UserInvite, UserSetting
-from breathecode.marketing.actions import validate_email
+from breathecode.marketing.actions import validate_email_local
 from breathecode.media.models import File
 from breathecode.notify import actions as notify_actions
 from breathecode.payments import tasks
@@ -2262,6 +2262,10 @@ def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversi
             financing.coupons.set(bag_coupons)
 
         financing.invoices.add(invoice)
+        
+        if financing.how_many_installments == 1 and invoice.status == Invoice.Status.FULFILLED:
+            financing.status = PlanFinancing.Status.FULLY_PAID
+        
         financing.save()
 
         tasks.build_service_stock_scheduler_from_plan_financing.delay(plan_financing_id=financing.id)
@@ -2587,7 +2591,7 @@ def invite_user_to_subscription_team(
 
 
 def _validate_email(email: str, lang: str):
-    email_status = validate_email(email, lang)
+    email_status = validate_email_local(email, lang)
     if email_status["score"] <= 0.60:
         raise ValidationException(
             translation(

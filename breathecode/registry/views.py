@@ -2354,9 +2354,13 @@ class AcademyCategoryView(APIView, GenerateLookupsMixin):
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
-        lang = request.GET.get("lang", None)
-        if lang is not None:
-            items = items.filter(lang__iexact=lang)
+        lang = request.GET.get("lang")
+        if lang:
+            normalized_lang = lang.lower()
+            if normalized_lang in ["us", "en"]:
+                items = items.filter(Q(lang__iexact="us") | Q(lang__iexact="en"))
+            else:
+                items = items.filter(lang__iexact=normalized_lang)
 
         items = items.filter(**lookup)
         items = handler.queryset(items)

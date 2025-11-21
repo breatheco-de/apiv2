@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+import random
 import re
 import urllib.parse
 from datetime import timedelta
@@ -845,7 +846,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if profileacademy_id is not None:
             profile = ProfileAcademy.objects.filter(academy__id=academy_id, id=profileacademy_id).first()
             if profile is None:
-                raise ValidationException("Profile not found", code=404, slug="profile-academy-not-found")
+                raise ValidationException("Profile not found or does not belong to this academy", code=404, slug="profile-academy-not-found")
 
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email, status="PENDING").first()
 
@@ -880,6 +881,33 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         like = request.GET.get("like", None)
         if like is not None:
             invites = query_like_by_full_name(like=like, items=invites)
+
+        # Search by user_id
+        user_id_param = request.GET.get("user_id")
+        if user_id_param is not None:
+            user_ids = [int(v.strip()) for v in user_id_param.split(",") if v.strip().isdigit()]
+            if user_ids:
+                invites = invites.filter(user__id__in=user_ids)
+
+        # Search by invite_id
+        invite_id_param = request.GET.get("invite_id")
+        if invite_id_param is not None:
+            invite_ids = [int(v.strip()) for v in invite_id_param.split(",") if v.strip().isdigit()]
+            if invite_ids:
+                invites = invites.filter(id__in=invite_ids)
+
+        # Search by profile_academy_id
+        profile_academy_id_param = request.GET.get("profile_academy_id")
+        if profile_academy_id_param is not None:
+            profile_academy_ids = [int(v.strip()) for v in profile_academy_id_param.split(",") if v.strip().isdigit()]
+            if profile_academy_ids:
+                profile_emails = list(
+                    ProfileAcademy.objects.filter(academy__id=academy_id, id__in=profile_academy_ids).values_list(
+                        "email", flat=True
+                    )
+                )
+                if profile_emails:
+                    invites = invites.filter(email__in=profile_emails)
 
         invites = invites.order_by(request.GET.get("sort", "-created_at"))
 
@@ -964,6 +992,65 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         invite.save()
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
+
+    @capable_of("crud_invite")
+    def patch(self, request, invite_id=None, academy_id=None):
+        """
+        Update an invite. If status is set to PENDING, reset the token.
+        """
+        if invite_id is None:
+            raise ValidationException(
+                translation(
+                    en="Invite ID is required",
+                    es="El ID de la invitación es requerido",
+                ),
+                slug="invite-id-required",
+                code=400,
+            )
+
+        invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id).first()
+        if invite is None:
+            raise ValidationException(
+                translation(
+                    en="Invite not found or does not belong to this academy",
+                    es="Invitación no encontrada o no pertenece a esta academia",
+                ),
+                slug="user-invite-not-found",
+                code=404,
+            )
+
+        new_status = request.data.get("status")
+        if new_status:
+            new_status = new_status.upper()
+            # Validate status
+            valid_statuses = ["PENDING", "ACCEPTED", "REJECTED", "WAITING_LIST"]
+            if new_status not in valid_statuses:
+                raise ValidationException(
+                    translation(
+                        en=f"Invalid status. Must be one of: {', '.join(valid_statuses)}",
+                        es=f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}",
+                    ),
+                    slug="invalid-status",
+                    code=400,
+                )
+
+            invite.status = new_status
+
+            # Only reset token if status is being set to PENDING
+            if new_status == "PENDING":
+                # Generate a new unique token
+                while True:
+                    new_token = random.getrandbits(128)
+                    if not UserInvite.objects.filter(token=new_token).exists():
+                        break
+
+                invite.token = new_token
+                invite.sent_at = None  # Reset sent_at so it can be resent
+
+        invite.save()
+
+        serializer = UserInviteSerializer(invite, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class V2AppUserView(APIView):
