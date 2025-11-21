@@ -810,19 +810,18 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            all_events = []
-            for serializer in all_serializers:
+            all_events_saved = []
+            for idx, serializer in enumerate(all_serializers):
+                original_starting_at = all_events[idx].starting_at
+                original_ending_at = all_events[idx].ending_at
                 event = serializer.save()
-                all_events.append(event)
-
-            for idx, event in enumerate(all_events):
+                all_events_saved.append(event)
+                
                 data = data_list[idx] if idx < len(data_list) else {}
+                
                 create_meet = data.get("create_meet")
                 if isinstance(create_meet, str):
                     create_meet = create_meet.lower() in ["1", "true", "yes"]
-                meet_private = data.get("meet_private", True)
-                if isinstance(meet_private, str):
-                    meet_private = meet_private.lower() in ["1", "true", "yes"]
 
                 if create_meet and getattr(event, "online_event", False):
                     provider = data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
@@ -832,23 +831,17 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
                             exp_epoch = int(target_end.timestamp())
 
-                            if not getattr(event, "live_stream_url", None):
-                                room = DailyClient().create_room(exp_in_epoch=exp_epoch)
-                                if room and room.get("url"):
-                                    event.live_stream_url = room["url"]
-                                    event.save(update_fields=["live_stream_url"])
-                            else:
-                                parsed = urlparse(event.live_stream_url)
-                                room_name = parsed.path.strip("/").split("/")[-1]
-                                DailyClient().extend_room(name=room_name, exp_in_epoch=exp_epoch)
+                            room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                            if room and room.get("url"):
+                                event.live_stream_url = room["url"]
+                                event.save(update_fields=["live_stream_url"])
 
                         elif provider == "livekit":
                             meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
-                            if meet_base and not getattr(event, "live_stream_url", None):
+                            if meet_base:
                                 event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
                                 event.save(update_fields=["live_stream_url"])
-
-                            tasks_events.create_livekit_room_for_event.delay(event.id)
+                                tasks_events.create_livekit_room_for_event.delay(event.id)
                     except Exception as e:
                         logger.error(
                             f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
@@ -856,11 +849,42 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                         raise ValidationException(
                             f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
                         )
+                elif not create_meet and getattr(event, "online_event", False):
+                    date_changed = (
+                        original_starting_at != event.starting_at
+                        or original_ending_at != event.ending_at
+                    )
+                    live_stream_url = getattr(event, "live_stream_url", None)
+                    if date_changed and live_stream_url and "daily.co" in live_stream_url.lower():
+                        try:
+                            margin = timedelta(hours=1)
+                            target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
+                            exp_epoch = int(target_end.timestamp())
+                            parsed = urlparse(live_stream_url)
+                            room_name = parsed.path.strip("/").split("/")[-1]
+                            DailyClient().extend_room(name=room_name, exp_in_epoch=exp_epoch)
+                            logger.info(
+                                f"Extended Daily.co room {room_name} for event {event.id} "
+                                f"(new expiration: {target_end.isoformat()})"
+                                f"(current date: {datetime.now().isoformat()})"
+                            )
+                        except Exception as extend_error:
+                            error_str = str(extend_error)
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en=f"Cannot change event date: Failed to extend Daily.co room. "
+                                    f"Error: {error_str}",
+                                    es=f"No se puede cambiar la fecha del evento: Falló al extender la sala de Daily.co. "
+                                    f"Error: {error_str}",
+                                    slug="failed-to-extend-room",
+                                )
+                            )
 
         if isinstance(request.data, list):
-            serializer = EventSerializer(all_events, many=True)
+            serializer = EventSerializer(all_events_saved, many=True)
         else:
-            serializer = EventSerializer(all_events.pop(), many=False)
+            serializer = EventSerializer(all_events_saved.pop(), many=False)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 

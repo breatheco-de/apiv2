@@ -160,7 +160,7 @@ def handle_event_rescheduled(sender, instance, **kwargs):
     if checkins.exists():
         email_list = [checkin.attendee.email for checkin in checkins]
         bulk_email_payload = {"event": serializer.data, "recipients": email_list}
-    HookManager.process_model_event(instance, model_label, "event_rescheduled", payload_override=bulk_email_payload)
+        HookManager.process_model_event(instance, model_label, "event_rescheduled", payload_override=bulk_email_payload)
 
 
 @receiver(asset_status_updated, sender=Asset)

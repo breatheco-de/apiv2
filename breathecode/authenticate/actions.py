@@ -1088,10 +1088,9 @@ def replace_user_email(requesting_user, target_user_id, new_email):
     """
     from capyc.core.i18n import translation
     from capyc.rest_framework.exceptions import ValidationException
-    from django.core.exceptions import ValidationError as DjangoValidationError
-    from django.core.validators import validate_email
 
     from breathecode.assessment.models import UserAssessment
+    from breathecode.marketing.actions import validate_email_local
     from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, User, UserInvite
     from breathecode.events.models import EventCheckin
     from breathecode.marketing.models import Contact, FormEntry
@@ -1133,8 +1132,8 @@ def replace_user_email(requesting_user, target_user_id, new_email):
         )
 
     try:
-        validate_email(new_email)
-    except DjangoValidationError:
+        validate_email_local(new_email, lang)
+    except ValidationException:
         raise ValidationException(
             translation(
                 lang,
