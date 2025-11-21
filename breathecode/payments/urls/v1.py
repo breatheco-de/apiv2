@@ -8,6 +8,7 @@ from ..views import (
     AcademyFinancingOptionView,
     AcademyInvoiceView,
     AcademyPaymentMethodView,
+    AcademyPaymentSettingsView,
     AcademyPlanFinancingView,
     AcademyPlanServiceItemView,
     AcademyPlanSpecificServiceItemView,
@@ -91,6 +92,7 @@ urlpatterns = [
     path("academy/academyservice/<slug:service_slug>", AcademyAcademyServiceView.as_view()),
     path("academy/serviceitem", AcademyServiceItemView.as_view(), name="academy_serviceitem"),
     path("academy/publishable-key", AcademyPublishableKeyView.as_view(), name="academy_publishable_key"),
+    path("academy/paymentsettings", AcademyPaymentSettingsView.as_view(), name="academy_payment_settings"),
     path("serviceitem", ServiceItemView.as_view(), name="serviceitem"),
     path("academy/paymentmethod", AcademyPaymentMethodView.as_view(), name="academy_paymentmethod"),
     path(
