@@ -470,10 +470,10 @@ class MentorshipSession(models.Model):
         super().save(*args, **kwargs)
 
         if is_creating or self.__old_status != self.status:
-            signals.mentorship_session_status.delay(instance=self, sender=MentorshipSession)
+            signals.mentorship_session_status.send_robust(instance=self, sender=MentorshipSession)
 
         # we're testing why there hasn't any mentorship session with a survey changing mentorship_session_status by mentorship_session_saved
-        signals.mentorship_session_saved.delay(instance=self, sender=MentorshipSession)
+        signals.mentorship_session_saved.send_robust(instance=self, sender=MentorshipSession)
 
         self.__old_status = self.status
 

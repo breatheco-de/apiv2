@@ -188,6 +188,26 @@ def edu_status_updated(sender, instance, **kwargs):
     )
 
 
+@receiver(m2m_changed, sender=PlanFinancing.invoices.through)
+def planfinancing_invoices_added(sender, instance, action, **kwargs):
+    """
+    Detects when invoices are added to a PlanFinancing for the first time.
+    If plans are already assigned, dispatches planfinancing_created signal. (otherwise it will be dispatched whithout plans or invoices)
+    """
+    # Only execute after invoices are added
+    if action != "post_add":
+        return
+
+    invoices_count = instance.invoices.count()
+    pk_set = kwargs.get("pk_set", set())
+
+    # Check if this is the first time invoices are being added (was empty before)
+    # AND that plans already exist
+    if invoices_count == len(pk_set):
+        logger.debug(f"Invoices added to new PlanFinancing {instance.id}, dispatching planfinancing_created signal")
+        planfinancing_created.send_robust(sender=PlanFinancing, instance=instance)
+
+
 @receiver(planfinancing_created, sender=PlanFinancing)
 def new_planfinancing_created(sender, instance, **kwargs):
     logger.debug("Sending new PlanFinancing to hook")
@@ -200,6 +220,26 @@ def new_planfinancing_created(sender, instance, **kwargs):
         payload_override=serializer.data,
         academy_override=instance.academy,
     )
+
+
+@receiver(m2m_changed, sender=Subscription.invoices.through)
+def subscription_invoices_added(sender, instance, action, **kwargs):
+    """
+    Detects when invoices are added to a Subscription for the first time.
+    If plans are already assigned, dispatches subscription_created signal. (otherwise it will be dispatched whithout plans or invoices)
+    """
+    # Only execute after invoices are added
+    if action != "post_add":
+        return
+
+    invoices_count = instance.invoices.count()
+    pk_set = kwargs.get("pk_set", set())
+
+    # Check if this is the first time invoices are being added (was empty before)
+    # AND that plans already exist
+    if invoices_count == len(pk_set):
+        logger.debug(f"Invoices added to new Subscription {instance.id}, dispatching subscription_created signal")
+        subscription_created.send_robust(sender=Subscription, instance=instance)
 
 
 @receiver(subscription_created, sender=Subscription)
