@@ -983,8 +983,10 @@ class AssetView(APIView, GenerateLookupsMixin):
                 lookup["slug__in"] = slugs
 
         if "language" in self.request.GET:
-            param = self.request.GET.get("language")
-            lookup["lang__in"] = ["us", "en"] if param == "en" or param == "us" else [param]
+            languages = self.request.GET.get("language").split(",")
+            if len(languages) == 1:
+                languages = ["us", "en"] if languages[0] == "en" or languages[0] == "us" else languages
+            lookup["lang__in"] = languages
 
         if "status" not in self.request.GET:
             lookup["status__in"] = ["PUBLISHED"]
