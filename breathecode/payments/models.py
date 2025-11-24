@@ -1022,6 +1022,16 @@ class AcademyService(models.Model):
         if required_integer_fields and not self.max_items.is_integer():
             raise forms.ValidationError("max_items must be an integer")
 
+        if self.id and self.service.type == Service.Type.SEAT:
+            try:
+                original = type(self).objects.get(pk=self.pk)
+                if original.price_per_unit != self.price_per_unit:
+                    raise forms.ValidationError(
+                        _("Cannot change price_per_unit for SEAT services. Seat prices are immutable to maintain payment integrity.")
+                    )
+            except type(self).DoesNotExist:
+                pass
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
@@ -1216,12 +1226,16 @@ class Plan(AbstractPriceByTime):
         if self.consumption_strategy == Plan.ConsumptionStrategy.BOTH:
             raise forms.ValidationError("Consumption strategy BOTH is not implemented yet")
 
-        is_effectively_free = not have_price and not self.financing_options.exists()
-        if is_effectively_free and self.plan_addons.exists():
-            raise forms.ValidationError(
-                "Free plans or free trials cannot have plan addons configured; "
-                "please remove plan_addons or set a price/financing option"
-            )
+        if self.pk:
+            has_financing_options = self.financing_options.exists()
+            has_plan_addons = self.plan_addons.exists()
+            is_effectively_free = not have_price and not has_financing_options
+
+            if is_effectively_free and has_plan_addons:
+                raise forms.ValidationError(
+                    "Free plans or free trials cannot have plan addons configured; "
+                    "please remove plan_addons or set a price/financing option"
+                )
 
         return super().clean()
 
