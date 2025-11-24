@@ -386,6 +386,61 @@ class MeLiveClassView(APIView):
         return handler.response(serializer.data)
 
 
+class PublicLiveClassView(APIView):
+    extensions = APIViewExtensions(cache=LiveClassCache, sort="-starting_at", paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        lang = get_user_language(request)
+
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": [
+                    "remote_meeting_url",
+                ],
+            },
+            bools={
+                "is_null": ["ended_at"],
+            },
+            datetimes={
+                "gte": ["starting_at"],
+                "lte": ["ending_at"],
+            },
+            slugs=[
+                "cohort_time_slot__cohort",
+                "cohort_time_slot__cohort__academy",
+                "cohort_time_slot__cohort__syllabus_version__syllabus",
+            ],
+            overwrite={
+                "cohort": "cohort_time_slot__cohort",
+                "academy": "cohort_time_slot__cohort__academy",
+                "syllabus": "cohort_time_slot__cohort__syllabus_version__syllabus",
+                "start": "starting_at",
+                "end": "ending_at",
+            },
+        )
+
+        items = LiveClass.objects.filter(query)
+
+        # Handle upcoming filter manually to ensure we filter by starting_at >= now
+        upcoming = request.GET.get("upcoming", None)
+        if upcoming == "true":
+            now = timezone.now()
+            items = items.filter(starting_at__gte=now)
+
+        items = handler.queryset(items)
+        serializer = GetLiveClassSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
 @private_view()
 @consume("live_class_join", consumer=live_class_by_url_param, format="html")
 def join_live_class(request, token, live_class, lang):
