@@ -3770,8 +3770,6 @@ class PayView(APIView):
                         currency=bag.currency,
                         academy=bag.academy,
                     )
-
-                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(bag, invoice, lang)
                     invoice.save()
 
                 else:
@@ -3802,6 +3800,18 @@ class PayView(APIView):
                 bag.token = None
                 bag.expires_at = None
                 bag.save()
+
+                if amount == 0:
+                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                    )
+                    invoice.save(update_fields=["amount_breakdown"])
+                else:
+                    invoice.refresh_from_db()
+                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                    )
+                    invoice.save(update_fields=["amount_breakdown"])
 
                 # Create reward coupons for sellers if coupons were used
                 if coupons.exists() and original_price > 0:
