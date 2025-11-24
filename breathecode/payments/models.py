@@ -1022,6 +1022,16 @@ class AcademyService(models.Model):
         if required_integer_fields and not self.max_items.is_integer():
             raise forms.ValidationError("max_items must be an integer")
 
+        if self.id and self.service.type == Service.Type.SEAT:
+            try:
+                original = type(self).objects.get(pk=self.pk)
+                if original.price_per_unit != self.price_per_unit:
+                    raise forms.ValidationError(
+                        _("Cannot change price_per_unit for SEAT services. Seat prices are immutable to maintain payment integrity.")
+                    )
+            except type(self).DoesNotExist:
+                pass
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
@@ -2998,9 +3008,17 @@ class Consumable(AbstractServiceItem):
         elif plan_financing_seat:
             param["plan_financing_seat"] = plan_financing_seat
 
+        invalid_statuses = [
+            Subscription.Status.EXPIRED,
+            Subscription.Status.DEPRECATED,
+        ]
+
         return (
             cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
             .exclude(how_many=0)
+            .exclude(
+                Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses)
+            )
             .order_by("id")
         )
 

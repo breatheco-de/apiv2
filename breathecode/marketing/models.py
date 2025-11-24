@@ -11,6 +11,7 @@ from django.forms import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 from breathecode.authenticate.models import UserInvite
+from breathecode.payments.models import Plan
 from breathecode.utils.validators.language import validate_language_code
 
 from .schemas import validate_course_translation_field
@@ -832,6 +833,9 @@ class Course(models.Model):
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
 
     invites = models.ManyToManyField(UserInvite, blank=True, help_text="Plan's invites", related_name="courses")
+    suggested_plan_addon = models.ManyToManyField(
+        Plan, blank=True, help_text="Suggested plan addons for this course", related_name="suggested_courses"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
