@@ -848,9 +848,15 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             if profile is None:
                 raise ValidationException("Profile not found or does not belong to this academy", code=404, slug="profile-academy-not-found")
 
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email, status="PENDING").first()
+            invites = UserInvite.objects.filter(academy__id=academy_id, email=profile.email)
+            status = request.GET.get("status", "")
+            if status != "":
+                invites = invites.filter(status__in=status.split(","))
+            else:
+                invites = invites.filter(status="PENDING")
 
-            if invite is None and profile.status != "INVITED":
+            invite = invites.first()
+            if invite is None:
                 raise ValidationException(
                     "No pending invite was found for this user and academy",
                     code=404,
