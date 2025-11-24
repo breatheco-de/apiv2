@@ -429,11 +429,11 @@ class PublicLiveClassView(APIView):
 
         items = LiveClass.objects.filter(query)
 
-        # Handle upcoming filter manually to ensure we filter by starting_at >= now
+        # Handle upcoming filter manually to ensure we filter by ending_at >= now
         upcoming = request.GET.get("upcoming", None)
         if upcoming == "true":
             now = timezone.now()
-            items = items.filter(starting_at__gte=now)
+            items = items.filter(ending_at__gte=now)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
