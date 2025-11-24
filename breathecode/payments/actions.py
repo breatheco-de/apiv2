@@ -2199,9 +2199,18 @@ def get_plan_addons_amounts_with_coupons(
     return total_before, total_after
 
 
-def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[str, Any]:
+def calculate_invoice_breakdown(
+    bag: Bag, invoice: Invoice, lang: str, chosen_period: str | None = None, how_many_installments: int | None = None
+) -> dict[str, Any]:
     """
     Calculate the breakdown of how the invoice amount is divided across plans, plan addons, and service items.
+
+    Args:
+        bag: The bag containing plans, plan_addons, and service_items
+        invoice: The invoice to calculate breakdown for
+        lang: Language code for error messages
+        chosen_period: Optional chosen period (MONTH, QUARTER, HALF, YEAR). If not provided, uses bag.chosen_period
+        how_many_installments: Optional number of installments. If not provided, uses bag.how_many_installments
 
     Returns a dictionary with the following structure:
     {
@@ -2240,11 +2249,20 @@ def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[s
     currency_code = currency.code.upper()
     coupons = list(bag.coupons.all())
 
-    for plan in bag.plans.all():
+    # Use provided values or fall back to bag values
+    effective_chosen_period = chosen_period if chosen_period is not None else bag.chosen_period
+    effective_how_many_installments = how_many_installments if how_many_installments is not None else bag.how_many_installments
+
+    # Ensure we have all plans loaded - use select_related/prefetch_related if needed
+    plans = list(bag.plans.all())
+    if not plans:
+        return breakdown
+
+    for plan in plans:
         base_price = 0.0
 
-        if bag.how_many_installments > 0:
-            option = plan.financing_options.filter(how_many_months=bag.how_many_installments).first()
+        if effective_how_many_installments > 0:
+            option = plan.financing_options.filter(how_many_months=effective_how_many_installments).first()
             if not option:
                 continue
 
@@ -2283,17 +2301,17 @@ def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[s
                         "currency": currency_code,
                     }
 
-        elif bag.chosen_period != "NO_SET":
-            if bag.chosen_period == "MONTH":
+        elif effective_chosen_period and effective_chosen_period != "NO_SET":
+            if effective_chosen_period == "MONTH":
                 base_price = plan.price_per_month or 0
                 price_attr = "price_per_month"
-            elif bag.chosen_period == "QUARTER":
+            elif effective_chosen_period == "QUARTER":
                 base_price = plan.price_per_quarter or 0
                 price_attr = "price_per_quarter"
-            elif bag.chosen_period == "HALF":
+            elif effective_chosen_period == "HALF":
                 base_price = plan.price_per_half or 0
                 price_attr = "price_per_half"
-            elif bag.chosen_period == "YEAR":
+            elif effective_chosen_period == "YEAR":
                 base_price = plan.price_per_year or 0
                 price_attr = "price_per_year"
             else:
@@ -2313,13 +2331,13 @@ def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[s
                         service=bag.seat_service_item.service, academy=bag.academy
                     ).first()
                     if academy_service:
-                        if bag.chosen_period == "MONTH":
+                        if effective_chosen_period == "MONTH":
                             seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
-                        elif bag.chosen_period == "QUARTER":
+                        elif effective_chosen_period == "QUARTER":
                             seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 3
-                        elif bag.chosen_period == "HALF":
+                        elif effective_chosen_period == "HALF":
                             seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 6
-                        elif bag.chosen_period == "YEAR":
+                        elif effective_chosen_period == "YEAR":
                             seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 12
                         else:
                             seat_cost = 0
@@ -2368,19 +2386,14 @@ def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[s
         for add_on in plan.add_ons.filter(currency=currency):
             if add_on.service.id not in add_ons:
                 add_ons[add_on.service.id] = add_on
-                # Mark services that are in plan add-ons (they're already included in plan price)
                 services_in_plan_addons.add(add_on.service.id)
 
-    # Only process service_items that are NOT part of plan add-ons
-    # (plan add-ons are already included in the plan price breakdown)
     for service_item in bag.service_items.all():
-        # Skip if this service is already included as a plan add-on
         if service_item.service.id in services_in_plan_addons:
             continue
 
         service_slug = service_item.service.slug
 
-        # Standalone service item - find AcademyService
         academy_service = AcademyService.objects.filter(
             service=service_item.service, academy=bag.academy, currency=currency
         ).first()
@@ -2388,7 +2401,6 @@ def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[s
         if not academy_service:
             continue
 
-        # Get discounted price (already includes pricing ratio)
         amount, c, _ = academy_service.get_discounted_price(service_item.how_many, bag.country_code, lang)
         if c:
             currency_code = c.code.upper()
@@ -2436,11 +2448,9 @@ def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversi
         if bag.country_code:
             base_price, _, _ = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
 
-        # Apply only coupons that are eligible for this addon plan
         addon_coupons = get_coupons_for_plan(plan, coupons)
         price = get_discounted_price(base_price, addon_coupons)
 
-        # Compute plan_expires_at from plan's own lifetime if configured
         if plan.time_of_life and plan.time_of_life_unit:
             delta = calculate_relative_delta(plan.time_of_life, plan.time_of_life_unit)
             plan_expires_at = invoice.paid_at + delta
@@ -2594,7 +2604,6 @@ def user_has_active_paid_plans(user: User) -> bool:
     Returns:
         bool: True if the user has active paid plans, False otherwise
     """
-    # Check for active PAID subscriptions owned by the user or where the user has a seat
     owned_subscriptions = Subscription.objects.filter(user=user, status=Subscription.Status.ACTIVE)
     seated_subscription_ids = SubscriptionSeat.objects.filter(user=user).values_list(
         "billing_team__subscription_id", flat=True

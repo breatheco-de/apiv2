@@ -428,9 +428,10 @@ class Stripe:
         invoice.currency = currency
         invoice.bag = bag
         invoice.academy = bag.academy
-
-        invoice.amount_breakdown = calculate_invoice_breakdown(bag, invoice, self.language)
         invoice.save()
+
+        # Breakdown will be calculated later when bag is fully configured
+        # (in PayView after bag.chosen_period and bag.how_many_installments are set)
 
         return invoice
 
