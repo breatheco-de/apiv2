@@ -1820,6 +1820,13 @@ class Invoice(models.Model):
         default=0, help_text="Amount refunded, this field will only be set when the invoice is refunded"
     )
 
+    amount_breakdown = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Breakdown of how the invoice amount is divided across plans, plan addons, and service items",
+    )
+
     coinbase_charge_id = models.CharField(
         max_length=40, null=True, default=None, blank=True, help_text="Coinbase charge id"
     )

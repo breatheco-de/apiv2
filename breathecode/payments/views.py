@@ -3771,6 +3771,7 @@ class PayView(APIView):
                         academy=bag.academy,
                     )
 
+                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(bag, invoice, lang)
                     invoice.save()
 
                 else:
