@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from breathecode.payments import signals, tasks
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 from breathecode.payments.models import (
     AcademyPaymentSettings,
     AcademyService,
@@ -286,7 +287,17 @@ class ConsumableAdmin(admin.ModelAdmin):
 
 
 @admin.register(Invoice)
+class InvoiceForm(forms.ModelForm):
+    class Meta:
+        model = Invoice
+        fields = "__all__"
+        widgets = {
+            "amount_breakdown": PrettyJSONWidget(),
+        }
+
+
 class InvoiceAdmin(admin.ModelAdmin):
+    form = InvoiceForm
     list_display = ("id", "amount", "currency", "paid_at", "status", "stripe_id", "user", "academy")
     list_filter = ["status", "academy"]
     search_fields = ["id", "status", "user__email"]
