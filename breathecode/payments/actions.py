@@ -2257,6 +2257,23 @@ def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[s
                         currency_code = c.code.upper()
                     base_price = adjusted_price
 
+                if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+                    academy_service = AcademyService.objects.filter(
+                        service=bag.seat_service_item.service, academy=bag.academy
+                    ).first()
+                    if academy_service:
+                        seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
+                        base_price += seat_cost
+
+                add_ons_amount = 0
+                for add_on in plan.add_ons.filter(currency=currency):
+                    service_item = bag.service_items.filter(service=add_on.service).first()
+                    if service_item:
+                        add_on_price, _, _ = add_on.get_discounted_price(service_item.how_many, bag.country_code, lang)
+                        add_ons_amount += add_on_price
+
+                base_price += add_ons_amount
+
                 plan_coupons = get_coupons_for_plan(plan, coupons)
                 final_price = get_discounted_price(base_price, plan_coupons)
 
@@ -2281,14 +2298,34 @@ def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[s
                 price_attr = "price_per_year"
             else:
                 base_price = 0
+                price_attr = None
 
-            if base_price > 0:
+            if base_price > 0 and price_attr:
+                # Apply pricing ratio if country code is available
                 if bag.country_code:
                     adjusted_price, _, c = apply_pricing_ratio(base_price, bag.country_code, plan, lang=lang, price_attr=price_attr)
                     if c:
                         currency_code = c.code.upper()
                     base_price = adjusted_price
 
+                if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+                    academy_service = AcademyService.objects.filter(
+                        service=bag.seat_service_item.service, academy=bag.academy
+                    ).first()
+                    if academy_service:
+                        if bag.chosen_period == "MONTH":
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
+                        elif bag.chosen_period == "QUARTER":
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 3
+                        elif bag.chosen_period == "HALF":
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 6
+                        elif bag.chosen_period == "YEAR":
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 12
+                        else:
+                            seat_cost = 0
+                        base_price += seat_cost
+
+                # Apply coupons to get the final discounted price
                 plan_coupons = get_coupons_for_plan(plan, coupons)
                 final_price = get_discounted_price(base_price, plan_coupons)
 
@@ -2322,36 +2359,39 @@ def calculate_invoice_breakdown(bag: Bag, invoice: Invoice, lang: str) -> dict[s
                     "currency": currency_code,
                 }
 
+    # Track which services are already included as plan add-ons to avoid duplication
     plans = bag.plans.all()
     add_ons: dict[int, AcademyService] = {}
+    services_in_plan_addons: set[int] = set()
+    
     for plan in plans:
         for add_on in plan.add_ons.filter(currency=currency):
             if add_on.service.id not in add_ons:
                 add_ons[add_on.service.id] = add_on
+                # Mark services that are in plan add-ons (they're already included in plan price)
+                services_in_plan_addons.add(add_on.service.id)
 
+    # Only process service_items that are NOT part of plan add-ons
+    # (plan add-ons are already included in the plan price breakdown)
     for service_item in bag.service_items.all():
+        # Skip if this service is already included as a plan add-on
+        if service_item.service.id in services_in_plan_addons:
+            continue
+
         service_slug = service_item.service.slug
 
-        # Check if this service item is an add-on from a plan
-        if service_item.service.id in add_ons:
-            add_on = add_ons[service_item.service.id]
-            # Get discounted price (already includes pricing ratio)
-            amount, c, _ = add_on.get_discounted_price(service_item.how_many, bag.country_code, lang)
-            if c:
-                currency_code = c.code.upper()
-        else:
-            # Standalone service item - find AcademyService
-            academy_service = AcademyService.objects.filter(
-                service=service_item.service, academy=bag.academy, currency=currency
-            ).first()
+        # Standalone service item - find AcademyService
+        academy_service = AcademyService.objects.filter(
+            service=service_item.service, academy=bag.academy, currency=currency
+        ).first()
 
-            if not academy_service:
-                continue
+        if not academy_service:
+            continue
 
-            # Get discounted price (already includes pricing ratio)
-            amount, c, _ = academy_service.get_discounted_price(service_item.how_many, bag.country_code, lang)
-            if c:
-                currency_code = c.code.upper()
+        # Get discounted price (already includes pricing ratio)
+        amount, c, _ = academy_service.get_discounted_price(service_item.how_many, bag.country_code, lang)
+        if c:
+            currency_code = c.code.upper()
 
         if amount > 0:
             breakdown["service-items"][service_slug] = {
