@@ -1022,6 +1022,16 @@ class AcademyService(models.Model):
         if required_integer_fields and not self.max_items.is_integer():
             raise forms.ValidationError("max_items must be an integer")
 
+        if self.id and self.service.type == Service.Type.SEAT:
+            try:
+                original = type(self).objects.get(pk=self.pk)
+                if original.price_per_unit != self.price_per_unit:
+                    raise forms.ValidationError(
+                        _("Cannot change price_per_unit for SEAT services. Seat prices are immutable to maintain payment integrity.")
+                    )
+            except type(self).DoesNotExist:
+                pass
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
