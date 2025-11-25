@@ -23,7 +23,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 import breathecode.activity.tasks as tasks_activity
-from breathecode.admissions.models import Academy, Cohort, Country, Syllabus
+from breathecode.admissions.models import Academy, Cohort, Country
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserInvite
 from breathecode.events.models import EventType
@@ -2305,10 +2305,10 @@ class PlanFinancing(AbstractIOweYou):
 
         is_paid = is_plan_financing_paid(self)
 
-        if on_create:
-            signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
-            if is_paid:
-                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+        # planfinancing_created signal is now handled by m2m_changed receivers
+        # in breathecode.notify.receivers to ensure plans and invoices are present
+        if on_create and is_paid:
+            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
@@ -2331,7 +2331,9 @@ class PlanFinancingTeam(models.Model):
         PlanFinancing, on_delete=models.CASCADE, related_name="team", help_text="Plan financing"
     )
     name = models.CharField(max_length=80, help_text="Team name")
-    seats_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this financing team")
+    seats_log = models.JSONField(
+        default=list, blank=True, help_text="Audit log of seat changes for this financing team"
+    )
     additional_seats = models.PositiveIntegerField(
         default=0, help_text="Additional seats for this team excluding the owner seat"
     )
@@ -2496,10 +2498,10 @@ class Subscription(AbstractIOweYou):
 
         is_paid = is_subscription_paid(self)
 
-        if on_create:
-            signals.subscription_created.send_robust(instance=self, sender=self.__class__)
-            if is_paid:
-                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+        # subscription_created signal is now handled by m2m_changed receivers
+        # in breathecode.notify.receivers to ensure plans and invoices are present
+        if on_create and is_paid:
+            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
@@ -3023,9 +3025,7 @@ class Consumable(AbstractServiceItem):
         return (
             cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
             .exclude(how_many=0)
-            .exclude(
-                Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses)
-            )
+            .exclude(Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses))
             .order_by("id")
         )
 
@@ -3552,9 +3552,7 @@ class ServiceStockScheduler(models.Model):
             raise forms.ValidationError("A ServiceStockScheduler cannot mix subscription and plan financing seats")
 
         if self.subscription_billing_team and self.plan_financing_team:
-            raise forms.ValidationError(
-                "A ServiceStockScheduler cannot mix subscription and plan financing teams"
-            )
+            raise forms.ValidationError("A ServiceStockScheduler cannot mix subscription and plan financing teams")
 
         return super().clean()
 
