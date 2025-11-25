@@ -87,6 +87,7 @@ class Academy(models.Model):
     def __init__(self, *args, **kwargs):
         super(Academy, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
+        self.__old_reseller = self.reseller
 
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
     name = models.CharField(max_length=150, db_index=True)
@@ -205,7 +206,7 @@ class Academy(models.Model):
 
     def save(self, *args, **kwargs):
         from .actions import get_bucket_object
-        from .signals import academy_saved
+        from .signals import academy_reseller_changed, academy_saved
 
         self.full_clean()
         created = not self.id
@@ -218,12 +219,19 @@ class Academy(models.Model):
         if not created and self.__old_slug != self.slug:
             raise Exception("Academy slug cannot be updated")
 
+        reseller_changed = not created and self.__old_reseller != self.reseller
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
         if created:
             self.__old_slug = self.slug
+            self.__old_reseller = self.reseller
 
         academy_saved.send_robust(instance=self, sender=self.__class__, created=created)
+
+        if reseller_changed:
+            academy_reseller_changed.send_robust(instance=self, sender=self.__class__, value=self.reseller)
+            self.__old_reseller = self.reseller
 
 
 PARTIME = "PART-TIME"
