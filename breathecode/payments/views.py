@@ -2907,6 +2907,10 @@ class CheckingView(APIView):
                         bag.token = Token.generate_key()
                         bag.expires_at = utc_now + timedelta(minutes=60)
 
+                        currency = bag.academy.main_currency
+                        if plan.currency != currency:
+                            currency = plan.currency
+
                         plan = bag.plans.filter(status="CHECKING").first()
 
                         # Initialize pricing_ratio_explanation
@@ -2916,7 +2920,7 @@ class CheckingView(APIView):
                         if not plan or plan.is_renewable:
                             bag.country_code = country_code
                             bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
-                                get_amount(bag, bag.academy.main_currency, lang)
+                                get_amount(bag, currency, lang)
                             )
 
                         else:
