@@ -15,6 +15,7 @@ from django.utils.html import format_html
 
 from breathecode.activity.tasks import get_attendancy_log
 from breathecode.assignments.actions import sync_student_tasks
+from breathecode.certificate.actions import generate_certificate_ignoring_tasks
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
 from breathecode.utils import getLogger
 from breathecode.utils.datetime_integer import from_now
@@ -143,6 +144,62 @@ def add_student_tag_to_active_campaign(modeladmin, request, queryset):
         add_cohort_task_to_student.delay(v.user.id, v.cohort.id, v.cohort.academy.id)
 
 
+@admin.display(description="🎓 Generate Certificates (Ignore Pending Tasks)")
+def generate_certificates_for_cohort_users_ignoring_tasks(modeladmin, request, queryset):
+    from capyc.rest_framework.exceptions import ValidationException
+
+    logger = getLogger(__name__)
+    success_count = 0
+    error_count = 0
+    errors = []
+
+    for cohort_user in queryset:
+        try:
+            if not cohort_user.user:
+                errors.append(f"CohortUser {cohort_user.id}: No user associated")
+                error_count += 1
+                continue
+
+            if not cohort_user.cohort:
+                errors.append(f"CohortUser {cohort_user.id}: No cohort associated")
+                error_count += 1
+                continue
+
+            logger.debug(
+                f"Generating certificate ignoring tasks for user {cohort_user.user.id} "
+                f"in cohort {cohort_user.cohort.id}"
+            )
+            generate_certificate_ignoring_tasks(cohort_user.user, cohort_user.cohort)
+            success_count += 1
+
+        except ValidationException as e:
+            error_msg = (
+                f"CohortUser {cohort_user.id} (user: {cohort_user.user.email if cohort_user.user else 'N/A'}): {str(e)}"
+            )
+            errors.append(error_msg)
+            error_count += 1
+            logger.exception(error_msg)
+        except Exception as e:
+            error_msg = (
+                f"CohortUser {cohort_user.id} (user: {cohort_user.user.email if cohort_user.user else 'N/A'}): {str(e)}"
+            )
+            errors.append(error_msg)
+            error_count += 1
+            logger.exception(error_msg)
+
+    # Show results
+    if success_count > 0:
+        messages.success(
+            request, message=f"Successfully generated {success_count} certificate(s) ignoring pending tasks"
+        )
+
+    if error_count > 0:
+        error_message = f"Failed to generate {error_count} certificate(s). Errors: " + " | ".join(errors[:5])
+        if len(errors) > 5:
+            error_message += f" ... and {len(errors) - 5} more errors"
+        messages.error(request, message=error_message)
+
+
 @admin.register(CohortUser)
 class CohortUserAdmin(admin.ModelAdmin):
     search_fields = ["user__email", "user__first_name", "user__last_name", "cohort__name", "cohort__slug"]
@@ -156,6 +213,7 @@ class CohortUserAdmin(admin.ModelAdmin):
         make_edu_stat_active,
         make_fin_stat_fully_paid,
         add_student_tag_to_active_campaign,
+        generate_certificates_for_cohort_users_ignoring_tasks,
     ]
 
     def get_student(self, obj):

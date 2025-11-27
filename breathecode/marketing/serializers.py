@@ -461,6 +461,7 @@ class GetCourseSerializer(GetCourseSmallSerializer):
     is_listed = serpy.Field()
     visibility = serpy.Field()
     plan_slug = serpy.MethodField()
+    suggested_plan_addon = serpy.MethodField()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -481,6 +482,9 @@ class GetCourseSerializer(GetCourseSmallSerializer):
                 return plan_slug
 
         return obj.plan_slug
+
+    def get_suggested_plan_addon(self, obj):
+        return list(obj.suggested_plan_addon.all().values_list("slug", flat=True))
 
 
 class CoursePUTSerializer(serializers.ModelSerializer):

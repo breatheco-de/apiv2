@@ -103,6 +103,7 @@ class PublicProfileSerializer(serpy.Serializer):
 
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
+    bio = serpy.Field()
 
 
 class ProfileSerializer(serpy.Serializer):
