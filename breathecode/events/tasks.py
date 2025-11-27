@@ -7,13 +7,14 @@ from linked_services.django.service import Service
 from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
+import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import CohortTimeSlot
 from breathecode.events.actions import ensure_livekit_room_for_event
 from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import TaskPriority
 from breathecode.utils.datetime_integer import DatetimeInteger
 
-from .models import Event, EventbriteWebhook, EventContext, LiveClass, Organization
+from .models import Event, EventCheckin, EventbriteWebhook, EventContext, LiveClass, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -300,3 +301,65 @@ def create_livekit_room_for_event(self, event_id: int):
     except Exception as e:
         logger.error(f"Failed to create LiveKit room for event {event_id}: {e}")
         AbortTask(f"Failed to create LiveKit room for event {event_id}: {e}")
+
+
+@task(priority=TaskPriority.NOTIFICATION.value)
+def send_event_suspended_notification(event_id: int, **kwargs):
+    """
+    Send email notifications to all attendees when an event is suspended.
+    """
+    logger.info(f"Starting send_event_suspended_notification for event {event_id}")
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        raise AbortTask(f"Event {event_id} not found. Task cannot continue.")
+
+    if event.status != "SUSPENDED":
+        logger.warning(f"Event {event_id} is not suspended, skipping notification")
+        return
+
+    # Get all EventCheckin records for this event that have email addresses
+    checkins = EventCheckin.objects.filter(event=event).exclude(email__isnull=True).exclude(email="")
+
+    if not checkins.exists():
+        logger.info(f"No attendees found for event {event_id}")
+        return
+
+    # Prepare email content based on event language
+    lang = (event.lang or "en").lower()
+    if lang not in ["en", "es"]:
+        lang = "en"
+
+    messages = {
+        "en": {
+            "subject": f"Event Suspended: {event.title or f'Event {event.id}'}",
+            "message": f"We regret to inform you that the event '{event.title or f'Event {event.id}'}' has been suspended for reasons that are out of our hands.<br><br>"
+            f"If you have any questions or concerns, please contact support for assistance.<br><br>"
+            f"We apologize for any inconvenience this may cause.",
+        },
+        "es": {
+            "subject": f"Evento Suspendido: {event.title or f'Evento {event.id}'}",
+            "message": f"Lamentamos informarle que el evento '{event.title or f'Evento {event.id}'}' ha sido suspendido por razones fuera de nuestro control.<br><br>"
+            f"Si tiene alguna pregunta o inquietud, por favor contacte a soporte para asistencia.<br><br>"
+            f"Nos disculpamos por cualquier inconveniente que esto pueda causar.",
+        },
+    }
+
+    selected_lang = messages.get(lang, messages["en"])
+
+    # Send email to each attendee
+    for checkin in checkins:
+        try:
+            data = {
+                "SUBJECT": selected_lang["subject"],
+                "MESSAGE": selected_lang["message"],
+            }
+
+            notify_actions.send_email_message(
+                "message", checkin.email, data, academy=event.academy
+            )
+            logger.debug(f"Sent suspension notification to {checkin.email} for event {event_id}")
+        except Exception as e:
+            logger.error(f"Failed to send suspension notification to {checkin.email} for event {event_id}: {e}")
+
+    logger.info(f"Completed sending suspension notifications for event {event_id}")

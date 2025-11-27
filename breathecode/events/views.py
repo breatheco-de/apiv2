@@ -59,6 +59,7 @@ from .models import (
     LiveClass,
     Organization,
     Organizer,
+    SUSPENDED,
     Venue,
 )
 from .permissions.consumers import event_by_url_param, live_class_by_url_param
@@ -89,7 +90,7 @@ from .serializers import (
     PUTEventCheckinSerializer,
     VenueSerializer,
 )
-from .tasks import async_eventbrite_webhook, mark_live_class_as_started
+from .tasks import async_eventbrite_webhook, mark_live_class_as_started, send_event_suspended_notification
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -961,6 +962,15 @@ class AcademyEventJoinView(APIView):
                 translation(lang, en="Event not found", es="Evento no encontrado", slug="not-found")
             )
 
+        if event.status == SUSPENDED:
+            message = translation(
+                lang,
+                en="This event was suspended for reasons that are out of our hands, contact support if you have any further questions",
+                es="Este evento fue suspendido por razones fuera de nuestro control, contacte a soporte si tiene alguna pregunta adicional",
+                slug="event-suspended",
+            )
+            return render_message(request, message, status=400, academy=event.academy)
+
         if not event.live_stream_url:
             message = translation(
                 lang,
@@ -971,6 +981,37 @@ class AcademyEventJoinView(APIView):
             return render_message(request, message, status=400, academy=event.academy)
 
         return redirect(event.live_stream_url)
+
+
+class AcademyEventSuspendView(APIView):
+
+    @capable_of("crud_event")
+    def put(self, request, event_id, academy_id=None):
+        lang = get_user_language(request)
+
+        event = Event.objects.filter(academy__id=int(academy_id), id=event_id).first()
+
+        if not event:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Event not found for this academy {academy_id}",
+                    es=f"Evento no encontrado para esta academia {academy_id}",
+                    slug="event-not-found",
+                )
+            )
+
+        # Set event status to SUSPENDED
+        event.status = SUSPENDED
+        # Set live_stream_url to None
+        event.live_stream_url = None
+        event.save()
+
+        # Queue email notification task
+        send_event_suspended_notification.delay(event.id)
+
+        serializer = EventSerializer(event, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class EventTypeView(APIView):
@@ -1160,6 +1201,16 @@ class EventTypeVisibilitySettingView(APIView):
 @consume("event_join", consumer=event_by_url_param, format="html")
 def join_event(request, token, event):
     now = timezone.now()
+
+    if event.status == SUSPENDED:
+        lang = get_user_language(request)
+        message = translation(
+            lang,
+            en="This event was suspended for reasons that are out of our hands, contact support if you have any further questions",
+            es="Este evento fue suspendido por razones fuera de nuestro control, contacte a soporte si tiene alguna pregunta adicional",
+            slug="event-suspended",
+        )
+        return render_message(request, message, status=400, academy=event.academy)
 
     if event.starting_at > now:
         obj = {}

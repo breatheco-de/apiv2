@@ -53,6 +53,7 @@ from .syndication import LatestEventsFeed
 from .views import (
     AcademyEventCheckinView,
     AcademyEventJoinView,
+    AcademyEventSuspendView,
     AcademyEventTypeView,
     AcademyEventView,
     AcademyLiveClassJoinView,
@@ -108,6 +109,7 @@ urlpatterns = [
     path("academy/event.csv", AcademyEventView.as_view(), name="academy_event_csv"),
     path("academy/event/<int:event_id>", AcademyEventView.as_view(), name="academy_event_id"),
     path("academy/event/<int:event_id>/join", AcademyEventJoinView.as_view(), name="academy_event_id_join"),
+    path("academy/event/<int:event_id>/suspend", AcademyEventSuspendView.as_view(), name="academy_event_id_suspend"),
     path("academy/organization", AcademyOrganizationView.as_view(), name="academy_organization"),
     path(
         "academy/organization/organizer",
