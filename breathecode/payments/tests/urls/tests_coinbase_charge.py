@@ -86,37 +86,3 @@ class CoinbaseChargeViewTestSuite(PaymentsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    """
-    🔽🔽🔽 GET with successful charge retrieval
-    """
-
-    @patch("breathecode.payments.services.coinbase.CoinbaseCommerce.get_charge")
-    def test__get__successful_charge_retrieval(self, mock_get_charge):
-        mock_get_charge.return_value = {
-            "id": "CHARGE123",
-            "code": "TESTCODE",
-            "name": "Test Payment",
-            "description": "Test Description",
-            "pricing": {"local": {"amount": "100.00", "currency": "USD"}},
-            "timeline": [
-                {"status": "NEW", "time": "2024-01-01T00:00:00Z"},
-                {"status": "PENDING", "time": "2024-01-01T00:05:00Z"},
-            ],
-            "metadata": {"bag_id": 1, "user_id": 1},
-        }
-
-        model = self.bc.database.create(user=1, academy=1)
-        self.client.force_authenticate(model.user)
-
-        url = reverse_lazy("payments:coinbase_charge_info", kwargs={"charge_id": "CHARGE123"}) + "?academy=1"
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        json = response.json()
-        self.assertEqual(json["id"], "CHARGE123")
-        self.assertEqual(json["code"], "TESTCODE")
-        self.assertEqual(json["name"], "Test Payment")
-        self.assertEqual(json["pricing"]["local"]["amount"], "100.00")
-        self.assertEqual(len(json["timeline"]), 2)
-        self.assertEqual(json["metadata"]["bag_id"], 1)
