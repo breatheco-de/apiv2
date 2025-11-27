@@ -16,6 +16,7 @@ from mixer.backend.django import mixer
 
 import breathecode.activity.tasks as activity_tasks
 from breathecode.notify import actions as notify_actions
+from breathecode.payments.models import PaymentMethod, Subscription
 from breathecode.payments.services import Stripe
 
 from ...tasks import charge_subscription
@@ -79,12 +80,16 @@ def invoice_item(data={}):
     return {
         "academy_id": 0,
         "amount": 0.0,
+        "amount_breakdown": None,
         "bag_id": 2,
+        "coinbase_charge_id": None,
         "currency_id": 2,
         "id": 0,
         "paid_at": None,
         "status": "PENDING",
         "stripe_id": None,
+        "subscription_billing_team_id": None,
+        "subscription_seat_id": None,
         "user_id": 0,
         "refund_stripe_id": None,
         "refunded_at": None,
@@ -98,8 +103,13 @@ def invoice_item(data={}):
 
 def fake_stripe_pay(**kwargs):
 
-    def wrapper(user, bag, amount: int, currency="usd", description=""):
-        return mixer.blend("payments.Invoice", user=user, bag=bag, **kwargs)
+    def wrapper(user, bag, amount: int, currency="usd", description="", **extra_kwargs):
+        # Accept all kwargs from the real Stripe.pay signature (like subscription_billing_team)
+        from breathecode.payments.models import Invoice
+
+        invoice = Invoice(user=user, bag=bag, academy=bag.academy, currency=bag.currency, amount=amount, **kwargs)
+        invoice.save()
+        return invoice
 
     return wrapper
 
@@ -168,7 +178,9 @@ class PaymentsTestSuite(PaymentsTestCase):
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
     def test_subscription_without_invoices(self):
-        model = self.bc.database.create_v2(subscription=1)
+        plan = {"is_renewable": False}
+        model = self.bc.database.create_v2(subscription=1, plan=plan)
+        model.subscription.plans.add(model.plan)
 
         # remove prints from mixer
         logging.Logger.info.call_args_list = []
@@ -187,6 +199,7 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(
             logging.Logger.error.call_args_list,
             [
+                call("charge_subscription: Error getting bag from subscription 1: subscription-has-no-invoices"),
                 call("Error getting bag from subscription 1: subscription-has-no-invoices", exc_info=True),
             ],
         )
@@ -242,7 +255,33 @@ class PaymentsTestSuite(PaymentsTestCase):
             "pay_every_unit": unit_type,
             "next_payment_at": UTC_NOW - relativedelta(days=25, months=unit * 2),
         }
-        model = self.bc.database.create(subscription=subscription, invoice=1)
+        bag = {
+            "chosen_period": "MONTH",
+            "amount_per_month": 10.0,
+            "amount_per_quarter": 10.0,
+            "amount_per_half": 10.0,
+            "amount_per_year": 10.0,
+        }
+        plan = {
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "price_per_month": 10.0,
+            "price_per_quarter": 10.0,
+            "price_per_half": 10.0,
+            "price_per_year": 10.0,
+            "trial_duration": 0,
+        }
+        model = self.bc.database.create(subscription=subscription, invoice=1, plan=plan, bag=bag)
+        model.subscription.plans.add(model.plan)
+        model.subscription.invoices.add(model.invoice)
+        model.invoice.bag = model.bag
+        model.invoice.save()
+
+        # Ensure the plan has the correct price (in case Mixer overrides it)
+        model.plan.price_per_month = 10.0
+        model.plan.trial_duration = 0
+        model.plan.save()
 
         with patch(
             "breathecode.payments.services.stripe.Stripe.pay", MagicMock(side_effect=fake_stripe_pay(paid_at=UTC_NOW))
@@ -266,7 +305,25 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(
             self.bc.database.list_of("payments.Bag"),
             [
-                self.bc.format.to_dict(model.bag),
+                bag_item(
+                    {
+                        "academy_id": 1,
+                        "currency_id": 1,
+                        "id": 1,
+                        "is_recurrent": False,
+                        "status": "CHECKING",
+                        "type": "BAG",
+                        "user_id": 1,
+                        "was_delivered": False,
+                        "chosen_period": "MONTH",
+                        "amount_per_month": 10.0,
+                        "amount_per_quarter": 10.0,
+                        "amount_per_half": 10.0,
+                        "amount_per_year": 10.0,
+                        "plan_addons_amount": 0.0,
+                        "pricing_ratio_explanation": {"plans": [], "service_items": [], "plan_addons": []},
+                    }
+                ),
                 bag_item(
                     {
                         "academy_id": 1,
@@ -277,6 +334,12 @@ class PaymentsTestSuite(PaymentsTestCase):
                         "user_id": 1,
                         "was_delivered": True,
                         "chosen_period": "MONTH",
+                        "amount_per_month": 10.0,
+                        "amount_per_quarter": 10.0,
+                        "amount_per_half": 10.0,
+                        "amount_per_year": 10.0,
+                        "plan_addons_amount": 0.0,
+                        "pricing_ratio_explanation": {"plans": [], "service_items": [], "plan_addons": []},
                     }
                 ),
             ],
@@ -284,13 +347,24 @@ class PaymentsTestSuite(PaymentsTestCase):
         self.assertEqual(
             self.bc.database.list_of("payments.Invoice"),
             [
-                self.bc.format.to_dict(model.invoice),
                 invoice_item(
                     {
-                        "academy_id": 2,
+                        "academy_id": 1,
+                        "id": 1,
+                        "user_id": 1,
+                        "bag_id": 1,
+                        "currency_id": 1,
+                        "paid_at": model.invoice.paid_at,
+                    }
+                ),
+                invoice_item(
+                    {
+                        "academy_id": 1,
                         "id": 2,
                         "user_id": 1,
                         "paid_at": UTC_NOW,
+                        "amount": 10.0,
+                        "currency_id": 1,
                     }
                 ),
             ],
@@ -318,7 +392,7 @@ class PaymentsTestSuite(PaymentsTestCase):
                 model.user.email,
                 {
                     "SUBJECT": "Your 4Geeks subscription was successfully renewed",
-                    "MESSAGE": "The amount was $0.0",
+                    "MESSAGE": "The amount was $10.0",
                     "BUTTON": "See the invoice",
                     "LINK": os.getenv("APP_URL")[:-1] + "/subscription/1",
                 },
@@ -381,7 +455,23 @@ class PaymentsTestSuite(PaymentsTestCase):
             "pay_every": unit,
             "pay_every_unit": unit_type,
         }
-        model = self.bc.database.create(subscription=subscription, invoice=1)
+        plan = {
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "price_per_month": 10.0,
+            "price_per_quarter": 10.0,
+            "price_per_half": 10.0,
+            "price_per_year": 10.0,
+            "trial_duration": 0,
+        }
+        model = self.bc.database.create(subscription=subscription, invoice=1, plan=plan)
+        model.subscription.plans.add(model.plan)
+
+        # Ensure the plan has the correct price (in case Mixer overrides it)
+        model.plan.price_per_month = 10.0
+        model.plan.trial_duration = 0
+        model.plan.save()
 
         with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock(side_effect=Exception("fake error"))):
             # remove prints from mixer
@@ -430,9 +520,10 @@ class PaymentsTestSuite(PaymentsTestCase):
                     model.user.email,
                     {
                         "SUBJECT": "Your 4Geeks subscription could not be renewed",
-                        "MESSAGE": "Please update your payment methods",
-                        "BUTTON": "Please update your payment methods",
-                        "LINK": os.getenv("APP_URL")[:-1] + "/paymentmethod",
+                        "MESSAGE": "Your payment with credit card was declined, please update your card or use another payment method",
+                        "BUTTON": "Change payment method",
+                        "LINK": os.getenv("APP_URL")[:-1]
+                        + f"/renew?plan={model.plan.id}&subscription_id={model.subscription.id}",
                     },
                     academy=model.academy,
                 )
@@ -627,8 +718,19 @@ class PaymentsTestSuite(PaymentsTestCase):
             "pay_every_unit": unit_type,
         }
         invoice = {"paid_at": UTC_NOW - relativedelta(hours=24, seconds=1)}
-        model = self.bc.database.create(subscription=subscription, invoice=invoice)
-
+        bag = {"chosen_period": "MONTH"}
+        plan = {
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "price_per_month": 10.0,
+            "trial_duration": 0,
+        }
+        model = self.bc.database.create(subscription=subscription, invoice=invoice, plan=plan, bag=bag)
+        model.subscription.plans.add(model.plan)
+        model.subscription.invoices.add(model.invoice)
+        model.invoice.bag = model.bag
+        model.invoice.save()
         error = self.bc.fake.text()
 
         with patch(
@@ -701,8 +803,31 @@ class PaymentsTestSuite(PaymentsTestCase):
             "pay_every": unit,
             "pay_every_unit": unit_type,
         }
-        invoice = {"paid_at": UTC_NOW - relativedelta(hours=random.randint(1, 23))}
-        model = self.bc.database.create(subscription=subscription, invoice=invoice)
+        invoice = {
+            "paid_at": UTC_NOW - relativedelta(hours=random.randint(1, 23)),
+            "coinbase_charge_id": None,
+            "payment_method": None,  # None = Stripe payment (default)
+        }
+        plan = {
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "price_per_month": random.randint(1, 100),
+            "price_per_quarter": random.randint(1, 100),
+            "price_per_half": random.randint(1, 100),
+            "price_per_year": random.randint(1, 100),
+        }
+        model = self.bc.database.create(subscription=subscription, invoice=invoice, plan=plan, bag=1)
+        model.subscription.plans.add(model.plan)
+        model.subscription.invoices.add(model.invoice)
+        model.invoice.bag = model.bag
+        model.invoice.save()
+
+        # Create a Coinbase payment method in the DB so the fallback logic can distinguish
+
+        PaymentMethod.objects.create(
+            academy=model.academy, title="Coinbase", is_crypto=True, currency=model.invoice.currency
+        )
 
         error = self.bc.fake.text()
 
@@ -1035,3 +1160,95 @@ class PaymentsTestSuite(PaymentsTestCase):
         assert notify_actions.send_email_message.call_args_list == []
         assert activity_tasks.add_activity.delay.call_args_list == []
         assert self.bc.database.list_of("task_manager.ScheduledTask") == []
+
+    """
+    🔽🔽🔽 Subscription externally managed - should not charge with Stripe
+    """
+
+    @patch("logging.Logger.info", MagicMock())
+    @patch("logging.Logger.error", MagicMock())
+    @patch("breathecode.notify.actions.send_email_message", MagicMock())
+    @patch("breathecode.payments.tasks.renew_subscription_consumables.delay", MagicMock())
+    @patch(
+        "breathecode.payments.tasks.schedule_task",
+        MagicMock(return_value=MagicMock(exists=MagicMock(return_value=False))),
+    )
+    @patch("mixer.main.LOGGER.info", MagicMock())
+    @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
+    def test_subscription_externally_managed(self):
+        unit = random.choice([1, 3, 6, 12])
+        unit_type = "MONTH"
+        subscription = {
+            "pay_every": unit,
+            "pay_every_unit": unit_type,
+            "next_payment_at": UTC_NOW - relativedelta(days=25, months=unit * 2),
+            "externally_managed": True,
+        }
+        plan = {
+            "is_renewable": True,
+            "time_of_life": 0,
+            "time_of_life_unit": None,
+            "price_per_month": 10.0,
+            "price_per_quarter": 10.0,
+            "price_per_half": 10.0,
+            "price_per_year": 10.0,
+            "trial_duration": 0,
+        }
+        model = self.bc.database.create(subscription=subscription, plan=plan)
+
+        model.plan.price_per_month = 10.0
+        model.plan.trial_duration = 0
+        model.plan.save()
+
+        with patch("breathecode.payments.services.stripe.Stripe.pay", MagicMock()) as mock_stripe_pay:
+            # remove prints from mixer
+            logging.Logger.info.call_args_list = []
+            logging.Logger.error.call_args_list = []
+
+            charge_subscription.delay(1)
+
+        # Verify Stripe.pay was NOT called
+        mock_stripe_pay.assert_not_called()
+
+        self.assertEqual(
+            logging.Logger.info.call_args_list,
+            [
+                call("Starting charge_subscription for subscription 1"),
+            ],
+        )
+        self.assertEqual(logging.Logger.error.call_args_list, [call("Payment to Subscription 1 failed", exc_info=True)])
+
+        # Verify the email notification was sent with correct message
+        self.assertEqual(
+            notify_actions.send_email_message.call_args_list,
+            [
+                call(
+                    "message",
+                    model.user.email,
+                    {
+                        "SUBJECT": "Your 4Geeks subscription could not be renewed",
+                        "MESSAGE": "Please make your payment in your academy or use another payment method",
+                        "BUTTON": "Renew with another method",
+                        "LINK": os.getenv("APP_URL")[:-1]
+                        + f"/renew?plan={model.plan.id}&subscription_id={model.subscription.id}",
+                    },
+                    academy=model.academy,
+                )
+            ],
+        )
+
+        # Verify no bags were created (externally managed subscriptions don't create bags)
+        bags = self.bc.database.list_of("payments.Bag")
+        self.assertEqual(len(bags), 0)  # No bags should be created
+
+        invoices = self.bc.database.list_of("payments.Invoice")
+        self.assertEqual(len(invoices), 0)  # No invoices should be created
+
+        subscription = self.bc.database.list_of("payments.Subscription")[0]
+        self.assertIn(subscription["status"], ["PAYMENT_ISSUE", Subscription.Status.PAYMENT_ISSUE])
+
+        from breathecode.payments.tasks import schedule_task
+
+        schedule_task.assert_called_once_with(charge_subscription, "1d")
+
+        assert activity_tasks.add_activity.delay.call_args_list == []
