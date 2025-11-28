@@ -4025,13 +4025,6 @@ class PayView(APIView):
                 if has_referral_coupons:
                     transaction.on_commit(lambda inv_id=invoice.id: register_referral_from_invoice.delay(inv_id))
 
-                invoice = Invoice.objects.prefetch_related(
-                    "bag__coupons",
-                    "bag__plans",
-                    "bag__plan_addons",
-                    "bag__service_items",
-                ).select_related("bag", "currency", "academy").get(id=invoice.id)
-
                 serializer = GetInvoiceSerializer(invoice, many=False)
 
                 tasks_activity.add_activity.delay(
