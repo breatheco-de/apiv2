@@ -20,6 +20,7 @@ from breathecode.payments.models import (
     SubscriptionBillingTeam,
     SubscriptionSeat,
 )
+from breathecode.payments.actions import calculate_invoice_breakdown
 from breathecode.utils import getLogger
 
 logger = getLogger(__name__)
@@ -429,8 +430,10 @@ class Stripe:
         invoice.currency = currency
         invoice.bag = bag
         invoice.academy = bag.academy
-
         invoice.save()
+
+        # Breakdown will be calculated later when bag is fully configured
+        # (in PayView after bag.chosen_period and bag.how_many_installments are set)
 
         return invoice
 
