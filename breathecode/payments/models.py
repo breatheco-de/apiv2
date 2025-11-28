@@ -1825,7 +1825,7 @@ class Invoice(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="Breakdown of invoice amount by component (main_plan, service_items, plan_addons)",
+        help_text="Breakdown of how the invoice amount is divided across plans, plan addons, and service items",
     )
 
     coinbase_charge_id = models.CharField(
