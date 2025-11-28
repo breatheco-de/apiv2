@@ -1757,6 +1757,7 @@ class Invoice(models.Model):
         FULFILLED = "FULFILLED", "Fulfilled"
         REJECTED = "REJECTED", "Rejected"
         PENDING = "PENDING", "Pending"
+        PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED", "Partially refunded"
         REFUNDED = "REFUNDED", "Refunded"
         DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD", "Disputed as fraud"
 
@@ -1769,7 +1770,7 @@ class Invoice(models.Model):
         null=True, blank=True, default=None, help_text="Date when the invoice was refunded"
     )
     status = models.CharField(
-        max_length=17, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
+        max_length=18, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
     )
 
     bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag", related_name="invoices")
@@ -1872,6 +1873,60 @@ class Invoice(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.email} {self.amount} ({self.currency.code})"
+
+
+class CreditNote(models.Model):
+    """Represents a credit note (nota de crédito) for refunds."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["CreditNote"]
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        ISSUED = "ISSUED", "Issued"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.CASCADE,
+        related_name="credit_notes",
+        help_text="Original invoice being refunded",
+    )
+    amount = models.FloatField(help_text="Credit note amount")
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency of the credit note")
+    reason = models.TextField(help_text="Reason for credit note")
+    issued_at = models.DateTimeField(auto_now_add=True, help_text="Date when the credit note was issued")
+    status = models.CharField(
+        max_length=10, choices=Status, default=Status.DRAFT, db_index=True, help_text="Credit note status"
+    )
+    legal_text = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Country-specific legal text for refunds",
+    )
+    country_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        help_text="Country code for legal compliance",
+    )
+    breakdown = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Breakdown of what is being refunded (main_plan, service_items, plan_addons)",
+    )
+    refund_stripe_id = models.CharField(
+        max_length=32, null=True, default=None, blank=True, help_text="Stripe refund id if applicable"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        db_table = "payments_credit_note"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"CreditNote {self.id} for Invoice {self.invoice.id} - {self.amount} {self.currency.code}"
 
 
 class AbstractIOweYou(models.Model):
