@@ -3617,6 +3617,7 @@ class PayView(APIView):
 
         with transaction.atomic():
             sid = transaction.savepoint()
+            savepoint_committed = False
             try:
 
                 reputation, _ = FinancialReputation.objects.get_or_create(user=request.user)
@@ -3979,11 +3980,14 @@ class PayView(APIView):
                 bag.expires_at = None
                 bag.save()
 
+                coupons_list = list(coupons)
+
                 # Create reward coupons for sellers if coupons were used
-                if coupons.exists() and original_price > 0:
-                    actions.create_seller_reward_coupons(list(coupons), original_price, request.user)
+                if coupons_list and original_price > 0:
+                    actions.create_seller_reward_coupons(coupons_list, original_price, request.user)
 
                 transaction.savepoint_commit(sid)
+                savepoint_committed = True
 
                 if original_price == 0:
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
@@ -4011,7 +4015,9 @@ class PayView(APIView):
 
                 has_referral_coupons = False
                 if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
-                    has_referral_coupons = coupons.exclude(referral_type="NO_REFERRAL").exists()
+                    has_referral_coupons = any(
+                        coupon.referral_type != "NO_REFERRAL" for coupon in coupons_list
+                    )
 
                 if has_referral_coupons:
                     transaction.on_commit(lambda inv_id=invoice.id: register_referral_from_invoice.delay(inv_id))
@@ -4026,13 +4032,16 @@ class PayView(APIView):
                 )
 
                 data = serializer.data
-                serializer = GetCouponSerializer(coupons, many=True)
+                serializer = GetCouponSerializer(coupons_list, many=True)
                 data["coupons"] = serializer.data
 
                 return Response(data, status=201)
 
             except Exception as e:
-                transaction.savepoint_rollback(sid)
+                try:
+                    transaction.savepoint_rollback(sid)
+                except Exception:
+                    pass
                 raise e
 
 
