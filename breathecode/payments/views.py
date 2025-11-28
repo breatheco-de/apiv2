@@ -3617,7 +3617,6 @@ class PayView(APIView):
 
         with transaction.atomic():
             sid = transaction.savepoint()
-            savepoint_committed = False
             try:
 
                 reputation, _ = FinancialReputation.objects.get_or_create(user=request.user)
@@ -3937,6 +3936,11 @@ class PayView(APIView):
                     s = Stripe(academy=bag.academy)
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
+                    invoice.refresh_from_db()
+                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                    )
+                    invoice.save(update_fields=["amount_breakdown"])
 
                 elif amount == 0:
                     invoice = Invoice(
@@ -3950,6 +3954,10 @@ class PayView(APIView):
                     )
 
                     invoice.save()
+                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                    )
+                    invoice.save(update_fields=["amount_breakdown"])
 
                 else:
                     raise ValidationException(
@@ -3987,7 +3995,6 @@ class PayView(APIView):
                     actions.create_seller_reward_coupons(coupons_list, original_price, request.user)
 
                 transaction.savepoint_commit(sid)
-                savepoint_committed = True
 
                 if original_price == 0:
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
