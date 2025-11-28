@@ -258,6 +258,130 @@ def generate_certificate(user, cohort=None, layout=None):
     return uspe
 
 
+def generate_certificate_ignoring_tasks(user, cohort=None, layout=None):
+    """
+    Generate certificate ignoring pending tasks validation.
+    This is used for admin bulk actions when certificates need to be generated
+    even if students have pending tasks.
+    """
+    query = {"user__id": user.id}
+
+    if cohort:
+        query["cohort__id"] = cohort.id
+
+    cohort_user = CohortUser.objects.filter(**query).exclude(cohort__stage="DELETED").first()
+
+    if not cohort_user:
+        raise ValidationException(
+            "Impossible to obtain the student cohort, maybe it's none assigned", slug="missing-cohort-user"
+        )
+
+    if not cohort:
+        cohort = cohort_user.cohort
+
+    if cohort.syllabus_version is None:
+        raise ValidationException(
+            f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}",
+            slug="missing-syllabus-version",
+        )
+
+    specialty = Specialty.objects.filter(syllabus__id=cohort.syllabus_version.syllabus_id).first()
+    if not specialty:
+        raise ValidationException("Specialty has no Syllabus assigned", slug="missing-specialty")
+
+    uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
+
+    if uspe is not None and uspe.status == "PERSISTED" and uspe.preview_url:
+        raise ValidationException("This user already has a certificate created", slug="already-exists")
+
+    if uspe is None:
+        utc_now = timezone.now()
+        uspe = UserSpecialty(
+            user=user,
+            cohort=cohort,
+            token=hashlib.sha1((str(user.id) + str(utc_now)).encode("UTF-8")).hexdigest(),
+            specialty=specialty,
+            signed_by_role=strings[cohort.language.lower()]["Main Instructor"],
+        )
+        if specialty.expiration_day_delta is not None:
+            uspe.expires_at = utc_now + timezone.timedelta(days=specialty.expiration_day_delta)
+
+    layout = LayoutDesign.objects.filter(slug=layout).first()
+
+    if layout is None:
+        layout = LayoutDesign.objects.filter(is_default=True, academy=cohort.academy).first()
+
+    if layout is None:
+        layout = LayoutDesign.objects.filter(slug="default").first()
+
+    if layout is None:
+        raise ValidationException(
+            "No layout was specified and there is no default layout for this academy", slug="no-default-layout"
+        )
+
+    uspe.layout = layout
+
+    # validate for teacher
+    main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role="TEACHER").first()
+    if main_teacher is None or main_teacher.user is None:
+        raise ValidationException(
+            "This cohort does not have a main teacher, please assign it first", slug="without-main-teacher"
+        )
+
+    main_teacher = main_teacher.user
+    uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
+
+    try:
+        uspe.academy = cohort.academy
+        
+        # Check pending tasks but don't fail - just record the count
+        pending_tasks = how_many_pending_tasks(
+            cohort.syllabus_version, user, task_types=["PROJECT"], only_mandatory=True, cohort_id=cohort.id
+        )
+
+        # Skip pending tasks validation - this is the key difference from generate_certificate
+
+        if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status == UP_TO_DATE):
+            message = "The student must have finantial status FULLY_PAID or UP_TO_DATE"
+            raise ValidationException(message, slug="bad-finantial-status")
+
+        if cohort_user.educational_status != "GRADUATED":
+            raise ValidationException(
+                "The student must have educational " "status GRADUATED", slug="bad-educational-status"
+            )
+
+        if not cohort.never_ends and cohort.current_day != cohort.syllabus_version.syllabus.duration_in_days:
+            raise ValidationException(
+                "Cohort current day should be " f"{cohort.syllabus_version.syllabus.duration_in_days}",
+                slug="cohort-not-finished",
+            )
+
+        if not cohort.never_ends and cohort.stage != "ENDED":
+            raise ValidationException(
+                "The student cohort stage has to be 'ENDED' before you can issue any certificates",
+                slug="cohort-without-status-ended",
+            )
+
+        if not uspe.issued_at:
+            uspe.issued_at = timezone.now()
+
+        uspe.status = PERSISTED
+        # Set status text indicating pending tasks were ignored
+        if pending_tasks and pending_tasks > 0:
+            uspe.status_text = f"Generated through admin ignoring {pending_tasks} pending tasks"
+        else:
+            uspe.status_text = "Certificate successfully queued for PDF generation"
+        uspe.save()
+
+    except ValidationException as e:
+        message = str(e)
+        uspe.status = ERROR
+        uspe.status_text = message
+        uspe.save()
+
+    return uspe
+
+
 def certificate_screenshot(certificate_id: int):
 
     certificate = UserSpecialty.objects.get(id=certificate_id)
