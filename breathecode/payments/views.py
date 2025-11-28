@@ -3940,6 +3940,11 @@ class PayView(APIView):
                     s = Stripe(academy=bag.academy)
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
+                    invoice.refresh_from_db()
+                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                    )
+                    invoice.save(update_fields=["amount_breakdown"])
 
                 elif amount == 0:
                     invoice = Invoice(
@@ -3952,6 +3957,10 @@ class PayView(APIView):
                         academy=bag.academy,
                     )
                     invoice.save()
+                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                    )
+                    invoice.save(update_fields=["amount_breakdown"])
 
                 else:
                     raise ValidationException(
@@ -3982,21 +3991,11 @@ class PayView(APIView):
                 bag.expires_at = None
                 bag.save()
 
-                if amount == 0:
-                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
-                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
-                    )
-                    invoice.save(update_fields=["amount_breakdown"])
-                else:
-                    invoice.refresh_from_db()
-                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
-                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
-                    )
-                    invoice.save(update_fields=["amount_breakdown"])
+                coupons_list = list(coupons)
 
                 # Create reward coupons for sellers if coupons were used
-                if coupons.exists() and original_price > 0:
-                    actions.create_seller_reward_coupons(list(coupons), original_price, request.user)
+                if coupons_list and original_price > 0:
+                    actions.create_seller_reward_coupons(coupons_list, original_price, request.user)
 
                 transaction.savepoint_commit(sid)
 
@@ -4026,7 +4025,9 @@ class PayView(APIView):
 
                 has_referral_coupons = False
                 if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
-                    has_referral_coupons = coupons.exclude(referral_type="NO_REFERRAL").exists()
+                    has_referral_coupons = any(
+                        coupon.referral_type != "NO_REFERRAL" for coupon in coupons_list
+                    )
 
                 if has_referral_coupons:
                     transaction.on_commit(lambda inv_id=invoice.id: register_referral_from_invoice.delay(inv_id))
@@ -4041,13 +4042,16 @@ class PayView(APIView):
                 )
 
                 data = serializer.data
-                serializer = GetCouponSerializer(coupons, many=True)
+                serializer = GetCouponSerializer(coupons_list, many=True)
                 data["coupons"] = serializer.data
 
                 return Response(data, status=201)
 
             except Exception as e:
-                transaction.savepoint_rollback(sid)
+                try:
+                    transaction.savepoint_rollback(sid)
+                except Exception:
+                    pass
                 raise e
 
 
