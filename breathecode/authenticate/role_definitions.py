@@ -211,6 +211,14 @@ CAPABILITIES = [
         "description": "Read user service consumables to understand how many units are available",
     },
     {
+        "slug": "read_invoice",
+        "description": "Read invoice information",
+    },
+    {
+        "slug": "crud_invoice",
+        "description": "Create, update, delete invoices and process refunds",
+    },
+    {
         "slug": "read_career_path",
         "description": "Read career paths, job families, job roles, skills, competencies, and related talent development information",
     },
