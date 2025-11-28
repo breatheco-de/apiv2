@@ -1757,6 +1757,7 @@ class Invoice(models.Model):
         FULFILLED = "FULFILLED", "Fulfilled"
         REJECTED = "REJECTED", "Rejected"
         PENDING = "PENDING", "Pending"
+        PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED", "Partially refunded"
         REFUNDED = "REFUNDED", "Refunded"
         DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD", "Disputed as fraud"
 
@@ -1769,7 +1770,7 @@ class Invoice(models.Model):
         null=True, blank=True, default=None, help_text="Date when the invoice was refunded"
     )
     status = models.CharField(
-        max_length=17, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
+        max_length=18, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
     )
 
     bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag", related_name="invoices")

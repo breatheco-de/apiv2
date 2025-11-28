@@ -920,22 +920,6 @@ class GetBagSerializer(serpy.Serializer):
         _, total_after = actions.get_plan_addons_amounts_with_coupons(obj, coupons, lang="en")
         return total_after
 
-
-class GetInvoiceSerializer(GetInvoiceSmallSerializer):
-    id = serpy.Field()
-    amount = serpy.Field()
-    paid_at = serpy.Field()
-    status = serpy.Field()
-    externally_managed = serpy.Field()
-    currency = GetCurrencySmallSerializer()
-    bag = GetBagSerializer(many=False)
-
-    amount_refunded = serpy.Field()
-    refund_stripe_id = serpy.Field()
-    refunded_at = serpy.Field()
-    amount_breakdown = serpy.Field()
-
-
 class CreditNoteSerializer(serpy.Serializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -951,6 +935,20 @@ class CreditNoteSerializer(serpy.Serializer):
     updated_at = serpy.Field()
     invoice = GetInvoiceSmallSerializer(many=False)
 
+class GetInvoiceSerializer(GetInvoiceSmallSerializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    paid_at = serpy.Field()
+    status = serpy.Field()
+    externally_managed = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    bag = GetBagSerializer(many=False)
+
+    amount_refunded = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    refunded_at = serpy.Field()
+    amount_breakdown = serpy.Field()
+    credit_notes = CreditNoteSerializer(many=True, required=False)
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 

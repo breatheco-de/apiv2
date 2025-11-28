@@ -1,6 +1,6 @@
 import math
 import os
-from typing import Union
+from typing import Any, Union
 
 import stripe
 from capyc.core.i18n import translation
@@ -434,40 +434,91 @@ class Stripe:
 
         return invoice
 
-    def refund_payment(self, invoice: Invoice) -> Invoice:
+    def refund_payment(self, invoice: Invoice, amount: float | None = None) -> dict[str, Any]:
         """
         Refunds a payment associated with a given invoice.
 
         This method creates a Stripe refund for the charge ID stored in the invoice.
-        The invoice status is updated to "REFUNDED", and refund details are saved.
+        Supports both full and partial refunds.
 
         Args:
             invoice (Invoice): The invoice object representing the payment to be refunded.
                                It must have a `stripe_id` (charge ID).
+            amount (float, optional): Amount to refund. If None, refunds full amount.
 
         Returns:
-            Invoice: The updated Invoice object with refund details.
+            dict: Dictionary containing refund information with keys:
+                - 'refund': Stripe refund object
+                - 'refunded_amount': Amount refunded
+                - 'invoice': Updated invoice object
 
         Raises:
             PaymentException: If there's an issue with the Stripe refund process.
         """
         stripe.api_key = self.api_key
 
-        # Ensure the user associated with the invoice has a contact, though Stripe refund
-        # primarily needs the charge ID. This might be for consistency or future use.
+        # Validate refund amount doesn't exceed available
+        already_refunded = invoice.amount_refunded or 0
+        available_to_refund = invoice.amount - already_refunded
+
+        if amount is None:
+            amount = available_to_refund
+        elif amount > available_to_refund:
+            raise PaymentException(
+                translation(
+                    self.lang,
+                    en=f"Refund amount ({amount}) exceeds available amount to refund ({available_to_refund}). "
+                    f"Already refunded: {already_refunded}, Invoice total: {invoice.amount}",
+                    es=f"El monto del reembolso ({amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
+                    f"Ya reembolsado: {already_refunded}, Total de la factura: {invoice.amount}",
+                    slug="refund-amount-exceeds-available",
+                ),
+                code=400,
+            )
+
+        if amount <= 0:
+            raise PaymentException(
+                translation(
+                    self.lang,
+                    en="Refund amount must be greater than 0",
+                    es="El monto del reembolso debe ser mayor que 0",
+                    slug="invalid-refund-amount",
+                ),
+                code=400,
+            )
+
+        # Ensure the user associated with the invoice has a contact
         self.add_contact(invoice.user)
 
         def callback():
-            return stripe.Refund.create(charge=invoice.stripe_id)
+            refund_params = {"charge": invoice.stripe_id}
+            if amount is not None:
+                refund_params["amount"] = int(amount * 100)
+            return stripe.Refund.create(**refund_params)
 
         refund = self._i18n_validations(callback)
 
-        invoice.refund_stripe_id = refund["id"]
-        invoice.refunded_at = timezone.now()
-        invoice.status = "REFUNDED"
+        refunded_amount = refund["amount"] / 100
+
+        if invoice.refund_stripe_id:
+            invoice.amount_refunded = (invoice.amount_refunded or 0) + refunded_amount
+        else:
+            invoice.refund_stripe_id = refund["id"]
+            invoice.amount_refunded = refunded_amount
+
+        if invoice.amount_refunded >= invoice.amount:
+            invoice.status = "REFUNDED"
+            invoice.refunded_at = timezone.now()
+        elif invoice.amount_refunded > 0:
+            invoice.status = "PARTIALLY_REFUNDED"
+
         invoice.save()
 
-        return invoice
+        return {
+            "refund": refund,
+            "refunded_amount": refunded_amount,
+            "invoice": invoice,
+        }
 
     def create_payment_link(self, price_id: str, quantity: int) -> tuple[str, str]:
         """
