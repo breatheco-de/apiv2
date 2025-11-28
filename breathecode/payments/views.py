@@ -3941,10 +3941,6 @@ class PayView(APIView):
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
                     invoice.refresh_from_db()
-                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
-                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
-                    )
-                    invoice.save(update_fields=["amount_breakdown"])
 
                 elif amount == 0:
                     invoice = Invoice(
@@ -3957,16 +3953,17 @@ class PayView(APIView):
                         academy=bag.academy,
                     )
                     invoice.save()
-                    invoice.amount_breakdown = actions.calculate_invoice_breakdown(
-                        bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
-                    )
-                    invoice.save(update_fields=["amount_breakdown"])
 
                 else:
                     raise ValidationException(
                         translation(lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"),
                         code=400,
                     )
+
+                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                )
+                invoice.save(update_fields=["amount_breakdown"])    
 
                 # Calculate is_recurrent based on:
                 # 1. If it's a free trial -> False
@@ -3991,11 +3988,9 @@ class PayView(APIView):
                 bag.expires_at = None
                 bag.save()
 
-                coupons_list = list(coupons)
-
                 # Create reward coupons for sellers if coupons were used
-                if coupons_list and original_price > 0:
-                    actions.create_seller_reward_coupons(coupons_list, original_price, request.user)
+                if coupons.exists() and original_price > 0:
+                    actions.create_seller_reward_coupons(list(coupons), original_price, request.user)
 
                 transaction.savepoint_commit(sid)
 
@@ -4025,14 +4020,10 @@ class PayView(APIView):
 
                 has_referral_coupons = False
                 if invoice.status == Invoice.Status.FULFILLED and invoice.amount > 0:
-                    has_referral_coupons = any(
-                        coupon.referral_type != "NO_REFERRAL" for coupon in coupons_list
-                    )
+                    has_referral_coupons = coupons.exclude(referral_type="NO_REFERRAL").exists()
 
                 if has_referral_coupons:
                     transaction.on_commit(lambda inv_id=invoice.id: register_referral_from_invoice.delay(inv_id))
-
-                bag.refresh_from_db()
 
                 serializer = GetInvoiceSerializer(invoice, many=False)
 
@@ -4044,7 +4035,8 @@ class PayView(APIView):
                 )
 
                 data = serializer.data
-                serializer = GetCouponSerializer(coupons_list, many=True)
+                # Convert coupons QuerySet to list before serialization to avoid stale QuerySet issues
+                serializer = GetCouponSerializer(list(coupons), many=True)
                 data["coupons"] = serializer.data
 
                 return Response(data, status=201)
@@ -4160,6 +4152,18 @@ class CoinbaseChargeView(APIView):
                     )
                 bag.status = "PAID"
                 bag.save()
+
+                # Calculate invoice breakdown after transaction is complete
+                how_many_installments = metadata.get("how_many_installments", 0)
+                how_many_installments = int(float(how_many_installments)) if how_many_installments else 0
+                chosen_period = metadata.get("chosen_period")
+                if chosen_period and chosen_period not in ["MONTH", "QUARTER", "HALF", "YEAR", "NO_SET"]:
+                    chosen_period = None
+
+                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                )
+                invoice.save(update_fields=["amount_breakdown"])
 
                 coupons = bag.coupons.all()
 
