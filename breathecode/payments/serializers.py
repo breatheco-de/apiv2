@@ -934,6 +934,19 @@ class CreditNoteSerializer(serpy.Serializer):
     created_at = serpy.Field()
     updated_at = serpy.Field()
     invoice = GetInvoiceSmallSerializer(many=False)
+    invoice_credit_notes = serpy.MethodField()
+
+    def get_invoice_credit_notes(self, obj):
+        """Return all credit notes for the invoice associated with this credit note."""
+        if not obj.invoice:
+            return []
+        
+        try:
+            # Get all credit notes for this invoice, ordered by creation date
+            credit_notes = obj.invoice.credit_notes.all().order_by('created_at')
+            return CreditNoteSerializer(credit_notes, many=True).data
+        except Exception:
+            return []
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
