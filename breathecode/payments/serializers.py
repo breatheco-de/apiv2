@@ -850,17 +850,31 @@ class GetBagSerializer(serpy.Serializer):
         # When serializing plans from a Bag, we can pass extra context so nested
         # financing options know about country_code and bag coupons, allowing
         # them to expose discounted_monthly_price.
+        # Convert coupons to list to avoid stale QuerySet issues after transaction commit
+        try:
+            coupons = list(obj.coupons.all())
+        except Exception:
+            obj.refresh_from_db()
+            coupons = list(obj.coupons.all())
+        
         context = {
             "country_code": getattr(obj, "country_code", None),
-            "coupons": list(obj.coupons.all()),
+            "coupons": coupons,
         }
 
         return GetPlanSmallSerializer(obj.plans.filter(), many=True, context=context).data
 
     def get_plan_addons(self, obj):
+        # Convert coupons to list to avoid stale QuerySet issues after transaction commit
+        try:
+            coupons = list(obj.coupons.all())
+        except Exception:
+            obj.refresh_from_db()
+            coupons = list(obj.coupons.all())
+        
         context = {
             "country_code": getattr(obj, "country_code", None),
-            "coupons": list(obj.coupons.all()),
+            "coupons": coupons,
         }
 
         return PlanAddOnSmallSerializer(obj.plan_addons.all(), many=True, context=context).data
@@ -875,7 +889,15 @@ class GetBagSerializer(serpy.Serializer):
         """
         from . import actions
 
-        coupons = list(obj.coupons.all())
+        try:
+            if hasattr(obj.coupons, "all"):
+                coupons = list(obj.coupons.all())
+            else:
+                coupons = list(obj.coupons)
+        except Exception:
+            obj.refresh_from_db()
+            coupons = list(obj.coupons.all())
+        
         if not coupons:
             return []
 
