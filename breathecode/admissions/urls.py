@@ -82,7 +82,6 @@ from .views import (
     UserMeView,
     UserMicroCohortsSyncView,
     UserView,
-    get_all_academies,
     get_cities,
     get_countries,
     get_public_syllabus,

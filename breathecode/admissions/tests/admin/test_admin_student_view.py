@@ -1,9 +1,6 @@
-from datetime import datetime, timezone, timedelta
 from django.urls import reverse
 from rest_framework import status
 
-from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.authenticate.models import ProfileAcademy, Role
 from ..mixins import AdmissionsTestCase
 
 
@@ -45,7 +42,7 @@ class TestAdminStudentView(AdmissionsTestCase):
         student_user = self.bc.database.create(user=1)
         
         # Create ProfileAcademy for student
-        profile_academy = self.bc.database.create(profile_academy=1, 
+        _profile_academy = self.bc.database.create(profile_academy=1, 
             user=student_user.user, 
             academy=academy.academy, 
             role=role.role
@@ -74,12 +71,12 @@ class TestAdminStudentView(AdmissionsTestCase):
         
         # Create test data
         academy = self.bc.database.create(academy=1)
-        role = self.bc.database.create(role={'slug': 'student'})
+        _role = self.bc.database.create(role={'slug': 'student'})
         student_user = self.bc.database.create(user=1)
         cohort = self.bc.database.create(cohort=1, academy=academy.academy)
         
         # Create CohortUser for student
-        cohort_user = self.bc.database.create(cohort_user=1,
+        _cohort_user = self.bc.database.create(cohort_user=1,
             user=student_user.user,
             cohort=cohort.cohort,
             role="STUDENT"
@@ -151,7 +148,7 @@ class TestAdminStudentView(AdmissionsTestCase):
         
         # Create test data
         academy = self.bc.database.create(academy=1)
-        role = self.bc.database.create(role={'slug': 'student'})
+        _role = self.bc.database.create(role={'slug': 'student'})
         student_user = self.bc.database.create(user=1)
         cohort = self.bc.database.create(cohort=1, academy=academy.academy)
         
@@ -186,7 +183,7 @@ class TestAdminStudentView(AdmissionsTestCase):
         
         # Create test data
         academy = self.bc.database.create(academy=1)
-        role = self.bc.database.create(role={'slug': 'student'})
+        _role = self.bc.database.create(role={'slug': 'student'})
         student_user = self.bc.database.create(user=1)
         cohort = self.bc.database.create(cohort=1, academy=academy.academy)
         
@@ -222,7 +219,7 @@ class TestAdminStudentView(AdmissionsTestCase):
         # Create test data
         academy1 = self.bc.database.create(academy=1)
         academy2 = self.bc.database.create(academy=2)
-        role = self.bc.database.create(role={'slug': 'student'})
+        _role = self.bc.database.create(role={'slug': 'student'})
         student_user = self.bc.database.create(user=1)
         cohort1 = self.bc.database.create(cohort=1, academy=academy1.academy)
         cohort2 = self.bc.database.create(cohort=2, academy=academy2.academy)
@@ -265,7 +262,7 @@ class TestAdminStudentView(AdmissionsTestCase):
         # Create 15 students
         for _i in range(15):
             student_user = self.bc.database.create(user=1)
-            profile_academy = self.bc.database.create(profile_academy=1,
+            _profile_academy = self.bc.database.create(profile_academy=1,
                 user=student_user.user,
                 academy=academy.academy,
                 role=role.role
@@ -382,7 +379,7 @@ class TestAdminStudentView(AdmissionsTestCase):
         student_user = self.bc.database.create(user=1)
         
         # Create only ProfileAcademy (no CohortUser)
-        profile_academy = self.bc.database.create(profile_academy=1,
+        _profile_academy = self.bc.database.create(profile_academy=1,
             user=student_user.user,
             academy=academy.academy,
             role=role.role
@@ -412,12 +409,12 @@ class TestAdminStudentView(AdmissionsTestCase):
         cohort = self.bc.database.create(cohort=1, academy=academies.academy[0])
         
         # Create both CohortUser and ProfileAcademy
-        cohort_user = self.bc.database.create(cohort_user=1,
+        _cohort_user = self.bc.database.create(cohort_user=1,
             user=student_user.user,
             cohort=cohort.cohort,
             role="STUDENT"
         )
-        profile_academy = self.bc.database.create(profile_academy=1,
+        _profile_academy = self.bc.database.create(profile_academy=1,
             user=student_user.user,
             academy=academies.academy[1],
             role=role.role

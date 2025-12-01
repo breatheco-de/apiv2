@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import User
 from breathecode.certificate.actions import get_assets_from_syllabus, how_many_pending_tasks
 from breathecode.assignments.models import Task

@@ -6,7 +6,6 @@ from datetime import datetime, timezone, timedelta
 from django.urls import reverse
 from rest_framework import status
 
-from breathecode.admissions.models import Cohort
 from ..mixins import AdmissionsTestCase
 
 
@@ -59,7 +58,7 @@ class TestAdminCohortView(AdmissionsTestCase):
         academy1 = self.bc.database.create(academy=1)
         academy2 = self.bc.database.create(academy=1)
         cohort1 = self.bc.database.create(cohort=1, academy=academy1.academy)
-        cohort2 = self.bc.database.create(cohort=1, academy=academy2.academy)
+        _cohort2 = self.bc.database.create(cohort=1, academy=academy2.academy)
         
         # Test filtering by academy ID
         response = self.client.get(f"{url}?academy_ids={academy1.academy.id}")
@@ -82,8 +81,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         
         # Create cohorts with different stages
         academy = self.bc.database.create(academy=1)
-        cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, stage="ACTIVE")
-        cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, stage="INACTIVE")
+        _cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, stage="ACTIVE")
+        _cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, stage="INACTIVE")
         
         # Test filtering by stage
         response = self.client.get(f"{url}?stage=ACTIVE")
@@ -106,8 +105,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         
         # Create cohorts with different private status
         academy = self.bc.database.create(academy=1)
-        cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, private=True)
-        cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, private=False)
+        _cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, private=True)
+        _cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, private=False)
         
         # Test filtering by private=True
         response = self.client.get(f"{url}?private=true")
@@ -132,11 +131,11 @@ class TestAdminCohortView(AdmissionsTestCase):
         # Create cohorts with different dates
         academy = self.bc.database.create(academy=1)
         now = datetime.now(timezone.utc)
-        cohort1 = self.bc.database.create(cohort=1,
+        _cohort1 = self.bc.database.create(cohort=1,
             academy=academy.academy, 
             kickoff_date=now - timedelta(days=30)
         )
-        cohort2 = self.bc.database.create(cohort=1,
+        _cohort2 = self.bc.database.create(cohort=1,
             academy=academy.academy, 
             kickoff_date=now + timedelta(days=30)
         )
@@ -158,8 +157,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         
         # Create cohorts with different never_ends status
         academy = self.bc.database.create(academy=1)
-        cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, never_ends=True)
-        cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, never_ends=False)
+        _cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, never_ends=True)
+        _cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, never_ends=False)
         
         # Test filtering by never_ends=True
         response = self.client.get(f"{url}?never_ends=true")
@@ -183,8 +182,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         
         # Create cohorts with different saas status
         academy = self.bc.database.create(academy=1)
-        cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, available_as_saas=True)
-        cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, available_as_saas=False)
+        _cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, available_as_saas=True)
+        _cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, available_as_saas=False)
         
         # Test filtering by saas=true
         response = self.client.get(f"{url}?saas=true")
@@ -208,8 +207,8 @@ class TestAdminCohortView(AdmissionsTestCase):
         
         # Create cohorts with different languages
         academy = self.bc.database.create(academy=1)
-        cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, language="en")
-        cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, language="es")
+        _cohort1 = self.bc.database.create(cohort=1, academy=academy.academy, language="en")
+        _cohort2 = self.bc.database.create(cohort=1, academy=academy.academy, language="es")
         
         # Test filtering by language
         response = self.client.get(f"{url}?language=en")

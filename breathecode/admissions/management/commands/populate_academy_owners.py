@@ -8,7 +8,6 @@ Usage:
     python manage.py populate_academy_owners
 """
 
-from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import ProfileAcademy, Role
