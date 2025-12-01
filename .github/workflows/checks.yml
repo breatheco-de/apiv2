@@ -117,7 +117,7 @@ jobs:
 
       - name: Calculate initial MD5 for Pipfile.lock
         id: calculate-md5-1
-        run: poetry run pip freeze -r requirements.txt > requirements.txt
+        run: poetry run pip freeze > requirements.txt
 
       - name: Set Environment Variables
         run: |
@@ -129,7 +129,7 @@ jobs:
 
       - name: Calculate updated MD5 for Pipfile.lock
         id: calculate-md5-2
-        run: poetry run pip freeze -r requirements2.txt > requirements2.txt
+        run: poetry run pip freeze > requirements2.txt
 
       - name: Check Pipfile.lock is up-to-date
         run: diff requirements.txt requirements2.txt

@@ -77,7 +77,7 @@ def _load_disposable_email_domains():
     
     try:
         with open(file_path, "r", encoding="utf-8") as f:
-            for line_num, line in enumerate(f, start=1):
+            for _line_num, line in enumerate(f, start=1):
                 line = line.strip()
                 if line and not line.startswith("#"):
                     domains.add(line.lower())

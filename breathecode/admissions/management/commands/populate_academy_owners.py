@@ -8,7 +8,6 @@ Usage:
     python manage.py populate_academy_owners
 """
 
-from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import ProfileAcademy, Role
@@ -36,7 +35,7 @@ class Command(BaseCommand):
             return
 
         if verbosity >= 1:
-            self.stdout.write(f"\nPopulating academy owners from ProfileAcademy")
+            self.stdout.write("\nPopulating academy owners from ProfileAcademy")
             self.stdout.write("=" * 70)
 
         # Get all academies

@@ -1612,7 +1612,7 @@ async def save_github_token(request):
         if invite:
             academy = invite.academy
 
-        companyName = "4Geeks"
+        company_name = "4Geeks"
         if "4geeks" not in url:
             parsed_url = urlparse(url)
             domain = (
@@ -1621,14 +1621,14 @@ async def save_github_token(request):
                 else parsed_url.netloc.split(".")[0]
             )
             if "learnpack" in domain:
-                companyName = "LearnPack"
+                company_name = "LearnPack"
             else:
-                companyName = domain.capitalize()
+                company_name = domain.capitalize()
 
         return render_message(
             request,
             "We could not find in our records the email associated to this github account, "
-            'perhaps you want to sign up to first? <a href="' + url + '">Back to ' + companyName + "</a>",
+            'perhaps you want to sign up to first? <a href="' + url + '">Back to ' + company_name + "</a>",
             academy=academy,
         )
 
@@ -3745,22 +3745,3 @@ class UpdateEmailEverywhereView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-
-class CapabilityCheckView(APIView):
-    """Check if the authenticated user has a specific capability within an academy context.
-
-    Requires:
-    - Authorization header (Token)
-    - Academy context via 'Academy' header or querystring (?academy=<id>)
-    Returns 200 if user has the capability for that academy; otherwise 403/400 from validators.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, capability_slug: str):
-        from breathecode.utils.decorators.capable_of import get_academy_from_capability
-
-        # Will raise if missing/invalid academy or user lacks capability
-        get_academy_from_capability({}, request, capability_slug)
-
-        return Response({"status": "ok"}, status=status.HTTP_200_OK)
