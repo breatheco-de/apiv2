@@ -19,7 +19,7 @@ This guide covers the REST endpoints you need to read and update academy profile
 **Response highlights (from `GetBigAcademySerializer`):**
 - Identity: `id`, `slug`, `name`, `owner`
 - Location: `country`, `city`, `street_address`, `latitude`, `longitude`, `timezone`
-- Branding: `logo_url`, `icon_url`, `white_labeled`, `white_label_url`, `white_label_features`
+- Branding: `logo_url`, `icon_url`, `white_labeled`, `white_label_url`, `academy_features`
 - Marketing & contact: `marketing_email`, `marketing_phone`, social handles, `website_url`
 - Integrations: `active_campaign_slug`, `available_as_saas`
 

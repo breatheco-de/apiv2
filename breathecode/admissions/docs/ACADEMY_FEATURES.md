@@ -1,8 +1,8 @@
-# White Label Features - Academy Configuration
+# Academy Feature Flags - Configuration
 
 ## Overview
 
-The `white_label_features` field in the `Academy` model allows configuring custom features for white label academies, such as hiding widgets, customizing navigation, and controlling feature availability.
+The `academy_features` field in the `Academy` model allows configuring custom features for all academies, such as hiding widgets, customizing navigation, and controlling feature availability. Feature flags are available for all academies to provide flexible configuration options.
 
 ## Architecture
 
@@ -15,8 +15,8 @@ The system automatically merges saved configurations with current defaults. This
 
 ### How It Works
 
-1. **Default Function** (`default_white_label_features()`): Defines the baseline structure with default values
-2. **Model Method** (`get_white_label_features()`): Merges saved data with current defaults using deep merge
+1. **Default Function** (`default_academy_features()`): Defines the baseline structure with default values
+2. **Model Method** (`get_academy_features()`): Merges saved data with current defaults using deep merge
 3. **Serializer**: Uses the merge method to always return complete feature structure
 4. **Management Command**: Available for batch updates when needed
 
@@ -24,18 +24,18 @@ The system automatically merges saved configurations with current defaults. This
 
 ```python
 {
-    "navigation": {
-        "show_marketing_navigation": False,  # Show marketing navigation (url to 4geeks programs)
-        "custom_links": []  # Additional links added to white label academy navbar
-    },
     "features": {
-        "allow_referral_program": False,  # Allow referral program
         "allow_events": True,  # Allow events
-        "allow_mentoring": False,  # Allow mentoring
-        "allow_feedback_widget": False,  # Allow feedback widget
-        "allow_community_widget": False,  # Allow community widget
-        "allow_other_academy_courses": False,  # Allow other academy courses on dashboard
-        "allow_other_academy_events": False  # Allow other academy events
+        "allow_mentoring": True,  # Allow mentoring
+        "allow_feedback_widget": True,  # Allow feedback widget
+        "allow_community_widget": True,  # Allow community widget
+        "allow_referral_program": True,  # Allow referral program
+        "allow_other_academy_events": True,  # Allow other academy events
+        "allow_other_academy_courses": True  # Allow other academy courses on dashboard
+    },
+    "navigation": {
+        "custom_links": [],  # Additional links added to academy navbar
+        "show_marketing_navigation": False  # Show marketing navigation (url to 4geeks programs) - Only for white label academies
     }
 }
 ```
@@ -49,7 +49,7 @@ When you need to add a new feature flag:
 Edit `breathecode/admissions/models.py`:
 
 ```python
-def default_white_label_features():
+def default_academy_features():
     return {
         "navigation": {
             "show_marketing_navigation": False,
@@ -68,17 +68,17 @@ If you want to persist the new defaults to the database:
 
 ```bash
 # Preview changes
-python manage.py normalize_white_label_features --dry-run
+python manage.py normalize_academy_features --dry-run
 
 # Apply changes
-python manage.py normalize_white_label_features
+python manage.py normalize_academy_features
 ```
 
 > **Note**: This step is optional! The API will automatically return merged values even without running the command. Only run it if you want to persist the new structure in the database.
 
 ### 3. No Serializer Changes Needed
 
-The serializer automatically uses `get_white_label_features()`, so it will return the merged structure.
+The serializer automatically uses `get_academy_features()`, so it will return the merged structure.
 
 ## API Usage
 
@@ -95,19 +95,19 @@ GET /v1/admissions/academy/{academy_id}
   "slug": "my-academy",
   "name": "My Academy",
   // ... other fields
-  "white_label_features": {
-    "navigation": {
-      "show_marketing_navigation": false,
-      "custom_links": []
-    },
+  "academy_features": {
     "features": {
-      "allow_referral_program": false,
       "allow_events": true,
-      "allow_mentoring": false,
-      "allow_feedback_widget": false,
-      "allow_community_widget": false,
-      "allow_other_academy_courses": false,
-      "allow_other_academy_events": false
+      "allow_mentoring": true,
+      "allow_feedback_widget": true,
+      "allow_community_widget": true,
+      "allow_referral_program": true,
+      "allow_other_academy_events": true,
+      "allow_other_academy_courses": true
+    },
+    "navigation": {
+      "custom_links": [],
+      "show_marketing_navigation": false
     }
   }
 }
@@ -115,7 +115,7 @@ GET /v1/admissions/academy/{academy_id}
 
 ### Update Academy Features
 
-To update white label features, use the Academy update endpoint with the fields you want to change:
+To update feature flags, use the Academy update endpoint with the fields you want to change:
 
 ```bash
 PUT /v1/admissions/academy/{academy_id}
@@ -123,18 +123,18 @@ PUT /v1/admissions/academy/{academy_id}
 
 ```json
 {
-  "white_label_features": {
+  "academy_features": {
+    "features": {
+      "allow_events": false
+    },
     "navigation": {
-      "show_marketing_navigation": true,
       "custom_links": [
         {
           "url": "/custom-page",
           "label": "Custom Link"
         }
-      ]
-    },
-    "features": {
-      "allow_events": false
+      ],
+      "show_marketing_navigation": false
     }
   }
 }
@@ -142,17 +142,17 @@ PUT /v1/admissions/academy/{academy_id}
 
 ## Management Command
 
-### `normalize_white_label_features`
+### `normalize_academy_features`
 
 Updates all academies with the latest default structure.
 
 **Usage:**
 ```bash
 # Dry run (preview changes)
-python manage.py normalize_white_label_features --dry-run
+python manage.py normalize_academy_features --dry-run
 
 # Apply changes
-python manage.py normalize_white_label_features
+python manage.py normalize_academy_features
 ```
 
 **When to use:**
@@ -189,13 +189,46 @@ pytest breathecode/admissions/tests/models/test_academy_white_label_features.py 
 4. **Testing**: Add tests for new features in the test suite
 5. **Communication**: Notify frontend team about new feature flags available
 
+## Backend Integration
+
+Backend code can check feature flags using the helper functions:
+
+```python
+from breathecode.admissions.utils.academy_features import has_feature_flag, get_feature_flag
+from breathecode.admissions.models import Academy
+
+# Get academy instance
+academy = Academy.objects.get(id=1)
+
+# Check boolean feature flag
+if has_feature_flag(academy, 'allow_events'):
+    # Show events widget
+    show_events_widget()
+
+# Check feature flag with default value
+if has_feature_flag(academy, 'allow_events', default=True):
+    # Show events
+
+# Get non-boolean feature flag (like custom_links)
+custom_links = get_feature_flag(academy, 'custom_links', default=[])
+
+# Works with None academy (returns default)
+if has_feature_flag(None, 'allow_events', default=True):
+    # Use default value when academy is None
+```
+
+### Helper Functions
+
+- **`has_feature_flag(academy, feature_key, default=True)`**: Returns boolean value of a feature flag
+- **`get_feature_flag(academy, feature_key, default=None)`**: Returns the actual value of a feature flag (useful for non-boolean flags)
+
 ## Frontend Integration
 
 Frontend can check feature availability:
 
 ```javascript
 const academy = await getAcademy(academyId);
-const features = academy.white_label_features;
+const features = academy.academy_features;
 
 // Check if feature is enabled
 if (features.features.allow_referral_program) {
@@ -219,7 +252,7 @@ features.navigation.custom_links.forEach(link => {
 
 **Solution**: The API automatically merges defaults. No action needed. If you want to persist to database, run:
 ```bash
-python manage.py normalize_white_label_features
+python manage.py normalize_academy_features
 ```
 
 ### Problem: Custom values being overwritten
@@ -229,13 +262,15 @@ python manage.py normalize_white_label_features
 ### Problem: Feature flag not appearing in API response
 
 **Solution**:
-1. Verify the feature is added to `default_white_label_features()`
-2. Check that the serializer uses `get_white_label_features()` method
+1. Verify the feature is added to `default_academy_features()`
+2. Check that the serializer uses `get_academy_features()` method
 3. Restart the Django server to reload model definitions
 
 ## Related Files
 
 - Model: `breathecode/admissions/models.py` (Academy model, line ~29 and ~173)
 - Serializer: `breathecode/admissions/serializers.py` (GetBigAcademySerializer, line ~215)
-- Management Command: `breathecode/admissions/management/commands/normalize_white_label_features.py`
+- Management Command: `breathecode/admissions/management/commands/normalize_academy_features.py`
+- Backend Helper: `breathecode/admissions/utils/academy_features.py` (has_feature_flag, get_feature_flag)
 - Tests: `breathecode/admissions/tests/models/test_academy_white_label_features.py`
+
