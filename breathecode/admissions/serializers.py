@@ -1257,7 +1257,9 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         is_late = (data.get("finantial_status") or (instance and instance.finantial_status or "")) == "LATE"
 
-        if is_graduated and is_late:
+        is_trying_to_graduate = "educational_status" in data and data.get("educational_status") == "GRADUATED"
+
+        if is_trying_to_graduate and is_late:
             raise ValidationException("Cannot be marked as `GRADUATED` if its financial " "status is `LATE`")
 
         tasks_pending = Task.objects.filter(
