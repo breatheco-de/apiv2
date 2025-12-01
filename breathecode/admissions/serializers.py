@@ -269,12 +269,12 @@ class GetBigAcademySerializer(serpy.Serializer):
     is_hidden_on_prework = serpy.Field()
     white_labeled = serpy.Field()
     white_label_url = serpy.Field()
-    white_label_features = serpy.MethodField()
+    academy_features = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
 
-    def get_white_label_features(self, obj):
-        """Return white_label_features merged with defaults."""
-        return obj.get_white_label_features()
+    def get_academy_features(self, obj):
+        """Return academy_features merged with defaults."""
+        return obj.get_academy_features()
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):

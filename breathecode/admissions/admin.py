@@ -53,6 +53,12 @@ class UserAdmin(UserAdmin):
 
 
 class AcademyForm(forms.ModelForm):
+    class Meta:
+        model = Academy
+        fields = "__all__"
+        widgets = {
+            "academy_features": PrettyJSONWidget(),
+        }
 
     def __init__(self, *args, **kwargs):
         super(AcademyForm, self).__init__(*args, **kwargs)
