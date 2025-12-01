@@ -2094,7 +2094,7 @@ class AcademyInvoiceView(APIView):
             items = items.filter(status__in=status.split(","))
 
         items = handler.queryset(items)
-        serializer = GetInvoiceSmallSerializer(items, many=True)
+        serializer = GetInvoiceSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
