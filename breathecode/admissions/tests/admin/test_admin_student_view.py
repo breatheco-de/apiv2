@@ -263,7 +263,7 @@ class TestAdminStudentView(AdmissionsTestCase):
         role = self.bc.database.create(role={'slug': 'student'})
         
         # Create 15 students
-        for i in range(15):
+        for _i in range(15):
             student_user = self.bc.database.create(user=1)
             profile_academy = self.bc.database.create(profile_academy=1,
                 user=student_user.user,

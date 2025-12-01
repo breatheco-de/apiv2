@@ -1019,7 +1019,7 @@ class AssetParser:
         import re
         
         # Common language codes to check (us is included as it's aliased to en in filenames)
-        COMMON_LANGUAGES = ['en', 'us', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ru', 'ar']
+        common_languages = ['en', 'us', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ru', 'ar']
         
         # Extract base filename without language code
         # e.g., "README.es.md" -> "README", "lesson.pt.md" -> "lesson"
@@ -1034,7 +1034,7 @@ class AssetParser:
         available_translations = []
         
         # Check for each language variant
-        for lang in COMMON_LANGUAGES:
+        for lang in common_languages:
             if lang == current_lang:
                 continue  # Skip current language
             
@@ -1112,7 +1112,7 @@ class AssetParser:
         import re
         
         # Common language codes to check (us is included as it's aliased to en in filenames)
-        COMMON_LANGUAGES = ['en', 'us', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ru', 'ar']
+        common_languages = ['en', 'us', 'es', 'pt', 'fr', 'de', 'it', 'zh', 'ja', 'ko', 'ru', 'ar']
         
         # Extract base filename without language code
         # e.g., "quiz.es.json" -> "quiz", "test.pt.json" -> "test"
@@ -1127,7 +1127,7 @@ class AssetParser:
         available_translations = []
         
         # Check for each language variant
-        for lang in COMMON_LANGUAGES:
+        for lang in common_languages:
             if lang == current_lang:
                 continue  # Skip current language
             

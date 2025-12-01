@@ -100,7 +100,7 @@ class Command(BaseCommand):
 
             # Load each fixture group
             errors = []
-            for app_name, description, fixture_files in fixtures:
+            for _app_name, description, fixture_files in fixtures:
                 if verbosity >= 1:
                     self.stdout.write(f"\nLoading {description}...")
 

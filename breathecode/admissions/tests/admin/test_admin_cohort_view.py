@@ -258,7 +258,7 @@ class TestAdminCohortView(AdmissionsTestCase):
         
         # Create multiple cohorts
         academy = self.bc.database.create(academy=1)
-        for i in range(25):  # Create more than default page size
+        for _i in range(25):  # Create more than default page size
             self.bc.database.create(cohort=1, academy=academy.academy)
         
         # Test pagination
