@@ -206,7 +206,7 @@ class Command(BaseCommand):
             from breathecode.authenticate.models import UserInvite
             from django.contrib.auth.models import User
 
-            self.stdout.write(f"\nData summary:")
+            self.stdout.write("\nData summary:")
             self.stdout.write(f"  Countries: {Country.objects.count()}")
             self.stdout.write(f"  Cities: {City.objects.count()}")
             self.stdout.write(f"  Academies: {Academy.objects.count()}")

@@ -159,7 +159,7 @@ class Command(BaseCommand):
         if cohort_user.finantial_status == "LATE":
             issues.append("Financial status is LATE (blocks manual graduation via API)")
             self.stdout.write(
-                self.style.ERROR(f"❌ Financial status is LATE (blocks manual graduation via API)")
+                self.style.ERROR("❌ Financial status is LATE (blocks manual graduation via API)")
             )
         else:
             self.stdout.write(f"✓ Financial status: {cohort_user.finantial_status}")

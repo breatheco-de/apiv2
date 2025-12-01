@@ -36,7 +36,7 @@ class Command(BaseCommand):
             return
 
         if verbosity >= 1:
-            self.stdout.write(f"\nPopulating academy owners from ProfileAcademy")
+            self.stdout.write("\nPopulating academy owners from ProfileAcademy")
             self.stdout.write("=" * 70)
 
         # Get all academies
