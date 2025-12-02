@@ -42,6 +42,7 @@ from .models import (
     CohortSet,
     Consumable,
     Coupon,
+    CreditNote,
     Currency,
     EventTypeSet,
     FinancingOption,
@@ -1595,6 +1596,21 @@ def validate_and_create_subscriptions(
 
     utc_now = timezone.now()
 
+    # Calculate breakdown for externally managed invoices
+    amount_breakdown = None
+    if bag.plans.exists() or bag.service_items.exists() or bag.plan_addons.exists():
+        try:
+            amount_breakdown = calculate_invoice_breakdown(
+                bag=bag,
+                invoice=None,
+                lang=lang,
+                chosen_period=bag.chosen_period,
+                how_many_installments=bag.how_many_installments,
+            )
+        except Exception:
+            # If breakdown calculation fails, continue without it
+            pass
+
     invoice = Invoice(
         amount=amount,
         paid_at=utc_now,
@@ -1606,6 +1622,7 @@ def validate_and_create_subscriptions(
         externally_managed=True,
         proof=proof_of_payment,
         payment_method=payment_method,
+        amount_breakdown=amount_breakdown,
     )
 
     invoice.amount_breakdown = calculate_invoice_breakdown(bag, invoice, lang)
@@ -2197,6 +2214,618 @@ def get_plan_addons_amounts_with_coupons(
         )
 
     return total_before, total_after
+
+def calculate_invoice_breakdown(
+    bag: Bag,
+    invoice: Invoice | None = None,
+    lang: str = "en",
+    chosen_period: str | None = None,
+    how_many_installments: int | None = None,
+) -> dict[str, Any]:
+    """
+    Calculate the breakdown of how the invoice amount is divided across plans, plan addons, and service items.
+
+    Args:
+        bag: The bag containing plans, plan_addons, and service_items
+        invoice: Optional invoice to get currency from. If not provided, uses bag currency
+        lang: Language code for error messages
+        chosen_period: Optional chosen period (MONTH, QUARTER, HALF, YEAR). If not provided, uses bag.chosen_period
+        how_many_installments: Optional number of installments. If not provided, uses bag.how_many_installments
+
+    Returns a dictionary with the following structure:
+    {
+        "plans": {
+            "plan-slug": {
+                "amount": float,
+                "currency": str
+            }
+        },
+        "service-items": {
+            "service-slug": {
+                "amount": float,
+                "currency": str,
+                "how-many": int,
+                "unit-type": str
+            }
+        }
+    }
+
+    Note: Plan addons are included in the "plans" section with their plan slug.
+    """
+    breakdown: dict[str, Any] = {"plans": {}, "service-items": {}}
+
+    currency = invoice.currency if invoice else (bag.currency or bag.academy.main_currency)
+    if not currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Currency not found for invoice breakdown calculation",
+                es="Moneda no encontrada para el cálculo del desglose de la factura",
+                slug="currency-not-found-for-breakdown",
+            ),
+            code=500,
+        )
+
+    currency_code = currency.code.upper()
+    coupons = list(bag.coupons.all())
+
+    # Use provided values or fall back to bag values
+    effective_chosen_period = chosen_period if chosen_period is not None else bag.chosen_period
+    effective_how_many_installments = (
+        how_many_installments if how_many_installments is not None else bag.how_many_installments
+    )
+
+    # Ensure we have all plans loaded - use select_related/prefetch_related if needed
+    plans = list(bag.plans.all())
+    if not plans:
+        return breakdown
+
+    for plan in plans:
+        base_price = 0.0
+
+        if effective_how_many_installments > 0:
+            option = plan.financing_options.filter(how_many_months=effective_how_many_installments).first()
+            if not option:
+                continue
+
+            base_price = option.monthly_price or 0
+
+            if base_price > 0:
+                if bag.country_code:
+                    adjusted_price, _, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+                    if c:
+                        currency_code = c.code.upper()
+                    base_price = adjusted_price
+
+                if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+                    academy_service = AcademyService.objects.filter(
+                        service=bag.seat_service_item.service, academy=bag.academy
+                    ).first()
+                    if academy_service:
+                        seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
+                        base_price += seat_cost
+
+                add_ons_amount = 0
+                for add_on in plan.add_ons.filter(currency=currency):
+                    service_item = bag.service_items.filter(service=add_on.service).first()
+                    if service_item:
+                        add_on_price, _, _ = add_on.get_discounted_price(service_item.how_many, bag.country_code, lang)
+                        add_ons_amount += add_on_price
+
+                base_price += add_ons_amount
+
+                plan_coupons = get_coupons_for_plan(plan, coupons)
+                final_price = get_discounted_price(base_price, plan_coupons)
+
+                if final_price > 0:
+                    breakdown["plans"][plan.slug] = {
+                        "amount": round(final_price, 2),
+                        "currency": currency_code,
+                    }
+
+        elif effective_chosen_period and effective_chosen_period != "NO_SET":
+            if effective_chosen_period == "MONTH":
+                base_price = plan.price_per_month or 0
+                price_attr = "price_per_month"
+            elif effective_chosen_period == "QUARTER":
+                base_price = plan.price_per_quarter or 0
+                price_attr = "price_per_quarter"
+            elif effective_chosen_period == "HALF":
+                base_price = plan.price_per_half or 0
+                price_attr = "price_per_half"
+            elif effective_chosen_period == "YEAR":
+                base_price = plan.price_per_year or 0
+                price_attr = "price_per_year"
+            else:
+                base_price = 0
+                price_attr = None
+
+            if base_price > 0 and price_attr:
+                # Apply pricing ratio if country code is available
+                if bag.country_code:
+                    adjusted_price, _, c = apply_pricing_ratio(
+                        base_price, bag.country_code, plan, lang=lang, price_attr=price_attr
+                    )
+                    if c:
+                        currency_code = c.code.upper()
+                    base_price = adjusted_price
+
+                if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+                    academy_service = AcademyService.objects.filter(
+                        service=bag.seat_service_item.service, academy=bag.academy
+                    ).first()
+                    if academy_service:
+                        if effective_chosen_period == "MONTH":
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
+                        elif effective_chosen_period == "QUARTER":
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 3
+                        elif effective_chosen_period == "HALF":
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 6
+                        elif effective_chosen_period == "YEAR":
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many * 12
+                        else:
+                            seat_cost = 0
+                        base_price += seat_cost
+
+                # Apply coupons to get the final discounted price
+                plan_coupons = get_coupons_for_plan(plan, coupons)
+                final_price = get_discounted_price(base_price, plan_coupons)
+
+                if final_price > 0:
+                    breakdown["plans"][plan.slug] = {
+                        "amount": round(final_price, 2),
+                        "currency": currency_code,
+                    }
+
+    for plan_addon in bag.plan_addons.all():
+        option = plan_addon.financing_options.filter(how_many_months=1).first()
+        if not option:
+            continue
+
+        base_price = option.monthly_price or 0
+
+        if base_price > 0:
+            if bag.country_code:
+                adjusted_price, _, c = apply_pricing_ratio(base_price, bag.country_code, option, lang=lang)
+                if c:
+                    currency_code = c.code.upper()
+                base_price = adjusted_price
+
+            # Apply coupons
+            addon_coupons = get_coupons_for_plan(plan_addon, coupons)
+            final_price = get_discounted_price(base_price, addon_coupons)
+
+            if final_price > 0:
+                breakdown["plans"][plan_addon.slug] = {
+                    "amount": round(final_price, 2),
+                    "currency": currency_code,
+                }
+
+    # Track which services are already included as plan add-ons to avoid duplication
+    plans = bag.plans.all()
+    add_ons: dict[int, AcademyService] = {}
+    services_in_plan_addons: set[int] = set()
+
+    for plan in plans:
+        for add_on in plan.add_ons.filter(currency=currency):
+            if add_on.service.id not in add_ons:
+                add_ons[add_on.service.id] = add_on
+                services_in_plan_addons.add(add_on.service.id)
+
+    for service_item in bag.service_items.all():
+        if service_item.service.id in services_in_plan_addons:
+            continue
+
+        service_slug = service_item.service.slug
+
+        academy_service = AcademyService.objects.filter(
+            service=service_item.service, academy=bag.academy, currency=currency
+        ).first()
+
+        if not academy_service:
+            continue
+
+        amount, c, _ = academy_service.get_discounted_price(service_item.how_many, bag.country_code, lang)
+        if c:
+            currency_code = c.code.upper()
+
+        if amount > 0:
+            breakdown["service-items"][service_slug] = {
+                "amount": round(amount, 2),
+                "currency": currency_code,
+                "how-many": service_item.how_many,
+                "unit-type": service_item.unit_type,
+            }
+
+    return breakdown
+
+
+# Keep old function name for backward compatibility
+def calculate_invoice_amount_breakdown(
+    bag: Bag,
+    main_plan_amount: float = 0.0,
+    main_plan_amount_before_discount: float = 0.0,
+    service_items_amount: float = 0.0,
+    plan_addons_amount: float = 0.0,
+    plan_addons_amount_before_discount: float = 0.0,
+    seat_costs: float = 0.0,
+    lang: str = "en",
+    invoice: Invoice | None = None,
+) -> dict[str, Any]:
+    """
+    Legacy function for backward compatibility.
+    Now delegates to calculate_invoice_breakdown which calculates everything from scratch.
+    """
+    return calculate_invoice_breakdown(bag=bag, invoice=invoice, lang=lang)
+
+
+def calculate_refund_breakdown(
+    invoice: Invoice, refund_amount: float, items_to_refund: dict[str, float], lang: str = "en"
+) -> dict[str, Any]:
+    """
+    Calculate which components of the invoice should be refunded based on the refund amount and items to refund.
+
+    Args:
+        invoice: The invoice to refund
+        refund_amount: Total amount to refund (must match sum of items_to_refund values)
+        items_to_refund: Dictionary mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50}). Required.
+        lang: Language code
+
+    Returns:
+        Dictionary with breakdown of what to refund (plans, service-items)
+    """
+    if not invoice.amount_breakdown:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Invoice does not have amount_breakdown. Cannot calculate refund breakdown.",
+                es="La factura no tiene amount_breakdown. No se puede calcular el breakdown del reembolso.",
+                slug="invoice-no-breakdown",
+            ),
+            code=400,
+        )
+
+    breakdown = invoice.amount_breakdown
+    total_invoice = invoice.amount
+    already_refunded = invoice.amount_refunded or 0
+    available_to_refund = total_invoice - already_refunded
+
+    if refund_amount <= 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Refund amount must be greater than 0",
+                es="El monto del reembolso debe ser mayor que 0",
+                slug="invalid-refund-amount",
+            ),
+            code=400,
+        )
+
+    # Check if refund amount exceeds available amount
+    if refund_amount > available_to_refund:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Refund amount ({refund_amount}) exceeds available amount to refund ({available_to_refund}). "
+                f"Already refunded: {already_refunded}, Invoice total: {total_invoice}",
+                es=f"El monto del reembolso ({refund_amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
+                f"Ya reembolsado: {already_refunded}, Total de la factura: {total_invoice}",
+                slug="refund-amount-exceeds-available",
+            ),
+            code=400,
+        )
+
+    refund_breakdown: dict[str, Any] = {
+        "plans": {},
+        "service-items": {},
+    }
+
+    # First, validate that ALL slugs exist in the breakdown before processing anything
+    available_plan_slugs = set(breakdown.get("plans", {}).keys())
+    available_service_slugs = set(breakdown.get("service-items", {}).keys())
+    all_available_slugs = available_plan_slugs | available_service_slugs
+
+    # Find slugs that don't exist in the breakdown
+    items_to_refund_slugs = set(items_to_refund.keys())
+    invalid_slugs = items_to_refund_slugs - all_available_slugs
+
+    if invalid_slugs:
+        available_slugs = []
+        if breakdown.get("plans"):
+            available_slugs.append(f"plans: {list(breakdown['plans'].keys())}")
+        if breakdown.get("service-items"):
+            available_slugs.append(f"service-items: {list(breakdown['service-items'].keys())}")
+
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invalid slugs provided: {list(invalid_slugs)}. These slugs do not exist in the invoice breakdown. "
+                f"Available slugs: {', '.join(available_slugs)}",
+                es=f"Slugs inválidos proporcionados: {list(invalid_slugs)}. Estos slugs no existen en el breakdown de la factura. "
+                f"Slugs disponibles: {', '.join(available_slugs)}",
+                slug="invalid-slugs-in-breakdown",
+            ),
+            code=400,
+        )
+
+    # Validate that refund amounts for each item don't exceed their original amounts
+    # and calculate total refund amount from items_to_refund
+    total_refund_from_items = 0.0
+
+    # Check plans
+    if "plans" in breakdown and breakdown["plans"]:
+        for plan_slug, refund_amount_for_plan in items_to_refund.items():
+            if plan_slug in breakdown["plans"]:
+                original_amount = breakdown["plans"][plan_slug].get("amount", 0)
+                if refund_amount_for_plan > original_amount:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Refund amount for '{plan_slug}' ({refund_amount_for_plan}) exceeds its original amount ({original_amount})",
+                            es=f"El monto del reembolso para '{plan_slug}' ({refund_amount_for_plan}) excede su monto original ({original_amount})",
+                            slug="refund-amount-exceeds-item-amount",
+                        ),
+                        code=400,
+                    )
+                total_refund_from_items += refund_amount_for_plan
+
+    # Check service items
+    if "service-items" in breakdown and breakdown["service-items"]:
+        for service_slug, refund_amount_for_service in items_to_refund.items():
+            if service_slug in breakdown["service-items"]:
+                original_amount = breakdown["service-items"][service_slug].get("amount", 0)
+                if refund_amount_for_service > original_amount:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Refund amount for '{service_slug}' ({refund_amount_for_service}) exceeds its original amount ({original_amount})",
+                            es=f"El monto del reembolso para '{service_slug}' ({refund_amount_for_service}) excede su monto original ({original_amount})",
+                            slug="refund-amount-exceeds-item-amount",
+                        ),
+                        code=400,
+                    )
+                total_refund_from_items += refund_amount_for_service
+
+    # Validate that total refund amount matches the sum of items_to_refund amounts
+    if abs(refund_amount - total_refund_from_items) > 0.01:  # Allow small floating point differences
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Refund amount ({refund_amount}) does not match the sum of items_to_refund amounts ({total_refund_from_items}). "
+                f"Items to refund: {items_to_refund}",
+                es=f"El monto del reembolso ({refund_amount}) no coincide con la suma de los montos de items_to_refund ({total_refund_from_items}). "
+                f"Items a reembolsar: {items_to_refund}",
+                slug="refund-amount-mismatch",
+            ),
+            code=400,
+        )
+
+    # Apply refund amounts directly from items_to_refund (no proportional calculation needed)
+    # Check plans
+    if "plans" in breakdown and breakdown["plans"]:
+        for plan_slug, refund_amount_for_plan in items_to_refund.items():
+            if plan_slug in breakdown["plans"]:
+                plan_data = breakdown["plans"][plan_slug]
+                if refund_amount_for_plan > 0:
+                    refund_breakdown["plans"][plan_slug] = {
+                        **plan_data,
+                        "amount": refund_amount_for_plan,
+                    }
+
+    # Check service items
+    if "service-items" in breakdown and breakdown["service-items"]:
+        for service_slug, refund_amount_for_service in items_to_refund.items():
+            if service_slug in breakdown["service-items"]:
+                service_data = breakdown["service-items"][service_slug]
+                if refund_amount_for_service > 0:
+                    refund_breakdown["service-items"][service_slug] = {
+                        **service_data,
+                        "amount": refund_amount_for_service,
+                    }
+
+    return refund_breakdown
+
+
+def process_refund(
+    invoice: Invoice,
+    amount: float | None,
+    items_to_refund: dict[str, float],
+    breakdown: dict[str, Any] | None = None,
+    reason: str = "",
+    country_code: str | None = None,
+    legal_text: str | None = None,
+    lang: str = "en",
+) -> "CreditNote":
+    """
+    Process a refund for an invoice.
+
+    Args:
+        invoice: The invoice to refund
+        amount: Total amount to refund (required, must match sum of items_to_refund values)
+        breakdown: Breakdown of what to refund (plans, service-items)
+        items_to_refund: Dictionary mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50}). Required.
+        reason: Reason for the refund
+        country_code: Country code for legal compliance
+        legal_text: Country-specific legal text
+        lang: Language code
+
+    Returns:
+        CreditNote object created for the refund
+    """
+    from breathecode.payments.models import (
+        CreditNote,
+        Plan,
+        PlanFinancing,
+        PlanServiceItemHandler,
+        Subscription,
+        SubscriptionServiceItem,
+    )
+
+    already_refunded = invoice.amount_refunded or 0
+    available_to_refund = invoice.amount - already_refunded
+
+    if already_refunded >= invoice.amount:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Invoice has already been fully refunded. Total refunded: {already_refunded}, Invoice amount: {invoice.amount}",
+                es=f"La factura ya ha sido completamente reembolsada. Total reembolsado: {already_refunded}, Monto de la factura: {invoice.amount}",
+                slug="invoice-already-fully-refunded",
+            ),
+            code=400,
+        )
+
+    # Amount must always be provided explicitly
+    if amount is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Refund amount is required and must be greater than 0",
+                es="El monto del reembolso es requerido y debe ser mayor que 0",
+                slug="refund-amount-required",
+            ),
+            code=400,
+        )
+
+    if amount <= 0:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Refund amount must be greater than 0",
+                es="El monto del reembolso debe ser mayor que 0",
+                slug="invalid-refund-amount",
+            ),
+            code=400,
+        )
+
+    if amount > available_to_refund:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"Refund amount ({amount}) exceeds available amount to refund ({available_to_refund}). "
+                f"Already refunded: {already_refunded}, Invoice total: {invoice.amount}",
+                es=f"El monto del reembolso ({amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
+                f"Ya reembolsado: {already_refunded}, Total de la factura: {invoice.amount}",
+                slug="refund-amount-exceeds-available",
+            ),
+            code=400,
+        )
+
+    if invoice.status not in [
+        Invoice.Status.FULFILLED,
+        Invoice.Status.PARTIALLY_REFUNDED,
+        Invoice.Status.REFUNDED,
+    ]:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Only fulfilled or partially refunded invoices can be refunded",
+                es="Solo las facturas cumplidas o parcialmente reembolsadas pueden ser reembolsadas",
+                slug="invoice-not-fulfilled",
+            ),
+            code=400,
+        )
+
+    if breakdown is None:
+        breakdown = invoice.amount_breakdown or {}
+
+    # Process refund through Stripe first (if applicable) before creating CreditNote
+    refund_stripe_id = None
+    if invoice.stripe_id:
+        from breathecode.payments.services.stripe import Stripe
+
+        stripe_service = Stripe(academy=invoice.academy)
+        stripe_service.set_language(lang)
+        try:
+            refund_result = stripe_service.refund_payment(invoice, amount=amount)
+            refund_stripe_id = refund_result["refund"]["id"]
+            invoice.refresh_from_db()
+        except Exception as e:
+            logger.error(f"Error processing Stripe refund: {str(e)}")
+            raise
+
+    # Update invoice status if not using Stripe
+    if not invoice.stripe_id:
+        invoice.amount_refunded = (invoice.amount_refunded or 0) + amount
+        if invoice.amount_refunded >= invoice.amount:
+            invoice.status = Invoice.Status.REFUNDED
+            invoice.refunded_at = timezone.now()
+        elif invoice.amount_refunded > 0:
+            invoice.status = Invoice.Status.PARTIALLY_REFUNDED
+        invoice.save()
+
+    # Create CreditNote only after successful Stripe refund (or if no Stripe)
+    credit_note = CreditNote.objects.create(
+        invoice=invoice,
+        amount=amount,
+        currency=invoice.currency,
+        reason=reason,
+        status=CreditNote.Status.ISSUED,
+        legal_text=legal_text,
+        country_code=country_code or invoice.bag.country_code,
+        breakdown=breakdown,
+        refund_stripe_id=refund_stripe_id,
+    )
+
+    bag = invoice.bag
+    user = invoice.user
+
+    plans_to_deprecate: list[str] = []
+    service_items_to_remove: list[int] = []
+
+    if items_to_refund:
+        original_breakdown = invoice.amount_breakdown or {}
+
+        # Check plans (main plans and plan addons are both in "plans")
+        # If a plan has a refund amount > 0 in items_to_refund, we deprecate it
+        if original_breakdown.get("plans"):
+            for plan_slug, refund_amount_for_plan in items_to_refund.items():
+                if plan_slug in original_breakdown["plans"] and refund_amount_for_plan > 0:
+                    plans_to_deprecate.append(plan_slug)
+
+        # Check service items
+        # If a service has a refund amount > 0 in items_to_refund, we remove it
+        if original_breakdown.get("service-items"):
+            for service_slug, refund_amount_for_service in items_to_refund.items():
+                if service_slug in original_breakdown["service-items"] and refund_amount_for_service > 0:
+                    service_items = bag.service_items.filter(service__slug=service_slug)
+                    for service_item in service_items:
+                        service_items_to_remove.append(service_item.id)
+
+    if plans_to_deprecate:
+        plans = Plan.objects.filter(slug__in=plans_to_deprecate)
+        for plan in plans:
+            # Expire subscription if it exists (regardless of whether it's main plan or plan addon)
+            # Using plans__in for ManyToManyField
+            subscriptions = Subscription.objects.filter(
+                user=user, plans__in=[plan], status__in=[Subscription.Status.ACTIVE]
+            )
+            for subscription in subscriptions:
+                subscription.status = Subscription.Status.EXPIRED
+                subscription.status_message = f"Subscription expired due to refund of invoice {invoice.id}"
+                subscription.save()
+
+            # Expire plan financing if it exists (regardless of whether it's main plan or plan addon)
+            # Using plans__in for ManyToManyField
+            plan_financings = PlanFinancing.objects.filter(
+                user=user, plans__in=[plan], status__in=[PlanFinancing.Status.ACTIVE]
+            )
+            for financing in plan_financings:
+                financing.status = PlanFinancing.Status.EXPIRED
+                financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"
+                financing.save()
+
+    if service_items_to_remove:
+        SubscriptionServiceItem.objects.filter(
+            subscription__user=user, service_item_id__in=service_items_to_remove
+        ).delete()
+
+        PlanServiceItemHandler.objects.filter(
+            plan_financing__user=user,
+            handler__service_item_id__in=service_items_to_remove,
+        ).delete()
+
+    return credit_note
 
 
 def calculate_invoice_breakdown(

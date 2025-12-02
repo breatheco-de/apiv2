@@ -26,21 +26,25 @@ def default_syllabus_version_json():
     return {"days": []}
 
 
-def default_white_label_features():
-    """Default value for `Academy.white_label_features` field."""
+def default_academy_features():
+    """Default value for `Academy.academy_features` field.
+    
+    Feature flags are now available for all academies, not just white label ones.
+    All features default to True, except show_marketing_navigation which is only for white label academies.
+    """
     return {
-        "navigation": {
-            "show_marketing_navigation": False,  # show marketing navigation (url to 4geeks programs)
-            "custom_links": [],  # Aditional links added to white label academy navbar (follow frontend structure)
-        },
         "features": {
-            "allow_referral_program": False,  # allow referral program
             "allow_events": True,  # allow events
-            "allow_mentoring": False,  # allow mentoring
-            "allow_feedback_widget": False,  # allow feedback widget
-            "allow_community_widget": False,  # allow community widget
-            "allow_other_academy_courses": False,  # allow other academy courses on dashboard
-            "allow_other_academy_events": False,  # allow other academy events
+            "allow_mentoring": True,  # allow mentoring
+            "allow_feedback_widget": True,  # allow feedback widget
+            "allow_community_widget": True,  # allow community widget
+            "allow_referral_program": True,  # allow referral program
+            "allow_other_academy_events": True,  # allow other academy events
+            "allow_other_academy_courses": True,  # allow other academy courses on dashboard
+        },
+        "navigation": {
+            "custom_links": [],  # Additional links added to academy navbar (follow frontend structure)
+            "show_marketing_navigation": False,  # Show marketing navigation (url to 4geeks programs) - Only for white label academies
         },
     }
 
@@ -122,10 +126,11 @@ class Academy(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, db_index=True)
     zip_code = models.IntegerField(blank=True, null=True, db_index=True)
     white_labeled = models.BooleanField(default=False)
-    white_label_features = models.JSONField(
-        default=default_white_label_features,
+    academy_features = models.JSONField(
+        default=default_academy_features,
         blank=True,
-        help_text="JSON field to store white label feature configurations for example: eliminate dashboard widgets, include custom links, etc.",
+        verbose_name="Academy Features",
+        help_text="JSON field to store feature flag configurations for all academies. Allows enabling/disabling features and customizing navigation. Example: hide dashboard widgets, include custom links, etc.",
     )
 
     active_campaign_slug = models.SlugField(
@@ -170,13 +175,13 @@ class Academy(models.Model):
     def default_ac_slug(self):
         return self.slug
 
-    def get_white_label_features(self):
+    def get_academy_features(self):
         """
-        Returns white_label_features merged with defaults.
+        Returns academy_features merged with defaults.
         This ensures that if new fields are added to the default structure,
         existing academies will automatically get them.
         """
-        return self._deep_merge_dict(default_white_label_features(), self.white_label_features or {})
+        return self._deep_merge_dict(default_academy_features(), self.academy_features or {})
 
     @staticmethod
     def _deep_merge_dict(default, override):

@@ -3,8 +3,6 @@ from datetime import datetime
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
-from django.utils import timezone
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,7 +13,7 @@ from breathecode.utils import APIViewExtensions
 
 from .models import Cohort, CohortUser
 from .serializers import GetCohortSerializer
-from breathecode.authenticate.models import ProfileAcademy, User
+from breathecode.authenticate.models import ProfileAcademy
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +158,6 @@ class AdminStudentView(APIView):
 
     @has_permission("read_students_from_all")
     def get(self, request):
-        handler = self.extensions(request)
         lang = get_user_language(request)
 
         # Get all users who are students (either in cohorts or in ProfileAcademy with student role)

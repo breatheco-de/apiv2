@@ -159,10 +159,12 @@ class EventType(models.Model):
 
 
 FINISHED = "FINISHED"
+SUSPENDED = "SUSPENDED"
 EVENT_STATUS = (
     (ACTIVE, "Active"),
     (DRAFT, "Draft"),
     (DELETED, "Deleted"),
+    (SUSPENDED, "Suspended"),
     (FINISHED, "Finished"),
 )
 

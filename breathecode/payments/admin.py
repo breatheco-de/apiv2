@@ -16,6 +16,7 @@ from breathecode.payments.models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditNote,
     Currency,
     EventTypeSet,
     EventTypeSetTranslation,
@@ -286,6 +287,14 @@ class ConsumableAdmin(admin.ModelAdmin):
         return getattr(obj, "plan_financing_seat", None)
 
 
+class CreditNoteInline(admin.TabularInline):
+    model = CreditNote
+    extra = 0
+    fields = ("id", "amount", "currency", "status", "issued_at", "reason", "refund_stripe_id")
+    readonly_fields = ("id", "issued_at")
+    can_delete = False
+
+
 class InvoiceForm(forms.ModelForm):
     class Meta:
         model = Invoice
@@ -331,6 +340,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = ["id", "status", "user__email"]
     raw_id_fields = ["user", "currency", "bag", "academy"]
     actions = [recalculate_invoice_breakdown]
+    inlines = [CreditNoteInline]
 
     fieldsets = (
         (
@@ -878,3 +888,65 @@ class ProofOfPaymentAdmin(admin.ModelAdmin):
 class AcademyPaymentSettingsAdmin(admin.ModelAdmin):
     list_display = ("academy", "created_at")
     search_fields = ["academy__name", "academy__slug"]
+
+
+class CreditNoteForm(forms.ModelForm):
+    class Meta:
+        model = CreditNote
+        fields = "__all__"
+        widgets = {
+            "breakdown": PrettyJSONWidget(),
+        }
+
+
+@admin.register(CreditNote)
+class CreditNoteAdmin(admin.ModelAdmin):
+    form = CreditNoteForm
+    list_display = ("id", "invoice", "amount", "currency", "status", "issued_at", "refund_stripe_id")
+    list_filter = ["status", "currency", "issued_at"]
+    search_fields = ["id", "invoice__id", "invoice__user__email", "refund_stripe_id"]
+    raw_id_fields = ["invoice", "currency"]
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "invoice",
+                    "amount",
+                    "currency",
+                    "status",
+                    "issued_at",
+                )
+            },
+        ),
+        (
+            "Refund Details",
+            {
+                "fields": (
+                    "reason",
+                    "breakdown",
+                    "refund_stripe_id",
+                )
+            },
+        ),
+        (
+            "Legal Information",
+            {
+                "fields": (
+                    "country_code",
+                    "legal_text",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
