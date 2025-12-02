@@ -129,7 +129,7 @@ class Github:
             return None
     
         # Known image extensions (lowercase, no dot)
-        IMAGE_EXTS = {
+        image_exts = {
             "png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff", "webp",
             "svg", "ico", "heic", "heif", "avif", "jfif"
         }
@@ -155,7 +155,7 @@ class Github:
             # Heuristic: blob/raw/api contents with a non-empty path are files.
             is_file = bool(path) and url_type in {"blob", "raw", "api"}
             ext = ext_from_path(path) if is_file else None
-            is_image = bool(ext and ext in IMAGE_EXTS)
+            is_image = bool(ext and ext in image_exts)
     
             result["is_file"] = is_file
             result["is_image"] = is_image

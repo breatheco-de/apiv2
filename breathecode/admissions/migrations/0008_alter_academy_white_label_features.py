@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             name="white_label_features",
             field=models.JSONField(
                 blank=True,
-                default=breathecode.admissions.models.default_white_label_features,
+                default=breathecode.admissions.models.default_academy_features,
                 help_text="JSON field to store white label feature configurations for example: eliminate dashboard widgets, include custom links, etc.",
             ),
         ),

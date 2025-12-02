@@ -917,6 +917,33 @@ class GetBagSerializer(serpy.Serializer):
         _, total_after = actions.get_plan_addons_amounts_with_coupons(obj, coupons, lang="en")
         return total_after
 
+class CreditNoteSerializer(serpy.Serializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    reason = serpy.Field()
+    issued_at = serpy.Field()
+    status = serpy.Field()
+    legal_text = serpy.Field()
+    country_code = serpy.Field()
+    breakdown = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    invoice = GetInvoiceSmallSerializer(many=False)
+    invoice_credit_notes = serpy.MethodField()
+
+    def get_invoice_credit_notes(self, obj):
+        """Return all credit notes for the invoice associated with this credit note."""
+        if not obj.invoice:
+            return []
+        
+        try:
+            # Get all credit notes for this invoice, ordered by creation date
+            credit_notes = obj.invoice.credit_notes.all().order_by('created_at')
+            return CreditNoteSerializer(credit_notes, many=True).data
+        except Exception:
+            return []
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
@@ -930,7 +957,27 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     amount_refunded = serpy.Field()
     refund_stripe_id = serpy.Field()
     refunded_at = serpy.Field()
+    amount_breakdown = serpy.Field()
+    credit_notes = serpy.MethodField()
 
+    def get_credit_notes(self, obj):
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Refresh invoice to avoid stale RelatedManager issues
+        if hasattr(obj, 'refresh_from_db'):
+            try:
+                logger.debug(f"GetInvoiceSerializer.get_credit_notes: Refreshing Invoice(id={obj.id})")
+                obj.refresh_from_db()
+            except Exception as e:
+                logger.warning(f"GetInvoiceSerializer.get_credit_notes: Failed to refresh Invoice(id={obj.id}): {e}")
+        
+        try:
+            credit_notes_list = list(obj.credit_notes.all())
+            return CreditNoteSerializer(credit_notes_list, many=True).data
+        except TypeError as e:
+            logger.error(f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}")
+            return []
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 

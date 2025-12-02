@@ -59,6 +59,7 @@ from .models import (
     LiveClass,
     Organization,
     Organizer,
+    SUSPENDED,
     Venue,
 )
 from .permissions.consumers import event_by_url_param, live_class_by_url_param
@@ -89,7 +90,7 @@ from .serializers import (
     PUTEventCheckinSerializer,
     VenueSerializer,
 )
-from .tasks import async_eventbrite_webhook, mark_live_class_as_started
+from .tasks import async_eventbrite_webhook, mark_live_class_as_started, send_event_suspended_notification
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -379,6 +380,61 @@ class MeLiveClassView(APIView):
         )
 
         items = LiveClass.objects.filter(query, cohort_time_slot__cohort__cohortuser__user=request.user)
+
+        items = handler.queryset(items)
+        serializer = GetLiveClassSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class PublicLiveClassView(APIView):
+    extensions = APIViewExtensions(cache=LiveClassCache, sort="-starting_at", paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        lang = get_user_language(request)
+
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": [
+                    "remote_meeting_url",
+                ],
+            },
+            bools={
+                "is_null": ["ended_at"],
+            },
+            datetimes={
+                "gte": ["starting_at"],
+                "lte": ["ending_at"],
+            },
+            slugs=[
+                "cohort_time_slot__cohort",
+                "cohort_time_slot__cohort__academy",
+                "cohort_time_slot__cohort__syllabus_version__syllabus",
+            ],
+            overwrite={
+                "cohort": "cohort_time_slot__cohort",
+                "academy": "cohort_time_slot__cohort__academy",
+                "syllabus": "cohort_time_slot__cohort__syllabus_version__syllabus",
+                "start": "starting_at",
+                "end": "ending_at",
+            },
+        )
+
+        items = LiveClass.objects.filter(query)
+
+        # Handle upcoming filter manually to ensure we filter by ending_at >= now
+        upcoming = request.GET.get("upcoming", None)
+        if upcoming == "true":
+            now = timezone.now()
+            items = items.filter(ending_at__gte=now)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
@@ -961,6 +1017,15 @@ class AcademyEventJoinView(APIView):
                 translation(lang, en="Event not found", es="Evento no encontrado", slug="not-found")
             )
 
+        if event.status == SUSPENDED:
+            message = translation(
+                lang,
+                en="This event was suspended for reasons that are out of our hands, contact support if you have any further questions",
+                es="Este evento fue suspendido por razones fuera de nuestro control, contacte a soporte si tiene alguna pregunta adicional",
+                slug="event-suspended",
+            )
+            return render_message(request, message, status=400, academy=event.academy)
+
         if not event.live_stream_url:
             message = translation(
                 lang,
@@ -971,6 +1036,37 @@ class AcademyEventJoinView(APIView):
             return render_message(request, message, status=400, academy=event.academy)
 
         return redirect(event.live_stream_url)
+
+
+class AcademyEventSuspendView(APIView):
+
+    @capable_of("crud_event")
+    def put(self, request, event_id, academy_id=None):
+        lang = get_user_language(request)
+
+        event = Event.objects.filter(academy__id=int(academy_id), id=event_id).first()
+
+        if not event:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Event not found for this academy {academy_id}",
+                    es=f"Evento no encontrado para esta academia {academy_id}",
+                    slug="event-not-found",
+                )
+            )
+
+        # Set event status to SUSPENDED
+        event.status = SUSPENDED
+        # Set live_stream_url to None
+        event.live_stream_url = None
+        event.save()
+
+        # Queue email notification task
+        send_event_suspended_notification.delay(event.id)
+
+        serializer = EventSerializer(event, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class EventTypeView(APIView):
@@ -1160,6 +1256,16 @@ class EventTypeVisibilitySettingView(APIView):
 @consume("event_join", consumer=event_by_url_param, format="html")
 def join_event(request, token, event):
     now = timezone.now()
+
+    if event.status == SUSPENDED:
+        lang = get_user_language(request)
+        message = translation(
+            lang,
+            en="This event was suspended for reasons that are out of our hands, contact support if you have any further questions",
+            es="Este evento fue suspendido por razones fuera de nuestro control, contacte a soporte si tiene alguna pregunta adicional",
+            slug="event-suspended",
+        )
+        return render_message(request, message, status=400, academy=event.academy)
 
     if event.starting_at > now:
         obj = {}
