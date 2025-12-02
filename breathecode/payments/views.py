@@ -70,6 +70,7 @@ from breathecode.payments.models import (
     SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
+    AcademyPaymentSettingsPUTSerializer,
     BillingTeamAutoRechargeSerializer,
     CohortSetSerializer,
     CreditNoteSerializer,
@@ -3799,9 +3800,11 @@ class PayView(APIView):
                         base_coupons = actions.get_coupons_for_plan(plan, list(coupons))
                         recurring_amount = get_discounted_price(adjusted_price, base_coupons)
 
-                        addons_before_total, plan_addons_amount = actions.get_plan_addons_amounts_with_coupons(
-                            bag, list(coupons), lang
-                        ) if has_plan_addons else (0.0, 0.0)
+                        addons_before_total, plan_addons_amount = (
+                            actions.get_plan_addons_amounts_with_coupons(bag, list(coupons), lang)
+                            if has_plan_addons
+                            else (0.0, 0.0)
+                        )
 
                         original_price = adjusted_price + addons_before_total
                         amount = recurring_amount + plan_addons_amount
@@ -3826,9 +3829,11 @@ class PayView(APIView):
                     base_after = get_discounted_price(base_amount, base_coupons)
 
                     # Apply coupons per addon, respecting coupon.plan scope
-                    addons_before_total, plan_addons_amount = actions.get_plan_addons_amounts_with_coupons(
-                        bag, list(coupons), lang
-                    ) if has_plan_addons else (0.0, 0.0)
+                    addons_before_total, plan_addons_amount = (
+                        actions.get_plan_addons_amounts_with_coupons(bag, list(coupons), lang)
+                        if has_plan_addons
+                        else (0.0, 0.0)
+                    )
 
                     original_price = base_amount + addons_before_total
                     amount = base_after + plan_addons_amount
@@ -6207,3 +6212,42 @@ class PlanFinancingSeatView(APIView):
 
         actions.deactivate_plan_financing_seat(seat)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPaymentSettingsView(APIView):
+    @capable_of("crud_academy_payment_settings")
+    def put(self, request, academy_id=None):
+        """
+        Update payment settings for an academy.
+        Allows partial updates of payment gateway configuration. Only provided fields will be updated.
+        If payment settings don't exist for the academy, they will be created automatically.
+
+        Args:
+            academy_id: Academy ID (injected automatically by @capable_of decorator from URL or Academy header)
+
+        Request Body (all optional):
+            stripe_api_key (str): Stripe secret API key (e.g., "sk_test_...")
+            stripe_webhook_secret (str): Stripe webhook secret for signature verification (e.g., "whsec_...")
+            stripe_publishable_key (str): Stripe publishable key for frontend (e.g., "pk_test_...")
+            coinbase_api_key (str): Coinbase Commerce API key
+            coinbase_webhook_secret (str): Coinbase webhook secret for signature verification
+        """
+
+        payment_settings, created = AcademyPaymentSettings.objects.get_or_create(
+            academy_id=academy_id,
+            defaults={
+                "stripe_api_key": "",
+                "stripe_webhook_secret": "",
+                "stripe_publishable_key": "",
+                "coinbase_api_key": None,
+                "coinbase_webhook_secret": None,
+            },
+        )
+
+        serializer = AcademyPaymentSettingsPUTSerializer(payment_settings, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
