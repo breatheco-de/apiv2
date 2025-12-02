@@ -503,6 +503,20 @@ class EventPUTSerializer(serializers.ModelSerializer):
 
         academy = self.context.get("academy_id")
 
+        # Prevent setting status to SUSPENDED via this endpoint
+        # Users must use the dedicated suspend endpoint instead
+        if "status" in data and data["status"] == "SUSPENDED":
+            # Get language from context or use default
+            context_lang = self.context.get("lang", lang)
+            raise ValidationException(
+                translation(
+                    context_lang,
+                    en="Cannot set event status to SUSPENDED using this endpoint. Please use PUT /v1/events/academy/event/{event_id}/suspend instead.",
+                    es="No se puede establecer el estado del evento como SUSPENDED usando este endpoint. Por favor use PUT /v1/events/academy/event/{event_id}/suspend en su lugar.",
+                    slug="use-suspend-endpoint",
+                )
+            )
+
         if "tags" in data:
             if data["tags"] == "":
                 raise ValidationException(

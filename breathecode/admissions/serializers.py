@@ -328,6 +328,7 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     version = serpy.Field()
     status = serpy.Field()
     change_log_details = serpy.Field()
+    reasoning = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -1430,7 +1431,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ["json", "version", "syllabus", "status", "change_log_details"]
+        fields = ["json", "version", "syllabus", "status", "change_log_details", "reasoning"]
         exclude = ()
         extra_kwargs = {
             "syllabus": {"read_only": True},
@@ -1485,7 +1486,7 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ["json", "version", "syllabus", "status", "change_log_details"]
+        fields = ["json", "version", "syllabus", "status", "change_log_details", "reasoning"]
         exclude = ()
         extra_kwargs = {
             "syllabus": {"read_only": True},

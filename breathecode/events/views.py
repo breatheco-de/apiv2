@@ -1056,6 +1056,19 @@ class AcademyEventSuspendView(APIView):
                 )
             )
 
+        # Check if event has already started or is in the past
+        now = timezone.now()
+        if event.starting_at <= now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only events that have not yet started and are scheduled for the future can be suspended",
+                    es="Solo se pueden suspender eventos que aún no han comenzado y están programados para el futuro",
+                    slug="event-already-started",
+                ),
+                code=400,
+            )
+
         # Set event status to SUSPENDED
         event.status = SUSPENDED
         # Set live_stream_url to None

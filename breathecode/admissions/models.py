@@ -319,6 +319,13 @@ class SyllabusVersion(models.Model):
     )
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
+    reasoning = models.TextField(
+        max_length=450,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Why is this new version being created?",
+    )
 
     integrity_status = models.CharField(max_length=15, choices=INTEGRITY_STATUS, default=PENDING, db_index=True)
     integrity_check_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
