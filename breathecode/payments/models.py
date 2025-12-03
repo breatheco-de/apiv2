@@ -2199,7 +2199,18 @@ class PlanFinancing(AbstractIOweYou):
         if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
             raise forms.ValidationError("Seat service item must be a seat service")
 
-        if not self.monthly_price:
+        # Allow monthly_price = 0 for invited bags (bag.type = "INVITED")
+        # Check if this financing comes from an invitation
+        is_invited = False
+        if self.invoices.exists():
+            # Check if any invoice has a bag with type "INVITED"
+            for invoice in self.invoices.all():
+                if invoice.bag and invoice.bag.type == "INVITED":
+                    is_invited = True
+                    break
+        
+        # Skip validation if it's from an invitation (can be free or paid)
+        if not is_invited and (self.monthly_price is None or self.monthly_price == 0):
             raise forms.ValidationError(
                 translation(settings.lang, en="Monthly price is required", es="Precio mensual es requerido")
             )
