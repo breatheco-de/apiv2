@@ -985,6 +985,9 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.save()
 
             bag.plans.add(plan)
+            
+            plan_price = plan.financing_options.filter(how_many_months=1).first().monthly_price
+            logger.debug(f"PLAN PRRRRRRRRRRRRRRRRRRRRRRRRRIIIIIIIIIIIIIIICEEEEEEEEEE: {plan_price}")
 
             invoice = Invoice(
                 amount=0,
