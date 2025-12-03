@@ -2474,7 +2474,9 @@ def render_user_invite(request, token):
             request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=get_app_url()
         )
 
-    querystr = urllib.parse.urlencode({"callback": get_app_url(), "token": token.key})
+    first_invite = pending_invites.first()
+    callback_url = get_app_url(academy=first_invite.academy if first_invite else None)
+    querystr = urllib.parse.urlencode({"callback": callback_url, "token": token.key})
     url = os.getenv("API_URL") + "/v1/auth/member/invite?" + querystr
     return shortcuts.render(
         request,
@@ -2604,6 +2606,12 @@ def render_invite(request, token, member_id=None):
                 return HttpResponse(f"Redirect to: <a href='{uri}'>{uri}</a>")
             else:
                 return HttpResponseRedirect(redirect_to=uri)
+        elif invite and invite.academy:
+            redirect_url = get_app_url(academy=invite.academy)
+            if settings.DEBUG:
+                return HttpResponse(f"Redirect to: <a href='{redirect_url}'>{redirect_url}</a>")
+            else:
+                return HttpResponseRedirect(redirect_to=redirect_url)
         else:
             obj = {}
             if invite and invite.academy:

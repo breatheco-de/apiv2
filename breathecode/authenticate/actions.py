@@ -39,8 +39,22 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-def get_app_url():
-    url = os.getenv("APP_URL", "https://4geeks.com")
+def get_app_url(academy=None):
+    """
+    Get the app URL for redirects.
+    
+    Args:
+        academy: Optional Academy instance. If provided and white_labeled=True,
+                 returns the academy's website_url instead of the default APP_URL.
+    
+    Returns:
+        str: The URL to redirect to (without trailing slash)
+    """
+    if academy and academy.white_labeled and academy.website_url:
+        url = academy.website_url
+    else:
+        url = os.getenv("APP_URL", "https://4geeks.com")
+    
     if url and url[-1] == "/":
         url = url[:-1]
 
