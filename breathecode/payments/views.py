@@ -79,6 +79,7 @@ from breathecode.payments.serializers import (
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
     GetCouponWithPlansSerializer,
+    GetCurrencySerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetFinancingOptionSerializer,
@@ -4983,6 +4984,57 @@ class AcademyPlanSubscriptionView(APIView):
         data["coupons"] = s2.data
 
         return Response(data)
+
+
+class CurrencyView(APIView):
+    """
+    Get all available currencies.
+    """
+
+    extensions = APIViewExtensions(sort="code", paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request, currency_code=None):
+        """
+        Get currency or list of currencies.
+        
+        Query parameters:
+        - code: Filter by currency code (e.g., USD, EUR)
+        - name: Filter by currency name
+        """
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        # If specific currency code is requested
+        if currency_code:
+            currency = Currency.objects.filter(code=currency_code.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Currency not found",
+                        es="Moneda no encontrada",
+                        slug="currency-not-found",
+                    ),
+                    code=404,
+                )
+            serializer = GetCurrencySerializer(currency, many=False)
+            return Response(serializer.data)
+
+        # List currencies with optional filters
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": ["code"],
+                "icontains": ["name"],
+            },
+        )
+
+        currencies = Currency.objects.filter(query)
+        currencies = handler.queryset(currencies)
+        serializer = GetCurrencySerializer(currencies, many=True)
+
+        return handler.response(serializer.data)
 
 
 class PaymentMethodView(APIView):
