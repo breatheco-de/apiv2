@@ -39,8 +39,22 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-def get_app_url():
-    url = os.getenv("APP_URL", "https://4geeks.com")
+def get_app_url(academy=None):
+    """
+    Get the app URL for redirects.
+    
+    Args:
+        academy: Optional Academy instance. If provided and white_labeled=True,
+                 returns the academy's website_url instead of the default APP_URL.
+    
+    Returns:
+        str: The URL to redirect to (without trailing slash)
+    """
+    if academy and academy.white_labeled and academy.website_url:
+        url = academy.website_url
+    else:
+        url = os.getenv("APP_URL", "https://4geeks.com")
+    
     if url and url[-1] == "/":
         url = url[:-1]
 
@@ -872,6 +886,8 @@ def accept_invite_action(data=None, token=None, lang="en"):
     from breathecode.payments import tasks as payments_tasks
     from breathecode.payments.models import Bag, Invoice, Plan
 
+    logger.info(f"DEBUG accept_invite - START - token={token}")
+
     if data is None:
         data = {}
 
@@ -879,6 +895,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
     password2 = data.get("repeat_password", None)
 
     invite = UserInvite.objects.filter(token=str(token), status="PENDING", email__isnull=False).first()
+    logger.info(f"DEBUG accept_invite - Found invite: {invite.email if invite else 'NOT FOUND'}")
     if invite is None:
         raise Exception(
             translation(
@@ -958,6 +975,14 @@ def accept_invite_action(data=None, token=None, lang="en"):
 
         plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
 
+        logger.info(f"DEBUG accept_invite - Checking conditions:")
+        logger.info(f"DEBUG accept_invite - plan exists: {plan is not None}")
+        logger.info(f"DEBUG accept_invite - invite.user exists: {invite.user is not None}")
+        logger.info(f"DEBUG accept_invite - cohort: {invite.cohort.id if invite.cohort else None}")
+        logger.info(f"DEBUG accept_invite - academy.main_currency: {invite.cohort.academy.main_currency if invite.cohort else None}")
+        logger.info(f"DEBUG accept_invite - cohort.available_as_saas: {invite.cohort.available_as_saas if invite.cohort else None}")
+        logger.info(f"DEBUG accept_invite - academy.available_as_saas: {invite.cohort.academy.available_as_saas if invite.cohort else None}")
+
         if (
             plan
             and invite.user
@@ -985,9 +1010,13 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.save()
 
             bag.plans.add(plan)
+            
+            plan_price = plan.financing_options.filter(how_many_months=1).first().monthly_price
+            is_free = plan_price == 0
+            logger.info(f"DEBUG accept_invite - PLAN PRICE: {plan_price}, is_free: {is_free}")
 
             invoice = Invoice(
-                amount=0,
+                amount=plan_price,
                 paid_at=utc_now,
                 user=invite.user,
                 bag=bag,
@@ -997,7 +1026,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
             )
             invoice.save()
 
-            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
 
     invite.user = user
     invite.status = "ACCEPTED"

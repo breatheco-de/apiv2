@@ -944,14 +944,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 class StudentPOSTListSerializer(serializers.ListSerializer):
 
     def create(self, validated_data):
-
         result = [self.child.create(attrs) for attrs in validated_data]
-
-        try:
-            self.child.Meta.model.objects.bulk_create(result)
-        except IntegrityError as e:
-            raise ValidationError(e)
-
         return result
 
 
@@ -1170,7 +1163,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug("Sending invite email to " + email)
 
-                querystr = urllib.parse.urlencode({"callback": get_app_url()})
+                callback_url = get_app_url(academy=academy)
+                querystr = urllib.parse.urlencode({"callback": callback_url})
                 url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
 
                 notify_actions.send_email_message(
