@@ -1163,7 +1163,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug("Sending invite email to " + email)
 
-                querystr = urllib.parse.urlencode({"callback": get_app_url()})
+                callback_url = get_app_url(academy=academy)
+                querystr = urllib.parse.urlencode({"callback": callback_url})
                 url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
 
                 notify_actions.send_email_message(
