@@ -969,6 +969,11 @@ def accept_invite_action(data=None, token=None, lang="en"):
         ):
             utc_now = timezone.now()
 
+            # Get the plan price from financing options (1 payment option)
+            financing_option = plan.financing_options.filter(how_many_months=1).first()
+            plan_price = financing_option.monthly_price if financing_option else 0
+            is_free = plan_price == 0
+
             bag = Bag()
             bag.chosen_period = "NO_SET"
             bag.status = "PAID"
@@ -987,17 +992,17 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.plans.add(plan)
 
             invoice = Invoice(
-                amount=0,
-                paid_at=utc_now,
+                amount=plan_price,
+                paid_at=utc_now if is_free else None,
                 user=invite.user,
                 bag=bag,
                 academy=bag.academy,
-                status="FULFILLED",
+                status="FULFILLED" if is_free else "PENDING",
                 currency=bag.academy.main_currency,
             )
             invoice.save()
 
-            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
 
     invite.user = user
     invite.status = "ACCEPTED"
