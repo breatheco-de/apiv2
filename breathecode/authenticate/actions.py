@@ -998,11 +998,12 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.plans.add(plan)
             
             plan_price = plan.financing_options.filter(how_many_months=1).first().monthly_price
-            logger.info(f"DEBUG accept_invite - PLAN PRICE: {plan_price}")
+            is_free = plan_price == 0
+            logger.info(f"DEBUG accept_invite - PLAN PRICE: {plan_price}, is_free: {is_free}")
 
             invoice = Invoice(
-                amount=0,
-                paid_at=utc_now,
+                amount=plan_price,
+                paid_at=utc_now if is_free else None,
                 user=invite.user,
                 bag=bag,
                 academy=bag.academy,
@@ -1011,7 +1012,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
             )
             invoice.save()
 
-            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
 
     invite.user = user
     invite.status = "ACCEPTED"
