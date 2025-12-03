@@ -1021,19 +1021,6 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             else:
                 raise ValidationException(f"Language property should be a string not a {type(language)}")
 
-        # if cohort is being activated the online_meeting_url should not be null
-        if (
-            self.instance is not None
-            and (self.instance.online_meeting_url is None or self.instance.online_meeting_url == "")
-            and self.instance.remote_available
-        ):
-            stage = data["stage"] if "stage" in data else self.instance.stage
-            if stage in ["STARTED", "FINAL_PROJECT"] and stage != self.instance.stage:
-                raise ValidationException(
-                    "This cohort has a remote option but no online meeting URL has been specified",
-                    slug="remove-without-online-meeting",
-                )
-
         return data
 
 
