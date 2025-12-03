@@ -969,23 +969,6 @@ def accept_invite_action(data=None, token=None, lang="en"):
         ):
             utc_now = timezone.now()
 
-            # Get the plan price from financing options (1 payment option)
-            financing_option = plan.financing_options.filter(how_many_months=1).first()
-            
-            logger.debug(f"Plan {plan.id} ({plan.slug}): financing_option={financing_option}")
-            
-            if financing_option:
-                plan_price = financing_option.monthly_price
-                logger.debug(f"Using financing option price: {plan_price}")
-            elif hasattr(plan, 'price') and plan.price:
-                plan_price = plan.price
-                logger.debug(f"Using plan base price: {plan_price}")
-            else:
-                plan_price = 0
-                logger.warning(f"Plan {plan.id} has no financing options or base price, defaulting to 0")
-            
-            is_free = plan_price == 0
-
             bag = Bag()
             bag.chosen_period = "NO_SET"
             bag.status = "PAID"
@@ -1004,17 +987,17 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.plans.add(plan)
 
             invoice = Invoice(
-                amount=plan_price,
-                paid_at=utc_now if is_free else None,
+                amount=0,
+                paid_at=utc_now,
                 user=invite.user,
                 bag=bag,
                 academy=bag.academy,
-                status="FULFILLED" if is_free else "PENDING",
+                status="FULFILLED",
                 currency=bag.academy.main_currency,
             )
             invoice.save()
 
-            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
+            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
 
     invite.user = user
     invite.status = "ACCEPTED"
