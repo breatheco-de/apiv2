@@ -1003,7 +1003,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
 
             invoice = Invoice(
                 amount=plan_price,
-                paid_at=utc_now if is_free else None,
+                paid_at=utc_now,
                 user=invite.user,
                 bag=bag,
                 academy=bag.academy,
