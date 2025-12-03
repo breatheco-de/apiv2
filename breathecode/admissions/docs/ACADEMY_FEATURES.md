@@ -58,13 +58,35 @@ def default_academy_features():
         },
         "features": {
             # ... existing features
+            "reseller": False,  # ← Add your new feature
         }
     }
 ```
 
-### 2. (Optional) Update Existing Academies
+### 2. Automatic Update on Deployment
 
-If you want to persist the new defaults to the database:
+**NEW**: Feature flags are automatically normalized on every deployment! 🎉
+
+When you deploy changes (run `python manage.py migrate`), a `post_migrate` signal automatically updates all academies with the new feature flags. You don't need to do anything manually.
+
+**How it works:**
+1. You add a new feature to `default_academy_features()`
+2. You commit and deploy your code
+3. During `python manage.py migrate`, the system automatically:
+   - Detects the new feature flag
+   - Updates all academies in the database with the new default
+   - Preserves any custom values already set
+
+**Benefits:**
+- ✅ Zero manual intervention required
+- ✅ Safe for production deployments
+- ✅ Runs silently without cluttering logs
+- ✅ Handles errors gracefully (won't fail migrations)
+- ✅ Custom academy values are preserved
+
+### 3. (Optional) Manual Update
+
+If you need to update academies manually (e.g., before deployment):
 
 ```bash
 # Preview changes
@@ -74,11 +96,11 @@ python manage.py normalize_academy_features --dry-run
 python manage.py normalize_academy_features
 ```
 
-> **Note**: This step is optional! The API will automatically return merged values even without running the command. Only run it if you want to persist the new structure in the database.
+> **Note**: This is now optional! The normalization happens automatically on every deployment.
 
-### 3. No Serializer Changes Needed
+### 4. No Serializer Changes Needed
 
-The serializer automatically uses `get_academy_features()`, so it will return the merged structure.
+The serializer automatically uses `get_academy_features()`, so it will always return the merged structure with all current features.
 
 ## API Usage
 
@@ -250,7 +272,9 @@ features.navigation.custom_links.forEach(link => {
 
 ### Problem: Old academy missing new feature flags
 
-**Solution**: The API automatically merges defaults. No action needed. If you want to persist to database, run:
+**Solution**: This is automatically handled on deployment! When you run `python manage.py migrate`, all academies are updated with new feature flags. 
+
+If you need to update immediately without deploying, run:
 ```bash
 python manage.py normalize_academy_features
 ```

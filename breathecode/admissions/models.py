@@ -41,6 +41,7 @@ def default_academy_features():
             "allow_referral_program": True,  # allow referral program
             "allow_other_academy_events": True,  # allow other academy events
             "allow_other_academy_courses": True,  # allow other academy courses on dashboard
+            "reseller": False,  # allow academy to resell courses from other academies (requires white_labeled=True)
         },
         "navigation": {
             "custom_links": [],  # Additional links added to academy navbar (follow frontend structure)
