@@ -971,7 +971,19 @@ def accept_invite_action(data=None, token=None, lang="en"):
 
             # Get the plan price from financing options (1 payment option)
             financing_option = plan.financing_options.filter(how_many_months=1).first()
-            plan_price = financing_option.monthly_price if financing_option else 0
+            
+            logger.debug(f"Plan {plan.id} ({plan.slug}): financing_option={financing_option}")
+            
+            if financing_option:
+                plan_price = financing_option.monthly_price
+                logger.debug(f"Using financing option price: {plan_price}")
+            elif hasattr(plan, 'price') and plan.price:
+                plan_price = plan.price
+                logger.debug(f"Using plan base price: {plan_price}")
+            else:
+                plan_price = 0
+                logger.warning(f"Plan {plan.id} has no financing options or base price, defaulting to 0")
+            
             is_free = plan_price == 0
 
             bag = Bag()
