@@ -1578,10 +1578,23 @@ def validate_and_create_subscriptions(
     # Get available coupons for this user (excluding their own coupons if they are a seller)
     coupons = get_available_coupons(plan, data.get("coupons", []), user=user)
 
+    # Determine currency: use payment_method's currency first, fall back to academy's main_currency
+    currency = payment_method.currency or academy.main_currency
+    if not currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Currency cannot be determined. Please ensure the payment method has a currency assigned or set a main currency for the academy.",
+                es="No se puede determinar la moneda. Por favor, asegúrate de que el método de pago tenga una moneda asignada o establece una moneda principal para la academia.",
+                slug="currency-not-found",
+            ),
+            code=400,
+        )
+
     bag = Bag()
     bag.type = Bag.Type.BAG
     bag.user = user
-    bag.currency = academy.main_currency
+    bag.currency = currency
     bag.status = Bag.Status.PAID
     bag.academy = academy
     bag.is_recurrent = True
@@ -1602,7 +1615,7 @@ def validate_and_create_subscriptions(
         bag=bag,
         academy=bag.academy,
         status="FULFILLED",
-        currency=bag.academy.main_currency,
+        currency=currency,
         externally_managed=True,
         proof=proof_of_payment,
         payment_method=payment_method,
