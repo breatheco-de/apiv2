@@ -872,6 +872,8 @@ def accept_invite_action(data=None, token=None, lang="en"):
     from breathecode.payments import tasks as payments_tasks
     from breathecode.payments.models import Bag, Invoice, Plan
 
+    logger.info(f"DEBUG accept_invite - START - token={token}")
+
     if data is None:
         data = {}
 
@@ -879,6 +881,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
     password2 = data.get("repeat_password", None)
 
     invite = UserInvite.objects.filter(token=str(token), status="PENDING", email__isnull=False).first()
+    logger.info(f"DEBUG accept_invite - Found invite: {invite.email if invite else 'NOT FOUND'}")
     if invite is None:
         raise Exception(
             translation(
