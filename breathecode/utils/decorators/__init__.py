@@ -1,3 +1,4 @@
+from .academy_has_feature import *  # noqa: F401
 from .capable_of import *  # noqa: F401
 from .consume import *  # noqa: F401
 from .has_permission import *  # noqa: F401

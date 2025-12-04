@@ -29,6 +29,7 @@ from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
     apply_pricing_ratio,
+    calculate_refund_breakdown,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -37,6 +38,7 @@ from breathecode.payments.actions import (
     get_balance_by_resource,
     get_discounted_price,
     max_coupons_allowed,
+    process_refund,
 )
 from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
@@ -68,8 +70,10 @@ from breathecode.payments.models import (
     SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
+    AcademyPaymentSettingsPUTSerializer,
     BillingTeamAutoRechargeSerializer,
     CohortSetSerializer,
+    CreditNoteSerializer,
     FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
@@ -2092,9 +2096,183 @@ class AcademyInvoiceView(APIView):
             items = items.filter(status__in=status.split(","))
 
         items = handler.queryset(items)
-        serializer = GetInvoiceSmallSerializer(items, many=True)
+        serializer = GetInvoiceSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+
+class AcademyInvoiceRefundView(APIView):
+    """
+    Process a refund for an invoice.
+    Creates a credit note and processes the refund through Stripe if applicable.
+    """
+
+    @capable_of("crud_invoice")
+    def post(self, request, invoice_id, academy_id=None):
+        lang = get_user_language(request)
+        invoice = Invoice.objects.filter(id=invoice_id, academy__id=academy_id).first()
+
+        if not invoice:
+            raise ValidationException(
+                translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
+            )
+
+        # Validate invoice is not already fully refunded
+        already_refunded = invoice.amount_refunded or 0
+        available_to_refund = invoice.amount - already_refunded
+
+        if already_refunded >= invoice.amount:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invoice has already been fully refunded. Total refunded: {already_refunded}, Invoice amount: {invoice.amount}",
+                    es=f"La factura ya ha sido completamente reembolsada. Total reembolsado: {already_refunded}, Monto de la factura: {invoice.amount}",
+                    slug="invoice-already-fully-refunded",
+                ),
+                code=400,
+            )
+
+        # refund_amount is required
+        refund_amount = request.data.get("refund_amount")
+        if refund_amount is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="refund_amount is required",
+                    es="refund_amount es requerido",
+                    slug="refund-amount-required",
+                ),
+                code=400,
+            )
+
+        try:
+            refund_amount = float(refund_amount)
+            if refund_amount <= 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Refund amount must be greater than 0",
+                        es="El monto del reembolso debe ser mayor que 0",
+                        slug="invalid-refund-amount",
+                    ),
+                    code=400,
+                )
+            if refund_amount > available_to_refund:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Refund amount ({refund_amount}) exceeds available amount to refund ({available_to_refund}). "
+                        f"Already refunded: {already_refunded}, Invoice total: {invoice.amount}",
+                        es=f"El monto del reembolso ({refund_amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
+                        f"Ya reembolsado: {already_refunded}, Total de la factura: {invoice.amount}",
+                        slug="refund-amount-exceeds-available",
+                    ),
+                    code=400,
+                )
+        except ValueError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid refund_amount. Must be a number.",
+                    es="refund_amount inválido. Debe ser un número.",
+                    slug="invalid-refund-amount",
+                ),
+                code=400,
+            )
+
+        reason = request.data.get("reason", "")
+
+        # items_to_refund is required - it's a dict mapping slugs to refund amounts
+        items_to_refund = request.data.get("items_to_refund")
+        if items_to_refund is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund is required. Must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
+                    es="items_to_refund es requerido. Debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
+                    slug="items-to-refund-required",
+                ),
+                code=400,
+            )
+
+        if not isinstance(items_to_refund, dict):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
+                    es="items_to_refund debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
+                    slug="invalid-items-to-refund",
+                ),
+                code=400,
+            )
+
+        if len(items_to_refund) == 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund cannot be empty. Must contain at least one slug with its refund amount",
+                    es="items_to_refund no puede estar vacío. Debe contener al menos un slug con su monto de reembolso",
+                    slug="items-to-refund-empty",
+                ),
+                code=400,
+            )
+
+        # Validate that all values in items_to_refund are positive numbers
+        for slug, amount in items_to_refund.items():
+            try:
+                amount_float = float(amount)
+                if amount_float <= 0:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Refund amount for '{slug}' must be greater than 0, got {amount}",
+                            es=f"El monto del reembolso para '{slug}' debe ser mayor que 0, se obtuvo {amount}",
+                            slug="invalid-refund-amount-for-item",
+                        ),
+                        code=400,
+                    )
+            except (ValueError, TypeError):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Refund amount for '{slug}' must be a number, got {type(amount).__name__}",
+                        es=f"El monto del reembolso para '{slug}' debe ser un número, se obtuvo {type(amount).__name__}",
+                        slug="invalid-refund-amount-type",
+                    ),
+                    code=400,
+                )
+
+        # Validate that refund_amount matches the sum of items_to_refund amounts
+        total_items_refund = sum(float(amount) for amount in items_to_refund.values())
+        if abs(refund_amount - total_items_refund) > 0.01:  # Allow small floating point differences
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Refund amount ({refund_amount}) does not match the sum of items_to_refund amounts ({total_items_refund}). "
+                    f"Items to refund: {items_to_refund}",
+                    es=f"El monto del reembolso ({refund_amount}) no coincide con la suma de los montos de items_to_refund ({total_items_refund}). "
+                    f"Items a reembolsar: {items_to_refund}",
+                    slug="refund-amount-mismatch",
+                ),
+                code=400,
+            )
+
+        refund_breakdown = None
+        if invoice.amount_breakdown and refund_amount is not None:
+            refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
+
+        credit_note = process_refund(
+            invoice=invoice,
+            amount=refund_amount,
+            breakdown=refund_breakdown,
+            items_to_refund=items_to_refund,
+            reason=reason,
+            country_code=invoice.bag.country_code if invoice.bag else None,
+            lang=lang,
+        )
+
+        serializer = CreditNoteSerializer(credit_note, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CardView(APIView):
@@ -2908,6 +3086,10 @@ class CheckingView(APIView):
                         bag.token = Token.generate_key()
                         bag.expires_at = utc_now + timedelta(minutes=60)
 
+                        currency = bag.academy.main_currency
+                        if plan.currency != currency:
+                            currency = plan.currency
+
                         plan = bag.plans.filter(status="CHECKING").first()
 
                         # Initialize pricing_ratio_explanation
@@ -2917,7 +3099,7 @@ class CheckingView(APIView):
                         if not plan or plan.is_renewable:
                             bag.country_code = country_code
                             bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
-                                get_amount(bag, bag.academy.main_currency, lang)
+                                get_amount(bag, currency, lang)
                             )
 
                         else:
@@ -3619,9 +3801,11 @@ class PayView(APIView):
                         base_coupons = actions.get_coupons_for_plan(plan, list(coupons))
                         recurring_amount = get_discounted_price(adjusted_price, base_coupons)
 
-                        addons_before_total, plan_addons_amount = actions.get_plan_addons_amounts_with_coupons(
-                            bag, list(coupons), lang
-                        ) if has_plan_addons else (0.0, 0.0)
+                        addons_before_total, plan_addons_amount = (
+                            actions.get_plan_addons_amounts_with_coupons(bag, list(coupons), lang)
+                            if has_plan_addons
+                            else (0.0, 0.0)
+                        )
 
                         original_price = adjusted_price + addons_before_total
                         amount = recurring_amount + plan_addons_amount
@@ -3646,9 +3830,11 @@ class PayView(APIView):
                     base_after = get_discounted_price(base_amount, base_coupons)
 
                     # Apply coupons per addon, respecting coupon.plan scope
-                    addons_before_total, plan_addons_amount = actions.get_plan_addons_amounts_with_coupons(
-                        bag, list(coupons), lang
-                    ) if has_plan_addons else (0.0, 0.0)
+                    addons_before_total, plan_addons_amount = (
+                        actions.get_plan_addons_amounts_with_coupons(bag, list(coupons), lang)
+                        if has_plan_addons
+                        else (0.0, 0.0)
+                    )
 
                     original_price = base_amount + addons_before_total
                     amount = base_after + plan_addons_amount
@@ -3760,6 +3946,7 @@ class PayView(APIView):
                     s = Stripe(academy=bag.academy)
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
+                    invoice.refresh_from_db()
 
                 elif amount == 0:
                     invoice = Invoice(
@@ -3771,7 +3958,6 @@ class PayView(APIView):
                         currency=bag.currency,
                         academy=bag.academy,
                     )
-
                     invoice.save()
 
                 else:
@@ -3779,6 +3965,11 @@ class PayView(APIView):
                         translation(lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"),
                         code=400,
                     )
+
+                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                )
+                invoice.save(update_fields=["amount_breakdown"])    
 
                 # Calculate is_recurrent based on:
                 # 1. If it's a free trial -> False
@@ -3850,13 +4041,17 @@ class PayView(APIView):
                 )
 
                 data = serializer.data
-                serializer = GetCouponSerializer(coupons, many=True)
+                # Convert coupons QuerySet to list before serialization to avoid stale QuerySet issues
+                serializer = GetCouponSerializer(list(coupons), many=True)
                 data["coupons"] = serializer.data
 
                 return Response(data, status=201)
 
             except Exception as e:
-                transaction.savepoint_rollback(sid)
+                try:
+                    transaction.savepoint_rollback(sid)
+                except Exception:
+                    pass
                 raise e
 
 
@@ -3963,6 +4158,18 @@ class CoinbaseChargeView(APIView):
                     )
                 bag.status = "PAID"
                 bag.save()
+
+                # Calculate invoice breakdown after transaction is complete
+                how_many_installments = metadata.get("how_many_installments", 0)
+                how_many_installments = int(float(how_many_installments)) if how_many_installments else 0
+                chosen_period = metadata.get("chosen_period")
+                if chosen_period and chosen_period not in ["MONTH", "QUARTER", "HALF", "YEAR", "NO_SET"]:
+                    chosen_period = None
+
+                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                )
+                invoice.save(update_fields=["amount_breakdown"])
 
                 coupons = bag.coupons.all()
 
@@ -6057,3 +6264,42 @@ class PlanFinancingSeatView(APIView):
 
         actions.deactivate_plan_financing_seat(seat)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPaymentSettingsView(APIView):
+    @capable_of("crud_academy_payment_settings")
+    def put(self, request, academy_id=None):
+        """
+        Update payment settings for an academy.
+        Allows partial updates of payment gateway configuration. Only provided fields will be updated.
+        If payment settings don't exist for the academy, they will be created automatically.
+
+        Args:
+            academy_id: Academy ID (injected automatically by @capable_of decorator from URL or Academy header)
+
+        Request Body (all optional):
+            stripe_api_key (str): Stripe secret API key (e.g., "sk_test_...")
+            stripe_webhook_secret (str): Stripe webhook secret for signature verification (e.g., "whsec_...")
+            stripe_publishable_key (str): Stripe publishable key for frontend (e.g., "pk_test_...")
+            coinbase_api_key (str): Coinbase Commerce API key
+            coinbase_webhook_secret (str): Coinbase webhook secret for signature verification
+        """
+
+        payment_settings, created = AcademyPaymentSettings.objects.get_or_create(
+            academy_id=academy_id,
+            defaults={
+                "stripe_api_key": "",
+                "stripe_webhook_secret": "",
+                "stripe_publishable_key": "",
+                "coinbase_api_key": None,
+                "coinbase_webhook_secret": None,
+            },
+        )
+
+        serializer = AcademyPaymentSettingsPUTSerializer(payment_settings, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
