@@ -312,6 +312,8 @@ class UserInviteShortSerializer(serpy.Serializer):
     status = serpy.Field()
     email = serpy.Field()
     sent_at = serpy.Field()
+    opened_at = serpy.Field()
+    clicked_at = serpy.Field()
     created_at = serpy.Field()
 
 
