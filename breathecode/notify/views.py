@@ -118,6 +118,81 @@ def get_sample_data(request, hook_id=None):
     return Response(single.sample_data)
 
 
+@api_view(["GET"])
+def get_hook_events(request):
+    """
+    Get all available webhook events with descriptions and metadata.
+    
+    Returns a list of all available webhook events that can be subscribed to,
+    including their descriptions, apps, and associated models.
+    
+    Query Parameters:
+        app (optional): Filter events by app name (admissions, assignments, marketing, etc.)
+        like (optional): Search in event name or description
+    
+    Example Response:
+        [
+            {
+                "event": "assignment.assignment_created",
+                "description": "Triggered when a new assignment is created for a student",
+                "app": "assignments",
+                "model": "assignments.Task"
+            },
+            ...
+        ]
+    """
+    from django.conf import settings
+    from breathecode.notify.utils.auto_register_hooks import derive_app_from_action, derive_model_from_action
+
+    # Get metadata from settings, fallback to empty dict if not defined
+    metadata = getattr(settings, "HOOK_EVENTS_METADATA", {})
+    
+    # Build response with all available events
+    events = []
+    for event_name, event_config in metadata.items():
+        action = event_config.get("action")
+        
+        # Get or derive app name
+        app_name = event_config.get("app")
+        if not app_name and action:
+            app_name = derive_app_from_action(action)
+        
+        # Get or derive model
+        model = event_config.get("model")
+        if not model and action:
+            model = derive_model_from_action(action)
+        
+        event_data = {
+            "event": event_name,
+            "description": event_config.get("description", "No description available"),
+            "app": app_name or "unknown",
+            "model": model or "Unknown",
+        }
+        events.append(event_data)
+    
+    # Filter by app if provided
+    app = request.GET.get("app", None)
+    if app:
+        events = [e for e in events if e["app"].lower() == app.lower()]
+    
+    # Filter by search term if provided
+    like = request.GET.get("like", None)
+    if like:
+        like_lower = like.lower()
+        events = [
+            e
+            for e in events
+            if like_lower in e["event"].lower()
+            or like_lower in e["description"].lower()
+            or like_lower in e["app"].lower()
+        ]
+    
+    # Sort by app, then by event name
+    events.sort(key=lambda x: (x["app"], x["event"]))
+    
+    return Response(events)
+
+
 class HooksView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.

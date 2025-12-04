@@ -479,7 +479,7 @@ class AcademyNotifySettings(models.Model):
         """
         Resolve variable references in override values.
         Supports:
-        - {{global.VAR}} and {{template.slug.VAR}} (cross-references between settings)
+        - {global.VAR} and {template.slug.VAR} (cross-references between settings)
         - {VARIABLE} for academy model fields (COMPANY_NAME from academy.name, etc)
         """
         resolved = {}
@@ -494,14 +494,14 @@ class AcademyNotifySettings(models.Model):
             for _ in range(max_depth):
                 has_changes = False
                 
-                # 1. Find and replace {{global.VAR}} or {{template.slug.VAR}} references
-                pattern_double = r'\{\{(global\.\w+|template\.\w+\.\w+)\}\}'
-                matches_double = re.findall(pattern_double, resolved_value)
+                # 1. Find and replace {global.VAR} or {template.slug.VAR} references
+                pattern_bracket = r'\{(global\.\w+|template\.\w+\.\w+)\}'
+                matches_bracket = re.findall(pattern_bracket, resolved_value)
                 
-                for match in matches_double:
+                for match in matches_bracket:
                     replacement = self._get_reference_value(match, template_slug, overrides)
                     if replacement is not None:
-                        resolved_value = resolved_value.replace(f'{{{{{match}}}}}', str(replacement))
+                        resolved_value = resolved_value.replace(f'{{{match}}}', str(replacement))
                         has_changes = True
                 
                 # 2. Find and replace {VARIABLE} from academy model fields
