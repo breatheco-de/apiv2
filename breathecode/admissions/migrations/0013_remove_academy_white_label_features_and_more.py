@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("admissions", "0012_remove_academy_white_label_features_and_more"),
+        ("admissions", "0012_add_reasoning_to_syllabus_version"),
     ]
 
     operations = [
