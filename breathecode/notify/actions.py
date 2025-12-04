@@ -255,6 +255,8 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
         "COMPANY_CONTACT_URL": os.environ.get("COMPANY_CONTACT_URL", ""),
         "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", ""),
         "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
+        "DOMAIN_NAME": os.environ.get("DOMAIN_NAME", ""),
+        "PLATFORM_DESCRIPTION": os.environ.get("PLATFORM_DESCRIPTION", "An award winning platform to learn and improve your AI related skills."),
         "style__success": "#99ccff",
         "style__danger": "#ffcccc",
         "style__secondary": "#ededed",
@@ -272,6 +274,7 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
         z.setdefault("COMPANY_LEGAL_NAME", academy.legal_name or academy.name)
         z.setdefault("COMPANY_LOGO", academy.logo_url)
         z.setdefault("COMPANY_NAME", academy.name)
+        z.setdefault("DOMAIN_NAME", academy.website_url)
         z.setdefault("PLATFORM_DESCRIPTION", academy.platform_description)
 
         if "heading" not in z:
