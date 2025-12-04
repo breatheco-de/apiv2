@@ -923,6 +923,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                         "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
                         "FIRST_NAME": validated_data["first_name"],
+                        "INVITE_ID": invite.id,
+                        "API_URL": os.getenv("API_URL", ""),
                     },
                     academy=academy,
                 )
@@ -1181,6 +1183,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
                         "FIRST_NAME": validated_data["first_name"],
+                        "INVITE_ID": invite.id,
+                        "API_URL": os.getenv("API_URL", ""),
                     },
                     academy=academy,
                 )

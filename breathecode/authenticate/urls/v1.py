@@ -74,8 +74,10 @@ from ..views import (
     render_academy_invite,
     render_google_connect,
     render_invite,
+    render_invite_with_tracking,
     render_user_invite,
     reset_password_view,
+    track_invite_open,
     save_facebook_token,
     save_github_token,
     save_google_token,
@@ -118,7 +120,8 @@ urlpatterns = [
     path("profile/me/picture", ProfileMePictureView.as_view(), name="profile_me_picture"),
     path("profile/invite/me", ProfileInviteMeView.as_view(), name="profile_invite_me"),
     path("member/invite", render_user_invite, name="member_invite"),
-    path("member/invite/<str:token>", render_invite, name="member_invite_token"),
+    path("invite/track/open/<int:invite_id>", track_invite_open, name="track_invite_open"),
+    path("member/invite/<str:token>", render_invite_with_tracking, name="member_invite_token"),
     path(
         "member/<int:profile_academy_id>/token", TokenTemporalView.as_view(), name="profile_academy_reset_github_link"
     ),

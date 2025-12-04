@@ -30,6 +30,20 @@
             "source": "Formatted with academy name",
             "example": "Welcome to 4Geeks Academy",
             "required": true
+        },
+        {
+            "name": "INVITE_ID",
+            "description": "UserInvite ID for tracking email opens",
+            "source": "UserInvite.id from database",
+            "example": "123",
+            "required": true
+        },
+        {
+            "name": "API_URL",
+            "description": "Base API URL for tracking pixel",
+            "source": "Environment variable API_URL",
+            "example": "https://api.4geeks.com",
+            "required": true
         }
     ]
 }
