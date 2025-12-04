@@ -181,9 +181,7 @@ class Task(models.Model):
                 self.reviewed_at = timezone.now()
 
         super().save(*args, **kwargs)
-        print("wssfsdffdsdsf89989898")
         if not creating and self.task_status != self._current_task_status:
-            print("asdjkasdjknadkjnasnkjsfk34434334344343")
             signals.assignment_status_updated.delay(instance=self, sender=self.__class__)
 
         if not creating and self.revision_status != self._current_revision_status:
