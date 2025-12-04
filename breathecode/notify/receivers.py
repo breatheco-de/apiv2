@@ -13,6 +13,9 @@ from breathecode.assessment.serializers import HookUserAssessmentSerializer
 from breathecode.assessment.signals import userassessment_status_updated
 from breathecode.authenticate.models import UserInvite
 from breathecode.authenticate.signals import invite_status_updated
+from breathecode.assignments.models import Task
+from breathecode.assignments.serializers import TaskHookSerializer
+from breathecode.assignments.signals import assignment_status_updated, assignment_created, revision_status_updated
 from breathecode.events.models import Event, EventCheckin
 from breathecode.events.serializers import EventHookCheckinSerializer, EventJoinSmallSerializer
 from breathecode.events.signals import event_rescheduled, event_status_updated, new_event_attendee, new_event_order
@@ -169,6 +172,28 @@ def handle_asset_status_updated(sender, instance, **kwargs):
     model_label = get_model_label(instance)
     serializer = AssetHookSerializer(instance)
     HookManager.process_model_event(instance, model_label, "asset_status_updated", payload_override=serializer.data)
+
+@receiver(assignment_status_updated, sender=Task)
+def handle_assignment_status_updated(sender, instance, **kwargs):
+    logger.debug("HOOK: Assignment status updated")
+    model_label = get_model_label(instance)
+    serializer = TaskHookSerializer(instance)
+    HookManager.process_model_event(instance, model_label, "assignment_status_updated", payload_override=serializer.data)
+
+@receiver(assignment_created, sender=Task)
+def handle_assignment_created(sender, instance, **kwargs):
+    logger.debug("HOOK: Assignment created!")
+    model_label = get_model_label(instance)
+    serializer = TaskHookSerializer(instance)
+    HookManager.process_model_event(instance, model_label, "assignment_created", payload_override=serializer.data)
+
+@receiver(revision_status_updated, sender=Task)
+def handle_revision_status_updated(sender, instance, **kwargs):
+    logger.debug("HOOK: Assignment revision status updated!")
+    model_label = get_model_label(instance)
+    serializer = TaskHookSerializer(instance)
+    HookManager.process_model_event(instance, model_label, "revision_status_updated", payload_override=serializer.data)
+
 
 
 @receiver(invite_status_updated, sender=UserInvite)
