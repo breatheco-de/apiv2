@@ -28,7 +28,7 @@
             "name": "subject",
             "description": "Email subject line with academy name",
             "source": "Formatted with academy name",
-            "example": "{ACADEMY_NAME} is inviting you to {WEBSITE_URL}",
+            "example": "{COMPANY_NAME} is inviting you to {DOMAIN_NAME}",
             "required": true
         },
         {
