@@ -1059,6 +1059,71 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class AcademyInviteStatsView(APIView):
+    """
+    GET /v1/auth/academy/user/invite/stats
+    GET /v1/auth/academy/user/invite/stats?clean_cache=true
+    
+    Returns aggregated statistics for academy invites.
+    
+    Cache Configuration:
+    - Expires after 24 hours automatically
+    - Can be manually cleared with clean_cache=true parameter
+    - Uses Redis cache via Django's cache framework
+    
+    IMPORTANT: DO NOT add automatic cache invalidation on UserInvite model changes.
+    The 24-hour TTL and manual refresh are intentional design decisions to reduce
+    database load on dashboard views. Cache invalidation on every invite change
+    would defeat the purpose of this endpoint.
+    """
+    
+    @capable_of("read_invite")
+    def get(self, request, academy_id=None):
+        from django.core.cache import cache
+        from django.db.models import Count
+        
+        # Cache key specific to this academy
+        cache_key = f"academy_{academy_id}_invite_stats"
+        
+        # Check if user wants to force refresh
+        clean_cache = request.GET.get('clean_cache', '').lower() == 'true'
+        
+        if clean_cache:
+            cache.delete(cache_key)
+        else:
+            # Try to get from cache first
+            cached_stats = cache.get(cache_key)
+            if cached_stats:
+                return Response(cached_stats)
+        
+        # Generate fresh stats - single query with aggregation
+        invites = UserInvite.objects.filter(academy__id=academy_id)
+        
+        stats = invites.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status='PENDING')),
+            accepted=Count('id', filter=Q(status='ACCEPTED')),
+            waiting=Count('id', filter=Q(status='WAITING_LIST')),
+            rejected=Count('id', filter=Q(status='REJECTED'))
+        )
+        
+        # Build response
+        result = {
+            'academy_id': academy_id,
+            'total_invitations': stats['total'],
+            'pending': stats['pending'],
+            'accepted': stats['accepted'],
+            'waiting': stats['waiting'],
+            'rejected': stats['rejected'],
+            'generated_at': timezone.now().isoformat()
+        }
+        
+        # Cache for 24 hours (86400 seconds)
+        cache.set(cache_key, result, 60 * 60 * 24)
+        
+        return Response(result)
+
+
 class V2AppUserView(APIView):
     permission_classes = [AllowAny]
 

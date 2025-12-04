@@ -26,6 +26,7 @@ from ..views import (
     AcademyAuthSettingsView,
     AcademyCapabilitiesView,
     AcademyGithubSyncView,
+    AcademyInviteStatsView,
     AcademyInviteView,
     AcademyTokenView,
     AppSync,
@@ -141,6 +142,8 @@ urlpatterns = [
     ),
     path("academy/invite/<int:invite_id>", AcademyInviteView.as_view(), name="academy_invite_id"),
     path("academy/user/invite", AcademyInviteView.as_view(), name="academy_user_invite"),
+    path("academy/user/invite/stats", AcademyInviteStatsView.as_view(), name="academy_user_invite_stats"),
+    path("academy/<int:academy_id>/user/invite/stats", AcademyInviteStatsView.as_view(), name="academy_id_user_invite_stats"),
     path("academy/html/invite", render_academy_invite, name="academy_html_invite"),
     # path('group/', get_groups, name="group"),
     path("view/login", login_html_view, name="login_view"),  # html login form

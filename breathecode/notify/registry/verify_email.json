@@ -1,0 +1,29 @@
+{
+    "slug": "verify_email",
+    "name": "Verify Email",
+    "description": "Email verification for new user accounts to confirm email ownership",
+    "category": "authentication",
+    "channels": {
+        "email": {
+            "template_path": "verify_email",
+            "default_subject": "Verify your email address"
+        }
+    },
+    "variables": [
+        {
+            "name": "LINK",
+            "description": "Email verification URL with token",
+            "source": "Generated from API_URL + verification token",
+            "example": "https://api.4geeks.com/v1/auth/email/verify?token=xyz789abc",
+            "required": true
+        },
+        {
+            "name": "subject",
+            "description": "Email subject line",
+            "source": "Passed in data dict or uses default",
+            "example": "Verify your email address",
+            "required": true
+        }
+    ]
+}
+

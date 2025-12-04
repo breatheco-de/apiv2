@@ -2522,13 +2522,13 @@ def notify_user_was_added_to_subscription_team(
         subscription_seat.email,
         {
             "email": subscription_seat.email,
+            "FIRST_NAME": subscription_seat.user.first_name or "",
             "subject": translation(
                 lang,
                 en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
                 es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
             ),
             "LINK": get_app_url(),
-            "FIST_NAME": subscription_seat.user.first_name or "",
         },
         academy=subscription.academy,
     )
@@ -2591,13 +2591,13 @@ def invite_user_to_subscription_team(
             subscription_seat.email,
             {
                 "email": subscription_seat.email,
+                "FIRST_NAME": obj.get("first_name", "") or "",
                 "subject": translation(
                     lang,
                     en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
                     es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
                 ),
                 "LINK": invite_link,
-                "FIST_NAME": obj.get("first_name", "") or "",
             },
             academy=subscription.academy,
         )
@@ -2682,13 +2682,13 @@ def notify_user_was_added_to_plan_financing_team(team: PlanFinancingTeam, seat: 
         seat.email,
         {
             "email": seat.email,
+            "FIRST_NAME": seat.user.first_name or "",
             "subject": translation(
                 lang,
                 en=f"You've been added to {team.name} at {financing.academy.name}",
                 es=f"Has sido agregado a {team.name} en {financing.academy.name}",
             ),
             "LINK": get_app_url(),
-            "FIST_NAME": seat.user.first_name or "",
         },
         academy=financing.academy,
     )
@@ -2723,13 +2723,13 @@ def invite_user_to_plan_financing_team(
             plan_financing_seat.email,
             {
                 "email": plan_financing_seat.email,
+                "FIRST_NAME": obj.get("first_name", "") or "",
                 "subject": translation(
                     lang,
                     en=f"You've been invited to {team.name} at {financing.academy.name}",
                     es=f"Has sido invitado a {team.name} en {financing.academy.name}",
                 ),
                 "LINK": invite_link,
-                "FIST_NAME": obj.get("first_name", "") or "",
             },
             academy=financing.academy,
         )

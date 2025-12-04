@@ -218,6 +218,14 @@ CAPABILITIES = [
         "slug": "crud_career_path",
         "description": "Create, update, or delete career paths, job families, job roles, skills, competencies, and related talent development information",
     },
+    {
+        "slug": "read_notification",
+        "description": "View and preview notification templates",
+    },
+    {
+        "slug": "crud_notification",
+        "description": "Full CRUD access to notifications (future-proofing)",
+    },
 ]
 
 BASE_ROLES = [
@@ -747,6 +755,8 @@ def get_extended_roles():
                 "crud_subscription",
                 "read_paymentmethod",
                 "crud_paymentmethod",
+                "read_notification",
+                "crud_notification",
             ],
         }
     )
