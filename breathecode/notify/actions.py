@@ -272,6 +272,7 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
         z.setdefault("COMPANY_LEGAL_NAME", academy.legal_name or academy.name)
         z.setdefault("COMPANY_LOGO", academy.logo_url)
         z.setdefault("COMPANY_NAME", academy.name)
+        z.setdefault("PLATFORM_DESCRIPTION", academy.platform_description)
 
         if "heading" not in z:
             z["heading"] = academy.name

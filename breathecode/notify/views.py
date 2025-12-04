@@ -1,4 +1,5 @@
 import logging
+import os
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.db.models import Q
@@ -366,3 +367,102 @@ class AcademyNotifySettingsView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyNotifyVariablesView(APIView):
+    """Show available notification variables for an academy."""
+
+    @capable_of("read_notification")
+    def get(self, request, academy_id=None):
+        """
+        Get all available variables for notification templates.
+        
+        Query params:
+        - template: Optional template slug to show final merged values for that template
+        """
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException("Academy not found", slug="academy-not-found")
+
+        # System defaults from environment
+        system_defaults = {
+            "API_URL": os.environ.get("API_URL", ""),
+            "COMPANY_NAME": os.environ.get("COMPANY_NAME", ""),
+            "COMPANY_CONTACT_URL": os.environ.get("COMPANY_CONTACT_URL", ""),
+            "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", ""),
+            "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
+            "COMPANY_INFO_EMAIL": os.environ.get("COMPANY_INFO_EMAIL", ""),
+            "style__success": "#99ccff",
+            "style__danger": "#ffcccc",
+            "style__secondary": "#ededed",
+        }
+
+        # Academy model values
+        academy_values = {
+            "COMPANY_NAME": academy.name,
+            "COMPANY_LOGO": academy.logo_url,
+            "COMPANY_INFO_EMAIL": academy.feedback_email,
+            "COMPANY_LEGAL_NAME": academy.legal_name or academy.name,
+            "PLATFORM_DESCRIPTION": academy.platform_description,
+        }
+
+        # Academy template_variables overrides
+        global_overrides = {}
+        template_specific_overrides = {}
+        
+        if hasattr(academy, 'notify_settings') and academy.notify_settings:
+            settings = academy.notify_settings
+            
+            for key, value in settings.template_variables.items():
+                if key.startswith("global."):
+                    var_name = key.replace("global.", "")
+                    global_overrides[var_name] = value
+                elif key.startswith("template."):
+                    # Parse template.SLUG.VARIABLE format
+                    parts = key.split(".", 2)  # Split into max 3 parts
+                    if len(parts) == 3:
+                        template_slug = parts[1]
+                        var_name = parts[2]
+                        if template_slug not in template_specific_overrides:
+                            template_specific_overrides[template_slug] = {}
+                        template_specific_overrides[template_slug][var_name] = value
+
+        response_data = {
+            "system_defaults": system_defaults,
+            "academy_values": academy_values,
+            "global_overrides": global_overrides,
+            "template_specific_overrides": template_specific_overrides,
+        }
+
+        # If template specified, show final merged values for that template
+        template_slug = request.GET.get("template")
+        if template_slug:
+            if hasattr(academy, 'notify_settings') and academy.notify_settings:
+                settings = academy.notify_settings
+                
+                # Check if template is disabled
+                if not settings.is_template_enabled(template_slug):
+                    response_data["template_disabled"] = True
+                    response_data["final_values"] = {}
+                else:
+                    # Get all overrides for this template (includes interpolation)
+                    overrides = settings.get_all_overrides_for_template(template_slug)
+                    response_data["resolved_for_template"] = overrides
+                    response_data["template_disabled"] = False
+                    
+                    # Build final values (simulating what send_email_message would use)
+                    final = {}
+                    final.update(system_defaults)
+                    final.update({k: v for k, v in academy_values.items() if v is not None})
+                    final.update(overrides)
+                    
+                    response_data["final_values"] = final
+            else:
+                # No settings, just show academy model values over system defaults
+                final = {}
+                final.update(system_defaults)
+                final.update({k: v for k, v in academy_values.items() if v is not None})
+                response_data["final_values"] = final
+                response_data["template_disabled"] = False
+
+        return Response(response_data)

@@ -340,30 +340,80 @@ Academy: 4
   },
   "variables": {
     "default": {
-      "API_URL": "https://api.4geeks.com",
-      "COMPANY_NAME": "4Geeks",
-      "COMPANY_CONTACT_URL": "https://4geeks.com/contact",
-      "style__success": "#99ccff",
-      "style__danger": "#ffcccc"
+      "API_URL": {
+        "description": "Base API URL for tracking pixels and API calls",
+        "source": "Environment variable API_URL",
+        "example": "https://api.4geeks.com",
+        "required": false,
+        "type": "system_default"
+      },
+      "COMPANY_NAME": {
+        "description": "Company name used in email templates",
+        "source": "Environment variable COMPANY_NAME",
+        "example": "4Geeks",
+        "required": false,
+        "type": "system_default"
+      },
+      "COMPANY_CONTACT_URL": {
+        "description": "URL to company contact page",
+        "source": "Environment variable COMPANY_CONTACT_URL",
+        "example": "https://4geeks.com/contact",
+        "required": false,
+        "type": "system_default"
+      },
+      "style__success": {
+        "description": "Success color for buttons and highlights",
+        "source": "System default CSS color",
+        "example": "#99ccff",
+        "required": false,
+        "type": "system_default"
+      },
+      "style__danger": {
+        "description": "Danger/warning color for alerts",
+        "source": "System default CSS color",
+        "example": "#ffcccc",
+        "required": false,
+        "type": "system_default"
+      }
     },
     "template_specific": {
       "SUBJECT": {
         "description": "Message subject/title",
         "source": "Passed in data dict",
         "example": "Important Update",
-        "required": true
+        "required": true,
+        "type": "template_variable"
       },
       "MESSAGE": {
         "description": "Main message content (supports HTML)",
         "source": "Passed in data dict",
         "example": "Your cohort schedule has been updated.",
-        "required": true
+        "required": true,
+        "type": "template_variable"
       }
     },
     "academy_specific": {
-      "COMPANY_NAME": "Miami Academy",
-      "COMPANY_LOGO": "https://...",
-      "COMPANY_INFO_EMAIL": "info@miami.4geeks.com"
+      "COMPANY_NAME": {
+        "description": "Academy name (overrides system default)",
+        "source": "Academy.name model field",
+        "example": "Miami Academy",
+        "required": false,
+        "type": "academy_field"
+      },
+      "COMPANY_LOGO": {
+        "description": "Academy logo URL for email headers",
+        "source": "Academy.logo_url model field",
+        "example": "https://storage.googleapis.com/logos/miami.png",
+        "required": false,
+        "type": "academy_field"
+      },
+      "COMPANY_INFO_EMAIL": {
+        "description": "Academy feedback/info email (overrides system default)",
+        "source": "Academy.feedback_email model field",
+        "example": "info@miami.4geeks.com",
+        "required": false,
+        "type": "academy_field"
+      }
     }
   },
   "preview_context": {
@@ -385,6 +435,12 @@ Academy: 4
   }
 }
 ```
+
+**Note on Variables Field:**
+
+The `variables` field in the preview response contains **schema/metadata** for all variables (description, source, example, type), not actual values. This provides documentation about what variables are available and how they're used.
+
+To get **actual current values** for variables (including system defaults, academy model values, and overrides), use the [`/v1/notify/academy/variables`](#get-available-variables) endpoint instead.
 
 **Channel-Specific Responses:**
 
@@ -1010,6 +1066,127 @@ Each academy can have one `AcademyNotifySettings` instance with the following fi
 **Important:** Academy `template_variables` overrides take priority over academy model fields, allowing full customization even for fields like `COMPANY_NAME` that are typically set from `academy.name`.
 
 ### API Endpoints
+
+#### Get Available Variables
+
+**Endpoint:** `GET /v1/notify/academy/variables`
+
+**Description:** Returns all available variables including system defaults, academy model values, and current overrides. Optionally shows final merged values for a specific template.
+
+**Permission:** Requires `read_notification` capability
+
+**Headers:**
+```
+Authorization: Token <user_token>
+Academy: <academy_id>
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `template` | string | Optional template slug to show final merged values | `?template=welcome_academy` |
+
+**Example Request (without template):**
+```bash
+GET /v1/notify/academy/variables
+Authorization: Token abc123
+Academy: 4
+```
+
+**Response:**
+```json
+{
+  "system_defaults": {
+    "API_URL": "https://api.4geeks.com",
+    "COMPANY_NAME": "4Geeks",
+    "COMPANY_CONTACT_URL": "https://4geeks.com/contact",
+    "COMPANY_LEGAL_NAME": "4Geeks LLC",
+    "COMPANY_ADDRESS": "",
+    "COMPANY_INFO_EMAIL": "info@4geeks.com",
+    "style__success": "#99ccff",
+    "style__danger": "#ffcccc",
+    "style__secondary": "#ededed"
+  },
+  "academy_values": {
+    "COMPANY_NAME": "Miami Academy",
+    "COMPANY_LOGO": "https://storage.googleapis.com/logos/miami.png",
+    "COMPANY_INFO_EMAIL": "info@miami.4geeks.com",
+    "COMPANY_LEGAL_NAME": "Miami Academy LLC",
+    "PLATFORM_DESCRIPTION": "A premium coding bootcamp in Miami"
+  },
+  "global_overrides": {
+    "COMPANY_NAME": "4Geeks Miami Campus"
+  },
+  "template_specific_overrides": {
+    "welcome_academy": {
+      "subject": "Welcome to Miami!",
+      "MESSAGE": "Custom welcome message"
+    },
+    "verify_email": {
+      "subject": "Verify your account"
+    }
+  }
+}
+```
+
+**Example Request (with template):**
+```bash
+GET /v1/notify/academy/variables?template=welcome_academy
+Authorization: Token abc123
+Academy: 4
+```
+
+**Response:**
+```json
+{
+  "system_defaults": { ... },
+  "academy_values": { ... },
+  "global_overrides": {
+    "COMPANY_NAME": "4Geeks Miami Campus"
+  },
+  "template_specific_overrides": {
+    "welcome_academy": {
+      "subject": "Welcome to Miami!",
+      "MESSAGE": "Custom message"
+    },
+    "verify_email": {
+      "subject": "Verify your account"
+    }
+  },
+  "resolved_for_template": {
+    "COMPANY_NAME": "4Geeks Miami Campus",
+    "subject": "Welcome to Miami!",
+    "MESSAGE": "Custom message"
+  },
+  "template_disabled": false,
+  "final_values": {
+    "API_URL": "https://api.4geeks.com",
+    "COMPANY_NAME": "4Geeks Miami Campus",
+    "COMPANY_LOGO": "https://storage.googleapis.com/logos/miami.png",
+    "COMPANY_INFO_EMAIL": "info@miami.4geeks.com",
+    "COMPANY_LEGAL_NAME": "Miami Academy LLC",
+    "PLATFORM_DESCRIPTION": "A premium coding bootcamp in Miami",
+    "subject": "Welcome to Miami!",
+    "MESSAGE": "Custom message",
+    "style__success": "#99ccff"
+  }
+}
+```
+
+**Note:** The response always includes `template_specific_overrides` showing all template-level overrides organized by template slug. When `?template=` is specified, additional fields `resolved_for_template`, `template_disabled`, and `final_values` are included.
+
+**Use Cases:**
+- Show users what variables are available for customization
+- Display current effective values for variables
+- Help debug why certain values appear in emails
+- Build UI for variable override management
+
+**Status Codes:**
+- `200 OK` - Variables retrieved successfully
+- `401 Unauthorized` - Missing or invalid authentication
+- `403 Forbidden` - User lacks `read_notification` capability
+- `404 Not Found` - Academy not found
 
 #### Get Academy Settings
 

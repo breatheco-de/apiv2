@@ -44,6 +44,13 @@
             "source": "Environment variable API_URL",
             "example": "https://api.4geeks.com",
             "required": true
+        },
+        {
+            "name": "PLATFORM_DESCRIPTION",
+            "description": "Description of the platform shown in welcome email",
+            "source": "Academy.platform_description or default value",
+            "example": "An award winning platform to learn and improve your AI related skills.",
+            "required": false
         }
     ]
 }

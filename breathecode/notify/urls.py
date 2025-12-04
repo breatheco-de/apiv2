@@ -51,6 +51,7 @@ from django.urls import path
 
 from .views import (
     AcademyNotifySettingsView,
+    AcademyNotifyVariablesView,
     HooksView,
     NotificationTemplatePreviewView,
     NotificationTemplatesView,
@@ -81,6 +82,7 @@ urlpatterns = [
     ),
     # Academy notification settings
     path("academy/settings", AcademyNotifySettingsView.as_view(), name="academy_notify_settings"),
+    path("academy/variables", AcademyNotifyVariablesView.as_view(), name="academy_notify_variables"),
     # Slack integration endpoints
     path("slack/interaction", process_interaction),
     path("slack/command", slack_command, name="slack_command"),
