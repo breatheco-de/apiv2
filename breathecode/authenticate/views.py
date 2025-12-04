@@ -1168,8 +1168,10 @@ def render_invite_with_tracking(request, token, member_id=None):
         invite.clicked_at = timezone.now()
         invite.save()
     
+    original_request = getattr(request, '_request', request)
+    
     # Delegate to existing render_invite function
-    return render_invite(request, token, member_id)
+    return render_invite(original_request, token, member_id)
 
 
 class V2AppUserView(APIView):
