@@ -6,7 +6,7 @@
     "channels": {
         "email": {
             "template_path": "welcome_academy",
-            "default_subject": "Welcome to {academy_name}"
+            "default_subject": "{COMPANY_NAME} is inviting you to {DOMAIN_NAME}"
         }
     },
     "variables": [
