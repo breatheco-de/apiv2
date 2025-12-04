@@ -1165,9 +1165,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug("Sending invite email to " + email)
 
+                # Log academy info for debugging white label
+                logger.info(f"DEBUG create_invite - Academy: {academy.slug}, white_labeled={academy.white_labeled}, website_url={academy.website_url}")
+                
                 callback_url = get_app_url(academy=academy)
+                logger.info(f"DEBUG create_invite - Callback URL: {callback_url}")
+                
                 querystr = urllib.parse.urlencode({"callback": callback_url})
                 url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                logger.info(f"DEBUG create_invite - Full invite URL: {url}")
 
                 notify_actions.send_email_message(
                     "welcome_academy",
