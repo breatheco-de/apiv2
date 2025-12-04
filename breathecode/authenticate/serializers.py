@@ -923,6 +923,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                         "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
                         "FIRST_NAME": validated_data["first_name"],
+                        "INVITE_ID": invite.id,
+                        "API_URL": os.getenv("API_URL", ""),
                     },
                     academy=academy,
                 )
@@ -944,14 +946,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 class StudentPOSTListSerializer(serializers.ListSerializer):
 
     def create(self, validated_data):
-
         result = [self.child.create(attrs) for attrs in validated_data]
-
-        try:
-            self.child.Meta.model.objects.bulk_create(result)
-        except IntegrityError as e:
-            raise ValidationError(e)
-
         return result
 
 
@@ -1170,8 +1165,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug("Sending invite email to " + email)
 
-                querystr = urllib.parse.urlencode({"callback": get_app_url()})
+                # Log academy info for debugging white label
+                logger.info(f"DEBUG create_invite - Academy: {academy.slug}, white_labeled={academy.white_labeled}, website_url={academy.website_url}")
+                
+                callback_url = get_app_url(academy=academy)
+                logger.info(f"DEBUG create_invite - Callback URL: {callback_url}")
+                
+                querystr = urllib.parse.urlencode({"callback": callback_url})
                 url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                logger.info(f"DEBUG create_invite - Full invite URL: {url}")
 
                 notify_actions.send_email_message(
                     "welcome_academy",
@@ -1181,6 +1183,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
                         "FIRST_NAME": validated_data["first_name"],
+                        "INVITE_ID": invite.id,
+                        "API_URL": os.getenv("API_URL", ""),
                     },
                     academy=academy,
                 )

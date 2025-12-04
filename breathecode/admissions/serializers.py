@@ -232,6 +232,16 @@ class GetAcademySerializer(serpy.Serializer):
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
     is_hidden_on_prework = serpy.Field()
+    main_currency = serpy.MethodField()
+
+    def get_main_currency(self, obj):
+        """Return main_currency details."""
+        if obj.main_currency:
+            return {
+                "code": obj.main_currency.code,
+                "name": obj.main_currency.name,
+            }
+        return None
 
 
 class GetAcademyWithStatusSerializer(serpy.Serializer):
@@ -269,12 +279,22 @@ class GetBigAcademySerializer(serpy.Serializer):
     is_hidden_on_prework = serpy.Field()
     white_labeled = serpy.Field()
     white_label_url = serpy.Field()
+    main_currency = serpy.MethodField()
     academy_features = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
 
     def get_academy_features(self, obj):
         """Return academy_features merged with defaults."""
         return obj.get_academy_features()
+
+    def get_main_currency(self, obj):
+        """Return main_currency details."""
+        if obj.main_currency:
+            return {
+                "code": obj.main_currency.code,
+                "name": obj.main_currency.name,
+            }
+        return None
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
@@ -328,6 +348,7 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     version = serpy.Field()
     status = serpy.Field()
     change_log_details = serpy.Field()
+    reasoning = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -785,6 +806,7 @@ class GetSyllabusSerializer(serpy.Serializer):
 #        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
     status_fields = ["status"]
+    main_currency = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Academy
@@ -798,6 +820,7 @@ class AcademySerializer(serializers.ModelSerializer):
             "is_hidden_on_prework",
             "logo_url",
             "icon_url",
+            "main_currency",
         ]
         extra_kwargs = {
             "name": {"required": False},
@@ -831,6 +854,54 @@ class AcademySerializer(serializers.ModelSerializer):
                 raise ValidationException(f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400)
         return value
 
+    def validate_main_currency(self, value):
+        """Validate that the main_currency is a valid Currency by code or ID."""
+        if value is None:
+            return None
+            
+        if not value:
+            return None
+            
+        from breathecode.payments.models import Currency
+
+        # If value is a string, try to get currency by code
+        if isinstance(value, str):
+            currency = Currency.objects.filter(code=value.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with code '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If value is an integer, try to get currency by ID
+        if isinstance(value, int):
+            currency = Currency.objects.filter(id=value).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with id '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If it's a Currency object (from nested serializers), validate it exists
+        if hasattr(value, 'id'):
+            if not Currency.objects.filter(id=value.id).exists():
+                raise ValidationException(
+                    "Invalid currency",
+                    slug="invalid-currency",
+                    code=400,
+                )
+            return value
+        
+        raise ValidationException(
+            "main_currency must be a currency code (e.g., 'USD') or currency ID",
+            slug="invalid-currency-format",
+            code=400,
+        )
+
     def validate(self, data):
         # Additional validation: ensure slug is never in the data
         if "slug" in data:
@@ -841,6 +912,10 @@ class AcademySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Extra safety: remove slug if somehow it made it through
         validated_data.pop("slug", None)
+        
+        # Handle main_currency - it comes as Currency object from validation
+        # No need to convert, it's already the right object
+        
         return super().update(instance, validated_data)
 
 
@@ -848,6 +923,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
     """Serializer for creating new academies."""
 
     status_fields = ["status"]
+    main_currency = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Academy
@@ -897,6 +973,54 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
         if Academy.objects.filter(slug=value).exists():
             raise ValidationException("Academy with this slug already exists", slug="academy-slug-exists")
         return value
+
+    def validate_main_currency(self, value):
+        """Validate that the main_currency is a valid Currency by code or ID."""
+        if value is None:
+            return None
+            
+        if not value:
+            return None
+            
+        from breathecode.payments.models import Currency
+
+        # If value is a string, try to get currency by code
+        if isinstance(value, str):
+            currency = Currency.objects.filter(code=value.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with code '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If value is an integer, try to get currency by ID
+        if isinstance(value, int):
+            currency = Currency.objects.filter(id=value).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with id '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If it's a Currency object (from nested serializers), validate it exists
+        if hasattr(value, 'id'):
+            if not Currency.objects.filter(id=value.id).exists():
+                raise ValidationException(
+                    "Invalid currency",
+                    slug="invalid-currency",
+                    code=400,
+                )
+            return value
+        
+        raise ValidationException(
+            "main_currency must be a currency code (e.g., 'USD') or currency ID",
+            slug="invalid-currency-format",
+            code=400,
+        )
 
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
@@ -1019,19 +1143,6 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                 data["language"] = language.lower()
             else:
                 raise ValidationException(f"Language property should be a string not a {type(language)}")
-
-        # if cohort is being activated the online_meeting_url should not be null
-        if (
-            self.instance is not None
-            and (self.instance.online_meeting_url is None or self.instance.online_meeting_url == "")
-            and self.instance.remote_available
-        ):
-            stage = data["stage"] if "stage" in data else self.instance.stage
-            if stage in ["STARTED", "FINAL_PROJECT"] and stage != self.instance.stage:
-                raise ValidationException(
-                    "This cohort has a remote option but no online meeting URL has been specified",
-                    slug="remove-without-online-meeting",
-                )
 
         return data
 
@@ -1432,7 +1543,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ["json", "version", "syllabus", "status", "change_log_details"]
+        fields = ["json", "version", "syllabus", "status", "change_log_details", "reasoning"]
         exclude = ()
         extra_kwargs = {
             "syllabus": {"read_only": True},
@@ -1487,7 +1598,7 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ["json", "version", "syllabus", "status", "change_log_details"]
+        fields = ["json", "version", "syllabus", "status", "change_log_details", "reasoning"]
         exclude = ()
         extra_kwargs = {
             "syllabus": {"read_only": True},

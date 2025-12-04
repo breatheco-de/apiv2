@@ -2261,11 +2261,6 @@ class PlanFinancing(AbstractIOweYou):
         if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
             raise forms.ValidationError("Seat service item must be a seat service")
 
-        if not self.monthly_price:
-            raise forms.ValidationError(
-                translation(settings.lang, en="Monthly price is required", es="Precio mensual es requerido")
-            )
-
         if not self.plan_expires_at:
             raise forms.ValidationError(
                 translation(settings.lang, en="Plan expires at is required", es="Plan expires at es requerido")

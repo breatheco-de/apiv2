@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("admissions", "0011_cohort_enable_assessments_telemetry"),
+        ("admissions", "0012_add_reasoning_to_syllabus_version"),
     ]
 
     operations = [

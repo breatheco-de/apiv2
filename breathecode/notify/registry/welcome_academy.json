@@ -1,0 +1,50 @@
+{
+    "slug": "welcome_academy",
+    "name": "Welcome to Academy",
+    "description": "Welcome email sent to new academy members after accepting invitation",
+    "category": "academy",
+    "channels": {
+        "email": {
+            "template_path": "welcome_academy",
+            "default_subject": "Welcome to {academy_name}"
+        }
+    },
+    "variables": [
+        {
+            "name": "FIRST_NAME",
+            "description": "First name of the user",
+            "source": "User model first_name field",
+            "example": "Jane",
+            "required": true
+        },
+        {
+            "name": "LINK",
+            "description": "URL to accept the invitation and access the platform",
+            "source": "Generated invitation acceptance URL",
+            "example": "https://app.4geeks.com/invite/accept?token=inv456",
+            "required": true
+        },
+        {
+            "name": "subject",
+            "description": "Email subject line with academy name",
+            "source": "Formatted with academy name",
+            "example": "Welcome to 4Geeks Academy",
+            "required": true
+        },
+        {
+            "name": "INVITE_ID",
+            "description": "UserInvite ID for tracking email opens",
+            "source": "UserInvite.id from database",
+            "example": "123",
+            "required": true
+        },
+        {
+            "name": "API_URL",
+            "description": "Base API URL for tracking pixel",
+            "source": "Environment variable API_URL",
+            "example": "https://api.4geeks.com",
+            "required": true
+        }
+    ]
+}
+

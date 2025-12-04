@@ -820,7 +820,7 @@ class ResendInviteView(APIView):
             )
 
         if not invite_answered:
-            resend_invite(invite.token, invite.email, invite.first_name, academy=invite.academy)
+            resend_invite(invite.token, invite.email, invite.first_name, academy=invite.academy, invite_id=invite.id)
 
         invite.sent_at = timezone.now()
         invite.save()
@@ -992,7 +992,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if not email:
             raise ValidationException("Impossible to determine the email of user", code=400, slug="without-email")
 
-        resend_invite(invite.token, email, invite.first_name, academy=invite.academy)
+        resend_invite(invite.token, email, invite.first_name, academy=invite.academy, invite_id=invite.id)
 
         invite.sent_at = timezone.now()
         invite.save()
@@ -1057,6 +1057,119 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyInviteStatsView(APIView):
+    """
+    GET /v1/auth/academy/user/invite/stats
+    GET /v1/auth/academy/user/invite/stats?clean_cache=true
+    
+    Returns aggregated statistics for academy invites.
+    
+    Cache Configuration:
+    - Expires after 24 hours automatically
+    - Can be manually cleared with clean_cache=true parameter
+    - Uses Redis cache via Django's cache framework
+    
+    IMPORTANT: DO NOT add automatic cache invalidation on UserInvite model changes.
+    The 24-hour TTL and manual refresh are intentional design decisions to reduce
+    database load on dashboard views. Cache invalidation on every invite change
+    would defeat the purpose of this endpoint.
+    """
+    
+    @capable_of("read_invite")
+    def get(self, request, academy_id=None):
+        from django.core.cache import cache
+        from django.db.models import Count
+        
+        # Cache key specific to this academy
+        cache_key = f"academy_{academy_id}_invite_stats"
+        
+        # Check if user wants to force refresh
+        clean_cache = request.GET.get('clean_cache', '').lower() == 'true'
+        
+        if clean_cache:
+            cache.delete(cache_key)
+        else:
+            # Try to get from cache first
+            cached_stats = cache.get(cache_key)
+            if cached_stats:
+                return Response(cached_stats)
+        
+        # Generate fresh stats - single query with aggregation
+        invites = UserInvite.objects.filter(academy__id=academy_id)
+        
+        stats = invites.aggregate(
+            total=Count('id'),
+            pending=Count('id', filter=Q(status='PENDING')),
+            accepted=Count('id', filter=Q(status='ACCEPTED')),
+            waiting=Count('id', filter=Q(status='WAITING_LIST')),
+            rejected=Count('id', filter=Q(status='REJECTED')),
+            opened=Count('id', filter=Q(opened_at__isnull=False)),
+            clicked=Count('id', filter=Q(clicked_at__isnull=False))
+        )
+        
+        # Build response with engagement metrics
+        result = {
+            'academy_id': academy_id,
+            'total_invitations': stats['total'],
+            'pending': stats['pending'],
+            'accepted': stats['accepted'],
+            'waiting': stats['waiting'],
+            'rejected': stats['rejected'],
+            'opened': stats['opened'],
+            'clicked': stats['clicked'],
+            'open_rate': round(stats['opened'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
+            'click_rate': round(stats['clicked'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
+            'conversion_rate': round(stats['accepted'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
+            'generated_at': timezone.now().isoformat()
+        }
+        
+        # Cache for 24 hours (86400 seconds)
+        cache.set(cache_key, result, 60 * 60 * 24)
+        
+        return Response(result)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def track_invite_open(request, invite_id=None):
+    """
+    Tracks when a UserInvite email is opened via invisible 1x1 pixel.
+    Returns a 1x1 transparent PNG image.
+    Only tracks first open (most valuable metric).
+    """
+    from PIL import Image
+    
+    if invite_id is not None:
+        # Only track if not already opened
+        invite = UserInvite.objects.filter(id=invite_id, opened_at__isnull=True).first()
+        if invite is not None:
+            invite.opened_at = timezone.now()
+            invite.save()
+    
+    # Return 1x1 transparent pixel
+    image = Image.new("RGB", (1, 1))
+    response = HttpResponse(content_type="image/png")
+    image.save(response, "PNG")
+    return response
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def render_invite_with_tracking(request, token, member_id=None):
+    """
+    Wraps the existing render_invite to track when the invite link is clicked.
+    Tracks first click only, then delegates to existing render_invite function.
+    """
+    # Track the click before rendering (first click only)
+    invite = UserInvite.objects.filter(token=token, clicked_at__isnull=True).first()
+    if invite is not None:
+        invite.clicked_at = timezone.now()
+        invite.save()
+    
+    # Delegate to existing render_invite function
+    return render_invite(request, token, member_id)
 
 
 class V2AppUserView(APIView):
@@ -1164,12 +1277,16 @@ class StudentView(APIView, GenerateLookupsMixin):
 
     @capable_of("crud_student")
     def post(self, request, academy_id=None):
+        # Detect if request data is an array for bulk creation
+        many = isinstance(request.data, list)
 
-        serializer = StudentPOSTSerializer(data=request.data, context={"academy_id": academy_id, "request": request})
+        serializer = StudentPOSTSerializer(
+            data=request.data, many=many, context={"academy_id": academy_id, "request": request}
+        )
 
         if serializer.is_valid():
             result = serializer.save()
-            result = GetProfileAcademySmallSerializer(result, many=False)
+            result = GetProfileAcademySmallSerializer(result, many=many)
             return Response(result.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -2466,11 +2583,19 @@ def render_user_invite(request, token):
 
     pending_invites = UserInvite.objects.filter(email=token.user.email, status="PENDING")
     if pending_invites.count() == 0:
+        # Get academy from any invite to determine redirect URL
+        any_invite = UserInvite.objects.filter(email=token.user.email).first()
+        academy = any_invite.academy if (any_invite and any_invite.academy) else None
+        redirect_url = get_app_url(academy=academy)
         return render_message(
-            request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=get_app_url()
+            request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=redirect_url
         )
 
-    querystr = urllib.parse.urlencode({"callback": get_app_url(), "token": token.key})
+    # Use first pending invite's academy for callback URL
+    first_invite = pending_invites.first()
+    academy = first_invite.academy if (first_invite and first_invite.academy) else None
+    callback_url = get_app_url(academy=academy)
+    querystr = urllib.parse.urlencode({"callback": callback_url, "token": token.key})
     url = os.getenv("API_URL") + "/v1/auth/member/invite?" + querystr
     return shortcuts.render(
         request,
@@ -2600,6 +2725,12 @@ def render_invite(request, token, member_id=None):
                 return HttpResponse(f"Redirect to: <a href='{uri}'>{uri}</a>")
             else:
                 return HttpResponseRedirect(redirect_to=uri)
+        elif invite and invite.academy:
+            redirect_url = get_app_url(academy=invite.academy)
+            if settings.DEBUG:
+                return HttpResponse(f"Redirect to: <a href='{redirect_url}'>{redirect_url}</a>")
+            else:
+                return HttpResponseRedirect(redirect_to=redirect_url)
         else:
             obj = {}
             if invite and invite.academy:
@@ -2634,11 +2765,19 @@ def render_academy_invite(request, token):
 
     pending_invites = ProfileAcademy.objects.filter(user__id=token.user.id, status="INVITED")
     if pending_invites.count() == 0:
+        # Get academy from any profile to determine redirect URL
+        any_profile = ProfileAcademy.objects.filter(user__id=token.user.id).first()
+        academy = any_profile.academy if (any_profile and any_profile.academy) else None
+        redirect_url = get_app_url(academy=academy)
         return render_message(
-            request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=get_app_url()
+            request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=redirect_url
         )
 
-    querystr = urllib.parse.urlencode({"callback": get_app_url(), "token": token.key})
+    # Use first pending invite's academy for callback URL
+    first_profile = pending_invites.first()
+    academy = first_profile.academy if (first_profile and first_profile.academy) else None
+    callback_url = get_app_url(academy=academy)
+    querystr = urllib.parse.urlencode({"callback": callback_url, "token": token.key})
     url = os.getenv("API_URL") + "/v1/auth/academy/html/invite?" + querystr
     return shortcuts.render(
         request,

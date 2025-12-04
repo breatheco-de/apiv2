@@ -50,7 +50,11 @@ Examples:
 from django.urls import path
 
 from .views import (
+    AcademyNotifySettingsView,
     HooksView,
+    NotificationTemplatePreviewView,
+    NotificationTemplatesView,
+    NotificationTemplateView,
     NotificationsView,
     SlackTeamsView,
     get_sample_data,
@@ -63,15 +67,29 @@ from .views import (
 
 app_name = "notify"
 urlpatterns = [
+    # Template preview endpoints (legacy)
     path("preview/<slug>", preview_template),
     path("preview/slack/<slug>", preview_slack_template),
     path("test/email/<email>", test_email),
+    # Notification template management (requires read_notification capability)
+    path("academy/template", NotificationTemplatesView.as_view(), name="academy_template"),
+    path("academy/template/<str:slug>", NotificationTemplateView.as_view(), name="academy_template_slug"),
+    path(
+        "academy/template/<str:slug>/preview",
+        NotificationTemplatePreviewView.as_view(),
+        name="academy_template_slug_preview",
+    ),
+    # Academy notification settings
+    path("academy/settings", AcademyNotifySettingsView.as_view(), name="academy_notify_settings"),
+    # Slack integration endpoints
     path("slack/interaction", process_interaction),
+    path("slack/command", slack_command, name="slack_command"),
+    path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
+    # Webhook endpoints
     path("hook/subscribe", HooksView.as_view()),
     path("hook/subscribe/<int:hook_id>", HooksView.as_view()),
     path("hook/sample", get_sample_data),
     path("hook/<int:hook_id>/sample", get_sample_data),
-    path("slack/command", slack_command, name="slack_command"),
-    path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
+    # User notification endpoints
     path("me/notification", NotificationsView.as_view(), name="me_notification"),
 ]

@@ -39,8 +39,22 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-def get_app_url():
-    url = os.getenv("APP_URL", "https://4geeks.com")
+def get_app_url(academy=None):
+    """
+    Get the app URL for redirects.
+    
+    Args:
+        academy: Optional Academy instance. If provided and white_labeled=True,
+                 returns the academy's website_url instead of the default APP_URL.
+    
+    Returns:
+        str: The URL to redirect to (without trailing slash)
+    """
+    if academy and academy.white_labeled and academy.website_url:
+        url = academy.website_url
+    else:
+        url = os.getenv("APP_URL", "https://4geeks.com")
+    
     if url and url[-1] == "/":
         url = url[:-1]
 
@@ -132,7 +146,7 @@ def reset_password(users=None, extra=None, academy=None):
     return True
 
 
-def resend_invite(token=None, email=None, first_name=None, extra=None, academy=None):
+def resend_invite(token=None, email=None, first_name=None, extra=None, academy=None, invite_id=None):
     if extra is None:
         extra = {}
 
@@ -140,16 +154,23 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     querystr = urllib.parse.urlencode(params)
     url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
 
+    data = {
+        "email": email,
+        "subject": f"{academy.name if academy else '4Geeks'} is inviting you to {academy.slug if academy else '4geeks'}.4Geeks.com",
+        "LINK": url,
+        "FIRST_NAME": first_name,
+        **extra,
+    }
+    
+    # Add tracking variables if invite_id is provided
+    if invite_id:
+        data["INVITE_ID"] = invite_id
+        data["API_URL"] = os.getenv("API_URL", "")
+
     notify_actions.send_email_message(
         "welcome_academy",
         email,
-        {
-            "email": email,
-            "subject": f"{academy.name if academy else '4Geeks'} is inviting you to {academy.slug if academy else '4geeks'}.4Geeks.com",
-            "LINK": url,
-            "FIRST_NAME": first_name,
-            **extra,
-        },
+        data,
         academy=academy,
     )
 
@@ -872,6 +893,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
     from breathecode.payments import tasks as payments_tasks
     from breathecode.payments.models import Bag, Invoice, Plan
 
+
     if data is None:
         data = {}
 
@@ -985,9 +1007,12 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.save()
 
             bag.plans.add(plan)
+            
+            plan_price = plan.financing_options.filter(how_many_months=1).first().monthly_price
+            is_free = plan_price == 0
 
             invoice = Invoice(
-                amount=0,
+                amount=plan_price,
                 paid_at=utc_now,
                 user=invite.user,
                 bag=bag,
@@ -997,7 +1022,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
             )
             invoice.save()
 
-            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=True)
+            payments_tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
 
     invite.user = user
     invite.status = "ACCEPTED"

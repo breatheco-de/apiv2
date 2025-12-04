@@ -10,12 +10,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from breathecode.admissions.models import Academy
 from breathecode.utils import APIViewExtensions, GenerateLookupsMixin
+from breathecode.utils.decorators import capable_of
 
 from .actions import get_template_content
-from .models import Hook, Notification, SlackTeam
-from .serializers import HookSerializer, NotificationSerializer, SlackTeamSerializer
+from .models import AcademyNotifySettings, Hook, Notification, SlackTeam
+from .serializers import AcademyNotifySettingsSerializer, HookSerializer, NotificationSerializer, SlackTeamSerializer
 from .tasks import async_slack_action, async_slack_command
+from .utils.email_manager import EmailManager
 
 logger = logging.getLogger(__name__)
 
@@ -244,3 +247,122 @@ class NotificationsView(APIView, GenerateLookupsMixin):
 
         serializer = NotificationSerializer(items, many=True)
         return handler.response(serializer.data)
+
+
+class NotificationTemplatesView(APIView):
+    """
+    List all notification templates from the registry.
+    """
+
+    @capable_of("read_notification")
+    def get(self, request, academy_id=None):
+        """
+        GET /v1/notify/academy/template
+        List all registered notifications with optional filters.
+
+        Query params:
+        - category: filter by category
+        - search: search in name/description
+        - channel: filter by channel availability
+        """
+        category = request.GET.get("category")
+        search = request.GET.get("search", "").lower()
+        channel = request.GET.get("channel")
+
+        # Get notifications from EmailManager
+        notifications = EmailManager.list_notifications(category=category, channel=channel)
+
+        # Apply search filter
+        if search:
+            notifications = [
+                n
+                for n in notifications
+                if search in n.get("name", "").lower() or search in n.get("description", "").lower()
+            ]
+
+        # Get categories for metadata
+        categories = EmailManager.get_categories()
+
+        return Response({"templates": notifications, "categories": categories, "total": len(notifications)})
+
+
+class NotificationTemplateView(APIView):
+    """
+    Get metadata for a specific notification template.
+    """
+
+    @capable_of("read_notification")
+    def get(self, request, slug, academy_id=None):
+        """
+        GET /v1/notify/academy/template/<slug>
+        Get notification configuration for a specific slug.
+        """
+        notification = EmailManager.get_notification(slug)
+
+        if not notification:
+            raise ValidationException(f"Notification template '{slug}' not found", slug="notification-not-found")
+
+        return Response(notification)
+
+
+class NotificationTemplatePreviewView(APIView):
+    """
+    Preview a notification template with raw template source.
+    """
+
+    @capable_of("read_notification")
+    def get(self, request, slug, academy_id=None):
+        """
+        GET /v1/notify/academy/template/<slug>/preview
+        Preview notification template across all or specific channels.
+
+        The academy_id is provided by the capable_of decorator from the request headers.
+        User can only preview templates for their own academy.
+
+        Query params:
+        - channels: comma-separated list of channels (email,slack,sms)
+        """
+        # Get academy from academy_id provided by capable_of decorator
+        academy = None
+        if academy_id:
+            academy = Academy.objects.filter(id=academy_id).first()
+
+        # Parse channels filter
+        channels = None
+        if request.GET.get("channels"):
+            channels = [ch.strip() for ch in request.GET.get("channels").split(",")]
+
+        # Get preview from EmailManager
+        try:
+            preview_data = EmailManager.get_template_preview(slug, academy=academy, channels=channels)
+            return Response(preview_data)
+        except ValidationException:
+            raise
+        except Exception as e:
+            logger.exception(f"Error generating preview for {slug}")
+            raise ValidationException(f"Error generating preview: {str(e)}", slug="preview-error")
+
+
+class AcademyNotifySettingsView(APIView):
+    """Manage notification settings for an academy."""
+
+    @capable_of("read_notification")
+    def get(self, request, academy_id=None):
+        """Get notification settings for academy."""
+        settings = AcademyNotifySettings.objects.filter(academy_id=academy_id).first()
+        if not settings:
+            return Response({"template_variables": {}, "academy": academy_id})
+
+        serializer = AcademyNotifySettingsSerializer(settings)
+        return Response(serializer.data)
+
+    @capable_of("crud_notification")
+    def put(self, request, academy_id=None):
+        """Update notification settings for academy."""
+        settings, created = AcademyNotifySettings.objects.get_or_create(academy_id=academy_id)
+
+        serializer = AcademyNotifySettingsSerializer(settings, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

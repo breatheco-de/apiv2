@@ -1,0 +1,47 @@
+{
+    "slug": "nps_survey",
+    "name": "NPS Survey",
+    "description": "Net Promoter Score survey request sent to users for feedback on cohorts, events, or mentorship sessions",
+    "category": "feedback",
+    "channels": {
+        "email": {
+            "template_path": "nps_survey",
+            "default_subject": "How was your experience?"
+        },
+        "slack": {
+            "template_path": "nps_survey",
+            "default_subject": null
+        }
+    },
+    "variables": [
+        {
+            "name": "SUBJECT",
+            "description": "Survey subject/question",
+            "source": "Passed in data dict, customized per survey type",
+            "example": "How was your experience with this cohort?",
+            "required": true
+        },
+        {
+            "name": "MESSAGE",
+            "description": "Additional message or context for the survey",
+            "source": "Passed in data dict",
+            "example": "We'd love to hear your feedback about your recent experience",
+            "required": false
+        },
+        {
+            "name": "LINK",
+            "description": "URL to the survey form",
+            "source": "Generated survey response URL with token",
+            "example": "https://app.4geeks.com/feedback/survey?token=survey123",
+            "required": true
+        },
+        {
+            "name": "BUTTON",
+            "description": "Button text for call-to-action",
+            "source": "Passed in data dict or uses default",
+            "example": "Take Survey",
+            "required": false
+        }
+    ]
+}
+

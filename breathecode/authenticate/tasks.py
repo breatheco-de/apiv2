@@ -282,6 +282,8 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
         {
             "SUBJECT": "Set your password at 4Geeks",
             "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{invite.token}",
+            "INVITE_ID": invite.id,
+            "API_URL": os.getenv("API_URL", ""),
         },
         academy=invite.academy,
     )
@@ -330,6 +332,8 @@ def create_user_from_invite(user_invite_id: int, **_):
             {
                 "SUBJECT": subject,
                 "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
+                "INVITE_ID": user_invite.id,
+                "API_URL": os.getenv("API_URL", ""),
             },
             academy=user_invite.academy,
         )
@@ -364,6 +368,8 @@ def verify_user_invite_email(user_invite_id: int, **_):
             "SUBJECT": subject,
             "LANG": settings.lang,
             "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
+            "INVITE_ID": user_invite.id,
+            "API_URL": os.getenv("API_URL", ""),
         },
         academy=user_invite.academy,
     )

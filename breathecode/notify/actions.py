@@ -23,6 +23,13 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != "":
 
 logger = logging.getLogger(__name__)
 
+# Import EmailManager for optional template validation
+try:
+    from .utils.email_manager import EmailManager
+except ImportError:
+    EmailManager = None
+    logger.warning("EmailManager not available, template validation disabled")
+
 
 def send_email_message(template_slug, to, data=None, force=False, inline_css=False, academy=None):
 
@@ -34,6 +41,31 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
 
     if isinstance(to, list) == False:
         to = [to]
+
+    # Check if template is disabled for this academy
+    if academy and hasattr(academy, 'notify_settings'):
+        try:
+            settings = academy.notify_settings
+            if not settings.is_template_enabled(template_slug):
+                logger.info(f"Template '{template_slug}' is disabled for academy {academy.id}")
+                return True  # Silently skip sending
+        except Exception as e:
+            logger.warning(f"Failed to check if template is disabled for {template_slug}: {e}")
+
+    # Apply academy variable overrides
+    if academy and hasattr(academy, 'notify_settings'):
+        try:
+            settings = academy.notify_settings
+            overrides = settings.get_all_overrides_for_template(template_slug)
+            # Academy overrides take priority over code defaults
+            data.update(overrides)
+        except Exception as e:
+            logger.warning(f"Failed to apply academy overrides for {template_slug}: {e}")
+
+    # Optional: Log if template is not in registry (helps with future migration)
+    if EmailManager is not None:
+        if not EmailManager.validate_notification(template_slug):
+            logger.debug(f"Template '{template_slug}' not found in notification registry (still sending)")
 
     if os.getenv("EMAIL_NOTIFICATIONS_ENABLED", False) == "TRUE" or force:
         template = get_template_content(template_slug, data, ["email"], inline_css=inline_css, academy=academy)
