@@ -806,6 +806,7 @@ class GetSyllabusSerializer(serpy.Serializer):
 #        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
     status_fields = ["status"]
+    main_currency = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Academy
@@ -828,7 +829,6 @@ class AcademySerializer(serializers.ModelSerializer):
             "city": {"required": False},
             "logo_url": {"required": False},
             "icon_url": {"required": False},
-            "main_currency": {"required": False},
             "slug": {"read_only": True},  # Prevent slug from being updated
         }
 
@@ -855,17 +855,52 @@ class AcademySerializer(serializers.ModelSerializer):
         return value
 
     def validate_main_currency(self, value):
-        """Validate that the main_currency is a valid Currency."""
-        if value:
-            from breathecode.payments.models import Currency
+        """Validate that the main_currency is a valid Currency by code or ID."""
+        if value is None:
+            return None
+            
+        if not value:
+            return None
+            
+        from breathecode.payments.models import Currency
 
+        # If value is a string, try to get currency by code
+        if isinstance(value, str):
+            currency = Currency.objects.filter(code=value.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with code '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If value is an integer, try to get currency by ID
+        if isinstance(value, int):
+            currency = Currency.objects.filter(id=value).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with id '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If it's a Currency object (from nested serializers), validate it exists
+        if hasattr(value, 'id'):
             if not Currency.objects.filter(id=value.id).exists():
                 raise ValidationException(
                     "Invalid currency",
                     slug="invalid-currency",
                     code=400,
                 )
-        return value
+            return value
+        
+        raise ValidationException(
+            "main_currency must be a currency code (e.g., 'USD') or currency ID",
+            slug="invalid-currency-format",
+            code=400,
+        )
 
     def validate(self, data):
         # Additional validation: ensure slug is never in the data
@@ -877,6 +912,10 @@ class AcademySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Extra safety: remove slug if somehow it made it through
         validated_data.pop("slug", None)
+        
+        # Handle main_currency - it comes as Currency object from validation
+        # No need to convert, it's already the right object
+        
         return super().update(instance, validated_data)
 
 
@@ -884,6 +923,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
     """Serializer for creating new academies."""
 
     status_fields = ["status"]
+    main_currency = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Academy
@@ -933,6 +973,54 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
         if Academy.objects.filter(slug=value).exists():
             raise ValidationException("Academy with this slug already exists", slug="academy-slug-exists")
         return value
+
+    def validate_main_currency(self, value):
+        """Validate that the main_currency is a valid Currency by code or ID."""
+        if value is None:
+            return None
+            
+        if not value:
+            return None
+            
+        from breathecode.payments.models import Currency
+
+        # If value is a string, try to get currency by code
+        if isinstance(value, str):
+            currency = Currency.objects.filter(code=value.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with code '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If value is an integer, try to get currency by ID
+        if isinstance(value, int):
+            currency = Currency.objects.filter(id=value).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with id '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If it's a Currency object (from nested serializers), validate it exists
+        if hasattr(value, 'id'):
+            if not Currency.objects.filter(id=value.id).exists():
+                raise ValidationException(
+                    "Invalid currency",
+                    slug="invalid-currency",
+                    code=400,
+                )
+            return value
+        
+        raise ValidationException(
+            "main_currency must be a currency code (e.g., 'USD') or currency ID",
+            slug="invalid-currency-format",
+            code=400,
+        )
 
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
