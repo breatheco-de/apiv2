@@ -232,6 +232,16 @@ class GetAcademySerializer(serpy.Serializer):
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
     is_hidden_on_prework = serpy.Field()
+    main_currency = serpy.MethodField()
+
+    def get_main_currency(self, obj):
+        """Return main_currency details."""
+        if obj.main_currency:
+            return {
+                "code": obj.main_currency.code,
+                "name": obj.main_currency.name,
+            }
+        return None
 
 
 class GetAcademyWithStatusSerializer(serpy.Serializer):
@@ -270,11 +280,21 @@ class GetBigAcademySerializer(serpy.Serializer):
     white_labeled = serpy.Field()
     white_label_url = serpy.Field()
     white_label_features = serpy.MethodField()
+    main_currency = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
 
     def get_white_label_features(self, obj):
         """Return white_label_features merged with defaults."""
         return obj.get_white_label_features()
+
+    def get_main_currency(self, obj):
+        """Return main_currency details."""
+        if obj.main_currency:
+            return {
+                "code": obj.main_currency.code,
+                "name": obj.main_currency.name,
+            }
+        return None
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
@@ -799,6 +819,7 @@ class AcademySerializer(serializers.ModelSerializer):
             "is_hidden_on_prework",
             "logo_url",
             "icon_url",
+            "main_currency",
         ]
         extra_kwargs = {
             "name": {"required": False},
@@ -807,6 +828,7 @@ class AcademySerializer(serializers.ModelSerializer):
             "city": {"required": False},
             "logo_url": {"required": False},
             "icon_url": {"required": False},
+            "main_currency": {"required": False},
             "slug": {"read_only": True},  # Prevent slug from being updated
         }
 
@@ -830,6 +852,19 @@ class AcademySerializer(serializers.ModelSerializer):
                 test_url(value, allow_relative=False, allow_hash=False)
             except Exception as e:
                 raise ValidationException(f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400)
+        return value
+
+    def validate_main_currency(self, value):
+        """Validate that the main_currency is a valid Currency."""
+        if value:
+            from breathecode.payments.models import Currency
+
+            if not Currency.objects.filter(id=value.id).exists():
+                raise ValidationException(
+                    "Invalid currency",
+                    slug="invalid-currency",
+                    code=400,
+                )
         return value
 
     def validate(self, data):
