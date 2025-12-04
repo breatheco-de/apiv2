@@ -392,6 +392,7 @@ class AcademyNotifyVariablesView(APIView):
             "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", ""),
             "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
             "COMPANY_INFO_EMAIL": os.environ.get("COMPANY_INFO_EMAIL", ""),
+            "DOMAIN_NAME": os.environ.get("DOMAIN_NAME", ""),
             "style__success": "#99ccff",
             "style__danger": "#ffcccc",
             "style__secondary": "#ededed",
@@ -404,6 +405,7 @@ class AcademyNotifyVariablesView(APIView):
             "COMPANY_INFO_EMAIL": academy.feedback_email,
             "COMPANY_LEGAL_NAME": academy.legal_name or academy.name,
             "PLATFORM_DESCRIPTION": academy.platform_description,
+            "DOMAIN_NAME": academy.website_url,
         }
 
         # Academy template_variables overrides
