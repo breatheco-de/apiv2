@@ -15,8 +15,8 @@ from breathecode.utils import APIViewExtensions, GenerateLookupsMixin
 from breathecode.utils.decorators import capable_of
 
 from .actions import get_template_content
-from .models import Hook, Notification, SlackTeam
-from .serializers import HookSerializer, NotificationSerializer, SlackTeamSerializer
+from .models import AcademyNotifySettings, Hook, Notification, SlackTeam
+from .serializers import AcademyNotifySettingsSerializer, HookSerializer, NotificationSerializer, SlackTeamSerializer
 from .tasks import async_slack_action, async_slack_command
 from .utils.email_manager import EmailManager
 
@@ -341,3 +341,28 @@ class NotificationTemplatePreviewView(APIView):
         except Exception as e:
             logger.exception(f"Error generating preview for {slug}")
             raise ValidationException(f"Error generating preview: {str(e)}", slug="preview-error")
+
+
+class AcademyNotifySettingsView(APIView):
+    """Manage notification settings for an academy."""
+
+    @capable_of("read_notification")
+    def get(self, request, academy_id=None):
+        """Get notification settings for academy."""
+        settings = AcademyNotifySettings.objects.filter(academy_id=academy_id).first()
+        if not settings:
+            return Response({"template_variables": {}, "academy": academy_id})
+
+        serializer = AcademyNotifySettingsSerializer(settings)
+        return Response(serializer.data)
+
+    @capable_of("crud_notification")
+    def put(self, request, academy_id=None):
+        """Update notification settings for academy."""
+        settings, created = AcademyNotifySettings.objects.get_or_create(academy_id=academy_id)
+
+        serializer = AcademyNotifySettingsSerializer(settings, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

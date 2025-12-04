@@ -1,6 +1,7 @@
+import re
 import traceback
 from collections import OrderedDict
-from typing import Literal, Optional
+from typing import Dict, Literal, Optional
 
 from asgiref.sync import async_to_sync, sync_to_async
 from channels.layers import get_channel_layer
@@ -14,7 +15,17 @@ from rest_framework.exceptions import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort
 
-__all__ = ["UserProxy", "CohortProxy", "Device", "SlackTeam", "SlackUser", "SlackUserTeam", "SlackChannel", "Hook"]
+__all__ = [
+    "UserProxy",
+    "CohortProxy",
+    "Device",
+    "SlackTeam",
+    "SlackUser",
+    "SlackUserTeam",
+    "SlackChannel",
+    "Hook",
+    "AcademyNotifySettings",
+]
 AUTH_USER_MODEL = getattr(settings, "AUTH_USER_MODEL", "auth.User")
 if getattr(settings, "HOOK_CUSTOM_MODEL", None) is None:
     settings.HOOK_CUSTOM_MODEL = "notify.Hook"
@@ -372,3 +383,217 @@ class Notification(models.Model):
     @classmethod
     def error(cls, message: str) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]:
         return ("ERROR", message)
+
+
+class AcademyNotifySettings(models.Model):
+    """
+    Per-academy notification variable overrides.
+    Allows academies to customize notification content without code changes.
+    """
+
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE, related_name="notify_settings")
+
+    template_variables = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Variable overrides for notification templates.\n"
+            "Format:\n"
+            "  - Template-specific: 'template.SLUG.VARIABLE': 'value'\n"
+            "  - Global (all templates): 'global.VARIABLE': 'value'\n"
+            "Supports interpolation: {{global.VARIABLE}} or {{template.slug.VARIABLE}}"
+        ),
+    )
+
+    disabled_templates = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of template slugs to disable for this academy. Example: ['welcome_academy', 'nps_survey']",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Academy Notification Settings"
+        verbose_name_plural = "Academy Notification Settings"
+
+    def __str__(self):
+        return f"Notification settings for {self.academy.name}"
+
+    def is_template_enabled(self, template_slug: str) -> bool:
+        """
+        Check if a template is enabled for this academy.
+        
+        Args:
+            template_slug: The notification template slug
+        
+        Returns:
+            bool: False if template is in disabled_templates list, True otherwise
+        """
+        return template_slug not in self.disabled_templates
+
+    def get_variable_override(self, template_slug: str, variable_name: str):
+        """
+        Get override value for a variable.
+        Priority: template-specific > global > None
+        """
+        # Template-specific override
+        template_key = f"template.{template_slug}.{variable_name}"
+        if template_key in self.template_variables:
+            return self.template_variables[template_key]
+
+        # Global override
+        global_key = f"global.{variable_name}"
+        if global_key in self.template_variables:
+            return self.template_variables[global_key]
+
+        return None
+
+    def get_all_overrides_for_template(self, template_slug: str) -> dict:
+        """
+        Get all variable overrides for a template with interpolation support.
+        Variables can reference other variables using {{global.VAR}} or {{template.slug.VAR}} syntax.
+        """
+        overrides = {}
+
+        # Collect all overrides (globals + template-specific)
+        for key, value in self.template_variables.items():
+            if key.startswith("global."):
+                var_name = key.replace("global.", "")
+                overrides[var_name] = value
+
+        template_prefix = f"template.{template_slug}."
+        for key, value in self.template_variables.items():
+            if key.startswith(template_prefix):
+                var_name = key.replace(template_prefix, "")
+                overrides[var_name] = value
+
+        # Resolve variable references within values
+        overrides = self._resolve_variable_references(overrides, template_slug)
+
+        return overrides
+
+    def _resolve_variable_references(self, overrides: Dict[str, str], template_slug: str, max_depth: int = 5) -> Dict[str, str]:
+        """
+        Resolve variable references in override values.
+        Supports {{global.VAR}} and {{template.slug.VAR}} references.
+        """
+        resolved = {}
+
+        for key, value in overrides.items():
+            if not isinstance(value, str):
+                resolved[key] = value
+                continue
+
+            # Resolve references iteratively (up to max_depth to prevent infinite loops)
+            resolved_value = value
+            for _ in range(max_depth):
+                # Find all {{variable}} references
+                # Supports: {{global.VAR}} or {{template.slug.VAR}}
+                pattern = r'\{\{(global\.\w+|template\.\w+\.\w+)\}\}'
+                matches = re.findall(pattern, resolved_value)
+
+                if not matches:
+                    break  # No more references to resolve
+
+                # Replace each reference
+                for match in matches:
+                    replacement = self._get_reference_value(match, template_slug, overrides)
+                    if replacement is not None:
+                        resolved_value = resolved_value.replace(f'{{{{{match}}}}}', str(replacement))
+
+            resolved[key] = resolved_value
+
+        return resolved
+
+    def _get_reference_value(self, reference: str, template_slug: str, overrides: Dict[str, str]):
+        """
+        Get the value for a variable reference.
+        reference format: 'global.VAR' or 'template.slug.VAR'
+        """
+        if reference.startswith("global."):
+            var_name = reference.replace("global.", "")
+            # Check if it's in overrides (already collected)
+            if var_name in overrides:
+                return overrides[var_name]
+            # Otherwise check raw template_variables
+            return self.template_variables.get(reference)
+
+        elif reference.startswith("template."):
+            parts = reference.split(".")
+            if len(parts) == 3:
+                ref_slug, var_name = parts[1], parts[2]
+                # Check if it's in overrides (already collected)
+                if var_name in overrides:
+                    return overrides[var_name]
+                # Otherwise check raw template_variables
+                return self.template_variables.get(reference)
+
+        return None
+
+    def clean(self):
+        """
+        Validate template_variables against registry.
+        Ensures template slugs and variable names exist in the notification registry.
+        """
+        from breathecode.notify.utils.email_manager import EmailManager
+
+        errors = []
+
+        # Validate disabled_templates
+        if not isinstance(self.disabled_templates, list):
+            errors.append("disabled_templates must be a list")
+        else:
+            for template_slug in self.disabled_templates:
+                if not isinstance(template_slug, str):
+                    errors.append(f"Invalid disabled template: {template_slug}. Must be a string")
+                    continue
+                
+                # Check if template exists in registry
+                notification = EmailManager.get_notification(template_slug)
+                if not notification:
+                    errors.append(f"Disabled template '{template_slug}' not found in notification registry")
+
+        # Validate each key in template_variables
+        for key, value in self.template_variables.items():
+            parts = key.split(".")
+
+            # Validate template-specific overrides
+            if key.startswith("template."):
+                if len(parts) != 3:
+                    errors.append(f"Invalid key format: '{key}'. Expected 'template.SLUG.VARIABLE'")
+                    continue
+
+                template_slug = parts[1]
+                variable_name = parts[2]
+
+                # Check if template exists in registry
+                notification = EmailManager.get_notification(template_slug)
+                if not notification:
+                    errors.append(f"Template '{template_slug}' not found in notification registry")
+                    continue
+
+                # Check if variable exists in template
+                var_names = [v["name"] for v in notification.get("variables", [])]
+                if variable_name not in var_names:
+                    errors.append(
+                        f"Variable '{variable_name}' not found in template '{template_slug}'. "
+                        f"Available variables: {', '.join(var_names) if var_names else 'none'}"
+                    )
+
+            # Validate global overrides
+            elif key.startswith("global."):
+                if len(parts) != 2:
+                    errors.append(f"Invalid key format: '{key}'. Expected 'global.VARIABLE'")
+
+            # Invalid format
+            else:
+                errors.append(
+                    f"Invalid key format: '{key}'. Must start with 'template.' or 'global.'"
+                )
+
+        if errors:
+            raise ValidationError("; ".join(errors))
+
+        super().clean()

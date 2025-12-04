@@ -50,6 +50,7 @@ Examples:
 from django.urls import path
 
 from .views import (
+    AcademyNotifySettingsView,
     HooksView,
     NotificationTemplatePreviewView,
     NotificationTemplatesView,
@@ -73,7 +74,13 @@ urlpatterns = [
     # Notification template management (requires read_notification capability)
     path("academy/template", NotificationTemplatesView.as_view(), name="academy_template"),
     path("academy/template/<str:slug>", NotificationTemplateView.as_view(), name="academy_template_slug"),
-    path("academy/template/<str:slug>/preview", NotificationTemplatePreviewView.as_view(), name="academy_template_slug_preview"),
+    path(
+        "academy/template/<str:slug>/preview",
+        NotificationTemplatePreviewView.as_view(),
+        name="academy_template_slug_preview",
+    ),
+    # Academy notification settings
+    path("academy/settings", AcademyNotifySettingsView.as_view(), name="academy_notify_settings"),
     # Slack integration endpoints
     path("slack/interaction", process_interaction),
     path("slack/command", slack_command, name="slack_command"),
