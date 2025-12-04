@@ -367,10 +367,21 @@ Academy: 4
     }
   },
   "preview_context": {
+    "API_URL": "{API_URL}",
+    "COMPANY_NAME": "{COMPANY_NAME}",
+    "COMPANY_CONTACT_URL": "{COMPANY_CONTACT_URL}",
+    "COMPANY_LEGAL_NAME": "{COMPANY_LEGAL_NAME}",
+    "COMPANY_ADDRESS": "{COMPANY_ADDRESS}",
+    "COMPANY_INFO_EMAIL": "{COMPANY_INFO_EMAIL}",
+    "COMPANY_LOGO": "{COMPANY_LOGO}",
+    "style__success": "#99ccff",
+    "style__danger": "#ffcccc",
+    "style__secondary": "#ededed",
     "SUBJECT": "{SUBJECT}",
     "MESSAGE": "{MESSAGE}",
     "BUTTON": "{BUTTON}",
-    "LINK": "{LINK}"
+    "LINK": "{LINK}",
+    "subject": "{subject}"
   }
 }
 ```
@@ -787,6 +798,19 @@ For simple variables without structure, uses direct placeholder:
 - ✅ **Frontend-Friendly Format**: Easy to parse `{VARIABLE}` format
 - ✅ **Type Safety**: Complex objects maintain their structure
 - ✅ **Self-Documenting**: Placeholders show exact variable access patterns
+- ✅ **All Variables Visible**: Both parent and child template variables shown as placeholders
+
+### Important Note on Default Variables
+
+**All variables use placeholders in preview**, including system defaults like `COMPANY_NAME`, `COMPANY_LOGO`, etc.
+
+This ensures:
+- Variables in parent templates (like `base.html`) are visible as `{COMPANY_LOGO}`
+- Variables with Django filters like `{{ COMPANY_NAME|default:'4Geeks' }}` show as `{COMPANY_NAME}`
+- Frontend can see **every** variable position in the complete rendered HTML
+- No confusion between actual content and placeholders
+
+**Exception:** CSS style variables (`style__success`, `style__danger`, `style__secondary`) use actual hex values so the preview displays with correct styling.
 
 ## Common Use Cases
 
@@ -977,10 +1001,13 @@ Each academy can have one `AcademyNotifySettings` instance with the following fi
   - Disabled templates won't send (silently skipped)
 
 **Variable Override Priority:**
-1. Academy template-specific override (highest)
-2. Academy global override
-3. Code context from `send_email_message` call
-4. System defaults (lowest)
+1. Academy template-specific override (`template.SLUG.VARIABLE`) - highest
+2. Academy global override (`global.VARIABLE`)
+3. Code context from `send_email_message` call (data dict)
+4. Academy model fields (academy.name, academy.logo_url, etc.)
+5. System defaults (environment variables) - lowest
+
+**Important:** Academy `template_variables` overrides take priority over academy model fields, allowing full customization even for fields like `COMPANY_NAME` that are typically set from `academy.name`.
 
 ### API Endpoints
 
@@ -1151,15 +1178,24 @@ Academies can completely disable specific notification templates:
 
 When `send_email_message("welcome_academy", ...)` is called, the subject will use the academy's custom value instead of the code default.
 
-#### Example 2: Global Company Name
+#### Example 2: Global Company Name Override
 
 ```json
 {
-  "global.COMPANY_NAME": "Academia de Programación Miami"
+  "template_variables": {
+    "global.COMPANY_NAME": "Academia de Programación Miami"
+  }
 }
 ```
 
-All templates will use this company name unless overridden by template-specific values.
+**Effect:** All templates will use "Academia de Programación Miami" instead of the academy's model name.
+
+**Example scenario:**
+- Academy model: `academy.name = "Miami"`
+- Template variable override: `global.COMPANY_NAME = "Academia de Programación Miami"`
+- **Result in emails:** "Academia de Programación Miami" ✅ (override wins)
+
+This is useful when the academy's database name differs from how they want to be presented in emails (e.g., legal name vs. marketing name).
 
 #### Example 3: Complex Composition
 
@@ -1196,11 +1232,25 @@ notify_actions.send_email_message(
 ```
 
 **Override Behavior:**
-1. Code provides default values in `data` dict
-2. Academy settings are retrieved if available
-3. Academy overrides are applied with `.update(overrides)`
-4. Academy values override code defaults
+1. System defaults are set (from environment variables)
+2. Context is updated with code-provided values in `data` dict
+3. Academy settings overrides are applied with `data.update(overrides)` - **these take priority**
+4. Academy model fields (academy.name, academy.logo_url) are applied with `setdefault()` - **only if not already set**
 5. Template is rendered with final merged data
+
+**Key insight:** Academy `template_variables` (from `global.*` or `template.*`) override academy model fields. This allows academies to customize how they appear in emails independently of their database name.
+
+**Example:**
+```python
+# Academy model
+academy.name = "Downtown Miami"
+
+# Academy template_variables
+global.COMPANY_NAME = "4Geeks Miami - Downtown Campus"
+
+# Result in email
+COMPANY_NAME = "4Geeks Miami - Downtown Campus"  ✅
+```
 
 ### Django Admin
 

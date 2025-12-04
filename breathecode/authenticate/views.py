@@ -1149,7 +1149,7 @@ def track_invite_open(request, invite_id=None):
             invite.save()
     
     # Return 1x1 transparent pixel
-    image = Image.new("RGB", (1, 1))
+    image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))  # Creates fully transparent pixel ✅
     response = HttpResponse(content_type="image/png")
     image.save(response, "PNG")
     return response

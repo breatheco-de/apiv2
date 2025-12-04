@@ -266,10 +266,12 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
     templates = {}
 
     if academy:
-        z["COMPANY_INFO_EMAIL"] = academy.feedback_email
-        z["COMPANY_LEGAL_NAME"] = academy.legal_name or academy.name
-        z["COMPANY_LOGO"] = academy.logo_url
-        z["COMPANY_NAME"] = academy.name
+        # Use setdefault to only set if not already in context
+        # This preserves academy template_variables overrides (global.* and template.*)
+        z.setdefault("COMPANY_INFO_EMAIL", academy.feedback_email)
+        z.setdefault("COMPANY_LEGAL_NAME", academy.legal_name or academy.name)
+        z.setdefault("COMPANY_LOGO", academy.logo_url)
+        z.setdefault("COMPANY_NAME", academy.name)
 
         if "heading" not in z:
             z["heading"] = academy.name

@@ -327,39 +327,35 @@ class EmailManagerClass:
     def _build_preview_context(self, notification: dict, academy=None) -> dict:
         """
         Build context with variable name placeholders using registry schema.
-        Intelligently parses schema to create proper placeholder structures.
-        Variables are replaced with {VARIABLE_NAME} format so frontend can see
-        the complete rendered template structure while still identifying variables.
+        ALL variables (including system defaults and academy values) use {VARIABLE_NAME} format
+        so frontend sees complete template structure with all variable positions visible.
         
         Args:
             notification: Notification configuration dict from registry
-            academy: Optional Academy instance for branding
+            academy: Optional Academy instance (not used for placeholders)
         
         Returns:
-            dict: Context with variables as {VARIABLE_NAME} placeholders
+            dict: Context with all variables as {VARIABLE_NAME} placeholders
         """
-        # Start with default variables - use actual values for these
+        # Use placeholders for ALL variables (not actual values)
+        # This ensures variables in parent templates (like base.html) are also visible
         context = {
-            "API_URL": os.environ.get("API_URL", "https://api.4geeks.com"),
-            "COMPANY_NAME": os.environ.get("COMPANY_NAME", "4Geeks"),
-            "COMPANY_CONTACT_URL": os.environ.get("COMPANY_CONTACT_URL", "https://4geeks.com/contact"),
-            "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", "4Geeks LLC"),
-            "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
-            "COMPANY_INFO_EMAIL": os.environ.get("COMPANY_INFO_EMAIL", "info@4geeks.com"),
-            "COMPANY_LOGO": "https://storage.googleapis.com/breathecode/logos/4geeks-vertical-logo.png",
+            "API_URL": "{API_URL}",
+            "COMPANY_NAME": "{COMPANY_NAME}",
+            "COMPANY_CONTACT_URL": "{COMPANY_CONTACT_URL}",
+            "COMPANY_LEGAL_NAME": "{COMPANY_LEGAL_NAME}",
+            "COMPANY_ADDRESS": "{COMPANY_ADDRESS}",
+            "COMPANY_INFO_EMAIL": "{COMPANY_INFO_EMAIL}",
+            "COMPANY_LOGO": "{COMPANY_LOGO}",
+            # Keep actual values ONLY for CSS style variables (needed for visual preview)
             "style__success": "#99ccff",
             "style__danger": "#ffcccc",
             "style__secondary": "#ededed",
         }
         
-        # Override with academy-specific values if provided
-        if academy:
-            context.update({
-                "COMPANY_INFO_EMAIL": academy.feedback_email if hasattr(academy, "feedback_email") else context["COMPANY_INFO_EMAIL"],
-                "COMPANY_LEGAL_NAME": academy.legal_name or academy.name if hasattr(academy, "legal_name") else academy.name,
-                "COMPANY_LOGO": academy.logo_url if hasattr(academy, "logo_url") else context["COMPANY_LOGO"],
-                "COMPANY_NAME": academy.name if hasattr(academy, "name") else context["COMPANY_NAME"],
-            })
+        # Note: We don't override with academy-specific values here because
+        # we want to show placeholders for ALL variables in the preview
+        # The academy parameter is kept for potential future use
         
         # Process each variable from the registry schema
         for var in notification.get("variables", []):
@@ -369,6 +365,8 @@ class EmailManagerClass:
         # Add common context variables as placeholders
         context.setdefault("subject", "{subject}")
         context.setdefault("SUBJECT", "{SUBJECT}")
+        context.setdefault("heading", "{heading}")
+        context.setdefault("TRACKER_URL", "{TRACKER_URL}")
         
         return context
 
