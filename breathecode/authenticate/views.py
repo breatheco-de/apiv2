@@ -2470,12 +2470,18 @@ def render_user_invite(request, token):
 
     pending_invites = UserInvite.objects.filter(email=token.user.email, status="PENDING")
     if pending_invites.count() == 0:
+        # Get academy from any invite to determine redirect URL
+        any_invite = UserInvite.objects.filter(email=token.user.email).first()
+        academy = any_invite.academy if (any_invite and any_invite.academy) else None
+        redirect_url = get_app_url(academy=academy)
         return render_message(
-            request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=get_app_url()
+            request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=redirect_url
         )
 
+    # Use first pending invite's academy for callback URL
     first_invite = pending_invites.first()
-    callback_url = get_app_url(academy=first_invite.academy if first_invite else None)
+    academy = first_invite.academy if (first_invite and first_invite.academy) else None
+    callback_url = get_app_url(academy=academy)
     querystr = urllib.parse.urlencode({"callback": callback_url, "token": token.key})
     url = os.getenv("API_URL") + "/v1/auth/member/invite?" + querystr
     return shortcuts.render(
@@ -2646,11 +2652,19 @@ def render_academy_invite(request, token):
 
     pending_invites = ProfileAcademy.objects.filter(user__id=token.user.id, status="INVITED")
     if pending_invites.count() == 0:
+        # Get academy from any profile to determine redirect URL
+        any_profile = ProfileAcademy.objects.filter(user__id=token.user.id).first()
+        academy = any_profile.academy if (any_profile and any_profile.academy) else None
+        redirect_url = get_app_url(academy=academy)
         return render_message(
-            request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=get_app_url()
+            request, "You don't have any more pending invites", btn_label="Continue to 4Geeks", btn_url=redirect_url
         )
 
-    querystr = urllib.parse.urlencode({"callback": get_app_url(), "token": token.key})
+    # Use first pending invite's academy for callback URL
+    first_profile = pending_invites.first()
+    academy = first_profile.academy if (first_profile and first_profile.academy) else None
+    callback_url = get_app_url(academy=academy)
+    querystr = urllib.parse.urlencode({"callback": callback_url, "token": token.key})
     url = os.getenv("API_URL") + "/v1/auth/academy/html/invite?" + querystr
     return shortcuts.render(
         request,
