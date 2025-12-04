@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("admissions", "0011_cohort_enable_assessments_telemetry"),
+        ("admissions", "0012_remove_academy_white_label_features_and_more"),
     ]
 
     operations = [
