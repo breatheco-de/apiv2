@@ -144,7 +144,6 @@ def set_cohort_user_assignments(task_id: int, **_: Any):
         raise AbortTask("Task not found")
 
     cohort_user = CohortUser.objects.filter(cohort=task.cohort, user=task.user, role="STUDENT").first()
-
     if not cohort_user:
         raise AbortTask("CohortUser not found")
 

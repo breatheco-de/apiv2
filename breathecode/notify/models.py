@@ -454,6 +454,7 @@ class AcademyNotifySettings(models.Model):
         """
         Get all variable overrides for a template with interpolation support.
         Variables can reference other variables using {{global.VAR}} or {{template.slug.VAR}} syntax.
+        Also supports {VARIABLE} for academy model fields (COMPANY_NAME, DOMAIN_NAME, etc).
         """
         overrides = {}
 
@@ -469,7 +470,7 @@ class AcademyNotifySettings(models.Model):
                 var_name = key.replace(template_prefix, "")
                 overrides[var_name] = value
 
-        # Resolve variable references within values
+        # Resolve variable references within values (uses self.academy for {VARIABLE})
         overrides = self._resolve_variable_references(overrides, template_slug)
 
         return overrides
@@ -477,7 +478,9 @@ class AcademyNotifySettings(models.Model):
     def _resolve_variable_references(self, overrides: Dict[str, str], template_slug: str, max_depth: int = 5) -> Dict[str, str]:
         """
         Resolve variable references in override values.
-        Supports {{global.VAR}} and {{template.slug.VAR}} references.
+        Supports:
+        - {global.VAR} and {template.slug.VAR} (cross-references between settings)
+        - {VARIABLE} for academy model fields (COMPANY_NAME from academy.name, etc)
         """
         resolved = {}
 
@@ -489,19 +492,30 @@ class AcademyNotifySettings(models.Model):
             # Resolve references iteratively (up to max_depth to prevent infinite loops)
             resolved_value = value
             for _ in range(max_depth):
-                # Find all {{variable}} references
-                # Supports: {{global.VAR}} or {{template.slug.VAR}}
-                pattern = r'\{\{(global\.\w+|template\.\w+\.\w+)\}\}'
-                matches = re.findall(pattern, resolved_value)
-
-                if not matches:
-                    break  # No more references to resolve
-
-                # Replace each reference
-                for match in matches:
+                has_changes = False
+                
+                # 1. Find and replace {global.VAR} or {template.slug.VAR} references
+                pattern_bracket = r'\{(global\.\w+|template\.\w+\.\w+)\}'
+                matches_bracket = re.findall(pattern_bracket, resolved_value)
+                
+                for match in matches_bracket:
                     replacement = self._get_reference_value(match, template_slug, overrides)
                     if replacement is not None:
-                        resolved_value = resolved_value.replace(f'{{{{{match}}}}}', str(replacement))
+                        resolved_value = resolved_value.replace(f'{{{match}}}', str(replacement))
+                        has_changes = True
+                
+                # 2. Find and replace {VARIABLE} from academy model fields
+                pattern_single = r'\{([A-Z_][A-Z0-9_]*)\}'
+                matches_single = re.findall(pattern_single, resolved_value)
+                
+                for var_name in matches_single:
+                    replacement = self._get_academy_value(var_name, overrides, key)
+                    if replacement is not None:
+                        resolved_value = resolved_value.replace(f'{{{var_name}}}', str(replacement))
+                        has_changes = True
+
+                if not has_changes:
+                    break  # No more references to resolve
 
             resolved[key] = resolved_value
 
@@ -530,6 +544,54 @@ class AcademyNotifySettings(models.Model):
                 # Otherwise check raw template_variables
                 return self.template_variables.get(reference)
 
+        return None
+
+    def _get_academy_value(self, var_name: str, overrides: Dict[str, str], current_key: str):
+        """
+        Get value for {VARIABLE} from academy model fields.
+        Search order matches /v1/notify/academy/variables endpoint:
+        1. overrides (from other override variables)
+        2. academy model fields (academy.name, academy.website_url, etc)
+        3. environment variables (fallback)
+        """
+        import os
+        
+        # 1. Check in overrides (allows referencing other override variables)
+        if var_name in overrides and var_name != current_key:
+            return overrides[var_name]
+        
+        # 2. Check in academy model fields (same as academy_values in /v1/notify/academy/variables)
+        academy_field_map = {
+            "COMPANY_NAME": lambda: self.academy.name,
+            "COMPANY_LOGO": lambda: self.academy.logo_url,
+            "COMPANY_INFO_EMAIL": lambda: self.academy.feedback_email,
+            "COMPANY_LEGAL_NAME": lambda: self.academy.legal_name or self.academy.name,
+            "PLATFORM_DESCRIPTION": lambda: self.academy.platform_description,
+            "DOMAIN_NAME": lambda: self.academy.website_url,
+        }
+        
+        if var_name in academy_field_map:
+            try:
+                value = academy_field_map[var_name]()
+                if value:
+                    return value
+            except:
+                pass
+        
+        # 3. Fallback to environment variables (same as system_defaults)
+        env_map = {
+            "API_URL": "API_URL",
+            "COMPANY_NAME": "COMPANY_NAME",
+            "COMPANY_CONTACT_URL": "COMPANY_CONTACT_URL",
+            "COMPANY_LEGAL_NAME": "COMPANY_LEGAL_NAME",
+            "COMPANY_ADDRESS": "COMPANY_ADDRESS",
+            "COMPANY_INFO_EMAIL": "COMPANY_INFO_EMAIL",
+            "DOMAIN_NAME": "DOMAIN_NAME",
+        }
+        
+        if var_name in env_map:
+            return os.environ.get(env_map[var_name], "")
+        
         return None
 
     def clean(self):

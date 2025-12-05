@@ -163,29 +163,88 @@ class EmailManagerClass:
 
     def get_available_variables(self, slug: str, academy=None) -> dict:
         """
-        Get all available variables for a notification template.
+        Get all available variables for a notification template as schema/metadata.
+        
+        This method returns schema information (description, source, example, etc.) for all
+        variables. For actual values, use the /v1/notify/academy/variables endpoint.
 
         Args:
             slug: The notification slug
-            academy: Optional Academy model instance for academy-specific variables
+            academy: Optional Academy model instance (used to determine if academy vars are available)
 
         Returns:
             dict: Variables organized by type (default, template_specific, academy_specific)
+                  All variables return schema/metadata, not actual values
         """
         notification = self.get_notification(slug)
         if not notification:
             raise ValidationException(f"Notification '{slug}' not found in registry")
 
-        # Default variables always available
+        # Default variables always available - return as schema
         default_vars = {
-            "API_URL": os.environ.get("API_URL", ""),
-            "COMPANY_NAME": os.environ.get("COMPANY_NAME", ""),
-            "COMPANY_CONTACT_URL": os.environ.get("COMPANY_CONTACT_URL", ""),
-            "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", ""),
-            "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
-            "style__success": "#99ccff",
-            "style__danger": "#ffcccc",
-            "style__secondary": "#ededed",
+            "API_URL": {
+                "description": "Base API URL for tracking pixels and API calls",
+                "source": "Environment variable API_URL",
+                "example": "https://api.4geeks.com",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_NAME": {
+                "description": "Company name used in email templates",
+                "source": "Environment variable COMPANY_NAME",
+                "example": "4Geeks",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_CONTACT_URL": {
+                "description": "URL to company contact page",
+                "source": "Environment variable COMPANY_CONTACT_URL",
+                "example": "https://4geeks.com/contact",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_LEGAL_NAME": {
+                "description": "Legal company name for footer and legal documents",
+                "source": "Environment variable COMPANY_LEGAL_NAME",
+                "example": "4Geeks LLC",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_ADDRESS": {
+                "description": "Company physical address",
+                "source": "Environment variable COMPANY_ADDRESS",
+                "example": "123 Main St, Miami, FL 33101",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_INFO_EMAIL": {
+                "description": "Company information email address",
+                "source": "Environment variable COMPANY_INFO_EMAIL",
+                "example": "info@4geeks.com",
+                "required": False,
+                "type": "system_default"
+            },
+            "style__success": {
+                "description": "Success color for buttons and highlights",
+                "source": "System default CSS color",
+                "example": "#99ccff",
+                "required": False,
+                "type": "system_default"
+            },
+            "style__danger": {
+                "description": "Danger/warning color for alerts",
+                "source": "System default CSS color",
+                "example": "#ffcccc",
+                "required": False,
+                "type": "system_default"
+            },
+            "style__secondary": {
+                "description": "Secondary color for backgrounds and borders",
+                "source": "System default CSS color",
+                "example": "#ededed",
+                "required": False,
+                "type": "system_default"
+            }
         }
 
         # Template-specific variables from notification config
@@ -196,18 +255,48 @@ class EmailManagerClass:
                 "source": var.get("source", ""),
                 "example": var.get("example", ""),
                 "required": var.get("required", False),
+                "type": "template_variable"
             }
 
-        # Academy-specific variables if academy provided
+        # Academy-specific variables - return as schema
         academy_vars = {}
         if academy:
             academy_vars = {
-                "COMPANY_INFO_EMAIL": academy.feedback_email if hasattr(academy, "feedback_email") else None,
-                "COMPANY_LEGAL_NAME": (
-                    academy.legal_name or academy.name if hasattr(academy, "legal_name") else academy.name
-                ),
-                "COMPANY_LOGO": academy.logo_url if hasattr(academy, "logo_url") else None,
-                "COMPANY_NAME": academy.name if hasattr(academy, "name") else None,
+                "COMPANY_NAME": {
+                    "description": "Academy name (overrides system default)",
+                    "source": "Academy.name model field",
+                    "example": "Miami Academy",
+                    "required": False,
+                    "type": "academy_field"
+                },
+                "COMPANY_LOGO": {
+                    "description": "Academy logo URL for email headers",
+                    "source": "Academy.logo_url model field",
+                    "example": "https://storage.googleapis.com/logos/miami.png",
+                    "required": False,
+                    "type": "academy_field"
+                },
+                "COMPANY_INFO_EMAIL": {
+                    "description": "Academy feedback/info email (overrides system default)",
+                    "source": "Academy.feedback_email model field",
+                    "example": "info@miami.4geeks.com",
+                    "required": False,
+                    "type": "academy_field"
+                },
+                "COMPANY_LEGAL_NAME": {
+                    "description": "Academy legal name (overrides system default)",
+                    "source": "Academy.legal_name or Academy.name model field",
+                    "example": "Miami Academy LLC",
+                    "required": False,
+                    "type": "academy_field"
+                },
+                "PLATFORM_DESCRIPTION": {
+                    "description": "Description of the platform shown in notification emails",
+                    "source": "Academy.platform_description model field",
+                    "example": "An award winning platform to learn and improve your AI related skills.",
+                    "required": False,
+                    "type": "academy_field"
+                }
             }
 
         return {"default": default_vars, "template_specific": template_vars, "academy_specific": academy_vars}
@@ -327,39 +416,35 @@ class EmailManagerClass:
     def _build_preview_context(self, notification: dict, academy=None) -> dict:
         """
         Build context with variable name placeholders using registry schema.
-        Intelligently parses schema to create proper placeholder structures.
-        Variables are replaced with {VARIABLE_NAME} format so frontend can see
-        the complete rendered template structure while still identifying variables.
+        ALL variables (including system defaults and academy values) use {VARIABLE_NAME} format
+        so frontend sees complete template structure with all variable positions visible.
         
         Args:
             notification: Notification configuration dict from registry
-            academy: Optional Academy instance for branding
+            academy: Optional Academy instance (not used for placeholders)
         
         Returns:
-            dict: Context with variables as {VARIABLE_NAME} placeholders
+            dict: Context with all variables as {VARIABLE_NAME} placeholders
         """
-        # Start with default variables - use actual values for these
+        # Use placeholders for ALL variables (not actual values)
+        # This ensures variables in parent templates (like base.html) are also visible
         context = {
-            "API_URL": os.environ.get("API_URL", "https://api.4geeks.com"),
-            "COMPANY_NAME": os.environ.get("COMPANY_NAME", "4Geeks"),
-            "COMPANY_CONTACT_URL": os.environ.get("COMPANY_CONTACT_URL", "https://4geeks.com/contact"),
-            "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", "4Geeks LLC"),
-            "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
-            "COMPANY_INFO_EMAIL": os.environ.get("COMPANY_INFO_EMAIL", "info@4geeks.com"),
-            "COMPANY_LOGO": "https://storage.googleapis.com/breathecode/logos/4geeks-vertical-logo.png",
+            "API_URL": "{API_URL}",
+            "COMPANY_NAME": "{COMPANY_NAME}",
+            "COMPANY_CONTACT_URL": "{COMPANY_CONTACT_URL}",
+            "COMPANY_LEGAL_NAME": "{COMPANY_LEGAL_NAME}",
+            "COMPANY_ADDRESS": "{COMPANY_ADDRESS}",
+            "COMPANY_INFO_EMAIL": "{COMPANY_INFO_EMAIL}",
+            "COMPANY_LOGO": "{COMPANY_LOGO}",
+            # Keep actual values ONLY for CSS style variables (needed for visual preview)
             "style__success": "#99ccff",
             "style__danger": "#ffcccc",
             "style__secondary": "#ededed",
         }
         
-        # Override with academy-specific values if provided
-        if academy:
-            context.update({
-                "COMPANY_INFO_EMAIL": academy.feedback_email if hasattr(academy, "feedback_email") else context["COMPANY_INFO_EMAIL"],
-                "COMPANY_LEGAL_NAME": academy.legal_name or academy.name if hasattr(academy, "legal_name") else academy.name,
-                "COMPANY_LOGO": academy.logo_url if hasattr(academy, "logo_url") else context["COMPANY_LOGO"],
-                "COMPANY_NAME": academy.name if hasattr(academy, "name") else context["COMPANY_NAME"],
-            })
+        # Note: We don't override with academy-specific values here because
+        # we want to show placeholders for ALL variables in the preview
+        # The academy parameter is kept for potential future use
         
         # Process each variable from the registry schema
         for var in notification.get("variables", []):
@@ -369,6 +454,8 @@ class EmailManagerClass:
         # Add common context variables as placeholders
         context.setdefault("subject", "{subject}")
         context.setdefault("SUBJECT", "{SUBJECT}")
+        context.setdefault("heading", "{heading}")
+        context.setdefault("TRACKER_URL", "{TRACKER_URL}")
         
         return context
 

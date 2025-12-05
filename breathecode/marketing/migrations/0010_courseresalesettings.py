@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("admissions", "0014_add_academy_features"),
+        ("admissions", "0015_add_academy_features"),
         ("marketing", "0009_course_suggested_plan_addon"),
     ]
 

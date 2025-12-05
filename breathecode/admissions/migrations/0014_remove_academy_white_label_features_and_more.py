@@ -41,7 +41,7 @@ def reverse_remove_white_label_features(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("admissions", "0012_add_reasoning_to_syllabus_version"),
+        ("admissions", "0013_add_platform_description"),
     ]
 
     operations = [

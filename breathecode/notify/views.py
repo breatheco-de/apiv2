@@ -1,4 +1,5 @@
 import logging
+import os
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.db.models import Q
@@ -115,6 +116,93 @@ def get_sample_data(request, hook_id=None):
         )
 
     return Response(single.sample_data)
+
+
+@api_view(["GET"])
+def get_hook_events(request):
+    """
+    Get all available webhook events with descriptions and metadata.
+    
+    Returns a list of all available webhook events that can be subscribed to,
+    including their descriptions, apps, labels, and associated models.
+    
+    Query Parameters:
+        app (optional): Filter events by app name (admissions, assignments, marketing, etc.)
+        like (optional): Search in event name or description
+    
+    Example Response:
+        [
+            {
+                "event": "assignment.assignment_created",
+                "label": "Assignment Created",
+                "description": "Triggered when a new assignment is created for a student",
+                "app": "assignments",
+                "model": "assignments.Task"
+            },
+            ...
+        ]
+    """
+    from django.conf import settings
+    from breathecode.notify.utils.auto_register_hooks import (
+        derive_app_from_action,
+        derive_label_from_action,
+        derive_model_from_action,
+    )
+
+    # Get metadata from settings, fallback to empty dict if not defined
+    metadata = getattr(settings, "HOOK_EVENTS_METADATA", {})
+    
+    # Build response with all available events
+    events = []
+    for event_name, event_config in metadata.items():
+        action = event_config.get("action")
+        
+        # Get or derive app name
+        app_name = event_config.get("app")
+        if not app_name and action:
+            app_name = derive_app_from_action(action)
+        
+        # Get or derive model
+        model = event_config.get("model")
+        if not model and action:
+            model = derive_model_from_action(action)
+        
+        # Get or derive label
+        label = event_config.get("label")
+        if not label and action:
+            label = derive_label_from_action(action)
+        
+        event_data = {
+            "event": event_name,
+            "label": label or "Unknown",
+            "description": event_config.get("description", "No description available"),
+            "app": app_name or "unknown",
+            "model": model or "Unknown",
+        }
+        events.append(event_data)
+    
+    # Filter by app if provided
+    app = request.GET.get("app", None)
+    if app:
+        events = [e for e in events if e["app"].lower() == app.lower()]
+    
+    # Filter by search term if provided
+    like = request.GET.get("like", None)
+    if like:
+        like_lower = like.lower()
+        events = [
+            e
+            for e in events
+            if like_lower in e["event"].lower()
+            or like_lower in e["description"].lower()
+            or like_lower in e["app"].lower()
+            or like_lower in e["label"].lower()
+        ]
+    
+    # Sort by app, then by event name
+    events.sort(key=lambda x: (x["app"], x["event"]))
+    
+    return Response(events)
 
 
 class HooksView(APIView, GenerateLookupsMixin):
@@ -366,3 +454,104 @@ class AcademyNotifySettingsView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyNotifyVariablesView(APIView):
+    """Show available notification variables for an academy."""
+
+    @capable_of("read_notification")
+    def get(self, request, academy_id=None):
+        """
+        Get all available variables for notification templates.
+        
+        Query params:
+        - template: Optional template slug to show final merged values for that template
+        """
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException("Academy not found", slug="academy-not-found")
+
+        # System defaults from environment
+        system_defaults = {
+            "API_URL": os.environ.get("API_URL", ""),
+            "COMPANY_NAME": os.environ.get("COMPANY_NAME", ""),
+            "COMPANY_CONTACT_URL": os.environ.get("COMPANY_CONTACT_URL", ""),
+            "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", ""),
+            "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
+            "COMPANY_INFO_EMAIL": os.environ.get("COMPANY_INFO_EMAIL", ""),
+            "DOMAIN_NAME": os.environ.get("DOMAIN_NAME", ""),
+            "style__success": "#99ccff",
+            "style__danger": "#ffcccc",
+            "style__secondary": "#ededed",
+        }
+
+        # Academy model values
+        academy_values = {
+            "COMPANY_NAME": academy.name,
+            "COMPANY_LOGO": academy.logo_url,
+            "COMPANY_INFO_EMAIL": academy.feedback_email,
+            "COMPANY_LEGAL_NAME": academy.legal_name or academy.name,
+            "PLATFORM_DESCRIPTION": academy.platform_description,
+            "DOMAIN_NAME": academy.website_url,
+        }
+
+        # Academy template_variables overrides
+        global_overrides = {}
+        template_specific_overrides = {}
+        
+        if hasattr(academy, 'notify_settings') and academy.notify_settings:
+            settings = academy.notify_settings
+            
+            for key, value in settings.template_variables.items():
+                if key.startswith("global."):
+                    var_name = key.replace("global.", "")
+                    global_overrides[var_name] = value
+                elif key.startswith("template."):
+                    # Parse template.SLUG.VARIABLE format
+                    parts = key.split(".", 2)  # Split into max 3 parts
+                    if len(parts) == 3:
+                        template_slug = parts[1]
+                        var_name = parts[2]
+                        if template_slug not in template_specific_overrides:
+                            template_specific_overrides[template_slug] = {}
+                        template_specific_overrides[template_slug][var_name] = value
+
+        response_data = {
+            "system_defaults": system_defaults,
+            "academy_values": academy_values,
+            "global_overrides": global_overrides,
+            "template_specific_overrides": template_specific_overrides,
+        }
+
+        # If template specified, show final merged values for that template
+        template_slug = request.GET.get("template")
+        if template_slug:
+            if hasattr(academy, 'notify_settings') and academy.notify_settings:
+                settings = academy.notify_settings
+                
+                # Check if template is disabled
+                if not settings.is_template_enabled(template_slug):
+                    response_data["template_disabled"] = True
+                    response_data["final_values"] = {}
+                else:
+                    # Get all overrides for this template (includes interpolation)
+                    overrides = settings.get_all_overrides_for_template(template_slug)
+                    response_data["resolved_for_template"] = overrides
+                    response_data["template_disabled"] = False
+                    
+                    # Build final values (simulating what send_email_message would use)
+                    final = {}
+                    final.update(system_defaults)
+                    final.update({k: v for k, v in academy_values.items() if v is not None})
+                    final.update(overrides)
+                    
+                    response_data["final_values"] = final
+            else:
+                # No settings, just show academy model values over system defaults
+                final = {}
+                final.update(system_defaults)
+                final.update({k: v for k, v in academy_values.items() if v is not None})
+                response_data["final_values"] = final
+                response_data["template_disabled"] = False
+
+        return Response(response_data)

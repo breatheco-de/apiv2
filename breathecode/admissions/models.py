@@ -106,6 +106,10 @@ class Academy(models.Model):
     marketing_email = models.EmailField(blank=True, null=True, default=None)
     feedback_email = models.EmailField(blank=True, null=True, default=None)
 
+    platform_description = models.TextField(
+        blank=True, null=True, default=None, help_text="Description of the platform shown in notification emails and meta description"
+    )
+
     phone_regex = RegexValidator(
         regex=r"^\+?1?\d{9,15}$",
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",

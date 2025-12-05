@@ -26,7 +26,7 @@
 			padding-top: 25px;
 			color: #000000;
 			font-family: sans-serif;" class="paragraph">
-				Hi {{ FIRST_NAME }}, this is an exclusive invitation to the {{ COMPANY_NAME|default:'4Geeks' }} platform: A private community of software developers learning and improving their coding skills.
+				Hi {{ FIRST_NAME }}, this is an exclusive invitation to the {{ COMPANY_NAME|default:'4Geeks' }} platform: {{ PLATFORM_DESCRIPTION|default:'An award winning platform to learn and improve your AI related skills.' }}
 		</td>
 	</tr>
 
@@ -46,17 +46,4 @@
 			</td></tr></table></a>
 		</td>
 	</tr>
-
-	<!-- Email open tracking pixel -->
-	{% if INVITE_ID and API_URL %}
-	<tr>
-		<td style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0;">
-			<img src="{{ API_URL }}/v1/auth/invite/track/open/{{ INVITE_ID }}" 
-				 width="1" 
-				 height="1" 
-				 style="display:none;" 
-				 alt="" />
-		</td>
-	</tr>
-	{% endif %}
 {% endblock %}
