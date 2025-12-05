@@ -1268,11 +1268,24 @@ class MemberPUTSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        if instance.user.first_name is None or instance.user.first_name == "":
+        user_updated = False
+        
+        if "first_name" in validated_data:
+            instance.user.first_name = validated_data["first_name"]
+            user_updated = True
+        elif instance.user.first_name is None or instance.user.first_name == "":
             instance.user.first_name = instance.first_name or ""
-        if instance.user.last_name is None or instance.user.last_name == "":
+            user_updated = True
+
+        if "last_name" in validated_data:
+            instance.user.last_name = validated_data["last_name"]
+            user_updated = True
+        elif instance.user.last_name is None or instance.user.last_name == "":
             instance.user.last_name = instance.last_name or ""
-        instance.user.save()
+            user_updated = True
+
+        if user_updated:
+            instance.user.save()
 
         return super().update(instance, validated_data)
 

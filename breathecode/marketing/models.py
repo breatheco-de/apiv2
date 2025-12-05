@@ -27,6 +27,7 @@ __all__ = [
     "ShortLink",
     "ActiveCampaignWebhook",
     "EmailDomainValidation",
+    "CourseResaleSettings",
 ]
 
 
@@ -1084,3 +1085,151 @@ class EmailDomainValidation(models.Model):
         utc_now = timezone.now()
         deleted_count, _ = cls.objects.filter(valid_until__lt=utc_now).delete()
         return deleted_count
+
+
+class CourseResaleSettings(models.Model):
+    """
+    Allows an academy to resell a course from another academy.
+    This model stores reseller-specific settings while keeping the original course data intact.
+    
+    The reseller can customize almost everything except:
+    - slug: Unique identifier (belongs to original course)
+    - syllabus: Course content (belongs to original owner)
+    - cohort: Cohort configuration (belongs to original owner)
+    
+    All resale_* fields override the original course values when set.
+    If a resale_* field is null/blank, the original course value is used.
+    """
+
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, related_name="resale_settings", help_text="Original course being resold"
+    )
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        related_name="resale_courses",
+        help_text="Academy that is reselling the course",
+    )
+
+    # Reseller-specific overrides (same field names as Course model for consistency)
+    # If null/blank, the original course value is used
+    
+    # Pricing and plans
+    plan_slug = models.SlugField(
+        max_length=150,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom plan slug for the reseller (overrides course.plan_slug)",
+    )
+    plan_by_country_code = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom plan mapping by country code for the reseller (overrides course.plan_by_country_code)",
+    )
+    
+    # Visual customization
+    icon_url = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom icon for the reseller (overrides course.icon_url)",
+    )
+    banner_image = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom banner image for the reseller (overrides course.banner_image)",
+    )
+    color = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom color in hexadecimal format for the reseller (overrides course.color)",
+    )
+    technologies = models.CharField(
+        max_length=240,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom technologies list for the reseller (overrides course.technologies)",
+    )
+    
+    # Status and visibility
+    status = models.CharField(
+        max_length=15,
+        choices=COURSE_STATUS,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Status for the reseller (overrides course.status, defaults to ACTIVE if null)",
+    )
+    status_message = models.CharField(
+        max_length=250,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom status message for the reseller",
+    )
+    visibility = models.CharField(
+        max_length=15,
+        choices=VISIBILITY_STATUS,
+        default=UNLISTED,
+        help_text="Visibility status for the reseller (overrides course.visibility)",
+    )
+    is_listed = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Controls inclusion in reseller's listings and sitemaps (overrides course.is_listed)",
+    )
+    
+    # Features
+    has_waiting_list = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Whether the reseller has a waiting list (overrides course.has_waiting_list)",
+    )
+    
+    # Control
+    is_active = models.BooleanField(default=True, help_text="Whether the resale is currently active")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        unique_together = (("course", "academy"),)
+        db_table = "marketing_course_resale_settings"
+        verbose_name = "Course Resale Settings"
+        verbose_name_plural = "Course Resale Settings"
+
+    def __str__(self):
+        return f"{self.academy.slug} reselling {self.course.slug}"
+
+    def clean(self):
+        """Validate that the reseller academy has the required permissions."""
+        from breathecode.admissions.utils.academy_features import has_feature_flag
+
+        if self.academy.white_labeled is False:
+            raise ValidationError(
+                {"academy": "Academy must be white labeled to resell courses. Set academy.white_labeled=True"}
+            )
+
+        if has_feature_flag(self.academy, "reseller", default=False) is False:
+            raise ValidationError(
+                {
+                    "academy": "Academy must have the 'reseller' feature enabled in academy_features to resell courses"
+                }
+            )
+
+        if self.course.academy == self.academy:
+            raise ValidationError(
+                {"academy": "An academy cannot resell its own courses. The reseller academy must be different from the course owner."}
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

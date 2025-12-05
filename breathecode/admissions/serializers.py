@@ -279,13 +279,13 @@ class GetBigAcademySerializer(serpy.Serializer):
     is_hidden_on_prework = serpy.Field()
     white_labeled = serpy.Field()
     white_label_url = serpy.Field()
-    white_label_features = serpy.MethodField()
     main_currency = serpy.MethodField()
+    academy_features = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
 
-    def get_white_label_features(self, obj):
-        """Return white_label_features merged with defaults."""
-        return obj.get_white_label_features()
+    def get_academy_features(self, obj):
+        """Return academy_features merged with defaults."""
+        return obj.get_academy_features()
 
     def get_main_currency(self, obj):
         """Return main_currency details."""
@@ -1368,7 +1368,9 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         is_late = (data.get("finantial_status") or (instance and instance.finantial_status or "")) == "LATE"
 
-        if is_graduated and is_late:
+        is_trying_to_graduate = "educational_status" in data and data.get("educational_status") == "GRADUATED"
+
+        if is_trying_to_graduate and is_late:
             raise ValidationException("Cannot be marked as `GRADUATED` if its financial " "status is `LATE`")
 
         tasks_pending = Task.objects.filter(

@@ -1,16 +1,15 @@
 import logging
-from collections import defaultdict
 from typing import Any
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.query_utils import Q
-from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
+    AcademyPaymentSettings,
     AcademyService,
     Bag,
     CohortSet,
@@ -26,8 +25,6 @@ from breathecode.payments.models import (
     ServiceItemFeature,
 )
 from breathecode.utils import serializers, serpy
-from breathecode.admissions.models import Cohort, Syllabus
-from breathecode.events.models import LiveClass
 
 logger = logging.getLogger(__name__)
 
@@ -559,7 +556,6 @@ class GetPlanOfferSerializer(serpy.Serializer):
         return None
 
 
-
 class GetInvoiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -673,6 +669,7 @@ class GetAcademyServiceSmallReverseSerializer(serpy.Serializer):
 
         price, _, _ = apply_pricing_ratio(obj.price_per_unit, country_code, obj)
         return price
+
 
 class GetAcademyServiceSmallSerializer(GetAcademyServiceSmallReverseSerializer):
     available_mentorship_service_sets = serpy.MethodField()
@@ -920,6 +917,33 @@ class GetBagSerializer(serpy.Serializer):
         _, total_after = actions.get_plan_addons_amounts_with_coupons(obj, coupons, lang="en")
         return total_after
 
+class CreditNoteSerializer(serpy.Serializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    reason = serpy.Field()
+    issued_at = serpy.Field()
+    status = serpy.Field()
+    legal_text = serpy.Field()
+    country_code = serpy.Field()
+    breakdown = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    invoice = GetInvoiceSmallSerializer(many=False)
+    invoice_credit_notes = serpy.MethodField()
+
+    def get_invoice_credit_notes(self, obj):
+        """Return all credit notes for the invoice associated with this credit note."""
+        if not obj.invoice:
+            return []
+        
+        try:
+            # Get all credit notes for this invoice, ordered by creation date
+            credit_notes = obj.invoice.credit_notes.all().order_by('created_at')
+            return CreditNoteSerializer(credit_notes, many=True).data
+        except Exception:
+            return []
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
@@ -933,7 +957,27 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     amount_refunded = serpy.Field()
     refund_stripe_id = serpy.Field()
     refunded_at = serpy.Field()
+    amount_breakdown = serpy.Field()
+    credit_notes = serpy.MethodField()
 
+    def get_credit_notes(self, obj):
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Refresh invoice to avoid stale RelatedManager issues
+        if hasattr(obj, 'refresh_from_db'):
+            try:
+                logger.debug(f"GetInvoiceSerializer.get_credit_notes: Refreshing Invoice(id={obj.id})")
+                obj.refresh_from_db()
+            except Exception as e:
+                logger.warning(f"GetInvoiceSerializer.get_credit_notes: Failed to refresh Invoice(id={obj.id}): {e}")
+        
+        try:
+            credit_notes_list = list(obj.credit_notes.all())
+            return CreditNoteSerializer(credit_notes_list, many=True).data
+        except TypeError as e:
+            logger.error(f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}")
+            return []
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
@@ -1275,3 +1319,29 @@ class BillingTeamAutoRechargeSerializer(serializers.Serializer):
         min_value=0,
         help_text="Maximum spending per monthly period (null = unlimited)",
     )
+
+
+class AcademyPaymentSettingsPUTSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating academy payment settings.
+
+    Allows updating payment-related configuration for an academy including
+    Stripe and Coinbase API keys, webhook secrets, and publishable keys.
+    """
+
+    class Meta:
+        model = AcademyPaymentSettings
+        fields = [
+            "stripe_api_key",
+            "stripe_webhook_secret",
+            "stripe_publishable_key",
+            "coinbase_api_key",
+            "coinbase_webhook_secret",
+        ]
+        extra_kwargs = {
+            "stripe_api_key": {"required": False, "allow_blank": True},
+            "stripe_webhook_secret": {"required": False, "allow_blank": True},
+            "stripe_publishable_key": {"required": False, "allow_blank": True},
+            "coinbase_api_key": {"required": False, "allow_blank": True, "allow_null": True},
+            "coinbase_webhook_secret": {"required": False, "allow_blank": True, "allow_null": True},
+        }

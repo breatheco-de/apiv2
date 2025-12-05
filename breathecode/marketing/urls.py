@@ -53,6 +53,7 @@ Examples:
 from django.urls import path
 from .views import (
     CourseView,
+    CourseResaleSettingsView,
     create_lead,
     create_lead_captcha,
     sync_tags_with_active_campaign,
@@ -132,8 +133,14 @@ urlpatterns = [
     path("course", CourseView.as_view(), name="course"),
     path("course/translation-schemas", CourseTranslationSchemaView.as_view(), name="course_translation_schemas"),
     path("course/<slug:course_slug>", CourseView.as_view(), name="course_slug"),
+    path("course/<slug:course_slug>/resalesettings", CourseResaleSettingsView.as_view(), name="course_resale_settings"),
     path("course/<slug:course_slug>/translations", CourseTranslationsView.as_view(), name="course_translations"),
     path("academy/course/<slug:course_identifier>", AcademyCourseView.as_view(), name="academy_course_id"),
+    path(
+        "academy/course/<slug:course_slug>/resalesettings",
+        CourseResaleSettingsView.as_view(),
+        name="academy_course_resale_settings",
+    ),
     path(
         "academy/course/<slug:course_identifier>/plan-by-country-code",
         CoursePlanByCountryCodeView.as_view(),

@@ -56,7 +56,7 @@ def put_serializer(academy, country, city, data={}):
         "is_hidden_on_prework": academy.is_hidden_on_prework,
         "white_labeled": academy.white_labeled,
         "white_label_url": academy.white_label_url,
-        "white_label_features": academy.get_white_label_features(),
+        "academy_features": academy.get_academy_features(),
         "owner": {
             "id": academy.owner.id,
             "email": academy.owner.email,

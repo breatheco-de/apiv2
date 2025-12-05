@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from breathecode.payments import signals, tasks
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 from breathecode.payments.models import (
     AcademyPaymentSettings,
     AcademyService,
@@ -15,6 +16,7 @@ from breathecode.payments.models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditNote,
     Currency,
     EventTypeSet,
     EventTypeSetTranslation,
@@ -285,12 +287,102 @@ class ConsumableAdmin(admin.ModelAdmin):
         return getattr(obj, "plan_financing_seat", None)
 
 
+class CreditNoteInline(admin.TabularInline):
+    model = CreditNote
+    extra = 0
+    fields = ("id", "amount", "currency", "status", "issued_at", "reason", "refund_stripe_id")
+    readonly_fields = ("id", "issued_at")
+    can_delete = False
+
+
+class InvoiceForm(forms.ModelForm):
+    class Meta:
+        model = Invoice
+        fields = "__all__"
+        widgets = {
+            "amount_breakdown": PrettyJSONWidget(),
+        }
+
+
+@admin.display(description="Recalculate amount breakdown")
+def recalculate_invoice_breakdown(modeladmin, request, queryset):
+    from django.contrib import messages
+    from breathecode.payments.actions import calculate_invoice_breakdown
+
+    updated_count = 0
+    error_count = 0
+
+    for invoice in queryset.all():
+        if not invoice.bag:
+            continue
+
+        try:
+            lang = "en"
+            breakdown = calculate_invoice_breakdown(invoice.bag, invoice, lang)
+            invoice.amount_breakdown = breakdown
+            invoice.save(update_fields=["amount_breakdown"])
+            updated_count += 1
+        except Exception as e:
+            error_count += 1
+            messages.error(request, f"Error recalculating breakdown for invoice {invoice.id}: {str(e)}")
+
+    if updated_count > 0:
+        messages.success(request, f"Successfully recalculated breakdown for {updated_count} invoice(s)")
+    if error_count > 0:
+        messages.warning(request, f"Failed to recalculate breakdown for {error_count} invoice(s)")
+
+
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
+    form = InvoiceForm
     list_display = ("id", "amount", "currency", "paid_at", "status", "stripe_id", "user", "academy")
     list_filter = ["status", "academy"]
     search_fields = ["id", "status", "user__email"]
     raw_id_fields = ["user", "currency", "bag", "academy"]
+    actions = [recalculate_invoice_breakdown]
+    inlines = [CreditNoteInline]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "user",
+                    "academy",
+                    "bag",
+                    "currency",
+                    "amount",
+                    "amount_breakdown",
+                    "status",
+                    "paid_at",
+                    "refunded_at",
+                    "amount_refunded",
+                )
+            },
+        ),
+        (
+            "Payment Details",
+            {
+                "fields": (
+                    "stripe_id",
+                    "refund_stripe_id",
+                    "coinbase_charge_id",
+                    "payment_method",
+                    "proof",
+                    "externally_managed",
+                )
+            },
+        ),
+        (
+            "Subscription Details",
+            {
+                "fields": (
+                    "subscription_billing_team",
+                    "subscription_seat",
+                )
+            },
+        ),
+    )
 
 
 def renew_subscription_consumables(modeladmin, request, queryset):
@@ -796,3 +888,65 @@ class ProofOfPaymentAdmin(admin.ModelAdmin):
 class AcademyPaymentSettingsAdmin(admin.ModelAdmin):
     list_display = ("academy", "created_at")
     search_fields = ["academy__name", "academy__slug"]
+
+
+class CreditNoteForm(forms.ModelForm):
+    class Meta:
+        model = CreditNote
+        fields = "__all__"
+        widgets = {
+            "breakdown": PrettyJSONWidget(),
+        }
+
+
+@admin.register(CreditNote)
+class CreditNoteAdmin(admin.ModelAdmin):
+    form = CreditNoteForm
+    list_display = ("id", "invoice", "amount", "currency", "status", "issued_at", "refund_stripe_id")
+    list_filter = ["status", "currency", "issued_at"]
+    search_fields = ["id", "invoice__id", "invoice__user__email", "refund_stripe_id"]
+    raw_id_fields = ["invoice", "currency"]
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "invoice",
+                    "amount",
+                    "currency",
+                    "status",
+                    "issued_at",
+                )
+            },
+        ),
+        (
+            "Refund Details",
+            {
+                "fields": (
+                    "reason",
+                    "breakdown",
+                    "refund_stripe_id",
+                )
+            },
+        ),
+        (
+            "Legal Information",
+            {
+                "fields": (
+                    "country_code",
+                    "legal_text",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
