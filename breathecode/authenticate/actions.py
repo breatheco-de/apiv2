@@ -1012,6 +1012,28 @@ def accept_invite_action(data=None, token=None, lang="en"):
 
             externally_managed = invite.payment_method is not None
 
+            proof = None
+            if invite.payment_method and not invite.payment_method.is_crypto:
+                from breathecode.payments.models import ProofOfPayment
+
+                if not invite.author:
+                    raise ValidationException(
+                        translation(
+                            en="Invite author is required when payment method is set. The author is the staff member who created the invitation.",
+                            es="El autor de la invitación es requerido cuando se establece un método de pago. El autor es el miembro del staff que creó la invitación.",
+                        ),
+                        slug="invite-author-required-for-payment-method",
+                        code=400,
+                    )
+
+                proof = ProofOfPayment(
+                    created_by=invite.author,
+                    status=ProofOfPayment.Status.DONE,
+                    provided_payment_details=f"Payment via invitation with payment method: {invite.payment_method.title}",
+                    reference=f"INVITE-{invite.id}",
+                )
+                proof.save()
+
             invoice = Invoice(
                 amount=plan_price,
                 paid_at=utc_now,
@@ -1022,6 +1044,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
                 currency=bag.academy.main_currency,
                 payment_method=invite.payment_method,
                 externally_managed=externally_managed,
+                proof=proof,
             )
             invoice.save()
 
