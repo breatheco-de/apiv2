@@ -45,8 +45,20 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(
-            remove_white_label_features_if_exists,
-            reverse_remove_white_label_features,
+        migrations.SeparateDatabaseAndState(
+            # Database operation: idempotent removal
+            database_operations=[
+                migrations.RunPython(
+                    remove_white_label_features_if_exists,
+                    reverse_remove_white_label_features,
+                ),
+            ],
+            # State operation: tell Django the field is removed
+            state_operations=[
+                migrations.RemoveField(
+                    model_name="academy",
+                    name="white_label_features",
+                ),
+            ],
         ),
     ]
