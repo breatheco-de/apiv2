@@ -11,6 +11,7 @@ Required Fields:
 Optional Fields (all auto-derived unless explicitly overridden):
   - model: Auto-derived as "app.Model" from action
   - app: Auto-derived as "app" from action (first part)
+  - label: Auto-derived by de-slugifying third part (e.g., "assignment_created" → "Assignment Created")
   - signal: Auto-derived as "breathecode.app.signals.signal_name"
   - sender: Auto-derived as "breathecode.app.models.Model"
   - event_action: Auto-derived from action (third part, e.g., "signal_name")
@@ -28,10 +29,18 @@ Auto-Derivation:
   From action "app.Model.signal_name", the system derives:
   - model → "app.Model"
   - app → "app"
+  - label → "Signal Name" (de-slugified signal_name)
   - signal → "breathecode.app.signals.signal_name"
   - sender → "breathecode.app.models.Model"
   - event_action → "signal_name"
   - HOOK_EVENTS → Generated automatically (imported in settings.py)
+
+Label Override Example:
+  "cohort_user.edu_status_updated": {
+      "action": "admissions.CohortUser.edu_status_updated",
+      "description": "...",
+      "label": "Student Status Updated",  # Override auto-derived "Edu Status Updated"
+  }
 """
 
 HOOK_EVENTS_METADATA = {
@@ -59,6 +68,7 @@ HOOK_EVENTS_METADATA = {
     "cohort_user.edu_status_updated": {
         "action": "admissions.CohortUser.edu_status_updated",
         "description": "Triggered when a student's educational status changes (ACTIVE, GRADUATED, DROPPED, etc.)",
+        "label": "Student Status Updated",  # Override auto-derived "Edu Status Updated"
         # Signal name doesn't match action - must be explicit
         "signal": "breathecode.admissions.signals.student_edu_status_updated",
         "serializer": "breathecode.admissions.serializers.CohortUserHookSerializer",

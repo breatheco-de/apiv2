@@ -150,26 +150,30 @@ curl -X GET \
 [
   {
     "event": "assignment.assignment_created",
+    "label": "Assignment Created",
     "description": "Triggered when a new assignment is created for a student",
-    "category": "assignments",
+    "app": "assignments",
     "model": "assignments.Task"
   },
   {
     "event": "assignment.assignment_revision_status_updated",
+    "label": "Assignment Revision Status Updated",
     "description": "Triggered when an assignment's revision status changes (PENDING, APPROVED, REJECTED)",
-    "category": "assignments",
+    "app": "assignments",
     "model": "assignments.Task"
   },
   {
     "event": "assignment.assignment_status_updated",
+    "label": "Assignment Status Updated",
     "description": "Triggered when an assignment's task status changes (PENDING to DONE)",
-    "category": "assignments",
+    "app": "assignments",
     "model": "assignments.Task"
   },
   {
     "event": "cohort.cohort_stage_updated",
+    "label": "Cohort Stage Updated",
     "description": "Triggered when a cohort's stage changes (INACTIVE, PREWORK, STARTED, FINAL_PROJECT, ENDED)",
-    "category": "admissions",
+    "app": "admissions",
     "model": "admissions.Cohort"
   }
 ]
@@ -177,7 +181,8 @@ curl -X GET \
 
 **Response Fields:**
 - `event`: The event name to use when subscribing
-- `description`: Human-readable description of when the event is triggered
+- `label`: Human-readable label (auto-derived by de-slugifying the action's third part, e.g., "assignment_created" → "Assignment Created")
+- `description`: Detailed description of when the event is triggered
 - `app`: The Django app that owns this event (auto-derived from action)
 - `model`: The Django model that triggers this event (auto-derived from action)
 

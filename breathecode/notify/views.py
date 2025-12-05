@@ -124,7 +124,7 @@ def get_hook_events(request):
     Get all available webhook events with descriptions and metadata.
     
     Returns a list of all available webhook events that can be subscribed to,
-    including their descriptions, apps, and associated models.
+    including their descriptions, apps, labels, and associated models.
     
     Query Parameters:
         app (optional): Filter events by app name (admissions, assignments, marketing, etc.)
@@ -134,6 +134,7 @@ def get_hook_events(request):
         [
             {
                 "event": "assignment.assignment_created",
+                "label": "Assignment Created",
                 "description": "Triggered when a new assignment is created for a student",
                 "app": "assignments",
                 "model": "assignments.Task"
@@ -142,7 +143,11 @@ def get_hook_events(request):
         ]
     """
     from django.conf import settings
-    from breathecode.notify.utils.auto_register_hooks import derive_app_from_action, derive_model_from_action
+    from breathecode.notify.utils.auto_register_hooks import (
+        derive_app_from_action,
+        derive_label_from_action,
+        derive_model_from_action,
+    )
 
     # Get metadata from settings, fallback to empty dict if not defined
     metadata = getattr(settings, "HOOK_EVENTS_METADATA", {})
@@ -162,8 +167,14 @@ def get_hook_events(request):
         if not model and action:
             model = derive_model_from_action(action)
         
+        # Get or derive label
+        label = event_config.get("label")
+        if not label and action:
+            label = derive_label_from_action(action)
+        
         event_data = {
             "event": event_name,
+            "label": label or "Unknown",
             "description": event_config.get("description", "No description available"),
             "app": app_name or "unknown",
             "model": model or "Unknown",
@@ -185,6 +196,7 @@ def get_hook_events(request):
             if like_lower in e["event"].lower()
             or like_lower in e["description"].lower()
             or like_lower in e["app"].lower()
+            or like_lower in e["label"].lower()
         ]
     
     # Sort by app, then by event name

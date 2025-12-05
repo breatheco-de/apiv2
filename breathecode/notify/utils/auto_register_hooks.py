@@ -203,6 +203,45 @@ def derive_model_from_action(action):
         return None
 
 
+def derive_label_from_action(action):
+    """
+    Derive human-readable label from action string by de-slugifying the last part.
+    
+    Args:
+        action: Action string like 'assignments.Task.assignment_created'
+    
+    Returns:
+        Human-readable label like 'Assignment Created'
+        or None if cannot be derived
+    
+    Examples:
+        'assignments.Task.assignment_created' -> 'Assignment Created'
+        'admissions.CohortUser.edu_status_updated' -> 'Edu Status Updated'
+        'marketing.FormEntry.created+' -> 'Created'
+        'event.Event.event_rescheduled' -> 'Event Rescheduled'
+    """
+    try:
+        parts = action.split(".")
+        if len(parts) < 3:
+            return None
+        
+        # Get the last part (e.g., 'assignment_created' or 'created+')
+        last_part = parts[2]
+        
+        # Remove the '+' suffix if present
+        last_part = last_part.rstrip("+")
+        
+        # Convert snake_case to Title Case
+        # 'assignment_created' -> 'Assignment Created'
+        words = last_part.split("_")
+        label = " ".join(word.capitalize() for word in words)
+        
+        return label
+    except Exception as e:
+        logger.debug(f"Could not derive label from action '{action}': {e}")
+        return None
+
+
 def get_model_label(instance):
     """Get the model label for an instance."""
     if instance is None:
