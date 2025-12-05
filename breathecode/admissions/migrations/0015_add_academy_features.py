@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("admissions", "0013_remove_academy_white_label_features_and_more"),
+        ("admissions", "0014_remove_academy_white_label_features_and_more"),
     ]
 
     operations = [

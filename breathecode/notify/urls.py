@@ -51,12 +51,14 @@ from django.urls import path
 
 from .views import (
     AcademyNotifySettingsView,
+    AcademyNotifyVariablesView,
     HooksView,
     NotificationTemplatePreviewView,
     NotificationTemplatesView,
     NotificationTemplateView,
     NotificationsView,
     SlackTeamsView,
+    get_hook_events,
     get_sample_data,
     preview_slack_template,
     preview_template,
@@ -81,11 +83,13 @@ urlpatterns = [
     ),
     # Academy notification settings
     path("academy/settings", AcademyNotifySettingsView.as_view(), name="academy_notify_settings"),
+    path("academy/variables", AcademyNotifyVariablesView.as_view(), name="academy_notify_variables"),
     # Slack integration endpoints
     path("slack/interaction", process_interaction),
     path("slack/command", slack_command, name="slack_command"),
     path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
     # Webhook endpoints
+    path("hook/event", get_hook_events, name="hook_event"),
     path("hook/subscribe", HooksView.as_view()),
     path("hook/subscribe/<int:hook_id>", HooksView.as_view()),
     path("hook/sample", get_sample_data),

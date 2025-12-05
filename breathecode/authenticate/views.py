@@ -1149,7 +1149,7 @@ def track_invite_open(request, invite_id=None):
             invite.save()
     
     # Return 1x1 transparent pixel
-    image = Image.new("RGB", (1, 1))
+    image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))  # Creates fully transparent pixel ✅
     response = HttpResponse(content_type="image/png")
     image.save(response, "PNG")
     return response
@@ -1168,8 +1168,10 @@ def render_invite_with_tracking(request, token, member_id=None):
         invite.clicked_at = timezone.now()
         invite.save()
     
+    original_request = getattr(request, '_request', request)
+    
     # Delegate to existing render_invite function
-    return render_invite(request, token, member_id)
+    return render_invite(original_request, token, member_id)
 
 
 class V2AppUserView(APIView):

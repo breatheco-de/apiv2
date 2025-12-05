@@ -332,8 +332,7 @@ def create_user_from_invite(user_invite_id: int, **_):
             {
                 "SUBJECT": subject,
                 "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
-                "INVITE_ID": user_invite.id,
-                "API_URL": os.getenv("API_URL", ""),
+                "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{user_invite.id}",
             },
             academy=user_invite.academy,
         )

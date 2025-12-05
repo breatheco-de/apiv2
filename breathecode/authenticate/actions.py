@@ -162,10 +162,9 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
         **extra,
     }
     
-    # Add tracking variables if invite_id is provided
+    # Add tracking URL if invite_id is provided
     if invite_id:
-        data["INVITE_ID"] = invite_id
-        data["API_URL"] = os.getenv("API_URL", "")
+        data["TRACKER_URL"] = f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite_id}"
 
     notify_actions.send_email_message(
         "welcome_academy",
