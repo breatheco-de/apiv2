@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             field=models.TextField(
                 blank=True,
                 default=None,
-                help_text="Description of the platform shown in notification emails",
+                help_text="Description of the platform shown in notification emails and meta description",
                 null=True,
             ),
         ),
