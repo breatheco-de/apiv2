@@ -47,21 +47,25 @@ HOOK_EVENTS_METADATA = {
     # Student & Cohort Management (app & model auto-derived from action)
     "profile_academy.added": {
         "action": "authenticate.ProfileAcademy.created+",
-        "description": "Triggered when a new academy member is added to an academy",
+        "label"
+        "description": "Triggered when students or staff members are added to an academy",
         # All metadata auto-derived from action!
     },
     "profile_academy.changed": {
         "action": "authenticate.ProfileAcademy.updated+",
+        "label": "Profile of user is updated in academy",
         "description": "Triggered when an academy member's profile is updated",
         # All metadata auto-derived from action!
     },
     "cohort_user.added": {
         "action": "admissions.CohortUser.created+",
-        "description": "Triggered when a student is added to a cohort",
+        "label": "User is added to a cohort",  
+        "description": "Its triggered when students or staff members are added to a cohort",
         # All metadata auto-derived from action!
     },
     "cohort_user.changed": {
         "action": "admissions.CohortUser.updated+",
+        "label": "User-Cohort Record Updated",  
         "description": "Triggered when a cohort user record is updated",
         # All metadata auto-derived from action!
     },
