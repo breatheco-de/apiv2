@@ -209,16 +209,49 @@ Authorization: Token YOUR_ACADEMY_TOKEN
 ```
 
 **Query Parameters:**
+- `app` (optional): Filter by Django app name(s), comma-separated (e.g., `assignments,admissions`). Matches hooks for events belonging to the specified app(s).
 - `event` (optional): Filter by event name(s), comma-separated (e.g., `assignment.assignment_created,cohort_user.added`)
+- `signal` (optional): Filter by Django signal path(s), comma-separated. Supports partial matching (e.g., `assignment_created` matches `breathecode.assignments.signals.assignment_created`)
 - `service_id` (optional): Filter by service ID, comma-separated
 - `like` (optional): Search in event name or target URL
 - `limit` (optional): Number of results per page (default: pagination settings)
 - `offset` (optional): Pagination offset
 
-**Example Request:**
+**Example Requests:**
 ```bash
+# Filter by single event
 curl -X GET \
   'https://api.4geeks.com/v1/notify/hook/subscribe?event=assignment.assignment_created' \
+  -H 'Authorization: Token YOUR_ACADEMY_TOKEN'
+
+# Filter by multiple events (comma-separated)
+curl -X GET \
+  'https://api.4geeks.com/v1/notify/hook/subscribe?event=assignment.assignment_created,cohort_user.added' \
+  -H 'Authorization: Token YOUR_ACADEMY_TOKEN'
+
+# Filter by app (all events from assignments app)
+curl -X GET \
+  'https://api.4geeks.com/v1/notify/hook/subscribe?app=assignments' \
+  -H 'Authorization: Token YOUR_ACADEMY_TOKEN'
+
+# Filter by multiple apps
+curl -X GET \
+  'https://api.4geeks.com/v1/notify/hook/subscribe?app=assignments,admissions' \
+  -H 'Authorization: Token YOUR_ACADEMY_TOKEN'
+
+# Filter by signal (partial match)
+curl -X GET \
+  'https://api.4geeks.com/v1/notify/hook/subscribe?signal=assignment_created' \
+  -H 'Authorization: Token YOUR_ACADEMY_TOKEN'
+
+# Filter by full signal path
+curl -X GET \
+  'https://api.4geeks.com/v1/notify/hook/subscribe?signal=breathecode.assignments.signals.assignment_created' \
+  -H 'Authorization: Token YOUR_ACADEMY_TOKEN'
+
+# Combine multiple filters
+curl -X GET \
+  'https://api.4geeks.com/v1/notify/hook/subscribe?app=assignments&event=assignment.assignment_created,assignment.assignment_status_updated' \
   -H 'Authorization: Token YOUR_ACADEMY_TOKEN'
 ```
 
