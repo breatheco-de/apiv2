@@ -820,7 +820,7 @@ class ResendInviteView(APIView):
             )
 
         if not invite_answered:
-            resend_invite(invite.token, invite.email, invite.first_name, academy=invite.academy)
+            resend_invite(invite.token, invite.email, invite.first_name, academy=invite.academy, invite_id=invite.id)
 
         invite.sent_at = timezone.now()
         invite.save()
@@ -992,7 +992,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if not email:
             raise ValidationException("Impossible to determine the email of user", code=400, slug="without-email")
 
-        resend_invite(invite.token, email, invite.first_name, academy=invite.academy)
+        resend_invite(invite.token, email, invite.first_name, academy=invite.academy, invite_id=invite.id)
 
         invite.sent_at = timezone.now()
         invite.save()
@@ -1104,10 +1104,12 @@ class AcademyInviteStatsView(APIView):
             pending=Count('id', filter=Q(status='PENDING')),
             accepted=Count('id', filter=Q(status='ACCEPTED')),
             waiting=Count('id', filter=Q(status='WAITING_LIST')),
-            rejected=Count('id', filter=Q(status='REJECTED'))
+            rejected=Count('id', filter=Q(status='REJECTED')),
+            opened=Count('id', filter=Q(opened_at__isnull=False)),
+            clicked=Count('id', filter=Q(clicked_at__isnull=False))
         )
         
-        # Build response
+        # Build response with engagement metrics
         result = {
             'academy_id': academy_id,
             'total_invitations': stats['total'],
@@ -1115,6 +1117,11 @@ class AcademyInviteStatsView(APIView):
             'accepted': stats['accepted'],
             'waiting': stats['waiting'],
             'rejected': stats['rejected'],
+            'opened': stats['opened'],
+            'clicked': stats['clicked'],
+            'open_rate': round(stats['opened'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
+            'click_rate': round(stats['clicked'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
+            'conversion_rate': round(stats['accepted'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
             'generated_at': timezone.now().isoformat()
         }
         
@@ -1122,6 +1129,49 @@ class AcademyInviteStatsView(APIView):
         cache.set(cache_key, result, 60 * 60 * 24)
         
         return Response(result)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def track_invite_open(request, invite_id=None):
+    """
+    Tracks when a UserInvite email is opened via invisible 1x1 pixel.
+    Returns a 1x1 transparent PNG image.
+    Only tracks first open (most valuable metric).
+    """
+    from PIL import Image
+    
+    if invite_id is not None:
+        # Only track if not already opened
+        invite = UserInvite.objects.filter(id=invite_id, opened_at__isnull=True).first()
+        if invite is not None:
+            invite.opened_at = timezone.now()
+            invite.save()
+    
+    # Return 1x1 transparent pixel
+    image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))  # Creates fully transparent pixel ✅
+    response = HttpResponse(content_type="image/png")
+    image.save(response, "PNG")
+    return response
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def render_invite_with_tracking(request, token, member_id=None):
+    """
+    Wraps the existing render_invite to track when the invite link is clicked.
+    Tracks first click only, then delegates to existing render_invite function.
+    """
+    # Track the click before rendering (first click only)
+    invite = UserInvite.objects.filter(token=token, clicked_at__isnull=True).first()
+    if invite is not None:
+        invite.clicked_at = timezone.now()
+        invite.save()
+    
+    original_request = getattr(request, '_request', request)
+    
+    # Delegate to existing render_invite function
+    return render_invite(original_request, token, member_id)
 
 
 class V2AppUserView(APIView):

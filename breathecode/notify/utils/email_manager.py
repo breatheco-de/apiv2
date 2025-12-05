@@ -1,8 +1,9 @@
 import json
 import logging
 import os
+import re
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.template.loader import get_template
@@ -162,29 +163,88 @@ class EmailManagerClass:
 
     def get_available_variables(self, slug: str, academy=None) -> dict:
         """
-        Get all available variables for a notification template.
+        Get all available variables for a notification template as schema/metadata.
+        
+        This method returns schema information (description, source, example, etc.) for all
+        variables. For actual values, use the /v1/notify/academy/variables endpoint.
 
         Args:
             slug: The notification slug
-            academy: Optional Academy model instance for academy-specific variables
+            academy: Optional Academy model instance (used to determine if academy vars are available)
 
         Returns:
             dict: Variables organized by type (default, template_specific, academy_specific)
+                  All variables return schema/metadata, not actual values
         """
         notification = self.get_notification(slug)
         if not notification:
             raise ValidationException(f"Notification '{slug}' not found in registry")
 
-        # Default variables always available
+        # Default variables always available - return as schema
         default_vars = {
-            "API_URL": os.environ.get("API_URL", ""),
-            "COMPANY_NAME": os.environ.get("COMPANY_NAME", ""),
-            "COMPANY_CONTACT_URL": os.environ.get("COMPANY_CONTACT_URL", ""),
-            "COMPANY_LEGAL_NAME": os.environ.get("COMPANY_LEGAL_NAME", ""),
-            "COMPANY_ADDRESS": os.environ.get("COMPANY_ADDRESS", ""),
-            "style__success": "#99ccff",
-            "style__danger": "#ffcccc",
-            "style__secondary": "#ededed",
+            "API_URL": {
+                "description": "Base API URL for tracking pixels and API calls",
+                "source": "Environment variable API_URL",
+                "example": "https://api.4geeks.com",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_NAME": {
+                "description": "Company name used in email templates",
+                "source": "Environment variable COMPANY_NAME",
+                "example": "4Geeks",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_CONTACT_URL": {
+                "description": "URL to company contact page",
+                "source": "Environment variable COMPANY_CONTACT_URL",
+                "example": "https://4geeks.com/contact",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_LEGAL_NAME": {
+                "description": "Legal company name for footer and legal documents",
+                "source": "Environment variable COMPANY_LEGAL_NAME",
+                "example": "4Geeks LLC",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_ADDRESS": {
+                "description": "Company physical address",
+                "source": "Environment variable COMPANY_ADDRESS",
+                "example": "123 Main St, Miami, FL 33101",
+                "required": False,
+                "type": "system_default"
+            },
+            "COMPANY_INFO_EMAIL": {
+                "description": "Company information email address",
+                "source": "Environment variable COMPANY_INFO_EMAIL",
+                "example": "info@4geeks.com",
+                "required": False,
+                "type": "system_default"
+            },
+            "style__success": {
+                "description": "Success color for buttons and highlights",
+                "source": "System default CSS color",
+                "example": "#99ccff",
+                "required": False,
+                "type": "system_default"
+            },
+            "style__danger": {
+                "description": "Danger/warning color for alerts",
+                "source": "System default CSS color",
+                "example": "#ffcccc",
+                "required": False,
+                "type": "system_default"
+            },
+            "style__secondary": {
+                "description": "Secondary color for backgrounds and borders",
+                "source": "System default CSS color",
+                "example": "#ededed",
+                "required": False,
+                "type": "system_default"
+            }
         }
 
         # Template-specific variables from notification config
@@ -195,25 +255,59 @@ class EmailManagerClass:
                 "source": var.get("source", ""),
                 "example": var.get("example", ""),
                 "required": var.get("required", False),
+                "type": "template_variable"
             }
 
-        # Academy-specific variables if academy provided
+        # Academy-specific variables - return as schema
         academy_vars = {}
         if academy:
             academy_vars = {
-                "COMPANY_INFO_EMAIL": academy.feedback_email if hasattr(academy, "feedback_email") else None,
-                "COMPANY_LEGAL_NAME": (
-                    academy.legal_name or academy.name if hasattr(academy, "legal_name") else academy.name
-                ),
-                "COMPANY_LOGO": academy.logo_url if hasattr(academy, "logo_url") else None,
-                "COMPANY_NAME": academy.name if hasattr(academy, "name") else None,
+                "COMPANY_NAME": {
+                    "description": "Academy name (overrides system default)",
+                    "source": "Academy.name model field",
+                    "example": "Miami Academy",
+                    "required": False,
+                    "type": "academy_field"
+                },
+                "COMPANY_LOGO": {
+                    "description": "Academy logo URL for email headers",
+                    "source": "Academy.logo_url model field",
+                    "example": "https://storage.googleapis.com/logos/miami.png",
+                    "required": False,
+                    "type": "academy_field"
+                },
+                "COMPANY_INFO_EMAIL": {
+                    "description": "Academy feedback/info email (overrides system default)",
+                    "source": "Academy.feedback_email model field",
+                    "example": "info@miami.4geeks.com",
+                    "required": False,
+                    "type": "academy_field"
+                },
+                "COMPANY_LEGAL_NAME": {
+                    "description": "Academy legal name (overrides system default)",
+                    "source": "Academy.legal_name or Academy.name model field",
+                    "example": "Miami Academy LLC",
+                    "required": False,
+                    "type": "academy_field"
+                },
+                "PLATFORM_DESCRIPTION": {
+                    "description": "Description of the platform shown in notification emails",
+                    "source": "Academy.platform_description model field",
+                    "example": "An award winning platform to learn and improve your AI related skills.",
+                    "required": False,
+                    "type": "academy_field"
+                }
             }
 
         return {"default": default_vars, "template_specific": template_vars, "academy_specific": academy_vars}
 
     def get_template_preview(self, slug: str, academy=None, channels=None) -> dict:
         """
-        Generate a preview of the notification template with variables intact.
+        Generate a preview of the notification template.
+        
+        Returns both the raw source and fully rendered template with placeholder values
+        in {VARIABLE_NAME} format, so frontend can display what the email actually looks
+        like including parent templates while still seeing variable positions.
 
         Args:
             slug: The notification slug
@@ -221,7 +315,7 @@ class EmailManagerClass:
             channels: Optional list of channels to preview (default: all available)
 
         Returns:
-            dict: Preview data with template sources and variable metadata
+            dict: Preview data with both source and rendered templates
         """
         notification = self.get_notification(slug)
         if not notification:
@@ -236,6 +330,9 @@ class EmailManagerClass:
             # Preview all available channels
             channels_to_preview = available_channels
 
+        # Build preview context with schema-driven placeholders
+        preview_context = self._build_preview_context(notification, academy)
+
         # Build preview for each channel
         channel_previews = {}
 
@@ -243,20 +340,27 @@ class EmailManagerClass:
             template_path = channel_config.get("template_path")
 
             if channel_name == "email":
-                # Load HTML and text templates
                 try:
                     html_template = get_template(f"{template_path}.html")
-                    html_source = html_template.template.source
-
+                    
                     try:
                         txt_template = get_template(f"{template_path}.txt")
-                        txt_source = txt_template.template.source
                     except Exception:
-                        txt_source = None
+                        txt_template = None
+
+                    # Get raw source (child template only)
+                    html_source = html_template.template.source
+                    txt_source = txt_template.template.source if txt_template else None
+                    
+                    # Render complete template (includes parent templates with placeholders)
+                    html_rendered = html_template.render(preview_context)
+                    txt_rendered = txt_template.render(preview_context) if txt_template else None
 
                     channel_previews["email"] = {
-                        "html": html_source,
-                        "text": txt_source,
+                        "html_source": html_source,          # Raw child template
+                        "html_rendered": html_rendered,      # Full rendered HTML
+                        "text_source": txt_source,           # Raw text template
+                        "text_rendered": txt_rendered,       # Full rendered text
                         "subject": channel_config.get("default_subject", ""),
                     }
                 except Exception as e:
@@ -264,13 +368,16 @@ class EmailManagerClass:
                     channel_previews["email"] = {"error": str(e)}
 
             elif channel_name == "slack":
-                # Load Slack template
                 try:
                     slack_template = get_template(f"{template_path}.slack")
                     slack_source = slack_template.template.source
+                    
+                    # Render Slack template with placeholders
+                    slack_rendered = slack_template.render(preview_context)
 
                     channel_previews["slack"] = {
-                        "template": slack_source,
+                        "source": slack_source,
+                        "rendered": slack_rendered,
                         "format": "json",
                     }
                 except Exception as e:
@@ -278,12 +385,17 @@ class EmailManagerClass:
                     channel_previews["slack"] = {"error": str(e)}
 
             elif channel_name == "sms":
-                # Load SMS template
                 try:
                     sms_template = get_template(f"{template_path}.sms")
                     sms_source = sms_template.template.source
+                    
+                    # Render SMS template with placeholders
+                    sms_rendered = sms_template.render(preview_context)
 
-                    channel_previews["sms"] = {"text": sms_source}
+                    channel_previews["sms"] = {
+                        "source": sms_source,
+                        "rendered": sms_rendered,
+                    }
                 except Exception as e:
                     logger.error(f"Error loading sms template for {slug}: {e}")
                     channel_previews["sms"] = {"error": str(e)}
@@ -298,7 +410,198 @@ class EmailManagerClass:
             "category": notification["category"],
             "channels": channel_previews,
             "variables": variables,
+            "preview_context": preview_context,  # Show what values were used for preview
         }
+
+    def _build_preview_context(self, notification: dict, academy=None) -> dict:
+        """
+        Build context with variable name placeholders using registry schema.
+        ALL variables (including system defaults and academy values) use {VARIABLE_NAME} format
+        so frontend sees complete template structure with all variable positions visible.
+        
+        Args:
+            notification: Notification configuration dict from registry
+            academy: Optional Academy instance (not used for placeholders)
+        
+        Returns:
+            dict: Context with all variables as {VARIABLE_NAME} placeholders
+        """
+        # Use placeholders for ALL variables (not actual values)
+        # This ensures variables in parent templates (like base.html) are also visible
+        context = {
+            "API_URL": "{API_URL}",
+            "COMPANY_NAME": "{COMPANY_NAME}",
+            "COMPANY_CONTACT_URL": "{COMPANY_CONTACT_URL}",
+            "COMPANY_LEGAL_NAME": "{COMPANY_LEGAL_NAME}",
+            "COMPANY_ADDRESS": "{COMPANY_ADDRESS}",
+            "COMPANY_INFO_EMAIL": "{COMPANY_INFO_EMAIL}",
+            "COMPANY_LOGO": "{COMPANY_LOGO}",
+            # Keep actual values ONLY for CSS style variables (needed for visual preview)
+            "style__success": "#99ccff",
+            "style__danger": "#ffcccc",
+            "style__secondary": "#ededed",
+        }
+        
+        # Note: We don't override with academy-specific values here because
+        # we want to show placeholders for ALL variables in the preview
+        # The academy parameter is kept for potential future use
+        
+        # Process each variable from the registry schema
+        for var in notification.get("variables", []):
+            var_name = var["name"]
+            context[var_name] = self._create_placeholder_from_schema(var)
+        
+        # Add common context variables as placeholders
+        context.setdefault("subject", "{subject}")
+        context.setdefault("SUBJECT", "{SUBJECT}")
+        context.setdefault("heading", "{heading}")
+        context.setdefault("TRACKER_URL", "{TRACKER_URL}")
+        
+        return context
+
+    def _create_placeholder_from_schema(self, var: dict) -> Any:
+        """
+        Create placeholder value from registry variable schema.
+        Uses example, description, and source fields to determine structure.
+        
+        Args:
+            var: Variable definition from registry with name, description, source, example
+        
+        Returns:
+            Placeholder value matching the variable structure
+        """
+        var_name = var["name"]
+        example = var.get("example", "")
+        description = var.get("description", "").lower()
+        source = var.get("source", "").lower()
+        
+        # Strategy 1: Try to parse example as JSON
+        if example:
+            try:
+                parsed_example = json.loads(example)
+                # If it's a dict/object, convert values to placeholders
+                if isinstance(parsed_example, dict):
+                    return self._dict_to_placeholders(parsed_example, var_name)
+                # If it's a list/array, convert items to placeholders
+                elif isinstance(parsed_example, list):
+                    return self._list_to_placeholders(parsed_example, var_name)
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON, try other strategies
+                pass
+        
+        # Strategy 2: Check description for structure hints
+        if "list" in description or "array" in description:
+            # It's an array - create a single-item placeholder array
+            return self._infer_array_structure(var, var_name)
+        
+        if "object" in description or "." in description:
+            # It's an object - extract properties from description
+            return self._infer_object_structure(var, var_name, description)
+        
+        # Strategy 3: Check source for serializer hints
+        if "serializer" in source:
+            # It's a serialized object - infer structure from serializer name
+            return self._infer_from_serializer(var_name, source)
+        
+        # Strategy 4: Default - simple string placeholder
+        return f"{{{var_name}}}"
+
+    def _dict_to_placeholders(self, obj: dict, var_name: str) -> dict:
+        """Convert dict example to placeholder dict with {var.key} format."""
+        result = {}
+        for key, value in obj.items():
+            if isinstance(value, dict):
+                result[key] = self._dict_to_placeholders(value, f"{var_name}.{key}")
+            elif isinstance(value, list):
+                result[key] = self._list_to_placeholders(value, f"{var_name}.{key}")
+            else:
+                result[key] = f"{{{var_name}.{key}}}"
+        return result
+
+    def _list_to_placeholders(self, arr: list, var_name: str) -> list:
+        """Convert list example to placeholder list with {var[index].key} format."""
+        if not arr:
+            return [f"{{{var_name}[0]}}"]
+        
+        # Use first item as template
+        first_item = arr[0]
+        if isinstance(first_item, dict):
+            placeholder_item = self._dict_to_placeholders(first_item, f"{var_name}[0]")
+        elif isinstance(first_item, list):
+            placeholder_item = self._list_to_placeholders(first_item, f"{var_name}[0]")
+        else:
+            placeholder_item = f"{{{var_name}[0]}}"
+        
+        return [placeholder_item]
+
+    def _infer_array_structure(self, var: dict, var_name: str) -> list:
+        """Infer array structure from description or example."""
+        example = var.get("example", "")
+        
+        # Try to extract structure from example string (even if not valid JSON)
+        # e.g., "[{academy: {name: 'Miami Academy'}, role: 'STUDENT'}]"
+        if "{" in example and "}" in example:
+            # Looks like array of objects
+            # Extract property names from example
+            props = re.findall(r'(\w+):', example)
+            if props:
+                placeholder_obj = {}
+                for prop in props:
+                    if prop == 'academy':
+                        # Handle nested objects mentioned in example
+                        placeholder_obj['academy'] = {'name': f"{{{var_name}[0].academy.name}}"}
+                    else:
+                        placeholder_obj[prop] = f"{{{var_name}[0].{prop}}}"
+                return [placeholder_obj]
+        
+        return [f"{{{var_name}[0]}}"]
+
+    def _infer_object_structure(self, var: dict, var_name: str, description: str) -> dict:
+        """Infer object structure from description mentioning properties."""
+        # Extract property references like "user.first_name" from description
+        property_pattern = r'(\w+)\.(\w+)'
+        matches = re.findall(property_pattern, description)
+        
+        if matches:
+            # Group by parent object
+            structure = {}
+            for parent, prop in matches:
+                if parent == var_name or len(matches) == 1:
+                    # Direct property
+                    structure[prop] = f"{{{var_name}.{prop}}}"
+                else:
+                    # Nested object
+                    if parent not in structure:
+                        structure[parent] = {}
+                    if isinstance(structure[parent], dict):
+                        structure[parent][prop] = f"{{{var_name}.{parent}.{prop}}}"
+            
+            if structure:
+                return structure
+        
+        # Fallback: create basic structure
+        return {"property": f"{{{var_name}.property}}"}
+
+    def _infer_from_serializer(self, var_name: str, source: str) -> dict:
+        """Infer object structure from serializer name in source."""
+        # Common serializer patterns
+        if "usersmallserializer" in source or "userserializer" in source:
+            return {
+                "id": f"{{{var_name}.id}}",
+                "first_name": f"{{{var_name}.first_name}}",
+                "last_name": f"{{{var_name}.last_name}}",
+                "email": f"{{{var_name}.email}}",
+            }
+        
+        if "academysmallserializer" in source or "academyserializer" in source:
+            return {
+                "id": f"{{{var_name}.id}}",
+                "name": f"{{{var_name}.name}}",
+                "slug": f"{{{var_name}.slug}}",
+            }
+        
+        # Generic object placeholder
+        return {"property": f"{{{var_name}.property}}"}
 
 
 # Singleton instance

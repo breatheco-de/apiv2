@@ -312,6 +312,8 @@ class UserInviteShortSerializer(serpy.Serializer):
     status = serpy.Field()
     email = serpy.Field()
     sent_at = serpy.Field()
+    opened_at = serpy.Field()
+    clicked_at = serpy.Field()
     created_at = serpy.Field()
 
 
@@ -923,6 +925,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                         "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
                         "FIRST_NAME": validated_data["first_name"],
+                        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
                     },
                     academy=academy,
                 )
@@ -1181,6 +1184,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                         "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
                         "LINK": url,
                         "FIRST_NAME": validated_data["first_name"],
+                        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
                     },
                     academy=academy,
                 )

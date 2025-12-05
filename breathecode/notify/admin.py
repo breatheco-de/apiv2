@@ -12,6 +12,7 @@ from breathecode.utils import AdminExportCsvMixin
 
 from .actions import send_slack, sync_slack_team_channel
 from .models import (
+    AcademyNotifySettings,
     CohortProxy,
     Device,
     HookError,
@@ -199,3 +200,43 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ("operation_code", "message", "user__username", "user__email", "academy__name")
     list_filter = ("status", "type")
     raw_id_fields = ("user", "academy")
+
+
+@admin.register(AcademyNotifySettings)
+class AcademyNotifySettingsAdmin(admin.ModelAdmin):
+    list_display = ("academy", "updated_at")
+    search_fields = ("academy__name", "academy__slug")
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+        (
+            None,
+            {"fields": ("academy",)},
+        ),
+        (
+            "Template Control",
+            {
+                "fields": ("disabled_templates",),
+                "description": (
+                    "Disable specific notification templates for this academy.<br>"
+                    "Format: List of template slugs, e.g., <code>[\"welcome_academy\", \"nps_survey\"]</code>"
+                ),
+            },
+        ),
+        (
+            "Variable Overrides",
+            {
+                "fields": ("template_variables",),
+                "description": (
+                    "Override notification variables. Format:<br>"
+                    "- Template-specific: <code>\"template.SLUG.VARIABLE\": \"value\"</code><br>"
+                    "- Global: <code>\"global.VARIABLE\": \"value\"</code><br>"
+                    "Supports interpolation: <code>{{global.VARIABLE}}</code>"
+                ),
+            },
+        ),
+        (
+            "Metadata",
+            {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
+        ),
+    )

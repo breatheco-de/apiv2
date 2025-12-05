@@ -146,7 +146,7 @@ def reset_password(users=None, extra=None, academy=None):
     return True
 
 
-def resend_invite(token=None, email=None, first_name=None, extra=None, academy=None):
+def resend_invite(token=None, email=None, first_name=None, extra=None, academy=None, invite_id=None):
     if extra is None:
         extra = {}
 
@@ -154,16 +154,22 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     querystr = urllib.parse.urlencode(params)
     url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
 
+    data = {
+        "email": email,
+        "subject": f"{academy.name if academy else '4Geeks'} is inviting you to {academy.slug if academy else '4geeks'}.4Geeks.com",
+        "LINK": url,
+        "FIRST_NAME": first_name,
+        **extra,
+    }
+    
+    # Add tracking URL if invite_id is provided
+    if invite_id:
+        data["TRACKER_URL"] = f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite_id}"
+
     notify_actions.send_email_message(
         "welcome_academy",
         email,
-        {
-            "email": email,
-            "subject": f"{academy.name if academy else '4Geeks'} is inviting you to {academy.slug if academy else '4geeks'}.4Geeks.com",
-            "LINK": url,
-            "FIRST_NAME": first_name,
-            **extra,
-        },
+        data,
         academy=academy,
     )
 

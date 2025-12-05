@@ -1,6 +1,5 @@
 ---
-description:
-globs: breathecode/*/urls.py
+globs: breathecode/*/urls.py,breathecode/*/urls/*.py
 alwaysApply: false
 ---
 # URL Configuration Standards
