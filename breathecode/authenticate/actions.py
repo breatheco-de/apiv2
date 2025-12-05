@@ -1010,6 +1010,8 @@ def accept_invite_action(data=None, token=None, lang="en"):
             plan_price = plan.financing_options.filter(how_many_months=1).first().monthly_price
             is_free = plan_price == 0
 
+            externally_managed = invite.payment_method is not None
+
             invoice = Invoice(
                 amount=plan_price,
                 paid_at=utc_now,
@@ -1019,6 +1021,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
                 status="FULFILLED",
                 currency=bag.academy.main_currency,
                 payment_method=invite.payment_method,
+                externally_managed=externally_managed,
             )
             invoice.save()
 
