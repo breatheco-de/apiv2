@@ -216,6 +216,7 @@ def sync_users_with_rigobot(modeladmin, request, queryset):
 class UserAdmin(UserAdmin):
     list_display = ("username", "email", "first_name", "last_name", "is_staff", "github_login", "google_login")
     actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password, sync_users_with_rigobot]
+    ordering = ["-date_joined"]
 
     def get_queryset(self, request):
         self.callback_url = "https://4geeks.com"
