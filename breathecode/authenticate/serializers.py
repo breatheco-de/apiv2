@@ -992,6 +992,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if user:
                 data["user"] = user.id
 
+        # Clean phone number (strip whitespace)
+        if "phone" in data and data["phone"]:
+            data["phone"] = data["phone"].strip()
+
         # Validate payment_method if provided
         if "payment_method" in data and data["payment_method"] is not None:
             from breathecode.payments.models import PaymentMethod
