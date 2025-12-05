@@ -47,7 +47,7 @@ HOOK_EVENTS_METADATA = {
     # Student & Cohort Management (app & model auto-derived from action)
     "profile_academy.added": {
         "action": "authenticate.ProfileAcademy.created+",
-        "label"
+        "label": "User is added to an academy",
         "description": "Triggered when students or staff members are added to an academy",
         # All metadata auto-derived from action!
     },
