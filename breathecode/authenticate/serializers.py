@@ -960,6 +960,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     plans = serializers.ListField(
         child=serializers.IntegerField(write_only=True, required=False), write_only=True, required=False
     )
+    payment_method = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
@@ -978,6 +979,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "cohort",
             "status",
             "plans",
+            "payment_method",
             "id",
         )
         list_serializer_class = StudentPOSTListSerializer
@@ -989,6 +991,25 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             if user:
                 data["user"] = user.id
+
+        # Validate payment_method if provided
+        if "payment_method" in data and data["payment_method"] is not None:
+            from breathecode.payments.models import PaymentMethod
+
+            academy_id = self.context.get("academy_id")
+            payment_method = PaymentMethod.objects.filter(
+                id=data["payment_method"], academy_id=academy_id
+            ).first()
+
+            if payment_method is None:
+                raise ValidationException(
+                    translation(
+                        en=f"Payment method not found or does not belong to this academy",
+                        es=f"Método de pago no encontrado o no pertenece a esta academia",
+                    ),
+                    slug="payment-method-not-found",
+                    code=404,
+                )
 
         if "user" not in data:
             if "invite" not in data or data["invite"] != True:
@@ -1107,6 +1128,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     raise ValidationException("Plan not found", slug="plan-not-found")
                 plans.append(plan)
 
+        # Extract payment_method if provided
+        payment_method = None
+        if "payment_method" in validated_data:
+            payment_method_id = validated_data.pop("payment_method")
+            if payment_method_id is not None:
+                from breathecode.payments.models import PaymentMethod
+
+                payment_method = PaymentMethod.objects.filter(id=payment_method_id).first()
+
         if "user" not in validated_data:
             validated_data.pop("invite")  # the front end sends invite=true so we need to remove it
             email = validated_data["email"].lower()
@@ -1161,6 +1191,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     author=self.context.get("request").user,
                     token=token,
                     expires_at=now + relativedelta(months=6),
+                    payment_method=payment_method,
                 )
                 invite.save()
 

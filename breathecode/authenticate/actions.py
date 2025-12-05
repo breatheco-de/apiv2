@@ -1018,6 +1018,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
                 academy=bag.academy,
                 status="FULFILLED",
                 currency=bag.academy.main_currency,
+                payment_method=invite.payment_method,
             )
             invoice.save()
 
