@@ -6,7 +6,7 @@ from breathecode.admissions.models import Academy
 from breathecode.authenticate.serializers import GetSmallAcademySerializer
 from breathecode.utils import serpy
 
-from .models import AcademyNotifySettings, Hook
+from .models import AcademyNotifySettings, Hook, HookError
 
 
 class UserSerializer(serpy.Serializer):
@@ -105,3 +105,18 @@ class AcademyNotifySettingsSmallSerializer(serpy.Serializer):
     disabled_templates = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+
+class HookErrorSerializer(serpy.Serializer):
+    """Serializer for HookError model."""
+
+    id = serpy.Field()
+    message = serpy.Field()
+    event = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    hooks = serpy.MethodField()
+
+    def get_hooks(self, obj):
+        """Return list of hook IDs associated with this error."""
+        return [hook.id for hook in obj.hooks.all()]

@@ -99,6 +99,10 @@ apps = [
 
 urlpatterns_apps = [path(url, include(urlconf, namespace=namespace)) for url, urlconf, namespace in apps]
 
+# Add alias for v1/notify -> v1/messaging (no namespace to avoid conflicts)
+# All reverse() calls use the "notify" namespace from v1/messaging/ above
+urlpatterns_apps.append(path("v1/notify/", include("breathecode.notify.urls")))
+
 urlpatterns_app_openapi = [mount_app_openapi(url, urlconf, namespace) for url, urlconf, namespace in apps]
 
 urlpatterns_docs = [

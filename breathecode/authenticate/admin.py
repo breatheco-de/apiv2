@@ -141,8 +141,8 @@ def validate_email(modeladmin, request, queryset: QuerySet[UserInvite]):
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ["email", "first_name", "last_name", "user__email"]
-    raw_id_fields = ["user", "author", "cohort", "course", "subscription_seat"]
-    list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country"]
+    raw_id_fields = ["user", "author", "cohort", "course", "subscription_seat", "payment_method"]
+    list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country", "payment_method"]
     list_display = (
         "email",
         "is_email_validated",
@@ -155,6 +155,7 @@ class UserInviteAdmin(admin.ModelAdmin):
         "invite_url",
         "country",
         "subscription_seat",
+        "payment_method",
     )
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list, validate_email]
 
@@ -215,6 +216,7 @@ def sync_users_with_rigobot(modeladmin, request, queryset):
 class UserAdmin(UserAdmin):
     list_display = ("username", "email", "first_name", "last_name", "is_staff", "github_login", "google_login")
     actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password, sync_users_with_rigobot]
+    ordering = ["-date_joined"]
 
     def get_queryset(self, request):
         self.callback_url = "https://4geeks.com"
