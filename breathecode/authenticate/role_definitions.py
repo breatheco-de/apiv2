@@ -238,6 +238,14 @@ CAPABILITIES = [
         "slug": "crud_notification",
         "description": "Full CRUD access to notifications (future-proofing)",
     },
+    {
+        "slug": "read_hook",
+        "description": "Read webhook subscriptions for academy token",
+    },
+    {
+        "slug": "crud_hook",
+        "description": "Create, update, and delete webhook subscriptions for academy token",
+    },
 ]
 
 BASE_ROLES = [
@@ -769,6 +777,8 @@ def get_extended_roles():
                 "crud_paymentmethod",
                 "read_notification",
                 "crud_notification",
+                "read_hook",
+                "crud_hook",
                 "crud_academy_payment_settings",
             ],
         }

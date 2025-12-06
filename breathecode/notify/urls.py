@@ -50,6 +50,7 @@ Examples:
 from django.urls import path
 
 from .views import (
+    AcademyHooksView,
     AcademyNotifySettingsView,
     AcademyNotifyVariablesView,
     HooksView,
@@ -90,8 +91,15 @@ urlpatterns = [
     path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
     # Webhook endpoints
     path("hook/event", get_hook_events, name="hook_event"),
+    # Legacy endpoints (backward compatibility)
     path("hook/subscribe", HooksView.as_view()),
     path("hook/subscribe/<int:hook_id>", HooksView.as_view()),
+    # User-specific endpoints (consistent with /me/ pattern)
+    path("hook/me/subscribe", HooksView.as_view(), name="hook_me_subscribe"),
+    path("hook/me/subscribe/<int:hook_id>", HooksView.as_view(), name="hook_me_subscribe_id"),
+    # Academy token endpoints
+    path("hook/academy/subscribe", AcademyHooksView.as_view(), name="hook_academy_subscribe"),
+    path("hook/academy/subscribe/<int:hook_id>", AcademyHooksView.as_view(), name="hook_academy_subscribe_id"),
     path("hook/sample", get_sample_data),
     path("hook/<int:hook_id>/sample", get_sample_data),
     # User notification endpoints

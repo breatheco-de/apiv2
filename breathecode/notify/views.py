@@ -1,6 +1,7 @@
 import logging
 import os
 
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.db.models import Q
 from django.http import HttpResponse
@@ -626,3 +627,244 @@ class AcademyNotifyVariablesView(APIView):
                 response_data["template_disabled"] = False
 
         return Response(response_data)
+
+
+def get_academy_token_user(academy_id, lang="en"):
+    """
+    Get the academy token user for a given academy.
+    
+    Args:
+        academy_id: The academy ID
+        lang: Language code for error messages (default: "en")
+    
+    Returns:
+        User: The academy token user
+    
+    Raises:
+        ValidationException: If academy token user is not found
+    """
+    from breathecode.authenticate.models import ProfileAcademy
+
+    profile_academy = ProfileAcademy.objects.filter(
+        academy_id=academy_id, role__slug="academy_token"
+    ).first()
+
+    if profile_academy is None or profile_academy.user is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="You need to first create an academy token that will be used for authentication when consuming the hooks",
+                es="Necesitas crear primero un token de academia que se usará para autenticación al consumir los hooks",
+                slug="academy-token-not-found",
+            ),
+            slug="academy-token-not-found",
+        )
+
+    return profile_academy.user
+
+
+class AcademyHooksView(APIView, GenerateLookupsMixin):
+    """
+    Manage webhook subscriptions for academy token users.
+    This endpoint filters hooks to only show hooks where hooks.user is the academy token user.
+    """
+
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    @capable_of("read_hook")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        lang = getattr(request.user, "lang", "en")
+
+        # Get academy token user
+        academy_token_user = get_academy_token_user(academy_id, lang)
+
+        items = Hook.objects.filter(user=academy_token_user)
+
+        # Check if we need metadata for app or signal filtering
+        app = request.GET.get("app", None)
+        signal = request.GET.get("signal", None)
+
+        if app is not None or signal is not None:
+            from django.conf import settings
+            from breathecode.notify.utils.auto_register_hooks import (
+                derive_app_from_action,
+                derive_signal_from_action,
+            )
+
+            # Get metadata from settings (only once)
+            metadata = getattr(settings, "HOOK_EVENTS_METADATA", {})
+
+            # Filter by app if provided
+            if app is not None:
+                # Find all event names that belong to the specified app(s)
+                app_list = [a.strip() for a in app.split(",")]
+                matching_events = []
+
+                for event_name, event_config in metadata.items():
+                    action = event_config.get("action")
+                    event_app = event_config.get("app")
+
+                    # If app not in config, derive it from action
+                    if not event_app and action:
+                        event_app = derive_app_from_action(action)
+
+                    # Check if this event's app matches any of the requested apps
+                    if event_app and event_app.lower() in [a.lower() for a in app_list]:
+                        matching_events.append(event_name)
+
+                # Filter hooks by matching event names
+                if matching_events:
+                    items = items.filter(event__in=matching_events)
+                else:
+                    # No matching events found, return empty queryset
+                    items = items.none()
+
+            # Filter by signal if provided
+            if signal is not None:
+                # Find all event names that have the specified signal(s)
+                signal_list = [s.strip() for s in signal.split(",")]
+                matching_events = []
+
+                for event_name, event_config in metadata.items():
+                    action = event_config.get("action")
+                    event_signal = event_config.get("signal")
+
+                    # If signal not in config, derive it from action
+                    if not event_signal and action:
+                        event_signal = derive_signal_from_action(action)
+
+                    # Check if this event's signal matches any of the requested signals
+                    if event_signal:
+                        # Support both full path and partial matching
+                        for sig in signal_list:
+                            if sig.lower() in event_signal.lower() or event_signal.lower() in sig.lower():
+                                matching_events.append(event_name)
+                                break
+
+                # Filter hooks by matching event names
+                if matching_events:
+                    items = items.filter(event__in=matching_events)
+                else:
+                    # No matching events found, return empty queryset
+                    items = items.none()
+
+        # Filter by event if provided
+        event = request.GET.get("event", None)
+        if event is not None:
+            event_list = [e.strip() for e in event.split(",")]
+            items = items.filter(event__in=event_list)
+
+        service_id = request.GET.get("service_id", None)
+        if service_id is not None:
+            service_id_list = [s.strip() for s in service_id.split(",")]
+            items = items.filter(service_id__in=service_id_list)
+
+        like = request.GET.get("like", None)
+        if like is not None:
+            items = items.filter(Q(event__icontains=like) | Q(target__icontains=like))
+
+        items = handler.queryset(items)
+        serializer = HookSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_hook")
+    def post(self, request, academy_id=None):
+        lang = getattr(request.user, "lang", "en")
+
+        # Get academy token user
+        academy_token_user = get_academy_token_user(academy_id, lang)
+
+        # Create a mock request object with academy token user for serializer context
+        class MockRequest:
+            def __init__(self, user):
+                self.user = user
+
+        mock_request = MockRequest(academy_token_user)
+
+        serializer = HookSerializer(data=request.data, context={"request": mock_request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_hook")
+    def put(self, request, hook_id, academy_id=None):
+        lang = getattr(request.user, "lang", "en")
+
+        # Get academy token user
+        academy_token_user = get_academy_token_user(academy_id, lang)
+
+        hook = Hook.objects.filter(id=hook_id, user=academy_token_user).first()
+        if hook is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Hook {hook_id} not found for this academy token",
+                    es=f"Hook {hook_id} no encontrado para este token de academia",
+                    slug="hook-not-found",
+                ),
+                slug="hook-not-found",
+            )
+
+        # Create a mock request object with academy token user for serializer context
+        class MockRequest:
+            def __init__(self, user):
+                self.user = user
+
+        mock_request = MockRequest(academy_token_user)
+
+        serializer = HookSerializer(
+            instance=hook,
+            data=request.data,
+            context={
+                "request": mock_request,
+            },
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_hook")
+    def delete(self, request, hook_id=None, academy_id=None):
+        lang = getattr(request.user, "lang", "en")
+
+        # Get academy token user
+        academy_token_user = get_academy_token_user(academy_id, lang)
+
+        filtered = False
+        items = Hook.objects.filter(user=academy_token_user)
+        if hook_id is not None:
+            items = items.filter(id=hook_id)
+            filtered = True
+        else:
+            event = request.GET.get("event", None)
+            if event is not None:
+                filtered = True
+                event_list = [e.strip() for e in event.split(",")]
+                items = items.filter(event__in=event_list)
+
+            service_id = request.GET.get("service_id", None)
+            if service_id is not None:
+                filtered = True
+                service_id_list = [s.strip() for s in service_id.split(",")]
+                items = items.filter(service_id__in=service_id_list)
+
+        if not filtered:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Please include some filter in the URL",
+                    es="Por favor incluye algún filtro en la URL",
+                    slug="missing-filter",
+                ),
+                slug="missing-filter",
+            )
+
+        total = items.count()
+        for item in items:
+            item.delete()
+
+        return Response({"details": f"Unsubscribed from {total} hooks"}, status=status.HTTP_200_OK)
