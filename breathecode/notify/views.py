@@ -199,7 +199,8 @@ def get_hook_events(request):
     including their descriptions, apps, labels, and associated models.
     
     Query Parameters:
-        app (optional): Filter events by app name (admissions, assignments, marketing, etc.)
+        app (optional): Filter events by app name(s), comma-separated (e.g., "admissions,assignments")
+        event (optional): Filter events by event name(s), comma-separated (e.g., "assignment.assignment_created,cohort_user.added")
         like (optional): Search in event name or description
     
     Example Response:
@@ -253,10 +254,17 @@ def get_hook_events(request):
         }
         events.append(event_data)
     
-    # Filter by app if provided
+    # Filter by app if provided (supports comma-separated values)
     app = request.GET.get("app", None)
     if app:
-        events = [e for e in events if e["app"].lower() == app.lower()]
+        app_list = [a.strip().lower() for a in app.split(",")]
+        events = [e for e in events if e["app"].lower() in app_list]
+    
+    # Filter by event if provided (supports comma-separated values)
+    event = request.GET.get("event", None)
+    if event:
+        event_list = [e.strip().lower() for e in event.split(",")]
+        events = [e for e in events if e["event"].lower() in event_list]
     
     # Filter by search term if provided
     like = request.GET.get("like", None)
