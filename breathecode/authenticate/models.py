@@ -232,6 +232,13 @@ class UserInvite(models.Model):
     email_quality = models.FloatField(default=None, blank=True, null=True)
     email_status = models.JSONField(default=None, blank=True, null=True)
 
+    welcome_video = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}"
+    )
+
     # link to team membership (optional)
     subscription_seat = models.ForeignKey(
         "payments.SubscriptionSeat",

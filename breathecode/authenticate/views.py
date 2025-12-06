@@ -2650,6 +2650,10 @@ def render_invite(request, token, member_id=None):
         return Response(serializer.data)
 
     if request.method == "GET":
+        if invite and invite.academy and invite.academy.white_labeled and invite.academy.website_url:
+            redirect_url = f"{invite.academy.website_url.rstrip('/')}/accept-invite?inviteToken={token}"
+            return HttpResponseRedirect(redirect_to=redirect_url)
+
         form = InviteForm(
             {
                 "callback": [""],
@@ -2669,6 +2673,9 @@ def render_invite(request, token, member_id=None):
 
             if "heading" not in obj:
                 obj["heading"] = invite.academy.name
+        
+        if invite and invite.welcome_video:
+            obj["WELCOME_VIDEO"] = invite.welcome_video
 
         return shortcuts.render(
             request,
@@ -2708,6 +2715,9 @@ def render_invite(request, token, member_id=None):
 
                 if "heading" not in obj:
                     obj["heading"] = invite.academy.name
+            
+            if invite and invite.welcome_video:
+                obj["WELCOME_VIDEO"] = invite.welcome_video
 
             return shortcuts.render(
                 request,

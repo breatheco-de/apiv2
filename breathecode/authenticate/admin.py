@@ -21,6 +21,8 @@ from . import tasks
 from .actions import (
     delete_tokens,
     generate_academy_token,
+    get_app_url,
+    get_invite_url,
     reset_password,
     set_gitpod_user_expiration,
     sync_organization_members,
@@ -160,9 +162,9 @@ class UserInviteAdmin(admin.ModelAdmin):
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list, validate_email]
 
     def invite_url(self, obj):
-        params = {"callback": "https://4geeks.com"}
-        querystr = urllib.parse.urlencode(params)
-        url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(obj.token) + "?" + querystr
+        academy = getattr(obj, "academy", None)
+        callback_url = get_app_url(academy=academy) if academy else "https://4geeks.com"
+        url = get_invite_url(obj.token, academy=academy, callback_url=callback_url)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
 
 

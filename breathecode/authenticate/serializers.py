@@ -18,7 +18,7 @@ from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
-from breathecode.authenticate.actions import get_app_url, get_user_settings, sync_with_rigobot
+from breathecode.authenticate.actions import get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
@@ -311,6 +311,7 @@ class UserInviteShortSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     email = serpy.Field()
+    phone = serpy.Field()
     sent_at = serpy.Field()
     opened_at = serpy.Field()
     clicked_at = serpy.Field()
@@ -332,7 +333,9 @@ class UserInviteSerializer(UserInviteNoUrlSerializer):
     def get_invite_url(self, _invite):
         if _invite.token is None:
             return None
-        return os.getenv("API_URL") + "/v1/auth/member/invite/" + str(_invite.token)
+        academy = getattr(_invite, "academy", None)
+        callback_url = get_app_url(academy=academy) if academy else None
+        return get_invite_url(_invite.token, academy=academy, callback_url=callback_url)
 
 
 class AcademySerializer(serpy.Serializer):
@@ -914,20 +917,25 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug("Sending invite email to " + email)
 
-                params = {"callback": "https://admin.4geeks.com"}
-                querystr = urllib.parse.urlencode(params)
-                url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                callback_url = get_app_url(academy=academy)
+                url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
+
+                email_data = {
+                    "email": email,
+                    "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
+                    "LINK": url,
+                    "FIRST_NAME": validated_data["first_name"],
+                    "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+                }
+                
+                # Add welcome video if available
+                if invite.welcome_video:
+                    email_data["WELCOME_VIDEO"] = invite.welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
                     email,
-                    {
-                        "email": email,
-                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
-                        "LINK": url,
-                        "FIRST_NAME": validated_data["first_name"],
-                        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
-                    },
+                    email_data,
                     academy=academy,
                 )
 
@@ -1209,20 +1217,25 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 callback_url = get_app_url(academy=academy)
                 logger.info(f"DEBUG create_invite - Callback URL: {callback_url}")
                 
-                querystr = urllib.parse.urlencode({"callback": callback_url})
-                url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
                 logger.info(f"DEBUG create_invite - Full invite URL: {url}")
+
+                email_data = {
+                    "email": email,
+                    "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
+                    "LINK": url,
+                    "FIRST_NAME": validated_data["first_name"],
+                    "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+                }
+                
+                # Add welcome video if available
+                if invite.welcome_video:
+                    email_data["WELCOME_VIDEO"] = invite.welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
                     email,
-                    {
-                        "email": email,
-                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
-                        "LINK": url,
-                        "FIRST_NAME": validated_data["first_name"],
-                        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
-                    },
+                    email_data,
                     academy=academy,
                 )
 

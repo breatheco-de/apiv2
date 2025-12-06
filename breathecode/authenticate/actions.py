@@ -61,6 +61,35 @@ def get_app_url(academy=None):
     return url
 
 
+def get_invite_url(invite_token, academy=None, callback_url=None):
+    """
+    Get the invitation URL for email links.
+    
+    If academy is white_labeled and has website_url, returns:
+        {website_url}/accept-invite?inviteToken={token}
+    Otherwise, returns the API URL with callback parameter.
+    
+    Args:
+        invite_token: The invitation token
+        academy: Optional Academy instance
+        callback_url: Optional callback URL for non-white-labeled academies
+    
+    Returns:
+        str: The invitation URL
+    """
+    if academy and academy.white_labeled and academy.website_url:
+        website_url = academy.website_url.rstrip('/')
+        return f"{website_url}/accept-invite?inviteToken={invite_token}"
+    
+    api_url = os.getenv("API_URL", "https://breathecode.herokuapp.com")
+    if callback_url:
+        params = {"callback": callback_url}
+        querystr = urllib.parse.urlencode(params)
+        return f"{api_url}/v1/auth/member/invite/{invite_token}?{querystr}"
+    
+    return f"{api_url}/v1/auth/member/invite/{invite_token}"
+
+
 def get_api_url():
     url = os.getenv("API_URL", "https://breathecode.herokuapp.com/")
     if url and url[-1] == "/":
@@ -150,9 +179,8 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     if extra is None:
         extra = {}
 
-    params = {"callback": "https://admin.4geeks.com"}
-    querystr = urllib.parse.urlencode(params)
-    url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
+    callback_url = get_app_url(academy=academy)
+    url = get_invite_url(token, academy=academy, callback_url=callback_url)
 
     data = {
         "email": email,
@@ -165,6 +193,12 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     # Add tracking URL if invite_id is provided
     if invite_id:
         data["TRACKER_URL"] = f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite_id}"
+    
+    if invite_id:
+        from .models import UserInvite
+        invite = UserInvite.objects.filter(id=invite_id).first()
+        if invite and invite.welcome_video:
+            data["WELCOME_VIDEO"] = invite.welcome_video
 
     notify_actions.send_email_message(
         "welcome_academy",
