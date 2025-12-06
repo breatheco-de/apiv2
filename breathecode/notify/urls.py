@@ -59,6 +59,7 @@ from .views import (
     NotificationTemplateView,
     NotificationsView,
     SlackTeamsView,
+    get_academy_sample_data,
     get_hook_events,
     get_sample_data,
     preview_slack_template,
@@ -100,8 +101,15 @@ urlpatterns = [
     # Academy token endpoints
     path("hook/academy/subscribe", AcademyHooksView.as_view(), name="hook_academy_subscribe"),
     path("hook/academy/subscribe/<int:hook_id>", AcademyHooksView.as_view(), name="hook_academy_subscribe_id"),
+    path("hook/academy/sample", get_academy_sample_data, name="hook_academy_sample"),
+    path("hook/academy/sample/<int:hook_id>", get_academy_sample_data, name="hook_academy_sample_id"),
+    # Sample data endpoints
+    # Legacy endpoints (backward compatibility)
     path("hook/sample", get_sample_data),
     path("hook/<int:hook_id>/sample", get_sample_data),
+    # User-specific endpoints (consistent with /me/ pattern)
+    path("hook/me/sample", get_sample_data, name="hook_me_sample"),
+    path("hook/me/sample/<int:hook_id>", get_sample_data, name="hook_me_sample_id"),
     # User notification endpoints
     path("me/notification", NotificationsView.as_view(), name="me_notification"),
 ]

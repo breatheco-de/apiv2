@@ -120,6 +120,77 @@ def get_sample_data(request, hook_id=None):
 
 
 @api_view(["GET"])
+@capable_of("read_hook")
+def get_academy_sample_data(request, hook_id=None, academy_id=None):
+    lang = getattr(request.user, "lang", "en")
+
+    # Get academy token user
+    academy_token_user = get_academy_token_user(academy_id, lang)
+
+    if hook_id is not None:
+        hook = Hook.objects.filter(user=academy_token_user, id=hook_id).first()
+        if hook is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"No hook found with id {hook_id} for this academy token",
+                    es=f"No se encontró hook con id {hook_id} para este token de academia",
+                    slug="hook-not-found",
+                ),
+                slug="hook-not-found",
+            )
+
+        if hook.sample_data is None:
+            return Response([])
+
+        return Response(hook.sample_data)
+
+    items = Hook.objects.filter(user=academy_token_user)
+    filtered = False
+    event = request.GET.get("event", None)
+    if event is not None:
+        filtered = True
+        event_list = [e.strip() for e in event.split(",")]
+        items = items.filter(event__in=event_list)
+
+    service_id = request.GET.get("service_id", None)
+    if service_id is not None:
+        filtered = True
+        service_id_list = [s.strip() for s in service_id.split(",")]
+        items = items.filter(service_id__in=service_id_list)
+
+    like = request.GET.get("like", None)
+
+    if like is not None:
+        items = items.filter(Q(event__icontains=like) | Q(target__icontains=like))
+
+    if not filtered:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Please specify hook id or filters to get sample data",
+                es="Por favor especifica el id del hook o filtros para obtener datos de ejemplo",
+                slug="missing-filter",
+            ),
+            slug="missing-filter",
+        )
+
+    single = items.first()
+    if single is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="No hook found with these filters for sample data",
+                es="No se encontró hook con estos filtros para datos de ejemplo",
+                slug="hook-not-found",
+            ),
+            slug="hook-not-found",
+        )
+
+    return Response(single.sample_data)
+
+
+@api_view(["GET"])
 def get_hook_events(request):
     """
     Get all available webhook events with descriptions and metadata.
