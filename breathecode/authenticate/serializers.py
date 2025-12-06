@@ -18,7 +18,7 @@ from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
-from breathecode.authenticate.actions import get_app_url, get_user_settings, sync_with_rigobot
+from breathecode.authenticate.actions import get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
@@ -311,6 +311,7 @@ class UserInviteShortSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     email = serpy.Field()
+    phone = serpy.Field()
     sent_at = serpy.Field()
     opened_at = serpy.Field()
     clicked_at = serpy.Field()
@@ -332,7 +333,9 @@ class UserInviteSerializer(UserInviteNoUrlSerializer):
     def get_invite_url(self, _invite):
         if _invite.token is None:
             return None
-        return os.getenv("API_URL") + "/v1/auth/member/invite/" + str(_invite.token)
+        academy = getattr(_invite, "academy", None)
+        callback_url = get_app_url(academy=academy) if academy else None
+        return get_invite_url(_invite.token, academy=academy, callback_url=callback_url)
 
 
 class AcademySerializer(serpy.Serializer):
@@ -903,6 +906,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     email=email,
                     first_name=validated_data["first_name"],
                     last_name=validated_data["last_name"],
+                    phone=validated_data.get("phone", ""),
                     academy=academy,
                     cohort=single_cohort,
                     role=role,
@@ -913,20 +917,25 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
                 logger.debug("Sending invite email to " + email)
 
-                params = {"callback": "https://admin.4geeks.com"}
-                querystr = urllib.parse.urlencode(params)
-                url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                callback_url = get_app_url(academy=academy)
+                url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
+
+                email_data = {
+                    "email": email,
+                    "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
+                    "LINK": url,
+                    "FIRST_NAME": validated_data["first_name"],
+                    "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+                }
+                
+                # Add welcome video if available
+                if invite.welcome_video:
+                    email_data["WELCOME_VIDEO"] = invite.welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
                     email,
-                    {
-                        "email": email,
-                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
-                        "LINK": url,
-                        "FIRST_NAME": validated_data["first_name"],
-                        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
-                    },
+                    email_data,
                     academy=academy,
                 )
 
@@ -960,6 +969,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     plans = serializers.ListField(
         child=serializers.IntegerField(write_only=True, required=False), write_only=True, required=False
     )
+    payment_method = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
 
@@ -978,6 +988,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "cohort",
             "status",
             "plans",
+            "payment_method",
             "id",
         )
         list_serializer_class = StudentPOSTListSerializer
@@ -989,6 +1000,29 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             if user:
                 data["user"] = user.id
+
+        # Clean phone number (strip whitespace)
+        if "phone" in data and data["phone"]:
+            data["phone"] = data["phone"].strip()
+
+        # Validate payment_method if provided
+        if "payment_method" in data and data["payment_method"] is not None:
+            from breathecode.payments.models import PaymentMethod
+
+            academy_id = self.context.get("academy_id")
+            payment_method = PaymentMethod.objects.filter(
+                id=data["payment_method"], academy_id=academy_id
+            ).first()
+
+            if payment_method is None:
+                raise ValidationException(
+                    translation(
+                        en=f"Payment method not found or does not belong to this academy",
+                        es=f"Método de pago no encontrado o no pertenece a esta academia",
+                    ),
+                    slug="payment-method-not-found",
+                    code=404,
+                )
 
         if "user" not in data:
             if "invite" not in data or data["invite"] != True:
@@ -1107,6 +1141,15 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     raise ValidationException("Plan not found", slug="plan-not-found")
                 plans.append(plan)
 
+        # Extract payment_method if provided
+        payment_method = None
+        if "payment_method" in validated_data:
+            payment_method_id = validated_data.pop("payment_method")
+            if payment_method_id is not None:
+                from breathecode.payments.models import PaymentMethod
+
+                payment_method = PaymentMethod.objects.filter(id=payment_method_id).first()
+
         if "user" not in validated_data:
             validated_data.pop("invite")  # the front end sends invite=true so we need to remove it
             email = validated_data["email"].lower()
@@ -1155,12 +1198,14 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     email=email,
                     first_name=validated_data["first_name"],
                     last_name=validated_data["last_name"],
+                    phone=validated_data.get("phone", ""),
                     academy=academy,
                     cohort=single_cohort,
                     role=role,
                     author=self.context.get("request").user,
                     token=token,
                     expires_at=now + relativedelta(months=6),
+                    payment_method=payment_method,
                 )
                 invite.save()
 
@@ -1172,20 +1217,25 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 callback_url = get_app_url(academy=academy)
                 logger.info(f"DEBUG create_invite - Callback URL: {callback_url}")
                 
-                querystr = urllib.parse.urlencode({"callback": callback_url})
-                url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
                 logger.info(f"DEBUG create_invite - Full invite URL: {url}")
+
+                email_data = {
+                    "email": email,
+                    "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
+                    "LINK": url,
+                    "FIRST_NAME": validated_data["first_name"],
+                    "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+                }
+                
+                # Add welcome video if available
+                if invite.welcome_video:
+                    email_data["WELCOME_VIDEO"] = invite.welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
                     email,
-                    {
-                        "email": email,
-                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
-                        "LINK": url,
-                        "FIRST_NAME": validated_data["first_name"],
-                        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
-                    },
+                    email_data,
                     academy=academy,
                 )
 

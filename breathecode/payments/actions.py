@@ -25,7 +25,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
-from breathecode.authenticate.actions import get_app_url, get_api_url, get_user_settings
+from breathecode.authenticate.actions import get_app_url, get_invite_url, get_user_settings
 from breathecode.authenticate.models import Role, UserInvite, UserSetting
 from breathecode.marketing.actions import validate_email_local
 from breathecode.media.models import File
@@ -3429,21 +3429,28 @@ def invite_user_to_subscription_team(
     )
     if created or invite.status == "PENDING":
         billing_team_name = subscription_seat.billing_team.name if subscription_seat.billing_team else "team"
-        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+        callback_url = get_app_url(academy=subscription.academy)
+        invite_link = get_invite_url(invite.token, academy=subscription.academy, callback_url=callback_url)
+
+        email_data = {
+            "email": subscription_seat.email,
+            "FIRST_NAME": obj.get("first_name", "") or "",
+            "subject": translation(
+                lang,
+                en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
+                es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
+            ),
+            "LINK": invite_link,
+        }
+        
+        # Add welcome video if available
+        if invite.welcome_video:
+            email_data["WELCOME_VIDEO"] = invite.welcome_video
 
         notify_actions.send_email_message(
             "welcome_academy",
             subscription_seat.email,
-            {
-                "email": subscription_seat.email,
-                "FIRST_NAME": obj.get("first_name", "") or "",
-                "subject": translation(
-                    lang,
-                    en=f"You've been added to {billing_team_name} at {subscription.academy.name}",
-                    es=f"Has sido agregado a {billing_team_name} en {subscription.academy.name}",
-                ),
-                "LINK": invite_link,
-            },
+            email_data,
             academy=subscription.academy,
         )
 
@@ -3561,21 +3568,28 @@ def invite_user_to_plan_financing_team(
     )
 
     if created or invite.status == "PENDING":
-        invite_link = f"{get_api_url()}/v1/auth/member/invite/{invite.token}"
+        callback_url = get_app_url(academy=financing.academy)
+        invite_link = get_invite_url(invite.token, academy=financing.academy, callback_url=callback_url)
+
+        email_data = {
+            "email": plan_financing_seat.email,
+            "FIRST_NAME": obj.get("first_name", "") or "",
+            "subject": translation(
+                lang,
+                en=f"You've been invited to {team.name} at {financing.academy.name}",
+                es=f"Has sido invitado a {team.name} en {financing.academy.name}",
+            ),
+            "LINK": invite_link,
+        }
+        
+        # Add welcome video if available
+        if invite.welcome_video:
+            email_data["WELCOME_VIDEO"] = invite.welcome_video
 
         notify_actions.send_email_message(
             "welcome_academy",
             plan_financing_seat.email,
-            {
-                "email": plan_financing_seat.email,
-                "FIRST_NAME": obj.get("first_name", "") or "",
-                "subject": translation(
-                    lang,
-                    en=f"You've been invited to {team.name} at {financing.academy.name}",
-                    es=f"Has sido invitado a {team.name} en {financing.academy.name}",
-                ),
-                "LINK": invite_link,
-            },
+            email_data,
             academy=financing.academy,
         )
 

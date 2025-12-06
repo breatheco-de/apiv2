@@ -232,6 +232,13 @@ class UserInvite(models.Model):
     email_quality = models.FloatField(default=None, blank=True, null=True)
     email_status = models.JSONField(default=None, blank=True, null=True)
 
+    welcome_video = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}"
+    )
+
     # link to team membership (optional)
     subscription_seat = models.ForeignKey(
         "payments.SubscriptionSeat",
@@ -249,6 +256,15 @@ class UserInvite(models.Model):
         default=None,
         blank=True,
         help_text="Related plan financing seat for team invitations",
+        db_index=True,
+    )
+    payment_method = models.ForeignKey(
+        "payments.PaymentMethod",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Payment method to use when creating the invoice",
         db_index=True,
     )
 
