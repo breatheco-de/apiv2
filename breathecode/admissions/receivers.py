@@ -276,6 +276,26 @@ def create_owner_profile_academy(sender: Type[Academy], instance: Academy, creat
             logger.info(f"ProfileAcademy already exists for {instance.owner.email} at {instance.slug}")
 
 
+@receiver(academy_saved, sender=Academy)
+def create_academy_token(sender: Type[Academy], instance: Academy, created: bool, **kwargs: Any):
+    """
+    When a new academy is created, automatically generate an academy token.
+    
+    This ensures that the academy has a token available for webhook subscriptions
+    and other API integrations that require academy-level authentication.
+    """
+    if created:
+        from breathecode.authenticate.actions import generate_academy_token
+        
+        try:
+            logger.info(f"Generating academy token for new academy: {instance.slug} (id: {instance.id})")
+            token = generate_academy_token(instance.id, force=False)
+            logger.info(f"Successfully generated academy token for academy {instance.slug} (token_id: {token.id})")
+        except Exception as e:
+            # Log error but don't fail academy creation if token generation fails
+            logger.error(f"Error generating academy token for academy {instance.slug}: {e}", exc_info=True)
+
+
 @receiver(post_migrate)
 def normalize_academy_features_on_migrate(sender, **kwargs):
     """
