@@ -50,6 +50,7 @@ Examples:
 from django.urls import path
 
 from .views import (
+    AcademyHookErrorsView,
     AcademyHooksView,
     AcademyNotifySettingsView,
     AcademyNotifyVariablesView,
@@ -103,6 +104,7 @@ urlpatterns = [
     path("hook/academy/subscribe/<int:hook_id>", AcademyHooksView.as_view(), name="hook_academy_subscribe_id"),
     path("hook/academy/sample", get_academy_sample_data, name="hook_academy_sample"),
     path("hook/academy/sample/<int:hook_id>", get_academy_sample_data, name="hook_academy_sample_id"),
+    path("hook/academy/error", AcademyHookErrorsView.as_view(), name="hook_academy_error"),
     # Sample data endpoints
     # Legacy endpoints (backward compatibility)
     path("hook/sample", get_sample_data),

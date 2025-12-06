@@ -17,8 +17,14 @@ from breathecode.utils import APIViewExtensions, GenerateLookupsMixin
 from breathecode.utils.decorators import capable_of
 
 from .actions import get_template_content
-from .models import AcademyNotifySettings, Hook, Notification, SlackTeam
-from .serializers import AcademyNotifySettingsSerializer, HookSerializer, NotificationSerializer, SlackTeamSerializer
+from .models import AcademyNotifySettings, Hook, HookError, Notification, SlackTeam
+from .serializers import (
+    AcademyNotifySettingsSerializer,
+    HookErrorSerializer,
+    HookSerializer,
+    NotificationSerializer,
+    SlackTeamSerializer,
+)
 from .tasks import async_slack_action, async_slack_command
 from .utils.email_manager import EmailManager
 
@@ -947,3 +953,43 @@ class AcademyHooksView(APIView, GenerateLookupsMixin):
             item.delete()
 
         return Response({"details": f"Unsubscribed from {total} hooks"}, status=status.HTTP_200_OK)
+
+
+class AcademyHookErrorsView(APIView, GenerateLookupsMixin):
+    """
+    Get webhook errors for academy token users.
+    This endpoint filters HookError records to only show errors related to hooks
+    where hooks.user is the academy token user.
+    """
+
+    extensions = APIViewExtensions(sort="-created_at", paginate=True)
+
+    @capable_of("read_hook")
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
+        lang = getattr(request.user, "lang", "en")
+
+        # Get academy token user
+        academy_token_user = get_academy_token_user(academy_id, lang)
+
+        # Get all hooks for this academy token user
+        academy_hooks = Hook.objects.filter(user=academy_token_user)
+
+        # Filter HookError records that are associated with academy hooks
+        items = HookError.objects.filter(hooks__in=academy_hooks).distinct()
+
+        # Filter by event if provided (supports comma-separated values)
+        event = request.GET.get("event", None)
+        if event is not None:
+            event_list = [e.strip() for e in event.split(",")]
+            items = items.filter(event__in=event_list)
+
+        # Filter by search term if provided
+        like = request.GET.get("like", None)
+        if like is not None:
+            items = items.filter(Q(message__icontains=like) | Q(event__icontains=like))
+
+        items = handler.queryset(items)
+        serializer = HookErrorSerializer(items, many=True)
+
+        return handler.response(serializer.data)
