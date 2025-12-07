@@ -5,6 +5,7 @@ import os
 import urllib.parse
 
 from asgiref.sync import async_to_sync
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
 from django.contrib.admin.models import LogEntry
@@ -15,6 +16,7 @@ from django.utils.html import format_html
 
 import breathecode.marketing.actions as marketing_actions
 from breathecode.utils.admin import change_field
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 from breathecode.utils.datetime_integer import from_now
 
 from . import tasks
@@ -140,8 +142,18 @@ def validate_email(modeladmin, request, queryset: QuerySet[UserInvite]):
         x.save()
 
 
+class UserInviteForm(forms.ModelForm):
+    class Meta:
+        model = UserInvite
+        fields = "__all__"
+        widgets = {
+            "welcome_video": PrettyJSONWidget(),
+        }
+
+
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
+    form = UserInviteForm
     search_fields = ["email", "first_name", "last_name", "user__email"]
     raw_id_fields = ["user", "author", "cohort", "course", "subscription_seat", "payment_method"]
     list_filter = ["academy", "status", "is_email_validated", "process_status", "role", "country", "payment_method"]
@@ -158,6 +170,7 @@ class UserInviteAdmin(admin.ModelAdmin):
         "country",
         "subscription_seat",
         "payment_method",
+        "welcome_video",
     )
     actions = [accept_selected_users_from_waiting_list, accept_all_users_from_waiting_list, validate_email]
 

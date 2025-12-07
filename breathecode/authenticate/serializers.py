@@ -322,6 +322,7 @@ class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
+    welcome_video = serpy.Field(required=False)
     academy = AcademyTinySerializer(required=False)
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
