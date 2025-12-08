@@ -141,6 +141,7 @@ class HookManagerClass(object):
         logger.debug(filters)
         hook_model_cls = self.get_hook_model()
         hooks = hook_model_cls.objects.filter(**filters)
+        logger.debug(f"Found {hooks.count()} hooks for {event_name} and model class {hook_model_cls.__name__}")
         for hook in hooks:
             self.deliver_hook(hook, instance, payload_override=payload_override, academy_override=academy_override)
 
