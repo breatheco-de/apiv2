@@ -39,6 +39,37 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def convert_youtube_to_embed(url):
+    """
+    Convert YouTube watch URL to embed format.
+    
+    Args:
+        url: YouTube URL (watch, embed, or short format)
+    
+    Returns:
+        str: YouTube embed URL
+    """
+    if not url:
+        return url
+    
+    if "/embed/" in url:
+        return url
+    
+    patterns = [
+        r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)",
+        r"youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]+)",
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            video_id = match.group(1)
+            video_id = video_id.split("&")[0].split("?")[0]
+            return f"https://www.youtube.com/embed/{video_id}"
+    
+    return url
+
+
 def get_app_url(academy=None):
     """
     Get the app URL for redirects.
@@ -198,7 +229,10 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
         from .models import UserInvite
         invite = UserInvite.objects.filter(id=invite_id).first()
         if invite and invite.welcome_video:
-            data["WELCOME_VIDEO"] = invite.welcome_video
+            welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+            if isinstance(welcome_video, dict) and "url" in welcome_video:
+                welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
+            data["WELCOME_VIDEO"] = welcome_video
 
     notify_actions.send_email_message(
         "welcome_academy",

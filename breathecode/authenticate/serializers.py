@@ -18,7 +18,7 @@ from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
-from breathecode.authenticate.actions import get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
+from breathecode.authenticate.actions import convert_youtube_to_embed, get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
@@ -933,7 +933,10 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 
                 # Add welcome video if available
                 if invite.welcome_video:
-                    email_data["WELCOME_VIDEO"] = invite.welcome_video
+                    welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+                    if isinstance(welcome_video, dict) and "url" in welcome_video:
+                        welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
+                    email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
@@ -1242,7 +1245,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 
                 # Add welcome video if available
                 if invite.welcome_video:
-                    email_data["WELCOME_VIDEO"] = invite.welcome_video
+                    welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+                    if isinstance(welcome_video, dict) and "url" in welcome_video:
+                        welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
+                    email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
