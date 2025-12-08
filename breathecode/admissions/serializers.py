@@ -826,6 +826,7 @@ class AcademySerializer(serializers.ModelSerializer):
             "main_currency",
             "welcome_video",
             "white_label_params",
+            "available_as_saas",
         ]
         extra_kwargs = {
             "name": {"required": False},
@@ -837,6 +838,7 @@ class AcademySerializer(serializers.ModelSerializer):
             "slug": {"read_only": True},  # Prevent slug from being updated
             "welcome_video": {"required": False},
             "white_label_params": {"required": False},
+            "available_as_saas": {"required": False},
         }
 
     def validate_logo_url(self, value):
