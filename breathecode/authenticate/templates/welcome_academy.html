@@ -29,6 +29,19 @@
 		</td>
 	</tr>
 
+	<!-- WELCOME VIDEO -->
+	{% if WELCOME_VIDEO and WELCOME_VIDEO.url and WELCOME_VIDEO.preview_image %}
+	<tr>
+		<td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+			padding-top: 25px;
+			padding-bottom: 5px;" class="video">
+			<a href="{{ WELCOME_VIDEO.url }}" target="_blank" style="text-decoration: none; display: block;">
+				<img src="{{ WELCOME_VIDEO.preview_image }}" alt="Welcome Video" style="width: 100%; max-width: 560px; height: auto; display: block; border: 0;" />
+			</a>
+		</td>
+	</tr>
+	{% endif %}
+
 	<!-- BUTTON -->
 	<!-- Set button background color at TD, link/text color at A and TD, font family ("sans-serif" or "Georgia, serif") at TD. For verification codes add "letter-spacing: 5px;". Link format:  -->
 	<tr>
