@@ -12,7 +12,8 @@
       </div>
       <div class="modal-body" style="padding: 0;">
         <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
-          {% if WELCOME_VIDEO.url|slice:":4" == "http" and (".mp4" in WELCOME_VIDEO.url|lower or ".webm" in WELCOME_VIDEO.url|lower or ".ogg" in WELCOME_VIDEO.url|lower or ".mov" in WELCOME_VIDEO.url|lower or "data:video" in WELCOME_VIDEO.url|lower) %}
+          {% with video_url_lower=WELCOME_VIDEO.url|lower %}
+          {% if video_url_lower|slice:":10" == "data:video" or video_url_lower|slice:"-4:" == ".mp4" or video_url_lower|slice:"-5:" == ".webm" or video_url_lower|slice:"-4:" == ".ogg" or video_url_lower|slice:"-4:" == ".mov" or video_url_lower|slice:"-4:" == ".m4v" or video_url_lower|slice:"-4:" == ".avi" %}
           <!-- Direct video file URL - use video tag -->
           <video 
             src="{{ WELCOME_VIDEO.url }}" 
@@ -30,6 +31,7 @@
             allowfullscreen>
           </iframe>
           {% endif %}
+          {% endwith %}
         </div>
       </div>
     </div>

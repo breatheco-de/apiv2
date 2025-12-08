@@ -18,39 +18,6 @@
 		</td>
 	</tr>
 
-	<!-- VIDEO -->
-	{% if WELCOME_VIDEO and WELCOME_VIDEO.url and WELCOME_VIDEO.preview_image %}
-	<tr>
-		<td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
-			padding-top: 25px;
-			padding-bottom: 5px;" class="video">
-			<a href="{{ WELCOME_VIDEO.url }}" target="_blank" style="text-decoration: none; display: block;">
-				<table border="0" cellpadding="0" cellspacing="0" align="center" style="max-width: 560px; width: 100%; border-collapse: collapse; border-spacing: 0; padding: 0; border: 1px solid #000000;">
-					<tr>
-						<td align="center" valign="middle" style="padding: 0; margin: 0; border-collapse: collapse; border-spacing: 0;">
-							<!-- Single cell with image and centered play button -->
-							<table border="0" cellpadding="0" cellspacing="0" width="560" height="315" style="border-collapse: collapse; background-image: url('{{ WELCOME_VIDEO.preview_image }}'); background-size: cover; background-position: center; background-repeat: no-repeat;">
-								<tr>
-									<td align="center" valign="middle" height="315" style="padding: 0; border-collapse: collapse;">
-										<!-- Play Button -->
-										<table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-											<tr>
-												<td align="center" valign="middle" bgcolor="#E9703E" style="width: 80px; height: 80px; padding: 0; border-collapse: collapse;">
-													<span style="color: #FFFFFF; font-size: 32px; line-height: 80px; margin-left: 6px;">▶</span>
-												</td>
-											</tr>
-										</table>
-									</td>
-								</tr>
-							</table>
-						</td>
-					</tr>
-				</table>
-			</a>
-		</td>
-	</tr>
-	{% endif %}
-
 	<!-- PARAGRAPH -->
 	<!-- Set text color and font family ("sans-serif" or "Georgia, serif"). Duplicate all text styles in links, including line-height -->
 	<tr>
