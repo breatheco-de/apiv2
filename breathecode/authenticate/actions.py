@@ -1,5 +1,6 @@
 import base64
 import datetime
+import hashlib
 import io
 import logging
 import os
@@ -46,13 +47,14 @@ def add_play_button_to_image(preview_image):
     """
     Add a play button icon overlay to an image for email display.
     Supports both base64 data URLs and regular image URLs.
-    Always returns base64 data URL for email compatibility.
+    Uploads the processed image to Google Cloud Storage and returns a public HTTP URL
+    for better email client compatibility (many email clients block data URLs).
     
     Args:
         preview_image: Image URL or base64 data URL (e.g., "data:image/png;base64,...")
     
     Returns:
-        str: Base64 data URL with play button overlay (e.g., "data:image/png;base64,...")
+        str: Public HTTP URL to the image with play button overlay
     """
     if not preview_image:
         logger.debug("PLAY_BUTTON_IMAGE_DEBUG: preview_image is empty, returning as is")
@@ -181,55 +183,53 @@ def add_play_button_to_image(preview_image):
         img_with_overlay.save(output, format=format_type, quality=45, optimize=True)
         output.seek(0)
         
-        # Convert to base64
+        # Get image bytes
         img_bytes = output.read()
-        img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-        
-        # CRITICAL: MIME type MUST match the actual format saved (JPEG)
-        # Don't use original_mime_type if we converted to JPEG
-        mime_type = "image/jpeg"  # Always JPEG since we always save as JPEG
-        
-        result = f"data:{mime_type};base64,{img_base64}"
-        
-        # Log size information
-        result_size_mb = len(result) / (1024 * 1024)
         img_size_mb = len(img_bytes) / (1024 * 1024)
-        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Successfully added play button. Format: {format_type}, MIME: {mime_type}, Original: {len(preview_image)} chars, Result: {len(result)} chars ({result_size_mb:.2f} MB), Image size: {len(img_bytes)} bytes ({img_size_mb:.2f} MB)")
         
-        # Check if size is too large for Gmail (warns if >1.5MB)
-        if result_size_mb > 1.5:
-            logger.warning(f"PLAY_BUTTON_IMAGE_DEBUG: WARNING - Data URL size ({result_size_mb:.2f} MB) may be too large for Gmail (>1.5MB)")
-        
-        # Log first and last 200 chars to detect corruption
-        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (first 200 chars): {result[:200]}...")
-        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (last 200 chars): ...{result[-200:]}")
-        
-        # Verify format
-        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL format check - Starts with 'data:image/': {result.startswith('data:image/')}, Contains ';base64,': {';base64,' in result}, MIME matches format: {mime_type == 'image/jpeg' and format_type == 'JPEG'}")
-        
-        # Verify base64 is valid and check for corruption
+        # Upload to Google Cloud Storage instead of using data URL
+        # Many email clients (especially Gmail) block data URLs for security
         try:
-            import base64 as b64_check
-            # Extract base64 part
-            if ';base64,' in result:
-                b64_part = result.split(';base64,', 1)[1]
-                # Check for common corruption issues
-                has_newlines = '\n' in b64_part or '\r' in b64_part
-                has_spaces = ' ' in b64_part
-                has_escaped = '&quot;' in b64_part or '&#43;' in b64_part or '&amp;' in b64_part
-                
-                if has_newlines or has_spaces or has_escaped:
-                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 corruption detected! Newlines: {has_newlines}, Spaces: {has_spaces}, Escaped chars: {has_escaped}")
-                else:
-                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 format check passed - No corruption detected")
-                
-                # Try to decode to verify it's valid base64
-                b64_check.b64decode(b64_part[:100])  # Just check first 100 chars
-                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 validation passed (checked first 100 chars)")
+            from breathecode.services.google_cloud import Storage
+            from breathecode.media.views import media_gallery_bucket
+            
+            # Generate unique filename based on image hash
+            img_hash = hashlib.sha256(img_bytes).hexdigest()
+            filename = f"welcome-video-thumbnails/{img_hash}.jpg"
+            
+            storage = Storage()
+            bucket_name = media_gallery_bucket()
+            if not bucket_name:
+                logger.warning(f"PLAY_BUTTON_IMAGE_DEBUG: MEDIA_GALLERY_BUCKET not configured, falling back to data URL")
+                # Fallback to data URL if bucket not configured
+                img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+                result = f"data:image/jpeg;base64,{img_base64}"
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Using data URL fallback (size: {img_size_mb:.2f} MB)")
+                return result
+            
+            cloud_file = storage.file(bucket_name, filename)
+            
+            # Check if file already exists
+            if cloud_file.exists():
+                result_url = cloud_file.url()
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Image already exists in GCS, using existing URL: {result_url}")
+            else:
+                # Upload the image
+                cloud_file.upload(img_bytes, content_type="image/jpeg", public=True)
+                result_url = cloud_file.url()
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Successfully uploaded image to GCS. URL: {result_url}, Size: {img_size_mb:.2f} MB")
+            
+            return result_url
+            
         except Exception as e:
-            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 validation failed: {str(e)}")
-        
-        return result
+            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Failed to upload image to GCS: {str(e)}. Falling back to data URL.")
+            import traceback
+            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Traceback: {traceback.format_exc()}")
+            # Fallback to data URL if upload fails
+            img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+            result = f"data:image/jpeg;base64,{img_base64}"
+            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Using data URL fallback (size: {img_size_mb:.2f} MB)")
+            return result
     
     except ImportError as e:
         logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: PIL/Pillow not available: {str(e)}. Cannot add play button.")
