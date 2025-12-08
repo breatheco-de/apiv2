@@ -2652,8 +2652,7 @@ def render_invite(request, token, member_id=None):
 
     if request.method == "GET":
         if invite and invite.academy and invite.academy.white_labeled and invite.academy.website_url:
-            api_url = os.getenv("API_URL", "https://breathecode.herokuapp.com").rstrip('/')
-            redirect_url = f"{invite.academy.website_url.rstrip('/')}/accept-invite?inviteToken={token}&host={api_url}"
+            redirect_url = f"{invite.academy.website_url.rstrip('/')}/accept-invite?inviteToken={token}"
             return HttpResponseRedirect(redirect_to=redirect_url)
 
         form = InviteForm(
@@ -2722,7 +2721,10 @@ def render_invite(request, token, member_id=None):
                     obj["heading"] = invite.academy.name
             
             if invite and invite.welcome_video:
-                obj["WELCOME_VIDEO"] = invite.welcome_video
+                welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+                if isinstance(welcome_video, dict) and "url" in welcome_video:
+                    welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
+                obj["WELCOME_VIDEO"] = welcome_video
 
             return shortcuts.render(
                 request,

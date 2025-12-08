@@ -12,12 +12,24 @@
       </div>
       <div class="modal-body" style="padding: 0;">
         <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+          {% if WELCOME_VIDEO.url|slice:":4" == "http" and (".mp4" in WELCOME_VIDEO.url|lower or ".webm" in WELCOME_VIDEO.url|lower or ".ogg" in WELCOME_VIDEO.url|lower or ".mov" in WELCOME_VIDEO.url|lower or "data:video" in WELCOME_VIDEO.url|lower) %}
+          <!-- Direct video file URL - use video tag -->
+          <video 
+            src="{{ WELCOME_VIDEO.url }}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+            controls
+            autoplay>
+            Your browser does not support the video tag.
+          </video>
+          {% else %}
+          <!-- Embed URL (YouTube, Vimeo, etc.) - use iframe -->
           <iframe 
             src="{{ WELCOME_VIDEO.url }}" 
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
             allowfullscreen>
           </iframe>
+          {% endif %}
         </div>
       </div>
     </div>
