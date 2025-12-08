@@ -50,6 +50,22 @@ def default_academy_features():
     }
 
 
+def default_welcome_video():
+    """Default value for `Academy.welcome_video` field."""
+    return {
+        "url": "",
+        "preview_image": ""
+    }
+
+
+def default_white_label_params():
+    """Default value for `Academy.white_label_params` field."""
+    return {
+        "es": "",
+        "en": ""
+    }
+
+
 User.add_to_class("__str__", get_user_label)
 
 __all__ = ["UserAdmissions", "Country", "City", "Academy", "Syllabus", "Cohort", "CohortUser", "CohortTimeSlot"]
@@ -136,6 +152,18 @@ class Academy(models.Model):
         blank=True,
         verbose_name="Academy Features",
         help_text="JSON field to store feature flag configurations for all academies. Allows enabling/disabling features and customizing navigation. Example: hide dashboard widgets, include custom links, etc.",
+    )
+    welcome_video = models.JSONField(
+        default=default_welcome_video,
+        blank=True,
+        null=True,
+        help_text="Video de bienvenida con preview_image y url. Formato: {'url': 'url', 'preview_image': 'url'}. Si no se especifica en el payload de la invitación, se usará este valor por defecto.",
+    )
+    white_label_params = models.JSONField(
+        default=default_white_label_params,
+        blank=True,
+        null=True,
+        help_text="This is a json with translations {es: '', en: ''} that will include a markdown that can be rendered on the right side of the login when an academy is whitelabel.",
     )
 
     active_campaign_slug = models.SlugField(

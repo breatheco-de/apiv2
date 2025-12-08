@@ -2675,10 +2675,20 @@ def render_invite(request, token, member_id=None):
             if "heading" not in obj:
                 obj["heading"] = invite.academy.name
         
-        if invite and invite.welcome_video:
-            welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
-            if isinstance(welcome_video, dict) and "url" in welcome_video:
-                welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
+        welcome_video = None
+        if invite and invite.welcome_video and isinstance(invite.welcome_video, dict):
+            url = invite.welcome_video.get("url", "")
+            preview_image = invite.welcome_video.get("preview_image", "")
+            if url and preview_image:
+                welcome_video = invite.welcome_video.copy()
+        elif invite and invite.academy and invite.academy.welcome_video and isinstance(invite.academy.welcome_video, dict):
+            url = invite.academy.welcome_video.get("url", "")
+            preview_image = invite.academy.welcome_video.get("preview_image", "")
+            if url and preview_image:
+                welcome_video = invite.academy.welcome_video.copy()
+        
+        if welcome_video and isinstance(welcome_video, dict) and "url" in welcome_video:
+            welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
             obj["WELCOME_VIDEO"] = welcome_video
 
         return shortcuts.render(
@@ -2720,10 +2730,20 @@ def render_invite(request, token, member_id=None):
                 if "heading" not in obj:
                     obj["heading"] = invite.academy.name
             
-            if invite and invite.welcome_video:
-                welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
-                if isinstance(welcome_video, dict) and "url" in welcome_video:
-                    welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
+            welcome_video = None
+            if invite and invite.welcome_video and isinstance(invite.welcome_video, dict):
+                url = invite.welcome_video.get("url", "")
+                preview_image = invite.welcome_video.get("preview_image", "")
+                if url and preview_image:
+                    welcome_video = invite.welcome_video.copy()
+            elif invite and invite.academy and invite.academy.welcome_video and isinstance(invite.academy.welcome_video, dict):
+                url = invite.academy.welcome_video.get("url", "")
+                preview_image = invite.academy.welcome_video.get("preview_image", "")
+                if url and preview_image:
+                    welcome_video = invite.academy.welcome_video.copy()
+            
+            if welcome_video and isinstance(welcome_video, dict) and "url" in welcome_video:
+                welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
                 obj["WELCOME_VIDEO"] = welcome_video
 
             return shortcuts.render(
