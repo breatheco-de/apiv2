@@ -322,6 +322,7 @@ class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
+    welcome_video = serpy.Field(required=False)
     academy = AcademyTinySerializer(required=False)
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
@@ -658,10 +659,11 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
     )
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
+    welcome_video = serializers.JSONField(write_only=True, required=False)
 
     class Meta:
         model = ProfileAcademy
-        fields = ("email", "role", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status")
+        fields = ("email", "role", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status", "welcome_video")
 
     def validate(self, data):
         lang = data.get("lang", "en")
@@ -912,6 +914,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     role=role,
                     author=self.context.get("request").user,
                     token=token,
+                    welcome_video=validated_data.get("welcome_video"),
                 )
                 invite.save()
 
@@ -939,6 +942,10 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     academy=academy,
                 )
 
+        # Remove welcome_video from validated_data as it's not a ProfileAcademy field
+        if "welcome_video" in validated_data:
+            del validated_data["welcome_video"]
+        
         # add member to the academy (the cohort is inside validated_data
         return super().create(
             {
@@ -990,6 +997,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "plans",
             "payment_method",
             "id",
+            "welcome_video",
         )
         list_serializer_class = StudentPOSTListSerializer
 
@@ -1184,6 +1192,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 },
             )
 
+            invites_created = []
             for single_cohort in cohort:
                 # prevent duplicate token (very low probability)
                 while True:
@@ -1206,8 +1215,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     token=token,
                     expires_at=now + relativedelta(months=6),
                     payment_method=payment_method,
+                    welcome_video=validated_data.get("welcome_video"),
                 )
                 invite.save()
+                invites_created.append(invite)
 
                 logger.debug("Sending invite email to " + email)
 
@@ -1240,10 +1251,14 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 )
 
             for plan in plans:
-                plan.invites.add(invite)
+                for invite in invites_created:
+                    plan.invites.add(invite)
 
             if "plans" in validated_data:
                 del validated_data["plans"]
+            
+            if "welcome_video" in validated_data:
+                del validated_data["welcome_video"]
 
             return ProfileAcademy.objects.create(
                 **{
