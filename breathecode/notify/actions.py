@@ -68,6 +68,13 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
             logger.debug(f"Template '{template_slug}' not found in notification registry (still sending)")
 
     if os.getenv("EMAIL_NOTIFICATIONS_ENABLED", False) == "TRUE" or force:
+        # Log WELCOME_VIDEO data if present for debugging
+        if "WELCOME_VIDEO" in data and data["WELCOME_VIDEO"]:
+            welcome_video = data["WELCOME_VIDEO"]
+            if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
+                preview_img = welcome_video["preview_image"]
+                logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - WELCOME_VIDEO.preview_image length: {len(preview_img) if preview_img else 0}, Is data URL: {preview_img.startswith('data:image/') if preview_img else False}, First 100 chars: {preview_img[:100] if preview_img else 'N/A'}")
+        
         template = get_template_content(template_slug, data, ["email"], inline_css=inline_css, academy=academy)
 
         sender_name = os.environ.get("COMPANY_NAME", "4Geeks")
