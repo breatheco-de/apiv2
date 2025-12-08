@@ -663,7 +663,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProfileAcademy
-        fields = ("email", "role", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status")
+        fields = ("email", "role", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status", "welcome_video")
 
     def validate(self, data):
         lang = data.get("lang", "en")
@@ -998,6 +998,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "plans",
             "payment_method",
             "id",
+            "welcome_video",
         )
         list_serializer_class = StudentPOSTListSerializer
 
