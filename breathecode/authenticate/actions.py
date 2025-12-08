@@ -55,11 +55,11 @@ def add_play_button_to_image(preview_image):
         str: Base64 data URL with play button overlay (e.g., "data:image/png;base64,...")
     """
     if not preview_image:
-        logger.debug("add_play_button_to_image: preview_image is empty, returning as is")
+        logger.debug("PLAY_BUTTON_IMAGE_DEBUG: preview_image is empty, returning as is")
         return preview_image
     
     is_url = not preview_image.startswith("data:image/")
-    logger.debug(f"add_play_button_to_image: Processing image (type: {'URL' if is_url else 'base64'})")
+    logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Processing image (type: {'URL' if is_url else 'base64'})")
     
     # If it's a URL, download it first and convert to base64
     image_bytes = None
@@ -79,7 +79,7 @@ def add_play_button_to_image(preview_image):
             elif preview_image.lower().endswith(".png"):
                 original_mime_type = "image/png"
         except Exception as e:
-            logger.error(f"add_play_button_to_image: Failed to download image from URL: {str(e)}")
+            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Failed to download image from URL: {str(e)}")
             return preview_image  # Return original if download fails
     
     try:
@@ -105,8 +105,9 @@ def add_play_button_to_image(preview_image):
         if image.mode != "RGBA":
             image = image.convert("RGBA")
         
-        # Resize image if too large (for email compatibility, max 800px width)
-        max_width = 800
+        # Resize image if too large (for email compatibility, max 400px width to reduce base64 size)
+        # Many email clients have issues with large base64 images
+        max_width = 400
         width, height = image.size
         if width > max_width:
             ratio = max_width / width
@@ -119,6 +120,7 @@ def add_play_button_to_image(preview_image):
                 resample = Image.LANCZOS
             image = image.resize((max_width, new_height), resample)
             width, height = image.size
+            logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Resized image to {width}x{height} for email compatibility")
         
         # Create a copy to avoid modifying the original
         img_with_overlay = image.copy()
@@ -179,8 +181,9 @@ def add_play_button_to_image(preview_image):
             img_with_overlay.save(output, format=format_type)
         else:
             # Default to JPEG for better email compatibility and smaller file size
+            # Use lower quality (75) to reduce base64 size for email clients
             format_type = "JPEG"
-            img_with_overlay.save(output, format=format_type, quality=85, optimize=True)
+            img_with_overlay.save(output, format=format_type, quality=75, optimize=True)
         output.seek(0)
         
         # Convert to base64
@@ -189,11 +192,12 @@ def add_play_button_to_image(preview_image):
         mime_type = original_mime_type  # Use original mime type (jpg or png)
         
         result = f"data:{mime_type};base64,{img_base64}"
-        logger.info(f"add_play_button_to_image: Successfully added play button. Format: {format_type}, Original: {len(preview_image)} chars, Result: {len(result)} chars")
+        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Successfully added play button. Format: {format_type}, MIME: {mime_type}, Original: {len(preview_image)} chars, Result: {len(result)} chars, Image size: {len(img_bytes)} bytes")
+        logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (first 100 chars): {result[:100]}...")
         return result
     
     except ImportError as e:
-        logger.error(f"PIL/Pillow not available: {str(e)}. Cannot add play button.")
+        logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: PIL/Pillow not available: {str(e)}. Cannot add play button.")
         # Always convert URL to base64 for email compatibility
         if is_url:
             # If we already downloaded it, use image_bytes, otherwise download again
@@ -204,7 +208,7 @@ def add_play_button_to_image(preview_image):
                     image_bytes = response.content
                     content_type = response.headers.get("Content-Type", "")
                 except Exception as e2:
-                    logger.error(f"Failed to download image: {str(e2)}")
+                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Failed to download image: {str(e2)}")
                     return preview_image
             else:
                 content_type = response.headers.get("Content-Type", "") if 'response' in locals() else ""
@@ -216,12 +220,12 @@ def add_play_button_to_image(preview_image):
                 mime_type = "image/png"
             else:
                 mime_type = "image/jpeg"
-            logger.info(f"Converted URL to base64 (no play button): {len(img_base64)} chars")
+            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Converted URL to base64 (no play button): {len(img_base64)} chars")
             return f"data:{mime_type};base64,{img_base64}"
         return preview_image
     except Exception as e:
         import traceback
-        logger.error(f"Error adding play button to image: {str(e)}. Traceback: {traceback.format_exc()}")
+        logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Error adding play button to image: {str(e)}. Traceback: {traceback.format_exc()}")
         # Always convert URL to base64 for email compatibility, even if play button failed
         if is_url and image_bytes is not None:
             try:
@@ -233,10 +237,10 @@ def add_play_button_to_image(preview_image):
                     mime_type = "image/png"
                 else:
                     mime_type = "image/jpeg"
-                logger.info(f"Converted URL to base64 as fallback (no play button): {len(img_base64)} chars")
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Converted URL to base64 as fallback (no play button): {len(img_base64)} chars")
                 return f"data:{mime_type};base64,{img_base64}"
             except Exception as e2:
-                logger.error(f"Failed to convert downloaded image to base64: {str(e2)}")
+                logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Failed to convert downloaded image to base64: {str(e2)}")
         elif is_url:
             # Try to download and convert if we haven't already
             try:
@@ -249,7 +253,7 @@ def add_play_button_to_image(preview_image):
                     mime_type = "image/png"
                 else:
                     mime_type = "image/jpeg"
-                logger.info(f"Downloaded and converted URL to base64 as fallback: {len(img_base64)} chars")
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Downloaded and converted URL to base64 as fallback: {len(img_base64)} chars")
                 return f"data:{mime_type};base64,{img_base64}"
             except Exception as e2:
                 logger.error(f"Failed to download and convert URL to base64: {str(e2)}")
