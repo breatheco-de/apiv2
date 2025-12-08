@@ -105,9 +105,9 @@ def add_play_button_to_image(preview_image):
         if image.mode != "RGBA":
             image = image.convert("RGBA")
         
-        # Resize image if too large (for email compatibility, max 400px width to reduce base64 size)
-        # Many email clients have issues with large base64 images
-        max_width = 400
+        # Resize image if too large (for email compatibility, max 300px width to reduce base64 size)
+        # Gmail blocks base64 images >1-2MB, so we need to keep it small
+        max_width = 300
         width, height = image.size
         if width > max_width:
             ratio = max_width / width
@@ -173,27 +173,62 @@ def add_play_button_to_image(preview_image):
         elif img_with_overlay.mode != "RGB":
             img_with_overlay = img_with_overlay.convert("RGB")
         
-        # Save to bytes - use original format for better email compatibility
-        # JPG is better for emails (smaller size, better compatibility)
+        # Save to bytes - ALWAYS use JPEG for email compatibility
+        # Gmail blocks large base64 images, so we need small file size
+        # Quality 45 and max 300px width should keep us under 1.5MB
         output = io.BytesIO()
-        if original_mime_type == "image/png":
-            format_type = "PNG"
-            img_with_overlay.save(output, format=format_type)
-        else:
-            # Default to JPEG for better email compatibility and smaller file size
-            # Use lower quality (75) to reduce base64 size for email clients
-            format_type = "JPEG"
-            img_with_overlay.save(output, format=format_type, quality=75, optimize=True)
+        format_type = "JPEG"  # Always JPEG for email compatibility
+        img_with_overlay.save(output, format=format_type, quality=45, optimize=True)
         output.seek(0)
         
         # Convert to base64
         img_bytes = output.read()
         img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-        mime_type = original_mime_type  # Use original mime type (jpg or png)
+        
+        # CRITICAL: MIME type MUST match the actual format saved (JPEG)
+        # Don't use original_mime_type if we converted to JPEG
+        mime_type = "image/jpeg"  # Always JPEG since we always save as JPEG
         
         result = f"data:{mime_type};base64,{img_base64}"
-        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Successfully added play button. Format: {format_type}, MIME: {mime_type}, Original: {len(preview_image)} chars, Result: {len(result)} chars, Image size: {len(img_bytes)} bytes")
-        logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (first 100 chars): {result[:100]}...")
+        
+        # Log size information
+        result_size_mb = len(result) / (1024 * 1024)
+        img_size_mb = len(img_bytes) / (1024 * 1024)
+        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Successfully added play button. Format: {format_type}, MIME: {mime_type}, Original: {len(preview_image)} chars, Result: {len(result)} chars ({result_size_mb:.2f} MB), Image size: {len(img_bytes)} bytes ({img_size_mb:.2f} MB)")
+        
+        # Check if size is too large for Gmail (warns if >1.5MB)
+        if result_size_mb > 1.5:
+            logger.warning(f"PLAY_BUTTON_IMAGE_DEBUG: WARNING - Data URL size ({result_size_mb:.2f} MB) may be too large for Gmail (>1.5MB)")
+        
+        # Log first and last 200 chars to detect corruption
+        logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (first 200 chars): {result[:200]}...")
+        logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (last 200 chars): ...{result[-200:]}")
+        
+        # Verify format
+        logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL format check - Starts with 'data:image/': {result.startswith('data:image/')}, Contains ';base64,': {';base64,' in result}, MIME matches format: {mime_type == 'image/jpeg' and format_type == 'JPEG'}")
+        
+        # Verify base64 is valid and check for corruption
+        try:
+            import base64 as b64_check
+            # Extract base64 part
+            if ';base64,' in result:
+                b64_part = result.split(';base64,', 1)[1]
+                # Check for common corruption issues
+                has_newlines = '\n' in b64_part or '\r' in b64_part
+                has_spaces = ' ' in b64_part
+                has_escaped = '&quot;' in b64_part or '&#43;' in b64_part or '&amp;' in b64_part
+                
+                if has_newlines or has_spaces or has_escaped:
+                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 corruption detected! Newlines: {has_newlines}, Spaces: {has_spaces}, Escaped chars: {has_escaped}")
+                else:
+                    logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 format check passed - No corruption detected")
+                
+                # Try to decode to verify it's valid base64
+                b64_check.b64decode(b64_part[:100])  # Just check first 100 chars
+                logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 validation passed (checked first 100 chars)")
+        except Exception as e:
+            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 validation failed: {str(e)}")
+        
         return result
     
     except ImportError as e:
@@ -213,14 +248,40 @@ def add_play_button_to_image(preview_image):
             else:
                 content_type = response.headers.get("Content-Type", "") if 'response' in locals() else ""
             
-            # Convert to base64
+            # Convert to base64 - Always use JPEG for email compatibility
+            # Resize and convert to JPEG to reduce size
+            try:
+                from PIL import Image
+                img = Image.open(io.BytesIO(image_bytes))
+                # Resize to max 300px width
+                max_width = 300
+                width, height = img.size
+                if width > max_width:
+                    ratio = max_width / width
+                    new_height = int(height * ratio)
+                    try:
+                        resample = Image.Resampling.LANCZOS
+                    except AttributeError:
+                        resample = Image.LANCZOS
+                    img = img.resize((max_width, new_height), resample)
+                
+                # Convert to RGB if needed
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                
+                # Save as JPEG with quality 45
+                output = io.BytesIO()
+                img.save(output, format="JPEG", quality=45, optimize=True)
+                output.seek(0)
+                image_bytes = output.read()
+            except Exception as e:
+                logger.warning(f"PLAY_BUTTON_IMAGE_DEBUG: Could not resize/convert image, using original: {str(e)}")
+            
             img_base64 = base64.b64encode(image_bytes).decode("utf-8")
-            # Detect mime type
-            if "image/png" in content_type or preview_image.lower().endswith(".png"):
-                mime_type = "image/png"
-            else:
-                mime_type = "image/jpeg"
-            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Converted URL to base64 (no play button): {len(img_base64)} chars")
+            # Always use JPEG for email compatibility
+            mime_type = "image/jpeg"
+            result_size_mb = len(f"data:{mime_type};base64,{img_base64}") / (1024 * 1024)
+            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Converted URL to base64 (no play button): {len(img_base64)} chars ({result_size_mb:.2f} MB)")
             return f"data:{mime_type};base64,{img_base64}"
         return preview_image
     except Exception as e:
@@ -229,34 +290,85 @@ def add_play_button_to_image(preview_image):
         # Always convert URL to base64 for email compatibility, even if play button failed
         if is_url and image_bytes is not None:
             try:
-                # Use already downloaded image bytes
+                # Use already downloaded image bytes - Always convert to JPEG
+                try:
+                    from PIL import Image
+                    img = Image.open(io.BytesIO(image_bytes))
+                    # Resize to max 300px width
+                    max_width = 300
+                    width, height = img.size
+                    if width > max_width:
+                        ratio = max_width / width
+                        new_height = int(height * ratio)
+                        try:
+                            resample = Image.Resampling.LANCZOS
+                        except AttributeError:
+                            resample = Image.LANCZOS
+                        img = img.resize((max_width, new_height), resample)
+                    
+                    # Convert to RGB if needed
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+                    
+                    # Save as JPEG with quality 45
+                    output = io.BytesIO()
+                    img.save(output, format="JPEG", quality=45, optimize=True)
+                    output.seek(0)
+                    image_bytes = output.read()
+                except Exception as e:
+                    logger.warning(f"PLAY_BUTTON_IMAGE_DEBUG: Could not resize/convert image in fallback, using original: {str(e)}")
+                
                 img_base64 = base64.b64encode(image_bytes).decode("utf-8")
-                # Detect mime type
-                content_type = response.headers.get("Content-Type", "") if 'response' in locals() else ""
-                if "image/png" in content_type or preview_image.lower().endswith(".png"):
-                    mime_type = "image/png"
-                else:
-                    mime_type = "image/jpeg"
-                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Converted URL to base64 as fallback (no play button): {len(img_base64)} chars")
+                # Always use JPEG for email compatibility
+                mime_type = "image/jpeg"
+                result_size_mb = len(f"data:{mime_type};base64,{img_base64}") / (1024 * 1024)
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Converted URL to base64 as fallback (no play button): {len(img_base64)} chars ({result_size_mb:.2f} MB)")
                 return f"data:{mime_type};base64,{img_base64}"
             except Exception as e2:
                 logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Failed to convert downloaded image to base64: {str(e2)}")
         elif is_url:
-            # Try to download and convert if we haven't already
+            # Try to download and convert if we haven't already - Always convert to JPEG
             try:
                 response = requests.get(preview_image, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
                 response.raise_for_status()
                 image_bytes = response.content
+                
+                # Always convert to JPEG for email compatibility
+                try:
+                    from PIL import Image
+                    img = Image.open(io.BytesIO(image_bytes))
+                    # Resize to max 300px width
+                    max_width = 300
+                    width, height = img.size
+                    if width > max_width:
+                        ratio = max_width / width
+                        new_height = int(height * ratio)
+                        try:
+                            resample = Image.Resampling.LANCZOS
+                        except AttributeError:
+                            resample = Image.LANCZOS
+                        img = img.resize((max_width, new_height), resample)
+                    
+                    # Convert to RGB if needed
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+                    
+                    # Save as JPEG with quality 45
+                    output = io.BytesIO()
+                    img.save(output, format="JPEG", quality=45, optimize=True)
+                    output.seek(0)
+                    image_bytes = output.read()
+                except Exception as e:
+                    logger.warning(f"PLAY_BUTTON_IMAGE_DEBUG: Could not resize/convert image in final fallback, using original: {str(e)}")
+                
                 img_base64 = base64.b64encode(image_bytes).decode("utf-8")
-                content_type = response.headers.get("Content-Type", "")
-                if "image/png" in content_type or preview_image.lower().endswith(".png"):
-                    mime_type = "image/png"
-                else:
-                    mime_type = "image/jpeg"
-                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Downloaded and converted URL to base64 as fallback: {len(img_base64)} chars")
+                # Always use JPEG for email compatibility
+                mime_type = "image/jpeg"
+                result_size_mb = len(f"data:{mime_type};base64,{img_base64}") / (1024 * 1024)
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Downloaded and converted URL to base64 as fallback: {len(img_base64)} chars ({result_size_mb:.2f} MB)")
                 return f"data:{mime_type};base64,{img_base64}"
             except Exception as e2:
-                logger.error(f"Failed to download and convert URL to base64: {str(e2)}")
+                logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Failed to download and convert URL to base64: {str(e2)}")
         return preview_image
 
 
