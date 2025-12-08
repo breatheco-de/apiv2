@@ -971,6 +971,9 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     if isinstance(welcome_video, dict) and "url" in welcome_video:
                         from breathecode.authenticate.actions import get_youtube_watch_url
                         welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
+                    if isinstance(welcome_video, dict) and "preview_image" in welcome_video and welcome_video["preview_image"]:
+                        from breathecode.authenticate.actions import add_play_button_to_image
+                        welcome_video["preview_image"] = add_play_button_to_image(welcome_video["preview_image"])
                     email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
@@ -1284,9 +1287,11 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 if invite.welcome_video:
                     welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
                     if isinstance(welcome_video, dict) and "url" in welcome_video:
-                        # For email, convert to YouTube watch URL (not embed) so users can click to watch on YouTube
                         from breathecode.authenticate.actions import get_youtube_watch_url
                         welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
+                    if isinstance(welcome_video, dict) and "preview_image" in welcome_video and welcome_video["preview_image"]:
+                        from breathecode.authenticate.actions import add_play_button_to_image
+                        welcome_video["preview_image"] = add_play_button_to_image(welcome_video["preview_image"])
                     email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(

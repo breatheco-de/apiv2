@@ -1,4 +1,6 @@
+import base64
 import datetime
+import io
 import logging
 import os
 import random
@@ -9,6 +11,7 @@ from random import randint
 from typing import Any
 
 import aiohttp
+import requests
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -37,6 +40,99 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def add_play_button_to_image(preview_image):
+    """
+    Add a play button icon overlay to an image for email display.
+    Supports both base64 data URLs and regular image URLs.
+    
+    Args:
+        preview_image: Image URL or base64 data URL (e.g., "data:image/png;base64,...")
+    
+    Returns:
+        str: Base64 data URL with play button overlay (e.g., "data:image/png;base64,...")
+    """
+    if not preview_image:
+        return preview_image
+    
+    try:
+        from PIL import Image, ImageDraw
+        
+        # Handle base64 data URL
+        if preview_image.startswith("data:image/"):
+            # Extract base64 data
+            header, data = preview_image.split(",", 1)
+            image_data = base64.b64decode(data)
+            image = Image.open(io.BytesIO(image_data))
+        else:
+            # Handle regular URL - download the image
+            response = requests.get(preview_image, timeout=10)
+            response.raise_for_status()
+            image = Image.open(io.BytesIO(response.content))
+        
+        # Convert to RGBA if needed
+        if image.mode != "RGBA":
+            image = image.convert("RGBA")
+        
+        # Create a copy to avoid modifying the original
+        img_with_overlay = image.copy()
+        width, height = img_with_overlay.size
+        
+        # Calculate play button size (approximately 20% of the smaller dimension)
+        button_size = int(min(width, height) * 0.2)
+        button_radius = button_size // 2
+        
+        # Position play button in the center
+        center_x = width // 2
+        center_y = height // 2
+        
+        # Create overlay image for the play button
+        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+        
+        # Draw orange circle background
+        circle_bbox = [
+            center_x - button_radius,
+            center_y - button_radius,
+            center_x + button_radius,
+            center_y + button_radius,
+        ]
+        draw.ellipse(circle_bbox, fill=(233, 112, 62, 230))  # Orange color #E9703E with transparency
+        
+        # Draw white play triangle
+        triangle_size = button_size // 2
+        triangle_points = [
+            (center_x - triangle_size // 3, center_y - triangle_size // 2),  # Left point
+            (center_x - triangle_size // 3, center_y + triangle_size // 2),  # Left bottom
+            (center_x + triangle_size // 2, center_y),  # Right point (tip)
+        ]
+        draw.polygon(triangle_points, fill=(255, 255, 255, 255))  # White triangle
+        
+        # Composite the overlay onto the image
+        img_with_overlay = Image.alpha_composite(img_with_overlay, overlay)
+        
+        # Convert back to RGB if original wasn't RGBA (for JPEG compatibility)
+        if image.mode != "RGBA":
+            background = Image.new("RGB", img_with_overlay.size, (255, 255, 255))
+            background.paste(img_with_overlay, mask=img_with_overlay.split()[3])
+            img_with_overlay = background
+        
+        # Save to bytes
+        output = io.BytesIO()
+        format_type = "PNG" if image.mode == "RGBA" or preview_image.startswith("data:image/png") else "JPEG"
+        img_with_overlay.save(output, format=format_type, quality=95)
+        output.seek(0)
+        
+        # Convert to base64
+        img_base64 = base64.b64encode(output.read()).decode("utf-8")
+        mime_type = "image/png" if format_type == "PNG" else "image/jpeg"
+        
+        return f"data:{mime_type};base64,{img_base64}"
+    
+    except Exception as e:
+        logger.warning(f"Error adding play button to image: {str(e)}. Returning original image.")
+        return preview_image
 
 
 def get_youtube_watch_url(url):
@@ -390,6 +486,8 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
             if isinstance(welcome_video, dict) and "url" in welcome_video:
                 # For email, convert to YouTube watch URL (not embed) so users can click to watch on YouTube
                 welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
+            if isinstance(welcome_video, dict) and "preview_image" in welcome_video and welcome_video["preview_image"]:
+                welcome_video["preview_image"] = add_play_button_to_image(welcome_video["preview_image"])
             data["WELCOME_VIDEO"] = welcome_video
 
     notify_actions.send_email_message(
