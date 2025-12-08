@@ -58,6 +58,8 @@ class AcademyForm(forms.ModelForm):
         fields = "__all__"
         widgets = {
             "academy_features": PrettyJSONWidget(),
+            "welcome_video": PrettyJSONWidget(),
+            "white_label_params": PrettyJSONWidget(),
         }
 
     def __init__(self, *args, **kwargs):

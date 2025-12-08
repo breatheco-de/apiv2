@@ -279,6 +279,9 @@ class GetBigAcademySerializer(serpy.Serializer):
     is_hidden_on_prework = serpy.Field()
     white_labeled = serpy.Field()
     white_label_url = serpy.Field()
+    white_label_params = serpy.Field()
+    welcome_video = serpy.Field()
+    available_as_saas = serpy.Field()
     main_currency = serpy.MethodField()
     academy_features = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
@@ -821,6 +824,9 @@ class AcademySerializer(serializers.ModelSerializer):
             "logo_url",
             "icon_url",
             "main_currency",
+            "welcome_video",
+            "white_label_params",
+            "available_as_saas",
         ]
         extra_kwargs = {
             "name": {"required": False},
@@ -830,6 +836,9 @@ class AcademySerializer(serializers.ModelSerializer):
             "logo_url": {"required": False},
             "icon_url": {"required": False},
             "slug": {"read_only": True},  # Prevent slug from being updated
+            "welcome_video": {"required": False},
+            "white_label_params": {"required": False},
+            "available_as_saas": {"required": False},
         }
 
     def validate_logo_url(self, value):
