@@ -73,9 +73,33 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
             welcome_video = data["WELCOME_VIDEO"]
             if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
                 preview_img = welcome_video["preview_image"]
-                logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - WELCOME_VIDEO.preview_image length: {len(preview_img) if preview_img else 0}, Is data URL: {preview_img.startswith('data:image/') if preview_img else False}, First 100 chars: {preview_img[:100] if preview_img else 'N/A'}")
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - WELCOME_VIDEO.preview_image length: {len(preview_img) if preview_img else 0}, Is data URL: {preview_img.startswith('data:image/') if preview_img else False}, First 100 chars: {preview_img[:100] if preview_img else 'N/A'}")
         
         template = get_template_content(template_slug, data, ["email"], inline_css=inline_css, academy=academy)
+        
+        # Log rendered HTML to check if WELCOME_VIDEO is in the HTML
+        if "WELCOME_VIDEO" in data and data["WELCOME_VIDEO"]:
+            html_content = template.get("html", "")
+            # Check if the preview_image appears in the HTML
+            welcome_video = data["WELCOME_VIDEO"]
+            if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
+                preview_img = welcome_video["preview_image"]
+                if preview_img and preview_img in html_content:
+                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image found in rendered HTML (length: {len(html_content)} chars)")
+                    # Find the img tag with the preview_image
+                    img_tag_start = html_content.find(preview_img)
+                    if img_tag_start > 0:
+                        # Get context around the img tag (200 chars before and after)
+                        start = max(0, img_tag_start - 200)
+                        end = min(len(html_content), img_tag_start + len(preview_img) + 200)
+                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - HTML context around img tag: ...{html_content[start:end]}...")
+                else:
+                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image NOT found in rendered HTML! HTML length: {len(html_content)}")
+                    # Check if WELCOME_VIDEO block exists at all
+                    if "WELCOME_VIDEO" in html_content or "welcome_video" in html_content.lower():
+                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - WELCOME_VIDEO text found in HTML but preview_image not found")
+                    else:
+                        logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - WELCOME_VIDEO block not found in HTML at all!")
 
         sender_name = os.environ.get("COMPANY_NAME", "4Geeks")
         if academy is not None and getattr(academy, "white_labeled", False):
