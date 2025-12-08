@@ -968,16 +968,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 # Add welcome video if available
                 if invite.welcome_video:
                     welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
-                    if isinstance(welcome_video, dict) and "url" in welcome_video:
-                        from breathecode.authenticate.actions import get_youtube_watch_url
-                        welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
-                    if isinstance(welcome_video, dict) and "preview_image" in welcome_video and welcome_video["preview_image"]:
-                        from breathecode.authenticate.actions import add_play_button_to_image
-                        original_preview = welcome_video["preview_image"]
-                        welcome_video["preview_image"] = add_play_button_to_image(welcome_video["preview_image"])
-                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: MemberPOSTSerializer - Processed preview_image. Original length: {len(original_preview)}, Result length: {len(welcome_video['preview_image'])}, Is data URL: {welcome_video['preview_image'].startswith('data:image/')}")
                     email_data["WELCOME_VIDEO"] = welcome_video
-                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: MemberPOSTSerializer - Added WELCOME_VIDEO to email_data. URL: {welcome_video.get('url', 'N/A')}, Has preview_image: {'preview_image' in welcome_video and bool(welcome_video.get('preview_image'))}")
 
                 notify_actions.send_email_message(
                     "welcome_academy",
@@ -1289,16 +1280,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 # Add welcome video if available
                 if invite.welcome_video:
                     welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
-                    if isinstance(welcome_video, dict) and "url" in welcome_video:
-                        from breathecode.authenticate.actions import get_youtube_watch_url
-                        welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
-                    if isinstance(welcome_video, dict) and "preview_image" in welcome_video and welcome_video["preview_image"]:
-                        from breathecode.authenticate.actions import add_play_button_to_image
-                        original_preview = welcome_video["preview_image"]
-                        welcome_video["preview_image"] = add_play_button_to_image(welcome_video["preview_image"])
-                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: StudentPOSTSerializer - Processed preview_image. Original length: {len(original_preview)}, Result length: {len(welcome_video['preview_image'])}, Is data URL: {welcome_video['preview_image'].startswith('data:image/')}")
                     email_data["WELCOME_VIDEO"] = welcome_video
-                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: StudentPOSTSerializer - Added WELCOME_VIDEO to email_data. URL: {welcome_video.get('url', 'N/A')}, Has preview_image: {'preview_image' in welcome_video and bool(welcome_video.get('preview_image'))}")
 
                 notify_actions.send_email_message(
                     "welcome_academy",
