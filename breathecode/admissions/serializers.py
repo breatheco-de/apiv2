@@ -280,6 +280,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     white_labeled = serpy.Field()
     white_label_url = serpy.Field()
     white_label_params = serpy.Field()
+    welcome_video = serpy.Field()
     main_currency = serpy.MethodField()
     academy_features = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
