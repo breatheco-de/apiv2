@@ -22,11 +22,45 @@ Example HOOK_EVENTS_METADATA entry that will auto-register:
 """
 
 import logging
+from datetime import datetime
 from importlib import import_module
 
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+# Runtime registry of successfully auto-registered hooks
+_REGISTERED_HOOKS = []
+_REGISTRATION_TIMESTAMP = None
+
+
+def get_registered_hooks():
+    """
+    Get a list of all successfully auto-registered webhook receivers.
+    
+    Returns:
+        List of dicts with registration information:
+        {
+            'event_name': str,
+            'signal_path': str,
+            'sender_path': str,
+            'event_action': str,
+            'serializer': str,
+            'registered': bool,
+            'error': str or None
+        }
+    """
+    return _REGISTERED_HOOKS.copy()
+
+
+def get_registration_timestamp():
+    """
+    Get the timestamp when auto-registration was last performed.
+    
+    Returns:
+        datetime or None if registration hasn't been performed yet
+    """
+    return _REGISTRATION_TIMESTAMP
 
 
 def import_from_string(import_path):
@@ -313,17 +347,36 @@ def auto_register_webhook_receivers():
     Events with auto_register=False are skipped.
     Events without event_action are skipped (likely using post_save/post_delete).
     """
+    global _REGISTERED_HOOKS, _REGISTRATION_TIMESTAMP
+    
+    # Clear previous registrations (in case of reload)
+    _REGISTERED_HOOKS = []
+    _REGISTRATION_TIMESTAMP = datetime.now()
+    
     metadata = getattr(settings, "HOOK_EVENTS_METADATA", {})
     registered_count = 0
     skipped_count = 0
     derived_count = 0
 
     for event_name, config in metadata.items():
+        registration_info = {
+            'event_name': event_name,
+            'signal_path': None,
+            'sender_path': None,
+            'event_action': None,
+            'serializer': config.get("serializer"),
+            'registered': False,
+            'error': None
+        }
+        
         # Skip if auto_register is explicitly False
         if config.get("auto_register") is False:
             logger.debug(f"Skipping auto-registration for {event_name} (auto_register=False)")
             skipped_count += 1
+            registration_info['error'] = 'auto_register=False'
+            _REGISTERED_HOOKS.append(registration_info)
             continue
+        logger.debug(f"Auto-registering {event_name}")
 
         # Get or derive event_action
         event_action = config.get("event_action")
@@ -338,9 +391,13 @@ def auto_register_webhook_receivers():
                     # Store derived event_action in config so create_hook_receiver can use it
                     config["event_action"] = event_action
 
+        registration_info['event_action'] = event_action
+
         # event_action is required for auto-registration
         if not event_action:
             # This is normal for events that use post_save/post_delete (created+, updated+, deleted+)
+            registration_info['error'] = 'No event_action (likely uses post_save/post_delete)'
+            _REGISTERED_HOOKS.append(registration_info)
             continue
 
         # Get or derive signal path
@@ -354,6 +411,8 @@ def auto_register_webhook_receivers():
                     logger.debug(f"Derived signal path for {event_name}: {signal_path}")
                     derived_count += 1
 
+        registration_info['signal_path'] = signal_path
+
         # Get or derive sender path
         sender_path = config.get("sender")
         if not sender_path:
@@ -364,12 +423,16 @@ def auto_register_webhook_receivers():
                 if sender_path:
                     logger.debug(f"Derived sender path for {event_name}: {sender_path}")
 
+        registration_info['sender_path'] = sender_path
+
         # Both signal and sender are required
         if not signal_path or not sender_path:
             logger.debug(
                 f"Skipping {event_name}: Missing signal or sender "
                 f"(signal={bool(signal_path)}, sender={bool(sender_path)})"
             )
+            registration_info['error'] = f'Missing signal or sender (signal={bool(signal_path)}, sender={bool(sender_path)})'
+            _REGISTERED_HOOKS.append(registration_info)
             continue
 
         # Import signal and sender
@@ -382,16 +445,26 @@ def auto_register_webhook_receivers():
                 f"signal ({signal_path}) or sender ({sender_path})"
             )
             skipped_count += 1
+            registration_info['error'] = f'Failed to import signal ({signal_path}) or sender ({sender_path})'
+            _REGISTERED_HOOKS.append(registration_info)
             continue
 
         # Create and register the receiver
-        receiver_func = create_hook_receiver(event_name, config)
+        try:
+            receiver_func = create_hook_receiver(event_name, config)
 
-        # Register with Django's receiver decorator
-        signal_obj.connect(receiver_func, sender=sender_model)
+            # Register with Django's receiver decorator
+            signal_obj.connect(receiver_func, sender=sender_model)
 
-        logger.debug(f"Auto-registered receiver for {event_name}")
-        registered_count += 1
+            logger.debug(f"Auto-registered receiver for {event_name}")
+            registered_count += 1
+            registration_info['registered'] = True
+        except Exception as e:
+            logger.error(f"Error registering receiver for {event_name}: {e}")
+            registration_info['error'] = str(e)
+            skipped_count += 1
+        
+        _REGISTERED_HOOKS.append(registration_info)
 
     logger.info(
         f"Auto-registered {registered_count} webhook receivers "

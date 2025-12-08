@@ -202,12 +202,14 @@ def get_hook_events(request):
     Get all available webhook events with descriptions and metadata.
     
     Returns a list of all available webhook events that can be subscribed to,
-    including their descriptions, apps, labels, and associated models.
+    including their descriptions, apps, labels, associated models, and
+    auto-registration status.
     
     Query Parameters:
         app (optional): Filter events by app name(s), comma-separated (e.g., "admissions,assignments")
         event (optional): Filter events by event name(s), comma-separated (e.g., "assignment.assignment_created,cohort_user.added")
         like (optional): Search in event name or description
+        registered (optional): Filter by registration status (true/false)
     
     Example Response:
         [
@@ -216,7 +218,20 @@ def get_hook_events(request):
                 "label": "Assignment Created",
                 "description": "Triggered when a new assignment is created for a student",
                 "app": "assignments",
-                "model": "assignments.Task"
+                "model": "assignments.Task",
+                "registered": true,
+                "registered_at": "2024-01-15T10:30:00Z",
+                "registration_error": null
+            },
+            {
+                "event": "some.event.failed",
+                "label": "Some Event Failed",
+                "description": "An event that failed to register",
+                "app": "someapp",
+                "model": "someapp.Model",
+                "registered": false,
+                "registered_at": "2024-01-15T10:30:00Z",
+                "registration_error": "Failed to import signal or sender"
             },
             ...
         ]
@@ -226,10 +241,16 @@ def get_hook_events(request):
         derive_app_from_action,
         derive_label_from_action,
         derive_model_from_action,
+        get_registered_hooks,
+        get_registration_timestamp,
     )
 
     # Get metadata from settings, fallback to empty dict if not defined
     metadata = getattr(settings, "HOOK_EVENTS_METADATA", {})
+    
+    # Get registered hooks registry
+    registered_hooks = {hook['event_name']: hook for hook in get_registered_hooks()}
+    registration_timestamp = get_registration_timestamp()
     
     # Build response with all available events
     events = []
@@ -251,14 +272,28 @@ def get_hook_events(request):
         if not label and action:
             label = derive_label_from_action(action)
         
+        # Get registration status from registry
+        registration_info = registered_hooks.get(event_name, {})
+        is_registered = registration_info.get('registered', False)
+        registration_error = registration_info.get('error')
+        
         event_data = {
             "event": event_name,
             "label": label or "Unknown",
             "description": event_config.get("description", "No description available"),
             "app": app_name or "unknown",
             "model": model or "Unknown",
+            "registered": is_registered,
+            "registered_at": registration_timestamp.isoformat() if registration_timestamp else None,
+            "registration_error": registration_error,
         }
         events.append(event_data)
+    
+    # Filter by registration status if provided
+    registered_filter = request.GET.get("registered")
+    if registered_filter is not None:
+        registered_bool = registered_filter.lower() == "true"
+        events = [e for e in events if e["registered"] == registered_bool]
     
     # Filter by app if provided (supports comma-separated values)
     app = request.GET.get("app", None)
