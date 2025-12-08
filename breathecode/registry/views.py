@@ -983,10 +983,10 @@ class AssetView(APIView, GenerateLookupsMixin):
                 lookup["slug__in"] = slugs
 
         if "language" in self.request.GET:
-            param = self.request.GET.get("language")
-            if param == "en":
-                param = "us"
-            lookup["lang"] = param
+            languages = self.request.GET.get("language").split(",")
+            if len(languages) == 1:
+                languages = ["us", "en"] if languages[0] == "en" or languages[0] == "us" else languages
+            lookup["lang__in"] = languages
 
         if "status" not in self.request.GET:
             lookup["status__in"] = ["PUBLISHED"]
@@ -2354,9 +2354,13 @@ class AcademyCategoryView(APIView, GenerateLookupsMixin):
         if like is not None and like != "undefined" and like != "":
             items = items.filter(Q(slug__icontains=slugify(like)) | Q(title__icontains=like))
 
-        lang = request.GET.get("lang", None)
-        if lang is not None:
-            items = items.filter(lang__iexact=lang)
+        lang = request.GET.get("lang")
+        if lang:
+            normalized_lang = lang.lower()
+            if normalized_lang in ["us", "en"]:
+                items = items.filter(Q(lang__iexact="us") | Q(lang__iexact="en"))
+            else:
+                items = items.filter(lang__iexact=normalized_lang)
 
         items = items.filter(**lookup)
         items = handler.queryset(items)

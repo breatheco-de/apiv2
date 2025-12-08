@@ -1,0 +1,36 @@
+{
+    "slug": "diagnostic",
+    "name": "Diagnostic Report",
+    "description": "System monitoring diagnostic reports sent when issues are detected in monitored applications or scripts",
+    "category": "monitoring",
+    "channels": {
+        "email": {
+            "template_path": "diagnostic",
+            "default_subject": "Diagnostic Alert"
+        }
+    },
+    "variables": [
+        {
+            "name": "subject",
+            "description": "Alert subject describing the issue",
+            "source": "Generated from monitoring script or passed in data",
+            "example": "Errors found on Payment Processing script",
+            "required": true
+        },
+        {
+            "name": "details",
+            "description": "Detailed diagnostic information and error messages",
+            "source": "Monitoring script output or error logs",
+            "example": "Database connection timeout after 30 seconds\\nAffected endpoints: /api/payments/process",
+            "required": true
+        },
+        {
+            "name": "button",
+            "description": "Optional button object with label and url for action",
+            "source": "Passed in data dict if action is available",
+            "example": "{label: 'View Dashboard', url: 'https://admin.4geeks.com/monitoring'}",
+            "required": false
+        }
+    ]
+}
+

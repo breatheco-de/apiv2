@@ -21,7 +21,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.exceptions import APIException
 from rest_framework.parsers import FileUploadParser, MultiPartParser
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_csv.renderers import CSVRenderer
@@ -36,37 +36,44 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.utils import GenerateLookupsMixin, HeaderLimitOffsetPagination, capable_of, localize_query
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
-from breathecode.utils.decorators import validate_captcha, validate_captcha_challenge
+from breathecode.utils.decorators import academy_has_feature, validate_captcha, validate_captcha_challenge
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
-from .actions import convert_data_frame, sync_automations, sync_tags, validate_email
+from .actions import convert_data_frame, sync_automations, sync_tags, validate_email_local
 from .models import (
     AcademyAlias,
     ActiveCampaignAcademy,
     Automation,
     Course,
+    CourseResaleSettings,
+    CourseTranslation,
     Downloadable,
     FormEntry,
     LeadGenerationApp,
     ShortLink,
     Tag,
     UTMField,
-    CourseTranslation,
     ACTIVE,
     UNLISTED,
     PUBLIC,
 )
+from .schemas import export_course_translation_schemas
 from .serializers import (
     AcademyAliasSmallSerializer,
     ActiveCampaignAcademyBigSerializer,
     ActiveCampaignAcademySerializer,
     AutomationSmallSerializer,
+    CourseResaleSettingsPOSTSerializer,
+    CourseResaleSettingsPUTSerializer,
+    CourseResaleSettingsSerializer,
     DownloadableSerializer,
     FormEntryBigSerializer,
     FormEntryHookSerializer,
     FormEntrySerializer,
     FormEntrySmallSerializer,
     GetCourseSerializer,
+    CoursePUTSerializer,
+    CourseTranslationPUTSerializer,
     LeadgenAppSmallSerializer,
     PostFormEntrySerializer,
     PUTAutomationSerializer,
@@ -261,7 +268,7 @@ def validate_email_from_app(request):
         raise ValidationException("Please provide an email to validate", code=400, slug="without-email")
 
     try:
-        payload = validate_email(email, lang)
+        payload = validate_email_local(email, lang)
         return Response(payload, status=status.HTTP_200_OK)
     except ValidationException as e:
         raise e
@@ -1236,7 +1243,6 @@ class CourseView(APIView):
                 Course.objects.filter(slug=course_slug)
                 .annotate(lang=Value(lang, output_field=CharField()))
                 .exclude(status="DELETED")
-                .exclude(visibility="PRIVATE")
                 .first()
             )
 
@@ -1246,14 +1252,40 @@ class CourseView(APIView):
                     code=404,
                 )
 
-            serializer = GetCourseSerializer(item, context={"lang": lang, "country_code": country_code}, many=False)
+            academy_id = None
+            if academy := request.GET.get("academy"):
+                if academy.isdigit():
+                    academy_id = int(academy)
+                else:
+                    academy_obj = Academy.objects.filter(slug=academy).first()
+                    if academy_obj:
+                        academy_id = academy_obj.id
+            
+            serializer = GetCourseSerializer(
+                item,
+                context={"lang": lang, "country_code": country_code, "academy_id": academy_id},
+                many=False
+            )
             return handler.response(serializer.data)
 
-        items = Course.objects.filter().exclude(status="DELETED").exclude(visibility="PRIVATE")
+        items = Course.objects.filter().exclude(status="DELETED")
 
         if academy := request.GET.get("academy"):
             args, kwargs = self.get_lookup("academy", academy)
-            items = items.filter(*args, **kwargs)
+            
+            academy_ids = []
+            if "academy__id__in" in kwargs:
+                academy_ids = kwargs["academy__id__in"]
+            elif "academy__slug__in" in kwargs:
+                academy_slugs = kwargs["academy__slug__in"]
+                academies = Academy.objects.filter(slug__in=academy_slugs)
+                academy_ids = list(academies.values_list("id", flat=True))
+            
+            resale_course_ids = CourseResaleSettings.objects.filter(
+                academy_id__in=academy_ids, is_active=True
+            ).values_list("course_id", flat=True)
+            
+            items = items.filter(Q(*args, **kwargs) | Q(id__in=resale_course_ids)).distinct()
 
         if syllabus := request.GET.get("syllabus"):
             args, kwargs = self.get_lookup("syllabus", syllabus)
@@ -1261,9 +1293,13 @@ class CourseView(APIView):
 
         if s := request.GET.get("status"):
             items = items.filter(status__in=s.split(","))
-
         else:
-            items = items.exclude(status="ARCHIVED")
+            items = items.exclude(status="DELETED")
+
+        if visibility := request.GET.get("visibility"):
+            items = items.filter(visibility__in=visibility.split(","))
+        else:
+            items = items.exclude(visibility="PRIVATE")
 
         if icon_url := request.GET.get("icon_url"):
             items = items.filter(icon_url__icontains=icon_url)
@@ -1285,8 +1321,198 @@ class CourseView(APIView):
         items = items.annotate(lang=Value(lang, output_field=CharField()))
         items = items.order_by("created_at")
         items = handler.queryset(items)
-        serializer = GetCourseSerializer(items, context={"lang": lang, "country_code": country_code}, many=True)
+        
+        academy_id = None
+        if academy := request.GET.get("academy"):
+            if academy.isdigit():
+                academy_id = int(academy)
+            else:
+                academy_obj = Academy.objects.filter(slug=academy).first()
+                if academy_obj:
+                    academy_id = academy_obj.id
+        
+        serializer = GetCourseSerializer(
+            items,
+            context={"lang": lang, "country_code": country_code, "academy_id": academy_id},
+            many=True
+        )
         return handler.response(serializer.data)
+
+
+class CourseResaleSettingsView(APIView):
+    """
+    View for managing course resale settings.
+    Allows white-labeled academies to resell courses from other academies.
+    """
+
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of("read_course")
+    def get(self, request, course_slug=None, academy_id=None):
+        """Get resale settings for a course."""
+        handler = self.extensions(request)
+
+        if course_slug is None:
+            raise ValidationException(
+                translation(
+                    en="Course slug is required",
+                    es="El slug del curso es requerido",
+                    slug="course-slug-required",
+                ),
+                code=400,
+            )
+
+        course = Course.objects.filter(slug=course_slug).first()
+        if course is None:
+            raise ValidationException(
+                translation(en="Course not found", es="Curso no encontrado", slug="course-not-found"),
+                code=404,
+            )
+
+        resale_settings = CourseResaleSettings.objects.filter(course=course)
+
+        # Filter by academy if provided
+        if academy_param := request.GET.get("academy"):
+            academy = Academy.objects.filter(Q(slug=academy_param) | Q(id=academy_param)).first()
+            if academy:
+                resale_settings = resale_settings.filter(academy=academy)
+
+        items = handler.queryset(resale_settings)
+        serializer = CourseResaleSettingsSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+    @capable_of("crud_course")
+    @academy_has_feature("reseller", require_white_labeled=True)
+    def post(self, request, course_slug=None, academy_id=None):
+        """
+        Create resale settings for a course.
+        Only white-labeled academies with 'reseller' feature can create resale settings.
+        """
+        if course_slug is None:
+            raise ValidationException(
+                translation(
+                    en="Course slug is required",
+                    es="El slug del curso es requerido",
+                    slug="course-slug-required",
+                ),
+                code=400,
+            )
+
+        course = Course.objects.filter(slug=course_slug).first()
+        if course is None:
+            raise ValidationException(
+                translation(en="Course not found", es="Curso no encontrado", slug="course-not-found"),
+                code=404,
+            )
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(en="Academy not found", es="Academia no encontrada", slug="academy-not-found"),
+                code=404,
+            )
+
+        serializer = CourseResaleSettingsPOSTSerializer(
+            data=request.data, context={"academy": academy, "course": course}
+        )
+
+        if serializer.is_valid():
+            resale_settings = serializer.save()
+            return Response(
+                CourseResaleSettingsSerializer(resale_settings).data,
+                status=status.HTTP_201_CREATED,
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_course")
+    @academy_has_feature("reseller", require_white_labeled=True)
+    def put(self, request, course_slug=None, academy_id=None):
+        """Update resale settings for a course."""
+        if course_slug is None:
+            raise ValidationException(
+                translation(
+                    en="Course slug is required",
+                    es="El slug del curso es requerido",
+                    slug="course-slug-required",
+                ),
+                code=400,
+            )
+
+        course = Course.objects.filter(slug=course_slug).first()
+        if course is None:
+            raise ValidationException(
+                translation(en="Course not found", es="Curso no encontrado", slug="course-not-found"),
+                code=404,
+            )
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(en="Academy not found", es="Academia no encontrada", slug="academy-not-found"),
+                code=404,
+            )
+
+        resale_settings = CourseResaleSettings.objects.filter(course=course, academy=academy).first()
+        if resale_settings is None:
+            raise ValidationException(
+                translation(
+                    en="Resale settings not found for this course and academy",
+                    es="Configuración de reventa no encontrada para este curso y academia",
+                    slug="resale-settings-not-found",
+                ),
+                code=404,
+            )
+
+        serializer = CourseResaleSettingsPUTSerializer(resale_settings, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(CourseResaleSettingsSerializer(resale_settings).data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_course")
+    @academy_has_feature("reseller", require_white_labeled=True)
+    def delete(self, request, course_slug=None, academy_id=None):
+        """Delete resale settings for a course."""
+        if course_slug is None:
+            raise ValidationException(
+                translation(
+                    en="Course slug is required",
+                    es="El slug del curso es requerido",
+                    slug="course-slug-required",
+                ),
+                code=400,
+            )
+
+        course = Course.objects.filter(slug=course_slug).first()
+        if course is None:
+            raise ValidationException(
+                translation(en="Course not found", es="Curso no encontrado", slug="course-not-found"),
+                code=404,
+            )
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(en="Academy not found", es="Academia no encontrada", slug="academy-not-found"),
+                code=404,
+            )
+
+        resale_settings = CourseResaleSettings.objects.filter(course=course, academy=academy).first()
+        if resale_settings is None:
+            raise ValidationException(
+                translation(
+                    en="Resale settings not found for this course and academy",
+                    es="Configuración de reventa no encontrada para este curso y academia",
+                    slug="resale-settings-not-found",
+                ),
+                code=404,
+            )
+
+        resale_settings.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CourseTranslationsView(APIView):
@@ -1320,3 +1546,289 @@ class CourseTranslationsView(APIView):
         translations = CourseTranslation.objects.filter(course=course)
         serializer = GetCourseTranslationSerializer(translations, many=True)
         return handler.response(serializer.data)
+
+
+class CourseTranslationSchemaView(APIView):
+    permission_classes = [AllowAny]
+    extensions = APIViewExtensions(cache=CourseCache, paginate=False)
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        payload = {"schemas": export_course_translation_schemas()}
+        return handler.response(payload)
+
+
+def _get_course_or_404(course_identifier, academy_id, request_lang):
+    identifier = str(course_identifier)
+    lookup = {"slug": identifier}
+    identifier_kind = "slug"
+
+    if identifier.isdigit():
+        lookup = {"id": int(identifier)}
+        identifier_kind = "id"
+
+    course = Course.objects.filter(academy__id=academy_id, **lookup).first()
+
+    if not course:
+        if identifier_kind == "id":
+            en_message = f"Course {identifier} not found for academy {academy_id}"
+            es_message = f"Curso {identifier} no encontrado para la academia {academy_id}"
+        else:
+            en_message = f"Course with slug {identifier} not found for academy {academy_id}"
+            es_message = f"Curso con slug {identifier} no encontrado para la academia {academy_id}"
+
+        raise ValidationException(
+            translation(
+                request_lang,
+                en=en_message,
+                es=es_message,
+                slug="course-not-found",
+            ),
+            code=404,
+        )
+
+    return course
+
+
+def _get_course_translation_or_404(request, course_identifier, academy_id):
+    request_lang = get_user_language(request)
+    course = _get_course_or_404(course_identifier, academy_id, request_lang)
+    lang = request.data.get("lang")
+
+    if not lang:
+        raise ValidationException(
+            translation(
+                request_lang,
+                en="lang field is required in the request body",
+                es="El campo lang es obligatorio en el cuerpo de la solicitud",
+                slug="missing-lang",
+            ),
+            code=400,
+        )
+
+    translation_instance = CourseTranslation.objects.filter(course=course, lang=lang).first()
+
+    if not translation_instance:
+        raise ValidationException(
+            translation(
+                request_lang,
+                en=f"Course translation with lang {lang} not found",
+                es=f"No se encontró la traducción del curso con idioma {lang}",
+                slug="course-translation-not-found",
+            ),
+            code=404,
+        )
+
+    return translation_instance, request_lang, lang
+
+
+class AcademyCourseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("crud_course")
+    def put(self, request, course_identifier, academy_id=None):
+        request_lang = get_user_language(request)
+        course = _get_course_or_404(course_identifier, academy_id, request_lang)
+
+        serializer = CoursePUTSerializer(course, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            CourseCache.clear()
+
+            response_lang = request.GET.get("lang") or request_lang
+            country_code = request.GET.get("country_code")
+            course.refresh_from_db()
+            course.lang = response_lang
+            payload = GetCourseSerializer(
+                course,
+                context={"lang": response_lang, "country_code": country_code},
+                many=False,
+            ).data
+            return Response(payload, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CoursePlanByCountryCodeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("crud_course")
+    def put(self, request, course_identifier, academy_id=None):
+        request_lang = get_user_language(request)
+        course = _get_course_or_404(course_identifier, academy_id, request_lang)
+
+        if "plan_by_country_code" not in request.data:
+            raise ValidationException(
+                translation(
+                    request_lang,
+                    en="plan_by_country_code field is required in the request body",
+                    es="El campo plan_by_country_code es obligatorio en el cuerpo de la solicitud",
+                    slug="missing-plan-by-country-code",
+                ),
+                code=400,
+            )
+
+        value = request.data["plan_by_country_code"]
+        if value is not None and not isinstance(value, dict):
+            raise ValidationException(
+                translation(
+                    request_lang,
+                    en="plan_by_country_code must be a JSON object or null",
+                    es="plan_by_country_code debe ser un objeto JSON o null",
+                    slug="invalid-plan-by-country-code",
+                ),
+                code=400,
+            )
+
+        course.plan_by_country_code = value
+        course.save(update_fields=["plan_by_country_code"])
+        CourseCache.clear()
+
+        return Response({"plan_by_country_code": course.plan_by_country_code}, status=status.HTTP_200_OK)
+
+
+class CourseTranslationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("crud_course")
+    def put(self, request, course_identifier, academy_id=None):
+        translation_instance, request_lang, _ = _get_course_translation_or_404(
+            request, course_identifier, academy_id
+        )
+
+        serializer = CourseTranslationPUTSerializer(translation_instance, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            CourseCache.clear()
+
+            payload = GetCourseTranslationSerializer(translation_instance, many=False).data
+            return Response(payload, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CourseTranslationCourseModulesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("crud_course")
+    def put(self, request, course_identifier, academy_id=None):
+        translation_instance, request_lang, _ = _get_course_translation_or_404(
+            request, course_identifier, academy_id
+        )
+
+        if "course_modules" not in request.data:
+            raise ValidationException(
+                translation(
+                    request_lang,
+                    en="course_modules field is required in the request body",
+                    es="El campo course_modules es obligatorio en el cuerpo de la solicitud",
+                    slug="missing-course-modules",
+                ),
+                code=400,
+            )
+
+        value = request.data["course_modules"]
+        if value is not None and not isinstance(value, list):
+            raise ValidationException(
+                translation(
+                    request_lang,
+                    en="course_modules must be an array of objects or null",
+                    es="course_modules debe ser una lista de objetos o null",
+                    slug="invalid-course-modules",
+                ),
+                code=400,
+            )
+
+        translation_instance.course_modules = value
+        translation_instance.save(update_fields=["course_modules"])
+        CourseCache.clear()
+
+        payload = GetCourseTranslationSerializer(translation_instance, many=False).data
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class CourseTranslationLandingVariablesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("crud_course")
+    def put(self, request, course_identifier, academy_id=None):
+        translation_instance, request_lang, _ = _get_course_translation_or_404(
+            request, course_identifier, academy_id
+        )
+
+        if "landing_variables" not in request.data:
+            raise ValidationException(
+                translation(
+                    request_lang,
+                    en="landing_variables field is required in the request body",
+                    es="El campo landing_variables es obligatorio en el cuerpo de la solicitud",
+                    slug="missing-landing-variables",
+                ),
+                code=400,
+            )
+
+        value = request.data["landing_variables"]
+        if value is not None and not isinstance(value, dict):
+            raise ValidationException(
+                translation(
+                    request_lang,
+                    en="landing_variables must be a JSON object or null",
+                    es="landing_variables debe ser un objeto JSON o null",
+                    slug="invalid-landing-variables",
+                ),
+                code=400,
+            )
+
+        translation_instance.landing_variables = value
+        translation_instance.save(update_fields=["landing_variables"])
+        CourseCache.clear()
+
+        payload = GetCourseTranslationSerializer(translation_instance, many=False).data
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class CourseTranslationPrerequisiteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("crud_course")
+    def put(self, request, course_identifier, academy_id=None):
+        translation_instance, request_lang, _ = _get_course_translation_or_404(
+            request, course_identifier, academy_id
+        )
+
+        if "prerequisite" not in request.data:
+            raise ValidationException(
+                translation(
+                    request_lang,
+                    en="prerequisite field is required in the request body",
+                    es="El campo prerequisite es obligatorio en el cuerpo de la solicitud",
+                    slug="missing-prerequisite",
+                ),
+                code=400,
+            )
+
+        value = request.data["prerequisite"]
+        if value is not None and not isinstance(value, list):
+            raise ValidationException(
+                translation(
+                    request_lang,
+                    en="prerequisite must be an array or null",
+                    es="prerequisite debe ser una lista o null",
+                    slug="invalid-prerequisite",
+                ),
+                code=400,
+            )
+
+        translation_instance.prerequisite = value
+        translation_instance.save(update_fields=["prerequisite"])
+        CourseCache.clear()
+
+        payload = GetCourseTranslationSerializer(translation_instance, many=False).data
+        return Response(payload, status=status.HTTP_200_OK)

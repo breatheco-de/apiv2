@@ -32,6 +32,7 @@ from .models import (
     Course,
     CourseTranslation,
     Downloadable,
+    EmailDomainValidation,
     FormEntry,
     LeadGenerationApp,
     ShortLink,
@@ -648,3 +649,48 @@ class CourseTranslationAdmin(admin.ModelAdmin):
     form = CourseTranslationForm
     list_display = ("course", "lang", "title", "description")
     list_filter = ["course__academy__slug", "course__status", "course__visibility"]
+
+
+@admin.register(EmailDomainValidation)
+class EmailDomainValidationAdmin(admin.ModelAdmin, AdminExportCsvMixin):
+    search_fields = ["domain"]
+    list_display = (
+        "domain",
+        "has_mx",
+        "mx_records_count",
+        "has_spf",
+        "has_dmarc",
+        "disposable",
+        "last_checked_at",
+        "next_check_at",
+        "is_expired_display",
+    )
+    list_filter = ["has_mx", "disposable", "last_checked_at"]
+    readonly_fields = ("created_at", "updated_at", "last_checked_at")
+    actions = ["export_as_csv"]
+
+    def mx_records_count(self, obj):
+        if obj.mx_records:
+            return len(obj.mx_records)
+        return 0
+
+    mx_records_count.short_description = "MX Records"
+
+    def has_spf(self, obj):
+        return "Yes" if obj.spf else "No"
+
+    has_spf.short_description = "SPF"
+
+    def has_dmarc(self, obj):
+        return "Yes" if obj.dmarc else "No"
+
+    has_dmarc.short_description = "DMARC"
+
+    def is_expired_display(self, obj):
+        from django.utils import timezone
+
+        if obj.next_check_at < timezone.now():
+            return format_html("<span class='badge bg-warning'>Expired</span>")
+        return format_html("<span class='badge bg-success'>Valid</span>")
+
+    is_expired_display.short_description = "Status"

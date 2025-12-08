@@ -50,9 +50,18 @@ Examples:
 from django.urls import path
 
 from .views import (
+    AcademyHookErrorsView,
+    AcademyHooksView,
+    AcademyNotifySettingsView,
+    AcademyNotifyVariablesView,
     HooksView,
+    NotificationTemplatePreviewView,
+    NotificationTemplatesView,
+    NotificationTemplateView,
     NotificationsView,
     SlackTeamsView,
+    get_academy_sample_data,
+    get_hook_events,
     get_sample_data,
     preview_slack_template,
     preview_template,
@@ -63,15 +72,46 @@ from .views import (
 
 app_name = "notify"
 urlpatterns = [
+    # Template preview endpoints (legacy)
     path("preview/<slug>", preview_template),
     path("preview/slack/<slug>", preview_slack_template),
     path("test/email/<email>", test_email),
+    # Notification template management (requires read_notification capability)
+    path("academy/template", NotificationTemplatesView.as_view(), name="academy_template"),
+    path("academy/template/<str:slug>", NotificationTemplateView.as_view(), name="academy_template_slug"),
+    path(
+        "academy/template/<str:slug>/preview",
+        NotificationTemplatePreviewView.as_view(),
+        name="academy_template_slug_preview",
+    ),
+    # Academy notification settings
+    path("academy/settings", AcademyNotifySettingsView.as_view(), name="academy_notify_settings"),
+    path("academy/variables", AcademyNotifyVariablesView.as_view(), name="academy_notify_variables"),
+    # Slack integration endpoints
     path("slack/interaction", process_interaction),
-    path("hook/subscribe", HooksView.as_view()),
-    path("hook/subscribe/<int:hook_id>", HooksView.as_view()),
-    path("hook/sample", get_sample_data),
-    path("hook/<int:hook_id>/sample", get_sample_data),
     path("slack/command", slack_command, name="slack_command"),
     path("slack/team", SlackTeamsView.as_view(), name="slack_team"),
+    # Webhook endpoints
+    path("hook/event", get_hook_events, name="hook_event"),
+    # Legacy endpoints (backward compatibility)
+    path("hook/subscribe", HooksView.as_view()),
+    path("hook/subscribe/<int:hook_id>", HooksView.as_view()),
+    # User-specific endpoints (consistent with /me/ pattern)
+    path("hook/me/subscribe", HooksView.as_view(), name="hook_me_subscribe"),
+    path("hook/me/subscribe/<int:hook_id>", HooksView.as_view(), name="hook_me_subscribe_id"),
+    # Academy token endpoints
+    path("hook/academy/subscribe", AcademyHooksView.as_view(), name="hook_academy_subscribe"),
+    path("hook/academy/subscribe/<int:hook_id>", AcademyHooksView.as_view(), name="hook_academy_subscribe_id"),
+    path("hook/academy/sample", get_academy_sample_data, name="hook_academy_sample"),
+    path("hook/academy/sample/<int:hook_id>", get_academy_sample_data, name="hook_academy_sample_id"),
+    path("hook/academy/error", AcademyHookErrorsView.as_view(), name="hook_academy_error"),
+    # Sample data endpoints
+    # Legacy endpoints (backward compatibility)
+    path("hook/sample", get_sample_data),
+    path("hook/<int:hook_id>/sample", get_sample_data),
+    # User-specific endpoints (consistent with /me/ pattern)
+    path("hook/me/sample", get_sample_data, name="hook_me_sample"),
+    path("hook/me/sample/<int:hook_id>", get_sample_data, name="hook_me_sample_id"),
+    # User notification endpoints
     path("me/notification", NotificationsView.as_view(), name="me_notification"),
 ]

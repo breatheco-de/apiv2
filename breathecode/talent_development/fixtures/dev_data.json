@@ -1,0 +1,631 @@
+[
+    {
+        "model": "talent_development.skilldomain",
+        "pk": 1,
+        "fields": {
+            "slug": "programming",
+            "name": "Programming",
+            "description": "Software development and coding skills",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skilldomain",
+        "pk": 2,
+        "fields": {
+            "slug": "database",
+            "name": "Database",
+            "description": "Database design and management",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skilldomain",
+        "pk": 3,
+        "fields": {
+            "slug": "frontend",
+            "name": "Frontend",
+            "description": "User interface and client-side development",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skilldomain",
+        "pk": 4,
+        "fields": {
+            "slug": "backend",
+            "name": "Backend",
+            "description": "Server-side development and APIs",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skilldomain",
+        "pk": 5,
+        "fields": {
+            "slug": "soft_skill",
+            "name": "Soft Skills",
+            "description": "Interpersonal and communication skills",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skilldomain",
+        "pk": 6,
+        "fields": {
+            "slug": "devops",
+            "name": "DevOps",
+            "description": "Infrastructure and deployment",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skill",
+        "pk": 1,
+        "fields": {
+            "slug": "python",
+            "name": "Python",
+            "domain": 1,
+            "description": "Python programming language",
+            "technologies": "Python, Django, Flask",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skill",
+        "pk": 2,
+        "fields": {
+            "slug": "javascript",
+            "name": "JavaScript",
+            "domain": 1,
+            "description": "JavaScript programming language",
+            "technologies": "JavaScript, Node.js, Express",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skill",
+        "pk": 3,
+        "fields": {
+            "slug": "sql",
+            "name": "SQL",
+            "domain": 2,
+            "description": "Structured Query Language",
+            "technologies": "PostgreSQL, MySQL, SQLite",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skill",
+        "pk": 4,
+        "fields": {
+            "slug": "react",
+            "name": "React",
+            "domain": 3,
+            "description": "React frontend framework",
+            "technologies": "React, Redux, Next.js",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skill",
+        "pk": 5,
+        "fields": {
+            "slug": "rest_api",
+            "name": "REST API",
+            "domain": 4,
+            "description": "RESTful API design and implementation",
+            "technologies": "REST, GraphQL, FastAPI",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skill",
+        "pk": 6,
+        "fields": {
+            "slug": "teamwork",
+            "name": "Teamwork",
+            "domain": 5,
+            "description": "Collaborative work and team dynamics",
+            "technologies": "",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skill",
+        "pk": 7,
+        "fields": {
+            "slug": "docker",
+            "name": "Docker",
+            "domain": 6,
+            "description": "Containerization and orchestration",
+            "technologies": "Docker, Kubernetes, CI/CD",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competency",
+        "pk": 1,
+        "fields": {
+            "slug": "python_programming",
+            "name": "Python Programming",
+            "type": "technical",
+            "description": "Ability to write and maintain Python applications",
+            "technologies": "Python, Django, Flask, FastAPI",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competency",
+        "pk": 2,
+        "fields": {
+            "slug": "database_design",
+            "name": "Database Design",
+            "type": "technical",
+            "description": "Design and implement database schemas",
+            "technologies": "PostgreSQL, MySQL, MongoDB",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competency",
+        "pk": 3,
+        "fields": {
+            "slug": "frontend_development",
+            "name": "Frontend Development",
+            "type": "technical",
+            "description": "Build user interfaces and client-side applications",
+            "technologies": "React, Vue, Angular, TypeScript",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competency",
+        "pk": 4,
+        "fields": {
+            "slug": "api_design",
+            "name": "API Design",
+            "type": "technical",
+            "description": "Design and implement RESTful APIs",
+            "technologies": "REST, GraphQL, OpenAPI",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competency",
+        "pk": 5,
+        "fields": {
+            "slug": "collaboration",
+            "name": "Collaboration",
+            "type": "behavioral",
+            "description": "Work effectively in teams",
+            "technologies": "",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competencyskill",
+        "pk": 1,
+        "fields": {
+            "competency": 1,
+            "skill": 1,
+            "weight": "90.00",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competencyskill",
+        "pk": 2,
+        "fields": {
+            "competency": 2,
+            "skill": 3,
+            "weight": "85.00",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competencyskill",
+        "pk": 3,
+        "fields": {
+            "competency": 3,
+            "skill": 4,
+            "weight": "80.00",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competencyskill",
+        "pk": 4,
+        "fields": {
+            "competency": 3,
+            "skill": 2,
+            "weight": "70.00",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competencyskill",
+        "pk": 5,
+        "fields": {
+            "competency": 4,
+            "skill": 5,
+            "weight": "90.00",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competencyskill",
+        "pk": 6,
+        "fields": {
+            "competency": 4,
+            "skill": 1,
+            "weight": "60.00",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.competencyskill",
+        "pk": 7,
+        "fields": {
+            "competency": 5,
+            "skill": 6,
+            "weight": "100.00",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.jobfamily",
+        "pk": 1,
+        "fields": {
+            "slug": "engineering",
+            "name": "Engineering",
+            "description": "Software engineering roles",
+            "academy": null,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.jobfamily",
+        "pk": 2,
+        "fields": {
+            "slug": "product",
+            "name": "Product",
+            "description": "Product management roles",
+            "academy": null,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.jobfamily",
+        "pk": 3,
+        "fields": {
+            "slug": "design",
+            "name": "Design",
+            "description": "Design and UX roles",
+            "academy": null,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.jobrole",
+        "pk": 1,
+        "fields": {
+            "slug": "backend_developer",
+            "name": "Backend Developer",
+            "job_family": 1,
+            "description": "Develops server-side applications and APIs",
+            "academy": null,
+            "is_active": true,
+            "is_model": false,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.jobrole",
+        "pk": 2,
+        "fields": {
+            "slug": "frontend_developer",
+            "name": "Frontend Developer",
+            "job_family": 1,
+            "description": "Develops user interfaces and client-side applications",
+            "academy": null,
+            "is_active": true,
+            "is_model": false,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.jobrole",
+        "pk": 3,
+        "fields": {
+            "slug": "fullstack_developer",
+            "name": "Full Stack Developer",
+            "job_family": 1,
+            "description": "Develops both frontend and backend applications",
+            "academy": null,
+            "is_active": true,
+            "is_model": false,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.careerpath",
+        "pk": 1,
+        "fields": {
+            "job_role": 1,
+            "name": "Backend Development Track",
+            "description": "Career progression for backend developers",
+            "academy": null,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.careerpath",
+        "pk": 2,
+        "fields": {
+            "job_role": 2,
+            "name": "Frontend Development Track",
+            "description": "Career progression for frontend developers",
+            "academy": null,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.careerstage",
+        "pk": 1,
+        "fields": {
+            "career_path": 1,
+            "sequence": 1,
+            "title": "Junior Backend Developer",
+            "goal": "Entry-level position for backend developers",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.careerstage",
+        "pk": 2,
+        "fields": {
+            "career_path": 1,
+            "sequence": 2,
+            "title": "Mid-level Backend Developer",
+            "goal": "Intermediate position for backend developers",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.careerstage",
+        "pk": 3,
+        "fields": {
+            "career_path": 1,
+            "sequence": 3,
+            "title": "Senior Backend Developer",
+            "goal": "Advanced position for backend developers",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.careerstage",
+        "pk": 4,
+        "fields": {
+            "career_path": 2,
+            "sequence": 1,
+            "title": "Junior Frontend Developer",
+            "goal": "Entry-level position for frontend developers",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.careerstage",
+        "pk": 5,
+        "fields": {
+            "career_path": 2,
+            "sequence": 2,
+            "title": "Mid-level Frontend Developer",
+            "goal": "Intermediate position for frontend developers",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.careerstage",
+        "pk": 6,
+        "fields": {
+            "career_path": 2,
+            "sequence": 3,
+            "title": "Senior Frontend Developer",
+            "goal": "Advanced position for frontend developers",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stagecompetency",
+        "pk": 1,
+        "fields": {
+            "stage": 1,
+            "competency": 5,
+            "required_level": "foundation",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stagecompetency",
+        "pk": 2,
+        "fields": {
+            "stage": 2,
+            "competency": 1,
+            "required_level": "core",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stagecompetency",
+        "pk": 3,
+        "fields": {
+            "stage": 2,
+            "competency": 4,
+            "required_level": "core",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stagecompetency",
+        "pk": 4,
+        "fields": {
+            "stage": 3,
+            "competency": 2,
+            "required_level": "applied",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stagecompetency",
+        "pk": 5,
+        "fields": {
+            "stage": 4,
+            "competency": 5,
+            "required_level": "foundation",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.stagecompetency",
+        "pk": 6,
+        "fields": {
+            "stage": 5,
+            "competency": 3,
+            "required_level": "core",
+            "is_core": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skillbehaviorindicator",
+        "pk": 1,
+        "fields": {
+            "skill": 1,
+            "level": "foundation",
+            "description": "Can write basic Python scripts and understand syntax",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skillbehaviorindicator",
+        "pk": 2,
+        "fields": {
+            "skill": 1,
+            "level": "core",
+            "description": "Can build applications using frameworks like Django or Flask",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skillbehaviorindicator",
+        "pk": 3,
+        "fields": {
+            "skill": 1,
+            "level": "applied",
+            "description": "Can architect complex systems and mentor others",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skillknowledgeitem",
+        "pk": 1,
+        "fields": {
+            "skill": 1,
+            "description": "Understanding of Python data structures (lists, dicts, sets)",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skillknowledgeitem",
+        "pk": 2,
+        "fields": {
+            "skill": 1,
+            "description": "Knowledge of object-oriented programming in Python",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skillattitudetag",
+        "pk": 1,
+        "fields": {
+            "skill": 1,
+            "tag": "Attention to Detail",
+            "description": "Focuses on code quality",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "talent_development.skillattitudetag",
+        "pk": 2,
+        "fields": {
+            "skill": 1,
+            "tag": "Continuous Learning",
+            "description": "Keeps up with Python ecosystem",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    }
+]
+

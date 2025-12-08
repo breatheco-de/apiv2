@@ -20,7 +20,16 @@ from breathecode.payments import actions, tasks
 from breathecode.payments.models import Invoice
 
 from .actions import validate_auto_recharge_service_units
-from .models import Consumable, Plan, PlanFinancing, Subscription, SubscriptionBillingTeam, SubscriptionSeat
+from .models import (
+    Consumable,
+    Plan,
+    PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
+    Subscription,
+    SubscriptionBillingTeam,
+    SubscriptionSeat,
+)
 from .signals import (
     consume_service,
     grant_plan_permissions,
@@ -210,7 +219,32 @@ def handle_seat_invite_accepted(sender: Type[UserInvite], instance: UserInvite, 
     if instance.status != "ACCEPTED" or not instance.user_id:
         return
 
-    # Find pending seats by email across subscriptions with team-enabled items
+    if instance.plan_financing_seat_id:
+        seat = instance.plan_financing_seat
+        team = seat.team
+        financing = team.financing
+
+        seat.user = instance.user
+        seat.email = instance.user.email.lower()
+        seat.save(update_fields=["user", "email"])
+
+        logger.info(
+            "Activated plan financing seat via invite: financing=%s user=%s",
+            financing.id,
+            instance.user_id,
+        )
+
+        per_team_strategy = team and team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM
+
+        if not per_team_strategy:
+            Consumable.objects.filter(plan_financing_seat=seat, user__isnull=True).update(user=instance.user)
+
+        for plan in financing.plans.all():
+            actions.grant_student_capabilities(instance.user, plan)
+
+        tasks.build_service_stock_scheduler_from_plan_financing.delay(financing.id, seat_id=seat.id)
+        return
+
     seats = SubscriptionSeat.objects.filter(email__iexact=instance.email.strip(), user__isnull=True)
     for seat in seats.select_related("billing_team", "billing_team__subscription"):
         subscription = seat.billing_team.subscription
@@ -355,7 +389,7 @@ def post_mentoring_session_ended(sender: Type[MentorshipSession], instance: Ment
 
 
 @receiver(m2m_changed, sender=Plan.service_items.through)
-def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
+def plan_m2m_wrapper(sender, instance: Plan, **kwargs):
     if kwargs["action"] != "post_add":
         return
 
@@ -363,7 +397,7 @@ def plan_m2m_wrapper(sender: Type[Plan.service_items.through], instance: Plan, *
 
 
 @receiver(update_plan_m2m_service_items, sender=Plan.service_items.through)
-def plan_m2m_changed(sender: Type[Plan.service_items.through], instance: Plan, **kwargs):
+def plan_m2m_changed(sender, instance: Plan, **kwargs):
     tasks.update_service_stock_schedulers.delay(instance.id)
 
 
@@ -371,102 +405,6 @@ def plan_m2m_changed(sender: Type[Plan.service_items.through], instance: Plan, *
 def process_google_webhook_on_created(sender: Type[GoogleWebhook], instance: GoogleWebhook, created: bool, **kwargs):
     if created:
         tasks.process_google_webhook.delay(instance.id)
-
-
-@receiver(monitoring_signals.stripe_webhook, sender=StripeEvent)
-def handle_stripe_refund(sender: Type[StripeEvent], event_id: int, **kwargs):
-    """
-    Maneja eventos de devolución de Stripe
-    """
-    instance = StripeEvent.objects.get(id=event_id)
-
-    if instance.type == "charge.refunded":
-        try:
-            charge_data = instance.data["object"]
-            charge_id = charge_data["id"]
-
-            refunds = charge_data.get("refunds", {}).get("data", [])
-            if not refunds:
-                logger.warning(f"No refunds found in charge {charge_id}")
-                instance.status = "ERROR"
-                instance.status_text = f"No refunds found in charge {charge_id}"
-                instance.save()
-                return
-
-            refunds_sorted = sorted(refunds, key=lambda x: x.get("created", 0), reverse=True)
-            refund_data = refunds_sorted[0]
-            refund_id = refund_data["id"]
-            refund_amount = refund_data.get("amount", 0) / 100  # Convertir de centavos a dólares
-
-            logger.info(f"Processing refund {refund_id} for charge {charge_id}, amount: {refund_amount}")
-
-            invoice = Invoice.objects.filter(stripe_id=charge_id).first()
-
-            if not invoice:
-                logger.warning(f"Invoice not found for charge {charge_id}")
-                instance.status = "ERROR"
-                instance.status_text = f"Invoice not found for charge {charge_id}"
-                instance.save()
-                return
-
-            if invoice.status == "REFUNDED":
-                logger.info(f"Invoice {invoice.id} already refunded")
-                invoice.amount_refunded += refund_amount
-                invoice.save()
-                instance.status = "DONE"
-                instance.status_text = f"Additional refund processed for invoice {invoice.id}, amount: {refund_amount}"
-                instance.save()
-                return
-
-            invoice.refund_stripe_id = refund_id
-            invoice.status = "REFUNDED"
-            invoice.refunded_at = timezone.now()
-            invoice.amount_refunded = refund_amount
-
-            invoice.save()
-            logger.info(
-                f"Updated invoice {invoice.id} to REFUNDED status with refund {refund_id} for amount {refund_amount}"
-            )
-
-            bag = invoice.bag
-            if bag and bag.plans.exists():
-                plan = bag.plans.first()
-                user = invoice.user
-
-                subscription = Subscription.objects.filter(
-                    user=user, plans=plan, status__in=[Subscription.Status.ACTIVE]
-                ).first()
-
-                if subscription:
-                    subscription.status = Subscription.Status.EXPIRED
-                    subscription.status_message = f"Subscription expired due to refund of invoice {invoice.id}"
-                    subscription.save()
-                    logger.info(f"Expired subscription {subscription.id} due to refund")
-                else:
-                    plan_financing = PlanFinancing.objects.filter(
-                        user=user, plans=plan, status__in=[PlanFinancing.Status.ACTIVE]
-                    ).first()
-
-                    if plan_financing:
-                        plan_financing.status = PlanFinancing.Status.EXPIRED
-                        plan_financing.status_message = f"Plan financing expired due to refund of invoice {invoice.id}"
-                        plan_financing.save()
-                        logger.info(f"Expired plan financing {plan_financing.id} due to refund")
-
-            instance.status = "DONE"
-            instance.status_text = f"Successfully processed refund for invoice {invoice.id}, amount: {refund_amount}"
-            instance.save()
-
-            logger.info(f"Successfully processed refund for invoice {invoice.id}")
-
-        except Exception as e:
-            logger.error(f"Error processing refund webhook: {str(e)}")
-            instance.status = "ERROR"
-            instance.status_text = f"Error processing refund webhook: {str(e)}"
-            instance.save()
-            return
-
-    logger.info("=== END HANDLE STRIPE REFUND RECEIVER ===")
 
 
 def check_consumable_balance_for_auto_recharge(sender: Type[Consumable], instance: Consumable, **kwargs):

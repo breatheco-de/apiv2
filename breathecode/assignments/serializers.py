@@ -86,6 +86,36 @@ class TaskGETSerializer(serpy.Serializer):
             return telemetry.telemetry
         return None
 
+class TaskHookSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    title = serpy.Field()
+    task_status = serpy.Field()
+    associated_slug = serpy.Field()
+    description = serpy.Field()
+    revision_status = serpy.Field()
+    github_url = serpy.Field()
+    live_url = serpy.Field()
+    task_type = serpy.Field()
+    user = UserSmallSerializer()
+    opened_at = serpy.Field()
+    read_at = serpy.Field()
+    reviewed_at = serpy.Field()
+    delivered_at = serpy.Field()
+    cohort = CohortSmallSerializer(required=False)
+    assignment_telemetry = serpy.MethodField()
+
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_assignment_telemetry(self, obj):
+        telemetry = AssignmentTelemetry.objects.filter(user=obj.user, asset_slug=obj.associated_slug).first()
+        if telemetry is not None:
+            return telemetry.telemetry
+        return None
+
 
 class TaskGETSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""

@@ -4,6 +4,7 @@ import re
 from typing import Any, Type
 
 from asgiref.sync import sync_to_async
+from django.db.models.signals import post_migrate
 from django.dispatch import receiver
 
 import breathecode.authenticate.tasks as auth_tasks
@@ -273,3 +274,61 @@ def create_owner_profile_academy(sender: Type[Academy], instance: Academy, creat
             logger.info(f"Created ProfileAcademy for {instance.owner.email} at {instance.slug}")
         else:
             logger.info(f"ProfileAcademy already exists for {instance.owner.email} at {instance.slug}")
+
+
+@receiver(academy_saved, sender=Academy)
+def create_academy_token(sender: Type[Academy], instance: Academy, created: bool, **kwargs: Any):
+    """
+    When a new academy is created, automatically generate an academy token.
+    
+    This ensures that the academy has a token available for webhook subscriptions
+    and other API integrations that require academy-level authentication.
+    """
+    if created:
+        from breathecode.authenticate.actions import generate_academy_token
+        
+        try:
+            logger.info(f"Generating academy token for new academy: {instance.slug} (id: {instance.id})")
+            token = generate_academy_token(instance.id, force=False)
+            logger.info(f"Successfully generated academy token for academy {instance.slug} (token_id: {token.id})")
+        except Exception as e:
+            # Log error but don't fail academy creation if token generation fails
+            logger.error(f"Error generating academy token for academy {instance.slug}: {e}", exc_info=True)
+
+
+@receiver(post_migrate)
+def normalize_academy_features_on_migrate(sender, **kwargs):
+    """
+    Automatically normalize academy_features for all academies after migrations.
+    
+    This ensures that when new feature flags are added to default_academy_features(),
+    all existing academies in the database get updated with the new defaults.
+    
+    Runs silently during deployment to avoid cluttering logs.
+    """
+    # Only run for the admissions app migrations
+    if sender.name != "breathecode.admissions":
+        return
+    
+    try:
+        logger.info("Auto-normalizing academy_features after migration...")
+        
+        academies = Academy.objects.all()
+        updated = 0
+        
+        for academy in academies:
+            merged_features = academy.get_academy_features()
+            
+            if merged_features != academy.academy_features:
+                academy.academy_features = merged_features
+                academy.save(update_fields=["academy_features"])
+                updated += 1
+        
+        if updated > 0:
+            logger.info(f"Successfully normalized academy_features for {updated} academies")
+        else:
+            logger.debug("All academies already have current feature flags")
+            
+    except Exception as e:
+        # Don't fail migrations if normalization fails
+        logger.error(f"Error normalizing academy_features: {e}")

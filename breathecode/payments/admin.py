@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from breathecode.payments import signals, tasks
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 from breathecode.payments.models import (
     AcademyPaymentSettings,
     AcademyService,
@@ -15,6 +16,7 @@ from breathecode.payments.models import (
     Consumable,
     ConsumptionSession,
     Coupon,
+    CreditNote,
     Currency,
     EventTypeSet,
     EventTypeSetTranslation,
@@ -27,6 +29,8 @@ from breathecode.payments.models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
     PlanOffer,
     PlanOfferTranslation,
     PlanServiceItem,
@@ -148,7 +152,7 @@ class PlanAdmin(admin.ModelAdmin):
         "mentorship_service_set",
         "event_type_set",
     ]
-    filter_horizontal = ("financing_options", "add_ons")
+    filter_horizontal = ("financing_options", "add_ons", "plan_addons")
     list_select_related = ("owner",)
 
     fieldsets = (
@@ -211,6 +215,7 @@ class PlanAdmin(admin.ModelAdmin):
                 "fields": (
                     "financing_options",
                     "add_ons",
+                    "plan_addons",
                     "invites",
                 )
             },
@@ -246,6 +251,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "unit_type",
         "how_many",
         "service_item",
+        "plan_financing_team",
+        "plan_financing_seat",
         "user",
         "subscription",
         "plan_financing",
@@ -257,6 +264,8 @@ class ConsumableAdmin(admin.ModelAdmin):
         "user__email",
         "subscription__user__email",
         "plan_financing__user__email",
+        "plan_financing_team__financing__user__email",
+        "plan_financing_seat__email",
     ]
     raw_id_fields = [
         "user",
@@ -266,16 +275,114 @@ class ConsumableAdmin(admin.ModelAdmin):
         "mentorship_service_set",
         "subscription_billing_team",
         "subscription_seat",
+        "plan_financing_team",
+        "plan_financing_seat",
     ]
     actions = [grant_service_permissions]
+
+    def plan_financing_team(self, obj):
+        return getattr(obj, "plan_financing_team", None)
+
+    def plan_financing_seat(self, obj):
+        return getattr(obj, "plan_financing_seat", None)
+
+
+class CreditNoteInline(admin.TabularInline):
+    model = CreditNote
+    extra = 0
+    fields = ("id", "amount", "currency", "status", "issued_at", "reason", "refund_stripe_id")
+    readonly_fields = ("id", "issued_at")
+    can_delete = False
+
+
+class InvoiceForm(forms.ModelForm):
+    class Meta:
+        model = Invoice
+        fields = "__all__"
+        widgets = {
+            "amount_breakdown": PrettyJSONWidget(),
+        }
+
+
+@admin.display(description="Recalculate amount breakdown")
+def recalculate_invoice_breakdown(modeladmin, request, queryset):
+    from django.contrib import messages
+    from breathecode.payments.actions import calculate_invoice_breakdown
+
+    updated_count = 0
+    error_count = 0
+
+    for invoice in queryset.all():
+        if not invoice.bag:
+            continue
+
+        try:
+            lang = "en"
+            breakdown = calculate_invoice_breakdown(invoice.bag, invoice, lang)
+            invoice.amount_breakdown = breakdown
+            invoice.save(update_fields=["amount_breakdown"])
+            updated_count += 1
+        except Exception as e:
+            error_count += 1
+            messages.error(request, f"Error recalculating breakdown for invoice {invoice.id}: {str(e)}")
+
+    if updated_count > 0:
+        messages.success(request, f"Successfully recalculated breakdown for {updated_count} invoice(s)")
+    if error_count > 0:
+        messages.warning(request, f"Failed to recalculate breakdown for {error_count} invoice(s)")
 
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
+    form = InvoiceForm
     list_display = ("id", "amount", "currency", "paid_at", "status", "stripe_id", "user", "academy")
     list_filter = ["status", "academy"]
     search_fields = ["id", "status", "user__email"]
     raw_id_fields = ["user", "currency", "bag", "academy"]
+    actions = [recalculate_invoice_breakdown]
+    inlines = [CreditNoteInline]
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "user",
+                    "academy",
+                    "bag",
+                    "currency",
+                    "amount",
+                    "amount_breakdown",
+                    "status",
+                    "paid_at",
+                    "refunded_at",
+                    "amount_refunded",
+                )
+            },
+        ),
+        (
+            "Payment Details",
+            {
+                "fields": (
+                    "stripe_id",
+                    "refund_stripe_id",
+                    "coinbase_charge_id",
+                    "payment_method",
+                    "proof",
+                    "externally_managed",
+                )
+            },
+        ),
+        (
+            "Subscription Details",
+            {
+                "fields": (
+                    "subscription_billing_team",
+                    "subscription_seat",
+                )
+            },
+        ),
+    )
 
 
 def renew_subscription_consumables(modeladmin, request, queryset):
@@ -378,6 +485,39 @@ class PlanFinancingAdmin(admin.ModelAdmin):
         "selected_event_type_set",
     ]
     actions = [renew_plan_financing_consumables, charge_plan_financing, regenerate_service_stock_schedulers]
+
+
+@admin.register(PlanFinancingTeam)
+class PlanFinancingTeamAdmin(admin.ModelAdmin):
+    list_display = ("id", "financing", "name", "additional_seats", "consumption_strategy", "seats_count")
+    list_filter = ["consumption_strategy", "financing__status"]
+    search_fields = [
+        "name",
+        "financing__id",
+        "financing__user__email",
+        "financing__user__first_name",
+        "financing__user__last_name",
+    ]
+    raw_id_fields = ["financing"]
+
+    def seats_count(self, obj):
+        return obj.seats.filter(is_active=True).count()
+
+    seats_count.short_description = "Active seats"
+
+
+@admin.register(PlanFinancingSeat)
+class PlanFinancingSeatAdmin(admin.ModelAdmin):
+    list_display = ("id", "team", "email", "user", "is_active", "created_at", "updated_at")
+    list_filter = ["is_active", "team__consumption_strategy"]
+    search_fields = [
+        "email",
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "team__financing__user__email",
+    ]
+    raw_id_fields = ["team", "user"]
 
 
 def add_cohort_set_to_the_subscriptions(modeladmin, request, queryset):
@@ -487,6 +627,9 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "id",
         "subscription",
         "plan_financing",
+        "service_type",
+        "plan_financing_team",
+        "plan_financing_seat",
         "subscription_billing_team",
         "subscription_seat",
         "consumables_count",
@@ -496,6 +639,8 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "valid_until",
         "subscription_billing_team",
         "subscription_seat",
+        "plan_financing_team",
+        "plan_financing_seat",
         "subscription_handler__subscription__status",
         "plan_handler__subscription__status",
         "plan_handler__plan_financing__status",
@@ -515,13 +660,18 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "plan_handler__plan_financing__user__last_name",
         "subscription_seat__email",
         "subscription_seat__user__email",
+        "plan_financing_seat__email",
+        "plan_financing_seat__user__email",
         "subscription_billing_team__name",
+        "plan_financing_team__name",
     ]
     raw_id_fields = [
         "subscription_handler",
         "plan_handler",
         "subscription_billing_team",
         "subscription_seat",
+        "plan_financing_team",
+        "plan_financing_seat",
     ]
     # Use autocomplete to avoid loading all consumables in memory and reduce cursor usage
     autocomplete_fields = ("consumables",)
@@ -536,6 +686,8 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
         "plan_handler__handler__service_item__service",
         "subscription_seat__user",
         "subscription_billing_team",
+        "plan_financing_team",
+        "plan_financing_seat__user",
     )
     date_hierarchy = "valid_until"
     actions = [renew_consumables]
@@ -557,6 +709,8 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
             "plan_handler__handler__service_item__service",
             "subscription_seat__user",
             "subscription_billing_team",
+            "plan_financing_team",
+            "plan_financing_seat__user",
         )
 
     def subscription(self, obj):
@@ -569,6 +723,19 @@ class ServiceStockSchedulerAdmin(admin.ModelAdmin):
     def plan_financing(self, obj):
         if obj.plan_handler:
             return obj.plan_handler.plan_financing
+
+    def service_type(self, obj):
+        handler = obj.plan_handler or obj.subscription_handler
+        if handler:
+            service_item = getattr(handler, "service_item", None)
+            if not service_item:
+                service_item = getattr(handler, "handler", None)
+                service_item = getattr(service_item, "service_item", None)
+            if service_item and service_item.service:
+                return service_item.service.type
+        return "-"
+
+    service_type.short_description = "Service type"
 
     def consumables_count(self, obj):
         # Use annotated value if available to avoid extra queries
@@ -596,10 +763,21 @@ class BagAdmin(admin.ModelAdmin):
     list_filter = ["status", "type", "chosen_period", "academy", "is_recurrent"]
     search_fields = ["user__email", "user__first_name", "user__last_name"]
     raw_id_fields = ["user", "academy"]
+    # Allow editing related objects in the Bag admin
+    filter_horizontal = ("plans", "plan_addons", "service_items", "coupons")
+
+
+class PlanOfferForm(forms.ModelForm):
+    class Meta:
+        model = PlanOffer
+        fields = "__all__"
+
+    pass
 
 
 @admin.register(PlanOffer)
 class PlanOfferAdmin(admin.ModelAdmin):
+    form = PlanOfferForm
     list_display = ("id", "original_plan", "suggested_plan", "show_modal", "expires_at")
     list_filter = ["show_modal"]
     search_fields = ["original_plan__slug", "suggested_plan__slug"]
@@ -708,5 +886,67 @@ class ProofOfPaymentAdmin(admin.ModelAdmin):
 
 @admin.register(AcademyPaymentSettings)
 class AcademyPaymentSettingsAdmin(admin.ModelAdmin):
-    list_display = ("academy", "pos_vendor", "created_at")
+    list_display = ("academy", "created_at")
     search_fields = ["academy__name", "academy__slug"]
+
+
+class CreditNoteForm(forms.ModelForm):
+    class Meta:
+        model = CreditNote
+        fields = "__all__"
+        widgets = {
+            "breakdown": PrettyJSONWidget(),
+        }
+
+
+@admin.register(CreditNote)
+class CreditNoteAdmin(admin.ModelAdmin):
+    form = CreditNoteForm
+    list_display = ("id", "invoice", "amount", "currency", "status", "issued_at", "refund_stripe_id")
+    list_filter = ["status", "currency", "issued_at"]
+    search_fields = ["id", "invoice__id", "invoice__user__email", "refund_stripe_id"]
+    raw_id_fields = ["invoice", "currency"]
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "invoice",
+                    "amount",
+                    "currency",
+                    "status",
+                    "issued_at",
+                )
+            },
+        ),
+        (
+            "Refund Details",
+            {
+                "fields": (
+                    "reason",
+                    "breakdown",
+                    "refund_stripe_id",
+                )
+            },
+        ),
+        (
+            "Legal Information",
+            {
+                "fields": (
+                    "country_code",
+                    "legal_text",
+                )
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )

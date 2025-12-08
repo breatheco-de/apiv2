@@ -65,6 +65,7 @@ CAPABILITIES = [
     {"slug": "crud_review", "description": "Create, update or delete academy reviews"},
     {"slug": "read_media", "description": "List all the medias"},
     {"slug": "crud_media", "description": "Create, update or delete academy medias"},
+    {"slug": "crud_course", "description": "Create, update or delete marketing courses"},
     {"slug": "read_media_resolution", "description": "List all the medias resolutions"},
     {"slug": "crud_media_resolution", "description": "Create, update or delete academy media resolutions"},
     {"slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)"},
@@ -159,6 +160,10 @@ CAPABILITIES = [
         "slug": "crud_academy_feedback_settings",
         "description": "Settings related to feedback module, for example the chosen template for a cohort survey",
     },
+    {
+        "slug": "crud_academy_payment_settings",
+        "description": "Update payment settings for the academy (Stripe, Coinbase API keys, webhooks, etc.)",
+    },
     {"slug": "start_or_end_event", "description": "Start or end event"},
     {"slug": "read_provisioning_bill", "description": "Read provisioning activities and bills"},
     {"slug": "crud_provisioning_activity", "description": "Create, update or delete provisioning activities"},
@@ -208,6 +213,38 @@ CAPABILITIES = [
     {
         "slug": "read_consumable",
         "description": "Read user service consumables to understand how many units are available",
+    },
+    {
+        "slug": "read_invoice",
+        "description": "Read invoice information",
+    },
+    {
+        "slug": "crud_invoice",
+        "description": "Create, update, delete invoices and process refunds",
+    },
+    {
+        "slug": "read_career_path",
+        "description": "Read career paths, job families, job roles, skills, competencies, and related talent development information",
+    },
+    {
+        "slug": "crud_career_path",
+        "description": "Create, update, or delete career paths, job families, job roles, skills, competencies, and related talent development information",
+    },
+    {
+        "slug": "read_notification",
+        "description": "View and preview notification templates",
+    },
+    {
+        "slug": "crud_notification",
+        "description": "Full CRUD access to notifications (future-proofing)",
+    },
+    {
+        "slug": "read_hook",
+        "description": "Read webhook subscriptions for academy token",
+    },
+    {
+        "slug": "crud_hook",
+        "description": "Create, update, and delete webhook subscriptions for academy token",
     },
 ]
 
@@ -697,6 +734,7 @@ def get_extended_roles():
                 "crud_paymentmethod",
                 "read_commission",
                 "crud_commission",
+                "crud_course",
             ],
         }
     )
@@ -737,6 +775,11 @@ def get_extended_roles():
                 "crud_subscription",
                 "read_paymentmethod",
                 "crud_paymentmethod",
+                "read_notification",
+                "crud_notification",
+                "read_hook",
+                "crud_hook",
+                "crud_academy_payment_settings",
             ],
         }
     )
@@ -811,4 +854,3 @@ def get_all_role_priorities() -> dict[str, int]:
     """
     roles = get_extended_roles()
     return {role["slug"]: get_role_priority(role["slug"]) for role in roles}
-

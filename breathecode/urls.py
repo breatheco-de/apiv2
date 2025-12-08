@@ -90,6 +90,7 @@ apps = [
     ("v1/provisioning/", "breathecode.provisioning.urls", "provisioning"),
     ("v1/payments/", "breathecode.payments.urls.v1", "payments"),
     ("v1/commission/", "breathecode.commission.urls", "commission"),
+    ("v1/talent/", "breathecode.talent_development.urls", "talent_development"),
     ("s/", "breathecode.marketing.urls_shortner", "marketing_shortner"),
     ("mentor/", "breathecode.mentorship.urls_shortner", "mentorship_shortner"),
     ("asset/", "breathecode.registry.urls_shortner", "registry_shortner"),
@@ -97,6 +98,10 @@ apps = [
 ]
 
 urlpatterns_apps = [path(url, include(urlconf, namespace=namespace)) for url, urlconf, namespace in apps]
+
+# Add alias for v1/notify -> v1/messaging (no namespace to avoid conflicts)
+# All reverse() calls use the "notify" namespace from v1/messaging/ above
+urlpatterns_apps.append(path("v1/notify/", include("breathecode.notify.urls")))
 
 urlpatterns_app_openapi = [mount_app_openapi(url, urlconf, namespace) for url, urlconf, namespace in apps]
 

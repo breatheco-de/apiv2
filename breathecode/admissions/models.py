@@ -26,22 +26,43 @@ def default_syllabus_version_json():
     return {"days": []}
 
 
-def default_white_label_features():
-    """Default value for `Academy.white_label_features` field."""
+def default_academy_features():
+    """Default value for `Academy.academy_features` field.
+    
+    Feature flags are now available for all academies, not just white label ones.
+    All features default to True, except show_marketing_navigation which is only for white label academies.
+    """
     return {
-        "navigation": {
-            "show_marketing_navigation": False,  # show marketing navigation (url to 4geeks programs)
-            "custom_links": [],  # Aditional links added to white label academy navbar (follow frontend structure)
-        },
         "features": {
-            "allow_referral_program": False,  # allow referral program
             "allow_events": True,  # allow events
-            "allow_mentoring": False,  # allow mentoring
-            "allow_feedback_widget": False,  # allow feedback widget
-            "allow_community_widget": False,  # allow community widget
-            "allow_other_academy_courses": False,  # allow other academy courses on dashboard
-            "allow_other_academy_events": False,  # allow other academy events
+            "allow_mentoring": True,  # allow mentoring
+            "allow_feedback_widget": True,  # allow feedback widget
+            "allow_community_widget": True,  # allow community widget
+            "allow_referral_program": True,  # allow referral program
+            "allow_other_academy_events": True,  # allow other academy events
+            "allow_other_academy_courses": True,  # allow other academy courses on dashboard
+            "reseller": False,  # allow academy to resell courses from other academies (requires white_labeled=True)
         },
+        "navigation": {
+            "custom_links": [],  # Additional links added to academy navbar (follow frontend structure)
+            "show_marketing_navigation": False,  # Show marketing navigation (url to 4geeks programs) - Only for white label academies
+        },
+    }
+
+
+def default_welcome_video():
+    """Default value for `Academy.welcome_video` field."""
+    return {
+        "url": "",
+        "preview_image": ""
+    }
+
+
+def default_white_label_params():
+    """Default value for `Academy.white_label_params` field."""
+    return {
+        "es": "",
+        "en": ""
     }
 
 
@@ -101,6 +122,10 @@ class Academy(models.Model):
     marketing_email = models.EmailField(blank=True, null=True, default=None)
     feedback_email = models.EmailField(blank=True, null=True, default=None)
 
+    platform_description = models.TextField(
+        blank=True, null=True, default=None, help_text="Description of the platform shown in notification emails and meta description"
+    )
+
     phone_regex = RegexValidator(
         regex=r"^\+?1?\d{9,15}$",
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
@@ -122,10 +147,23 @@ class Academy(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, db_index=True)
     zip_code = models.IntegerField(blank=True, null=True, db_index=True)
     white_labeled = models.BooleanField(default=False)
-    white_label_features = models.JSONField(
-        default=default_white_label_features,
+    academy_features = models.JSONField(
+        default=default_academy_features,
         blank=True,
-        help_text="JSON field to store white label feature configurations for example: eliminate dashboard widgets, include custom links, etc.",
+        verbose_name="Academy Features",
+        help_text="JSON field to store feature flag configurations for all academies. Allows enabling/disabling features and customizing navigation. Example: hide dashboard widgets, include custom links, etc.",
+    )
+    welcome_video = models.JSONField(
+        default=default_welcome_video,
+        blank=True,
+        null=True,
+        help_text="Video de bienvenida con preview_image y url. Formato: {'url': 'url', 'preview_image': 'url'}. Si no se especifica en el payload de la invitación, se usará este valor por defecto.",
+    )
+    white_label_params = models.JSONField(
+        default=default_white_label_params,
+        blank=True,
+        null=True,
+        help_text="This is a json with translations {es: '', en: ''} that will include a markdown that can be rendered on the right side of the login when an academy is whitelabel.",
     )
 
     active_campaign_slug = models.SlugField(
@@ -170,13 +208,13 @@ class Academy(models.Model):
     def default_ac_slug(self):
         return self.slug
 
-    def get_white_label_features(self):
+    def get_academy_features(self):
         """
-        Returns white_label_features merged with defaults.
+        Returns academy_features merged with defaults.
         This ensures that if new fields are added to the default structure,
         existing academies will automatically get them.
         """
-        return self._deep_merge_dict(default_white_label_features(), self.white_label_features or {})
+        return self._deep_merge_dict(default_academy_features(), self.academy_features or {})
 
     @staticmethod
     def _deep_merge_dict(default, override):
@@ -242,12 +280,12 @@ class Syllabus(models.Model):
     )
 
     forked_from = models.ForeignKey(
-        'self',
+        "self",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
-        related_name='forks',
+        related_name="forks",
         help_text="If this syllabus was forked/created based another one",
     )
 
@@ -309,16 +347,23 @@ class SyllabusVersion(models.Model):
     version = models.PositiveSmallIntegerField(db_index=True)
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
     forked_from = models.ForeignKey(
-        'self',
+        "self",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         default=None,
         help_text="If this syllabus version was forked/created based another one",
-        related_name='forks',
+        related_name="forks",
     )
     status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED, db_index=True)
     change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
+    reasoning = models.TextField(
+        max_length=450,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Why is this new version being created?",
+    )
 
     integrity_status = models.CharField(max_length=15, choices=INTEGRITY_STATUS, default=PENDING, db_index=True)
     integrity_check_at = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
@@ -419,6 +464,11 @@ class Cohort(models.Model):
     remote_available = models.BooleanField(
         default=True, help_text="True (default) if the students from other cities can take it from home", db_index=True
     )
+
+    enable_assessments_telemetry = models.BooleanField(
+        default=False, help_text="If true, the assessments will be tracked in the database", db_index=True
+    )
+
     online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
     timezone = models.CharField(max_length=50, null=True, default=None, blank=True, db_index=True)
@@ -584,7 +634,7 @@ EDU_STATUS = (
 class CohortUser(models.Model):
     """
     Represents a user's membership in a cohort with a specific role.
-    
+
     The role determines the user's permissions and responsibilities within the cohort,
     and maps to a corresponding ProfileAcademy role for academy-wide permissions.
     """
@@ -631,7 +681,7 @@ class CohortUser(models.Model):
     def get_profile_academy_role_slug(self) -> str:
         """
         Get the ProfileAcademy role slug corresponding to this CohortUser's role.
-        
+
         Returns:
             str: The role slug for ProfileAcademy (e.g., 'teacher', 'student')
         """
@@ -641,10 +691,10 @@ class CohortUser(models.Model):
     def map_role_to_profile_academy_slug(cls, cohort_user_role: str) -> str:
         """
         Map a CohortUser role to its corresponding ProfileAcademy role slug.
-        
+
         Args:
             cohort_user_role: The CohortUser role (e.g., 'TEACHER', 'ASSISTANT')
-            
+
         Returns:
             str: The role slug for ProfileAcademy (e.g., 'teacher', 'assistant')
         """

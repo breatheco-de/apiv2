@@ -29,6 +29,7 @@ from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
     apply_pricing_ratio,
+    calculate_refund_breakdown,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -37,6 +38,7 @@ from breathecode.payments.actions import (
     get_balance_by_resource,
     get_discounted_price,
     max_coupons_allowed,
+    process_refund,
 )
 from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
@@ -56,6 +58,8 @@ from breathecode.payments.models import (
     PaymentMethod,
     Plan,
     PlanFinancing,
+    PlanFinancingSeat,
+    PlanFinancingTeam,
     PlanOffer,
     PlanServiceItem,
     Seller,
@@ -66,8 +70,10 @@ from breathecode.payments.models import (
     SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
+    AcademyPaymentSettingsPUTSerializer,
     BillingTeamAutoRechargeSerializer,
     CohortSetSerializer,
+    CreditNoteSerializer,
     FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
@@ -77,6 +83,7 @@ from breathecode.payments.serializers import (
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
     GetCouponWithPlansSerializer,
+    GetCurrencySerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetFinancingOptionSerializer,
@@ -2089,9 +2096,183 @@ class AcademyInvoiceView(APIView):
             items = items.filter(status__in=status.split(","))
 
         items = handler.queryset(items)
-        serializer = GetInvoiceSmallSerializer(items, many=True)
+        serializer = GetInvoiceSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+
+class AcademyInvoiceRefundView(APIView):
+    """
+    Process a refund for an invoice.
+    Creates a credit note and processes the refund through Stripe if applicable.
+    """
+
+    @capable_of("crud_invoice")
+    def post(self, request, invoice_id, academy_id=None):
+        lang = get_user_language(request)
+        invoice = Invoice.objects.filter(id=invoice_id, academy__id=academy_id).first()
+
+        if not invoice:
+            raise ValidationException(
+                translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
+            )
+
+        # Validate invoice is not already fully refunded
+        already_refunded = invoice.amount_refunded or 0
+        available_to_refund = invoice.amount - already_refunded
+
+        if already_refunded >= invoice.amount:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invoice has already been fully refunded. Total refunded: {already_refunded}, Invoice amount: {invoice.amount}",
+                    es=f"La factura ya ha sido completamente reembolsada. Total reembolsado: {already_refunded}, Monto de la factura: {invoice.amount}",
+                    slug="invoice-already-fully-refunded",
+                ),
+                code=400,
+            )
+
+        # refund_amount is required
+        refund_amount = request.data.get("refund_amount")
+        if refund_amount is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="refund_amount is required",
+                    es="refund_amount es requerido",
+                    slug="refund-amount-required",
+                ),
+                code=400,
+            )
+
+        try:
+            refund_amount = float(refund_amount)
+            if refund_amount <= 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Refund amount must be greater than 0",
+                        es="El monto del reembolso debe ser mayor que 0",
+                        slug="invalid-refund-amount",
+                    ),
+                    code=400,
+                )
+            if refund_amount > available_to_refund:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Refund amount ({refund_amount}) exceeds available amount to refund ({available_to_refund}). "
+                        f"Already refunded: {already_refunded}, Invoice total: {invoice.amount}",
+                        es=f"El monto del reembolso ({refund_amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
+                        f"Ya reembolsado: {already_refunded}, Total de la factura: {invoice.amount}",
+                        slug="refund-amount-exceeds-available",
+                    ),
+                    code=400,
+                )
+        except ValueError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid refund_amount. Must be a number.",
+                    es="refund_amount inválido. Debe ser un número.",
+                    slug="invalid-refund-amount",
+                ),
+                code=400,
+            )
+
+        reason = request.data.get("reason", "")
+
+        # items_to_refund is required - it's a dict mapping slugs to refund amounts
+        items_to_refund = request.data.get("items_to_refund")
+        if items_to_refund is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund is required. Must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
+                    es="items_to_refund es requerido. Debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
+                    slug="items-to-refund-required",
+                ),
+                code=400,
+            )
+
+        if not isinstance(items_to_refund, dict):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
+                    es="items_to_refund debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
+                    slug="invalid-items-to-refund",
+                ),
+                code=400,
+            )
+
+        if len(items_to_refund) == 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund cannot be empty. Must contain at least one slug with its refund amount",
+                    es="items_to_refund no puede estar vacío. Debe contener al menos un slug con su monto de reembolso",
+                    slug="items-to-refund-empty",
+                ),
+                code=400,
+            )
+
+        # Validate that all values in items_to_refund are positive numbers
+        for slug, amount in items_to_refund.items():
+            try:
+                amount_float = float(amount)
+                if amount_float <= 0:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Refund amount for '{slug}' must be greater than 0, got {amount}",
+                            es=f"El monto del reembolso para '{slug}' debe ser mayor que 0, se obtuvo {amount}",
+                            slug="invalid-refund-amount-for-item",
+                        ),
+                        code=400,
+                    )
+            except (ValueError, TypeError):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Refund amount for '{slug}' must be a number, got {type(amount).__name__}",
+                        es=f"El monto del reembolso para '{slug}' debe ser un número, se obtuvo {type(amount).__name__}",
+                        slug="invalid-refund-amount-type",
+                    ),
+                    code=400,
+                )
+
+        # Validate that refund_amount matches the sum of items_to_refund amounts
+        total_items_refund = sum(float(amount) for amount in items_to_refund.values())
+        if abs(refund_amount - total_items_refund) > 0.01:  # Allow small floating point differences
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Refund amount ({refund_amount}) does not match the sum of items_to_refund amounts ({total_items_refund}). "
+                    f"Items to refund: {items_to_refund}",
+                    es=f"El monto del reembolso ({refund_amount}) no coincide con la suma de los montos de items_to_refund ({total_items_refund}). "
+                    f"Items a reembolsar: {items_to_refund}",
+                    slug="refund-amount-mismatch",
+                ),
+                code=400,
+            )
+
+        refund_breakdown = None
+        if invoice.amount_breakdown and refund_amount is not None:
+            refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
+
+        credit_note = process_refund(
+            invoice=invoice,
+            amount=refund_amount,
+            breakdown=refund_breakdown,
+            items_to_refund=items_to_refund,
+            reason=reason,
+            country_code=invoice.bag.country_code if invoice.bag else None,
+            lang=lang,
+        )
+
+        serializer = CreditNoteSerializer(credit_note, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CardView(APIView):
@@ -2181,7 +2362,6 @@ class V2CardView(APIView):
 
         if info:
             return Response(info)
-
         return Response({"has_payment_method": False})
 
     def post(self, request):
@@ -2192,18 +2372,14 @@ class V2CardView(APIView):
         s.set_language(lang)
 
         token = request.data.get("token")
-        card_number = request.data.get("card_number")
-        exp_month = request.data.get("exp_month")
-        exp_year = request.data.get("exp_year")
-        cvc = request.data.get("cvc")
 
-        if not ((card_number and exp_month and exp_year and cvc) or token):
+        if not token:
             raise ValidationException(
                 translation(
                     lang,
-                    en="Missing card information",
-                    es="Falta la información de la tarjeta",
-                    slug="missing-card-information",
+                    en="Missing token",
+                    es="Falta el token",
+                    slug="missing-token",
                 ),
                 code=404,
             )
@@ -2212,14 +2388,9 @@ class V2CardView(APIView):
             s.add_contact(request.user)
 
         try:
-            if not token:
-                token = s.create_card_token(card_number, exp_month, exp_year, cvc)
+            error, details = s.add_payment_method(request.user, token)
 
-            success, errors, details = s.update_all_payment_methods(
-                user=request.user, token=token, card_number=card_number, exp_month=exp_month, exp_year=exp_year, cvc=cvc
-            )
-
-            if not success:
+            if error:
                 raise ValidationException(
                     translation(
                         lang,
@@ -2238,6 +2409,103 @@ class V2CardView(APIView):
             raise ValidationException(str(e), code=400)
 
         return Response({"status": "ok", "details": details})
+
+
+class AcademyPublishableKeyView(APIView):
+    """
+    Endpoint to get the Stripe publishable key for a specific academy.
+    This key is safe to expose publicly as it's designed for client-side use.
+    Note: This endpoint is public (AllowAny) as it's needed for frontend payment initialization.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """
+        Get Stripe publishable key for the specified academy.
+
+        Query Parameters:
+            - academy (required): ID of the academy
+
+        OR Header:
+            - Academy (required): ID of the academy
+
+        Returns:
+            200: Academy publishable key configuration
+            {
+                "academy_id": 1,
+                "academy_name": "4Geeks.com",
+                "academy_slug": "4geeks",
+                "stripe_publishable_key": "pk_test_xxx...",
+            }
+
+            404: Academy or payment settings not found
+
+        Example:
+            GET /v1/payments/academy/publishable-key?academy=1
+            GET /v1/payments/academy/publishable-key (with header Academy: 1)
+        """
+        lang = get_user_language(request)
+
+        # Get academy_id from query parameter or header (same as capable_of decorator)
+        academy_id = request.GET.get("academy")
+
+        if not academy_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing academy parameter expected in query string or 'Academy' header",
+                    es="Falta el parámetro academy esperado en la query string o el header 'Academy'",
+                    slug="missing-academy-id",
+                ),
+                code=400,
+            )
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Academy not found",
+                    es="Academia no encontrada",
+                    slug="academy-not-found",
+                ),
+                code=404,
+            )
+
+        # Get payment settings for this academy
+        payment_settings = AcademyPaymentSettings.objects.filter(academy__id=academy_id).first()
+        if not payment_settings:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Payment settings not configured for this academy",
+                    es="Configuración de pago no configurada para esta academia",
+                    slug="payment-settings-not-found",
+                ),
+                code=404,
+            )
+
+        # Validate publishable key exists
+        if not payment_settings.stripe_publishable_key:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Stripe publishable key not configured for this academy",
+                    es="Clave publicable de Stripe no configurada para esta academia",
+                    slug="publishable-key-not-configured",
+                ),
+                code=404,
+            )
+
+        return Response(
+            {
+                "academy_id": academy.id,
+                "academy_name": academy.name,
+                "academy_slug": academy.slug,
+                "stripe_publishable_key": payment_settings.stripe_publishable_key,
+            }
+        )
 
 
 class ServiceBlocked(APIView):
@@ -2442,7 +2710,9 @@ class PlanOfferView(APIView):
         items = items.distinct()
         items = handler.queryset(items)
         items = items.annotate(lang=Value(lang, output_field=CharField()))
-        serializer = GetPlanOfferSerializer(items, many=True)
+
+        country_code = request.GET.get("country_code")
+        serializer = GetPlanOfferSerializer(items, many=True, context={"country_code": country_code})
 
         return handler.response(serializer.data)
 
@@ -2816,6 +3086,10 @@ class CheckingView(APIView):
                         bag.token = Token.generate_key()
                         bag.expires_at = utc_now + timedelta(minutes=60)
 
+                        currency = bag.academy.main_currency
+                        if plan.currency != currency:
+                            currency = plan.currency
+
                         plan = bag.plans.filter(status="CHECKING").first()
 
                         # Initialize pricing_ratio_explanation
@@ -2825,7 +3099,7 @@ class CheckingView(APIView):
                         if not plan or plan.is_renewable:
                             bag.country_code = country_code
                             bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
-                                get_amount(bag, bag.academy.main_currency, lang)
+                                get_amount(bag, currency, lang)
                             )
 
                         else:
@@ -3403,6 +3677,7 @@ class PayView(APIView):
 
                 how_many_installments = request.data.get("how_many_installments")
                 chosen_period = request.data.get("chosen_period", "").upper()
+                has_plan_addons = bag.plan_addons.exists()
 
                 available_for_free_trial = False
                 available_free = False
@@ -3485,7 +3760,7 @@ class PayView(APIView):
                 if not available_for_free_trial and not available_free and not chosen_period and how_many_installments:
                     bag.how_many_installments = how_many_installments
 
-                coupons = bag.coupons.none()
+                coupons = bag.coupons.all()
 
                 if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
@@ -3498,16 +3773,42 @@ class PayView(APIView):
                             bag.currency = c
                             bag.save()
 
-                        # Initialize add-ons to zero by default
+                        if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+                            academy_service = AcademyService.objects.filter(
+                                service=bag.seat_service_item.service,
+                                academy=bag.academy,
+                            ).first()
+                            if not academy_service:
+                                raise ValidationException(
+                                    translation(
+                                        lang,
+                                        en="Price are not configured for per-seat purchases",
+                                        es="Precio no configurado para compras por asiento",
+                                        slug="price-not-configured-for-per-seat-purchases",
+                                    ),
+                                    code=400,
+                                )
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
+                            adjusted_price += seat_cost
+                            original_price += seat_cost
+
                         add_ons_amount = 0
                         if request.data.get("add_ons"):
                             add_ons_amount = actions.manage_plan_financing_add_ons(request, bag, lang)
 
                         adjusted_price += add_ons_amount
 
-                        # Then apply coupons
-                        coupons = bag.coupons.all()
-                        amount = get_discounted_price(adjusted_price, coupons)
+                        base_coupons = actions.get_coupons_for_plan(plan, list(coupons))
+                        recurring_amount = get_discounted_price(adjusted_price, base_coupons)
+
+                        addons_before_total, plan_addons_amount = (
+                            actions.get_plan_addons_amounts_with_coupons(bag, list(coupons), lang)
+                            if has_plan_addons
+                            else (0.0, 0.0)
+                        )
+
+                        original_price = adjusted_price + addons_before_total
+                        amount = recurring_amount + plan_addons_amount
 
                     except Exception:
                         raise ValidationException(
@@ -3521,10 +3822,22 @@ class PayView(APIView):
                         )
 
                 elif not available_for_free_trial and not available_free:
-                    amount = get_amount_by_chosen_period(bag, chosen_period, lang)
-                    coupons = bag.coupons.all()
-                    original_price = amount
-                    amount = get_discounted_price(amount, coupons)
+                    base_amount = get_amount_by_chosen_period(bag, chosen_period, lang)
+                    plan = bag.plans.first()
+
+                    # Apply coupons only to the base subscription plan
+                    base_coupons = actions.get_coupons_for_plan(plan, list(coupons)) if plan else list(coupons)
+                    base_after = get_discounted_price(base_amount, base_coupons)
+
+                    # Apply coupons per addon, respecting coupon.plan scope
+                    addons_before_total, plan_addons_amount = (
+                        actions.get_plan_addons_amounts_with_coupons(bag, list(coupons), lang)
+                        if has_plan_addons
+                        else (0.0, 0.0)
+                    )
+
+                    original_price = base_amount + addons_before_total
+                    amount = base_after + plan_addons_amount
 
                 else:
                     original_price = 0
@@ -3633,6 +3946,7 @@ class PayView(APIView):
                     s = Stripe(academy=bag.academy)
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
+                    invoice.refresh_from_db()
 
                 elif amount == 0:
                     invoice = Invoice(
@@ -3644,7 +3958,6 @@ class PayView(APIView):
                         currency=bag.currency,
                         academy=bag.academy,
                     )
-
                     invoice.save()
 
                 else:
@@ -3652,6 +3965,11 @@ class PayView(APIView):
                         translation(lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"),
                         code=400,
                     )
+
+                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                )
+                invoice.save(update_fields=["amount_breakdown"])    
 
                 # Calculate is_recurrent based on:
                 # 1. If it's a free trial -> False
@@ -3686,10 +4004,19 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+                    tasks.build_plan_financing.delay(
+                        bag.id,
+                        invoice.id,
+                        conversion_info=conversion_info,
+                        principal_amount=recurring_amount,
+                    )
+                    if has_plan_addons:
+                        actions.build_plan_addons_financings(bag, invoice, lang, conversion_info=conversion_info)
 
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
+                    if has_plan_addons:
+                        actions.build_plan_addons_financings(bag, invoice, lang, conversion_info=conversion_info)
 
                 if plans := bag.plans.all():
                     for plan in plans:
@@ -3714,13 +4041,17 @@ class PayView(APIView):
                 )
 
                 data = serializer.data
-                serializer = GetCouponSerializer(coupons, many=True)
+                # Convert coupons QuerySet to list before serialization to avoid stale QuerySet issues
+                serializer = GetCouponSerializer(list(coupons), many=True)
                 data["coupons"] = serializer.data
 
                 return Response(data, status=201)
 
             except Exception as e:
-                transaction.savepoint_rollback(sid)
+                try:
+                    transaction.savepoint_rollback(sid)
+                except Exception:
+                    pass
                 raise e
 
 
@@ -3827,6 +4158,18 @@ class CoinbaseChargeView(APIView):
                     )
                 bag.status = "PAID"
                 bag.save()
+
+                # Calculate invoice breakdown after transaction is complete
+                how_many_installments = metadata.get("how_many_installments", 0)
+                how_many_installments = int(float(how_many_installments)) if how_many_installments else 0
+                chosen_period = metadata.get("chosen_period")
+                if chosen_period and chosen_period not in ["MONTH", "QUARTER", "HALF", "YEAR", "NO_SET"]:
+                    chosen_period = None
+
+                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                )
+                invoice.save(update_fields=["amount_breakdown"])
 
                 coupons = bag.coupons.all()
 
@@ -3948,6 +4291,9 @@ class CoinbaseChargeView(APIView):
                                 pass
 
                         transaction.savepoint_commit(sid)
+                        
+                        has_plan_addons = bag.plan_addons.exists()
+                        
                         if original_price == 0:
                             tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
 
@@ -3955,11 +4301,15 @@ class CoinbaseChargeView(APIView):
                             tasks.build_plan_financing.delay(
                                 bag.id, invoice.id, conversion_info="", externally_managed=True
                             )
+                            if has_plan_addons:
+                                actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
 
                         else:
                             tasks.build_subscription.delay(
                                 bag.id, invoice.id, conversion_info="", externally_managed=True
                             )
+                            if has_plan_addons:
+                                actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
 
                     if plans := bag.plans.all():
                         for plan in plans:
@@ -4843,6 +5193,57 @@ class AcademyPlanSubscriptionView(APIView):
         return Response(data)
 
 
+class CurrencyView(APIView):
+    """
+    Get all available currencies.
+    """
+
+    extensions = APIViewExtensions(sort="code", paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request, currency_code=None):
+        """
+        Get currency or list of currencies.
+        
+        Query parameters:
+        - code: Filter by currency code (e.g., USD, EUR)
+        - name: Filter by currency name
+        """
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        # If specific currency code is requested
+        if currency_code:
+            currency = Currency.objects.filter(code=currency_code.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Currency not found",
+                        es="Moneda no encontrada",
+                        slug="currency-not-found",
+                    ),
+                    code=404,
+                )
+            serializer = GetCurrencySerializer(currency, many=False)
+            return Response(serializer.data)
+
+        # List currencies with optional filters
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": ["code"],
+                "icontains": ["name"],
+            },
+        )
+
+        currencies = Currency.objects.filter(query)
+        currencies = handler.queryset(currencies)
+        serializer = GetCurrencySerializer(currencies, many=True)
+
+        return handler.response(serializer.data)
+
+
 class PaymentMethodView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
     permission_classes = [AllowAny]
@@ -5184,6 +5585,48 @@ class AcademyPlanServiceItemView(APIView):
 
         return handler.response(
             {"status": "ok", "deleted": True, "deleted_count": deleted_count, "deleted_ids": plan_service_item_ids}
+        )
+
+
+class AcademyPlanSpecificServiceItemView(APIView):
+    @capable_of("crud_plan")
+    def delete(self, request, academy_id=None, plan_id=None, service_item_id=None):
+        lang = get_user_language(request)
+
+        plan = (
+            Plan.objects.filter(id=plan_id)
+            .filter(Q(owner__id=academy_id) | Q(owner=None))
+            .exclude(status=Plan.Status.DELETED)
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(en="Plan not found", es="Plan no encontrado", slug="plan-not-found"),
+                code=404,
+            )
+
+        plan_service_item = PlanServiceItem.objects.filter(plan=plan, service_item_id=service_item_id).first()
+        if not plan_service_item:
+            raise ValidationException(
+                translation(
+                    en="This service item is not attached to the selected plan",
+                    es="Este service item no está asociado al plan seleccionado",
+                    slug="plan-service-item-not-found",
+                ),
+                code=404,
+            )
+
+        plan_service_item_id = plan_service_item.id
+        plan_service_item.delete()
+
+        return Response(
+            {
+                "status": "ok",
+                "deleted": True,
+                "plan_id": plan.id,
+                "service_item_id": service_item_id,
+                "plan_service_item_id": plan_service_item_id,
+            }
         )
 
 
@@ -5534,3 +5977,329 @@ class SubscriptionSeatView(APIView):
         Consumable.objects.filter(subscription_seat_id=seat.id).update(user=None)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PlanFinancingTeamView(APIView):
+    """Manage PlanFinancing team (read-only for now)."""
+
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def _serializer(self, team: PlanFinancingTeam) -> dict[str, Any]:
+        financing = team.financing
+        return {
+            "id": team.id,
+            "plan_financing": financing.id,
+            "name": team.name,
+            "additional_seats": team.additional_seats,
+            "seats_limit": team.seats_limit,
+            "consumption_strategy": team.consumption_strategy,
+            "seats_count": team.seats.filter(is_active=True).count(),
+            "seats_log": team.seats_log,
+            "currency": financing.currency.code if financing.currency else None,
+        }
+
+    def get(self, request, plan_financing_id: int):
+        lang = get_user_language(request)
+        plan_financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+        if not plan_financing:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing not found",
+                    es="Plan financiado no encontrado",
+                    slug="plan-financing-not-found",
+                ),
+                code=404,
+            )
+
+        if request.user.id != plan_financing.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage financing seats",
+                    es="Solo el dueño puede gestionar los asientos del financiamiento",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = getattr(plan_financing, "team", None)
+        if not team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing team not found",
+                    es="Equipo del financiamiento no encontrado",
+                    slug="plan-financing-team-not-found",
+                ),
+                code=404,
+            )
+
+        return Response(self._serializer(team), status=status.HTTP_200_OK)
+
+
+class PlanFinancingSeatView(APIView):
+    """CRUD for PlanFinancing seats."""
+
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def _get_plan_financing(self, plan_financing_id: int, lang: str) -> PlanFinancing:
+        financing = PlanFinancing.objects.filter(id=plan_financing_id).first()
+        if not financing:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Plan financing not found",
+                    es="Plan financiado no encontrado",
+                    slug="plan-financing-not-found",
+                ),
+                code=404,
+            )
+        return financing
+
+    def _get_team(self, financing: PlanFinancing, lang: str) -> PlanFinancingTeam:
+        team = getattr(financing, "team", None)
+        if not team:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Financing team not found",
+                    es="Equipo del financiamiento no encontrado",
+                    slug="plan-financing-team-not-found",
+                ),
+                code=404,
+            )
+        return team
+
+    def _get_seats(self, team: PlanFinancingTeam) -> QuerySet[PlanFinancingSeat]:
+        return PlanFinancingSeat.objects.filter(team=team)
+
+    def _serialize_seat(self, seat: PlanFinancingSeat) -> dict[str, Any]:
+        return {
+            "id": seat.id,
+            "email": seat.email,
+            "user": seat.user_id,
+            "is_active": seat.is_active,
+            "seat_log": seat.seat_log,
+        }
+
+    def get(self, request, plan_financing_id: int, seat_id: int = None):
+        lang = get_user_language(request)
+
+        financing = self._get_plan_financing(plan_financing_id, lang)
+        if request.user.id != financing.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage financing seats",
+                    es="Solo el dueño puede gestionar los asientos del financiamiento",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = self._get_team(financing, lang)
+        qs = self._get_seats(team)
+
+        if seat_id:
+            seat = qs.filter(id=seat_id).first()
+            if not seat:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Seat not found",
+                        es="Asiento no encontrado",
+                        slug="seat-not-found",
+                    ),
+                    code=404,
+                )
+            return Response(self._serialize_seat(seat), status=status.HTTP_200_OK)
+
+        items = [self._serialize_seat(s) for s in qs]
+        return Response(items, status=status.HTTP_200_OK)
+
+    def put(self, request, plan_financing_id: int):
+        lang = get_user_language(request)
+        data = request.data or {}
+
+        financing = self._get_plan_financing(plan_financing_id, lang)
+        if request.user.id != financing.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage financing seats",
+                    es="Solo el dueño puede gestionar los asientos del financiamiento",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        add_seats = actions.normalize_add_seats(data.get("add_seats", []))
+        replace_seats = actions.normalize_replace_seat(data.get("replace_seats", []))
+
+        if not add_seats and not replace_seats:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Add seats or replace seats are required",
+                    es="Agregar asientos o reemplazar asientos son requeridos",
+                    slug="add-or-replace-seats-required",
+                ),
+                code=400,
+            )
+
+        team = self._get_team(financing, lang)
+
+        actions.validate_seats_limit(team, add_seats, replace_seats, lang)
+
+        result: list[PlanFinancingSeat] = []
+        errors: list[ValidationException] = []
+
+        for seat in add_seats:
+            try:
+                new_user = None
+                if seat.get("user"):
+                    new_user = User.objects.filter(id=seat["user"]).first()
+                    if not new_user:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="User not found",
+                                es="Usuario no encontrado",
+                                slug="user-not-found",
+                            ),
+                            code=404,
+                        )
+                result.append(
+                    actions.create_plan_financing_seat(
+                        seat["email"],
+                        new_user,
+                        team,
+                        lang,
+                        seat.get("first_name", ""),
+                        seat.get("last_name", ""),
+                    )
+                )
+            except ValidationException as e:
+                errors.append(e)
+
+        for seat in replace_seats:
+            try:
+                financing_seat = PlanFinancingSeat.objects.filter(team=team, email=seat["from_email"]).first()
+                if not financing_seat:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Seat not found",
+                            es="Asiento no encontrado",
+                            slug="seat-not-found",
+                        ),
+                        code=404,
+                    )
+                new_user = None
+                if seat["to_user"]:
+                    new_user = User.objects.filter(id=seat["to_user"]).first()
+                    if not new_user:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="User not found",
+                                es="Usuario no encontrado",
+                                slug="user-not-found",
+                            ),
+                            code=404,
+                        )
+                elif seat["to_email"]:
+                    new_user = User.objects.filter(email=seat["to_email"]).first()
+
+                result.append(
+                    actions.replace_plan_financing_seat(
+                        seat["from_email"],
+                        seat["to_email"],
+                        new_user,
+                        financing_seat,
+                        lang,
+                        seat.get("first_name", ""),
+                        seat.get("last_name", ""),
+                    )
+                )
+            except ValidationException as e:
+                errors.append(e)
+
+        return Response(
+            {
+                "data": [self._serialize_seat(seat) for seat in result],
+                "errors": [
+                    {
+                        "message": getattr(e, "detail", str(e)),
+                        "code": getattr(e, "code", 400),
+                    }
+                    for e in errors
+                ],
+            },
+            status=status.HTTP_207_MULTI_STATUS,
+        )
+
+    def delete(self, request, plan_financing_id: int, seat_id: int):
+        lang = get_user_language(request)
+
+        financing = self._get_plan_financing(plan_financing_id, lang)
+        if request.user.id != financing.user_id:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only the owner can manage financing seats",
+                    es="Solo el dueño puede gestionar los asientos del financiamiento",
+                    slug="only-owner-allowed",
+                ),
+                code=403,
+            )
+
+        team = self._get_team(financing, lang)
+        seat = PlanFinancingSeat.objects.filter(team=team, id=seat_id, is_active=True).first()
+        if not seat:
+            raise ValidationException(
+                translation(lang, en="Seat not found", es="Asiento no encontrado", slug="seat-not-found"), code=404
+            )
+
+        actions.deactivate_plan_financing_seat(seat)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPaymentSettingsView(APIView):
+    @capable_of("crud_academy_payment_settings")
+    def put(self, request, academy_id=None):
+        """
+        Update payment settings for an academy.
+        Allows partial updates of payment gateway configuration. Only provided fields will be updated.
+        If payment settings don't exist for the academy, they will be created automatically.
+
+        Args:
+            academy_id: Academy ID (injected automatically by @capable_of decorator from URL or Academy header)
+
+        Request Body (all optional):
+            stripe_api_key (str): Stripe secret API key (e.g., "sk_test_...")
+            stripe_webhook_secret (str): Stripe webhook secret for signature verification (e.g., "whsec_...")
+            stripe_publishable_key (str): Stripe publishable key for frontend (e.g., "pk_test_...")
+            coinbase_api_key (str): Coinbase Commerce API key
+            coinbase_webhook_secret (str): Coinbase webhook secret for signature verification
+        """
+
+        payment_settings, created = AcademyPaymentSettings.objects.get_or_create(
+            academy_id=academy_id,
+            defaults={
+                "stripe_api_key": "",
+                "stripe_webhook_secret": "",
+                "stripe_publishable_key": "",
+                "coinbase_api_key": None,
+                "coinbase_webhook_secret": None,
+            },
+        )
+
+        serializer = AcademyPaymentSettingsPUTSerializer(payment_settings, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

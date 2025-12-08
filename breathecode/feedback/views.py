@@ -54,7 +54,7 @@ def track_survey_open(request, answer_id=None):
         item.opened_at = timezone.now()
         item.save()
 
-    image = Image.new("RGB", (1, 1))
+    image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))  # Creates fully transparent pixel ✅
     response = HttpResponse(content_type="image/png")
     image.save(response, "PNG")
     return response

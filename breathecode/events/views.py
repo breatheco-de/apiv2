@@ -59,6 +59,7 @@ from .models import (
     LiveClass,
     Organization,
     Organizer,
+    SUSPENDED,
     Venue,
 )
 from .permissions.consumers import event_by_url_param, live_class_by_url_param
@@ -89,7 +90,7 @@ from .serializers import (
     PUTEventCheckinSerializer,
     VenueSerializer,
 )
-from .tasks import async_eventbrite_webhook, mark_live_class_as_started
+from .tasks import async_eventbrite_webhook, mark_live_class_as_started, send_event_suspended_notification
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -379,6 +380,61 @@ class MeLiveClassView(APIView):
         )
 
         items = LiveClass.objects.filter(query, cohort_time_slot__cohort__cohortuser__user=request.user)
+
+        items = handler.queryset(items)
+        serializer = GetLiveClassSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+
+class PublicLiveClassView(APIView):
+    extensions = APIViewExtensions(cache=LiveClassCache, sort="-starting_at", paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        lang = get_user_language(request)
+
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": [
+                    "remote_meeting_url",
+                ],
+            },
+            bools={
+                "is_null": ["ended_at"],
+            },
+            datetimes={
+                "gte": ["starting_at"],
+                "lte": ["ending_at"],
+            },
+            slugs=[
+                "cohort_time_slot__cohort",
+                "cohort_time_slot__cohort__academy",
+                "cohort_time_slot__cohort__syllabus_version__syllabus",
+            ],
+            overwrite={
+                "cohort": "cohort_time_slot__cohort",
+                "academy": "cohort_time_slot__cohort__academy",
+                "syllabus": "cohort_time_slot__cohort__syllabus_version__syllabus",
+                "start": "starting_at",
+                "end": "ending_at",
+            },
+        )
+
+        items = LiveClass.objects.filter(query)
+
+        # Handle upcoming filter manually to ensure we filter by ending_at >= now
+        upcoming = request.GET.get("upcoming", None)
+        if upcoming == "true":
+            now = timezone.now()
+            items = items.filter(ending_at__gte=now)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
@@ -810,19 +866,18 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            all_events = []
-            for serializer in all_serializers:
+            all_events_saved = []
+            for idx, serializer in enumerate(all_serializers):
+                original_starting_at = all_events[idx].starting_at
+                original_ending_at = all_events[idx].ending_at
                 event = serializer.save()
-                all_events.append(event)
-
-            for idx, event in enumerate(all_events):
+                all_events_saved.append(event)
+                
                 data = data_list[idx] if idx < len(data_list) else {}
+                
                 create_meet = data.get("create_meet")
                 if isinstance(create_meet, str):
                     create_meet = create_meet.lower() in ["1", "true", "yes"]
-                meet_private = data.get("meet_private", True)
-                if isinstance(meet_private, str):
-                    meet_private = meet_private.lower() in ["1", "true", "yes"]
 
                 if create_meet and getattr(event, "online_event", False):
                     provider = data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
@@ -832,23 +887,17 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
                             exp_epoch = int(target_end.timestamp())
 
-                            if not getattr(event, "live_stream_url", None):
-                                room = DailyClient().create_room(exp_in_epoch=exp_epoch)
-                                if room and room.get("url"):
-                                    event.live_stream_url = room["url"]
-                                    event.save(update_fields=["live_stream_url"])
-                            else:
-                                parsed = urlparse(event.live_stream_url)
-                                room_name = parsed.path.strip("/").split("/")[-1]
-                                DailyClient().extend_room(name=room_name, exp_in_epoch=exp_epoch)
+                            room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                            if room and room.get("url"):
+                                event.live_stream_url = room["url"]
+                                event.save(update_fields=["live_stream_url"])
 
                         elif provider == "livekit":
                             meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
-                            if meet_base and not getattr(event, "live_stream_url", None):
+                            if meet_base:
                                 event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
                                 event.save(update_fields=["live_stream_url"])
-
-                            tasks_events.create_livekit_room_for_event.delay(event.id)
+                                tasks_events.create_livekit_room_for_event.delay(event.id)
                     except Exception as e:
                         logger.error(
                             f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
@@ -856,11 +905,42 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                         raise ValidationException(
                             f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
                         )
+                elif not create_meet and getattr(event, "online_event", False):
+                    date_changed = (
+                        original_starting_at != event.starting_at
+                        or original_ending_at != event.ending_at
+                    )
+                    live_stream_url = getattr(event, "live_stream_url", None)
+                    if date_changed and live_stream_url and "daily.co" in live_stream_url.lower():
+                        try:
+                            margin = timedelta(hours=1)
+                            target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
+                            exp_epoch = int(target_end.timestamp())
+                            parsed = urlparse(live_stream_url)
+                            room_name = parsed.path.strip("/").split("/")[-1]
+                            DailyClient().extend_room(name=room_name, exp_in_epoch=exp_epoch)
+                            logger.info(
+                                f"Extended Daily.co room {room_name} for event {event.id} "
+                                f"(new expiration: {target_end.isoformat()})"
+                                f"(current date: {datetime.now().isoformat()})"
+                            )
+                        except Exception as extend_error:
+                            error_str = str(extend_error)
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en=f"Cannot change event date: Failed to extend Daily.co room. "
+                                    f"Error: {error_str}",
+                                    es=f"No se puede cambiar la fecha del evento: Falló al extender la sala de Daily.co. "
+                                    f"Error: {error_str}",
+                                    slug="failed-to-extend-room",
+                                )
+                            )
 
         if isinstance(request.data, list):
-            serializer = EventSerializer(all_events, many=True)
+            serializer = EventSerializer(all_events_saved, many=True)
         else:
-            serializer = EventSerializer(all_events.pop(), many=False)
+            serializer = EventSerializer(all_events_saved.pop(), many=False)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -937,6 +1017,15 @@ class AcademyEventJoinView(APIView):
                 translation(lang, en="Event not found", es="Evento no encontrado", slug="not-found")
             )
 
+        if event.status == SUSPENDED:
+            message = translation(
+                lang,
+                en="This event was suspended for reasons that are out of our hands, contact support if you have any further questions",
+                es="Este evento fue suspendido por razones fuera de nuestro control, contacte a soporte si tiene alguna pregunta adicional",
+                slug="event-suspended",
+            )
+            return render_message(request, message, status=400, academy=event.academy)
+
         if not event.live_stream_url:
             message = translation(
                 lang,
@@ -947,6 +1036,50 @@ class AcademyEventJoinView(APIView):
             return render_message(request, message, status=400, academy=event.academy)
 
         return redirect(event.live_stream_url)
+
+
+class AcademyEventSuspendView(APIView):
+
+    @capable_of("crud_event")
+    def put(self, request, event_id, academy_id=None):
+        lang = get_user_language(request)
+
+        event = Event.objects.filter(academy__id=int(academy_id), id=event_id).first()
+
+        if not event:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Event not found for this academy {academy_id}",
+                    es=f"Evento no encontrado para esta academia {academy_id}",
+                    slug="event-not-found",
+                )
+            )
+
+        # Check if event has already started or is in the past
+        now = timezone.now()
+        if event.starting_at <= now:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Only events that have not yet started and are scheduled for the future can be suspended",
+                    es="Solo se pueden suspender eventos que aún no han comenzado y están programados para el futuro",
+                    slug="event-already-started",
+                ),
+                code=400,
+            )
+
+        # Set event status to SUSPENDED
+        event.status = SUSPENDED
+        # Set live_stream_url to None
+        event.live_stream_url = None
+        event.save()
+
+        # Queue email notification task
+        send_event_suspended_notification.delay(event.id)
+
+        serializer = EventSerializer(event, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class EventTypeView(APIView):
@@ -1136,6 +1269,16 @@ class EventTypeVisibilitySettingView(APIView):
 @consume("event_join", consumer=event_by_url_param, format="html")
 def join_event(request, token, event):
     now = timezone.now()
+
+    if event.status == SUSPENDED:
+        lang = get_user_language(request)
+        message = translation(
+            lang,
+            en="This event was suspended for reasons that are out of our hands, contact support if you have any further questions",
+            es="Este evento fue suspendido por razones fuera de nuestro control, contacte a soporte si tiene alguna pregunta adicional",
+            slug="event-suspended",
+        )
+        return render_message(request, message, status=400, academy=event.academy)
 
     if event.starting_at > now:
         obj = {}

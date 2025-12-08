@@ -580,6 +580,31 @@ Multiple items (comma-separated):
 
 ---
 
+### 7b. Remove Service Item from Plan by IDs
+
+**Endpoint:** `DELETE /v1/payments/academy/plan/<plan_id>/serviceitem/<service_item_id>`
+
+**Authentication:** Required - `crud_plan` capability
+
+**Path Params:**
+- `plan_id` – Plan that owns the relation (must belong to the academy or be global)
+- `service_item_id` – Service item to detach
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "deleted": true,
+  "plan_id": 123,
+  "service_item_id": 456,
+  "plan_service_item_id": 789
+}
+```
+
+Use this when you only know the plan and service item IDs; the API will locate and delete the matching `PlanServiceItem` internally.
+
+---
+
 ### 8. View Service Items
 
 **Endpoint:** `GET /v1/payments/serviceitem`

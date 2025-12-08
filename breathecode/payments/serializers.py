@@ -1,12 +1,15 @@
 import logging
+from typing import Any
 
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models.query_utils import Q
 from rest_framework.exceptions import ValidationError
 
 from breathecode.payments.actions import apply_pricing_ratio
 from breathecode.payments.models import (
+    AcademyPaymentSettings,
     AcademyService,
     Bag,
     CohortSet,
@@ -14,7 +17,9 @@ from breathecode.payments.models import (
     FinancingOption,
     PaymentMethod,
     Plan,
+    PlanOffer,
     PlanOfferTranslation,
+    PlanTranslation,
     Service,
     ServiceItem,
     ServiceItemFeature,
@@ -56,6 +61,19 @@ class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
+
+
+class GetSyllabusSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class GetLiveClassSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
 
 
 class GetPermissionSerializer(serpy.Serializer):
@@ -157,6 +175,7 @@ class GetFinancingOptionSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = serpy.MethodField()
     monthly_price = serpy.MethodField()
+    discounted_monthly_price = serpy.MethodField()
     how_many_months = serpy.Field()
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
@@ -222,6 +241,35 @@ class GetFinancingOptionSerializer(serpy.Serializer):
         price, _, _ = apply_pricing_ratio(obj.monthly_price, country_code, obj, cache=self.cache)
         return price
 
+    def get_discounted_monthly_price(self, obj: FinancingOption):
+        """
+        Return the monthly price of this financing option after applying:
+          - pricing ratio (country_code)
+          - coupons that apply to the parent plan (if provided in context)
+
+        This is mainly used in the checking/bag preview response to show
+        per-installment prices with discount, similar to bag.discounted_amount_per_month.
+        """
+        from . import actions
+
+        base_price = self.get_monthly_price(obj)
+        if base_price is None:
+            return None
+
+        coupons = (self.context or {}).get("coupons") or []
+        if not coupons:
+            return base_price
+
+        plan = (self.context or {}).get("plan")
+        if not plan:
+            return base_price
+
+        eligible = actions.get_coupons_for_plan(plan, list(coupons))
+        if not eligible:
+            return base_price
+
+        return actions.get_discounted_price(base_price, eligible)
+
 
 class GetPlanSmallTinySerializer(serpy.Serializer):
     title = serpy.Field()
@@ -234,6 +282,7 @@ class GetPlanSmallTinySerializer(serpy.Serializer):
 
 
 class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
+    translations = serpy.MethodField()
     service_items = serpy.MethodField()
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
@@ -254,12 +303,71 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
         if obj.is_renewable:
             return []
 
-        # Pass country_code context to financing options serializer
-        context = {}
+        # Pass country_code and plan context to financing options serializer.
+        # Optionally, coupons can be passed (e.g. from a Bag) so that
+        # discounted_monthly_price can be computed per financing option.
+        context = {"plan": obj}
         if hasattr(self, "context") and self.context:
             context["country_code"] = self.context.get("country_code")
+            # coupons is optional and only present when serializing plans from a Bag
+            if "coupons" in self.context:
+                context["coupons"] = self.context.get("coupons") or []
 
         return GetFinancingOptionSerializer(obj.financing_options.all(), many=True, context=context).data
+
+    def get_translations(self, obj: Plan):
+        qs = PlanTranslation.objects.filter(plan=obj)
+        return GetPlanTranslationSerializer(qs, many=True).data
+
+
+class GetPlanTranslationSerializer(serpy.Serializer):
+    lang = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+
+
+class PlanAddOnSmallSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+    translations = serpy.MethodField()
+    price_before_coupon = serpy.MethodField()
+    price_after_coupon = serpy.MethodField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = kwargs.get("context", {}) or {}
+
+    def get_translations(self, obj: Plan):
+        qs = PlanTranslation.objects.filter(plan=obj)
+        return GetPlanTranslationSerializer(qs, many=True).data
+
+    def get_price_before_coupon(self, obj: Plan):
+        from . import actions
+
+        option = obj.financing_options.filter(how_many_months=1).first()
+        if not option:
+            return None
+
+        base_price = option.monthly_price or 0
+        country_code = self.context.get("country_code")
+        if country_code:
+            base_price, _, _ = actions.apply_pricing_ratio(base_price, country_code, option, lang="en")
+
+        return base_price
+
+    def get_price_after_coupon(self, obj: Plan):
+        from . import actions
+
+        base_price = self.get_price_before_coupon(obj)
+        if base_price is None:
+            return None
+
+        coupons = self.context.get("coupons") or []
+        if not coupons:
+            return base_price
+
+        addon_coupons = actions.get_coupons_for_plan(obj, coupons)
+        return actions.get_discounted_price(base_price, addon_coupons)
 
 
 class GetPlanSerializer(GetPlanSmallSerializer):
@@ -275,6 +383,7 @@ class GetPlanSerializer(GetPlanSmallSerializer):
     pricing_ratio_exceptions = serpy.Field()
     currency = serpy.MethodField()
     add_ons = serpy.MethodField()
+    plan_addons = serpy.MethodField()
     seat_service_price = serpy.MethodField()
     consumption_strategy = serpy.Field()
 
@@ -377,6 +486,35 @@ class GetPlanSerializer(GetPlanSmallSerializer):
 
         return GetAcademyServiceSmallReverseSerializer(obj.add_ons.all(), many=True, context=context).data
 
+    def get_plan_addons(self, obj: Plan):
+        """
+        Expose plan_addons (other Plan objects that can be purchased as one-shot bundles)
+        with their marketing information and one-shot pricing (including country ratios).
+        """
+        addons = obj.plan_addons.all()
+        items: list[dict[str, Any]] = []
+
+        for plan in addons:
+            data = GetPlanSmallSerializer(plan, many=False, context=self.context).data
+
+            option = plan.financing_options.filter(how_many_months=1).first()
+            if option:
+                country_code = (self.context.get("country_code") or "").lower()
+                base_price = option.monthly_price or 0
+                if country_code:
+                    price, _, _ = apply_pricing_ratio(
+                        base_price, country_code, option, lang=self.lang, cache=self.cache
+                    )
+                else:
+                    price = base_price
+                data["one_shot_price"] = price
+            else:
+                data["one_shot_price"] = None
+
+            items.append(data)
+
+        return items
+
 
 class GetPlanOfferTranslationSerializer(serpy.Serializer):
     lang = serpy.Field()
@@ -386,11 +524,23 @@ class GetPlanOfferTranslationSerializer(serpy.Serializer):
 
 
 class GetPlanOfferSerializer(serpy.Serializer):
-    original_plan = GetPlanSerializer(required=False, many=False)
-    suggested_plan = GetPlanSerializer(required=False, many=False)
+    original_plan = serpy.MethodField()
+    suggested_plan = serpy.MethodField()
     details = serpy.MethodField()
     show_modal = serpy.Field()
     expires_at = serpy.Field()
+
+    def get_original_plan(self, obj: PlanOffer):
+        if not obj.original_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.original_plan, many=False, context=context).data
+
+    def get_suggested_plan(self, obj: PlanOffer):
+        if not obj.suggested_plan:
+            return None
+        context = getattr(self, "context", {}) or {}
+        return GetPlanSerializer(obj.suggested_plan, many=False, context=context).data
 
     def get_details(self, obj):
         query_args = []
@@ -663,6 +813,7 @@ class GetBagSerializer(serpy.Serializer):
     id = serpy.Field()
     service_items = serpy.MethodField()
     plans = serpy.MethodField()
+    plan_addons = serpy.MethodField()
     coupons = serpy.MethodField()
     status = serpy.Field()
     type = serpy.Field()
@@ -672,6 +823,8 @@ class GetBagSerializer(serpy.Serializer):
     amount_per_quarter = serpy.Field()
     amount_per_half = serpy.Field()
     amount_per_year = serpy.Field()
+    plan_addons_amount = serpy.Field()
+    discounted_plan_addons_amount = serpy.MethodField()
     discounted_amount_per_month = serpy.Field()
     discounted_amount_per_quarter = serpy.Field()
     discounted_amount_per_half = serpy.Field()
@@ -691,11 +844,106 @@ class GetBagSerializer(serpy.Serializer):
         return GetServiceItemSerializer(obj.seat_service_item, many=False).data
 
     def get_plans(self, obj):
-        return GetPlanSmallSerializer(obj.plans.filter(), many=True).data
+        # When serializing plans from a Bag, we can pass extra context so nested
+        # financing options know about country_code and bag coupons, allowing
+        # them to expose discounted_monthly_price.
+        context = {
+            "country_code": getattr(obj, "country_code", None),
+            "coupons": list(obj.coupons.all()),
+        }
 
-    def get_coupons(self, obj):
-        return GetCouponSerializer(obj.coupons.filter(), many=True).data
+        return GetPlanSmallSerializer(obj.plans.filter(), many=True, context=context).data
 
+    def get_plan_addons(self, obj):
+        context = {
+            "country_code": getattr(obj, "country_code", None),
+            "coupons": list(obj.coupons.all()),
+        }
+
+        return PlanAddOnSmallSerializer(obj.plan_addons.all(), many=True, context=context).data
+
+    def get_coupons(self, obj: Bag):
+        """
+        Return coupons enriched with the bag context, including where
+        (which plans / plan_addons inside this bag) each coupon is applied.
+
+        This allows the frontend to show more detailed information about
+        the scope of each discount.
+        """
+        from . import actions
+
+        coupons = list(obj.coupons.all())
+        if not coupons:
+            return []
+
+        coupon_map: dict[int, dict] = {}
+        for coupon in coupons:
+            data = GetCouponSerializer(coupon, many=False).data
+
+            data["applied_plans"] = []
+            data["applied_plan_addons"] = []
+            coupon_map[coupon.id] = data
+
+        bag_plans = list(obj.plans.all())
+        for plan in bag_plans:
+            eligible = actions.get_coupons_for_plan(plan, coupons)
+            if not eligible:
+                continue
+
+            for coupon in eligible:
+                slug = plan.slug
+                applied = coupon_map[coupon.id]["applied_plans"]
+                if slug not in applied:
+                    applied.append(slug)
+
+        bag_plan_addons = list(obj.plan_addons.all())
+        for addon in bag_plan_addons:
+            eligible = actions.get_coupons_for_plan(addon, coupons)
+            if not eligible:
+                continue
+
+            for coupon in eligible:
+                slug = addon.slug
+                applied = coupon_map[coupon.id]["applied_plan_addons"]
+                if slug not in applied:
+                    applied.append(slug)
+
+        return list(coupon_map.values())
+
+    def get_discounted_plan_addons_amount(self, obj: Bag):
+        from . import actions
+
+        coupons = list(obj.coupons.all())
+        _, total_after = actions.get_plan_addons_amounts_with_coupons(obj, coupons, lang="en")
+        return total_after
+
+class CreditNoteSerializer(serpy.Serializer):
+    id = serpy.Field()
+    amount = serpy.Field()
+    currency = GetCurrencySmallSerializer()
+    reason = serpy.Field()
+    issued_at = serpy.Field()
+    status = serpy.Field()
+    legal_text = serpy.Field()
+    country_code = serpy.Field()
+    breakdown = serpy.Field()
+    refund_stripe_id = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    invoice = GetInvoiceSmallSerializer(many=False)
+    invoice_credit_notes = serpy.MethodField()
+
+    def get_invoice_credit_notes(self, obj):
+        """Return all credit notes for the invoice associated with this credit note."""
+        if not obj.invoice:
+            return []
+        
+        try:
+            # Get all credit notes for this invoice, ordered by creation date
+            credit_notes = obj.invoice.credit_notes.all().order_by('created_at')
+            return CreditNoteSerializer(credit_notes, many=True).data
+        except Exception:
+            return []
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
@@ -709,7 +957,27 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     amount_refunded = serpy.Field()
     refund_stripe_id = serpy.Field()
     refunded_at = serpy.Field()
+    amount_breakdown = serpy.Field()
+    credit_notes = serpy.MethodField()
 
+    def get_credit_notes(self, obj):
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Refresh invoice to avoid stale RelatedManager issues
+        if hasattr(obj, 'refresh_from_db'):
+            try:
+                logger.debug(f"GetInvoiceSerializer.get_credit_notes: Refreshing Invoice(id={obj.id})")
+                obj.refresh_from_db()
+            except Exception as e:
+                logger.warning(f"GetInvoiceSerializer.get_credit_notes: Failed to refresh Invoice(id={obj.id}): {e}")
+        
+        try:
+            credit_notes_list = list(obj.credit_notes.all())
+            return CreditNoteSerializer(credit_notes_list, many=True).data
+        except TypeError as e:
+            logger.error(f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}")
+            return []
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
@@ -827,13 +1095,57 @@ class PlanSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        return Plan.objects.create(**validated_data)
+        m2m_fields = {}
+
+        for key in list(validated_data.keys()):
+            try:
+                field = Plan._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                continue
+
+            if field.many_to_many:
+                m2m_fields[key] = validated_data.pop(key)
+
+        instance = Plan.objects.create(**validated_data)
+
+        for key, value in m2m_fields.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance
 
     def update(self, instance, validated_data):
-        for key in validated_data:
-            setattr(instance, key, validated_data[key])
+        m2m_updates = {}
+
+        for key, value in validated_data.items():
+            try:
+                field = instance._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                setattr(instance, key, value)
+                continue
+
+            if field.many_to_many:
+                m2m_updates[key] = value
+                continue
+
+            setattr(instance, key, value)
 
         instance.save()
+
+        for key, value in m2m_updates.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
         return instance
 
 
@@ -1007,3 +1319,29 @@ class BillingTeamAutoRechargeSerializer(serializers.Serializer):
         min_value=0,
         help_text="Maximum spending per monthly period (null = unlimited)",
     )
+
+
+class AcademyPaymentSettingsPUTSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating academy payment settings.
+
+    Allows updating payment-related configuration for an academy including
+    Stripe and Coinbase API keys, webhook secrets, and publishable keys.
+    """
+
+    class Meta:
+        model = AcademyPaymentSettings
+        fields = [
+            "stripe_api_key",
+            "stripe_webhook_secret",
+            "stripe_publishable_key",
+            "coinbase_api_key",
+            "coinbase_webhook_secret",
+        ]
+        extra_kwargs = {
+            "stripe_api_key": {"required": False, "allow_blank": True},
+            "stripe_webhook_secret": {"required": False, "allow_blank": True},
+            "stripe_publishable_key": {"required": False, "allow_blank": True},
+            "coinbase_api_key": {"required": False, "allow_blank": True, "allow_null": True},
+            "coinbase_webhook_secret": {"required": False, "allow_blank": True, "allow_null": True},
+        }

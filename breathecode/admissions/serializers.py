@@ -29,6 +29,7 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+
 class SyllabusVersionTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
 
@@ -47,6 +48,7 @@ class SyllabusVersionTinySerializer(serpy.Serializer):
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
+
 
 class GetTinyCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -101,6 +103,7 @@ class PublicProfileSerializer(serpy.Serializer):
 
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
+    bio = serpy.Field()
 
 
 class ProfileSerializer(serpy.Serializer):
@@ -229,6 +232,16 @@ class GetAcademySerializer(serpy.Serializer):
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
     is_hidden_on_prework = serpy.Field()
+    main_currency = serpy.MethodField()
+
+    def get_main_currency(self, obj):
+        """Return main_currency details."""
+        if obj.main_currency:
+            return {
+                "code": obj.main_currency.code,
+                "name": obj.main_currency.name,
+            }
+        return None
 
 
 class GetAcademyWithStatusSerializer(serpy.Serializer):
@@ -266,12 +279,25 @@ class GetBigAcademySerializer(serpy.Serializer):
     is_hidden_on_prework = serpy.Field()
     white_labeled = serpy.Field()
     white_label_url = serpy.Field()
-    white_label_features = serpy.MethodField()
+    white_label_params = serpy.Field()
+    welcome_video = serpy.Field()
+    available_as_saas = serpy.Field()
+    main_currency = serpy.MethodField()
+    academy_features = serpy.MethodField()
     owner = UserSmallSerializer(required=False)
 
-    def get_white_label_features(self, obj):
-        """Return white_label_features merged with defaults."""
-        return obj.get_white_label_features()
+    def get_academy_features(self, obj):
+        """Return academy_features merged with defaults."""
+        return obj.get_academy_features()
+
+    def get_main_currency(self, obj):
+        """Return main_currency details."""
+        if obj.main_currency:
+            return {
+                "code": obj.main_currency.code,
+                "name": obj.main_currency.name,
+            }
+        return None
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
@@ -325,6 +351,7 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     version = serpy.Field()
     status = serpy.Field()
     change_log_details = serpy.Field()
+    reasoning = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -413,29 +440,30 @@ class GetCohortSerializer(serpy.Serializer):
     shortcuts = serpy.Field()
 
     micro_cohorts = serpy.MethodField()
+
     def get_micro_cohorts(self, obj):
         cohorts = obj.micro_cohorts.all()
-        
+
         # Sort by cohorts_order if it exists
         if obj.cohorts_order:
             # Parse the comma-separated IDs
-            order_ids = [int(id.strip()) for id in obj.cohorts_order.split(',') if id.strip().isdigit()]
-            
+            order_ids = [int(id.strip()) for id in obj.cohorts_order.split(",") if id.strip().isdigit()]
+
             # Create a dictionary for quick lookup
             cohort_dict = {cohort.id: cohort for cohort in cohorts}
-            
+
             # Build sorted list based on order_ids
             sorted_cohorts = []
             for cohort_id in order_ids:
                 if cohort_id in cohort_dict:
                     sorted_cohorts.append(cohort_dict[cohort_id])
-            
+
             # Append any micro cohorts not in the order list at the end
             remaining = [c for c in cohorts if c.id not in order_ids]
             sorted_cohorts.extend(remaining)
-            
+
             cohorts = sorted_cohorts
-        
+
         return GetTinyCohortSerializer(cohorts, many=True).data
 
     def get_timeslots(self, obj):
@@ -541,6 +569,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     stage = serpy.Field()
     is_hidden_on_prework = serpy.Field()
     available_as_saas = serpy.Field()
+    enable_assessments_telemetry = serpy.Field()
     shortcuts = serpy.Field()
 
     def get_micro_cohorts(self, obj):
@@ -780,10 +809,25 @@ class GetSyllabusSerializer(serpy.Serializer):
 #        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
     status_fields = ["status"]
+    main_currency = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Academy
-        fields = ["id", "slug", "name", "street_address", "country", "city", "is_hidden_on_prework", "logo_url", "icon_url"]
+        fields = [
+            "id",
+            "slug",
+            "name",
+            "street_address",
+            "country",
+            "city",
+            "is_hidden_on_prework",
+            "logo_url",
+            "icon_url",
+            "main_currency",
+            "welcome_video",
+            "white_label_params",
+            "available_as_saas",
+        ]
         extra_kwargs = {
             "name": {"required": False},
             "street_address": {"required": False},
@@ -792,6 +836,9 @@ class AcademySerializer(serializers.ModelSerializer):
             "logo_url": {"required": False},
             "icon_url": {"required": False},
             "slug": {"read_only": True},  # Prevent slug from being updated
+            "welcome_video": {"required": False},
+            "white_label_params": {"required": False},
+            "available_as_saas": {"required": False},
         }
 
     def validate_logo_url(self, value):
@@ -802,9 +849,7 @@ class AcademySerializer(serializers.ModelSerializer):
             try:
                 test_url(value, allow_relative=False, allow_hash=False)
             except Exception as e:
-                raise ValidationException(
-                    f"Invalid logo URL: {str(e)}", slug="invalid-logo-url", code=400
-                )
+                raise ValidationException(f"Invalid logo URL: {str(e)}", slug="invalid-logo-url", code=400)
         return value
 
     def validate_icon_url(self, value):
@@ -815,10 +860,56 @@ class AcademySerializer(serializers.ModelSerializer):
             try:
                 test_url(value, allow_relative=False, allow_hash=False)
             except Exception as e:
-                raise ValidationException(
-                    f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400
-                )
+                raise ValidationException(f"Invalid icon URL: {str(e)}", slug="invalid-icon-url", code=400)
         return value
+
+    def validate_main_currency(self, value):
+        """Validate that the main_currency is a valid Currency by code or ID."""
+        if value is None:
+            return None
+            
+        if not value:
+            return None
+            
+        from breathecode.payments.models import Currency
+
+        # If value is a string, try to get currency by code
+        if isinstance(value, str):
+            currency = Currency.objects.filter(code=value.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with code '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If value is an integer, try to get currency by ID
+        if isinstance(value, int):
+            currency = Currency.objects.filter(id=value).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with id '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If it's a Currency object (from nested serializers), validate it exists
+        if hasattr(value, 'id'):
+            if not Currency.objects.filter(id=value.id).exists():
+                raise ValidationException(
+                    "Invalid currency",
+                    slug="invalid-currency",
+                    code=400,
+                )
+            return value
+        
+        raise ValidationException(
+            "main_currency must be a currency code (e.g., 'USD') or currency ID",
+            slug="invalid-currency-format",
+            code=400,
+        )
 
     def validate(self, data):
         # Additional validation: ensure slug is never in the data
@@ -830,6 +921,10 @@ class AcademySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Extra safety: remove slug if somehow it made it through
         validated_data.pop("slug", None)
+        
+        # Handle main_currency - it comes as Currency object from validation
+        # No need to convert, it's already the right object
+        
         return super().update(instance, validated_data)
 
 
@@ -837,6 +932,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
     """Serializer for creating new academies."""
 
     status_fields = ["status"]
+    main_currency = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = Academy
@@ -886,6 +982,54 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
         if Academy.objects.filter(slug=value).exists():
             raise ValidationException("Academy with this slug already exists", slug="academy-slug-exists")
         return value
+
+    def validate_main_currency(self, value):
+        """Validate that the main_currency is a valid Currency by code or ID."""
+        if value is None:
+            return None
+            
+        if not value:
+            return None
+            
+        from breathecode.payments.models import Currency
+
+        # If value is a string, try to get currency by code
+        if isinstance(value, str):
+            currency = Currency.objects.filter(code=value.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with code '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If value is an integer, try to get currency by ID
+        if isinstance(value, int):
+            currency = Currency.objects.filter(id=value).first()
+            if not currency:
+                raise ValidationException(
+                    f"Currency with id '{value}' not found",
+                    slug="currency-not-found",
+                    code=400,
+                )
+            return currency
+        
+        # If it's a Currency object (from nested serializers), validate it exists
+        if hasattr(value, 'id'):
+            if not Currency.objects.filter(id=value.id).exists():
+                raise ValidationException(
+                    "Invalid currency",
+                    slug="invalid-currency",
+                    code=400,
+                )
+            return value
+        
+        raise ValidationException(
+            "main_currency must be a currency code (e.g., 'USD') or currency ID",
+            slug="invalid-currency-format",
+            code=400,
+        )
 
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
@@ -1008,19 +1152,6 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                 data["language"] = language.lower()
             else:
                 raise ValidationException(f"Language property should be a string not a {type(language)}")
-
-        # if cohort is being activated the online_meeting_url should not be null
-        if (
-            self.instance is not None
-            and (self.instance.online_meeting_url is None or self.instance.online_meeting_url == "")
-            and self.instance.remote_available
-        ):
-            stage = data["stage"] if "stage" in data else self.instance.stage
-            if stage in ["STARTED", "FINAL_PROJECT"] and stage != self.instance.stage:
-                raise ValidationException(
-                    "This cohort has a remote option but no online meeting URL has been specified",
-                    slug="remove-without-online-meeting",
-                )
 
         return data
 
@@ -1246,7 +1377,9 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         is_late = (data.get("finantial_status") or (instance and instance.finantial_status or "")) == "LATE"
 
-        if is_graduated and is_late:
+        is_trying_to_graduate = "educational_status" in data and data.get("educational_status") == "GRADUATED"
+
+        if is_trying_to_graduate and is_late:
             raise ValidationException("Cannot be marked as `GRADUATED` if its financial " "status is `LATE`")
 
         tasks_pending = Task.objects.filter(
@@ -1419,7 +1552,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ["json", "version", "syllabus", "status", "change_log_details"]
+        fields = ["json", "version", "syllabus", "status", "change_log_details", "reasoning"]
         exclude = ()
         extra_kwargs = {
             "syllabus": {"read_only": True},
@@ -1474,7 +1607,7 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ["json", "version", "syllabus", "status", "change_log_details"]
+        fields = ["json", "version", "syllabus", "status", "change_log_details", "reasoning"]
         exclude = ()
         extra_kwargs = {
             "syllabus": {"read_only": True},

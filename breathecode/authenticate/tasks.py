@@ -12,7 +12,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.decorators import task
 
 from breathecode.authenticate.models import Cohort, CredentialsDiscord, UserInvite
-from breathecode.marketing.actions import validate_email
+from breathecode.marketing.actions import validate_email_local
 from breathecode.notify import actions as notify_actions
 from breathecode.payments.models import PlanFinancing, Subscription
 from breathecode.services.discord import Discord
@@ -41,7 +41,7 @@ def async_validate_email_invite(invite_id, **_):
         raise RetryTask(f"UserInvite {invite_id} not found")
 
     try:
-        email_status = validate_email(user_invite.email, "en")
+        email_status = validate_email_local(user_invite.email, "en")
         if email_status["score"] <= 0.60:
             user_invite.status = "REJECTED"
             user_invite.process_status = "ERROR"
@@ -282,6 +282,8 @@ def async_accept_user_from_waiting_list(user_invite_id: int) -> None:
         {
             "SUBJECT": "Set your password at 4Geeks",
             "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{invite.token}",
+            "INVITE_ID": invite.id,
+            "API_URL": os.getenv("API_URL", ""),
         },
         academy=invite.academy,
     )
@@ -330,6 +332,7 @@ def create_user_from_invite(user_invite_id: int, **_):
             {
                 "SUBJECT": subject,
                 "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
+                "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{user_invite.id}",
             },
             academy=user_invite.academy,
         )
@@ -364,6 +367,8 @@ def verify_user_invite_email(user_invite_id: int, **_):
             "SUBJECT": subject,
             "LANG": settings.lang,
             "LINK": os.getenv("API_URL", "") + f"/v1/auth/password/{user_invite.token}",
+            "INVITE_ID": user_invite.id,
+            "API_URL": os.getenv("API_URL", ""),
         },
         academy=user_invite.academy,
     )
