@@ -89,10 +89,24 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
                     # Find the img tag with the preview_image
                     img_tag_start = html_content.find(preview_img)
                     if img_tag_start > 0:
-                        # Get context around the img tag (200 chars before and after)
-                        start = max(0, img_tag_start - 200)
-                        end = min(len(html_content), img_tag_start + len(preview_img) + 200)
-                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - HTML context around img tag: ...{html_content[start:end]}...")
+                        # Get context around the img tag (500 chars before and after for better visibility)
+                        start = max(0, img_tag_start - 500)
+                        end = min(len(html_content), img_tag_start + len(preview_img) + 500)
+                        context = html_content[start:end]
+                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - HTML context around img tag (first 1000 chars): {context[:1000]}")
+                        
+                        # Also extract just the img tag itself
+                        img_tag_start_full = html_content.rfind('<img', 0, img_tag_start)
+                        if img_tag_start_full >= 0:
+                            img_tag_end = html_content.find('>', img_tag_start_full)
+                            if img_tag_end > 0:
+                                img_tag = html_content[img_tag_start_full:img_tag_end + 1]
+                                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - Complete img tag: {img_tag}")
+                                # Check if |safe was applied correctly
+                                if '&quot;' in img_tag or '&#39;' in img_tag or '&amp;' in img_tag:
+                                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - HTML ENTITIES DETECTED in img tag! The data URL is being escaped!")
+                                else:
+                                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - img tag looks good, no HTML entities detected")
                 else:
                     logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image NOT found in rendered HTML! HTML length: {len(html_content)}")
                     # Check if WELCOME_VIDEO block exists at all
@@ -108,6 +122,17 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
             except Exception:
                 sender_name = sender_name
 
+        # Log HTML before sending to Mailgun (check if data URL is still intact)
+        if "WELCOME_VIDEO" in data and data["WELCOME_VIDEO"]:
+            welcome_video = data["WELCOME_VIDEO"]
+            if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
+                preview_img = welcome_video["preview_image"]
+                html_to_send = template["html"]
+                if preview_img and preview_img in html_to_send:
+                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image still in HTML before sending to Mailgun")
+                else:
+                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image LOST from HTML before sending to Mailgun!")
+
         result = requests.post(
             f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
             auth=("api", os.environ.get("MAILGUN_API_KEY", "")),
@@ -121,6 +146,12 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
             timeout=2,
         )
 
+        # Log Mailgun response
+        if result.status_code == 200:
+            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - Email sent successfully to Mailgun (status 200)")
+        else:
+            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - Mailgun returned status {result.status_code}: {result.text}")
+        
         if result.status_code != 200:
             logger.error(f"Error sending email, mailgun status code: {str(result.status_code)}")
             logger.error(result.text)
