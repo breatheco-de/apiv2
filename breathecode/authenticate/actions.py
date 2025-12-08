@@ -64,7 +64,14 @@ def convert_youtube_to_embed(url):
     
     # Check if already in embed format (any platform)
     if "/embed/" in url:
-        # Clean embed URL - remove any query parameters that might cause issues
+        # If it's YouTube embed, add autoplay parameters
+        if "youtube.com/embed/" in url:
+            video_id_match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
+            if video_id_match:
+                video_id = video_id_match.group(1)
+                # Remove existing query params and add autoplay
+                return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+        # For other platforms, clean and return
         if "?" in url:
             url = url.split("?")[0]
         return url
@@ -74,32 +81,35 @@ def convert_youtube_to_embed(url):
     match = re.search(r"(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})", url)
     if match:
         video_id = match.group(1)
-        return f"https://www.youtube.com/embed/{video_id}"
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
     
     # Pattern 2: youtube.com/watch?other_params&v=VIDEO_ID
     match = re.search(r"youtube\.com\/watch\?.*[&?]v=([a-zA-Z0-9_-]{11})", url)
     if match:
         video_id = match.group(1)
-        return f"https://www.youtube.com/embed/{video_id}"
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
     
     # Pattern 3: Already YouTube embed format but with query params
     match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
     if match:
         video_id = match.group(1)
-        return f"https://www.youtube.com/embed/{video_id}"
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
     
     # Vimeo URL patterns
     # Pattern 1: vimeo.com/VIDEO_ID or vimeo.com/VIDEO_ID?params
     match = re.search(r"vimeo\.com\/(?:video\/)?(\d+)", url)
     if match:
         video_id = match.group(1)
-        return f"https://player.vimeo.com/video/{video_id}"
+        return f"https://player.vimeo.com/video/{video_id}?autoplay=1"
     
     # Pattern 2: player.vimeo.com/video/VIDEO_ID (already embed format)
     match = re.search(r"player\.vimeo\.com\/video\/(\d+)", url)
     if match:
         video_id = match.group(1)
-        return f"https://player.vimeo.com/video/{video_id}"
+        # Check if it already has query params
+        if "?" in url:
+            return f"https://player.vimeo.com/video/{video_id}&autoplay=1"
+        return f"https://player.vimeo.com/video/{video_id}?autoplay=1"
     
     # Loom URL patterns
     # Pattern 1: loom.com/share/VIDEO_ID - convert to embed
