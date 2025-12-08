@@ -201,11 +201,11 @@ def add_play_button_to_image(preview_image):
             logger.warning(f"PLAY_BUTTON_IMAGE_DEBUG: WARNING - Data URL size ({result_size_mb:.2f} MB) may be too large for Gmail (>1.5MB)")
         
         # Log first and last 200 chars to detect corruption
-        logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (first 200 chars): {result[:200]}...")
-        logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (last 200 chars): ...{result[-200:]}")
+        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (first 200 chars): {result[:200]}...")
+        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL preview (last 200 chars): ...{result[-200:]}")
         
         # Verify format
-        logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL format check - Starts with 'data:image/': {result.startswith('data:image/')}, Contains ';base64,': {';base64,' in result}, MIME matches format: {mime_type == 'image/jpeg' and format_type == 'JPEG'}")
+        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Data URL format check - Starts with 'data:image/': {result.startswith('data:image/')}, Contains ';base64,': {';base64,' in result}, MIME matches format: {mime_type == 'image/jpeg' and format_type == 'JPEG'}")
         
         # Verify base64 is valid and check for corruption
         try:
@@ -221,11 +221,11 @@ def add_play_button_to_image(preview_image):
                 if has_newlines or has_spaces or has_escaped:
                     logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 corruption detected! Newlines: {has_newlines}, Spaces: {has_spaces}, Escaped chars: {has_escaped}")
                 else:
-                    logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 format check passed - No corruption detected")
+                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 format check passed - No corruption detected")
                 
                 # Try to decode to verify it's valid base64
                 b64_check.b64decode(b64_part[:100])  # Just check first 100 chars
-                logger.debug(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 validation passed (checked first 100 chars)")
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 validation passed (checked first 100 chars)")
         except Exception as e:
             logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: Base64 validation failed: {str(e)}")
         
