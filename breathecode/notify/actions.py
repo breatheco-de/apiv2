@@ -68,52 +68,7 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
             logger.debug(f"Template '{template_slug}' not found in notification registry (still sending)")
 
     if os.getenv("EMAIL_NOTIFICATIONS_ENABLED", False) == "TRUE" or force:
-        # Log WELCOME_VIDEO data if present for debugging
-        if "WELCOME_VIDEO" in data and data["WELCOME_VIDEO"]:
-            welcome_video = data["WELCOME_VIDEO"]
-            if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
-                preview_img = welcome_video["preview_image"]
-                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - WELCOME_VIDEO.preview_image length: {len(preview_img) if preview_img else 0}, Is data URL: {preview_img.startswith('data:image/') if preview_img else False}, First 100 chars: {preview_img[:100] if preview_img else 'N/A'}")
-        
         template = get_template_content(template_slug, data, ["email"], inline_css=inline_css, academy=academy)
-        
-        # Log rendered HTML to check if WELCOME_VIDEO is in the HTML
-        if "WELCOME_VIDEO" in data and data["WELCOME_VIDEO"]:
-            html_content = template.get("html", "")
-            # Check if the preview_image appears in the HTML
-            welcome_video = data["WELCOME_VIDEO"]
-            if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
-                preview_img = welcome_video["preview_image"]
-                if preview_img and preview_img in html_content:
-                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image found in rendered HTML (length: {len(html_content)} chars)")
-                    # Find the img tag with the preview_image
-                    img_tag_start = html_content.find(preview_img)
-                    if img_tag_start > 0:
-                        # Get context around the img tag (500 chars before and after for better visibility)
-                        start = max(0, img_tag_start - 500)
-                        end = min(len(html_content), img_tag_start + len(preview_img) + 500)
-                        context = html_content[start:end]
-                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - HTML context around img tag (first 1000 chars): {context[:1000]}")
-                        
-                        # Also extract just the img tag itself
-                        img_tag_start_full = html_content.rfind('<img', 0, img_tag_start)
-                        if img_tag_start_full >= 0:
-                            img_tag_end = html_content.find('>', img_tag_start_full)
-                            if img_tag_end > 0:
-                                img_tag = html_content[img_tag_start_full:img_tag_end + 1]
-                                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - Complete img tag: {img_tag}")
-                                # Check if |safe was applied correctly
-                                if '&quot;' in img_tag or '&#39;' in img_tag or '&amp;' in img_tag:
-                                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - HTML ENTITIES DETECTED in img tag! The data URL is being escaped!")
-                                else:
-                                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - img tag looks good, no HTML entities detected")
-                else:
-                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image NOT found in rendered HTML! HTML length: {len(html_content)}")
-                    # Check if WELCOME_VIDEO block exists at all
-                    if "WELCOME_VIDEO" in html_content or "welcome_video" in html_content.lower():
-                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - WELCOME_VIDEO text found in HTML but preview_image not found")
-                    else:
-                        logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - WELCOME_VIDEO block not found in HTML at all!")
 
         sender_name = os.environ.get("COMPANY_NAME", "4Geeks")
         if academy is not None and getattr(academy, "white_labeled", False):
@@ -121,17 +76,6 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
                 sender_name = academy.name or sender_name
             except Exception:
                 sender_name = sender_name
-
-        # Log HTML before sending to Mailgun (check if data URL is still intact)
-        if "WELCOME_VIDEO" in data and data["WELCOME_VIDEO"]:
-            welcome_video = data["WELCOME_VIDEO"]
-            if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
-                preview_img = welcome_video["preview_image"]
-                html_to_send = template["html"]
-                if preview_img and preview_img in html_to_send:
-                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image still in HTML before sending to Mailgun")
-                else:
-                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - preview_image LOST from HTML before sending to Mailgun!")
 
         result = requests.post(
             f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
@@ -146,12 +90,6 @@ def send_email_message(template_slug, to, data=None, force=False, inline_css=Fal
             timeout=2,
         )
 
-        # Log Mailgun response
-        if result.status_code == 200:
-            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - Email sent successfully to Mailgun (status 200)")
-        else:
-            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: send_email_message - Mailgun returned status {result.status_code}: {result.text}")
-        
         if result.status_code != 200:
             logger.error(f"Error sending email, mailgun status code: {str(result.status_code)}")
             logger.error(result.text)
@@ -326,26 +264,6 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
 
     z = con.copy()  # start with x's keys and values
     z.update(data)
-    
-    # Log WELCOME_VIDEO in context before rendering
-    if "WELCOME_VIDEO" in z:
-        welcome_video = z["WELCOME_VIDEO"]
-        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO found in context. Type: {type(welcome_video)}, Is dict: {isinstance(welcome_video, dict)}")
-        if isinstance(welcome_video, dict):
-            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO keys: {list(welcome_video.keys())}")
-            if "preview_image" in welcome_video:
-                preview_img = welcome_video["preview_image"]
-                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO.preview_image exists. Length: {len(preview_img) if preview_img else 0}, Is data URL: {preview_img.startswith('data:image/') if preview_img else False}")
-            else:
-                logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO.preview_image NOT in dict!")
-            if "url" in welcome_video:
-                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO.url: {welcome_video.get('url', 'N/A')}")
-            else:
-                logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO.url NOT in dict!")
-        else:
-            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO is not a dict! Type: {type(welcome_video)}")
-    else:
-        logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO NOT in context! Available keys: {list(z.keys())}")
 
     templates = {}
 
@@ -376,32 +294,7 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
         plaintext = get_template(slug + ".txt")
         html = get_template(slug + ".html")
         templates["text"] = plaintext.render(z)
-        
-        # Log before rendering HTML
-        if "WELCOME_VIDEO" in z:
-            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - About to render HTML template. WELCOME_VIDEO in context: True")
-        
         templates["html"] = html.render(z)
-        
-        # Log after rendering HTML - check if WELCOME_VIDEO block was rendered
-        if "WELCOME_VIDEO" in z:
-            rendered_html = templates["html"]
-            welcome_video = z["WELCOME_VIDEO"]
-            if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
-                preview_img = welcome_video["preview_image"]
-                if preview_img and preview_img in rendered_html:
-                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - preview_image found in rendered HTML")
-                else:
-                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - preview_image NOT in rendered HTML! Checking template condition...")
-                    # Check if the condition would pass
-                    has_url = "url" in welcome_video and welcome_video.get("url")
-                    has_preview = "preview_image" in welcome_video and welcome_video.get("preview_image")
-                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - Template condition check: WELCOME_VIDEO exists: True, url exists: {has_url}, preview_image exists: {has_preview}")
-                    # Check if the img tag exists at all
-                    if '<img' in rendered_html and 'Welcome Video' in rendered_html:
-                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - img tag with 'Welcome Video' alt found, but preview_image not in src")
-                    else:
-                        logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - No img tag with 'Welcome Video' found in HTML")
 
     if formats is not None and "html" in formats:
         html = get_template(slug + ".html")
