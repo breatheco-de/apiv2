@@ -295,6 +295,26 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
 
     z = con.copy()  # start with x's keys and values
     z.update(data)
+    
+    # Log WELCOME_VIDEO in context before rendering
+    if "WELCOME_VIDEO" in z:
+        welcome_video = z["WELCOME_VIDEO"]
+        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO found in context. Type: {type(welcome_video)}, Is dict: {isinstance(welcome_video, dict)}")
+        if isinstance(welcome_video, dict):
+            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO keys: {list(welcome_video.keys())}")
+            if "preview_image" in welcome_video:
+                preview_img = welcome_video["preview_image"]
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO.preview_image exists. Length: {len(preview_img) if preview_img else 0}, Is data URL: {preview_img.startswith('data:image/') if preview_img else False}")
+            else:
+                logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO.preview_image NOT in dict!")
+            if "url" in welcome_video:
+                logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO.url: {welcome_video.get('url', 'N/A')}")
+            else:
+                logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO.url NOT in dict!")
+        else:
+            logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO is not a dict! Type: {type(welcome_video)}")
+    else:
+        logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - WELCOME_VIDEO NOT in context! Available keys: {list(z.keys())}")
 
     templates = {}
 
@@ -325,7 +345,32 @@ def get_template_content(slug, data=None, formats=None, inline_css=False, academ
         plaintext = get_template(slug + ".txt")
         html = get_template(slug + ".html")
         templates["text"] = plaintext.render(z)
+        
+        # Log before rendering HTML
+        if "WELCOME_VIDEO" in z:
+            logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - About to render HTML template. WELCOME_VIDEO in context: True")
+        
         templates["html"] = html.render(z)
+        
+        # Log after rendering HTML - check if WELCOME_VIDEO block was rendered
+        if "WELCOME_VIDEO" in z:
+            rendered_html = templates["html"]
+            welcome_video = z["WELCOME_VIDEO"]
+            if isinstance(welcome_video, dict) and "preview_image" in welcome_video:
+                preview_img = welcome_video["preview_image"]
+                if preview_img and preview_img in rendered_html:
+                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - preview_image found in rendered HTML")
+                else:
+                    logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - preview_image NOT in rendered HTML! Checking template condition...")
+                    # Check if the condition would pass
+                    has_url = "url" in welcome_video and welcome_video.get("url")
+                    has_preview = "preview_image" in welcome_video and welcome_video.get("preview_image")
+                    logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - Template condition check: WELCOME_VIDEO exists: True, url exists: {has_url}, preview_image exists: {has_preview}")
+                    # Check if the img tag exists at all
+                    if '<img' in rendered_html and 'Welcome Video' in rendered_html:
+                        logger.info(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - img tag with 'Welcome Video' alt found, but preview_image not in src")
+                    else:
+                        logger.error(f"PLAY_BUTTON_IMAGE_DEBUG: get_template_content - No img tag with 'Welcome Video' found in HTML")
 
     if formats is not None and "html" in formats:
         html = get_template(slug + ".html")
