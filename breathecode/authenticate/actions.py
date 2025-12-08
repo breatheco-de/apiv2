@@ -46,6 +46,7 @@ def add_play_button_to_image(preview_image):
     """
     Add a play button icon overlay to an image for email display.
     Supports both base64 data URLs and regular image URLs.
+    Always returns base64 data URL for email compatibility.
     
     Args:
         preview_image: Image URL or base64 data URL (e.g., "data:image/png;base64,...")
@@ -54,33 +55,78 @@ def add_play_button_to_image(preview_image):
         str: Base64 data URL with play button overlay (e.g., "data:image/png;base64,...")
     """
     if not preview_image:
+        logger.debug("add_play_button_to_image: preview_image is empty, returning as is")
         return preview_image
+    
+    is_url = not preview_image.startswith("data:image/")
+    logger.debug(f"add_play_button_to_image: Processing image (type: {'URL' if is_url else 'base64'})")
+    
+    # If it's a URL, download it first and convert to base64
+    image_bytes = None
+    original_mime_type = "image/jpeg"  # Default
+    
+    if is_url:
+        try:
+            response = requests.get(preview_image, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+            response.raise_for_status()
+            image_bytes = response.content
+            # Try to detect mime type from content-type header
+            content_type = response.headers.get("Content-Type", "")
+            if "image/png" in content_type:
+                original_mime_type = "image/png"
+            elif "image/jpeg" in content_type or "image/jpg" in content_type:
+                original_mime_type = "image/jpeg"
+            elif preview_image.lower().endswith(".png"):
+                original_mime_type = "image/png"
+        except Exception as e:
+            logger.error(f"add_play_button_to_image: Failed to download image from URL: {str(e)}")
+            return preview_image  # Return original if download fails
     
     try:
         from PIL import Image, ImageDraw
         
         # Handle base64 data URL
-        if preview_image.startswith("data:image/"):
+        if not is_url:
             # Extract base64 data
             header, data = preview_image.split(",", 1)
             image_data = base64.b64decode(data)
             image = Image.open(io.BytesIO(image_data))
+            # Extract mime type from header
+            if "image/png" in header:
+                original_mime_type = "image/png"
         else:
-            # Handle regular URL - download the image
-            response = requests.get(preview_image, timeout=10)
-            response.raise_for_status()
-            image = Image.open(io.BytesIO(response.content))
+            # Use downloaded image bytes
+            image = Image.open(io.BytesIO(image_bytes))
         
-        # Convert to RGBA if needed
+        # Store original mode for later use
+        original_mode = image.mode
+        
+        # Convert to RGBA if needed (required for alpha compositing)
         if image.mode != "RGBA":
             image = image.convert("RGBA")
         
+        # Resize image if too large (for email compatibility, max 800px width)
+        max_width = 800
+        width, height = image.size
+        if width > max_width:
+            ratio = max_width / width
+            new_height = int(height * ratio)
+            # Use LANCZOS resampling (compatible with older Pillow versions)
+            try:
+                resample = Image.Resampling.LANCZOS
+            except AttributeError:
+                # Fallback for older Pillow versions
+                resample = Image.LANCZOS
+            image = image.resize((max_width, new_height), resample)
+            width, height = image.size
+        
         # Create a copy to avoid modifying the original
         img_with_overlay = image.copy()
-        width, height = img_with_overlay.size
         
         # Calculate play button size (approximately 20% of the smaller dimension)
         button_size = int(min(width, height) * 0.2)
+        if button_size < 30:  # Minimum size for visibility
+            button_size = 30
         button_radius = button_size // 2
         
         # Position play button in the center
@@ -112,26 +158,101 @@ def add_play_button_to_image(preview_image):
         # Composite the overlay onto the image
         img_with_overlay = Image.alpha_composite(img_with_overlay, overlay)
         
-        # Convert back to RGB if original wasn't RGBA (for JPEG compatibility)
-        if image.mode != "RGBA":
+        # Always convert to RGB for better email client compatibility
+        # Create white background and paste the RGBA image on top
+        if img_with_overlay.mode == "RGBA":
             background = Image.new("RGB", img_with_overlay.size, (255, 255, 255))
-            background.paste(img_with_overlay, mask=img_with_overlay.split()[3])
+            # Use alpha channel as mask
+            if img_with_overlay.split()[3]:
+                background.paste(img_with_overlay, mask=img_with_overlay.split()[3])
+            else:
+                background.paste(img_with_overlay)
             img_with_overlay = background
+        elif img_with_overlay.mode != "RGB":
+            img_with_overlay = img_with_overlay.convert("RGB")
         
-        # Save to bytes
+        # Save to bytes - use original format for better email compatibility
+        # JPG is better for emails (smaller size, better compatibility)
         output = io.BytesIO()
-        format_type = "PNG" if image.mode == "RGBA" or preview_image.startswith("data:image/png") else "JPEG"
-        img_with_overlay.save(output, format=format_type, quality=95)
+        if original_mime_type == "image/png":
+            format_type = "PNG"
+            img_with_overlay.save(output, format=format_type)
+        else:
+            # Default to JPEG for better email compatibility and smaller file size
+            format_type = "JPEG"
+            img_with_overlay.save(output, format=format_type, quality=85, optimize=True)
         output.seek(0)
         
         # Convert to base64
-        img_base64 = base64.b64encode(output.read()).decode("utf-8")
-        mime_type = "image/png" if format_type == "PNG" else "image/jpeg"
+        img_bytes = output.read()
+        img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+        mime_type = original_mime_type  # Use original mime type (jpg or png)
         
-        return f"data:{mime_type};base64,{img_base64}"
+        result = f"data:{mime_type};base64,{img_base64}"
+        logger.info(f"add_play_button_to_image: Successfully added play button. Format: {format_type}, Original: {len(preview_image)} chars, Result: {len(result)} chars")
+        return result
     
+    except ImportError as e:
+        logger.error(f"PIL/Pillow not available: {str(e)}. Cannot add play button.")
+        # Always convert URL to base64 for email compatibility
+        if is_url:
+            # If we already downloaded it, use image_bytes, otherwise download again
+            if image_bytes is None:
+                try:
+                    response = requests.get(preview_image, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+                    response.raise_for_status()
+                    image_bytes = response.content
+                    content_type = response.headers.get("Content-Type", "")
+                except Exception as e2:
+                    logger.error(f"Failed to download image: {str(e2)}")
+                    return preview_image
+            else:
+                content_type = response.headers.get("Content-Type", "") if 'response' in locals() else ""
+            
+            # Convert to base64
+            img_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            # Detect mime type
+            if "image/png" in content_type or preview_image.lower().endswith(".png"):
+                mime_type = "image/png"
+            else:
+                mime_type = "image/jpeg"
+            logger.info(f"Converted URL to base64 (no play button): {len(img_base64)} chars")
+            return f"data:{mime_type};base64,{img_base64}"
+        return preview_image
     except Exception as e:
-        logger.warning(f"Error adding play button to image: {str(e)}. Returning original image.")
+        import traceback
+        logger.error(f"Error adding play button to image: {str(e)}. Traceback: {traceback.format_exc()}")
+        # Always convert URL to base64 for email compatibility, even if play button failed
+        if is_url and image_bytes is not None:
+            try:
+                # Use already downloaded image bytes
+                img_base64 = base64.b64encode(image_bytes).decode("utf-8")
+                # Detect mime type
+                content_type = response.headers.get("Content-Type", "") if 'response' in locals() else ""
+                if "image/png" in content_type or preview_image.lower().endswith(".png"):
+                    mime_type = "image/png"
+                else:
+                    mime_type = "image/jpeg"
+                logger.info(f"Converted URL to base64 as fallback (no play button): {len(img_base64)} chars")
+                return f"data:{mime_type};base64,{img_base64}"
+            except Exception as e2:
+                logger.error(f"Failed to convert downloaded image to base64: {str(e2)}")
+        elif is_url:
+            # Try to download and convert if we haven't already
+            try:
+                response = requests.get(preview_image, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+                response.raise_for_status()
+                image_bytes = response.content
+                img_base64 = base64.b64encode(image_bytes).decode("utf-8")
+                content_type = response.headers.get("Content-Type", "")
+                if "image/png" in content_type or preview_image.lower().endswith(".png"):
+                    mime_type = "image/png"
+                else:
+                    mime_type = "image/jpeg"
+                logger.info(f"Downloaded and converted URL to base64 as fallback: {len(img_base64)} chars")
+                return f"data:{mime_type};base64,{img_base64}"
+            except Exception as e2:
+                logger.error(f"Failed to download and convert URL to base64: {str(e2)}")
         return preview_image
 
 
