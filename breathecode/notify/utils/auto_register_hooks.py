@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 # Runtime registry of successfully auto-registered hooks
 _REGISTERED_HOOKS = []
 _REGISTRATION_TIMESTAMP = None
+_REGISTERED_RECEIVER_FUNCTIONS = []  # Store to prevent garbage collection
 
 
 def get_registered_hooks():
@@ -304,6 +305,7 @@ def create_hook_receiver(event_name, event_config):
 
     def hook_receiver(sender, instance, **kwargs):
         """Auto-generated webhook receiver."""
+        logger.info(f"HOOK RECEIVER TRIGGERED: {event_name} for instance {type(instance).__name__} (id={getattr(instance, 'id', 'N/A')})")
         logger.debug(f"HOOK: {event_name} triggered")
 
         model_label = get_model_label(instance)
@@ -347,10 +349,11 @@ def auto_register_webhook_receivers():
     Events with auto_register=False are skipped.
     Events without event_action are skipped (likely using post_save/post_delete).
     """
-    global _REGISTERED_HOOKS, _REGISTRATION_TIMESTAMP
-    
+    global _REGISTERED_HOOKS, _REGISTRATION_TIMESTAMP, _REGISTERED_RECEIVER_FUNCTIONS
+    logger.debug(f"Starting auto-registration of webhook receivers")
     # Clear previous registrations (in case of reload)
     _REGISTERED_HOOKS = []
+    _REGISTERED_RECEIVER_FUNCTIONS = []  # Clear old receivers
     _REGISTRATION_TIMESTAMP = datetime.now()
     
     metadata = getattr(settings, "HOOK_EVENTS_METADATA", {})
@@ -452,15 +455,19 @@ def auto_register_webhook_receivers():
         # Create and register the receiver
         try:
             receiver_func = create_hook_receiver(event_name, config)
+            
+            # Store the receiver function to prevent garbage collection
+            _REGISTERED_RECEIVER_FUNCTIONS.append(receiver_func)
 
             # Register with Django's receiver decorator
-            signal_obj.connect(receiver_func, sender=sender_model)
+            # Use weak=False to prevent garbage collection of the receiver
+            signal_obj.connect(receiver_func, sender=sender_model, weak=False)
 
-            logger.debug(f"Auto-registered receiver for {event_name}")
+            logger.info(f"Auto-registered receiver for {event_name} (signal={signal_path}, sender={sender_path})")
             registered_count += 1
             registration_info['registered'] = True
         except Exception as e:
-            logger.error(f"Error registering receiver for {event_name}: {e}")
+            logger.error(f"Error registering receiver for {event_name}: {e}", exc_info=True)
             registration_info['error'] = str(e)
             skipped_count += 1
         
