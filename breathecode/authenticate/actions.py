@@ -41,32 +41,123 @@ logger = logging.getLogger(__name__)
 
 def convert_youtube_to_embed(url):
     """
-    Convert YouTube watch URL to embed format.
+    Convert video URL to embed format for iframe usage.
+    Supports YouTube, Vimeo, Loom, VideoAsk, Google Drive, and direct video URLs.
     
     Args:
-        url: YouTube URL (watch, embed, or short format)
+        url: Video URL (YouTube watch/embed, Vimeo, Loom, VideoAsk, Google Drive, or direct video file)
     
     Returns:
-        str: YouTube embed URL
+        str: Embed URL ready for iframe src attribute
     """
     if not url:
         return url
     
+    # Clean URL - remove any URL encoding issues and whitespace
+    url = url.strip()
+    
+    # Decode URL if needed
+    try:
+        url = urllib.parse.unquote(url)
+    except Exception:
+        pass
+    
+    # Check if already in embed format (any platform)
     if "/embed/" in url:
+        # Clean embed URL - remove any query parameters that might cause issues
+        if "?" in url:
+            url = url.split("?")[0]
         return url
     
-    patterns = [
-        r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)",
-        r"youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]+)",
-    ]
+    # YouTube URL patterns
+    # Pattern 1: youtube.com/watch?v=VIDEO_ID or youtu.be/VIDEO_ID
+    match = re.search(r"(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}"
     
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            video_id = match.group(1)
-            video_id = video_id.split("&")[0].split("?")[0]
-            return f"https://www.youtube.com/embed/{video_id}"
+    # Pattern 2: youtube.com/watch?other_params&v=VIDEO_ID
+    match = re.search(r"youtube\.com\/watch\?.*[&?]v=([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}"
     
+    # Pattern 3: Already YouTube embed format but with query params
+    match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}"
+    
+    # Vimeo URL patterns
+    # Pattern 1: vimeo.com/VIDEO_ID or vimeo.com/VIDEO_ID?params
+    match = re.search(r"vimeo\.com\/(?:video\/)?(\d+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://player.vimeo.com/video/{video_id}"
+    
+    # Pattern 2: player.vimeo.com/video/VIDEO_ID (already embed format)
+    match = re.search(r"player\.vimeo\.com\/video\/(\d+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://player.vimeo.com/video/{video_id}"
+    
+    # Loom URL patterns
+    # Pattern 1: loom.com/share/VIDEO_ID - convert to embed
+    match = re.search(r"loom\.com\/share\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.loom.com/embed/{video_id}"
+    
+    # Pattern 2: loom.com/embed/VIDEO_ID (already embed format)
+    match = re.search(r"loom\.com\/embed\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.loom.com/embed/{video_id}"
+    
+    # VideoAsk URL patterns
+    # Pattern 1: videoask.com/VIDEO_ID or videoask.com/f/VIDEO_ID - convert to embed
+    match = re.search(r"videoask\.com\/(?:f\/)?([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.videoask.com/embed/{video_id}"
+    
+    # Pattern 2: videoask.com/embed/VIDEO_ID (already embed format)
+    match = re.search(r"videoask\.com\/embed\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.videoask.com/embed/{video_id}"
+    
+    # Google Drive URL patterns
+    # Pattern 1: drive.google.com/file/d/FILE_ID/view - convert to preview (embed)
+    match = re.search(r"drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Pattern 2: drive.google.com/open?id=FILE_ID - convert to preview
+    match = re.search(r"drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Pattern 3: drive.google.com/file/d/FILE_ID/preview (already embed format)
+    match = re.search(r"drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/preview", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Check if it's a direct video file URL (.mp4, .webm, .ogg, etc.)
+    # These should be used with <video> tag, not iframe, so return as is
+    video_extensions = ['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v', '.avi']
+    if any(url.lower().endswith(ext) for ext in video_extensions):
+        return url
+    
+    # Check if it's a data URL (base64 encoded video)
+    if url.startswith('data:video/'):
+        return url
+    
+    # If no pattern matches, return original URL
+    # This allows other video platforms or custom embed URLs to work
     return url
 
 

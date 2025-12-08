@@ -25,15 +25,24 @@
 			padding-top: 25px;
 			padding-bottom: 5px;" class="video">
 			<a href="{{ WELCOME_VIDEO.url }}" target="_blank" style="text-decoration: none; display: block;">
-				<table border="0" cellpadding="0" cellspacing="0" align="center" style="max-width: 560px; border-collapse: collapse; border-spacing: 0; padding: 0; border: 1px solid #000000;">
+				<table border="0" cellpadding="0" cellspacing="0" align="center" style="max-width: 560px; width: 100%; border-collapse: collapse; border-spacing: 0; padding: 0; border: 1px solid #000000;">
 					<tr>
-						<td align="center" valign="middle" style="position: relative; padding: 0; margin: 0; border-collapse: collapse; border-spacing: 0;">
-							<img src="{{ WELCOME_VIDEO.preview_image }}" alt="Video preview" style="width: 100%; max-width: 560px; height: auto; border: 0; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; display: block;" />
-							<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; background-color: rgba(233, 112, 62, 0.95); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);">
-								<svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-left: 3px;">
-									<path d="M8 5v14l11-7z" fill="#FFFFFF"/>
-								</svg>
-							</div>
+						<td align="center" valign="middle" style="padding: 0; margin: 0; border-collapse: collapse; border-spacing: 0;">
+							<!-- Single cell with image and centered play button -->
+							<table border="0" cellpadding="0" cellspacing="0" width="560" height="315" style="border-collapse: collapse; background-image: url('{{ WELCOME_VIDEO.preview_image }}'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+								<tr>
+									<td align="center" valign="middle" height="315" style="padding: 0; border-collapse: collapse;">
+										<!-- Play Button -->
+										<table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+											<tr>
+												<td align="center" valign="middle" bgcolor="#E9703E" style="width: 80px; height: 80px; padding: 0; border-collapse: collapse;">
+													<span style="color: #FFFFFF; font-size: 32px; line-height: 80px; margin-left: 6px;">▶</span>
+												</td>
+											</tr>
+										</table>
+									</td>
+								</tr>
+							</table>
 						</td>
 					</tr>
 				</table>
