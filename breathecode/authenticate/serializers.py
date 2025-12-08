@@ -40,6 +40,38 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def get_welcome_video_for_invite(validated_data, academy):
+    """
+    Get welcome_video for invite with priority:
+    1. From payload (validated_data)
+    2. From academy default
+    3. None if neither has valid video
+    
+    Args:
+        validated_data: Serializer validated data
+        academy: Academy instance
+        
+    Returns:
+        dict or None: Welcome video dict with url and preview_image, or None
+    """
+    # Priority 1: Check if welcome_video is in payload
+    payload_video = validated_data.get("welcome_video")
+    if payload_video and isinstance(payload_video, dict):
+        url = payload_video.get("url", "")
+        preview_image = payload_video.get("preview_image", "")
+        if url and preview_image:
+            return payload_video
+    
+    # Priority 2: Check academy default welcome_video
+    if academy and academy.welcome_video and isinstance(academy.welcome_video, dict):
+        url = academy.welcome_video.get("url", "")
+        preview_image = academy.welcome_video.get("preview_image", "")
+        if url and preview_image:
+            return academy.welcome_video
+    
+    return None
+
+
 class CapyAppUserSerializer(capy.Serializer):
     model = User
     path = "/v1/auth/app/user"
@@ -904,6 +936,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     if not UserInvite.objects.filter(token=token).exists():
                         break
 
+                welcome_video = get_welcome_video_for_invite(validated_data, academy)
+                
                 invite = UserInvite(
                     email=email,
                     first_name=validated_data["first_name"],
@@ -914,7 +948,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     role=role,
                     author=self.context.get("request").user,
                     token=token,
-                    welcome_video=validated_data.get("welcome_video"),
+                    welcome_video=welcome_video,
                 )
                 invite.save()
 
@@ -935,7 +969,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 if invite.welcome_video:
                     welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
                     if isinstance(welcome_video, dict) and "url" in welcome_video:
-                        welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
+                        from breathecode.authenticate.actions import get_youtube_watch_url
+                        welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
                     email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
@@ -1206,6 +1241,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 now = timezone.now()
 
+                welcome_video = get_welcome_video_for_invite(validated_data, academy)
+                
                 invite = UserInvite(
                     user=user,
                     email=email,
@@ -1219,7 +1256,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     token=token,
                     expires_at=now + relativedelta(months=6),
                     payment_method=payment_method,
-                    welcome_video=validated_data.get("welcome_video"),
+                    welcome_video=welcome_video,
                 )
                 invite.save()
                 invites_created.append(invite)
@@ -1247,7 +1284,9 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 if invite.welcome_video:
                     welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
                     if isinstance(welcome_video, dict) and "url" in welcome_video:
-                        welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
+                        # For email, convert to YouTube watch URL (not embed) so users can click to watch on YouTube
+                        from breathecode.authenticate.actions import get_youtube_watch_url
+                        welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
                     email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
