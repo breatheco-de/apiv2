@@ -39,6 +39,194 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def get_youtube_watch_url(url):
+    """
+    Convert any YouTube URL format to the standard watch URL.
+    This is useful for email links where we want users to go directly to YouTube.
+    
+    Args:
+        url: YouTube URL in any format (watch, embed, youtu.be, etc.)
+    
+    Returns:
+        str: Standard YouTube watch URL (https://www.youtube.com/watch?v=VIDEO_ID)
+    """
+    if not url:
+        return url
+    
+    url = url.strip()
+    
+    # Decode URL if needed
+    try:
+        url = urllib.parse.unquote(url)
+    except Exception:
+        pass
+    
+    # Extract video ID from various YouTube URL formats
+    video_id = None
+    
+    # Pattern 1: youtube.com/watch?v=VIDEO_ID
+    match = re.search(r"youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+    
+    # Pattern 2: youtube.com/embed/VIDEO_ID
+    if not video_id:
+        match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
+        if match:
+            video_id = match.group(1)
+    
+    # Pattern 3: youtu.be/VIDEO_ID
+    if not video_id:
+        match = re.search(r"youtu\.be\/([a-zA-Z0-9_-]{11})", url)
+        if match:
+            video_id = match.group(1)
+    
+    # Pattern 4: youtube.com/watch?other_params&v=VIDEO_ID
+    if not video_id:
+        match = re.search(r"youtube\.com\/watch\?.*[&?]v=([a-zA-Z0-9_-]{11})", url)
+        if match:
+            video_id = match.group(1)
+    
+    # If we found a video ID, return the standard watch URL
+    if video_id:
+        return f"https://www.youtube.com/watch?v={video_id}"
+    
+    # If it's not a YouTube URL or we couldn't extract the ID, return original
+    return url
+
+
+def convert_youtube_to_embed(url):
+    """
+    Convert video URL to embed format for iframe usage.
+    Supports YouTube, Vimeo, Loom, VideoAsk, Google Drive, and direct video URLs.
+    
+    Args:
+        url: Video URL (YouTube watch/embed, Vimeo, Loom, VideoAsk, Google Drive, or direct video file)
+    
+    Returns:
+        str: Embed URL ready for iframe src attribute
+    """
+    if not url:
+        return url
+    
+    # Clean URL - remove any URL encoding issues and whitespace
+    url = url.strip()
+    
+    # Decode URL if needed
+    try:
+        url = urllib.parse.unquote(url)
+    except Exception:
+        pass
+    
+    # Check if already in embed format (any platform)
+    if "/embed/" in url:
+        # If it's YouTube embed, add autoplay parameters
+        if "youtube.com/embed/" in url:
+            video_id_match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
+            if video_id_match:
+                video_id = video_id_match.group(1)
+                # Remove existing query params and add autoplay
+                return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+        # For other platforms, clean and return
+        if "?" in url:
+            url = url.split("?")[0]
+        return url
+    
+    # YouTube URL patterns
+    # Pattern 1: youtube.com/watch?v=VIDEO_ID or youtu.be/VIDEO_ID
+    match = re.search(r"(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+    
+    # Pattern 2: youtube.com/watch?other_params&v=VIDEO_ID
+    match = re.search(r"youtube\.com\/watch\?.*[&?]v=([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+    
+    # Pattern 3: Already YouTube embed format but with query params
+    match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1"
+    
+    # Vimeo URL patterns
+    # Pattern 1: vimeo.com/VIDEO_ID or vimeo.com/VIDEO_ID?params
+    match = re.search(r"vimeo\.com\/(?:video\/)?(\d+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://player.vimeo.com/video/{video_id}?autoplay=1"
+    
+    # Pattern 2: player.vimeo.com/video/VIDEO_ID (already embed format)
+    match = re.search(r"player\.vimeo\.com\/video\/(\d+)", url)
+    if match:
+        video_id = match.group(1)
+        # Check if it already has query params
+        if "?" in url:
+            return f"https://player.vimeo.com/video/{video_id}&autoplay=1"
+        return f"https://player.vimeo.com/video/{video_id}?autoplay=1"
+    
+    # Loom URL patterns
+    # Pattern 1: loom.com/share/VIDEO_ID - convert to embed
+    match = re.search(r"loom\.com\/share\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.loom.com/embed/{video_id}"
+    
+    # Pattern 2: loom.com/embed/VIDEO_ID (already embed format)
+    match = re.search(r"loom\.com\/embed\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.loom.com/embed/{video_id}"
+    
+    # VideoAsk URL patterns
+    # Pattern 1: videoask.com/VIDEO_ID or videoask.com/f/VIDEO_ID - convert to embed
+    match = re.search(r"videoask\.com\/(?:f\/)?([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.videoask.com/embed/{video_id}"
+    
+    # Pattern 2: videoask.com/embed/VIDEO_ID (already embed format)
+    match = re.search(r"videoask\.com\/embed\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.videoask.com/embed/{video_id}"
+    
+    # Google Drive URL patterns
+    # Pattern 1: drive.google.com/file/d/FILE_ID/view - convert to preview (embed)
+    match = re.search(r"drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Pattern 2: drive.google.com/open?id=FILE_ID - convert to preview
+    match = re.search(r"drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Pattern 3: drive.google.com/file/d/FILE_ID/preview (already embed format)
+    match = re.search(r"drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/preview", url)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/file/d/{file_id}/preview"
+    
+    # Check if it's a direct video file URL (.mp4, .webm, .ogg, etc.)
+    # These should be used with <video> tag, not iframe, so return as is
+    video_extensions = ['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v', '.avi']
+    if any(url.lower().endswith(ext) for ext in video_extensions):
+        return url
+    
+    # Check if it's a data URL (base64 encoded video)
+    if url.startswith('data:video/'):
+        return url
+    
+    # If no pattern matches, return original URL
+    # This allows other video platforms or custom embed URLs to work
+    return url
+
+
 def get_app_url(academy=None):
     """
     Get the app URL for redirects.
@@ -59,6 +247,35 @@ def get_app_url(academy=None):
         url = url[:-1]
 
     return url
+
+
+def get_invite_url(invite_token, academy=None, callback_url=None):
+    """
+    Get the invitation URL for email links.
+    
+    If academy is white_labeled and has website_url, returns:
+        {website_url}/accept-invite?inviteToken={token}
+    Otherwise, returns the API URL with callback parameter.
+    
+    Args:
+        invite_token: The invitation token
+        academy: Optional Academy instance
+        callback_url: Optional callback URL for non-white-labeled academies
+    
+    Returns:
+        str: The invitation URL
+    """
+    if academy and academy.white_labeled and academy.website_url:
+        website_url = academy.website_url.rstrip('/')
+        return f"{website_url}/accept-invite?inviteToken={invite_token}"
+    
+    api_url = os.getenv("API_URL", "https://breathecode.herokuapp.com")
+    if callback_url:
+        params = {"callback": callback_url}
+        querystr = urllib.parse.urlencode(params)
+        return f"{api_url}/v1/auth/member/invite/{invite_token}?{querystr}"
+    
+    return f"{api_url}/v1/auth/member/invite/{invite_token}"
 
 
 def get_api_url():
@@ -150,9 +367,8 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     if extra is None:
         extra = {}
 
-    params = {"callback": "https://admin.4geeks.com"}
-    querystr = urllib.parse.urlencode(params)
-    url = os.getenv("API_URL", "") + "/v1/auth/member/invite/" + str(token) + "?" + querystr
+    callback_url = get_app_url(academy=academy)
+    url = get_invite_url(token, academy=academy, callback_url=callback_url)
 
     data = {
         "email": email,
@@ -165,6 +381,16 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     # Add tracking URL if invite_id is provided
     if invite_id:
         data["TRACKER_URL"] = f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite_id}"
+    
+    if invite_id:
+        from .models import UserInvite
+        invite = UserInvite.objects.filter(id=invite_id).first()
+        if invite and invite.welcome_video:
+            welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+            if isinstance(welcome_video, dict) and "url" in welcome_video:
+                # For email, convert to YouTube watch URL (not embed) so users can click to watch on YouTube
+                welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
+            data["WELCOME_VIDEO"] = welcome_video
 
     notify_actions.send_email_message(
         "welcome_academy",

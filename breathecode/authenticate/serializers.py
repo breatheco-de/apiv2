@@ -18,7 +18,7 @@ from rest_framework.exceptions import ValidationError
 
 import breathecode.notify.actions as notify_actions
 from breathecode.admissions.models import Academy, City, Cohort, CohortUser, Country
-from breathecode.authenticate.actions import get_app_url, get_user_settings, sync_with_rigobot
+from breathecode.authenticate.actions import convert_youtube_to_embed, get_app_url, get_invite_url, get_user_settings, sync_with_rigobot
 from breathecode.authenticate.tasks import verify_user_invite_email
 from breathecode.events.models import Event
 from breathecode.registry.models import Asset
@@ -38,6 +38,38 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def get_welcome_video_for_invite(validated_data, academy):
+    """
+    Get welcome_video for invite with priority:
+    1. From payload (validated_data)
+    2. From academy default
+    3. None if neither has valid video
+    
+    Args:
+        validated_data: Serializer validated data
+        academy: Academy instance
+        
+    Returns:
+        dict or None: Welcome video dict with url and preview_image, or None
+    """
+    # Priority 1: Check if welcome_video is in payload
+    payload_video = validated_data.get("welcome_video")
+    if payload_video and isinstance(payload_video, dict):
+        url = payload_video.get("url", "")
+        preview_image = payload_video.get("preview_image", "")
+        if url and preview_image:
+            return payload_video
+    
+    # Priority 2: Check academy default welcome_video
+    if academy and academy.welcome_video and isinstance(academy.welcome_video, dict):
+        url = academy.welcome_video.get("url", "")
+        preview_image = academy.welcome_video.get("preview_image", "")
+        if url and preview_image:
+            return academy.welcome_video
+    
+    return None
 
 
 class CapyAppUserSerializer(capy.Serializer):
@@ -311,6 +343,7 @@ class UserInviteShortSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     email = serpy.Field()
+    phone = serpy.Field()
     sent_at = serpy.Field()
     opened_at = serpy.Field()
     clicked_at = serpy.Field()
@@ -321,6 +354,7 @@ class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
+    welcome_video = serpy.Field(required=False)
     academy = AcademyTinySerializer(required=False)
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
@@ -332,7 +366,9 @@ class UserInviteSerializer(UserInviteNoUrlSerializer):
     def get_invite_url(self, _invite):
         if _invite.token is None:
             return None
-        return os.getenv("API_URL") + "/v1/auth/member/invite/" + str(_invite.token)
+        academy = getattr(_invite, "academy", None)
+        callback_url = get_app_url(academy=academy) if academy else None
+        return get_invite_url(_invite.token, academy=academy, callback_url=callback_url)
 
 
 class AcademySerializer(serpy.Serializer):
@@ -655,10 +691,11 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
     )
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
+    welcome_video = serializers.JSONField(write_only=True, required=False)
 
     class Meta:
         model = ProfileAcademy
-        fields = ("email", "role", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status")
+        fields = ("email", "role", "user", "first_name", "last_name", "address", "phone", "invite", "cohort", "status", "welcome_video")
 
     def validate(self, data):
         lang = data.get("lang", "en")
@@ -899,6 +936,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     if not UserInvite.objects.filter(token=token).exists():
                         break
 
+                welcome_video = get_welcome_video_for_invite(validated_data, academy)
+                
                 invite = UserInvite(
                     email=email,
                     first_name=validated_data["first_name"],
@@ -909,28 +948,42 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     role=role,
                     author=self.context.get("request").user,
                     token=token,
+                    welcome_video=welcome_video,
                 )
                 invite.save()
 
                 logger.debug("Sending invite email to " + email)
 
-                params = {"callback": "https://admin.4geeks.com"}
-                querystr = urllib.parse.urlencode(params)
-                url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                callback_url = get_app_url(academy=academy)
+                url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
+
+                email_data = {
+                    "email": email,
+                    "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
+                    "LINK": url,
+                    "FIRST_NAME": validated_data["first_name"],
+                    "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+                }
+                
+                # Add welcome video if available
+                if invite.welcome_video:
+                    welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+                    if isinstance(welcome_video, dict) and "url" in welcome_video:
+                        from breathecode.authenticate.actions import get_youtube_watch_url
+                        welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
+                    email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
                     email,
-                    {
-                        "email": email,
-                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
-                        "LINK": url,
-                        "FIRST_NAME": validated_data["first_name"],
-                        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
-                    },
+                    email_data,
                     academy=academy,
                 )
 
+        # Remove welcome_video from validated_data as it's not a ProfileAcademy field
+        if "welcome_video" in validated_data:
+            del validated_data["welcome_video"]
+        
         # add member to the academy (the cohort is inside validated_data
         return super().create(
             {
@@ -964,6 +1017,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
     payment_method = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     user = serializers.IntegerField(write_only=True, required=False)
     status = serializers.CharField(read_only=True)
+    welcome_video = serializers.JSONField(write_only=True, required=False)
 
     id = serializers.IntegerField(read_only=True)
 
@@ -982,6 +1036,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             "plans",
             "payment_method",
             "id",
+            "welcome_video",
         )
         list_serializer_class = StudentPOSTListSerializer
 
@@ -1176,6 +1231,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 },
             )
 
+            invites_created = []
             for single_cohort in cohort:
                 # prevent duplicate token (very low probability)
                 while True:
@@ -1185,6 +1241,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
                 now = timezone.now()
 
+                welcome_video = get_welcome_video_for_invite(validated_data, academy)
+                
                 invite = UserInvite(
                     user=user,
                     email=email,
@@ -1198,8 +1256,10 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     token=token,
                     expires_at=now + relativedelta(months=6),
                     payment_method=payment_method,
+                    welcome_video=welcome_video,
                 )
                 invite.save()
+                invites_created.append(invite)
 
                 logger.debug("Sending invite email to " + email)
 
@@ -1209,28 +1269,42 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 callback_url = get_app_url(academy=academy)
                 logger.info(f"DEBUG create_invite - Callback URL: {callback_url}")
                 
-                querystr = urllib.parse.urlencode({"callback": callback_url})
-                url = os.getenv("API_URL") + "/v1/auth/member/invite/" + str(invite.token) + "?" + querystr
+                url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
                 logger.info(f"DEBUG create_invite - Full invite URL: {url}")
+
+                email_data = {
+                    "email": email,
+                    "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
+                    "LINK": url,
+                    "FIRST_NAME": validated_data["first_name"],
+                    "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+                }
+                
+                # Add welcome video if available
+                if invite.welcome_video:
+                    welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
+                    if isinstance(welcome_video, dict) and "url" in welcome_video:
+                        # For email, convert to YouTube watch URL (not embed) so users can click to watch on YouTube
+                        from breathecode.authenticate.actions import get_youtube_watch_url
+                        welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
+                    email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
                     "welcome_academy",
                     email,
-                    {
-                        "email": email,
-                        "subject": f"{academy.name} is inviting you to {academy.slug}.4Geeks.com",
-                        "LINK": url,
-                        "FIRST_NAME": validated_data["first_name"],
-                        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
-                    },
+                    email_data,
                     academy=academy,
                 )
 
             for plan in plans:
-                plan.invites.add(invite)
+                for invite in invites_created:
+                    plan.invites.add(invite)
 
             if "plans" in validated_data:
                 del validated_data["plans"]
+            
+            if "welcome_video" in validated_data:
+                del validated_data["welcome_video"]
 
             return ProfileAcademy.objects.create(
                 **{
