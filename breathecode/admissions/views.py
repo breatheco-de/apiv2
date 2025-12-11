@@ -417,6 +417,18 @@ class PublicCohortView(APIView):
         if syllabus_slug_like:
             items = items.filter(syllabus_version__syllabus__slug__icontains=slugify(syllabus_slug_like))
 
+        # Filter by syllabus version number (comma-separated)
+        syllabus_version = request.GET.get("syllabus_version", None)
+        if syllabus_version is not None:
+            try:
+                versions = [int(x.strip()) for x in syllabus_version.split(",")]
+                items = items.filter(syllabus_version__version__in=versions)
+            except ValueError:
+                raise ValidationException(
+                    "Invalid syllabus_version format. Must be comma-separated integers.",
+                    slug="invalid-syllabus-version-format"
+                )
+
         plan = request.GET.get("plan", "")
         if plan == "true":
             items = items.filter(academy__main_currency__isnull=False, cohortset__isnull=False).distinct()
@@ -1399,6 +1411,42 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         if syllabus is not None:
             # Filter by syllabus slug
             items = items.filter(syllabus_version__syllabus__slug__in=syllabus.split(","))
+
+        # Filter by syllabus version ID (comma-separated)
+        syllabus_version_id = request.GET.get("syllabus_version_id", None)
+        if syllabus_version_id is not None:
+            try:
+                version_ids = [int(x.strip()) for x in syllabus_version_id.split(",")]
+                items = items.filter(syllabus_version__id__in=version_ids)
+            except ValueError:
+                lang = get_user_language(request)
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid syllabus_version_id format. Must be comma-separated integers.",
+                        es="Formato de syllabus_version_id inválido. Debe ser enteros separados por comas.",
+                        slug="invalid-syllabus-version-id-format",
+                    ),
+                    slug="invalid-syllabus-version-id-format",
+                )
+
+        # Filter by syllabus version number (comma-separated)
+        syllabus_version = request.GET.get("syllabus_version", None)
+        if syllabus_version is not None:
+            try:
+                versions = [int(x.strip()) for x in syllabus_version.split(",")]
+                items = items.filter(syllabus_version__version__in=versions)
+            except ValueError:
+                lang = get_user_language(request)
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid syllabus_version format. Must be comma-separated integers.",
+                        es="Formato de syllabus_version inválido. Debe ser enteros separados por comas.",
+                        slug="invalid-syllabus-version-format",
+                    ),
+                    slug="invalid-syllabus-version-format",
+                )
 
         # Filter by live cohorts (has online_meeting_url)
         live = request.GET.get("live", None)

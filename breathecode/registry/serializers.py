@@ -544,7 +544,7 @@ class AssetBigTechnologySerializer(AssetTechnologySerializer):
 
     def get_featured_course(self, obj):
         if obj.featured_course:
-            obj.featured_course.lang = obj.lang or "en"
+            obj.featured_course.lang = obj.lang or "us"
             return GetCourseSmallSerializer(obj.featured_course).data
         return None
 
@@ -648,6 +648,10 @@ class PostAssetSerializer(serializers.ModelSerializer):
             raise ValidationException("Asset is missing a language", slug="no-language")
 
         validated_data["lang"] = validated_data["lang"].lower()
+        
+        # Normalize "en" to "us" (case-insensitive)
+        if validated_data["lang"] == "en":
+            validated_data["lang"] = "us"
 
         # Handle category field validation
         if "category" in data:
@@ -744,6 +748,10 @@ class PostAcademyAssetSerializer(serializers.ModelSerializer):
             raise ValidationException("Asset is missing a language", slug="no-language")
 
         validated_data["lang"] = validated_data["lang"].lower()
+        
+        # Normalize "en" to "us" (case-insensitive)
+        if validated_data["lang"] == "en":
+            validated_data["lang"] = "us"
 
         # Handle category field validation
         if "category" in data:
@@ -1131,6 +1139,12 @@ class AssetPUTSerializer(serializers.ModelSerializer):
         lang = self.instance.lang
         if "lang" in data:
             lang = data["lang"]
+        
+        # Normalize "en" to "us" (case-insensitive)
+        if lang and lang.lower() == "en":
+            lang = "us"
+            if "lang" in data:
+                data["lang"] = "us"
 
         category = self.instance.category
         if "category" in data:
@@ -1247,6 +1261,12 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
         lang = self.instance.lang
         if "lang" in data:
             lang = data["lang"]
+        
+        # Normalize "en" to "us" (case-insensitive)
+        if lang and lang.lower() == "en":
+            lang = "us"
+            if "lang" in data:
+                data["lang"] = "us"
 
         category = self.instance.category
         if "category" in data:
