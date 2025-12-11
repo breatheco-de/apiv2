@@ -515,6 +515,7 @@ class GetSmallCohortSerializer(serpy.Serializer):
     stage = serpy.Field()
     available_as_saas = serpy.Field()
     shortcuts = serpy.Field()
+    syllabus_version = serpy.Field()
 
 
 class GetTeacherAcademySmallSerializer(serpy.Serializer):

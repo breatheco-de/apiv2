@@ -29,7 +29,7 @@ from slugify import slugify
 
 
 from breathecode.admissions.models import Academy
-from breathecode.authenticate.actions import get_user_language
+from breathecode.authenticate.actions import aget_user_language, get_user_language
 from breathecode.authenticate.models import ProfileAcademy, User, CredentialsGithub
 from breathecode.notify.actions import send_email_message
 from breathecode.registry.permissions.consumers import asset_by_slug
@@ -2616,3 +2616,38 @@ class CodeCompilerView(APIView):
                 url = "/v1/prompting/completion/code-compiler/"
 
             return await s.post(url, json=request.data)
+
+
+class CompletionView(APIView):
+    """
+    Proxy endpoint to communicate with rigobot for AI completion/messaging.
+    """
+
+    @consume("ai-completion")
+    async def post(self, request):
+        """
+        POST request to send a message to rigobot completion endpoint.
+        The request body should contain a "message" field that will be wrapped
+        in the inputs object before being sent to rigobot.
+        """
+
+        # Get message from request body
+        message = request.data.get("message")
+        if not message:
+            lang = await aget_user_language(request)
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Message is required",
+                    es="El mensaje es requerido",
+                    slug="message-required",
+                ),
+                code=400,
+            )
+
+        # Wrap message in inputs object
+        payload = {"inputs": {"message": message}}
+
+        # Get rigobot token using user's token
+        async with Service("rigobot", request.user.id, proxy=True) as s:
+            return await s.post("/v1/prompting/completion/message", json=payload)
