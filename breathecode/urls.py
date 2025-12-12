@@ -68,6 +68,7 @@ versions = {
         path("media/", include("breathecode.media.urls.v2", namespace="media")),
         path("auth/", include("breathecode.authenticate.urls.v2", namespace="auth")),
         path("payments/", include("breathecode.payments.urls.v2", namespace="payments")),
+        path("marketing/", include("breathecode.marketing.urls.v2", namespace="marketing")),
     ],
 }
 
