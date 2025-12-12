@@ -822,7 +822,7 @@ class ModelServiceView(APIView):
         the user has the read_invite capability will work.
         """
         handler = self.extensions(request)
-        lang = get_user_language(request)
+        # lang = get_user_language(request)
 
         # Get all services marked as model services
         # Model services ignore the private field - they are always visible
