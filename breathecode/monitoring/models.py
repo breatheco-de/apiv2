@@ -5,6 +5,7 @@ import re
 from datetime import timedelta
 from urllib.parse import urlparse
 
+from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -379,9 +380,36 @@ class MonitoringError(models.Model):
     academy = models.ForeignKey(
         Academy, on_delete=models.CASCADE, related_name="monitoring_errors", help_text="Academy this error belongs to"
     )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="monitoring_errors",
+        null=True,
+        blank=True,
+        default=None,
+        help_text="User this error is related to (should have a ProfileAcademy from the same academy)",
+    )
 
     def __str__(self):
         return f"{self.title} ({self.severity}) - {self.academy.name}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        # Validate that user has a ProfileAcademy from the same academy
+        if self.user and self.academy:
+            from breathecode.authenticate.models import ProfileAcademy
+
+            profile_academy = ProfileAcademy.objects.filter(user=self.user, academy=self.academy).first()
+            if not profile_academy:
+                raise ValidationError(
+                    f"User {self.user.id} does not have a ProfileAcademy for academy {self.academy.id}"
+                )
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     class Meta:
         ordering = ["-created_at"]

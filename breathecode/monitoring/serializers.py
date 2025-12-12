@@ -196,6 +196,7 @@ class MonitoringErrorSerializer(serpy.Serializer):
     replicated_at = serpy.Field()
     monitor_script_id = serpy.Field(attr="monitor_script.id")
     academy_id = serpy.Field(attr="academy.id")
+    user_id = serpy.Field(attr="user.id", required=False)
 
 
 class MonitorScriptSmallSerializer(serpy.Serializer):

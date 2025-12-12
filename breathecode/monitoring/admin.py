@@ -341,15 +341,16 @@ class StripeEventAdmin(admin.ModelAdmin):
 
 @admin.register(MonitoringError)
 class MonitoringErrorAdmin(admin.ModelAdmin):
-    list_display = ("title", "severity", "academy", "monitor_script", "created_at", "fixed_at", "replicated_at")
+    list_display = ("title", "severity", "academy", "user", "monitor_script", "created_at", "fixed_at", "replicated_at")
     list_filter = ("severity", "academy", "monitor_script", "created_at", "fixed_at")
-    search_fields = ("title", "description", "academy__name", "monitor_script__script_slug")
+    search_fields = ("title", "description", "academy__name", "monitor_script__script_slug", "user__email")
     readonly_fields = ("created_at",)
     date_hierarchy = "created_at"
+    raw_id_fields = ("user",)
     
     fieldsets = (
         ("Error Information", {
-            "fields": ("severity", "title", "description", "monitor_script", "academy")
+            "fields": ("severity", "title", "description", "monitor_script", "academy", "user")
         }),
         ("Details", {
             "fields": ("details", "comments")

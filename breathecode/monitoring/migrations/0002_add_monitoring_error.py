@@ -1,6 +1,7 @@
 # Generated manually
 
 import django.db.models.deletion
+from django.conf import settings
 from django.db import migrations, models
 
 
@@ -9,6 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("monitoring", "0001_initial"),
         ("admissions", "0002_initial"),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
@@ -55,6 +57,18 @@ class Migration(migrations.Migration):
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="monitoring_errors",
                         to="admissions.academy",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        default=None,
+                        help_text="User this error is related to (should have a ProfileAcademy from the same academy)",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="monitoring_errors",
+                        to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
