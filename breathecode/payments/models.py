@@ -282,6 +282,10 @@ class Service(AbstractAsset):
     )
     type = models.CharField(max_length=22, choices=Type, default=Type.COHORT_SET, help_text="Service type")
     consumer = models.CharField(max_length=15, choices=Consumer, default=Consumer.NO_SET, help_text="Service type")
+    is_model_service = models.BooleanField(
+        default=False,
+        help_text="If true, this service will be considered a model service and will be suggested to all academies at setup time"
+    )
 
     def __str__(self):
         return self.slug

@@ -120,6 +120,7 @@ class GetServiceSerializer(serpy.Serializer):
     owner = serpy.MethodField()
     private = serpy.Field()
     groups = serpy.MethodField()
+    is_model_service = serpy.Field()
 
     def get_owner(self, obj):
         if obj.owner:

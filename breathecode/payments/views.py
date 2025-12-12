@@ -16,7 +16,7 @@ from linked_services.rest_framework.types import LinkedApp, LinkedHttpRequest, L
 from redis.exceptions import LockError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
@@ -805,6 +805,42 @@ class ServiceView(APIView):
         items = handler.queryset(items)
         serializer = GetServiceSerializer(
             items, many=True, context={"academy_id": request.GET.get("academy")}, select=request.GET.get("select")
+        )
+
+        return handler.response(serializer.data)
+
+
+class ModelServiceView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_invite")
+    def get(self, request, academy_id=None):
+        """
+        Get all model services that are suggested to all academies at setup time.
+        This endpoint requires the read_invite capability in any academy.
+        The academy_id can be provided via URL, header, or query param, but any academy where
+        the user has the read_invite capability will work.
+        """
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        # Get all services marked as model services
+        # Model services ignore the private field - they are always visible
+        items = Service.objects.filter(is_model_service=True)
+
+        # Add optional academy owner filter
+        # Use academy_id from decorator, or fall back to query param
+        filter_academy_id = academy_id or request.GET.get("academy")
+        if filter_academy_id and str(filter_academy_id).isdigit():
+            items = items.filter(Q(owner__id=int(filter_academy_id)) | Q(owner=None))
+
+        # Add "like" search filter for slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        items = handler.queryset(items)
+        serializer = GetServiceSerializer(
+            items, many=True, context={"academy_id": academy_id or request.GET.get("academy")}, select=request.GET.get("select")
         )
 
         return handler.response(serializer.data)
