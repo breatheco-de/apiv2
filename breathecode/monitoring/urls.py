@@ -55,6 +55,7 @@ from django.urls import path
 from .views import (
     AcademyDownloadSignedUrlView,
     AcademyDownloadView,
+    AcademyScriptView,
     DjangoAdminView,
     RepositorySubscriptionView,
     get_apps,
@@ -75,6 +76,7 @@ urlpatterns = [
     path("academy/download", AcademyDownloadView.as_view(), name="academy_download"),
     path("academy/download/<int:download_id>", AcademyDownloadView.as_view(), name="academy_download_id"),
     path("academy/download/<int:download_id>/signed-url", AcademyDownloadSignedUrlView.as_view(), name="academy_download_signed_url"),
+    path("academy/script/<slug:script_slug>", AcademyScriptView.as_view(), name="academy_script_slug"),
     path("upload", get_upload),
     path("upload/<int:upload_id>", get_upload),
     path("reposubscription", RepositorySubscriptionView.as_view()),

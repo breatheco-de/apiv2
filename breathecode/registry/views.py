@@ -2623,7 +2623,7 @@ class CompletionView(APIView):
     Proxy endpoint to communicate with rigobot for AI completion/messaging.
     """
 
-    @consume("rigobot-api-completion")
+    @consume("rigobot-api-test-completion")
     async def post(self, request):
         """
         POST request to send a message to rigobot completion endpoint.

@@ -12,7 +12,7 @@ from django.utils import timezone
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackChannel
 
-__all__ = ["Application", "Endpoint", "MonitorScript"]
+__all__ = ["Application", "Endpoint", "MonitorScript", "MonitoringError"]
 
 GITHUB_URL_PATTERN = re.compile(r"https:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/]+)\/?")
 
@@ -351,3 +351,43 @@ class SupervisorIssue(models.Model):
 class NoPagination(models.Model):
     path = models.CharField(max_length=255)
     method = models.CharField(max_length=9)
+
+
+class MonitoringError(models.Model):
+    """Represents errors detected by monitoring scripts without interrupting execution."""
+
+    MINOR = "MINOR"
+    CRITICAL = "CRITICAL"
+    SEVERITY_CHOICES = (
+        (MINOR, "Minor"),
+        (CRITICAL, "Critical"),
+    )
+
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default=MINOR)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    details = models.JSONField(default=dict, blank=True, help_text="Additional error details as JSON")
+    comments = models.JSONField(default=dict, blank=True, help_text="Comments and notes as JSON")
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    fixed_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the error was fixed")
+    replicated_at = models.DateTimeField(
+        null=True, blank=True, default=None, help_text="When the error was replicated/verified"
+    )
+    monitor_script = models.ForeignKey(
+        MonitorScript, on_delete=models.CASCADE, related_name="monitoring_errors", help_text="The script that created this error"
+    )
+    academy = models.ForeignKey(
+        Academy, on_delete=models.CASCADE, related_name="monitoring_errors", help_text="Academy this error belongs to"
+    )
+
+    def __str__(self):
+        return f"{self.title} ({self.severity}) - {self.academy.name}"
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["-created_at"]),
+            models.Index(fields=["academy", "-created_at"]),
+            models.Index(fields=["monitor_script", "-created_at"]),
+            models.Index(fields=["severity", "-created_at"]),
+        ]

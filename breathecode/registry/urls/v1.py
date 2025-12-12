@@ -85,5 +85,5 @@ urlpatterns = [
     path("translation", get_translations),
     path("alias/redirect", get_alias_redirects),
     path("code-compiler", CodeCompilerView.as_view(), name="code_compiler"),
-    path("completion", CompletionView.as_view(), name="completion"),
+    path("/me/completion", CompletionView.as_view(), name="completion"),
 ]
