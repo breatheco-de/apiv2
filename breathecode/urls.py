@@ -85,7 +85,7 @@ apps = [
     ("v1/assessment/", "breathecode.assessment.urls", "assessment"),
     ("v1/certificate/", "breathecode.certificate.urls", "certificate"),
     ("v1/media/", "breathecode.media.urls.v1", "media"),
-    ("v1/marketing/", "breathecode.marketing.urls", "marketing"),
+    ("v1/marketing/", "breathecode.marketing.urls.v1", "marketing"),
     ("v1/mentorship/", "breathecode.mentorship.urls", "mentorship"),
     ("v1/monitoring/", "breathecode.monitoring.urls", "monitoring"),
     ("v1/provisioning/", "breathecode.provisioning.urls", "provisioning"),
