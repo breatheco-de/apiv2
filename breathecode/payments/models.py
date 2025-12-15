@@ -2940,6 +2940,7 @@ class Consumable(AbstractServiceItem):
         plan_financing_team: Optional["PlanFinancingTeam" | int] = None,
         plan_financing_seat: Optional["PlanFinancingSeat" | int] = None,
         extra: Optional[dict] = None,
+        include_zero_balance: bool = False,
     ) -> QuerySet["Consumable"]:
 
         if extra is None:
@@ -3076,10 +3077,13 @@ class Consumable(AbstractServiceItem):
             Subscription.Status.DEPRECATED,
         ]
 
+        queryset = cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
+
+        if not include_zero_balance:
+            queryset = queryset.exclude(how_many=0)
+
         return (
-            cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
-            .exclude(how_many=0)
-            .exclude(Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses))
+            queryset.exclude(Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses))
             .order_by("id")
         )
 
@@ -3096,6 +3100,7 @@ class Consumable(AbstractServiceItem):
         subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
         subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: dict = None,
+        include_zero_balance: bool = False,
     ) -> QuerySet["Consumable"]:
 
         return cls.list(
@@ -3107,6 +3112,7 @@ class Consumable(AbstractServiceItem):
             subscription_billing_team=subscription_billing_team,
             subscription_seat=subscription_seat,
             extra=extra,
+            include_zero_balance=include_zero_balance,
         )
 
     @classmethod

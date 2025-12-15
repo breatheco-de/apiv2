@@ -1211,7 +1211,7 @@ class AcademyServiceItemView(APIView):
 class MeConsumableView(APIView):
 
     def get(self, request):
-        items = Consumable.list(user=request.user)
+        items = Consumable.list(user=request.user, include_zero_balance=True)
 
         mentorship_services = MentorshipServiceSet.objects.none()
         mentorship_services = filter_consumables(request, items, mentorship_services, "mentorship_service_set")

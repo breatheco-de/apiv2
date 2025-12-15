@@ -1161,8 +1161,9 @@ def get_balance_by_resource(
         units = {x[0] for x in SERVICE_UNITS}
         for unit in units:
             per_unit = current.filter(unit_type=unit)
+            sum_result = per_unit.aggregate(Sum("how_many"))["how_many__sum"]
             balance[unit.lower()] = (
-                -1 if per_unit.filter(how_many=-1).exists() else per_unit.aggregate(Sum("how_many"))["how_many__sum"]
+                -1 if per_unit.filter(how_many=-1).exists() else (sum_result if sum_result is not None else 0)
             )
 
         for x in queryset:
