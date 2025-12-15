@@ -70,12 +70,14 @@ from .serializers import (
     FormEntryBigSerializer,
     FormEntryHookSerializer,
     FormEntrySerializer,
+    FormEntrySerializerV2,
     FormEntrySmallSerializer,
     GetCourseSerializer,
     CoursePUTSerializer,
     CourseTranslationPUTSerializer,
     LeadgenAppSmallSerializer,
     PostFormEntrySerializer,
+    PostFormEntrySerializerV2,
     PUTAutomationSerializer,
     PUTTagSerializer,
     ShortLinkSerializer,
@@ -1832,3 +1834,142 @@ class CourseTranslationPrerequisiteView(APIView):
 
         payload = GetCourseTranslationSerializer(translation_instance, many=False).data
         return Response(payload, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# V2 Views - Use ppc_tracking_id instead of gclid
+# ============================================================================
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@validate_captcha_challenge
+def create_lead_v2(request):
+    """
+    V2 endpoint for creating leads.
+    Accepts ppc_tracking_id instead of gclid - no backward compatibility.
+    """
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if "phone" in data:
+        data["phone"] = data["phone"].replace(" ", "")
+
+    if "utm_url" in data and ("//localhost:" in data["utm_url"] or "gitpod.io" in data["utm_url"]):
+        print("Ignoring lead because its coming from development team")
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    serializer = PostFormEntrySerializerV2(data=data)
+    if serializer.is_valid():
+        serializer.save()
+
+        persist_single_lead.delay(serializer.data)
+
+        # Return response with ppc_tracking_id instead of gclid
+        response_data = FormEntrySerializerV2(serializer.instance).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@validate_captcha
+def create_lead_captcha_v2(request):
+    """
+    V2 endpoint for creating leads with captcha.
+    Accepts ppc_tracking_id instead of gclid - no backward compatibility.
+    """
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if "phone" in data:
+        data["phone"] = data["phone"].replace(" ", "")
+
+    if "utm_url" in data and ("//localhost:" in data["utm_url"] or "gitpod.io" in data["utm_url"]):
+        print("Ignoring lead because its coming from development team")
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    serializer = PostFormEntrySerializerV2(data=data)
+    if serializer.is_valid():
+        serializer.save()
+
+        persist_single_lead.delay(serializer.data)
+
+        # Return response with ppc_tracking_id instead of gclid
+        response_data = FormEntrySerializerV2(serializer.instance).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def create_lead_from_app_v2(request, app_slug=None):
+    """
+    V2 endpoint for creating leads from app.
+    Accepts ppc_tracking_id instead of gclid - no backward compatibility.
+    """
+    app_id = request.GET.get("app_id", None)
+    if app_id is None:
+        raise ValidationException("Invalid app slug and/or id", code=400, slug="without-app-slug-or-app-id")
+
+    if app_slug is None:
+        # try get the slug from the encoded app_id
+        decoded_id = parse.unquote(app_id)
+        if ":" not in decoded_id:
+            raise ValidationException("Missing app slug", code=400, slug="without-app-slug-or-app-id")
+        else:
+            app_slug, app_id = decoded_id.split(":")
+
+    app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
+    if app is None:
+        raise ValidationException("App not found with those credentials", code=401, slug="without-app-id")
+
+    app.hits += 1
+    app.last_call_at = timezone.now()
+    app.last_request_data = json.dumps(request.data)
+
+    ## apply defaults from the app
+    payload = {
+        "location": app.location,
+        "language": app.language,
+        "utm_url": app.utm_url,
+        "utm_medium": app.utm_medium,
+        "utm_campaign": app.utm_campaign,
+        "utm_source": app.utm_source,
+        "utm_plan": app.utm_plan,
+        "academy": app.academy.id,
+        "lead_generation_app": app.id,
+    }
+    payload.update(request.data)
+
+    if "automations" not in request.data:
+        payload["automations"] = ",".join([str(auto.slug) for auto in app.default_automations.all()])
+
+    if "tags" not in request.data:
+        payload["tags"] = ",".join([tag.slug for tag in app.default_tags.all()])
+
+    # remove spaces from phone
+    if "phone" in request.data:
+        payload["phone"] = payload["phone"].replace(" ", "")
+
+    serializer = PostFormEntrySerializerV2(data=payload)
+    if serializer.is_valid():
+        serializer.save()
+
+        tasks.persist_single_lead.delay(serializer.data)
+
+        app.last_call_status = "OK"
+        app.save()
+
+        # Return response with ppc_tracking_id instead of gclid
+        response_data = FormEntrySerializerV2(serializer.instance).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    else:
+        app.last_call_status = "ERROR"
+        app.last_call_log = json.dumps(serializer.errors)
+        app.save()
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

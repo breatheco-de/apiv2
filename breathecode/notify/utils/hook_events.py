@@ -201,5 +201,12 @@ HOOK_EVENTS_METADATA = {
         # Note: This receiver has custom logic, so it needs manual handling
         "auto_register": False,
     },
+    # Surveys (app auto-derived from action)
+    "survey.survey_answered": {
+        "action": "feedback.SurveyResponse.survey_answered",
+        "description": "Triggered when a user answers a survey",
+        # app, signal, sender, event_action all auto-derived from action
+        "serializer": "breathecode.feedback.serializers.SurveyResponseHookSerializer",
+    },
 }
 

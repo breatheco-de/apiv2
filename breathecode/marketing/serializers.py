@@ -867,3 +867,99 @@ class CourseResaleSettingsPUTSerializer(serializers.ModelSerializer):
             # Control
             "is_active",
         )
+
+
+# ============================================================================
+# V2 Serializers - Use ppc_tracking_id instead of gclid
+# ============================================================================
+
+
+class FormEntrySerializerV2(serpy.Serializer):
+    """V2 serializer that uses ppc_tracking_id instead of gclid"""
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    email = serpy.Field()
+    course = serpy.Field()
+    location = serpy.Field()
+    language = serpy.Field()
+    ppc_tracking_id = serpy.MethodField()
+    utm_url = serpy.Field()
+    utm_medium = serpy.Field()
+    utm_campaign = serpy.Field()
+    utm_source = serpy.Field()
+    utm_placement = serpy.Field()
+    utm_term = serpy.Field()
+    utm_plan = serpy.Field()
+    sex = serpy.Field()
+    tags = serpy.Field()
+    storage_status = serpy.Field()
+    country = serpy.Field()
+    lead_type = serpy.Field()
+    academy = AcademySmallSerializer(required=False)
+    client_comments = serpy.Field(required=False)
+    created_at = serpy.Field()
+    custom_fields = serpy.MethodField(required=False)
+
+    def get_ppc_tracking_id(self, obj):
+        """Map gclid field to ppc_tracking_id"""
+        return obj.gclid
+
+    def get_custom_fields(self, obj):
+        if isinstance(obj.custom_fields, dict):
+            processed_fields = {}
+            for key, value in obj.custom_fields.items():
+                if isinstance(value, list):
+                    processed_fields[key] = ",".join(map(str, value))
+                else:
+                    processed_fields[key] = value
+            return processed_fields
+        return {}
+
+
+class PostFormEntrySerializerV2(serializers.ModelSerializer):
+    """
+    V2 serializer for creating form entries.
+    Accepts ppc_tracking_id instead of gclid - no backward compatibility.
+    """
+
+    ppc_tracking_id = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = FormEntry
+        exclude = ()
+        read_only_fields = ["id"]
+        extra_kwargs = {
+            "gclid": {"write_only": True},  # Hide gclid from input, we use ppc_tracking_id instead
+        }
+
+    def to_internal_value(self, data):
+        """Map ppc_tracking_id to gclid before validation"""
+        if "ppc_tracking_id" in data:
+            # Create a copy to avoid mutating the original
+            data = data.copy()
+            data["gclid"] = data.pop("ppc_tracking_id")
+        return super().to_internal_value(data)
+
+    def create(self, validated_data):
+        academy = None
+        if "location" in validated_data:
+            alias = AcademyAlias.objects.filter(active_campaign_slug=validated_data["location"]).first()
+            if alias is not None:
+                academy = alias.academy
+            else:
+                academy = Academy.objects.filter(active_campaign_slug=validated_data["location"]).first()
+
+        # copy the validated data just to do small last minute corrections
+        data = validated_data.copy()
+
+        # "us" language will become "en" language, its the right lang code
+        if "language" in data and data["language"] == "us":
+            data["language"] = "en"
+
+        if "tag_objects" in data and data["tag_objects"] != "":
+            tag_ids = data["tag_objects"].split(",")
+            data["tags"] = Tag.objects.filter(id__in=tag_ids)
+
+        result = super().create({**data, "academy": academy})
+        return result

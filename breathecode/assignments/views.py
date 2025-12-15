@@ -48,6 +48,7 @@ from .serializers import (
     TaskGETDeliverSerializer,
     TaskGETSerializer,
     UserAttachmentSerializer,
+    TaskUserSmallSerializer,
     RepositoryDeletionOrderSerializer,
 )
 
@@ -764,7 +765,7 @@ class TaskMeView(APIView):
 
         items = handler.queryset(items)
 
-        serializer = TaskGETSerializer(items, many=True)
+        serializer = TaskUserSmallSerializer(items, many=True)
         return handler.response(serializer.data)
 
     def put(self, request, task_id=None):

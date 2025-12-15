@@ -11,7 +11,16 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Token
 
 from . import tasks
-from .models import AcademyFeedbackSettings, Answer, Review, ReviewPlatform, Survey
+from .models import (
+    AcademyFeedbackSettings,
+    Answer,
+    Review,
+    ReviewPlatform,
+    Survey,
+    SurveyConfiguration,
+    SurveyResponse,
+)
+from .services.pusher_service import send_survey_event
 from .utils import strings
 
 logger = logging.getLogger(__name__)
@@ -297,3 +306,225 @@ def calculate_survey_scores(survey_id: int) -> dict:
         "live_class": live_class,
         "mentors": sorted(mentors, key=lambda x: x["name"]),
     }
+
+
+def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
+    """
+    Trigger a survey for a user when a specific action is completed.
+
+    Args:
+        user: User who completed the action
+        trigger_type: Type of trigger (must be one of SurveyConfiguration.TriggerType values)
+        context: Context information about the trigger (e.g., {"asset_slug": "...", "cohort": ...})
+
+    Returns:
+        SurveyResponse instance if created, None otherwise
+    """
+    if not user:
+        logger.warning("Cannot trigger survey: user is None")
+        return None
+
+    # Validate trigger_type
+    valid_triggers = [choice[0] for choice in SurveyConfiguration.TriggerType.choices]
+    if trigger_type not in valid_triggers:
+        logger.warning(f"Invalid trigger_type: {trigger_type}. Must be one of {valid_triggers}")
+        return None
+
+    # Get user's academy
+    academy = None
+    if hasattr(user, "profileacademy_set") and user.profileacademy_set.exists():
+        academy = user.profileacademy_set.first().academy
+    elif "academy" in context:
+        academy = context["academy"]
+
+    if not academy:
+        logger.warning(f"Cannot trigger survey for user {user.id}: no academy found")
+        return None
+
+    # Find active survey configurations for this trigger type and academy
+    # Use prefetch_related to avoid N+1 queries when checking cohorts
+    survey_configs = SurveyConfiguration.objects.filter(
+        trigger_type=trigger_type, is_active=True, academy=academy
+    ).prefetch_related("cohorts")
+
+    if not survey_configs.exists():
+        logger.debug(f"No active survey configurations found for trigger_type={trigger_type}, academy={academy.id}")
+        return None
+
+    # Apply filters for each survey configuration
+    for survey_config in survey_configs:
+        # Apply cohort filter for course completion
+        if trigger_type == SurveyConfiguration.TriggerType.COURSE_COMPLETION:
+            cohort = context.get("cohort")
+            if cohort:
+                # If cohorts filter is set, check if this cohort is in the list
+                if survey_config.cohorts.exists():
+                    if cohort not in survey_config.cohorts.all():
+                        logger.debug(
+                            f"Survey config {survey_config.id} filtered out: cohort {cohort.id} not in allowed cohorts"
+                        )
+                        continue
+                # If cohorts filter is empty, apply to all cohorts
+
+        # Apply asset_slug filter for learnpack completion
+        elif trigger_type == SurveyConfiguration.TriggerType.LEARNPACK_COMPLETION:
+            asset_slug = context.get("asset_slug")
+            if asset_slug:
+                # If asset_slugs filter is set, check if this asset_slug is in the list
+                if survey_config.asset_slugs:
+                    if asset_slug not in survey_config.asset_slugs:
+                        logger.debug(
+                            f"Survey config {survey_config.id} filtered out: asset_slug {asset_slug} not in allowed asset_slugs"
+                        )
+                        continue
+                # If asset_slugs filter is empty, apply to all learnpacks
+
+        # Check if user already has a pending survey response for this config and trigger
+        existing_response = SurveyResponse.objects.filter(
+            survey_config=survey_config,
+            user=user,
+            status=SurveyResponse.Status.PENDING,
+            trigger_context__trigger_type=trigger_type,
+        ).first()
+
+        if existing_response:
+            logger.debug(
+                f"User {user.id} already has pending survey response {existing_response.id} for config {survey_config.id}"
+            )
+            continue
+
+        # Create survey response
+        survey_response = create_survey_response(survey_config, user, context)
+        if survey_response:
+            logger.info(f"Survey response {survey_response.id} created for user {user.id}")
+            return survey_response
+
+    return None
+
+
+def create_survey_response(survey_config: SurveyConfiguration, user: User, context: dict):
+    """
+    Create a survey response and send Pusher event.
+
+    Args:
+        survey_config: SurveyConfiguration instance
+        user: User who should receive the survey
+        context: Context information about the trigger
+
+    Returns:
+        SurveyResponse instance if created successfully, None otherwise
+    """
+    try:
+        # Prepare trigger context
+        trigger_context = {
+            "trigger_type": survey_config.trigger_type,
+            **context,
+        }
+
+        # Create survey response
+        survey_response = SurveyResponse.objects.create(
+            survey_config=survey_config,
+            user=user,
+            trigger_context=trigger_context,
+            status=SurveyResponse.Status.PENDING,
+        )
+
+        # Send Pusher event
+        questions = survey_config.questions.get("questions", [])
+        send_survey_event(user.id, survey_response.id, questions, trigger_context)
+
+        logger.info(f"Survey response {survey_response.id} created and Pusher event sent for user {user.id}")
+        return survey_response
+
+    except Exception as e:
+        logger.error(f"Error creating survey response for user {user.id}: {str(e)}", exc_info=True)
+        return None
+
+
+def save_survey_answers(response_id: int, answers: dict) -> SurveyResponse:
+    """
+    Save survey answers and update response status.
+
+    Args:
+        response_id: ID of the SurveyResponse
+        answers: Dictionary with question IDs as keys and answers as values
+
+    Returns:
+        Updated SurveyResponse instance
+
+    Raises:
+        ValidationException: If response not found, already answered, or validation fails
+    """
+    from django.db import transaction
+
+    # Use select_for_update to prevent race conditions
+    with transaction.atomic():
+        survey_response = SurveyResponse.objects.select_for_update().filter(id=response_id).first()
+
+        if not survey_response:
+            raise ValidationException("Survey response not found", code=404, slug="survey-response-not-found")
+
+        if survey_response.status == SurveyResponse.Status.ANSWERED:
+            raise ValidationException("Survey already answered", code=400, slug="survey-already-answered")
+
+        # Validate answers against survey configuration
+        questions = survey_response.survey_config.questions.get("questions", [])
+        question_ids = {q.get("id") for q in questions if q.get("id")}
+
+        # Check if all required questions are answered
+        for question in questions:
+            question_id = question.get("id")
+            if question_id and question_id not in answers:
+                # Check if question is required
+                if question.get("required", False):
+                    raise ValidationException(
+                        f"Required question '{question_id}' not answered", code=400, slug="missing-required-question"
+                    )
+
+        # Validate answer types and values
+        for question_id, answer_value in answers.items():
+            if question_id not in question_ids:
+                logger.warning(f"Answer for unknown question '{question_id}' will be saved but not validated")
+
+            # Find question config
+            question = next((q for q in questions if q.get("id") == question_id), None)
+            if question:
+                question_type = question.get("type")
+                config = question.get("config", {})
+
+                # Validate based on question type
+                if question_type == "likert_scale":
+                    scale = config.get("scale", 5)
+                    if not isinstance(answer_value, int) or answer_value < 1 or answer_value > scale:
+                        raise ValidationException(
+                            f"Answer for '{question_id}' must be an integer between 1 and {scale}",
+                            code=400,
+                            slug="invalid-likert-answer",
+                        )
+
+                elif question_type == "open_question":
+                    max_length = config.get("max_length", 500)
+                    if not isinstance(answer_value, str):
+                        raise ValidationException(
+                            f"Answer for '{question_id}' must be a string", code=400, slug="invalid-open-answer-type"
+                        )
+                    if len(answer_value) > max_length:
+                        raise ValidationException(
+                            f"Answer for '{question_id}' exceeds maximum length of {max_length} characters",
+                            code=400,
+                            slug="answer-too-long",
+                        )
+
+        # Save answers
+        survey_response.answers = answers
+        survey_response.status = SurveyResponse.Status.ANSWERED
+        survey_response.answered_at = timezone.now()
+        survey_response.save()
+
+    # Trigger signal for webhook
+    from breathecode.feedback.signals import survey_response_answered
+
+    survey_response_answered.send(sender=SurveyResponse, instance=survey_response)
+
+    logger.info(f"Survey response {survey_response.id} answered by user {survey_response.user.id}")
+    return survey_response

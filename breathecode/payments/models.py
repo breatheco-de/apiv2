@@ -22,7 +22,6 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, Country
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserInvite
@@ -282,6 +281,10 @@ class Service(AbstractAsset):
     )
     type = models.CharField(max_length=22, choices=Type, default=Type.COHORT_SET, help_text="Service type")
     consumer = models.CharField(max_length=15, choices=Consumer, default=Consumer.NO_SET, help_text="Service type")
+    is_model_service = models.BooleanField(
+        default=False,
+        help_text="If true, this service will be considered a model service and will be suggested to all academies at setup time"
+    )
 
     def __str__(self):
         return self.slug
@@ -1636,6 +1639,9 @@ class Bag(AbstractAmountByTime):
         super().save(*args, **kwargs)
 
         if created:
+            # Lazy import to avoid circular dependency
+            import breathecode.activity.tasks as tasks_activity
+
             tasks_activity.add_activity.delay(
                 self.user.id, "bag_created", related_type="payments.Bag", related_id=self.id
             )

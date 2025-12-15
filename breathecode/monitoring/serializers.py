@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.monitoring.actions import subscribe_repository
-from breathecode.monitoring.models import RepositorySubscription
+from breathecode.monitoring.models import MonitorScript, MonitoringError, RepositorySubscription
 from breathecode.monitoring.tasks import async_subscribe_repo, async_unsubscribe_repo
 from breathecode.utils import serpy
 
@@ -182,3 +182,48 @@ class RepositorySubscriptionSerializer(serializers.ModelSerializer):
             async_unsubscribe_repo.delay(instance.id, force_delete=False)
 
         return super().update(instance, validated_data)
+
+
+class MonitoringErrorSerializer(serpy.Serializer):
+    id = serpy.Field()
+    severity = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    details = serpy.Field()
+    comments = serpy.Field()
+    created_at = serpy.Field()
+    fixed_at = serpy.Field()
+    replicated_at = serpy.Field()
+    monitor_script_id = serpy.Field(attr="monitor_script.id")
+    academy_id = serpy.Field(attr="academy.id")
+    user_id = serpy.Field(attr="user.id", required=False)
+
+
+class MonitorScriptSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    script_slug = serpy.Field()
+    status = serpy.Field()
+    status_code = serpy.Field()
+    severity_level = serpy.Field()
+    status_text = serpy.Field()
+    special_status_text = serpy.Field()
+    response_text = serpy.Field()
+    last_run = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class MonitorScriptSmallSerializer(serpy.Serializer):
+    """Basic MonitorScript serializer."""
+    
+    id = serpy.Field()
+    script_slug = serpy.Field()
+    status = serpy.Field()
+    status_code = serpy.Field()
+    severity_level = serpy.Field()
+    status_text = serpy.Field()
+    special_status_text = serpy.Field()
+    response_text = serpy.Field()
+    last_run = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()

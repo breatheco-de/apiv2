@@ -25,6 +25,8 @@ from .models import (
     Review,
     ReviewPlatform,
     Survey,
+    SurveyConfiguration,
+    SurveyResponse,
     SurveyTemplate,
     UserProxy,
 )
@@ -453,3 +455,131 @@ class FeedbackTagAdmin(admin.ModelAdmin):
         ("Visibility", {"fields": ("academy", "is_private")}),
         ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
+
+
+class SurveyConfigurationForm(forms.ModelForm):
+    """Form for SurveyConfiguration with formatted JSON fields"""
+
+    class Meta:
+        model = SurveyConfiguration
+        fields = "__all__"
+        widgets = {
+            "questions": PrettyJSONWidget(),
+            "asset_slugs": PrettyJSONWidget(),
+        }
+
+
+@admin.register(SurveyConfiguration)
+class SurveyConfigurationAdmin(admin.ModelAdmin):
+    form = SurveyConfigurationForm
+    list_display = (
+        "id",
+        "trigger_type",
+        "academy",
+        "is_active",
+        "created_by",
+        "created_at",
+        "updated_at",
+    )
+    list_filter = ("trigger_type", "is_active", "academy", "created_at")
+    search_fields = ("academy__name", "academy__slug", "created_by__email", "created_by__first_name", "created_by__last_name")
+    raw_id_fields = ("academy", "created_by")
+    filter_horizontal = ("cohorts",)
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "trigger_type",
+                    "academy",
+                    "is_active",
+                    "created_by",
+                )
+            },
+        ),
+        (
+            "Questions",
+            {
+                "fields": ("questions",),
+                "description": "JSON structure containing survey questions. Format: {'questions': [...]}",
+            },
+        ),
+        (
+            "Filters",
+            {
+                "fields": ("cohorts", "asset_slugs"),
+                "description": "Cohorts: Leave empty to apply to all cohorts. Asset slugs: Leave empty to apply to all learnpacks.",
+            },
+        ),
+        ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
+
+
+@admin.register(SurveyResponse)
+class SurveyResponseAdmin(admin.ModelAdmin, AdminExportCsvMixin):
+    list_display = (
+        "id",
+        "survey_config",
+        "user",
+        "status",
+        "created_at",
+        "answered_at",
+        "has_answers",
+    )
+    list_filter = ("status", "survey_config__trigger_type", "survey_config__academy", "created_at", "answered_at")
+    search_fields = (
+        "user__email",
+        "user__first_name",
+        "user__last_name",
+        "survey_config__academy__name",
+        "survey_config__academy__slug",
+    )
+    raw_id_fields = ("survey_config", "user")
+    readonly_fields = ("created_at", "answered_at", "trigger_context_display", "answers_display")
+    actions = ["export_as_csv"]
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "survey_config",
+                    "user",
+                    "status",
+                )
+            },
+        ),
+        (
+            "Response Data",
+            {
+                "fields": ("trigger_context_display", "answers_display"),
+                "description": "Context and answers are stored as JSON. Use the API to modify them.",
+            },
+        ),
+        ("Timestamps", {"fields": ("created_at", "answered_at"), "classes": ("collapse",)}),
+    )
+
+    def has_answers(self, obj):
+        """Display whether the survey has been answered"""
+        if obj.answers:
+            return format_html('<span style="color: green;">✓ Answered</span>')
+        return format_html('<span style="color: orange;">○ Pending</span>')
+
+    has_answers.short_description = "Status"
+    has_answers.boolean = True
+
+    def trigger_context_display(self, obj):
+        """Display trigger context in a readable format"""
+        if obj.trigger_context:
+            return format_html("<pre>{}</pre>", json.dumps(obj.trigger_context, indent=2))
+        return "-"
+
+    trigger_context_display.short_description = "Trigger Context"
+
+    def answers_display(self, obj):
+        """Display answers in a readable format"""
+        if obj.answers:
+            return format_html("<pre>{}</pre>", json.dumps(obj.answers, indent=2))
+        return "-"
+
+    answers_display.short_description = "Answers"
