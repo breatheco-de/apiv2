@@ -6,3 +6,6 @@ emisor = Emisor("breathecode.feedback")
 
 # when a student answers one particular questions of a survey
 survey_answered = emisor.signal("survey_answered")
+
+# when a user answers a survey response (for webhook system)
+survey_response_answered = emisor.signal("survey_response_answered")

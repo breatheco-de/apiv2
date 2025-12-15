@@ -8,7 +8,7 @@ from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
 
 from .actions import send_cohort_survey_group
-from .models import AcademyFeedbackSettings, Answer, FeedbackTag, Review, Survey
+from .models import AcademyFeedbackSettings, Answer, FeedbackTag, Review, Survey, SurveyConfiguration, SurveyResponse
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -463,3 +463,130 @@ class FeedbackTagPUTSerializer(serializers.ModelSerializer):
             )
 
         return data
+
+
+class SurveyResponseHookSerializer(serpy.Serializer):
+    """Serializer for webhook payload when a survey response is answered."""
+
+    id = serpy.Field()
+    survey_response_id = serpy.MethodField()
+    user_id = serpy.MethodField()
+    user_email = serpy.MethodField()
+    trigger_type = serpy.MethodField()
+    trigger_context = serpy.Field()
+    answers = serpy.Field()
+    status = serpy.Field()
+    answered_at = serpy.Field()
+    created_at = serpy.Field()
+
+    def get_survey_response_id(self, obj):
+        return obj.id
+
+    def get_user_id(self, obj):
+        return obj.user.id if obj.user else None
+
+    def get_user_email(self, obj):
+        return obj.user.email if obj.user else None
+
+    def get_trigger_type(self, obj):
+        return obj.survey_config.trigger_type if obj.survey_config else None
+
+
+class SurveyConfigurationSerializer(serializers.ModelSerializer):
+    """Serializer for creating and listing survey configurations."""
+
+    class Meta:
+        model = SurveyConfiguration
+        fields = [
+            "id",
+            "trigger_type",
+            "questions",
+            "is_active",
+            "academy",
+            "cohorts",
+            "asset_slugs",
+            "created_by",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at", "created_by"]
+
+    def validate_questions(self, value):
+        """Validate questions structure."""
+        if not isinstance(value, dict):
+            raise ValidationException("questions must be a dictionary", slug="invalid-questions-structure")
+
+        if "questions" not in value:
+            raise ValidationException("questions must contain a 'questions' key", slug="missing-questions-key")
+
+        questions = value.get("questions", [])
+        if not isinstance(questions, list):
+            raise ValidationException("questions.questions must be a list", slug="invalid-questions-list")
+
+        if len(questions) == 0:
+            raise ValidationException("questions.questions must contain at least one question", slug="empty-questions-list")
+
+        for idx, question in enumerate(questions):
+            if not isinstance(question, dict):
+                raise ValidationException(
+                    f"Question at index {idx} must be a dictionary", slug="invalid-question-structure"
+                )
+
+            required_fields = ["id", "type", "title"]
+            for field in required_fields:
+                if field not in question:
+                    raise ValidationException(
+                        f"Question at index {idx} missing required field: {field}", slug=f"missing-{field}"
+                    )
+
+            question_type = question.get("type")
+            if question_type == "likert_scale":
+                config = question.get("config", {})
+                scale = config.get("scale", 5)
+                if not isinstance(scale, int) or scale < 1:
+                    raise ValidationException(
+                        f"Question {question.get('id')} likert_scale must have scale >= 1",
+                        slug="invalid-likert-scale",
+                    )
+
+            elif question_type == "open_question":
+                config = question.get("config", {})
+                max_length = config.get("max_length", 500)
+                if not isinstance(max_length, int) or max_length < 1:
+                    raise ValidationException(
+                        f"Question {question.get('id')} open_question must have max_length >= 1",
+                        slug="invalid-open-question-max-length",
+                    )
+
+        return value
+
+
+class SurveyResponseSerializer(serializers.ModelSerializer):
+    """Serializer for survey responses."""
+
+    class Meta:
+        model = SurveyResponse
+        fields = [
+            "id",
+            "survey_config",
+            "user",
+            "trigger_context",
+            "answers",
+            "status",
+            "created_at",
+            "answered_at",
+        ]
+        read_only_fields = ["id", "user", "survey_config", "trigger_context", "status", "created_at", "answered_at"]
+
+
+class SurveyAnswerSerializer(serializers.Serializer):
+    """Serializer for validating survey answers."""
+
+    answers = serializers.DictField(help_text="Dictionary with question IDs as keys and answers as values")
+
+    def validate_answers(self, value):
+        """Validate answers format."""
+        if not isinstance(value, dict):
+            raise ValidationException("answers must be a dictionary", slug="invalid-answers-structure")
+
+        return value

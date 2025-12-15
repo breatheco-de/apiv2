@@ -14,7 +14,17 @@ from breathecode.feedback.utils import strings
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.registry.models import Asset
 
-__all__ = ["UserProxy", "CohortUserProxy", "CohortProxy", "Survey", "Answer", "SurveyTemplate", "FeedbackTag"]
+__all__ = [
+    "UserProxy",
+    "CohortUserProxy",
+    "CohortProxy",
+    "Survey",
+    "Answer",
+    "SurveyTemplate",
+    "FeedbackTag",
+    "SurveyConfiguration",
+    "SurveyResponse",
+]
 
 
 class UserProxy(User):
@@ -603,3 +613,75 @@ class AcademyFeedbackSettings(models.Model):
     class Meta:
         verbose_name = "Academy Feedback Settings"
         verbose_name_plural = "Academy Feedback Settings"
+
+
+class SurveyConfiguration(models.Model):
+    class TriggerType(models.TextChoices):
+        LEARNPACK_COMPLETION = "learnpack_completed", "Learnpack Completion"
+        COURSE_COMPLETION = "course_completed", "Course Completion"
+
+    trigger_type = models.CharField(
+        max_length=50,
+        choices=TriggerType.choices,
+        help_text="Tipo de evento que dispara la encuesta: learnpack_completed o course_completed",
+    )
+    questions = models.JSONField(help_text="Estructura de preguntas (formato flexible para escalar)")
+    is_active = models.BooleanField(default=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Para filtrar por academia")
+    cohorts = models.ManyToManyField(
+        Cohort,
+        blank=True,
+        help_text="Si está vacío, aplica a todas las cohorts. Si tiene valores, solo a esas cohorts específicas",
+    )
+    asset_slugs = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Para learnpacks: si está vacío, aplica a todos. Si tiene valores, solo a esos learnpacks específicos. Ejemplo: ['learnpack-1', 'learnpack-2']",
+    )
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        if self.asset_slugs and not isinstance(self.asset_slugs, list):
+            raise ValidationError("asset_slugs must be a list")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Survey Configuration: {self.trigger_type} ({self.academy.name})"
+
+    class Meta:
+        verbose_name = "Survey Configuration"
+        verbose_name_plural = "Survey Configurations"
+
+
+class SurveyResponse(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        ANSWERED = "ANSWERED", "Answered"
+        EXPIRED = "EXPIRED", "Expired"
+
+    survey_config = models.ForeignKey(SurveyConfiguration, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    trigger_context = models.JSONField(
+        help_text="Info del evento que disparó la encuesta: learnpack_slug, course_slug, etc."
+    )
+    answers = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Respuestas del usuario guardadas en BD, null hasta que responda. Formato: {'q1': 5, 'q2': 4, 'q3': 'texto respuesta'}",
+    )
+    status = models.CharField(max_length=15, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    answered_at = models.DateTimeField(null=True, blank=True, default=None, help_text="Timestamp de cuando respondió")
+
+    def __str__(self):
+        return f"Survey Response {self.id} - User: {self.user.email} - Status: {self.status}"
+
+    class Meta:
+        verbose_name = "Survey Response"
+        verbose_name_plural = "Survey Responses"

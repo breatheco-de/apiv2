@@ -22,8 +22,8 @@ from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
-from breathecode.utils import NDB
-from breathecode.utils.decorators import TaskPriority
+from breathecode.utils.decorators.task import TaskPriority
+from breathecode.utils.ndb import NDB
 from breathecode.utils.redis import Lock
 
 from .models import StudentActivity

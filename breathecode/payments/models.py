@@ -22,7 +22,6 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, Country
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserInvite
@@ -1640,6 +1639,9 @@ class Bag(AbstractAmountByTime):
         super().save(*args, **kwargs)
 
         if created:
+            # Lazy import to avoid circular dependency
+            import breathecode.activity.tasks as tasks_activity
+
             tasks_activity.add_activity.delay(
                 self.user.id, "bag_created", related_type="payments.Bag", related_id=self.id
             )
