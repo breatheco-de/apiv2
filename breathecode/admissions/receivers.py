@@ -228,33 +228,6 @@ def mark_saas_student_as_graduated(sender: Type[Task], instance: Task, **kwargs:
             cohort_user.educational_status,
             cohort_user.id,
         )
-
-        try:
-            from breathecode.feedback import actions
-            from breathecode.feedback.models import SurveyConfiguration
-
-            context = {
-                "academy": cohort.academy,
-                "cohort": cohort,
-                "cohort_id": cohort.id,
-                "cohort_slug": cohort.slug,
-                "completed_at": timezone.now().isoformat(),
-            }
-
-            survey_response = actions.trigger_survey_for_user(
-                instance.user, SurveyConfiguration.TriggerType.COURSE_COMPLETION, context
-            )
-            logger.info(
-                "[graduate] survey trigger result | user_id=%s cohort_id=%s survey_response_id=%s",
-                instance.user.id,
-                cohort.id,
-                getattr(survey_response, "id", None),
-            )
-        except Exception as e:
-            logger.error(
-                f"[graduate] Error triggering survey for course completion: {str(e)}",
-                exc_info=True,
-            )
     else:
         logger.info("[graduate] there are still mandatory pending tasks -> do not graduate")
 

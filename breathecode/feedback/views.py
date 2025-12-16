@@ -833,3 +833,65 @@ class SurveyResponseView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except ValidationException as e:
             return Response({"detail": str(e), "slug": e.slug}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademySurveyResponseView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    """
+    Staff endpoint to list survey responses for an academy with filters.
+
+    Query params (all optional):
+    - user: user id (supports comma-separated values for bulk filter)
+    - survey_config: SurveyConfiguration id (supports comma-separated values)
+    - cohort_id: Cohort id (stored in trigger_context)
+    - status: PENDING|ANSWERED|EXPIRED (supports comma-separated values)
+    """
+
+    @capable_of("read_survey")
+    def get(self, request, academy_id=None, response_id=None):
+        if response_id is not None:
+            item = SurveyResponse.objects.filter(
+                id=response_id, survey_config__academy__id=academy_id
+            ).first()
+            if not item:
+                raise NotFound("Survey response not found")
+
+            serializer = SurveyResponseSerializer(item)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        items = SurveyResponse.objects.filter(survey_config__academy__id=academy_id)
+
+        # Relationships-based filters (user, survey_config)
+        lookups = self.generate_lookups(request, relationships=["user", "survey_config"], many_relationships=["user", "survey_config"])
+        if lookups:
+            items = items.filter(**lookups)
+
+        # Status filter (comma-separated)
+        status_param = request.GET.get("status")
+        if status_param:
+            statuses = [x.strip().upper() for x in status_param.split(",") if x.strip()]
+            items = items.filter(status__in=statuses)
+
+        # Cohort filter (from trigger_context)
+        cohort_id = request.GET.get("cohort_id") or request.GET.get("cohort")
+        cohort_ids = request.GET.get("cohort_ids")
+
+        if cohort_ids:
+            values = [x.strip() for x in cohort_ids.split(",") if x.strip()]
+            if not all(v.isdigit() for v in values):
+                raise ValidationException("cohort_ids must be integers", code=400, slug="invalid-cohort-ids")
+            items = items.filter(trigger_context__cohort_id__in=[int(v) for v in values])
+
+        elif cohort_id:
+            if not str(cohort_id).isdigit():
+                raise ValidationException("cohort_id must be an integer", code=400, slug="invalid-cohort-id")
+            items = items.filter(trigger_context__cohort_id=int(cohort_id))
+
+        items = items.order_by("-created_at")
+
+        page = self.paginate_queryset(items, request)
+        if page is not None:
+            serializer = SurveyResponseSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = SurveyResponseSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
