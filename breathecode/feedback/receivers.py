@@ -98,6 +98,20 @@ def post_survey_response_answered(sender: Type[SurveyResponse], instance: Survey
 
     try:
         logger.info(f"Survey response {instance.id} answered, triggering webhook")
-        HookManager.find_and_fire_hook("survey.survey_answered", instance)
+        academy_override = None
+        if getattr(instance, "survey_config", None) and getattr(instance.survey_config, "academy", None):
+            academy_override = instance.survey_config.academy
+
+        from breathecode.feedback.serializers import SurveyResponseHookSerializer
+
+        def payload_override(hook, _instance):
+            return {"hook": hook.dict(), "data": SurveyResponseHookSerializer(_instance).data}
+
+        HookManager.find_and_fire_hook(
+            "survey.survey_answered",
+            instance,
+            payload_override=payload_override,
+            academy_override=academy_override,
+        )
     except Exception as e:
         logger.error(f"Error triggering webhook for survey response {instance.id}: {str(e)}", exc_info=True)
