@@ -345,12 +345,16 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
         sorted(list(context.keys())),
     )
 
-    # Get user's academy
+    # Get academy for filtering SurveyConfiguration.
+    # Prefer explicit context academy (e.g. cohort.academy) because users can belong to multiple academies.
     academy = None
-    if hasattr(user, "profileacademy_set") and user.profileacademy_set.exists():
-        academy = user.profileacademy_set.first().academy
-    elif "academy" in context:
+    academy_source = None
+    if "academy" in context and context["academy"] is not None:
         academy = context["academy"]
+        academy_source = "context"
+    elif hasattr(user, "profileacademy_set") and user.profileacademy_set.exists():
+        academy = user.profileacademy_set.first().academy
+        academy_source = "profileacademy_set.first"
 
     if not academy:
         logger.warning(
@@ -361,6 +365,13 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
             "academy" in context,
         )
         return None
+    else:
+        logger.info(
+            "[survey-trigger] academy resolved | user_id=%s academy_id=%s source=%s",
+            user.id,
+            academy.id,
+            academy_source,
+        )
 
     # Find active survey configurations for this trigger type and academy
     # Use prefetch_related to avoid N+1 queries when checking cohorts
