@@ -561,7 +561,11 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "created_by"]
+        read_only_fields = ["id", "created_at", "updated_at", "created_by", "academy"]
+
+        extra_kwargs = {
+            "academy": {"required": False},
+        }
 
     def validate_questions(self, value):
         """Validate questions structure."""
