@@ -320,15 +320,30 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
     Returns:
         SurveyResponse instance if created, None otherwise
     """
+    if context is None:
+        context = {}
+
     if not user:
-        logger.warning("Cannot trigger survey: user is None")
+        logger.warning("[survey-trigger] abort: user is None | trigger_type=%s", trigger_type)
         return None
 
     # Validate trigger_type
     valid_triggers = [choice[0] for choice in SurveyConfiguration.TriggerType.choices]
     if trigger_type not in valid_triggers:
-        logger.warning(f"Invalid trigger_type: {trigger_type}. Must be one of {valid_triggers}")
+        logger.warning(
+            "[survey-trigger] abort: invalid trigger_type=%s valid_triggers=%s user_id=%s",
+            trigger_type,
+            valid_triggers,
+            user.id,
+        )
         return None
+
+    logger.info(
+        "[survey-trigger] start | user_id=%s trigger_type=%s context_keys=%s",
+        user.id,
+        trigger_type,
+        sorted(list(context.keys())),
+    )
 
     # Get user's academy
     academy = None
@@ -338,7 +353,13 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
         academy = context["academy"]
 
     if not academy:
-        logger.warning(f"Cannot trigger survey for user {user.id}: no academy found")
+        logger.warning(
+            "[survey-trigger] abort: no academy found | user_id=%s trigger_type=%s has_profileacademy=%s context_has_academy=%s",
+            user.id,
+            trigger_type,
+            bool(getattr(user, "profileacademy_set", None) and user.profileacademy_set.exists()),
+            "academy" in context,
+        )
         return None
 
     # Find active survey configurations for this trigger type and academy
@@ -348,10 +369,16 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
     ).prefetch_related("cohorts")
 
     if not survey_configs.exists():
-        logger.debug(f"No active survey configurations found for trigger_type={trigger_type}, academy={academy.id}")
+        logger.info(
+            "[survey-trigger] no active configs | user_id=%s trigger_type=%s academy_id=%s",
+            user.id,
+            trigger_type,
+            academy.id,
+        )
         return None
 
     # Apply filters for each survey configuration
+    filtered_out = 0
     for survey_config in survey_configs:
         # Apply cohort filter for course completion
         if trigger_type == SurveyConfiguration.TriggerType.COURSE_COMPLETION:
@@ -360,8 +387,13 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
                 # If cohorts filter is set, check if this cohort is in the list
                 if survey_config.cohorts.exists():
                     if cohort not in survey_config.cohorts.all():
-                        logger.debug(
-                            f"Survey config {survey_config.id} filtered out: cohort {cohort.id} not in allowed cohorts"
+                        filtered_out += 1
+                        logger.info(
+                            "[survey-trigger] filtered by cohort | user_id=%s survey_config_id=%s cohort_id=%s academy_id=%s",
+                            user.id,
+                            survey_config.id,
+                            getattr(cohort, "id", None),
+                            academy.id,
                         )
                         continue
                 # If cohorts filter is empty, apply to all cohorts
@@ -373,8 +405,13 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
                 # If asset_slugs filter is set, check if this asset_slug is in the list
                 if survey_config.asset_slugs:
                     if asset_slug not in survey_config.asset_slugs:
-                        logger.debug(
-                            f"Survey config {survey_config.id} filtered out: asset_slug {asset_slug} not in allowed asset_slugs"
+                        filtered_out += 1
+                        logger.info(
+                            "[survey-trigger] filtered by asset_slug | user_id=%s survey_config_id=%s asset_slug=%s academy_id=%s",
+                            user.id,
+                            survey_config.id,
+                            asset_slug,
+                            academy.id,
                         )
                         continue
                 # If asset_slugs filter is empty, apply to all learnpacks
@@ -388,17 +425,33 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
         ).first()
 
         if existing_response:
-            logger.debug(
-                f"User {user.id} already has pending survey response {existing_response.id} for config {survey_config.id}"
+            logger.info(
+                "[survey-trigger] skip: existing pending | user_id=%s survey_config_id=%s survey_response_id=%s",
+                user.id,
+                survey_config.id,
+                existing_response.id,
             )
             continue
 
         # Create survey response
         survey_response = create_survey_response(survey_config, user, context)
         if survey_response:
-            logger.info(f"Survey response {survey_response.id} created for user {user.id}")
+            logger.info(
+                "[survey-trigger] created | user_id=%s survey_config_id=%s survey_response_id=%s",
+                user.id,
+                survey_config.id,
+                survey_response.id,
+            )
             return survey_response
 
+    logger.info(
+        "[survey-trigger] no response created | user_id=%s trigger_type=%s academy_id=%s configs=%s filtered_out=%s",
+        user.id,
+        trigger_type,
+        academy.id,
+        survey_configs.count(),
+        filtered_out,
+    )
     return None
 
 
@@ -415,6 +468,18 @@ def create_survey_response(survey_config: SurveyConfiguration, user: User, conte
         SurveyResponse instance if created successfully, None otherwise
     """
     try:
+        if context is None:
+            context = {}
+
+        logger.info(
+            "[survey-response] start | user_id=%s survey_config_id=%s academy_id=%s trigger_type=%s context_keys=%s",
+            getattr(user, "id", None),
+            getattr(survey_config, "id", None),
+            getattr(getattr(survey_config, "academy", None), "id", None),
+            getattr(survey_config, "trigger_type", None),
+            sorted(list(context.keys())),
+        )
+
         # Prepare trigger context
         trigger_context = {
             "trigger_type": survey_config.trigger_type,
@@ -429,15 +494,33 @@ def create_survey_response(survey_config: SurveyConfiguration, user: User, conte
             status=SurveyResponse.Status.PENDING,
         )
 
+        logger.info(
+            "[survey-response] created | user_id=%s survey_response_id=%s survey_config_id=%s",
+            user.id,
+            survey_response.id,
+            survey_config.id,
+        )
+
         # Send Pusher event
         questions = survey_config.questions.get("questions", [])
         send_survey_event(user.id, survey_response.id, questions, trigger_context)
 
-        logger.info(f"Survey response {survey_response.id} created and Pusher event sent for user {user.id}")
+        logger.info(
+            "[survey-response] pusher sent | user_id=%s survey_response_id=%s questions=%s",
+            user.id,
+            survey_response.id,
+            len(questions) if isinstance(questions, list) else None,
+        )
         return survey_response
 
     except Exception as e:
-        logger.error(f"Error creating survey response for user {user.id}: {str(e)}", exc_info=True)
+        logger.error(
+            "[survey-response] error | user_id=%s survey_config_id=%s error=%s",
+            getattr(user, "id", None),
+            getattr(survey_config, "id", None),
+            str(e),
+            exc_info=True,
+        )
         return None
 
 
