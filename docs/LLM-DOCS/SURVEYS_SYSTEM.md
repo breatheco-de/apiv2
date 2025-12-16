@@ -143,6 +143,15 @@ Stores individual user responses to surveys.
 
 ## Question Types
 
+### Supported Types (Current)
+
+At the moment, the system only supports these question types:
+
+- `likert_scale`
+- `open_question`
+
+Anything else will not be validated/supported by the backend answer validation logic.
+
 ### Likert Scale
 
 **Structure:**
@@ -160,6 +169,38 @@ Stores individual user responses to surveys.
       "3": "Neutral",
       "4": "Satisfied",
       "5": "Very satisfied"
+    }
+  }
+}
+```
+
+**Bilingual (recommended, for frontend i18n):**
+```json
+{
+  "id": "q1",
+  "type": "likert_scale",
+  "title": {
+    "en": "How satisfied are you?",
+    "es": "¿Qué tan satisfecho/a estás?"
+  },
+  "required": true,
+  "config": {
+    "scale": 5,
+    "labels": {
+      "en": {
+        "1": "Very unsatisfied",
+        "2": "Unsatisfied",
+        "3": "Neutral",
+        "4": "Satisfied",
+        "5": "Very satisfied"
+      },
+      "es": {
+        "1": "Muy insatisfecho/a",
+        "2": "Insatisfecho/a",
+        "3": "Neutral",
+        "4": "Satisfecho/a",
+        "5": "Muy satisfecho/a"
+      }
     }
   }
 }
@@ -184,6 +225,22 @@ Stores individual user responses to surveys.
 }
 ```
 
+**Bilingual (recommended, for frontend i18n):**
+```json
+{
+  "id": "q2",
+  "type": "open_question",
+  "title": {
+    "en": "What would you improve?",
+    "es": "¿Qué mejorarías?"
+  },
+  "required": false,
+  "config": {
+    "max_length": 500
+  }
+}
+```
+
 **Validation:**
 - Answer must be a string
 - Length must not exceed `max_length`
@@ -193,13 +250,35 @@ Stores individual user responses to surveys.
 
 ## API Endpoints
 
-### Admin Endpoints
+### Base URL and Required Headers (Postman-friendly)
+
+All endpoints below are under:
+
+- `{{base_url}}/v1/...`
+
+When an endpoint is academy-scoped and uses `@capable_of(...)`, you must provide the academy via one of:
+
+- `Academy: {{academy_id}}` header (recommended)
+- `?academy={{academy_id}}` querystring
+
+And authentication is typically:
+
+- `Authorization: Token {{token}}`
+
+### Admin/Staff Endpoints
 
 #### Create Survey Configuration
 
-**Endpoint:** `POST /api/v1/feedback/academy/{academy_id}/survey/configuration`
+**Method:** `POST`
+
+**URL:** `{{base_url}}/v1/feedback/academy/survey/configuration`
 
 **Permissions:** `crud_survey`
+
+**Headers:**
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+- `Content-Type: application/json`
 
 **Request:**
 ```json
@@ -216,9 +295,15 @@ Stores individual user responses to surveys.
 
 #### List Survey Configurations
 
-**Endpoint:** `GET /api/v1/feedback/academy/{academy_id}/survey/configuration`
+**Method:** `GET`
+
+**URL:** `{{base_url}}/v1/feedback/academy/survey/configuration`
 
 **Permissions:** `read_survey`
+
+**Headers:**
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
 
 **Query Parameters:**
 - `trigger_type`: Filter by trigger type
@@ -226,27 +311,114 @@ Stores individual user responses to surveys.
 
 #### Get Survey Configuration
 
-**Endpoint:** `GET /api/v1/feedback/academy/{academy_id}/survey/configuration/{configuration_id}`
+**Method:** `GET`
+
+**URL:** `{{base_url}}/v1/feedback/academy/survey/configuration/{{configuration_id}}`
 
 **Permissions:** `read_survey`
 
+**Headers:**
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+
 #### Update Survey Configuration
 
-**Endpoint:** `PUT /api/v1/feedback/academy/{academy_id}/survey/configuration/{configuration_id}`
+**Method:** `PUT`
+
+**URL:** `{{base_url}}/v1/feedback/academy/survey/configuration/{{configuration_id}}`
 
 **Permissions:** `crud_survey`
+
+**Headers:**
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+- `Content-Type: application/json`
+
+**Common use case: update questions JSON**
+
+First do a GET to copy the existing structure, then PUT the updated `questions`.
+
+```json
+{
+  "questions": {
+    "questions": [
+      {
+        "id": "q1",
+        "type": "likert_scale",
+        "required": true,
+        "title": { "en": "Question in English", "es": "Pregunta en Español" },
+        "config": {
+          "scale": 5,
+          "labels": {
+            "en": { "1": "Strongly disagree", "2": "Disagree", "3": "Neutral", "4": "Agree", "5": "Strongly agree" },
+            "es": { "1": "Totalmente en desacuerdo", "2": "En desacuerdo", "3": "Neutral", "4": "De acuerdo", "5": "Totalmente de acuerdo" }
+          }
+        }
+      }
+    ]
+  }
+}
+```
 
 #### Delete Survey Configuration
 
-**Endpoint:** `DELETE /api/v1/feedback/academy/{academy_id}/survey/configuration/{configuration_id}`
+**Method:** `DELETE`
+
+**URL:** `{{base_url}}/v1/feedback/academy/survey/configuration/{{configuration_id}}`
 
 **Permissions:** `crud_survey`
+
+**Headers:**
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+
+#### List Survey Responses (Staff) with Filters
+
+This endpoint is meant for staff/admin analytics and auditing.
+
+**Method:** `GET`
+
+**URL:** `{{base_url}}/v1/feedback/academy/survey/response`
+
+**Permissions:** `read_survey`
+
+**Headers:**
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+
+**Query Parameters (optional):**
+- `user`: user id (supports comma-separated values, e.g. `?user=8301,9000`)
+- `survey_config`: SurveyConfiguration id (supports comma-separated values)
+- `cohort_id`: Cohort id (from `trigger_context.cohort_id`)
+- `cohort_ids`: comma-separated cohort ids
+- `status`: `PENDING|ANSWERED|EXPIRED` (supports comma-separated values)
+
+**Examples:**
+- By student: `?user=8301`
+- By cohort: `?cohort_id=1183`
+- By config: `?survey_config=3`
+- Answered only: `?status=ANSWERED`
+- Combined: `?survey_config=3&cohort_id=1183&status=ANSWERED`
+
+#### Get Survey Response by ID (Staff)
+
+**Method:** `GET`
+
+**URL:** `{{base_url}}/v1/feedback/academy/survey/response/{{response_id}}`
+
+**Permissions:** `read_survey`
+
+**Headers:**
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
 
 ### User Endpoints
 
 #### Get Survey Response
 
-**Endpoint:** `GET /api/v1/feedback/user/me/survey/response/{response_id}`
+**Method:** `GET`
+
+**URL:** `{{base_url}}/v1/feedback/user/me/survey/response/{{response_id}}`
 
 **Authentication:** Required (user can only see their own)
 
@@ -266,7 +438,9 @@ Stores individual user responses to surveys.
 
 #### Answer Survey
 
-**Endpoint:** `POST /api/v1/feedback/user/me/survey/response/{response_id}/answer`
+**Method:** `POST`
+
+**URL:** `{{base_url}}/v1/feedback/user/me/survey/response/{{response_id}}/answer`
 
 **Authentication:** Required (user can only answer their own)
 

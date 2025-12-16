@@ -57,6 +57,7 @@ from .views import (
     GetAnswerView,
     ReviewView,
     SurveyConfigurationView,
+    AcademySurveyResponseView,
     SurveyResponseView,
     get_review_platform,
     get_reviews,
@@ -99,5 +100,12 @@ urlpatterns = [
         "user/me/survey/response/<int:response_id>/answer",
         SurveyResponseView.as_view(),
         name="user_me_survey_response_answer",
+    ),
+    # Staff SurveyResponse endpoints (academy scoped)
+    path("academy/survey/response", AcademySurveyResponseView.as_view(), name="academy_survey_response"),
+    path(
+        "academy/survey/response/<int:response_id>",
+        AcademySurveyResponseView.as_view(),
+        name="academy_survey_response_id",
     ),
 ]
