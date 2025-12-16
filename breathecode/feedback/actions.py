@@ -1,8 +1,10 @@
 import json
 import logging
+import datetime
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
+from django.db import models as django_models
 from django.db.models import Avg, Q, QuerySet
 from django.utils import timezone
 
@@ -491,10 +493,40 @@ def create_survey_response(survey_config: SurveyConfiguration, user: User, conte
             sorted(list(context.keys())),
         )
 
+        def _serialize_trigger_context(value):
+            """
+            Convert values into JSON-serializable shapes for storage in JSONField.
+
+            `context` can include Django model instances for filtering, but the stored `trigger_context`
+            must be JSON-serializable.
+            """
+            if value is None:
+                return None
+
+            if isinstance(value, django_models.Model):
+                payload = {"id": value.pk, "model": value._meta.label_lower}
+                if hasattr(value, "slug"):
+                    payload["slug"] = getattr(value, "slug")
+                return payload
+
+            if isinstance(value, (datetime.datetime, datetime.date)):
+                return value.isoformat()
+
+            if isinstance(value, (str, int, float, bool)):
+                return value
+
+            if isinstance(value, dict):
+                return {str(k): _serialize_trigger_context(v) for k, v in value.items()}
+
+            if isinstance(value, list):
+                return [_serialize_trigger_context(v) for v in value]
+
+            return str(value)
+
         # Prepare trigger context
         trigger_context = {
             "trigger_type": survey_config.trigger_type,
-            **context,
+            **_serialize_trigger_context(context),
         }
 
         # Create survey response
