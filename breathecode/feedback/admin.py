@@ -560,10 +560,8 @@ class SurveyResponseAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     )
 
     def has_answers(self, obj):
-        """Display whether the survey has been answered"""
-        if obj.answers:
-            return format_html('<span style="color: green;">✓ Answered</span>')
-        return format_html('<span style="color: orange;">○ Pending</span>')
+        """Return True when answers exist (so the admin boolean icon can render safely)."""
+        return bool(obj.answers)
 
     has_answers.short_description = "Status"
     has_answers.boolean = True
