@@ -1843,7 +1843,7 @@ class CourseTranslationPrerequisiteView(APIView):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
-@validate_captcha_challenge
+@validate_captcha_challenge(vendor="cloudflare")
 def create_lead_v2(request):
     """
     V2 endpoint for creating leads.

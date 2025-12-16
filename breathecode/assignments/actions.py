@@ -178,6 +178,25 @@ def calculate_telemetry_indicator(telemetry, asset_tasks=None):
                 task.delivered_at = timezone.now()
                 task.reviewed_at = timezone.now()
                 task.save()
+
+            try:
+                from breathecode.feedback import actions
+                from breathecode.feedback.models import SurveyConfiguration
+
+                context = {
+                    "asset_slug": telemetry.asset_slug,
+                    "completion_rate": telemetry.completion_rate,
+                    "completed_at": timezone.now().isoformat(),
+                }
+
+                actions.trigger_survey_for_user(
+                    telemetry.user, SurveyConfiguration.TriggerType.LEARNPACK_COMPLETION, context
+                )
+            except Exception as e:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error triggering survey for learnpack completion: {str(e)}", exc_info=True)
         else:
             for task in asset_tasks:
                 task.task_status = (

@@ -19,7 +19,17 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 from .caches import AnswerCache
-from .models import AcademyFeedbackSettings, Answer, FeedbackTag, Review, ReviewPlatform, Survey, SurveyTemplate
+from .models import (
+    AcademyFeedbackSettings,
+    Answer,
+    FeedbackTag,
+    Review,
+    ReviewPlatform,
+    Survey,
+    SurveyConfiguration,
+    SurveyResponse,
+    SurveyTemplate,
+)
 from .serializers import (
     AcademyFeedbackSettingsPUTSerializer,
     AcademyFeedbackSettingsSerializer,
@@ -33,7 +43,10 @@ from .serializers import (
     ReviewPlatformSerializer,
     ReviewPUTSerializer,
     ReviewSmallSerializer,
+    SurveyAnswerSerializer,
+    SurveyConfigurationSerializer,
     SurveyPUTSerializer,
+    SurveyResponseSerializer,
     SurveySerializer,
     SurveySmallSerializer,
     SurveyTemplateSerializer,
@@ -704,3 +717,181 @@ class AcademyFeedbackTagView(APIView, GenerateLookupsMixin):
 
         tag.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class SurveyConfigurationView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    """View for managing survey configurations."""
+
+    @capable_of("crud_survey")
+    def post(self, request, academy_id=None):
+        """Create a new survey configuration."""
+        serializer = SurveyConfigurationSerializer(
+            data=request.data, context={"request": request, "academy_id": academy_id}
+        )
+
+        if serializer.is_valid():
+            # Set academy and created_by
+            academy = Academy.objects.filter(id=academy_id).first()
+            if not academy:
+                raise ValidationException("Academy not found", code=404, slug="academy-not-found")
+
+            survey_config = serializer.save(academy=academy, created_by=request.user)
+            return Response(SurveyConfigurationSerializer(survey_config).data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("read_survey")
+    def get(self, request, academy_id=None, configuration_id=None):
+        """List or get survey configurations."""
+        if configuration_id:
+            config = SurveyConfiguration.objects.filter(id=configuration_id, academy__id=academy_id).first()
+            if not config:
+                raise NotFound("Survey configuration not found")
+
+            serializer = SurveyConfigurationSerializer(config)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # List all configurations for this academy
+        items = SurveyConfiguration.objects.filter(academy__id=academy_id)
+        lookups = self.generate_lookups(request, many_fields=["id", "trigger_type"])
+
+        if lookups:
+            items = items.filter(**lookups)
+
+        items = items.order_by("-created_at")
+
+        page = self.paginate_queryset(items, request)
+        if page is not None:
+            serializer = SurveyConfigurationSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = SurveyConfigurationSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_survey")
+    def put(self, request, academy_id=None, configuration_id=None):
+        """Update a survey configuration."""
+        if not configuration_id:
+            raise ValidationException("Missing configuration_id", code=400, slug="missing-configuration-id")
+
+        config = SurveyConfiguration.objects.filter(id=configuration_id, academy__id=academy_id).first()
+        if not config:
+            raise NotFound("Survey configuration not found")
+
+        serializer = SurveyConfigurationSerializer(
+            config, data=request.data, context={"request": request, "academy_id": academy_id}, partial=True
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SurveyResponseView(APIView):
+    """View for managing survey responses."""
+
+    def get(self, request, response_id=None):
+        """Get a survey response (user can only see their own)."""
+        if not response_id:
+            raise ValidationException("Missing response_id", code=400, slug="missing-response-id")
+
+        survey_response = SurveyResponse.objects.filter(id=response_id, user=request.user).first()
+        if not survey_response:
+            raise NotFound("Survey response not found or you don't have permission to view it")
+
+        serializer = SurveyResponseSerializer(survey_response)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, response_id=None):
+        """Submit answers for a survey response."""
+        from breathecode.feedback import actions
+
+        if not response_id:
+            raise ValidationException("Missing response_id", code=400, slug="missing-response-id")
+
+        # Verify user owns this response
+        survey_response = SurveyResponse.objects.filter(id=response_id, user=request.user).first()
+        if not survey_response:
+            raise NotFound("Survey response not found or you don't have permission to answer it")
+
+        if survey_response.status == SurveyResponse.Status.ANSWERED:
+            raise ValidationException("Survey already answered", code=400, slug="survey-already-answered")
+
+        # Validate answers
+        answer_serializer = SurveyAnswerSerializer(data={"answers": request.data.get("answers", {})})
+        if not answer_serializer.is_valid():
+            return Response(answer_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save answers
+        try:
+            updated_response = actions.save_survey_answers(
+                response_id, answer_serializer.validated_data["answers"]
+            )
+            serializer = SurveyResponseSerializer(updated_response)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except ValidationException as e:
+            return Response({"detail": str(e), "slug": e.slug}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademySurveyResponseView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    """
+    Staff endpoint to list survey responses for an academy with filters.
+
+    Query params (all optional):
+    - user: user id (supports comma-separated values for bulk filter)
+    - survey_config: SurveyConfiguration id (supports comma-separated values)
+    - cohort_id: Cohort id (stored in trigger_context)
+    - status: PENDING|ANSWERED|EXPIRED (supports comma-separated values)
+    """
+
+    @capable_of("read_survey")
+    def get(self, request, academy_id=None, response_id=None):
+        if response_id is not None:
+            item = SurveyResponse.objects.filter(
+                id=response_id, survey_config__academy__id=academy_id
+            ).first()
+            if not item:
+                raise NotFound("Survey response not found")
+
+            serializer = SurveyResponseSerializer(item)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        items = SurveyResponse.objects.filter(survey_config__academy__id=academy_id)
+
+        # Relationships-based filters (user, survey_config)
+        lookups = self.generate_lookups(request, relationships=["user", "survey_config"], many_relationships=["user", "survey_config"])
+        if lookups:
+            items = items.filter(**lookups)
+
+        # Status filter (comma-separated)
+        status_param = request.GET.get("status")
+        if status_param:
+            statuses = [x.strip().upper() for x in status_param.split(",") if x.strip()]
+            items = items.filter(status__in=statuses)
+
+        # Cohort filter (from trigger_context)
+        cohort_id = request.GET.get("cohort_id") or request.GET.get("cohort")
+        cohort_ids = request.GET.get("cohort_ids")
+
+        if cohort_ids:
+            values = [x.strip() for x in cohort_ids.split(",") if x.strip()]
+            if not all(v.isdigit() for v in values):
+                raise ValidationException("cohort_ids must be integers", code=400, slug="invalid-cohort-ids")
+            items = items.filter(trigger_context__cohort_id__in=[int(v) for v in values])
+
+        elif cohort_id:
+            if not str(cohort_id).isdigit():
+                raise ValidationException("cohort_id must be an integer", code=400, slug="invalid-cohort-id")
+            items = items.filter(trigger_context__cohort_id=int(cohort_id))
+
+        items = items.order_by("-created_at")
+
+        page = self.paginate_queryset(items, request)
+        if page is not None:
+            serializer = SurveyResponseSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = SurveyResponseSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

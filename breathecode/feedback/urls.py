@@ -56,6 +56,9 @@ from .views import (
     AnswerMeView,
     GetAnswerView,
     ReviewView,
+    SurveyConfigurationView,
+    AcademySurveyResponseView,
+    SurveyResponseView,
     get_review_platform,
     get_reviews,
     get_survey,
@@ -84,4 +87,25 @@ urlpatterns = [
     # FeedbackTag endpoints
     path("academy/tag", AcademyFeedbackTagView.as_view(), name="academy_feedback_tag"),
     path("academy/tag/<int:tag_id>", AcademyFeedbackTagView.as_view(), name="academy_feedback_tag_id"),
+    # Survey Configuration endpoints
+    path("academy/survey/configuration", SurveyConfigurationView.as_view(), name="academy_survey_configuration"),
+    path(
+        "academy/survey/configuration/<int:configuration_id>",
+        SurveyConfigurationView.as_view(),
+        name="academy_survey_configuration_id",
+    ),
+    # Survey Response endpoints
+    path("user/me/survey/response/<int:response_id>", SurveyResponseView.as_view(), name="user_me_survey_response_id"),
+    path(
+        "user/me/survey/response/<int:response_id>/answer",
+        SurveyResponseView.as_view(),
+        name="user_me_survey_response_answer",
+    ),
+    # Staff SurveyResponse endpoints (academy scoped)
+    path("academy/survey/response", AcademySurveyResponseView.as_view(), name="academy_survey_response"),
+    path(
+        "academy/survey/response/<int:response_id>",
+        AcademySurveyResponseView.as_view(),
+        name="academy_survey_response_id",
+    ),
 ]
