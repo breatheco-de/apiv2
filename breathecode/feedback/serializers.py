@@ -475,6 +475,7 @@ class SurveyResponseHookSerializer(serpy.Serializer):
     trigger_type = serpy.MethodField()
     trigger_context = serpy.Field()
     answers = serpy.Field()
+    answers_detail = serpy.MethodField()
     status = serpy.Field()
     answered_at = serpy.Field()
     created_at = serpy.Field()
@@ -490,6 +491,57 @@ class SurveyResponseHookSerializer(serpy.Serializer):
 
     def get_trigger_type(self, obj):
         return obj.survey_config.trigger_type if obj.survey_config else None
+
+    def get_answers_detail(self, obj):
+        """
+        Human-readable answers: each item contains the question definition (from the config) + the user's answer.
+
+        This keeps `answers` as the canonical machine-friendly mapping (question_id -> value),
+        while providing an easier structure for humans/BI.
+        """
+        if not obj or not getattr(obj, "survey_config", None):
+            return []
+
+        questions = {}
+        try:
+            raw_questions = (obj.survey_config.questions or {}).get("questions", []) or []
+            if isinstance(raw_questions, list):
+                for q in raw_questions:
+                    if isinstance(q, dict) and q.get("id"):
+                        questions[q["id"]] = q
+        except Exception:
+            questions = {}
+
+        answers = obj.answers or {}
+        if not isinstance(answers, dict):
+            return []
+
+        ordered_ids = []
+        try:
+            raw_questions = (obj.survey_config.questions or {}).get("questions", []) or []
+            for q in raw_questions:
+                qid = q.get("id") if isinstance(q, dict) else None
+                if qid and qid in answers:
+                    ordered_ids.append(qid)
+        except Exception:
+            ordered_ids = []
+
+        # Include any extra answers not present in the questions list (defensive)
+        for qid in answers.keys():
+            if qid not in ordered_ids:
+                ordered_ids.append(qid)
+
+        result = []
+        for qid in ordered_ids:
+            result.append(
+                {
+                    "id": qid,
+                    "question": questions.get(qid),
+                    "answer": answers.get(qid),
+                }
+            )
+
+        return result
 
 
 class SurveyConfigurationSerializer(serializers.ModelSerializer):
@@ -564,6 +616,8 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
 class SurveyResponseSerializer(serializers.ModelSerializer):
     """Serializer for survey responses."""
 
+    answers_detail = serializers.SerializerMethodField()
+
     class Meta:
         model = SurveyResponse
         fields = [
@@ -572,12 +626,47 @@ class SurveyResponseSerializer(serializers.ModelSerializer):
             "user",
             "trigger_context",
             "answers",
+            "answers_detail",
             "status",
             "created_at",
             "answered_at",
         ]
         read_only_fields = ["id", "user", "survey_config", "trigger_context", "status", "created_at", "answered_at"]
 
+    def get_answers_detail(self, obj):
+        """
+        Human-readable answers: ordered list of {id, question, answer}.
+
+        - `question` is the original question dict from `survey_config.questions['questions']`
+          (can include `en/es` translations if you store them that way).
+        - `answer` is the raw value the user submitted (int for likert, str for open_question, etc).
+        """
+        if not obj or not getattr(obj, "survey_config", None):
+            return []
+
+        answers = obj.answers or {}
+        if not isinstance(answers, dict):
+            return []
+
+        raw_questions = (obj.survey_config.questions or {}).get("questions", []) or []
+        questions_by_id = {}
+        if isinstance(raw_questions, list):
+            for q in raw_questions:
+                if isinstance(q, dict) and q.get("id"):
+                    questions_by_id[q["id"]] = q
+
+        ordered_ids = []
+        if isinstance(raw_questions, list):
+            for q in raw_questions:
+                qid = q.get("id") if isinstance(q, dict) else None
+                if qid and qid in answers:
+                    ordered_ids.append(qid)
+
+        for qid in answers.keys():
+            if qid not in ordered_ids:
+                ordered_ids.append(qid)
+
+        return [{"id": qid, "question": questions_by_id.get(qid), "answer": answers.get(qid)} for qid in ordered_ids]
 
 class SurveyAnswerSerializer(serializers.Serializer):
     """Serializer for validating survey answers."""
