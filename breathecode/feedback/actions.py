@@ -429,20 +429,32 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
                         continue
                 # If asset_slugs filter is empty, apply to all learnpacks
 
-        # Check if user already has a pending survey response for this config and trigger
-        existing_response = SurveyResponse.objects.filter(
+        # Check if user already has a response for this config+trigger (avoid re-asking the same survey).
+        # For course completion, dedupe per cohort.
+        dedupe_query = SurveyResponse.objects.filter(
             survey_config=survey_config,
             user=user,
-            status=SurveyResponse.Status.PENDING,
             trigger_context__trigger_type=trigger_type,
-        ).first()
+        ).exclude(status=SurveyResponse.Status.EXPIRED)
+
+        if trigger_type == SurveyConfiguration.TriggerType.COURSE_COMPLETION:
+            cohort_id = context.get("cohort_id")
+            cohort = context.get("cohort")
+            if cohort_id is None and cohort is not None:
+                cohort_id = getattr(cohort, "id", None)
+
+            if cohort_id is not None:
+                dedupe_query = dedupe_query.filter(trigger_context__cohort_id=cohort_id)
+
+        existing_response = dedupe_query.first()
 
         if existing_response:
             logger.info(
-                "[survey-trigger] skip: existing pending | user_id=%s survey_config_id=%s survey_response_id=%s",
+                "[survey-trigger] skip: existing response | user_id=%s survey_config_id=%s survey_response_id=%s status=%s",
                 user.id,
                 survey_config.id,
                 existing_response.id,
+                existing_response.status,
             )
             continue
 
