@@ -3912,7 +3912,7 @@ class PayView(APIView):
 
                 payment_method = request.data.get("payment_method")
 
-                if payment_method == "coinbase":
+                if amount > 0 and payment_method == "coinbase":
                     if amount < 0.001:
                         raise ValidationException(
                             translation(
@@ -3968,7 +3968,7 @@ class PayView(APIView):
                         status=status.HTTP_201_CREATED,
                     )
 
-                elif payment_method != "stripe":
+                if amount > 0 and payment_method != "stripe":
                     raise ValidationException(
                         translation(
                             lang,
@@ -3978,6 +3978,7 @@ class PayView(APIView):
                         ),
                         code=400,
                     )
+
                 if amount >= 0.50:
                     s = Stripe(academy=bag.academy)
                     s.set_language(lang)
