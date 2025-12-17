@@ -87,6 +87,7 @@ from .serializers import (
     OrganizerSmallSerializer,
     POSTEventCheckinSerializer,
     PostEventTypeSerializer,
+    PostVenueSerializer,
     PUTEventCheckinSerializer,
     VenueSerializer,
 )
@@ -1694,6 +1695,33 @@ class AcademyVenueView(APIView):
 
         serializer = VenueSerializer(venues, many=True)
         return Response(serializer.data)
+
+    @capable_of("crud_event")
+    def post(self, request, format=None, academy_id=None):
+        lang = get_user_language(request)
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                )
+            )
+
+        serializer = PostVenueSerializer(
+            data=request.data,
+            context={
+                "lang": lang,
+                "academy_id": academy_id,
+            },
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(VenueSerializer(serializer.instance).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 def ical_academies_repr(slugs=None, ids=None):

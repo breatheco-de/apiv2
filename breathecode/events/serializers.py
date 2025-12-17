@@ -18,7 +18,7 @@ from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.utils import serpy
 
-from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization
+from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization, Venue
 
 logger = logging.getLogger(__name__)
 
@@ -655,6 +655,42 @@ class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
         exclude = ()
+
+
+class PostVenueSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Venue
+        fields = [
+            "title",
+            "street_address",
+            "country",
+            "city",
+            "latitude",
+            "longitude",
+            "state",
+            "zip_code",
+            "status",
+        ]
+        extra_kwargs = {
+            "title": {"required": True},
+            "status": {"required": False},
+        }
+
+    def validate(self, data):
+        academy_id = self.context.get("academy_id")
+        if academy_id:
+            data["academy"] = Academy.objects.filter(id=academy_id).first()
+            if not data["academy"]:
+                raise ValidationException(
+                    translation(
+                        self.context.get("lang", "en"),
+                        en=f"Academy {academy_id} not found",
+                        es=f"Academia {academy_id} no encontrada",
+                        slug="academy-not-found",
+                    )
+                )
+        return data
 
 
 class EventbriteWebhookSerializer(serializers.ModelSerializer):
