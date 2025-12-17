@@ -85,6 +85,7 @@ class EventTypeSmallSerializer(serpy.Serializer):
 
 class EventTypeSerializer(EventTypeSmallSerializer):
     description = serpy.Field()
+    icon_url = serpy.Field()
     lang = serpy.Field()
     academy = AcademySerializer(required=False)
 
