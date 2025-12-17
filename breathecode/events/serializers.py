@@ -440,8 +440,10 @@ class EventSerializer(serializers.ModelSerializer):
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
         allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
+        # Only validate live_stream_url if status is not DRAFT
         if (
-            online_event == True
+            status != "DRAFT"
+            and online_event == True
             and (live_stream_url is None or live_stream_url == "")
             and not allow_missing_live_stream_url
         ):
@@ -577,8 +579,10 @@ class EventPUTSerializer(serializers.ModelSerializer):
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
         allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
+        # Only validate live_stream_url if status is not DRAFT
         if (
-            online_event == True
+            status != "DRAFT"
+            and online_event == True
             and (live_stream_url is None or live_stream_url == "")
             and (self.instance.live_stream_url is None or self.instance.live_stream_url == "")
             and not allow_missing_live_stream_url
