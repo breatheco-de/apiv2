@@ -467,14 +467,16 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if "event_type" not in data or data["event_type"] is None:
+        # Only require event_type if status is not DRAFT
+        if status != "DRAFT" and ("event_type" not in data or data["event_type"] is None):
             raise ValidationException(
                 translation(
                     lang, en="Missing event type", es="Debes especificar un tipo de evento", slug="no-event-type"
                 )
             )
 
-        if "lang" in data and data["event_type"].lang != data.get("lang", "en"):
+        # Only validate event_type.lang if event_type exists and lang is provided
+        if "event_type" in data and data["event_type"] and "lang" in data and data["event_type"].lang != data.get("lang", "en"):
             raise ValidationException(
                 translation(
                     lang,
@@ -484,7 +486,7 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if "event_type" in data:
+        if "event_type" in data and data["event_type"]:
             data["lang"] = data["event_type"].lang
 
         if not self.instance:
@@ -607,15 +609,17 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
-        event_type = data["event_type"] if "event_type" in data else self.instance.event_type
-        if not event_type:
+        event_type = data["event_type"] if "event_type" in data else (self.instance.event_type if self.instance else None)
+        # Only require event_type if status is not DRAFT
+        if status != "DRAFT" and not event_type:
             raise ValidationException(
                 translation(
                     lang, en="Missing event type", es="Debes especificar un tipo de evento", slug="no-event-type"
                 )
             )
 
-        if "lang" in data and event_type.lang != data["lang"]:
+        # Only validate event_type.lang if event_type exists and lang is provided
+        if event_type and "lang" in data and event_type.lang != data["lang"]:
             raise ValidationException(
                 translation(
                     lang,
@@ -625,7 +629,9 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
-        data["lang"] = event_type.lang
+        # Only set lang from event_type if event_type exists
+        if event_type:
+            data["lang"] = event_type.lang
 
         if not self.instance:
             data["slug"] = slug
