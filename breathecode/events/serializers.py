@@ -13,6 +13,7 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy
 from breathecode.admissions.serializers import UserPublicSerializer
 from breathecode.authenticate.models import Profile, ProfileTranslation
+from breathecode.events import actions as events_actions
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetSmallSerializer

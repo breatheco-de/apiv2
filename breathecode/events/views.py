@@ -749,6 +749,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 "lang": lang,
                 "academy_id": academy_id,
                 "allow_missing_live_stream_url": bool(create_meet),
+                "request": request,
             },
         )
         if serializer.is_valid():
@@ -1081,6 +1082,94 @@ class AcademyEventSuspendView(APIView):
 
         serializer = EventSerializer(event, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyEventHostView(APIView):
+
+    @capable_of("crud_event")
+    def post(self, request, event_id, academy_id=None):
+        """
+        Create an inactive (zombie) user for an event host and assign them to the event.
+        Sends an invitation email to the host.
+        """
+        lang = get_user_language(request)
+
+        # Get the event
+        event = Event.objects.filter(academy__id=int(academy_id), id=event_id).first()
+
+        if not event:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Event not found for this academy {academy_id}",
+                    es=f"Evento no encontrado para esta academia {academy_id}",
+                    slug="event-not-found",
+                )
+            )
+
+        # Validate required fields
+        host_name = request.data.get("host")
+        host_email = request.data.get("host_email")
+
+        if not host_name:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Host name is required",
+                    es="El nombre del host es requerido",
+                    slug="host-name-required",
+                )
+            )
+
+        if not host_email:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Host email is required",
+                    es="El email del host es requerido",
+                    slug="host-email-required",
+                )
+            )
+
+        # Get profile data if provided
+        profile_data = {}
+        profile_fields = ["avatar_url", "bio", "phone", "twitter_username", "github_username", 
+                         "portfolio_url", "linkedin_url", "blog"]
+        for field in profile_fields:
+            if field in request.data:
+                profile_data[field] = request.data.get(field)
+
+        # Create zombie user and profile
+        host_user = actions.create_external_event_host(
+            name=host_name,
+            email=host_email,
+            academy=event.academy,
+            **profile_data
+        )
+
+        # Assign host to event
+        event.host_user = host_user
+        event.host = host_name  # Also update the host name field
+        event.save()
+
+        # Create and send invite
+        invite = actions.create_event_host_invite(
+            user=host_user,
+            event=event,
+            academy=event.academy,
+            author=request.user
+        )
+
+        # Return the created user and invite info
+        from breathecode.authenticate.serializers import UserBigSerializer
+        from breathecode.authenticate.serializers import UserInviteSerializer
+
+        return Response({
+            "user": UserBigSerializer(host_user, many=False).data,
+            "invite": UserInviteSerializer(invite, many=False).data,
+            "event_id": event.id,
+            "message": "Host user created and invitation sent"
+        }, status=status.HTTP_201_CREATED)
 
 
 class EventTypeView(APIView):
