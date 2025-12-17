@@ -393,7 +393,21 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if ("tags" not in data and self.instance.tags == "") or ("tags" in data and data["tags"] == ""):
+        # Get status from data or instance, default to DRAFT if not provided
+        status = data.get("status")
+        if status is None:
+            if self.instance:
+                status = self.instance.status
+            else:
+                status = "DRAFT"  # Default status for new events
+
+        # Get tags from data or instance
+        tags = data.get("tags")
+        if tags is None and self.instance:
+            tags = self.instance.tags
+
+        # Validate that tags are not empty (only if status is not DRAFT)
+        if status != "DRAFT" and (not tags or tags == ""):
             raise ValidationException(
                 translation(
                     lang,
@@ -403,7 +417,9 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
+        # Validate marketing tags if tags are provided (even for DRAFT)
+        if tags and tags != "":
+            validate_marketing_tags(tags, academy, types=["DISCOVERY"], lang=lang)
 
         title = data.get("title")
         slug = data.get("slug")
@@ -517,8 +533,14 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
+        # Get status from data or instance (for PUT, instance should always exist)
+        status = data.get("status")
+        if status is None and self.instance:
+            status = self.instance.status
+
         if "tags" in data:
-            if data["tags"] == "":
+            # Only require tags if status is not DRAFT
+            if data["tags"] == "" and status and status != "DRAFT":
                 raise ValidationException(
                     translation(
                         lang,
@@ -528,7 +550,9 @@ class EventPUTSerializer(serializers.ModelSerializer):
                     )
                 )
 
-            validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
+            # Validate marketing tags if tags are provided (even for DRAFT)
+            if data["tags"] and data["tags"] != "":
+                validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
 
         title = data.get("title")
         slug = data.get("slug")
