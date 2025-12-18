@@ -31,7 +31,7 @@ import breathecode.activity.tasks as tasks_activity
 import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
-from breathecode.authenticate.models import Profile
+from breathecode.authenticate.models import Profile, ProfileAcademy
 from breathecode.services.daily.client import DailyClient
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
@@ -1196,6 +1196,19 @@ class AcademyEventHostView(APIView):
                 )
             )
 
+        # Get the user
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"User {user_id} not found",
+                    es=f"Usuario {user_id} no encontrado",
+                    slug="user-not-found",
+                ),
+                code=404,
+            )
+
         # Verify the user is the host of this event
         if not event.host_user or event.host_user.id != int(user_id):
             raise ValidationException(
@@ -1208,19 +1221,24 @@ class AcademyEventHostView(APIView):
                 code=403,
             )
 
-        # Get the user's profile
-        try:
-            profile = Profile.objects.get(user_id=user_id)
-        except Profile.DoesNotExist:
+        # Verify the user has a ProfileAcademy for this academy (is staff or student)
+        profile_academy = ProfileAcademy.objects.filter(
+            user_id=user_id,
+            academy_id=academy_id
+        ).first()
+
+        if not profile_academy:
             raise ValidationException(
                 translation(
                     lang,
-                    en=f"Profile not found for user {user_id}",
-                    es=f"Perfil no encontrado para el usuario {user_id}",
-                    slug="profile-not-found",
+                    en=f"User {user_id} is not a staff or student in this academy",
+                    es=f"El usuario {user_id} no es personal o estudiante de esta academia",
+                    slug="user-not-in-academy",
                 ),
-                code=404,
+                code=403,
             )
+
+        profile, created = Profile.objects.get_or_create(user_id=user_id)
 
         # Update only profile fields (exclude user field from request data)
         profile_data = {}
