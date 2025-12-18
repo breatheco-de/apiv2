@@ -8,7 +8,17 @@ from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
 
 from .actions import send_cohort_survey_group
-from .models import AcademyFeedbackSettings, Answer, FeedbackTag, Review, Survey, SurveyConfiguration, SurveyResponse
+from .models import (
+    AcademyFeedbackSettings,
+    Answer,
+    FeedbackTag,
+    Review,
+    Survey,
+    SurveyConfiguration,
+    SurveyQuestionTemplate,
+    SurveyResponse,
+    SurveyStudy,
+)
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -552,6 +562,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "trigger_type",
+            "template",
             "questions",
             "is_active",
             "academy",
@@ -561,7 +572,13 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "created_by"]
+        # academy and created_by are set by the view based on the Academy header and the authenticated user
+        read_only_fields = ["id", "created_at", "updated_at", "created_by", "academy"]
+
+        extra_kwargs = {
+            "academy": {"required": False},
+            "trigger_type": {"required": False, "allow_null": True},
+        }
 
     def validate_questions(self, value):
         """Validate questions structure."""
@@ -612,6 +629,28 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
 
         return value
 
+    def validate(self, data):
+        """
+        Enforce mutual exclusivity:
+        - If template is provided, questions may be omitted (it will be sourced from template on save()).
+        - If template is not provided, questions must exist.
+        """
+        template = data.get("template", getattr(self.instance, "template", None) if self.instance else None)
+        questions = data.get("questions", getattr(self.instance, "questions", None) if self.instance else None)
+
+        # If template is set, questions must not be provided/edited via API to avoid divergence and confusion.
+        if template is not None and "questions" in data:
+            raise ValidationException(
+                "questions cannot be modified when template is assigned",
+                code=400,
+                slug="questions-not-editable-with-template",
+            )
+
+        if template is None and not questions:
+            raise ValidationException("questions is required when template is not provided", slug="missing-questions")
+
+        return data
+
 
 class SurveyResponseSerializer(serializers.ModelSerializer):
     """Serializer for survey responses."""
@@ -623,15 +662,33 @@ class SurveyResponseSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "survey_config",
+            "survey_study",
             "user",
+            "token",
             "trigger_context",
+            "questions_snapshot",
             "answers",
             "answers_detail",
             "status",
             "created_at",
+            "opened_at",
+            "email_opened_at",
             "answered_at",
         ]
-        read_only_fields = ["id", "user", "survey_config", "trigger_context", "status", "created_at", "answered_at"]
+        read_only_fields = [
+            "id",
+            "user",
+            "survey_config",
+            "survey_study",
+            "token",
+            "trigger_context",
+            "questions_snapshot",
+            "status",
+            "created_at",
+            "opened_at",
+            "email_opened_at",
+            "answered_at",
+        ]
 
     def get_answers_detail(self, obj):
         """
@@ -667,6 +724,50 @@ class SurveyResponseSerializer(serializers.ModelSerializer):
                 ordered_ids.append(qid)
 
         return [{"id": qid, "question": questions_by_id.get(qid), "answer": answers.get(qid)} for qid in ordered_ids]
+
+
+class SurveyQuestionTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveyQuestionTemplate
+        fields = ["id", "slug", "title", "description", "questions", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def validate_questions(self, value):
+        # Reuse the same shape as SurveyConfiguration.questions
+        if not isinstance(value, dict):
+            raise ValidationException("questions must be a dictionary", slug="invalid-questions-structure")
+
+        if "questions" not in value:
+            raise ValidationException("questions must contain a 'questions' key", slug="missing-questions-key")
+
+        questions = value.get("questions", [])
+        if not isinstance(questions, list):
+            raise ValidationException("questions.questions must be a list", slug="invalid-questions-list")
+
+        if len(questions) == 0:
+            raise ValidationException("questions.questions must contain at least one question", slug="empty-questions-list")
+
+        return value
+
+
+class SurveyStudySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveyStudy
+        fields = [
+            "id",
+            "slug",
+            "title",
+            "description",
+            "academy",
+            "starts_at",
+            "ends_at",
+            "max_responses",
+            "survey_configurations",
+            "stats",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "academy", "stats", "created_at", "updated_at"]
 
 class SurveyAnswerSerializer(serializers.Serializer):
     """Serializer for validating survey answers."""

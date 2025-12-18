@@ -19,7 +19,7 @@ from breathecode.utils import TaskPriority, getLogger
 from breathecode.utils.redis import Lock
 
 from . import actions
-from .models import AcademyFeedbackSettings, Answer, Survey, SurveyTemplate
+from .models import AcademyFeedbackSettings, Answer, Survey, SurveyResponse, SurveyTemplate
 from .utils import strings
 
 # Get an instance of a logger
@@ -240,6 +240,17 @@ def api_url():
     return os.getenv("API_URL", "")
 
 
+def _build_survey_response_link(app_url: str, token: str) -> str:
+    """
+    Build a frontend link for a SurveyResponse using its token.
+
+    Override using SURVEY_RESPONSE_LINK_TEMPLATE.
+    Default: "{app_url}/survey/{token}"
+    """
+    template = os.getenv("SURVEY_RESPONSE_LINK_TEMPLATE", "{app_url}/survey/{token}")
+    return template.format(app_url=app_url.rstrip("/"), token=str(token))
+
+
 @task(bind=False, priority=TaskPriority.NOTIFICATION.value)
 def send_cohort_survey(user_id, survey_id, template_slug=None, **_):
     logger.info("Starting send_cohort_survey")
@@ -289,6 +300,59 @@ def send_cohort_survey(user_id, survey_id, template_slug=None, **_):
         notify_actions.send_slack(
             "nps_survey", user.slackuser, survey.cohort.academy.slackteam, data=data, academy=survey.cohort.academy
         )
+
+
+@task(bind=False, priority=TaskPriority.NOTIFICATION.value)
+def send_survey_response_email(survey_response_id: int, **_):
+    """
+    Send an email invitation to answer a SurveyResponse (token-based).
+
+    This task handles only one SurveyResponse instance (bulk scheduling should be done elsewhere).
+    """
+    logger.info("Starting send_survey_response_email")
+
+    survey_response = (
+        SurveyResponse.objects.filter(id=survey_response_id)
+        .select_related("user", "survey_config__academy", "survey_study")
+        .first()
+    )
+    if survey_response is None:
+        raise RetryTask("SurveyResponse not found")
+
+    if survey_response.status == SurveyResponse.Status.ANSWERED:
+        raise AbortTask("SurveyResponse already answered")
+
+    academy = getattr(getattr(survey_response, "survey_config", None), "academy", None)
+    if academy is None:
+        raise AbortTask("SurveyResponse missing academy")
+
+    utc_now = timezone.now()
+    if survey_response.survey_study:
+        if survey_response.survey_study.starts_at and survey_response.survey_study.starts_at > utc_now:
+            raise AbortTask("SurveyStudy has not started yet")
+        if survey_response.survey_study.ends_at and survey_response.survey_study.ends_at < utc_now:
+            raise AbortTask("SurveyStudy already ended")
+
+    user = survey_response.user
+    if not user or not getattr(user, "email", None):
+        raise AbortTask("User has no email")
+
+    # Import here to avoid circular imports at module load time
+    from breathecode.authenticate.actions import get_app_url
+
+    app_url = get_app_url(academy=academy)
+    link = _build_survey_response_link(app_url, str(survey_response.token))
+    tracker_url = f"{api_url()}/v1/feedback/survey/response/{survey_response.token}/tracker.png"
+
+    data = {
+        "SUBJECT": "We'd love your feedback",
+        "MESSAGE": "Please take a minute to answer this survey.",
+        "BUTTON": "Open survey",
+        "LINK": link,
+        "TRACKER_URL": tracker_url,
+    }
+
+    notify_actions.send_email_message("survey_response", user.email, data, academy=academy)
 
 
 @task(bind=False, priority=TaskPriority.ACADEMY.value)

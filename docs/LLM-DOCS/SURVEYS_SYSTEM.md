@@ -49,11 +49,13 @@ Defines when and how surveys are triggered.
 
 **Fields:**
 - `trigger_type`: Type of event that triggers the survey (`learnpack_completed`, `course_completed`)
+- `template`: Optional FK to `SurveyQuestionTemplate`. If set, questions are sourced from the template.
 - `questions`: JSON structure containing survey questions
 - `is_active`: Whether this configuration is active
 - `academy`: Academy this survey applies to
 - `cohorts`: ManyToMany - If empty, applies to all cohorts. If set, only to specified cohorts
 - `asset_slugs`: JSON array - If empty, applies to all learnpacks. If set, only to specified learnpacks
+- `stats`: JSON aggregated stats for this configuration (sent/opened/partial/responses/email_opened)
 - `created_by`: User who created the configuration
 - `created_at`, `updated_at`: Timestamps
 
@@ -89,12 +91,38 @@ Stores individual user responses to surveys.
 
 **Fields:**
 - `survey_config`: ForeignKey to SurveyConfiguration
+- `survey_study`: Optional FK to SurveyStudy
 - `user`: ForeignKey to User
+- `token`: UUID token used for email links / direct navigation
 - `trigger_context`: JSON with context about what triggered the survey
+- `questions_snapshot`: Optional snapshot of the questions used (immutability)
 - `answers`: JSON with user's answers (null until answered)
-- `status`: PENDING, ANSWERED, or EXPIRED
+- `status`: PENDING, OPENED, PARTIAL, ANSWERED, or EXPIRED
 - `created_at`: When survey was created
+- `opened_at`: First time the user opened the survey (set once)
+- `email_opened_at`: First time the user opened the survey email (set once)
 - `answered_at`: When user answered (null until answered)
+
+### SurveyQuestionTemplate
+
+Reusable questions template for the new SurveyConfiguration/SurveyResponse system.
+
+**Fields:**
+- `slug`, `title`, `description`
+- `questions`: JSON structure (same shape as SurveyConfiguration.questions)
+- `created_at`, `updated_at`
+
+### SurveyStudy
+
+Groups one or more SurveyConfigurations for a given academy.
+
+**Fields:**
+- `academy`
+- `slug`, `title`, `description`
+- `starts_at`, `ends_at`
+- `max_responses` (optional)
+- `survey_configurations` (ManyToMany)
+- `stats`: JSON aggregated stats (sent/opened/partial/responses/email_opened)
 
 ---
 
@@ -437,6 +465,48 @@ This endpoint is meant for staff/admin analytics and auditing.
 ```
 
 #### Answer Survey
+#### Get Survey Response by Token (for email links)
+
+**Method:** `GET`
+
+**URL:** `{{base_url}}/v1/feedback/survey/response/by_token/{{token}}`
+
+**Authentication:** Required (user can only see their own response)
+
+#### Mark Survey Response Opened
+
+**Method:** `POST`
+
+**URL:** `{{base_url}}/v1/feedback/survey/response/{{response_id}}/opened`
+
+**Authentication:** Required (user can only update their own response)
+
+#### Save Partial Answers (Draft)
+
+**Method:** `POST`
+
+**URL:** `{{base_url}}/v1/feedback/survey/response/{{response_id}}/partial`
+
+**Authentication:** Required (user can only update their own response)
+
+**Request:**
+```json
+{
+  "answers": {
+    "q1": 4,
+    "q2": "draft text"
+  }
+}
+```
+
+#### Track Survey Email Open (pixel)
+
+**Method:** `GET`
+
+**URL:** `{{base_url}}/v1/feedback/survey/response/{{token}}/tracker.png`
+
+This returns a 1x1 transparent pixel and sets `email_opened_at` only once.
+
 
 **Method:** `POST`
 
