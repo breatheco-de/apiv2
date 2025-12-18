@@ -43,22 +43,6 @@ def set_user_group(sender, instance, created: bool, **_):
     group = None
     groups = None
 
-    try:
-        instance_id = getattr(instance, "id", None)
-        instance_user = getattr(instance, "user", None)
-        instance_user_id = getattr(instance_user, "id", None) if instance_user else None
-        instance_user_email = getattr(instance_user, "email", None) if instance_user else None
-        logger.warning(
-            "[user_group] start | sender=%s created=%s instance_id=%s user_id=%s email=%s",
-            getattr(sender, "__name__", str(sender)),
-            created,
-            instance_id,
-            instance_user_id,
-            instance_user_email,
-        )
-    except Exception:
-        logger.exception("[user_group] unable to log start context")
-
     # Only run on creation for most models
     if not created:
         # Special case: For ProfileAcademy, also run when status changes to ACTIVE
@@ -71,30 +55,11 @@ def set_user_group(sender, instance, created: bool, **_):
                 and instance.status == "ACTIVE"
             )
             if not status_changed_to_active:
-                logger.warning(
-                    "[user_group] skip | sender=ProfileAcademy created=%s reason=status_not_changed_to_active profile_id=%s status=%s old_status=%s",
-                    created,
-                    getattr(instance, "id", None),
-                    getattr(instance, "status", None),
-                    getattr(instance, "_ProfileAcademy__old_status", None),
-                )
                 return
         elif sender == SubscriptionSeat:
             if not getattr(instance, "user", None):
-                logger.warning(
-                    "[user_group] skip | sender=SubscriptionSeat created=%s reason=no_user seat_id=%s email=%s is_active=%s",
-                    created,
-                    getattr(instance, "id", None),
-                    getattr(instance, "email", None),
-                    getattr(instance, "is_active", None),
-                )
                 return
         else:
-            logger.warning(
-                "[user_group] skip | sender=%s created=%s reason=not_created",
-                getattr(sender, "__name__", str(sender)),
-                created,
-            )
             return
 
     # prevent errors with migrations
@@ -102,18 +67,6 @@ def set_user_group(sender, instance, created: bool, **_):
         if sender == SubscriptionSeat and instance.user:
             group = Group.objects.filter(name="Student").first()
             groups = instance.user.groups
-
-            if not group:
-                logger.warning("[user_group] missing Group(name=Student) | seat_id=%s user_id=%s", instance.id, instance.user.id)
-            else:
-                already_in_group = instance.user.groups.filter(name="Student").exists()
-                logger.warning(
-                    "[user_group] subscription_seat | seat_id=%s user_id=%s is_active=%s already_in_group=%s",
-                    instance.id,
-                    instance.user.id,
-                    getattr(instance, "is_active", None),
-                    already_in_group,
-                )
 
             # Only grant capabilities when the user is missing the Student group.
             # This keeps the fix focused and avoids heavy re-processing on every seat update.
@@ -144,22 +97,7 @@ def set_user_group(sender, instance, created: bool, **_):
 
         if groups and group:
             # Use add() which is idempotent - won't duplicate if already in group
-            already_in_group = group.user_set.filter(id=getattr(getattr(instance, "user", None), "id", None)).exists()
             groups.add(group)
-            logger.warning(
-                "[user_group] added | sender=%s group=%s user_id=%s already_in_group=%s",
-                getattr(sender, "__name__", str(sender)),
-                getattr(group, "name", None),
-                getattr(getattr(instance, "user", None), "id", None),
-                already_in_group,
-            )
-        else:
-            logger.warning(
-                "[user_group] no-op | sender=%s group=%s groups_set=%s",
-                getattr(sender, "__name__", str(sender)),
-                getattr(group, "name", None) if group else None,
-                bool(groups),
-            )
 
     # this prevent a bug with migrations
     except ObjectDoesNotExist:
