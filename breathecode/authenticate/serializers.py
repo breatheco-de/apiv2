@@ -195,8 +195,8 @@ class UserTinySerializer(serpy.Serializer):
     email = serpy.Field()
 
 
-class UserBigSerializer(serpy.Serializer):
-    """The serializer schema definition."""
+class UserSmallSerializer(serpy.Serializer):
+    """The serializer schema definition - minimal user data (id, email, first_name)."""
 
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
@@ -421,8 +421,8 @@ class AcademySmallSerializer(serpy.Serializer):
     slug = serpy.Field()
 
 
-class UserSmallSerializer(serpy.Serializer):
-    """The serializer schema definition."""
+class UserBigSerializer(serpy.Serializer):
+    """The serializer schema definition - complete user data (id, email, first_name, last_name, github, profile)."""
 
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
@@ -469,7 +469,7 @@ class GetProfileAcademySerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
-    user = UserSmallSerializer(required=False)
+    user = UserBigSerializer(required=False)
     academy = AcademySmallSerializer()
     role = RoleSmallSerializer()
     created_at = serpy.Field()
@@ -611,8 +611,8 @@ class AuthSettingsBigSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = AcademyTinySerializer()
     github_username = serpy.Field()
-    github_owner = UserSmallSerializer(required=False)
-    google_cloud_owner = UserSmallSerializer(required=False)
+    github_owner = UserBigSerializer(required=False)
+    google_cloud_owner = UserBigSerializer(required=False)
     github_default_team_ids = serpy.Field()
     github_is_sync = serpy.Field()
     github_error_log = serpy.Field()
@@ -1170,7 +1170,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 {
                     "subject": f"Invitation to study at {academy.name}",
                     "invites": [ProfileAcademySmallSerializer(profile_academy).data],
-                    "user": UserSmallSerializer(user).data,
+                    "user": UserBigSerializer(user).data,
                     "LINK": url,
                 },
                 academy=academy,

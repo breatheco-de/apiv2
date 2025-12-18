@@ -141,7 +141,7 @@ from .serializers import (
     UserMeSerializer,
     UserSerializer,
     UserSettingsSerializer,
-    UserSmallSerializer,
+    UserBigSerializer,
     UserTinySerializer,
 )
 
@@ -969,7 +969,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 {
                     "subject": f"Invitation to study at {profile_academy.academy.name}",
                     "invites": [ProfileAcademySmallSerializer(profile_academy).data],
-                    "user": UserSmallSerializer(profile_academy.user).data,
+                    "user": UserBigSerializer(profile_academy.user).data,
                     "LINK": os.getenv("API_URL") + "/v1/auth/academy/html/invite",
                 },
                 academy=profile_academy.academy,
@@ -1512,7 +1512,7 @@ def get_users(request):
 
     query = query.exclude(email__contains="@token.com")
     query = query.order_by("-date_joined")
-    users = UserSmallSerializer(query, many=True)
+    users = UserBigSerializer(query, many=True)
     return Response(users.data)
 
 
@@ -1528,7 +1528,7 @@ def get_user_by_id_or_email(request, id_or_email):
     if query is None:
         raise ValidationException("User with that id or email does not exists", slug="user-dont-exists", code=404)
 
-    users = UserSmallSerializer(query, many=False)
+    users = UserBigSerializer(query, many=False)
     return Response(users.data)
 
 
