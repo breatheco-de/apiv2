@@ -70,6 +70,7 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     event = serpy.Field()
     course = serpy.Field()
     downloadable = serpy.Field()
+    plan = serpy.Field()
     referrer_user = serpy.Field()
     purpose = serpy.Field()
     notes = serpy.Field()

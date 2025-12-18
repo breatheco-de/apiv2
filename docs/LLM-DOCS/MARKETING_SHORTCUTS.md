@@ -23,6 +23,7 @@ Each ShortLink has the following key properties:
 - `event`: Event reference in format `"<id:slug>"` (e.g., `"<3434:event_slug>"`) - Optional, for event promotions
 - `course`: Course reference in format `"<id:slug>"` (e.g., `"<123:course_slug>"`) - Optional, for course promotions
 - `downloadable`: Downloadable content reference in format `"<id:slug>"` (e.g., `"<567:downloadable_slug>"`) - Optional, for content downloads
+- `plan`: Plan reference in format `"<id:slug>"` (e.g., `"<789:plan_slug>"`) - Optional, for subscription plan promotions
 - `referrer_user`: User ID of the referrer (for affiliate tracking) - Optional ForeignKey to User
 - `purpose`: Internal description of what this link is used for - Optional TextField (max 500 chars)
 - `notes`: Internal notes about this short link - Optional TextField (max 1000 chars)
@@ -68,6 +69,7 @@ Lists all short links accessible to the authenticated academy.
         "event": null,
         "course": null,
         "downloadable": null,
+        "plan": null,
         "referrer_user": null,
         "purpose": null,
         "notes": null
@@ -117,6 +119,7 @@ Create a new short link.
     "event": "<3434:summer-workshop-2025>",  // Optional: Event reference in format "<id:slug>"
     "course": "<123:full-stack-bootcamp>",  // Optional: Course reference in format "<id:slug>"
     "downloadable": "<567:course-guide>",  // Optional: Downloadable reference in format "<id:slug>"
+    "plan": "<789:4geeks-plus-subscription>",  // Optional: Plan reference in format "<id:slug>"
     "referrer_user": 42,  // Optional: User ID of the referrer
     "purpose": "Promote summer bootcamp enrollment",  // Optional: Internal description
     "notes": "Used in email campaign sent to previous students"  // Optional: Internal notes
@@ -317,6 +320,7 @@ POST /v1/marketing/academy/short
     "private": false,
     "active": true,
     "course": "<123:full-stack-bootcamp>",
+    "plan": "<789:4geeks-plus-subscription>",
     "purpose": "Summer 2025 enrollment campaign",
     "notes": "Facebook ad campaign targeting 25-35 age group"
 }

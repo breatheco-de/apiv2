@@ -48,6 +48,17 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="shortlink",
+            name="plan",
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text="Plan reference in format '<id:slug>' (e.g., '<789:plan_slug>')",
+                max_length=200,
+                null=True,
+            ),
+        ),
+        migrations.AddField(
+            model_name="shortlink",
             name="referrer_user",
             field=models.ForeignKey(
                 blank=True,

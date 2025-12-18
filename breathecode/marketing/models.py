@@ -700,6 +700,13 @@ class ShortLink(models.Model):
         default=None,
         help_text="Downloadable reference in format '<id:slug>' (e.g., '<567:downloadable_slug>')"
     )
+    plan = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Plan reference in format '<id:slug>' (e.g., '<789:plan_slug>')"
+    )
     referrer_user = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
