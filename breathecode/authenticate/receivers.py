@@ -27,13 +27,16 @@ from .tasks import async_add_to_organization, async_remove_from_organization
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
+@receiver(post_save, sender=User)
+@receiver(post_save, sender=ProfileAcademy)
+@receiver(post_save, sender=MentorProfile)
+@receiver(post_save, sender=SubscriptionSeat)
 def update_user_group(sender, instance, created: bool, **_):
     # redirect to other signal to be able to mock it
     user_info_updated.send_robust(sender=sender, instance=instance, created=created)
 
 
-@receiver(user_info_updated, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
+@receiver(user_info_updated)
 def set_user_group(sender, instance, created: bool, **_):
     from breathecode.payments import actions as payments_actions
 
@@ -45,7 +48,7 @@ def set_user_group(sender, instance, created: bool, **_):
         instance_user = getattr(instance, "user", None)
         instance_user_id = getattr(instance_user, "id", None) if instance_user else None
         instance_user_email = getattr(instance_user, "email", None) if instance_user else None
-        logger.info(
+        logger.warning(
             "[user_group] start | sender=%s created=%s instance_id=%s user_id=%s email=%s",
             getattr(sender, "__name__", str(sender)),
             created,
@@ -68,7 +71,7 @@ def set_user_group(sender, instance, created: bool, **_):
                 and instance.status == "ACTIVE"
             )
             if not status_changed_to_active:
-                logger.info(
+                logger.warning(
                     "[user_group] skip | sender=ProfileAcademy created=%s reason=status_not_changed_to_active profile_id=%s status=%s old_status=%s",
                     created,
                     getattr(instance, "id", None),
@@ -78,7 +81,7 @@ def set_user_group(sender, instance, created: bool, **_):
                 return
         elif sender == SubscriptionSeat:
             if not getattr(instance, "user", None):
-                logger.info(
+                logger.warning(
                     "[user_group] skip | sender=SubscriptionSeat created=%s reason=no_user seat_id=%s email=%s is_active=%s",
                     created,
                     getattr(instance, "id", None),
@@ -87,7 +90,7 @@ def set_user_group(sender, instance, created: bool, **_):
                 )
                 return
         else:
-            logger.info(
+            logger.warning(
                 "[user_group] skip | sender=%s created=%s reason=not_created",
                 getattr(sender, "__name__", str(sender)),
                 created,
@@ -104,7 +107,7 @@ def set_user_group(sender, instance, created: bool, **_):
                 logger.warning("[user_group] missing Group(name=Student) | seat_id=%s user_id=%s", instance.id, instance.user.id)
             else:
                 already_in_group = instance.user.groups.filter(name="Student").exists()
-                logger.info(
+                logger.warning(
                     "[user_group] subscription_seat | seat_id=%s user_id=%s is_active=%s already_in_group=%s",
                     instance.id,
                     instance.user.id,
@@ -143,7 +146,7 @@ def set_user_group(sender, instance, created: bool, **_):
             # Use add() which is idempotent - won't duplicate if already in group
             already_in_group = group.user_set.filter(id=getattr(getattr(instance, "user", None), "id", None)).exists()
             groups.add(group)
-            logger.info(
+            logger.warning(
                 "[user_group] added | sender=%s group=%s user_id=%s already_in_group=%s",
                 getattr(sender, "__name__", str(sender)),
                 getattr(group, "name", None),
@@ -151,7 +154,7 @@ def set_user_group(sender, instance, created: bool, **_):
                 already_in_group,
             )
         else:
-            logger.info(
+            logger.warning(
                 "[user_group] no-op | sender=%s group=%s groups_set=%s",
                 getattr(sender, "__name__", str(sender)),
                 getattr(group, "name", None) if group else None,
