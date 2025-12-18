@@ -151,5 +151,3 @@ class Command(BaseCommand):
         self.stdout.write(f"already_had_group={already_ok}")
         self.stdout.write(f"missing_group={missing_group}")
         self.stdout.write(f"applied={fixed}" if commit else "applied=0 (dry-run)")
-
-
