@@ -26,7 +26,9 @@ from .models import (
     ReviewPlatform,
     Survey,
     SurveyConfiguration,
+    SurveyQuestionTemplate,
     SurveyResponse,
+    SurveyStudy,
     SurveyTemplate,
     UserProxy,
 )
@@ -469,12 +471,72 @@ class SurveyConfigurationForm(forms.ModelForm):
         }
 
 
+class SurveyQuestionTemplateForm(forms.ModelForm):
+    """Form for SurveyQuestionTemplate with formatted JSON fields."""
+
+    class Meta:
+        model = SurveyQuestionTemplate
+        fields = "__all__"
+        widgets = {
+            "questions": PrettyJSONWidget(),
+        }
+
+
+@admin.register(SurveyQuestionTemplate)
+class SurveyQuestionTemplateAdmin(admin.ModelAdmin):
+    form = SurveyQuestionTemplateForm
+    list_display = ("id", "slug", "title", "created_at", "updated_at")
+    search_fields = ("slug", "title", "description")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        ("Basic Information", {"fields": ("slug", "title", "description")}),
+        (
+            "Questions",
+            {
+                "fields": ("questions",),
+                "description": "Canonical questions JSON structure used by SurveyConfiguration templates.",
+            },
+        ),
+        ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
+
+
+class SurveyStudyForm(forms.ModelForm):
+    """Form for SurveyStudy with formatted JSON fields."""
+
+    class Meta:
+        model = SurveyStudy
+        fields = "__all__"
+        widgets = {
+            "stats": PrettyJSONWidget(),
+        }
+
+
+@admin.register(SurveyStudy)
+class SurveyStudyAdmin(admin.ModelAdmin):
+    form = SurveyStudyForm
+    list_display = ("id", "slug", "title", "academy", "starts_at", "ends_at", "max_responses", "created_at")
+    list_filter = ("academy", "starts_at", "ends_at", "created_at")
+    search_fields = ("slug", "title", "description", "academy__name", "academy__slug")
+    raw_id_fields = ("academy",)
+    filter_horizontal = ("survey_configurations",)
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        ("Basic Information", {"fields": ("slug", "title", "description", "academy")}),
+        ("Window & Limits", {"fields": ("starts_at", "ends_at", "max_responses")}),
+        ("Survey Configurations", {"fields": ("survey_configurations",)}),
+        ("Stats", {"fields": ("stats",), "classes": ("collapse",)}),
+        ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
+
+
 @admin.register(SurveyConfiguration)
 class SurveyConfigurationAdmin(admin.ModelAdmin):
     form = SurveyConfigurationForm
     list_display = (
         "id",
         "trigger_type",
+        "template",
         "academy",
         "is_active",
         "created_by",
@@ -483,7 +545,7 @@ class SurveyConfigurationAdmin(admin.ModelAdmin):
     )
     list_filter = ("trigger_type", "is_active", "academy", "created_at")
     search_fields = ("academy__name", "academy__slug", "created_by__email", "created_by__first_name", "created_by__last_name")
-    raw_id_fields = ("academy", "created_by")
+    raw_id_fields = ("academy", "created_by", "template")
     filter_horizontal = ("cohorts",)
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
@@ -492,6 +554,7 @@ class SurveyConfigurationAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "trigger_type",
+                    "template",
                     "academy",
                     "is_active",
                     "created_by",
