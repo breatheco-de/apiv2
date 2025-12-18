@@ -31,6 +31,7 @@ import breathecode.activity.tasks as tasks_activity
 import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
+from breathecode.authenticate.models import Profile
 from breathecode.services.daily.client import DailyClient
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
@@ -1173,6 +1174,72 @@ class AcademyEventHostView(APIView):
             "event_id": event.id,
             "message": "Host user created and invitation sent"
         }, status=status.HTTP_201_CREATED)
+
+    @capable_of("crud_event")
+    def put(self, request, event_id, user_id, academy_id=None):
+        """
+        Update the profile of an event host.
+        Only updates profile fields (avatar_url, bio, phone, social media, etc.)
+        """
+        lang = get_user_language(request)
+
+        # Get the event
+        event = Event.objects.filter(academy__id=int(academy_id), id=event_id).first()
+
+        if not event:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Event not found for this academy {academy_id}",
+                    es=f"Evento no encontrado para esta academia {academy_id}",
+                    slug="event-not-found",
+                )
+            )
+
+        # Verify the user is the host of this event
+        if not event.host_user or event.host_user.id != int(user_id):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"User {user_id} is not the host of event {event_id}",
+                    es=f"El usuario {user_id} no es el host del evento {event_id}",
+                    slug="user-not-event-host",
+                ),
+                code=403,
+            )
+
+        # Get the user's profile
+        try:
+            profile = Profile.objects.get(user_id=user_id)
+        except Profile.DoesNotExist:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Profile not found for user {user_id}",
+                    es=f"Perfil no encontrado para el usuario {user_id}",
+                    slug="profile-not-found",
+                ),
+                code=404,
+            )
+
+        # Update only profile fields (exclude user field from request data)
+        profile_data = {}
+        profile_fields = ["avatar_url", "bio", "phone", "twitter_username", "github_username", 
+                         "portfolio_url", "linkedin_url", "blog"]
+        for field in profile_fields:
+            if field in request.data:
+                profile_data[field] = request.data.get(field)
+
+        # Use ProfileSerializer from authenticate
+        from breathecode.authenticate.serializers import ProfileSerializer, GetProfileSerializer
+
+        serializer = ProfileSerializer(profile, data=profile_data, partial=True)
+        if serializer.is_valid():
+            updated_profile = serializer.save()
+            response_serializer = GetProfileSerializer(updated_profile, many=False)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EventTypeView(APIView):
