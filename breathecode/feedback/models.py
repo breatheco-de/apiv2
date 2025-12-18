@@ -1,5 +1,6 @@
 import datetime
 import json
+import uuid as uuid_lib
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -22,6 +23,8 @@ __all__ = [
     "Answer",
     "SurveyTemplate",
     "FeedbackTag",
+    "SurveyQuestionTemplate",
+    "SurveyStudy",
     "SurveyConfiguration",
     "SurveyResponse",
 ]
@@ -623,20 +626,38 @@ class SurveyConfiguration(models.Model):
     trigger_type = models.CharField(
         max_length=50,
         choices=TriggerType.choices,
-        help_text="Tipo de evento que dispara la encuesta: learnpack_completed o course_completed",
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            "Realtime trigger type for this configuration (learnpack_completed or course_completed). only for realtime studies where a modal appears after a user completes an activity"
+            "For email/list-based studies, this can be null."
+        ),
     )
-    questions = models.JSONField(help_text="Estructura de preguntas (formato flexible para escalar)")
+
+    template = models.ForeignKey(
+        "feedback.SurveyQuestionTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="survey_configurations",
+        help_text="Optional questions template. If set, questions are sourced from the template.",
+    )
+    questions = models.JSONField(help_text="Questions JSON structure (flexible format)")
     is_active = models.BooleanField(default=True)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Para filtrar por academia")
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Used to scope configurations by academy")
     cohorts = models.ManyToManyField(
         Cohort,
         blank=True,
-        help_text="Si está vacío, aplica a todas las cohorts. Si tiene valores, solo a esas cohorts específicas",
+        help_text="If empty, applies to all cohorts. If set, applies only to those cohorts.",
     )
     asset_slugs = models.JSONField(
         default=list,
         blank=True,
-        help_text="Para learnpacks: si está vacío, aplica a todos. Si tiene valores, solo a esos learnpacks específicos. Ejemplo: ['learnpack-1', 'learnpack-2']",
+        help_text=(
+            "For learnpacks: if empty, applies to all. If set, applies only to those learnpacks. "
+            "Example: ['learnpack-1', 'learnpack-2']"
+        ),
     )
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -647,6 +668,21 @@ class SurveyConfiguration(models.Model):
             raise ValidationError("asset_slugs must be a list")
 
     def save(self, *args, **kwargs):
+        previous_template_id = None
+        if self.pk:
+            previous_template_id = (
+                SurveyConfiguration.objects.filter(pk=self.pk).values_list("template_id", flat=True).first()
+            )
+
+        if self.template is not None:
+            if previous_template_id != self.template_id:
+                self.questions = self.template.questions
+
+            else:
+                # Template unchanged: questions must match template exactly
+                if self.questions != self.template.questions:
+                    raise ValidationError({"questions": "Questions cannot be modified when template is assigned"})
+
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -661,13 +697,30 @@ class SurveyConfiguration(models.Model):
 class SurveyResponse(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
+        OPENED = "OPENED", "Opened"
+        PARTIAL = "PARTIAL", "Partial"
         ANSWERED = "ANSWERED", "Answered"
         EXPIRED = "EXPIRED", "Expired"
 
     survey_config = models.ForeignKey(SurveyConfiguration, on_delete=models.CASCADE)
+    survey_study = models.ForeignKey(
+        "feedback.SurveyStudy",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="survey_responses",
+        help_text="Study/campaign that originated this survey response (optional).",
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.UUIDField(null=True, blank=True, editable=False, unique=True)
     trigger_context = models.JSONField(
-        help_text="Info del evento que disparó la encuesta: learnpack_slug, course_slug, etc."
+        help_text="Context that originated the survey (e.g. learnpack_slug, course_slug, cohort_id, etc.)"
+    )
+    questions_snapshot = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Snapshot of questions used to render/validate this response.",
     )
     answers = models.JSONField(
         null=True,
@@ -677,7 +730,17 @@ class SurveyResponse(models.Model):
     )
     status = models.CharField(max_length=15, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    answered_at = models.DateTimeField(null=True, blank=True, default=None, help_text="Timestamp de cuando respondió")
+    opened_at = models.DateTimeField(null=True, blank=True, default=None, help_text="First time the survey was opened")
+    email_opened_at = models.DateTimeField(
+        null=True, blank=True, default=None, help_text="First time the survey email was opened"
+    )
+    answered_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the survey was answered")
+
+    def save(self, *args, **kwargs):
+        if self.token is None:
+            self.token = uuid_lib.uuid4()
+
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Survey Response {self.id} - User: {self.user.email} - Status: {self.status}"
@@ -685,3 +748,61 @@ class SurveyResponse(models.Model):
     class Meta:
         verbose_name = "Survey Response"
         verbose_name_plural = "Survey Responses"
+
+
+class SurveyQuestionTemplate(models.Model):
+    """
+    Question template for the new SurveyConfiguration/SurveyResponse system.
+    NOTE: This is not the legacy `SurveyTemplate` used by the classic NPS Survey/Answer flows.
+    """
+
+    slug = models.SlugField(max_length=100, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True, default=None)
+    questions = models.JSONField(help_text="Questions JSON structure (same shape as SurveyConfiguration.questions)")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.slug} ({self.id})"
+
+    class Meta:
+        verbose_name = "Survey Question Template"
+        verbose_name_plural = "Survey Question Templates"
+
+
+class SurveyStudy(models.Model):
+    """
+    A study/campaign that groups one or more SurveyConfigurations and provides study-level constraints/stats.
+    """
+
+    slug = models.SlugField(max_length=100, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    starts_at = models.DateTimeField(null=True, blank=True, default=None)
+    ends_at = models.DateTimeField(null=True, blank=True, default=None)
+    max_responses = models.PositiveIntegerField(
+        null=True, blank=True, default=None, help_text="Max ANSWERED responses allowed (null = unlimited)"
+    )
+
+    survey_configurations = models.ManyToManyField(
+        SurveyConfiguration,
+        blank=True,
+        related_name="survey_studies",
+        help_text="Survey configurations that belong to this study",
+    )
+
+    stats = models.JSONField(default=dict, blank=True, help_text="Aggregated stats for this study")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.slug} ({self.academy.slug})"
+
+    class Meta:
+        verbose_name = "Survey Study"
+        verbose_name_plural = "Survey Studies"
