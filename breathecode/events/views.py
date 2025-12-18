@@ -1160,6 +1160,9 @@ class AcademyEventHostView(APIView):
             author=request.user
         )
 
+        # Refresh user to ensure profile relationship is loaded
+        host_user.refresh_from_db()
+
         # Return the created user and invite info
         from breathecode.authenticate.serializers import UserBigSerializer
         from breathecode.authenticate.serializers import UserInviteSerializer

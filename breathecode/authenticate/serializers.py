@@ -439,10 +439,12 @@ class UserBigSerializer(serpy.Serializer):
         return GithubSmallSerializer(obj.credentialsgithub).data
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
 
 class UserSuperSmallSerializer(serpy.Serializer):
@@ -456,10 +458,12 @@ class UserSuperSmallSerializer(serpy.Serializer):
     profile = serpy.MethodField()
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
 
 class GetProfileAcademySerializer(serpy.Serializer):
@@ -537,10 +541,12 @@ class AppUserSerializer(serpy.Serializer):
     profile = serpy.MethodField()
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
