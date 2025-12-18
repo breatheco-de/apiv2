@@ -967,6 +967,8 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     f"Shortlink with slug {slug} not found or its private and it belongs to another academy",
                     slug="shortlink-not-found",
                 )
+            serializer = ShortlinkSmallSerializer(link)
+            return Response(serializer.data, status=200)
 
         academy = Academy.objects.get(id=academy_id)
         items = ShortLink.objects.filter(Q(academy__id=academy.id) | Q(private=False))

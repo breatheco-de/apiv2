@@ -66,6 +66,14 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
 
+    # New traceability fields
+    event = serpy.Field()
+    course = serpy.Field()
+    downloadable = serpy.Field()
+    referrer_user = serpy.Field()
+    purpose = serpy.Field()
+    notes = serpy.Field()
+
 
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()

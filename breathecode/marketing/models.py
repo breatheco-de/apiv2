@@ -678,6 +678,52 @@ class ShortLink(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    # Traceability fields
+    event = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Event reference in format '<id:slug>' (e.g., '<3434:event_slug>')"
+    )
+    course = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Course reference in format '<id:slug>' (e.g., '<123:course_slug>')"
+    )
+    downloadable = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Downloadable reference in format '<id:slug>' (e.g., '<567:downloadable_slug>')"
+    )
+    referrer_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name='referral_shortlinks',
+        help_text="User who referred this link (for affiliate tracking)"
+    )
+    purpose = models.TextField(
+        max_length=500,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Internal description of what this link is used for"
+    )
+    notes = models.TextField(
+        max_length=1000,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Internal notes about this short link"
+    )
+
     lastclick_at = models.DateTimeField(
         blank=True, null=True, default=None, help_text="Last time a click was registered for this link"
     )

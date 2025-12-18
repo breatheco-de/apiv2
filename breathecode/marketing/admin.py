@@ -440,8 +440,8 @@ class AutomationAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 
 @admin.register(ShortLink)
 class ShortLinkAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    search_fields = ["slug", "destination"]
-    list_display = ("id", "slug", "hits", "current_status", "active", "lastclick_at", "link")
+    search_fields = ["slug", "destination", "purpose", "notes", "event", "course", "downloadable"]
+    list_display = ("id", "slug", "hits", "current_status", "active", "event", "course", "lastclick_at", "link")
     list_filter = ["destination_status", "active"]
     actions = ["export_as_csv"]
 
