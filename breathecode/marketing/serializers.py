@@ -724,6 +724,65 @@ class TagListSerializer(serializers.ListSerializer):
         return result
 
 
+class POSTTagSerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=True, max_length=150)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = Tag
+        fields = ("slug", "tag_type", "description", "automation")
+        extra_kwargs = {
+            "tag_type": {"required": False, "allow_null": True},
+            "automation": {"required": False, "allow_null": True},
+        }
+
+    def create(self, validated_data):
+        from breathecode.services.activecampaign import ActiveCampaign
+
+        academy_id = self.context.get("academy")
+        if not academy_id:
+            raise ValidationException("Academy ID is required", slug="missing-academy-id")
+
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+        if ac_academy is None:
+            raise ValidationException(
+                f"ActiveCampaign Academy not found for academy {academy_id}",
+                slug="academy-not-found",
+            )
+
+        slug = validated_data.pop("slug")
+        description = validated_data.pop("description", "")
+
+        # Check if tag already exists
+        existing_tag = Tag.objects.filter(slug=slug, ac_academy=ac_academy).first()
+        if existing_tag:
+            raise ValidationException(
+                f"Tag with slug '{slug}' already exists for this academy", slug="tag-already-exists"
+            )
+
+        # Create tag in ActiveCampaign
+        client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+        try:
+            ac_data = client.create_tag(slug, description=description or "")
+        except Exception as e:
+            raise ValidationException(
+                f"Failed to create tag in ActiveCampaign: {str(e)}", slug="activecampaign-error"
+            )
+
+        # Create local Tag object
+        tag = Tag(
+            slug=ac_data["tag"],
+            acp_id=ac_data["id"],
+            ac_academy=ac_academy,
+            subscribers=0,
+            description=description,
+            **validated_data,
+        )
+        tag.save()
+
+        return tag
+
+
 class PUTTagSerializer(serializers.ModelSerializer):
 
     class Meta:

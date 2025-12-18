@@ -78,6 +78,7 @@ from .serializers import (
     LeadgenAppSmallSerializer,
     PostFormEntrySerializer,
     PostFormEntrySerializerV2,
+    POSTTagSerializer,
     PUTAutomationSerializer,
     PUTTagSerializer,
     ShortLinkSerializer,
@@ -518,6 +519,15 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
         items = handler.queryset(items)
         serializer = TagSmallSerializer(items, many=True)
         return handler.response(serializer.data)
+
+    @capable_of("crud_tag")
+    def post(self, request, academy_id=None):
+        serializer = POSTTagSerializer(data=request.data, context={"request": request, "academy": academy_id})
+        if serializer.is_valid():
+            tag = serializer.save()
+            response_serializer = TagSmallSerializer(tag)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_tag")
     def put(self, request, tag_slug=None, academy_id=None):
