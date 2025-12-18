@@ -20,12 +20,45 @@ from .models import (
     ReviewPlatform,
     Survey,
     SurveyConfiguration,
+    SurveyStudy,
     SurveyResponse,
 )
 from .services.pusher_service import send_survey_event
 from .utils import strings
 
 logger = logging.getLogger(__name__)
+
+
+def _update_stats_for_survey_study(survey_study) -> None:
+    """Recalculate and persist stats for a SurveyStudy (if present)."""
+    if not survey_study:
+        return
+
+    qs = SurveyResponse.objects.filter(survey_study=survey_study)
+    opened_statuses = [
+        SurveyResponse.Status.OPENED,
+        SurveyResponse.Status.PARTIAL,
+        SurveyResponse.Status.ANSWERED,
+    ]
+    stats = {
+        "sent": qs.count(),
+        "opened": qs.filter(Q(opened_at__isnull=False) | Q(status__in=opened_statuses)).count(),
+        "partial_responses": qs.filter(status=SurveyResponse.Status.PARTIAL).count(),
+        "responses": qs.filter(status=SurveyResponse.Status.ANSWERED).count(),
+        "email_opened": qs.filter(email_opened_at__isnull=False).count(),
+        "updated_at": timezone.now().isoformat(),
+    }
+
+    survey_study.stats = stats
+    survey_study.save(update_fields=["stats", "updated_at"])
+
+
+def update_survey_stats(survey_response: SurveyResponse) -> None:
+    """Update stats for related SurveyStudy (SurveyConfiguration does not store stats)."""
+    if not survey_response:
+        return
+
+    _update_stats_for_survey_study(getattr(survey_response, "survey_study", None))
 
 
 def send_cohort_survey_group(survey=None, cohort=None):
@@ -393,6 +426,29 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
     # Apply filters for each survey configuration
     filtered_out = 0
     for survey_config in survey_configs:
+        # Study gate: only trigger realtime surveys when there is an active SurveyStudy that includes this config.
+        utc_now = timezone.now()
+        active_study = (
+            SurveyStudy.objects.filter(
+                academy=academy,
+                survey_configurations=survey_config,
+            )
+            .filter(Q(starts_at__lte=utc_now) | Q(starts_at__isnull=True))
+            .filter(Q(ends_at__gte=utc_now) | Q(ends_at__isnull=True))
+            .order_by("-starts_at", "-id")
+            .first()
+        )
+
+        if not active_study:
+            logger.info(
+                "[survey-trigger] skip: no active study | user_id=%s survey_config_id=%s trigger_type=%s academy_id=%s",
+                user.id,
+                survey_config.id,
+                trigger_type,
+                academy.id,
+            )
+            continue
+
         # Apply cohort filter for course completion
         if trigger_type == SurveyConfiguration.TriggerType.COURSE_COMPLETION:
             cohort = context.get("cohort")
@@ -430,10 +486,10 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
                 # If asset_slugs filter is empty, apply to all learnpacks
 
         # Check if user already has a response for this config+trigger (avoid re-asking the same survey).
-        # For course completion, dedupe per cohort.
         dedupe_query = SurveyResponse.objects.filter(
             survey_config=survey_config,
             user=user,
+            survey_study=active_study,
             trigger_context__trigger_type=trigger_type,
         ).exclude(status=SurveyResponse.Status.EXPIRED)
 
@@ -459,12 +515,13 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
             continue
 
         # Create survey response
-        survey_response = create_survey_response(survey_config, user, context)
+        survey_response = create_survey_response(survey_config, user, context, survey_study=active_study)
         if survey_response:
             logger.info(
-                "[survey-trigger] created | user_id=%s survey_config_id=%s survey_response_id=%s",
+                "[survey-trigger] created | user_id=%s survey_config_id=%s survey_study_id=%s survey_response_id=%s",
                 user.id,
                 survey_config.id,
+                active_study.id,
                 survey_response.id,
             )
             return survey_response
@@ -480,7 +537,9 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
     return None
 
 
-def create_survey_response(survey_config: SurveyConfiguration, user: User, context: dict):
+def create_survey_response(
+    survey_config: SurveyConfiguration, user: User, context: dict, survey_study: SurveyStudy | None = None
+):
     """
     Create a survey response and send Pusher event.
 
@@ -542,10 +601,13 @@ def create_survey_response(survey_config: SurveyConfiguration, user: User, conte
         }
 
         # Create survey response
+        questions_snapshot = survey_config.questions
         survey_response = SurveyResponse.objects.create(
             survey_config=survey_config,
+            survey_study=survey_study,
             user=user,
             trigger_context=trigger_context,
+            questions_snapshot=questions_snapshot,
             status=SurveyResponse.Status.PENDING,
         )
 
@@ -556,8 +618,14 @@ def create_survey_response(survey_config: SurveyConfiguration, user: User, conte
             survey_config.id,
         )
 
+        # Update aggregated stats (best-effort)
+        try:
+            update_survey_stats(survey_response)
+        except Exception:
+            logger.exception("[survey-response] unable to update stats after create")
+
         # Send Pusher event
-        questions = survey_config.questions.get("questions", [])
+        questions = (questions_snapshot or {}).get("questions", [])
         send_survey_event(user.id, survey_response.id, questions, trigger_context)
 
         logger.info(
@@ -663,6 +731,11 @@ def save_survey_answers(response_id: int, answers: dict) -> SurveyResponse:
     from breathecode.feedback.signals import survey_response_answered
 
     survey_response_answered.send(sender=SurveyResponse, instance=survey_response)
+
+    try:
+        update_survey_stats(survey_response)
+    except Exception:
+        logger.exception("[survey-response] unable to update stats after answered")
 
     logger.info(f"Survey response {survey_response.id} answered by user {survey_response.user.id}")
     return survey_response
