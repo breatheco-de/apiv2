@@ -31,7 +31,7 @@ import breathecode.activity.tasks as tasks_activity
 import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
-from breathecode.authenticate.models import Profile, ProfileAcademy
+from breathecode.authenticate.models import ACTIVE, Profile, ProfileAcademy
 from breathecode.services.daily.client import DailyClient
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
@@ -1234,6 +1234,18 @@ class AcademyEventHostView(APIView):
                     en=f"User {user_id} is not a staff or student in this academy",
                     es=f"El usuario {user_id} no es personal o estudiante de esta academia",
                     slug="user-not-in-academy",
+                ),
+                code=403,
+            )
+
+        # Verify the ProfileAcademy is ACTIVE or the user is a zombie (inactive)
+        if profile_academy.status != ACTIVE and user.is_active:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Staff or student has not accepted the invitation to the academy and it's an active user in other academies",
+                    es=f"El personal o estudiante no ha aceptado la invitación a la academia y es un usuario activo en otras academias",
+                    slug="user-not-accepted-invitation",
                 ),
                 code=403,
             )
