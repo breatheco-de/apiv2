@@ -269,6 +269,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     marketing_email = serpy.Field()
     street_address = serpy.Field()
     website_url = serpy.Field()
+    short_url = serpy.Field()
     marketing_phone = serpy.Field()
     twitter_handle = serpy.Field()
     facebook_handle = serpy.Field()
@@ -944,6 +945,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
             "logo_url",
             "icon_url",
             "website_url",
+            "short_url",
             "white_label_url",
             "street_address",
             "marketing_email",
@@ -1719,6 +1721,7 @@ class AcademyReportSerializer(serpy.Serializer):
     slug = serpy.Field()
     logo_url = serpy.Field()
     website_url = serpy.Field()
+    short_url = serpy.Field()
     street_address = serpy.Field()
     latitude = serpy.Field()
     longitude = serpy.Field()
