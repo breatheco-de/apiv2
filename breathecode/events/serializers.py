@@ -13,12 +13,13 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy
 from breathecode.admissions.serializers import UserPublicSerializer
 from breathecode.authenticate.models import Profile, ProfileTranslation
+from breathecode.events import actions as events_actions
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.registry.models import Asset
 from breathecode.registry.serializers import AssetSmallSerializer
 from breathecode.utils import serpy
 
-from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization
+from .models import Event, EventbriteWebhook, EventCheckin, EventType, LiveClass, Organization, Venue
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class EventTypeSmallSerializer(serpy.Serializer):
 
 class EventTypeSerializer(EventTypeSmallSerializer):
     description = serpy.Field()
+    icon_url = serpy.Field()
     lang = serpy.Field()
     academy = AcademySerializer(required=False)
 
@@ -393,7 +395,21 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if ("tags" not in data and self.instance.tags == "") or ("tags" in data and data["tags"] == ""):
+        # Get status from data or instance, default to DRAFT if not provided
+        status = data.get("status")
+        if status is None:
+            if self.instance:
+                status = self.instance.status
+            else:
+                status = "DRAFT"  # Default status for new events
+
+        # Get tags from data or instance
+        tags = data.get("tags")
+        if tags is None and self.instance:
+            tags = self.instance.tags
+
+        # Validate that tags are not empty (only if status is not DRAFT)
+        if status != "DRAFT" and (not tags or tags == ""):
             raise ValidationException(
                 translation(
                     lang,
@@ -403,7 +419,9 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
+        # Validate marketing tags if tags are provided (even for DRAFT)
+        if tags and tags != "":
+            validate_marketing_tags(tags, academy, types=["DISCOVERY"], lang=lang)
 
         title = data.get("title")
         slug = data.get("slug")
@@ -424,8 +442,10 @@ class EventSerializer(serializers.ModelSerializer):
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
         allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
+        # Only validate live_stream_url if status is not DRAFT
         if (
-            online_event == True
+            status != "DRAFT"
+            and online_event == True
             and (live_stream_url is None or live_stream_url == "")
             and not allow_missing_live_stream_url
         ):
@@ -449,14 +469,16 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if "event_type" not in data or data["event_type"] is None:
+        # Only require event_type if status is not DRAFT
+        if status != "DRAFT" and ("event_type" not in data or data["event_type"] is None):
             raise ValidationException(
                 translation(
                     lang, en="Missing event type", es="Debes especificar un tipo de evento", slug="no-event-type"
                 )
             )
 
-        if "lang" in data and data["event_type"].lang != data.get("lang", "en"):
+        # Only validate event_type.lang if event_type exists and lang is provided
+        if "event_type" in data and data["event_type"] and "lang" in data and data["event_type"].lang != data.get("lang", "en"):
             raise ValidationException(
                 translation(
                     lang,
@@ -466,7 +488,7 @@ class EventSerializer(serializers.ModelSerializer):
                 )
             )
 
-        if "event_type" in data:
+        if "event_type" in data and data["event_type"]:
             data["lang"] = data["event_type"].lang
 
         if not self.instance:
@@ -517,8 +539,14 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
+        # Get status from data or instance (for PUT, instance should always exist)
+        status = data.get("status")
+        if status is None and self.instance:
+            status = self.instance.status
+
         if "tags" in data:
-            if data["tags"] == "":
+            # Only require tags if status is not DRAFT
+            if data["tags"] == "" and status and status != "DRAFT":
                 raise ValidationException(
                     translation(
                         lang,
@@ -528,7 +556,9 @@ class EventPUTSerializer(serializers.ModelSerializer):
                     )
                 )
 
-            validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
+            # Validate marketing tags if tags are provided (even for DRAFT)
+            if data["tags"] and data["tags"] != "":
+                validate_marketing_tags(data["tags"], academy, types=["DISCOVERY"], lang=lang)
 
         title = data.get("title")
         slug = data.get("slug")
@@ -553,8 +583,10 @@ class EventPUTSerializer(serializers.ModelSerializer):
         online_event = data.get("online_event")
         live_stream_url = data.get("live_stream_url")
         allow_missing_live_stream_url = self.context.get("allow_missing_live_stream_url", False)
+        # Only validate live_stream_url if status is not DRAFT
         if (
-            online_event == True
+            status != "DRAFT"
+            and online_event == True
             and (live_stream_url is None or live_stream_url == "")
             and (self.instance.live_stream_url is None or self.instance.live_stream_url == "")
             and not allow_missing_live_stream_url
@@ -579,15 +611,17 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
-        event_type = data["event_type"] if "event_type" in data else self.instance.event_type
-        if not event_type:
+        event_type = data["event_type"] if "event_type" in data else (self.instance.event_type if self.instance else None)
+        # Only require event_type if status is not DRAFT
+        if status != "DRAFT" and not event_type:
             raise ValidationException(
                 translation(
                     lang, en="Missing event type", es="Debes especificar un tipo de evento", slug="no-event-type"
                 )
             )
 
-        if "lang" in data and event_type.lang != data["lang"]:
+        # Only validate event_type.lang if event_type exists and lang is provided
+        if event_type and "lang" in data and event_type.lang != data["lang"]:
             raise ValidationException(
                 translation(
                     lang,
@@ -597,7 +631,9 @@ class EventPUTSerializer(serializers.ModelSerializer):
                 )
             )
 
-        data["lang"] = event_type.lang
+        # Only set lang from event_type if event_type exists
+        if event_type:
+            data["lang"] = event_type.lang
 
         if not self.instance:
             data["slug"] = slug
@@ -620,6 +656,42 @@ class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
         exclude = ()
+
+
+class PostVenueSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Venue
+        fields = [
+            "title",
+            "street_address",
+            "country",
+            "city",
+            "latitude",
+            "longitude",
+            "state",
+            "zip_code",
+            "status",
+        ]
+        extra_kwargs = {
+            "title": {"required": True},
+            "status": {"required": False},
+        }
+
+    def validate(self, data):
+        academy_id = self.context.get("academy_id")
+        if academy_id:
+            data["academy"] = Academy.objects.filter(id=academy_id).first()
+            if not data["academy"]:
+                raise ValidationException(
+                    translation(
+                        self.context.get("lang", "en"),
+                        en=f"Academy {academy_id} not found",
+                        es=f"Academia {academy_id} no encontrada",
+                        slug="academy-not-found",
+                    )
+                )
+        return data
 
 
 class EventbriteWebhookSerializer(serializers.ModelSerializer):

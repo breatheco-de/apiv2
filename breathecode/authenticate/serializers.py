@@ -358,6 +358,7 @@ class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     academy = AcademyTinySerializer(required=False)
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
+    event_slug = serpy.Field(required=False)
 
 
 class UserInviteSerializer(UserInviteNoUrlSerializer):

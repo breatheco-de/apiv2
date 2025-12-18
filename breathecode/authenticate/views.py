@@ -2489,6 +2489,9 @@ def pick_password(request, token):
 
         else:
             user.set_password(password1)
+            # Activate zombie user if they were inactive
+            if not user.is_active:
+                user.is_active = True
             user.save()
 
             # destroy the token

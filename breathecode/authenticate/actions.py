@@ -1094,6 +1094,13 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if user is None:
         user = User(email=invite.email, first_name=first_name, last_name=last_name, username=invite.email)
         user.save()
+    else:
+        # If user exists but is inactive (zombie), activate them
+        if not user.is_active:
+            user.is_active = True
+            user.first_name = first_name or user.first_name
+            user.last_name = last_name or user.last_name
+            user.save()
 
     # Only set/update the password if it's provided
     if password1:

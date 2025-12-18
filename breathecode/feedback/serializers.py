@@ -572,12 +572,18 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+<<<<<<< HEAD
         # academy and created_by are set by the view based on the Academy header and the authenticated user
+=======
+>>>>>>> 869570bb0403b1cd2222935b0b145244ad91839d
         read_only_fields = ["id", "created_at", "updated_at", "created_by", "academy"]
 
         extra_kwargs = {
             "academy": {"required": False},
+<<<<<<< HEAD
             "trigger_type": {"required": False, "allow_null": True},
+=======
+>>>>>>> 869570bb0403b1cd2222935b0b145244ad91839d
         }
 
     def validate_questions(self, value):
