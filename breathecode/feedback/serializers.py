@@ -578,6 +578,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "academy": {"required": False},
             "trigger_type": {"required": False, "allow_null": True},
+            "questions": {"required": False},
         }
 
     def validate_questions(self, value):
