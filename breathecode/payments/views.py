@@ -309,6 +309,12 @@ class AcademyPlanView(APIView):
         if plan.currency:
             data["currency"] = plan.currency.id
 
+        # Include slug from URL or existing plan to satisfy serializer requirement
+        if plan_slug:
+            data["slug"] = plan_slug
+        elif plan.slug:
+            data["slug"] = plan.slug
+
         for key in request.data:
             if key in ["owner", "owner_id"]:
                 continue
