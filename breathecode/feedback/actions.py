@@ -538,7 +538,11 @@ def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
 
 
 def create_survey_response(
-    survey_config: SurveyConfiguration, user: User, context: dict, survey_study: SurveyStudy | None = None
+    survey_config: SurveyConfiguration,
+    user: User,
+    context: dict,
+    survey_study: SurveyStudy | None = None,
+    send_pusher: bool = True,
 ):
     """
     Create a survey response and send Pusher event.
@@ -624,16 +628,17 @@ def create_survey_response(
         except Exception:
             logger.exception("[survey-response] unable to update stats after create")
 
-        # Send Pusher event
-        questions = (questions_snapshot or {}).get("questions", [])
-        send_survey_event(user.id, survey_response.id, questions, trigger_context)
+        if send_pusher:
+            # Send Pusher event
+            questions = (questions_snapshot or {}).get("questions", [])
+            send_survey_event(user.id, survey_response.id, questions, trigger_context)
 
-        logger.info(
-            "[survey-response] pusher sent | user_id=%s survey_response_id=%s questions=%s",
-            user.id,
-            survey_response.id,
-            len(questions) if isinstance(questions, list) else None,
-        )
+            logger.info(
+                "[survey-response] pusher sent | user_id=%s survey_response_id=%s questions=%s",
+                user.id,
+                survey_response.id,
+                len(questions) if isinstance(questions, list) else None,
+            )
         return survey_response
 
     except Exception as e:

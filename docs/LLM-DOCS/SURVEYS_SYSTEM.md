@@ -55,9 +55,15 @@ Defines when and how surveys are triggered.
 - `academy`: Academy this survey applies to
 - `cohorts`: ManyToMany - If empty, applies to all cohorts. If set, only to specified cohorts
 - `asset_slugs`: JSON array - If empty, applies to all learnpacks. If set, only to specified learnpacks
-- `stats`: JSON aggregated stats for this configuration (sent/opened/partial/responses/email_opened)
 - `created_by`: User who created the configuration
 - `created_at`, `updated_at`: Timestamps
+
+**Important behavior (template vs inline questions):**
+- If `template != null`, then `questions` are sourced from the template and **must not be edited** via API (or Admin) to avoid divergence.
+- If `template == null`, then `questions` must be provided.
+
+**Stats:**
+- Aggregated stats are stored on `SurveyStudy.stats` (not on `SurveyConfiguration`).
 
 **Example:**
 ```json
@@ -321,6 +327,17 @@ And authentication is typically:
 }
 ```
 
+**Alternative: create using a template (no inline questions):**
+```json
+{
+  "trigger_type": "course_completed",
+  "template": {{template_id}},
+  "is_active": true,
+  "asset_slugs": [],
+  "cohorts": [{{cohort_id}}]
+}
+```
+
 #### List Survey Configurations
 
 **Method:** `GET`
@@ -366,6 +383,9 @@ And authentication is typically:
 
 First do a GET to copy the existing structure, then PUT the updated `questions`.
 
+**Important:**
+- If the configuration has `template != null`, you **cannot** send `"questions"` in the PUT (the API should reject it).
+
 ```json
 {
   "questions": {
@@ -387,18 +407,6 @@ First do a GET to copy the existing structure, then PUT the updated `questions`.
   }
 }
 ```
-
-#### Delete Survey Configuration
-
-**Method:** `DELETE`
-
-**URL:** `{{base_url}}/v1/feedback/academy/survey/configuration/{{configuration_id}}`
-
-**Permissions:** `crud_survey`
-
-**Headers:**
-- `Authorization: Token {{token}}`
-- `Academy: {{academy_id}}`
 
 #### List Survey Responses (Staff) with Filters
 
@@ -439,6 +447,65 @@ This endpoint is meant for staff/admin analytics and auditing.
 **Headers:**
 - `Authorization: Token {{token}}`
 - `Academy: {{academy_id}}`
+
+#### SurveyQuestionTemplate CRUD (Staff)
+
+Templates are global, but still require academy-scoped capability checks via the `Academy` header.
+
+- **List**: `GET {{base_url}}/v1/feedback/academy/survey/question_template`
+- **Retrieve**: `GET {{base_url}}/v1/feedback/academy/survey/question_template/{{template_id}}`
+- **Create**: `POST {{base_url}}/v1/feedback/academy/survey/question_template`
+- **Update (partial)**: `PUT {{base_url}}/v1/feedback/academy/survey/question_template/{{template_id}}`
+- **Delete**: `DELETE {{base_url}}/v1/feedback/academy/survey/question_template/{{template_id}}`
+
+Headers (all above):
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+- `Content-Type: application/json` (for POST/PUT)
+
+#### SurveyStudy CRUD + bulk email sending (Staff)
+
+- **List**: `GET {{base_url}}/v1/feedback/academy/survey/study`
+- **Retrieve**: `GET {{base_url}}/v1/feedback/academy/survey/study/{{study_id}}`
+- **Create**: `POST {{base_url}}/v1/feedback/academy/survey/study`
+- **Update (partial)**: `PUT {{base_url}}/v1/feedback/academy/survey/study/{{study_id}}`
+- **Delete**: `DELETE {{base_url}}/v1/feedback/academy/survey/study/{{study_id}}`
+
+Headers (all above):
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+- `Content-Type: application/json` (for POST/PUT)
+
+**Bulk send (study → list of users)**:
+
+- **Method**: `POST`
+- **URL**: `{{base_url}}/v1/feedback/academy/survey/study/{{study_id}}/send_emails`
+- **Permissions**: `crud_survey`
+- **Body**:
+
+```json
+{
+  "user_ids": [8301, 8302, 8303],
+  "callback": "https://your-frontend.com/after-survey",
+  "dry_run": false
+}
+```
+
+**Bulk send (study → all students in a cohort)**:
+
+```json
+{
+  "cohort_id": {{cohort_id}},
+  "callback": "https://your-frontend.com/after-survey",
+  "dry_run": false
+}
+```
+
+Behavior:
+- Creates **one `SurveyResponse` per (study, user)** if missing.
+- If the study has multiple configs, assigns users **round-robin** across them.
+- Enqueues `send_survey_response_email` which sends an email containing the `SurveyResponse.token` link.
+- If `callback` is provided, it is stored in `SurveyResponse.trigger_context.callback` and appended to the email link as `?callback=...`.
 
 ### User Endpoints
 

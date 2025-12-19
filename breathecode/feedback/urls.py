@@ -64,6 +64,7 @@ from .views import (
     SurveyResponsePartialView,
     SurveyQuestionTemplateView,
     SurveyStudyView,
+    SurveyStudySendEmailsView,
     get_review_platform,
     get_reviews,
     get_survey,
@@ -145,4 +146,9 @@ urlpatterns = [
     ),
     path("academy/survey/study", SurveyStudyView.as_view(), name="academy_survey_study"),
     path("academy/survey/study/<int:study_id>", SurveyStudyView.as_view(), name="academy_survey_study_id"),
+    path(
+        "academy/survey/study/<int:study_id>/send_emails",
+        SurveyStudySendEmailsView.as_view(),
+        name="academy_survey_study_send_emails",
+    ),
 ]
