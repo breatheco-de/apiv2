@@ -1051,13 +1051,30 @@ def sync_tags(ac_academy):
         tags = tags + response["tags"]
 
     for tag in tags:
-        t = Tag.objects.filter(slug=tag["tag"], ac_academy=ac_academy).first()
-        if t is None:
+        # Look for existing tag by slug - check both ac_academy relationship AND direct academy
+        # This handles tags created locally without ActiveCampaign
+        existing_tag = Tag.objects.filter(
+            slug=tag["tag"]
+        ).filter(
+            Q(ac_academy=ac_academy) | 
+            Q(academy=ac_academy.academy)
+        ).first()
+        
+        if existing_tag is None:
+            # Tag doesn't exist locally - create new one
             t = Tag(
                 slug=tag["tag"],
                 acp_id=tag["id"],
                 ac_academy=ac_academy,
+                academy=ac_academy.academy,  # Set direct academy relationship too
             )
+        else:
+            # Tag exists locally - update it with ActiveCampaign data
+            t = existing_tag
+            t.acp_id = tag["id"]
+            t.ac_academy = ac_academy  # Ensure ac_academy is set
+            if not t.academy:
+                t.academy = ac_academy.academy  # Set academy if not already set
 
         t.subscribers = tag["subscriber_count"]
         t.save()

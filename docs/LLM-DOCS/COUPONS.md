@@ -25,90 +25,66 @@ The **Coupon** system in the BreatheCode payments app enables flexible discount 
 
 ---
 
-## Models
+## Coupon Data Structure
 
-### Coupon
+### Coupon Fields
 
-The core model representing a discount or referral coupon.
+**Identification:**
+- `slug` (string, required): Unique identifier (e.g., "new-year-50")
 
-```python
-class Coupon(models.Model):
-    # Identification
-    slug = models.SlugField()  # Unique identifier (e.g., "new-year-50")
-    
-    # Discount Configuration
-    discount_type = models.CharField(choices=Discount)  # PERCENT_OFF, FIXED_PRICE, NO_DISCOUNT, HAGGLING
-    discount_value = models.FloatField()  # Percentage (0-1) or fixed amount
-    
-    # Referral Configuration
-    referral_type = models.CharField(choices=Referral)  # NO_REFERRAL, PERCENTAGE, FIXED_PRICE
-    referral_value = models.FloatField(default=0)  # Commission amount for seller
-    
-    # Behavior
-    auto = models.BooleanField(default=False)  # Automatically apply during checkout
-    how_many_offers = models.IntegerField(default=-1)  # -1 = unlimited, 0 = disabled, >0 = limit
-    
-    # Relationships
-    seller = models.ForeignKey(Seller, null=True)  # Referral seller
-    allowed_user = models.ForeignKey(User, null=True)  # User restriction
-    referred_buyer = models.ForeignKey(User, null=True)  # Buyer who activated reward
-    plans = models.ManyToManyField(Plan, blank=True)  # Plan restrictions
-    
-    # Validity
-    offered_at = models.DateTimeField(null=True)  # When offer becomes available
-    expires_at = models.DateTimeField(null=True)  # When offer expires
-    
-    # Metadata
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-```
+**Discount Configuration:**
+- `discount_type` (string, required): `PERCENT_OFF`, `FIXED_PRICE`, `NO_DISCOUNT`, or `HAGGLING`
+- `discount_value` (number, required): 
+  - For `PERCENT_OFF`: Percentage as decimal (0-1, e.g., 0.5 = 50% off)
+  - For `FIXED_PRICE`: Absolute discount amount
 
-**Discount Types:**
+**Referral Configuration:**
+- `referral_type` (string, required): `NO_REFERRAL`, `PERCENTAGE`, or `FIXED_PRICE`
+- `referral_value` (number, default: 0): Commission amount for seller
+
+**Behavior:**
+- `auto` (boolean, default: false): Automatically apply during checkout
+- `how_many_offers` (integer, default: -1): 
+  - `-1` = unlimited uses
+  - `0` = disabled (nobody can use)
+  - `>0` = maximum number of uses
+
+**Relationships:**
+- `seller` (integer, optional): Seller ID for referral coupons
+- `allowed_user` (integer, optional): User ID restriction
+- `referred_buyer` (integer, optional): Buyer who activated reward
+- `plans` (array of integers, optional): Plan IDs this coupon applies to
+
+**Validity:**
+- `offered_at` (datetime, optional): When offer becomes available
+- `expires_at` (datetime, optional): When offer expires
+
+**Metadata:**
+- `created_at` (datetime, read-only): Creation timestamp
+- `updated_at` (datetime, read-only): Last update timestamp
+
+### Discount Types
+
 - `PERCENT_OFF`: Percentage discount (discount_value is 0-1, e.g., 0.5 = 50% off)
 - `FIXED_PRICE`: Fixed price discount (discount_value is absolute amount)
 - `NO_DISCOUNT`: No discount applied
 - `HAGGLING`: Special haggling type
 
-**Referral Types:**
+### Referral Types
+
 - `NO_REFERRAL`: Regular coupon, no seller commission
 - `PERCENTAGE`: Seller receives percentage commission
 - `FIXED_PRICE`: Seller receives fixed commission amount
 
-**Key Behaviors:**
-- Slug uniqueness validated (no duplicate active coupons)
-- Auto-updates `offered_at` when `how_many_offers` changes
-- Validates discount/referral value consistency
-- Prevents auto-apply with NO_DISCOUNT type
+### Validation Rules
 
-**Validation Rules:**
 - `discount_value` must be positive
 - `referral_value` must be positive
 - If `referral_type != NO_REFERRAL`, `referral_value` must be set
 - If `referral_type == NO_REFERRAL`, `referral_value` must be 0
 - If `auto == True`, `discount_type` cannot be `NO_DISCOUNT`
 - If `referral_type != NO_REFERRAL`, `plans` should be empty (applies to all plans)
-
-**Static Method:**
-```python
-Coupon.generate_coupon_key(length=8, prefix=None)
-```
-Generates a unique, readable coupon slug using ambiguity-free characters.
-
-### Seller
-
-Represents a referral partner who can earn commissions.
-
-```python
-class Seller(models.Model):
-    name = models.CharField(max_length=100)
-    user = models.ForeignKey(User, null=True)
-    type = models.CharField(choices=Partner)  # INDIVIDUAL, COMPANY
-    is_active = models.BooleanField(default=True)
-```
-
-**Partner Types:**
-- `INDIVIDUAL`: Individual referral partner
-- `COMPANY`: Company referral partner
+- Slug must be unique (no duplicate active coupons)
 
 ---
 
@@ -281,68 +257,45 @@ class Seller(models.Model):
 
 ---
 
-## Actions
+## Coupon Validation Logic
 
-Located in `actions.py`, these functions encapsulate core coupon business logic.
+The API validates coupons based on the following criteria:
 
-### `get_available_coupons(plan, coupons=None, user=None, only_sent_coupons=False)`
+### Validation Rules
 
-Validates and filters coupons for a specific plan.
+1. **Expiration Check**: Coupon must not be expired (`expires_at` is None or in future)
+2. **Offer Date Check**: Coupon must be available (`offered_at` is None or in past)
+3. **Usage Limits**: Coupon must have remaining uses (`how_many_offers` > 0 or -1 for unlimited)
+4. **Plan Restrictions**:
+   - If coupon has plans, the specified plan must be in the list
+   - If coupon has no plans, it's global and applies to all plans
+5. **Seller Exclusion**: User cannot use their own referral coupons
+6. **User Restrictions**: If `allowed_user` is set, only that user can use the coupon
+7. **Referral Program Exclusions**: Plans with `exclude_from_referral_program=True` cannot use referral coupons
 
-**Parameters:**
-- `plan`: Plan instance
-- `coupons`: Optional list of coupon slugs to validate
-- `user`: Optional user for ownership/restriction checks
-- `only_sent_coupons`: If True, only return coupons that were sent to users
+### Discount Calculation
 
-**Process:**
-1. Filters by expiration (`expires_at` is None or in future)
-2. Filters by offer date (`offered_at` is None or in past)
-3. Checks usage limits (`how_many_offers`)
-4. Validates plan restrictions:
-   - If coupon has plans, plan must be in the list
-   - If coupon has no plans, it's global (applies to all)
-5. Excludes coupons where user is the seller
-6. Validates user restrictions (`allowed_user`)
-7. Validates referral program exclusions
+When coupons are applied to a price:
 
-**Returns**: List of valid `Coupon` objects
+1. **Percentage Discounts**: Applied first (cumulative)
+   - Formula: `price = price * (1 - discount_value)`
+   - Example: $100 with 20% off = $80
 
-### `get_discounted_price(price, coupons)`
+2. **Fixed Price Discounts**: Applied after percentage discounts
+   - Formula: `price = price - discount_value`
+   - Example: $80 with $25 off = $55
 
-Calculates final price after applying coupons.
+3. **Price Floor**: Final price cannot go below $0
 
-**Process:**
-1. Filters coupons eligible for the plan
-2. Applies discounts in order:
-   - Percentage discounts applied first
-   - Fixed price discounts applied after
-3. Ensures price doesn't go below 0
+### Multiple Coupons
 
-**Returns**: Final discounted price (float)
+The system supports applying multiple coupons (if `max_coupons_allowed() > 1`). Default is 1 coupon per purchase.
 
-**Example:**
-```python
-price = 100.0
-coupons = [Coupon(discount_type="PERCENT_OFF", discount_value=0.2)]  # 20% off
-final_price = get_discounted_price(price, coupons)  # 80.0
-```
-
-### `get_coupons_for_plan(plan, coupons)`
-
-Filters coupons that are eligible for a given plan.
-
-**Rules:**
-- If `coupon.plans` is empty → global coupon, applies to all plans
-- If `coupon.plans` is not empty → applies only if plan is in the list
-
-**Returns**: List of eligible coupons
-
-### `max_coupons_allowed()`
-
-Returns the maximum number of coupons that can be applied to a single purchase.
-
-**Default**: 1 (can be configured via environment or settings)
+**Example Calculation:**
+- Original: $100
+- Coupon 1 (10% off): $90
+- Coupon 2 ($25 off): $65
+- Final: $65
 
 ---
 
@@ -389,9 +342,7 @@ Returns the maximum number of coupons that can be applied to a single purchase.
 
 ### Percentage Discount
 
-```python
-discounted_price = original_price * (1 - discount_value)
-```
+**Formula**: `discounted_price = original_price * (1 - discount_value)`
 
 **Example:**
 - Original: $100
@@ -400,9 +351,7 @@ discounted_price = original_price * (1 - discount_value)
 
 ### Fixed Price Discount
 
-```python
-discounted_price = original_price - discount_value
-```
+**Formula**: `discounted_price = original_price - discount_value`
 
 **Example:**
 - Original: $100
@@ -445,14 +394,12 @@ When multiple coupons are applied:
 ### Commission Calculation
 
 **Percentage Commission:**
-```python
-commission = purchase_amount * referral_value
-```
+- Formula: `commission = purchase_amount * referral_value`
+- Example: $100 purchase with 10% commission = $10 commission
 
 **Fixed Commission:**
-```python
-commission = referral_value
-```
+- Formula: `commission = referral_value`
+- Example: Fixed commission of $25 = $25 commission regardless of purchase amount
 
 ---
 
@@ -528,9 +475,8 @@ If `coupon.plans` has entries:
 - Used for plan-specific promotions
 
 **Example:**
-```python
-coupon.plans.add(plan1, plan2)  # Only works for plan1 and plan2
-```
+- Coupon with `plans: [1, 2]` only works for plans with ID 1 and 2
+- Coupon with `plans: []` works for all plans
 
 ---
 
@@ -559,12 +505,12 @@ When the coupon expires. If `None`, coupon never expires.
 
 ---
 
-## Serializers
+## Response Formats
 
-### Read Serializers (Serpy)
+### Coupon Response Object
 
-**GetCouponSerializer:**
-```python
+**Standard Coupon Response:**
+```json
 {
     "slug": "new-year-50",
     "discount_type": "PERCENT_OFF",
@@ -572,36 +518,38 @@ When the coupon expires. If `None`, coupon never expires.
     "referral_type": "NO_REFERRAL",
     "referral_value": 0.0,
     "auto": true,
-    "allowed_user": {...},  // Optional
+    "allowed_user": {
+        "id": 123,
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@example.com"
+    },
     "offered_at": "2025-02-04T22:04:29Z",
     "expires_at": "2026-10-06T17:52:36Z"
 }
 ```
 
-**GetCouponWithPlansSerializer:**
-Includes `plans` array with plan details.
+**Coupon with Plans:**
+Includes `plans` array with plan details when using endpoints that return plan associations.
 
-### Write Serializers (DRF)
+### Request Payload (POST/PUT)
 
-**CouponSerializer:**
-- Handles ManyToMany `plans` field
-- Validates all coupon fields
-- Supports create and update operations
+**Required Fields:**
+- `slug` (string)
+- `discount_type` (string)
+- `discount_value` (number)
+- `referral_type` (string)
+- `referral_value` (number)
 
-**Fields:**
-- `slug` (required)
-- `discount_type` (required)
-- `discount_value` (required)
-- `referral_type` (required)
-- `referral_value` (required)
-- `auto` (optional)
-- `how_many_offers` (optional)
-- `plans` (optional, list of plan IDs/slugs)
-- `offered_at` (optional)
-- `expires_at` (optional)
-- `allowed_user` (optional)
-- `seller` (optional)
-- `referred_buyer` (optional)
+**Optional Fields:**
+- `auto` (boolean)
+- `how_many_offers` (integer)
+- `plans` (array of integers or strings - plan IDs or slugs)
+- `offered_at` (datetime string)
+- `expires_at` (datetime string)
+- `allowed_user` (integer - user ID)
+- `seller` (integer - seller ID)
+- `referred_buyer` (integer - user ID)
 
 ---
 
@@ -1211,83 +1159,9 @@ GET /v1/payments/academy/coupon
 
 ---
 
-## Usage Examples
+## Additional API Examples
 
-### Example 1: Create a Percentage Discount Coupon
-
-```python
-from breathecode.payments.models import Coupon, Plan
-
-coupon = Coupon.objects.create(
-    slug="summer-2025",
-    discount_type=Coupon.Discount.PERCENT_OFF,
-    discount_value=0.25,  # 25% off
-    referral_type=Coupon.Referral.NO_REFERRAL,
-    referral_value=0.0,
-    auto=False,
-    how_many_offers=100,  # Limit to 100 uses
-    offered_at=timezone.now(),
-    expires_at=timezone.now() + timedelta(days=90)
-)
-
-# Restrict to specific plans
-plan1 = Plan.objects.get(slug="4geeks-plus-subscription")
-plan2 = Plan.objects.get(slug="4geeks-pro-subscription")
-coupon.plans.add(plan1, plan2)
-```
-
-### Example 2: Create an Auto-Applied Promotional Coupon
-
-```python
-coupon = Coupon.objects.create(
-    slug="new-year-50",
-    discount_type=Coupon.Discount.PERCENT_OFF,
-    discount_value=0.5,  # 50% off
-    referral_type=Coupon.Referral.NO_REFERRAL,
-    referral_value=0.0,
-    auto=True,  # Auto-apply during checkout
-    how_many_offers=-1,  # Unlimited
-    expires_at=timezone.now() + timedelta(days=30)
-)
-# No plans restriction = applies to all plans
-```
-
-### Example 3: Create a Referral Coupon
-
-```python
-from breathecode.payments.models import Seller
-
-seller = Seller.objects.get(user=user)
-coupon = Coupon.objects.create(
-    slug=f"referral-{user.id}",
-    discount_type=Coupon.Discount.PERCENT_OFF,
-    discount_value=0.1,  # 10% discount for buyer
-    referral_type=Coupon.Referral.PERCENTAGE,
-    referral_value=0.1,  # 10% commission for seller
-    auto=False,
-    seller=seller,
-    how_many_offers=-1
-)
-# No plans restriction = applies to all plans (unless plan excludes referrals)
-```
-
-### Example 4: Create a User-Specific Reward Coupon
-
-```python
-user = User.objects.get(email="student@example.com")
-coupon = Coupon.objects.create(
-    slug="reward-student-123",
-    discount_type=Coupon.Discount.FIXED_PRICE,
-    discount_value=50.0,  # $50 off
-    referral_type=Coupon.Referral.NO_REFERRAL,
-    referral_value=0.0,
-    allowed_user=user,  # Only this user can use it
-    auto=False,
-    how_many_offers=1  # One-time use
-)
-```
-
-### Example 5: Validate and Apply Coupon via API
+### Example 1: Validate and Apply Coupon
 
 ```bash
 # 1. Validate coupon
@@ -1298,7 +1172,7 @@ curl -X PUT "https://api.4geeks.com/v1/payments/bag/123/coupon?coupons=summer-20
   -H "Authorization: Token abc123"
 ```
 
-### Example 6: Academy Creates Coupon
+### Example 2: Academy Creates Coupon
 
 ```bash
 curl -X POST "https://api.4geeks.com/v1/payments/academy/coupon" \
@@ -1316,25 +1190,23 @@ curl -X POST "https://api.4geeks.com/v1/payments/academy/coupon" \
   }'
 ```
 
-### Example 7: Calculate Discounted Price
+### Example 3: Academy Lists Coupons with Filtering
 
-```python
-from breathecode.payments.actions import get_discounted_price, get_available_coupons
-from breathecode.payments.models import Plan, Coupon
+```bash
+# List all academy coupons
+curl -X GET "https://api.4geeks.com/v1/payments/academy/coupon" \
+  -H "Authorization: Token abc123" \
+  -H "Academy: 1"
 
-plan = Plan.objects.get(slug="4geeks-plus-subscription")
-original_price = 100.0
+# Filter by plan
+curl -X GET "https://api.4geeks.com/v1/payments/academy/coupon?plan=4geeks-plus-subscription" \
+  -H "Authorization: Token abc123" \
+  -H "Academy: 1"
 
-# Get valid coupons
-coupons = get_available_coupons(
-    plan=plan,
-    coupons=["summer-2025"],
-    user=request.user
-)
-
-# Calculate discounted price
-discounted_price = get_discounted_price(original_price, coupons)
-print(f"Original: ${original_price}, Discounted: ${discounted_price}")
+# Search by slug
+curl -X GET "https://api.4geeks.com/v1/payments/academy/coupon?like=summer" \
+  -H "Authorization: Token abc123" \
+  -H "Academy: 1"
 ```
 
 ---
@@ -1368,9 +1240,9 @@ print(f"Original: ${original_price}, Discounted: ${discounted_price}")
 
 ### Performance
 
-1. **Caching**: Coupon validation results can be cached
-2. **Query Optimization**: Use `select_related` for plan lookups
-3. **Batch Operations**: Validate multiple coupons in single query
+1. **Caching**: Coupon validation results can be cached on the client side
+2. **Batch Validation**: Validate multiple coupons in a single API call (comma-separated slugs)
+3. **Efficient Filtering**: Use query parameters to filter coupons server-side
 
 ### Referral Programs
 
@@ -1398,7 +1270,7 @@ print(f"Original: ${original_price}, Discounted: ${discounted_price}")
 **Check:**
 1. Coupon validated successfully?
 2. Coupon added to bag?
-3. `get_discounted_price` called correctly?
+3. Price calculation includes coupons?
 4. Multiple coupons exceeding max allowed?
 
 ### Issue: Auto-Applied Coupon Not Showing
@@ -1477,200 +1349,6 @@ print(f"Original: ${original_price}, Discounted: ${discounted_price}")
    - Usage statistics
    - Revenue impact
    - Conversion tracking
-
----
-
-## Frontend Integration Guide
-
-### React/TypeScript Example
-
-```typescript
-// Coupon validation hook
-const useCouponValidation = () => {
-  const validateCoupon = async (couponCode: string, planSlug: string) => {
-    try {
-      const response = await fetch(
-        `/v1/payments/coupon?coupons=${couponCode}&plan=${planSlug}`
-      );
-      const coupons = await response.json();
-      
-      if (coupons.length === 0) {
-        return {
-          valid: false,
-          error: "This coupon is invalid or doesn't work for this plan."
-        };
-      }
-      
-      return {
-        valid: true,
-        coupon: coupons[0]
-      };
-    } catch (error) {
-      return {
-        valid: false,
-        error: "Failed to validate coupon. Please try again."
-      };
-    }
-  };
-  
-  return { validateCoupon };
-};
-
-// Apply coupon to bag
-const applyCouponToBag = async (
-  bagId: number,
-  couponCode: string,
-  planSlug: string
-) => {
-  const response = await fetch(
-    `/v1/payments/bag/${bagId}/coupon?coupons=${couponCode}&plan=${planSlug}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Token ${userToken}`
-      }
-    }
-  );
-  
-  if (!response.ok) {
-    throw new Error('Failed to apply coupon');
-  }
-  
-  return await response.json();
-};
-
-// Component example
-const CouponInput = ({ bagId, planSlug, onCouponApplied }) => {
-  const [couponCode, setCouponCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const { validateCoupon } = useCouponValidation();
-  
-  const handleApply = async () => {
-    setLoading(true);
-    setError(null);
-    
-    // Step 1: Validate
-    const validation = await validateCoupon(couponCode, planSlug);
-    
-    if (!validation.valid) {
-      setError(validation.error);
-      setLoading(false);
-      return;
-    }
-    
-    // Step 2: Apply to bag
-    try {
-      const bag = await applyCouponToBag(bagId, couponCode, planSlug);
-      onCouponApplied(bag);
-      setCouponCode('');
-    } catch (err) {
-      setError('Failed to apply coupon');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  return (
-    <div>
-      <input
-        value={couponCode}
-        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-        placeholder="Enter coupon code"
-      />
-      <button onClick={handleApply} disabled={loading}>
-        {loading ? 'Applying...' : 'Apply Coupon'}
-      </button>
-      {error && <div className="error">{error}</div>}
-    </div>
-  );
-};
-```
-
-### Vue.js Example
-
-```javascript
-// Composable for coupon management
-export const useCoupons = () => {
-  const validateCoupon = async (code, planSlug) => {
-    const { data } = await $fetch(
-      `/v1/payments/coupon?coupons=${code}&plan=${planSlug}`
-    );
-    return data.length > 0;
-  };
-  
-  const applyCoupon = async (bagId, code, planSlug) => {
-    return await $fetch(
-      `/v1/payments/bag/${bagId}/coupon?coupons=${code}&plan=${planSlug}`,
-      { method: 'PUT' }
-    );
-  };
-  
-  return { validateCoupon, applyCoupon };
-};
-
-// Component
-<template>
-  <div class="coupon-input">
-    <input
-      v-model="couponCode"
-      @keyup.enter="handleApply"
-      placeholder="Coupon code"
-    />
-    <button @click="handleApply" :disabled="loading">
-      Apply
-    </button>
-    <div v-if="error" class="error">{{ error }}</div>
-  </div>
-</template>
-
-<script setup>
-const couponCode = ref('');
-const loading = ref(false);
-const error = ref(null);
-const { validateCoupon, applyCoupon } = useCoupons();
-
-const handleApply = async () => {
-  loading.value = true;
-  error.value = null;
-  
-  const isValid = await validateCoupon(couponCode.value, planSlug.value);
-  if (!isValid) {
-    error.value = "Invalid coupon code";
-    loading.value = false;
-    return;
-  }
-  
-  try {
-    await applyCoupon(bagId.value, couponCode.value, planSlug.value);
-    couponCode.value = '';
-  } catch (err) {
-    error.value = "Failed to apply coupon";
-  } finally {
-    loading.value = false;
-  }
-};
-</script>
-```
-
-### Error Handling Best Practices
-
-```typescript
-// Centralized error handling
-const COUPON_ERRORS = {
-  'not-found': 'Coupon not found',
-  'plan-not-found': 'Plan not found',
-  'plan-not-belonging-to-academy': 'This coupon is not available for this plan',
-  'invalid-referral-coupon-with-plans': 'Referral coupons cannot be restricted to specific plans',
-  'bag-not-found': 'Shopping bag not found',
-  'timeout': 'Request timed out. Please try again.'
-};
-
-const handleCouponError = (error: any) => {
-  const slug = error?.slug || 'unknown';
-  return COUPON_ERRORS[slug] || 'An error occurred. Please try again.';
-};
-```
 
 ---
 

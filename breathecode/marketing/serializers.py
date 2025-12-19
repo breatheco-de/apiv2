@@ -738,43 +738,53 @@ class POSTTagSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         from breathecode.services.activecampaign import ActiveCampaign
+        from breathecode.admissions.models import Academy
 
         academy_id = self.context.get("academy")
         if not academy_id:
             raise ValidationException("Academy ID is required", slug="missing-academy-id")
 
-        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
-        if ac_academy is None:
-            raise ValidationException(
-                f"ActiveCampaign Academy not found for academy {academy_id}",
-                slug="academy-not-found",
-            )
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f"Academy {academy_id} not found", slug="academy-not-found")
 
         slug = validated_data.pop("slug")
         description = validated_data.pop("description", "")
 
-        # Check if tag already exists
-        existing_tag = Tag.objects.filter(slug=slug, ac_academy=ac_academy).first()
+        # Check if tag already exists for this academy (check both relationships)
+        existing_tag = Tag.objects.filter(slug=slug).filter(
+            Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+        ).first()
+        
         if existing_tag:
             raise ValidationException(
                 f"Tag with slug '{slug}' already exists for this academy", slug="tag-already-exists"
             )
 
-        # Create tag in ActiveCampaign
-        client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-        try:
-            ac_data = client.create_tag(slug, description=description or "")
-        except Exception as e:
-            raise ValidationException(
-                f"Failed to create tag in ActiveCampaign: {str(e)}", slug="activecampaign-error"
-            )
+        # Try to get ActiveCampaign Academy (optional)
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+        
+        acp_id = None
+        subscribers = 0
+        
+        # If ActiveCampaign is configured, create tag there
+        if ac_academy:
+            client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+            try:
+                ac_data = client.create_tag(slug, description=description or "")
+                acp_id = ac_data["id"]
+                subscribers = 0  # Will be updated on sync
+            except Exception as e:
+                # Log but don't fail - tag can still be created locally
+                logger.warning(f"Failed to create tag in ActiveCampaign: {str(e)}")
 
         # Create local Tag object
         tag = Tag(
-            slug=ac_data["tag"],
-            acp_id=ac_data["id"],
+            slug=slug,
+            acp_id=acp_id,
             ac_academy=ac_academy,
-            subscribers=0,
+            academy=academy,  # Direct academy relationship
+            subscribers=subscribers,
             description=description,
             **validated_data,
         )

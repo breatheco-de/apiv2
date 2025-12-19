@@ -410,7 +410,7 @@ class DisputedFilter(admin.SimpleListFilter):
 class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomTagModelForm
     search_fields = ["slug"]
-    list_display = ("id", "slug", "tag_type", "disputed", "ac_academy", "acp_id", "subscribers")
+    list_display = ("id", "slug", "tag_type", "disputed", "is_connected_to_ac", "ac_academy", "acp_id", "subscribers")
     list_filter = [DisputedFilter, TagTypeFilter, "ac_academy__academy__slug"]
     actions = [
         delete_from_everywhere,
@@ -428,6 +428,12 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
             )
         else:
             return format_html("<span class='badge'></span>")
+
+    def is_connected_to_ac(self, obj):
+        if obj.ac_academy and obj.acp_id:
+            return format_html("<span class='badge bg-success'>Yes</span>")
+        return format_html("<span class='badge bg-warning'>No</span>")
+    is_connected_to_ac.short_description = "AC Connected"
 
 
 @admin.register(Automation)

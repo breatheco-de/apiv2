@@ -2321,10 +2321,10 @@ class AcademyCouponView(APIView):
     def get(self, request, coupon_slug=None, academy_id=None):
         handler = self.extensions(request)
         lang = get_user_language(request)
-
+        _academy_id = int(academy_id) if academy_id is not None else None
         # Filter coupons that have at least one plan associated with the academy
         # Include both academy-owned plans and global plans (owner=None)
-        base_query = Q(plans__owner__id=academy_id) | Q(plans__owner=None)
+        base_query = Q(plans__owner__id=_academy_id) | Q(plans__owner=None)
         items = Coupon.objects.filter(base_query).distinct()
 
         # Filter by specific plan if provided
@@ -2343,7 +2343,7 @@ class AcademyCouponView(APIView):
                 )
 
             # Validate plan belongs to academy or is global
-            if plan.owner_id is not None and plan.owner_id != academy_id:
+            if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
                 raise ValidationException(
                     translation(
                         lang,
@@ -2380,6 +2380,7 @@ class AcademyCouponView(APIView):
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
         data = request.data.copy()
+        _academy_id = int(academy_id) if academy_id is not None else None
 
         # Validate plans if provided
         plans_data = data.get("plans", [])
@@ -2419,7 +2420,7 @@ class AcademyCouponView(APIView):
                     )
 
                 # Validate plan belongs to academy or is global
-                if plan.owner_id is not None and plan.owner_id != academy_id:
+                if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
                     raise ValidationException(
                         translation(
                             lang,
@@ -2460,7 +2461,7 @@ class AcademyCouponView(APIView):
     @capable_of("crud_subscription")
     def put(self, request, coupon_slug=None, academy_id=None):
         lang = get_user_language(request)
-
+        _academy_id = int(academy_id) if academy_id is not None else None
         # Filter coupons that have at least one plan associated with the academy
         base_query = Q(plans__owner__id=academy_id) | Q(plans__owner=None)
         coupon = Coupon.objects.filter(base_query, slug=coupon_slug).distinct().first()
@@ -2510,7 +2511,7 @@ class AcademyCouponView(APIView):
                     )
 
                 # Validate plan belongs to academy or is global
-                if plan.owner_id is not None and plan.owner_id != academy_id:
+                if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
                     raise ValidationException(
                         translation(
                             lang,

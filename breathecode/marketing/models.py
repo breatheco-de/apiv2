@@ -170,8 +170,18 @@ class Tag(models.Model):
         default=None,
         help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
     )
-    acp_id = models.IntegerField(help_text="The id coming from active campaign")
-    subscribers = models.IntegerField()
+    acp_id = models.IntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="The id coming from active campaign (optional)"
+    )
+    subscribers = models.IntegerField(
+        null=True,
+        blank=True,
+        default=0,
+        help_text="Number of subscribers in ActiveCampaign (optional)"
+    )
 
     # For better maintance the tags can be disputed for deletion
     disputed_at = models.DateTimeField(
@@ -194,6 +204,16 @@ class Tag(models.Model):
         blank=True,
         default=None,
         help_text="Leads that contain this tag will be asociated to this automation",
+    )
+
+    # Direct academy relationship (for tags without ActiveCampaign)
+    academy = models.ForeignKey(
+        "admissions.Academy",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Academy this tag belongs to (required if ac_academy is not set)",
     )
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)

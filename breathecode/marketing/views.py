@@ -498,7 +498,15 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     def get(self, request, format=None, academy_id=None):
         handler = self.extensions(request)
 
-        items = Tag.objects.filter(ac_academy__academy__id=academy_id)
+        # Include tags with ac_academy OR direct academy relationship
+        items = Tag.objects.filter(
+            Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+        )
+        
+        # Optional filter: exclude tags without ActiveCampaign
+        exclude_without_ac = request.GET.get("exclude_without_ac", "false").lower() == "true"
+        if exclude_without_ac:
+            items = items.filter(ac_academy__isnull=False, acp_id__isnull=False)
 
         like = request.GET.get("like", None)
         if like is not None:
@@ -533,7 +541,11 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     def put(self, request, tag_slug=None, academy_id=None):
         many = isinstance(request.data, list)
         if not many:
-            tag = Tag.objects.filter(slug=tag_slug, ac_academy__academy__id=academy_id).first()
+            tag = Tag.objects.filter(
+                slug=tag_slug
+            ).filter(
+                Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+            ).first()
             if tag is None:
                 raise ValidationException(f"Tag {tag_slug} not found for this academy", slug="tag-not-found")
         else:
@@ -545,7 +557,11 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
                 if "id" not in x:
                     raise ValidationException("Cannot determine tag in " f"index {index}", slug="without-id")
 
-                instance = Tag.objects.filter(id=x["id"], ac_academy__academy__id=academy_id).first()
+                instance = Tag.objects.filter(
+                    id=x["id"]
+                ).filter(
+                    Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+                ).first()
 
                 if not instance:
                     raise ValidationException(
