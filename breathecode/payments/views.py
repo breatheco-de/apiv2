@@ -2376,6 +2376,24 @@ class AcademyCouponView(APIView):
 
         return handler.response(serializer.data)
 
+    @capable_of("read_subscription")
+    def head(self, request, coupon_slug, academy_id=None):
+        """
+        Check if a coupon slug exists (checks globally, not just academy-specific).
+        Returns 200 if exists, 404 if not.
+        """
+        lang = get_user_language(request)
+
+        # Check globally (any academy, not filtered by academy_id)
+        coupon_exists = Coupon.objects.filter(slug=coupon_slug).exists()
+
+        if not coupon_exists:
+            raise ValidationException(
+                translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+            )
+
+        return Response(status=status.HTTP_200_OK)
+
     @capable_of("crud_subscription")
     def post(self, request, academy_id=None):
         lang = get_user_language(request)

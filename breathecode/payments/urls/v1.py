@@ -144,6 +144,7 @@ urlpatterns = [
     path("academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"),
     path("academy/coupon", AcademyCouponView.as_view(), name="academy_coupon"),
     path("academy/coupon/<str:coupon_slug>", AcademyCouponView.as_view(), name="academy_coupon_slug"),
+    path("academy/coupon/<str:coupon_slug>/exists", AcademyCouponView.as_view(), name="academy_coupon_exists"),
     path("coupon", CouponView.as_view(), name="coupon"),
     path("currency", CurrencyView.as_view(), name="currency"),
     path("currency/<str:currency_code>", CurrencyView.as_view(), name="currency_code"),
