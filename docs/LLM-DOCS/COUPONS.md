@@ -1367,3 +1367,160 @@ The **Coupon** system provides a flexible, powerful discount and referral manage
 
 The system integrates seamlessly with the Bag, Subscription, and PlanFinancing systems, ensuring discounts are properly applied and tracked throughout the payment lifecycle.
 
+---
+
+## Coupon Statistics
+
+### Overview
+
+The coupon system tracks usage statistics to provide insights into coupon performance. Statistics are calculated automatically for recently active coupons and stored in the `stats` JSONField.
+
+### Statistics Fields
+
+**Basic Tracking:**
+- `times_used` (integer): Total number of times the coupon has been used (always available)
+- `last_used_at` (datetime): When the coupon was last used (always available)
+
+**Detailed Statistics (calculated):**
+- `stats` (JSON): Detailed statistics object (only calculated for recently active coupons)
+- `stats_updated_at` (datetime): When stats were last calculated
+
+### Statistics Structure
+
+The `stats` JSON object contains:
+
+```json
+{
+    "times_used": 42,
+    "first_used_at": "2025-01-15T10:30:00Z",
+    "last_used_at": "2025-02-20T14:22:00Z",
+    "revenue": {
+        "total_revenue_generated": 12500.00,
+        "total_discount_given": 2500.00,
+        "average_order_value": 297.62,
+        "currency": "USD"
+    },
+    "users": {
+        "unique_users": 35,
+        "repeat_users": 7,
+        "new_users": 28
+    },
+    "plans": {
+        "1": {
+            "times_used": 15,
+            "last_used_at": "2025-02-18T09:15:00Z",
+            "revenue_generated": 4500.00,
+            "discount_given": 900.00
+        },
+        "2": {
+            "times_used": 27,
+            "last_used_at": "2025-02-20T14:22:00Z",
+            "revenue_generated": 8000.00,
+            "discount_given": 1600.00
+        }
+    },
+    "referral": {
+        "total_commissions_paid": 250.00,
+        "unique_sellers": 1,
+        "unique_buyers": 35
+    },
+    "time_periods": {
+        "last_7_days": {
+            "times_used": 8,
+            "revenue_generated": 2400.00
+        },
+        "last_30_days": {
+            "times_used": 25,
+            "revenue_generated": 7500.00
+        },
+        "last_90_days": {
+            "times_used": 42,
+            "revenue_generated": 12500.00
+        }
+    },
+    "payment_methods": {
+        "stripe": 30,
+        "paypal": 8,
+        "other": 4
+    }
+}
+```
+
+### Configuration
+
+Statistics calculation is configured per academy via `AcademyPaymentSettings.feature_flags.coupons`:
+
+```json
+{
+    "feature_flags": {
+        "coupons": {
+            "stats_hours_threshold": 24,
+            "stats_top_n": 100,
+            "stats_min_usage": 2,
+            "stats_cleanup_threshold": 17520
+        }
+    }
+}
+```
+
+**Configuration Options:**
+- `stats_hours_threshold` (default: 24): Only calculate stats for coupons used in the last N hours
+- `stats_top_n` (default: 100): Maximum number of coupons to process per academy per run
+- `stats_min_usage` (default: 2): Minimum `times_used` to calculate stats for
+- `stats_cleanup_threshold` (default: 17520 = 2 years): Remove stats from coupons not used in last N hours
+
+### How Statistics Are Calculated
+
+1. **Automatic Tracking**: `times_used` and `last_used_at` are updated automatically when coupons are used (in `build_subscription`, `build_plan_financing`, `build_plan_addons_financings`)
+
+2. **Daily Cronjob**: `calculate_recent_coupon_stats()` runs daily and:
+   - Processes coupons per academy
+   - Only calculates stats for coupons used in the last 24 hours (configurable)
+   - Only processes coupons with `times_used >= stats_min_usage` (default: 2)
+   - Limits to top N coupons per academy (default: 100)
+   - Updates `stats` and `stats_updated_at` fields
+
+3. **Cleanup Task**: `cleanup_stale_coupon_stats()` removes stats from coupons that haven't been used recently (default: 2 years)
+
+### API Response with Statistics
+
+**GET /v1/payments/academy/coupon**
+
+```json
+{
+    "count": 5,
+    "results": [
+        {
+            "slug": "summer-2025",
+            "discount_type": "PERCENT_OFF",
+            "discount_value": 0.25,
+            "times_used": 42,
+            "last_used_at": "2025-02-20T14:22:00Z",
+            "stats": {
+                "revenue": {
+                    "total_revenue_generated": 12500.00,
+                    "total_discount_given": 2500.00
+                },
+                "plans": {
+                    "1": {
+                        "times_used": 15,
+                        "last_used_at": "2025-02-18T09:15:00Z"
+                    }
+                }
+            },
+            "stats_updated_at": "2025-02-20T03:00:00Z"
+        }
+    ]
+}
+```
+
+**Note**: The `stats` field is only present if statistics have been calculated. If a coupon hasn't been used recently or doesn't meet the minimum usage threshold, `stats` will be `null`.
+
+### Performance Considerations
+
+- **Counter Updates**: `times_used` and `last_used_at` are updated with a single fast UPDATE query when coupons are used
+- **Stats Calculation**: Only performed for recently active coupons (last 24h by default)
+- **Per-Academy Processing**: Cronjob processes coupons per academy, allowing different configurations per academy
+- **Selective Calculation**: Only calculates stats for coupons that meet minimum usage threshold (default: 2 uses)
+- **Automatic Cleanup**: Stale stats are automatically removed to keep the database lean
+

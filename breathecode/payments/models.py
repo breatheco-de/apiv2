@@ -1423,6 +1423,24 @@ class Coupon(models.Model):
 
     offered_at = models.DateTimeField(default=None, null=True, blank=True)
     expires_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    # Statistics tracking fields
+    times_used = models.IntegerField(
+        default=0, db_index=True, help_text="Number of times this coupon has been used"
+    )
+    last_used_at = models.DateTimeField(
+        null=True, blank=True, db_index=True, help_text="When this coupon was last used"
+    )
+    stats = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Detailed statistics (only calculated for recently active coupons)",
+    )
+    stats_updated_at = models.DateTimeField(
+        null=True, blank=True, help_text="When stats were last calculated"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -3746,6 +3764,12 @@ class AcademyPaymentSettings(models.Model):
         default=2,
         validators=[MaxValueValidator(14)],
         help_text="Days before expiration when early renewal is allowed, 0 means it is not allowed",
+    )
+
+    feature_flags = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Feature flags and configuration settings for academy-specific features",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

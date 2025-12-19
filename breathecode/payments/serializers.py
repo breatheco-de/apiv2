@@ -601,6 +601,10 @@ class GetCouponSerializer(serpy.Serializer):
     allowed_user = GetUserSmallSerializer(many=False, required=False)
     offered_at = serpy.Field()
     expires_at = serpy.Field()
+    times_used = serpy.Field()
+    last_used_at = serpy.Field(required=False)
+    stats = serpy.Field(required=False)
+    stats_updated_at = serpy.Field(required=False)
 
 
 class GetCouponWithPlansSerializer(serpy.Serializer):
