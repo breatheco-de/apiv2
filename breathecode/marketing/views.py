@@ -1041,6 +1041,20 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             if referrer is not None:
                 lookup["referrer_user__pk"] = referrer
 
+        # Search by traceability field slug or shortlink slug
+        # These search both the shortlink slug and the traceability field (event, course, downloadable, plan)
+        traceability_like_fields = ["event", "course", "downloadable", "plan"]
+        for field in traceability_like_fields:
+            like_value = request.GET.get(f"like_{field}", None)
+            if like_value is not None:
+                like_value = like_value.strip()
+                # Create Q object to search both slug and traceability field
+                # For traceability field: search for ":{search_term}>" to match the slug part in "<id:slug>" format
+                # Also search for the value anywhere in the field as fallback
+                field_q = Q(**{f"{field}__contains": f":{like_value}>"}) | Q(**{f"{field}__icontains": like_value})
+                slug_q = Q(slug__icontains=slugify(like_value))
+                items = items.filter(field_q | slug_q)
+
         sort_by = "-created_at"
         if "sort" in self.request.GET and self.request.GET["sort"] != "":
             sort_by = self.request.GET.get("sort")
