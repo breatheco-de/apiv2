@@ -3501,7 +3501,6 @@ class ProfileView(APIView, GenerateLookupsMixin):
 
 
 @api_view(["GET"])
-@capable_of("read_member")
 def get_user_avatar_url(request, user_id):
     """
     Redirects to the user's avatar URL with caching.
@@ -3512,11 +3511,47 @@ def get_user_avatar_url(request, user_id):
     - 404 if user/profile not found
 
     Usage in HTML:
-    <img src="/v1/auth/user/123/avatar" alt="User avatar">
+    <img src="/v1/auth/user/123/avatar?token=YOUR_TOKEN&academy=1" alt="User avatar">
+
+    Authentication:
+    - Both 'token' and 'academy' query parameters are required
+    - Token must be valid and user must have 'read_member' capability for the specified academy
     """
     from django.core.cache import cache
     from django.http import HttpResponseRedirect
     from breathecode.authenticate.actions import get_api_url
+    from breathecode.authenticate.models import ProfileAcademy
+
+    # Both token and academy query parameters are required
+    token_query = request.GET.get("token", None)
+    academy_id = request.GET.get("academy", None)
+
+    # Validate required parameters
+    if not token_query:
+        raise ValidationException("Token query parameter is required", code=400, slug="token-required")
+
+    if not academy_id:
+        raise ValidationException("Academy query parameter is required", code=400, slug="academy-required")
+
+    # Validate academy_id format
+    if not str(academy_id).isdigit():
+        raise ValidationException(
+            f"Academy ID needs to be an integer: {str(academy_id)}", slug="invalid-academy-id"
+        )
+
+    # Validate token
+    valid_token = Token.get_valid(token_query)
+    if valid_token is None:
+        raise ValidationException("Invalid token", code=401, slug="invalid-token")
+
+    # Check if user has read_member capability for the specified academy
+    has_capability = ProfileAcademy.objects.filter(
+        user=valid_token.user.id, academy__id=academy_id, role__capabilities__slug="read_member"
+    ).exists()
+    if not has_capability:
+        raise PermissionDenied(
+            f"You (user: {valid_token.user.id}) don't have this capability: read_member for academy {academy_id}"
+        )
 
     cache_key = f"user_avatar_{user_id}"
 
