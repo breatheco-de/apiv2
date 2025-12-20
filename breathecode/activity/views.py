@@ -10,6 +10,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from breathecode.activity.actions import ALLOWED_TYPES
 from breathecode.activity.models import StudentActivity
 from breathecode.activity.serializers import ActivitySerializer
 from breathecode.admissions.models import Cohort, CohortUser
@@ -754,3 +755,126 @@ class V2AcademyActivityReportView(APIView):
             data.append(dict(r.items()))
 
         return Response(data)
+
+
+class V3ActivityKindView(APIView):
+
+    @capable_of("read_activity")
+    def get(self, request, academy_id=None):
+        """
+        Returns all activity kinds from ALLOWED_TYPES grouped by related_type.
+        Useful for frontend filter configuration.
+        """
+        result = []
+        for related_type, kinds in ALLOWED_TYPES.items():
+            result.append({
+                "related_type": related_type,
+                "kinds": kinds,
+            })
+
+        return Response(result)
+
+
+class V3AcademyActivityView(APIView):
+
+    @capable_of("read_activity")
+    def get(self, request, activity_id=None, academy_id=None):
+        lang = get_user_language(request)
+        client, project_id, dataset = BigQuery.client()
+
+        user_id = request.GET.get("user_id", None)
+        if user_id is None:
+            user_id = request.user.id
+
+        if activity_id:
+            # Define a query
+            query = f"""
+                SELECT *
+                FROM `{project_id}.{dataset}.activity`
+                WHERE id = @activity_id
+                    AND user_id = @user_id
+                    AND meta.academy = @academy_id
+                ORDER BY id DESC
+                LIMIT 1
+            """
+
+            job_config = bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("activity_id", "STRING", activity_id),
+                    bigquery.ScalarQueryParameter("academy_id", "INT64", academy_id),
+                    bigquery.ScalarQueryParameter("user_id", "INT64", user_id),
+                ]
+            )
+
+            # Run the query
+            query_job = client.query(query, job_config=job_config)
+            results = query_job.result()
+
+            result = next(results)
+            if not result:
+                raise ValidationException(
+                    translation(lang, en="activity not found", es="actividad no encontrada", slug="activity-not-found"),
+                    code=404,
+                )
+
+            serializer = ActivitySerializer(result, many=False)
+            return Response(serializer.data)
+
+        limit = int(request.GET.get("limit", 100))
+        offset = (int(request.GET.get("page", 1)) - 1) * limit
+        kind_param = request.GET.get("kind", "")
+        date_start = request.GET.get("date_start", None)
+        date_end = request.GET.get("date_end", None)
+        cohort = request.GET.get("cohort_id", None)
+
+        # Parse comma-separated kind values
+        kinds = []
+        if kind_param:
+            kinds = [k.strip() for k in kind_param.split(",") if k.strip()]
+
+        query = f"""
+            SELECT *
+            FROM `{project_id}.{dataset}.activity`
+            WHERE user_id = @user_id
+                AND meta.academy = @academy_id
+                {'AND kind IN UNNEST(@kinds)' if kinds else ''}
+                {'AND timestamp >= @date_start' if date_start else ''}
+                {'AND timestamp <= @date_end' if date_end else ''}
+                {'AND meta.cohort = @cohort_id' if cohort else ''}
+            ORDER BY timestamp DESC
+            LIMIT @limit
+            OFFSET @offset
+        """
+
+        data = [
+            bigquery.ScalarQueryParameter("academy_id", "INT64", int(academy_id)),
+            bigquery.ScalarQueryParameter("user_id", "INT64", user_id),
+            bigquery.ScalarQueryParameter("limit", "INT64", limit),
+            bigquery.ScalarQueryParameter("offset", "INT64", offset),
+        ]
+
+        if kinds:
+            data.append(bigquery.ArrayQueryParameter("kinds", "STRING", kinds))
+
+        if date_start:
+            data.append(bigquery.ScalarQueryParameter("date_start", "TIMESTAMP", date_start))
+
+        if date_end:
+            data.append(bigquery.ScalarQueryParameter("date_end", "TIMESTAMP", date_end))
+
+        if cohort:
+            # Try to convert cohort to integer for ID comparison, fallback to slug
+            try:
+                cohort_id = int(cohort)
+                data.append(bigquery.ScalarQueryParameter("cohort_id", "INT64", cohort_id))
+            except (ValueError, TypeError):
+                data.append(bigquery.ScalarQueryParameter("cohort_id", "INT64", 0))
+
+        job_config = bigquery.QueryJobConfig(query_parameters=data)
+
+        # Run the query
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+
+        serializer = ActivitySerializer(results, many=True)
+        return Response(serializer.data)
