@@ -796,7 +796,7 @@ class V3AcademyActivityView(APIView):
                 FROM `{project_id}.{dataset}.activity`
                 WHERE id = @activity_id
                     {'AND user_id = @user_id' if user_id else ''}
-                    AND meta.academy = @academy_id
+                    AND (meta.academy = @academy_id OR meta.academy IS NULL)
                 ORDER BY id DESC
                 LIMIT 1
             """
@@ -840,7 +840,7 @@ class V3AcademyActivityView(APIView):
         query = f"""
             SELECT *
             FROM `{project_id}.{dataset}.activity`
-            WHERE meta.academy = @academy_id
+            WHERE (meta.academy = @academy_id OR meta.academy IS NULL)
                 {'AND user_id = @user_id' if user_id else ''}
                 {'AND kind IN UNNEST(@kinds)' if kinds else ''}
                 {'AND timestamp >= @date_start' if date_start else ''}
