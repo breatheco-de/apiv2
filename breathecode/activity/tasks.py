@@ -246,7 +246,9 @@ def upload_activities(self, task_manager_id: int, **_):
 
         raise AbortTask("No data to upload")
 
-    table = BigQuery.table("activity")
+    from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+    table = BigQuery.table(ACTIVITY_TABLE_NAME)
     schema = table.schema()
 
     rows = [x["data"] for x in res]

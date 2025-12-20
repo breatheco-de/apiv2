@@ -3501,6 +3501,7 @@ class ProfileView(APIView, GenerateLookupsMixin):
 
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def get_user_avatar_url(request, user_id):
     """
     Redirects to the user's avatar URL with caching.

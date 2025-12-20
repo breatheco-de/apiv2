@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.activity.actions import ALLOWED_TYPES
-from breathecode.activity.models import StudentActivity
+from breathecode.activity.models import ACTIVITY_TABLE_NAME, StudentActivity
 from breathecode.activity.serializers import ActivitySerializer
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
@@ -530,7 +530,7 @@ class V2MeActivityView(APIView):
             # Define a query
             query = f"""
                 SELECT *
-                FROM `{project_id}.{dataset}.activity`
+                FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
                 WHERE id = @activity_id
                     AND user_id = @user_id
                 ORDER BY id DESC
@@ -565,7 +565,7 @@ class V2MeActivityView(APIView):
 
         query = f"""
             SELECT *
-            FROM `{project_id}.{dataset}.activity`
+            FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
             WHERE user_id = @user_id
                 {'AND kind = @kind' if kind else ''}
                 {'AND (meta.cohort = @cohort_slug OR meta.cohort = @cohort_id)' if cohort else ''}
@@ -618,7 +618,7 @@ class V2AcademyActivityView(APIView):
             # Define a query
             query = f"""
                 SELECT *
-                FROM `{project_id}.{dataset}.activity`
+                FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
                 WHERE id = @activity_id
                     AND user_id = @user_id
                     AND meta.academy = @academy_id
@@ -657,7 +657,7 @@ class V2AcademyActivityView(APIView):
 
         query = f"""
             SELECT *
-            FROM `{project_id}.{dataset}.activity`
+            FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
             WHERE user_id = @user_id
                 AND meta.academy = @academy_id
                 {'AND kind = @kind' if kind else ''}
@@ -710,7 +710,7 @@ class V2AcademyActivityReportView(APIView):
         query = request.GET.get("query", "{}")
 
         query = json.loads(query)
-        result = BigQuery.table("activity")
+        result = BigQuery.table(ACTIVITY_TABLE_NAME)
 
         fields = request.GET.get("fields", None)
         if fields is not None:
@@ -793,7 +793,7 @@ class V3AcademyActivityView(APIView):
             # Define a query
             query = f"""
                 SELECT *
-                FROM `{project_id}.{dataset}.activity`
+                FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
                 WHERE id = @activity_id
                     {'AND user_id = @user_id' if user_id else ''}
                     AND (meta.academy = @academy_id OR meta.academy IS NULL)
@@ -839,7 +839,7 @@ class V3AcademyActivityView(APIView):
 
         query = f"""
             SELECT *
-            FROM `{project_id}.{dataset}.activity`
+            FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
             WHERE (meta.academy = @academy_id OR meta.academy IS NULL)
                 {'AND user_id = @user_id' if user_id else ''}
                 {'AND kind IN UNNEST(@kinds)' if kinds else ''}

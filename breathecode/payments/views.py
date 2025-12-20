@@ -3129,6 +3129,23 @@ class BagCouponView(CouponBaseView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class BagByIdView(APIView):
+    def get(self, request, bag_id):
+        lang = get_user_language(request)
+
+        # Get bag and ensure it belongs to the authenticated user
+        bag = Bag.objects.filter(id=bag_id, user=request.user).first()
+
+        if not bag:
+            raise ValidationException(
+                translation(lang, en="Bag not found", es="Bolsa no encontrada", slug="bag-not-found"),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = GetBagSerializer(bag, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class BagView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 

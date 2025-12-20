@@ -52,3 +52,6 @@ ACTIVITY = [
     ),
     bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
 ]
+
+# BigQuery table name for activity data
+ACTIVITY_TABLE_NAME = "activity_partitioned"
