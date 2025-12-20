@@ -766,7 +766,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
             ).select_related('cohort', 'user').first()
             if item is None:
                 raise ValidationException("Cohort user not found", 404)
-                
+
             serializer = GetCohortUserBigSerializer(item, many=False)
             return Response(serializer.data)
 

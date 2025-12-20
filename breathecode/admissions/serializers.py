@@ -654,6 +654,7 @@ class GetCohortUserBigSerializer(serpy.Serializer):
     educational_status = serpy.Field()
     watching = serpy.Field()
     history_log = serpy.Field()
+    tasks = serpy.MethodField()
     created_at = serpy.Field()
     updated_at = serpy.Field()
     profile_academy = serpy.MethodField()
@@ -662,7 +663,7 @@ class GetCohortUserBigSerializer(serpy.Serializer):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
         return GetProfileAcademySmallSerializer(profile).data if profile else None
 
-    def tasks(self, obj):
+    def get_tasks(self, obj):
         tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort)
         return TaskGETSmallSerializer(tasks, many=True).data
 
