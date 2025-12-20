@@ -837,7 +837,7 @@ class ModelServiceView(APIView):
 
         # Add optional academy owner filter
         # Use academy_id from decorator, or fall back to query param
-        filter_academy_id = academy_id or request.GET.get("academy")
+        filter_academy_id = request.GET.get("academy", False)
         if filter_academy_id and str(filter_academy_id).isdigit():
             items = items.filter(Q(owner__id=int(filter_academy_id)) | Q(owner=None))
 

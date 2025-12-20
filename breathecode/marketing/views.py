@@ -1004,6 +1004,43 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if private == "true":
             lookup["private"] = True
 
+        # Generate lookups for UTM parameters
+        filter_fields = [
+            "utm_content",
+            "utm_medium",
+            "utm_campaign",
+            "utm_source",
+            "utm_placement",
+            "utm_term",
+            "utm_plan",
+        ]
+        relationships = ["referrer_user"]
+        filter_lookups = self.generate_lookups(request, fields=filter_fields, relationships=relationships)
+        lookup.update(filter_lookups)
+
+        # Custom handling for traceability fields with <id:slug> format
+        # These fields store values like "<232:event_slug>"
+        traceability_fields = ["event", "course", "downloadable", "plan"]
+        for field in traceability_fields:
+            value = request.GET.get(field, None)
+            if value is not None:
+                value = value.strip()
+                # Check if it's the full format <id:slug>
+                if value.startswith("<") and value.endswith(">"):
+                    lookup[field] = value
+                # Check if it's numeric (ID) - search for "<{id}:" within the field
+                elif value.isdigit():
+                    lookup[f"{field}__contains"] = f"<{value}:"
+                # Otherwise treat as slug - search for ":{slug}>" within the field
+                else:
+                    lookup[f"{field}__contains"] = f":{value}>"
+
+        # Support "referrer" as an alias for "referrer_user" (only if referrer_user not already set)
+        if "referrer_user__pk" not in lookup:
+            referrer = request.GET.get("referrer", None)
+            if referrer is not None:
+                lookup["referrer_user__pk"] = referrer
+
         sort_by = "-created_at"
         if "sort" in self.request.GET and self.request.GET["sort"] != "":
             sort_by = self.request.GET.get("sort")

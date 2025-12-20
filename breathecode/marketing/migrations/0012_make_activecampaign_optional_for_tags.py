@@ -56,3 +56,4 @@ class Migration(migrations.Migration):
         migrations.RunPython(backfill_academy_from_ac_academy, migrations.RunPython.noop),
     ]
 
+

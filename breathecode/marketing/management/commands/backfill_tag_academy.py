@@ -137,3 +137,4 @@ class Command(BaseCommand):
                 self.style.WARNING(f"Skipped {skipped_count} tags (missing ac_academy or academy)")
             )
 
+
