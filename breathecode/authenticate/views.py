@@ -3500,6 +3500,53 @@ class ProfileView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(["GET"])
+@capable_of("read_member")
+def get_user_avatar_url(request, user_id):
+    """
+    Redirects to the user's avatar URL with caching.
+
+    Returns:
+    - 302 redirect to avatar_url if found
+    - 302 redirect to randomized default avatar (avatar-1.png to avatar-20.png) if avatar_url is None
+    - 404 if user/profile not found
+
+    Usage in HTML:
+    <img src="/v1/auth/user/123/avatar" alt="User avatar">
+    """
+    from django.core.cache import cache
+    from django.http import HttpResponseRedirect
+    from breathecode.authenticate.actions import get_api_url
+
+    cache_key = f"user_avatar_{user_id}"
+
+    # Try cache first
+    avatar_url = cache.get(cache_key)
+
+    if avatar_url is None:
+        # Cache miss - query database
+        profile = Profile.objects.filter(user__id=user_id).select_related("user").first()
+
+        if not profile:
+            raise ValidationException("Profile not found", code=404, slug="profile-not-found")
+
+        # Use avatar_url or default
+        avatar_url = profile.avatar_url
+
+        if not avatar_url:
+            # Deterministic avatar selection based on user_id (1-20)
+            # Same user always gets the same default avatar for consistency
+            avatar_number = (user_id % 20) + 1
+            api_url = get_api_url()
+            avatar_url = f"{api_url}/static/img/avatar-{avatar_number}.png"
+
+        # Cache for 24 hours (86400 seconds)
+        cache.set(cache_key, avatar_url, 86400)
+
+    # Return 302 redirect
+    return HttpResponseRedirect(avatar_url)
+
+
 class ProfileMeView(APIView, GenerateLookupsMixin):
 
     @has_permission("get_my_profile")
