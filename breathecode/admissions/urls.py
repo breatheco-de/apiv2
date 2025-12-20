@@ -114,6 +114,11 @@ urlpatterns = [
     ),
     # new endpoints (replacing above)
     path("academy/cohort/user", AcademyCohortUserView.as_view(), name="academy_cohort_user"),
+    path(
+        "academy/cohort/user/<int:cohort_user_id>",
+        AcademyCohortUserView.as_view(),
+        name="academy_cohort_user_id",
+    ),
     path("academy/cohort/<str:cohort_id>/log", AcademyCohortHistoryView.as_view(), name="academy_cohort_id_history"),
     path(
         "academy/cohort/<int:cohort_id>/user/<int:user_id>",

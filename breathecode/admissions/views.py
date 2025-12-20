@@ -68,6 +68,7 @@ from .serializers import (
     GETCohortTimeSlotSerializer,
     GetCohortUserPlansSerializer,
     GetCohortUserSerializer,
+    GetCohortUserBigSerializer,
     GetCohortUserTasksSerializer,
     GetPublicCohortUserSerializer,
     GetSyllabusScheduleSerializer,
@@ -750,13 +751,24 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
 
     @capable_of("read_all_cohort")
-    def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
+    def get(self, request, format=None, cohort_id=None, user_id=None, cohort_user_id=None, academy_id=None):
 
         handler = self.extensions(request)
 
         cache = handler.cache.get()
         if cache is not None:
             return cache
+
+        # Handle direct cohort_user_id lookup
+        if cohort_user_id is not None:
+            item = CohortUser.objects.filter(
+                id=cohort_user_id, cohort__academy__id=academy_id
+            ).select_related('cohort', 'user').first()
+            if item is None:
+                raise ValidationException("Cohort user not found", 404)
+                
+            serializer = GetCohortUserBigSerializer(item, many=False)
+            return Response(serializer.data)
 
         if user_id is not None:
             item = CohortUser.objects.filter(
