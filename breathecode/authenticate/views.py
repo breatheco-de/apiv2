@@ -3562,13 +3562,8 @@ def get_user_avatar_url(request, user_id):
     if avatar_url is None:
         # Cache miss - query database
         profile = Profile.objects.filter(user__id=user_id).select_related("user").first()
-
-        if not profile:
-            raise ValidationException("Profile not found", code=404, slug="profile-not-found")
-
         # Use avatar_url or default
-        avatar_url = profile.avatar_url
-
+        avatar_url = profile.avatar_url if profile is not None else None
         if not avatar_url:
             # Deterministic avatar selection based on user_id (1-20)
             # Same user always gets the same default avatar for consistency
