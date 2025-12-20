@@ -3564,7 +3564,7 @@ def get_user_avatar_url(request, user_id):
         profile = Profile.objects.filter(user__id=user_id).select_related("user").first()
         # Use avatar_url or default
         avatar_url = profile.avatar_url if profile is not None else None
-        if not avatar_url:
+        if avatar_url is None:
             # Deterministic avatar selection based on user_id (1-20)
             # Same user always gets the same default avatar for consistency
             avatar_number = (user_id % 20) + 1
