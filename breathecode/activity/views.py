@@ -783,8 +783,11 @@ class V3AcademyActivityView(APIView):
         client, project_id, dataset = BigQuery.client()
 
         user_id = request.GET.get("user_id", None)
-        if user_id is None:
-            user_id = request.user.id
+        if user_id:
+            try:
+                user_id = int(user_id)
+            except (ValueError, TypeError):
+                raise ValidationException("user_id is not an integer", slug="bad-user-id")
 
         if activity_id:
             # Define a query
@@ -792,19 +795,21 @@ class V3AcademyActivityView(APIView):
                 SELECT *
                 FROM `{project_id}.{dataset}.activity`
                 WHERE id = @activity_id
-                    AND user_id = @user_id
+                    {'AND user_id = @user_id' if user_id else ''}
                     AND meta.academy = @academy_id
                 ORDER BY id DESC
                 LIMIT 1
             """
 
-            job_config = bigquery.QueryJobConfig(
-                query_parameters=[
-                    bigquery.ScalarQueryParameter("activity_id", "STRING", activity_id),
-                    bigquery.ScalarQueryParameter("academy_id", "INT64", academy_id),
-                    bigquery.ScalarQueryParameter("user_id", "INT64", user_id),
-                ]
-            )
+            query_parameters = [
+                bigquery.ScalarQueryParameter("activity_id", "STRING", activity_id),
+                bigquery.ScalarQueryParameter("academy_id", "INT64", academy_id),
+            ]
+
+            if user_id:
+                query_parameters.append(bigquery.ScalarQueryParameter("user_id", "INT64", user_id))
+
+            job_config = bigquery.QueryJobConfig(query_parameters=query_parameters)
 
             # Run the query
             query_job = client.query(query, job_config=job_config)
@@ -835,8 +840,8 @@ class V3AcademyActivityView(APIView):
         query = f"""
             SELECT *
             FROM `{project_id}.{dataset}.activity`
-            WHERE user_id = @user_id
-                AND meta.academy = @academy_id
+            WHERE meta.academy = @academy_id
+                {'AND user_id = @user_id' if user_id else ''}
                 {'AND kind IN UNNEST(@kinds)' if kinds else ''}
                 {'AND timestamp >= @date_start' if date_start else ''}
                 {'AND timestamp <= @date_end' if date_end else ''}
@@ -848,10 +853,12 @@ class V3AcademyActivityView(APIView):
 
         data = [
             bigquery.ScalarQueryParameter("academy_id", "INT64", int(academy_id)),
-            bigquery.ScalarQueryParameter("user_id", "INT64", user_id),
             bigquery.ScalarQueryParameter("limit", "INT64", limit),
             bigquery.ScalarQueryParameter("offset", "INT64", offset),
         ]
+
+        if user_id:
+            data.append(bigquery.ScalarQueryParameter("user_id", "INT64", user_id))
 
         if kinds:
             data.append(bigquery.ArrayQueryParameter("kinds", "STRING", kinds))
