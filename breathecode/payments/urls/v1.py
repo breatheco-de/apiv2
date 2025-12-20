@@ -2,6 +2,7 @@ from django.urls import path
 
 from ..views import (
     AcademyAcademyServiceView,
+    AcademyBagByIdView,
     AcademyCohortSetCohortView,
     AcademyCohortSetView,
     AcademyConsumableView,
@@ -143,6 +144,7 @@ urlpatterns = [
     path("academy/invoice", AcademyInvoiceView.as_view()),
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view()),
     path("academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"),
+    path("academy/bag/<int:bag_id>", AcademyBagByIdView.as_view(), name="academy_bag_id"),
     path("academy/coupon", AcademyCouponView.as_view(), name="academy_coupon"),
     path("academy/coupon/<str:coupon_slug>", AcademyCouponView.as_view(), name="academy_coupon_slug"),
     path("academy/coupon/<str:coupon_slug>/exists", AcademyCouponView.as_view(), name="academy_coupon_exists"),

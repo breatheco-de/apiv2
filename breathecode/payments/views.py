@@ -3146,6 +3146,24 @@ class BagByIdView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class AcademyBagByIdView(APIView):
+    @capable_of("read_subscription")
+    def get(self, request, bag_id, academy_id=None):
+        lang = get_user_language(request)
+
+        # Get bag and ensure it belongs to the academy
+        bag = Bag.objects.filter(id=bag_id, academy__id=academy_id).first()
+
+        if not bag:
+            raise ValidationException(
+                translation(lang, en="Bag not found", es="Bolsa no encontrada", slug="bag-not-found"),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = GetBagSerializer(bag, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class BagView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
