@@ -3941,58 +3941,23 @@ class LearnpackOrganizationView(APIView):
     def aget_user(self):
         return self.request.user
 
-    @sync_to_async
-    def aget_app(self):
-        from linked_services.django.models import App
-        return App.objects.filter(slug="learnpack").first()
-
     async def get(self, request):
         lang = await aget_user_language(request)
         user = await self.aget_user()
-
-        # Check environment variable
-        print(f"AIODNS_DISABLE_CARES: {os.getenv('AIODNS_DISABLE_CARES', 'not set')}")
-        
-        # Check aiohttp's resolver
-        try:
-            import aiodns
-            print(f"aiodns available: {aiodns is not None}")
-            print(f"c-ares disabled: {os.getenv('AIODNS_DISABLE_CARES') == '1'}")
-        except ImportError:
-            print("aiodns not available")
-
-        # Clear cache BEFORE checking app
-        from linked_services.django.actions import reset_app_cache, get_app
-        from asgiref.sync import sync_to_async
-        
-        
-        # Test if get_app works now (must use sync_to_async in async context)
-        try:
-            test_app = await sync_to_async(get_app)("rigobot")
-            print(f"get_app('rigobot') works: {test_app}")
-            print(f"app_url: {test_app.app_url}")
-        except Exception as e:
-            print(f"get_app('rigobot') still fails: {e}")
-            # If it still fails, the app might not be properly saved
-            from linked_services.django.models import App
-            app = await self.aget_app()
-            if app:
-                print(f"Direct query found app: {app.slug}, app_url: {app.app_url}")
 
         try:
             async with Service("rigobot", user.id, proxy=True) as s:
                 params = dict(request.GET)
                 return await s.get("/v1/auth/organization/", params=params)
         except Exception as e:
-            print("wlelelelee", e)
             raise ValidationException(
                 translation(
                     lang,
-                    en=f"Error calling learnpack service: {str(e)}",
-                    es=f"Error al llamar al servicio learnpack: {str(e)}",
+                    en=f"Error calling rigobot service: {str(e)}",
+                    es=f"Error al llamar al servicio rigobot: {str(e)}",
                 ),
                 code=500,
-                slug="learnpack-service-error",
+                slug="rigobot-service-error",
             )
 
 
