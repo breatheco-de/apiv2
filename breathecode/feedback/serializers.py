@@ -562,6 +562,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "trigger_type",
+            "syllabus",
             "template",
             "questions",
             "is_active",
@@ -579,7 +580,36 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
             "academy": {"required": False},
             "trigger_type": {"required": False, "allow_null": True},
             "questions": {"required": False},
+            "syllabus": {"required": False},
         }
+
+    def validate_syllabus(self, value):
+        if value is None:
+            return {}
+
+        if not isinstance(value, dict):
+            raise ValidationException("syllabus must be a dictionary", slug="invalid-syllabus-filter")
+
+        allowed_keys = {"syllabus", "version", "module", "asset_slug"}
+        for k in value.keys():
+            if k not in allowed_keys:
+                raise ValidationException(f"Invalid syllabus key: {k}", slug="invalid-syllabus-filter-key")
+
+        if "syllabus" in value and value["syllabus"] is not None and not isinstance(value["syllabus"], str):
+            raise ValidationException("'syllabus' must be a string", slug="invalid-syllabus-filter-syllabus")
+
+        if "version" in value and value["version"] is not None:
+            if not isinstance(value["version"], int) or value["version"] < 1:
+                raise ValidationException("'version' must be an integer >= 1", slug="invalid-syllabus-filter-version")
+
+        if "module" in value and value["module"] is not None:
+            if not isinstance(value["module"], int) or value["module"] < 0:
+                raise ValidationException("'module' must be an integer >= 0", slug="invalid-syllabus-filter-module")
+
+        if "asset_slug" in value and value["asset_slug"] is not None and not isinstance(value["asset_slug"], str):
+            raise ValidationException("'asset_slug' must be a string", slug="invalid-syllabus-filter-asset-slug")
+
+        return value
 
     def validate_questions(self, value):
         """Validate questions structure."""

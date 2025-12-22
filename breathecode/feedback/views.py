@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from capyc.rest_framework.exceptions import ValidationException
+from capyc.core.i18n import translation
+from django.contrib.auth.models import User
 from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
@@ -753,6 +755,34 @@ class AcademyFeedbackTagView(APIView, GenerateLookupsMixin):
 class SurveyConfigurationView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """View for managing survey configurations."""
 
+    @capable_of("read_survey")
+    def get(self, request, academy_id=None, configuration_id=None):
+        """List or get survey configurations."""
+        if configuration_id:
+            config = SurveyConfiguration.objects.filter(id=configuration_id, academy__id=academy_id).first()
+            if not config:
+                raise NotFound("Survey configuration not found")
+
+            serializer = SurveyConfigurationSerializer(config)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # List all configurations for this academy
+        items = SurveyConfiguration.objects.filter(academy__id=academy_id)
+        lookups = self.generate_lookups(request, many_fields=["id", "trigger_type"])
+
+        if lookups:
+            items = items.filter(**lookups)
+
+        items = items.order_by("-created_at")
+
+        page = self.paginate_queryset(items, request)
+        if page is not None:
+            serializer = SurveyConfigurationSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = SurveyConfigurationSerializer(items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @capable_of("crud_survey")
     def post(self, request, academy_id=None):
         """Create a new survey configuration."""
@@ -768,6 +798,26 @@ class SurveyConfigurationView(APIView, HeaderLimitOffsetPagination, GenerateLook
 
             survey_config = serializer.save(academy=academy, created_by=request.user)
             return Response(SurveyConfigurationSerializer(survey_config).data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_survey")
+    def put(self, request, academy_id=None, configuration_id=None):
+        """Update a survey configuration."""
+        if not configuration_id:
+            raise ValidationException("Missing configuration_id", code=400, slug="missing-configuration-id")
+
+        config = SurveyConfiguration.objects.filter(id=configuration_id, academy__id=academy_id).first()
+        if not config:
+            raise NotFound("Survey configuration not found")
+
+        serializer = SurveyConfigurationSerializer(
+            config, data=request.data, context={"request": request, "academy_id": academy_id}, partial=True
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -844,7 +894,7 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
     """CRUD for SurveyStudy (academy-scoped)."""
 
     @capable_of("crud_survey")
-    def post(self, request, academy_id=None):
+    def post(self, request, academy_id=None, **kwargs):
         academy = Academy.objects.filter(id=academy_id).first()
         if not academy:
             raise ValidationException("Academy not found", code=404, slug="academy-not-found")
@@ -857,7 +907,7 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("read_survey")
-    def get(self, request, academy_id=None, study_id=None):
+    def get(self, request, academy_id=None, study_id=None, **kwargs):
         if study_id is not None:
             item = SurveyStudy.objects.filter(id=study_id, academy__id=academy_id).first()
             if not item:
@@ -880,7 +930,7 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of("crud_survey")
-    def put(self, request, academy_id=None, study_id=None):
+    def put(self, request, academy_id=None, study_id=None, **kwargs):
         if study_id is None:
             raise ValidationException("Missing study_id", code=400, slug="missing-study-id")
 
@@ -896,7 +946,7 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_survey")
-    def delete(self, request, academy_id=None, study_id=None):
+    def delete(self, request, academy_id=None, study_id=None, **kwargs):
         if study_id is None:
             raise ValidationException("Missing study_id", code=400, slug="missing-study-id")
 
@@ -907,53 +957,229 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         item.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-    @capable_of("read_survey")
-    def get(self, request, academy_id=None, configuration_id=None):
-        """List or get survey configurations."""
-        if configuration_id:
-            config = SurveyConfiguration.objects.filter(id=configuration_id, academy__id=academy_id).first()
-            if not config:
-                raise NotFound("Survey configuration not found")
 
-            serializer = SurveyConfigurationSerializer(config)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+class SurveyStudySendEmailsView(APIView):
+    """
+    Staff endpoint to send a SurveyStudy survey to a list of users by email.
 
-        # List all configurations for this academy
-        items = SurveyConfiguration.objects.filter(academy__id=academy_id)
-        lookups = self.generate_lookups(request, many_fields=["id", "trigger_type"])
-
-        if lookups:
-            items = items.filter(**lookups)
-
-        items = items.order_by("-created_at")
-
-        page = self.paginate_queryset(items, request)
-        if page is not None:
-            serializer = SurveyConfigurationSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = SurveyConfigurationSerializer(items, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    It will:
+    - create SurveyResponse objects for users that don't have one in this study (one per user per study)
+    - distribute users across the study SurveyConfigurations using round-robin (equitable split)
+    - enqueue `send_survey_response_email` Celery task for each created response
+    - store optional `callback` in trigger_context and append it to the email LINK as `?callback=...`
+    """
 
     @capable_of("crud_survey")
-    def put(self, request, academy_id=None, configuration_id=None):
-        """Update a survey configuration."""
-        if not configuration_id:
-            raise ValidationException("Missing configuration_id", code=400, slug="missing-configuration-id")
+    def post(self, request, academy_id=None, study_id=None, **kwargs):
+        if study_id is None:
+            raise ValidationException(
+                translation(en="Missing study_id", es="Falta study_id"),
+                code=400,
+                slug="missing-study-id",
+            )
 
-        config = SurveyConfiguration.objects.filter(id=configuration_id, academy__id=academy_id).first()
-        if not config:
-            raise NotFound("Survey configuration not found")
+        study = SurveyStudy.objects.filter(id=study_id, academy__id=academy_id).first()
+        if not study:
+            raise ValidationException(
+                translation(en="SurveyStudy not found", es="SurveyStudy no encontrado"),
+                code=404,
+                slug="survey-study-not-found",
+            )
 
-        serializer = SurveyConfigurationSerializer(
-            config, data=request.data, context={"request": request, "academy_id": academy_id}, partial=True
+        user_ids = request.data.get("user_ids") or request.data.get("users") or []
+        cohort_id = request.data.get("cohort_id", None)
+        cohort_ids = request.data.get("cohort_ids", None)
+
+        if cohort_id is not None and cohort_ids is not None:
+            raise ValidationException(
+                translation(
+                    en="Use only one of cohort_id or cohort_ids",
+                    es="Usa solo uno entre cohort_id o cohort_ids",
+                ),
+                code=400,
+                slug="cohort-id-and-cohort-ids-together",
+            )
+
+        if cohort_id is not None:
+            cohort_ids = [cohort_id]
+
+        if cohort_ids is not None:
+            if not isinstance(cohort_ids, list) or len(cohort_ids) == 0:
+                raise ValidationException(
+                    translation(
+                        en="cohort_ids must be a non-empty list of integers",
+                        es="cohort_ids debe ser una lista no vacía de enteros",
+                    ),
+                    code=400,
+                    slug="invalid-cohort-ids",
+                )
+
+            cohort_user_ids = list(
+                CohortUser.objects.filter(
+                    cohort__id__in=cohort_ids,
+                    role="STUDENT",
+                    educational_status__in=["ACTIVE", "GRADUATED"],
+                )
+                .values_list("user_id", flat=True)
+                .distinct()
+            )
+
+            # merge cohort users with provided user_ids
+            if user_ids and not isinstance(user_ids, list):
+                raise ValidationException(
+                    translation(
+                        en="user_ids must be a list when provided",
+                        es="user_ids debe ser una lista cuando se provee",
+                    ),
+                    code=400,
+                    slug="invalid-user-ids",
+                )
+
+            user_ids = list(dict.fromkeys([*cohort_user_ids, *(user_ids or [])]))
+
+        if not isinstance(user_ids, list) or len(user_ids) == 0:
+            raise ValidationException(
+                translation(
+                    en="Provide user_ids or cohort_id/cohort_ids",
+                    es="Provee user_ids o cohort_id/cohort_ids",
+                ),
+                code=400,
+                slug="missing-recipients",
+            )
+
+        callback = request.data.get("callback", None)
+        if callback is not None and not isinstance(callback, str):
+            raise ValidationException(
+                translation(en="callback must be a string", es="callback debe ser un string"),
+                code=400,
+                slug="invalid-callback",
+            )
+
+        dry_run = bool(request.data.get("dry_run", False))
+
+        utc_now = timezone.now()
+        if study.starts_at and study.starts_at > utc_now:
+            raise ValidationException(
+                translation(en="SurveyStudy has not started yet", es="SurveyStudy no ha empezado todavía"),
+                code=400,
+                slug="study-not-started",
+            )
+        if study.ends_at and study.ends_at < utc_now:
+            raise ValidationException(
+                translation(en="SurveyStudy already ended", es="SurveyStudy ya terminó"),
+                code=400,
+                slug="study-ended",
+            )
+
+        configs = list(
+            study.survey_configurations.filter(academy__id=academy_id, is_active=True).order_by("id")
         )
+        if len(configs) == 0:
+            raise ValidationException(
+                translation(
+                    en="SurveyStudy has no active survey configurations",
+                    es="SurveyStudy no tiene configuraciones activas",
+                ),
+                code=400,
+                slug="study-without-configs",
+            )
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        # fetch users in bulk
+        existing_users = {u.id: u for u in User.objects.filter(id__in=user_ids)}
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        from breathecode.feedback.actions import create_survey_response
+        from breathecode.feedback.tasks import send_survey_response_email
+
+        created = []
+        skipped_existing = []
+        skipped_missing_user = []
+        scheduled = 0
+
+        for i, raw_id in enumerate(user_ids):
+            try:
+                uid = int(raw_id)
+            except Exception:
+                skipped_missing_user.append({"user_id": raw_id, "reason": "invalid"})
+                continue
+
+            user = existing_users.get(uid)
+            if not user:
+                skipped_missing_user.append({"user_id": uid, "reason": "not_found"})
+                continue
+
+            existing = SurveyResponse.objects.filter(survey_study=study, user=user).first()
+            if existing:
+                skipped_existing.append(
+                    {
+                        "user_id": user.id,
+                        "survey_response_id": existing.id,
+                        "token": str(existing.token) if existing.token else None,
+                    }
+                )
+                continue
+
+            config = configs[i % len(configs)]
+            context = {"source": "study_email"}
+            if callback:
+                context["callback"] = callback
+
+            if dry_run:
+                created.append(
+                    {
+                        "user_id": user.id,
+                        "survey_config_id": config.id,
+                        "survey_response_id": None,
+                        "token": None,
+                        "scheduled": False,
+                    }
+                )
+                continue
+
+            survey_response = create_survey_response(
+                config,
+                user,
+                context,
+                survey_study=study,
+                send_pusher=False,
+            )
+            if not survey_response:
+                created.append(
+                    {
+                        "user_id": user.id,
+                        "survey_config_id": config.id,
+                        "survey_response_id": None,
+                        "token": None,
+                        "scheduled": False,
+                    }
+                )
+                continue
+
+            send_survey_response_email.delay(survey_response.id)
+            scheduled += 1
+
+            created.append(
+                {
+                    "user_id": user.id,
+                    "survey_config_id": config.id,
+                    "survey_response_id": survey_response.id,
+                    "token": str(survey_response.token) if survey_response.token else None,
+                    "scheduled": True,
+                }
+            )
+
+        return Response(
+            {
+                "study_id": study.id,
+                "academy_id": int(academy_id) if academy_id is not None else None,
+                "dry_run": dry_run,
+                "configs_used": [c.id for c in configs],
+                "created": created,
+                "skipped_existing": skipped_existing,
+                "skipped_missing_user": skipped_missing_user,
+                "scheduled": scheduled,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class SurveyResponseView(APIView):

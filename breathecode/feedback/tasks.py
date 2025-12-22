@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
@@ -251,6 +252,21 @@ def _build_survey_response_link(app_url: str, token: str) -> str:
     return template.format(app_url=app_url.rstrip("/"), token=str(token))
 
 
+def _append_query_params(url: str, params: dict) -> str:
+    if not params:
+        return url
+
+    split = urlsplit(url)
+    query = dict(parse_qsl(split.query, keep_blank_values=True))
+    for k, v in params.items():
+        if v is None:
+            continue
+        query[str(k)] = str(v)
+
+    new_query = urlencode(query, doseq=True)
+    return urlunsplit((split.scheme, split.netloc, split.path, new_query, split.fragment))
+
+
 @task(bind=False, priority=TaskPriority.NOTIFICATION.value)
 def send_cohort_survey(user_id, survey_id, template_slug=None, **_):
     logger.info("Starting send_cohort_survey")
@@ -342,6 +358,9 @@ def send_survey_response_email(survey_response_id: int, **_):
 
     app_url = get_app_url(academy=academy)
     link = _build_survey_response_link(app_url, str(survey_response.token))
+    callback = (survey_response.trigger_context or {}).get("callback")
+    if callback:
+        link = _append_query_params(link, {"callback": callback})
     tracker_url = f"{api_url()}/v1/feedback/survey/response/{survey_response.token}/tracker.png"
 
     data = {

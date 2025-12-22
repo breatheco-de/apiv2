@@ -6,10 +6,11 @@ The Survey System is a real-time, event-driven feedback collection system that a
 
 ### Key Features
 
-- **Admin-Configurable Triggers**: Admins can define when surveys are sent (learnpack completion, course completion, etc.)
+- **Admin-Configurable Triggers**: Admins can define when surveys are sent (learnpack completion, course completion, module completion, syllabus completion)
 - **Real-Time Delivery**: Surveys are pushed to users via Pusher channels
 - **Flexible Question Types**: Supports Likert scale, open-ended questions, and extensible JSON structure for future types
-- **Filtering**: Surveys can be filtered by specific cohorts, learnpacks, or academies
+- **Advanced Filtering**: Surveys can be filtered by specific cohorts, learnpacks, syllabi, modules, or academies
+- **Module & Syllabus Completion Detection**: Automatically detects when users complete modules or entire syllabi across all activity types (QUIZ, LESSON, EXERCISE, PROJECT)
 - **Webhook Integration**: Responses are automatically sent to n8n or other webhook subscribers
 - **Scalable Architecture**: Easy to add new trigger types without modifying existing code
 
@@ -24,9 +25,18 @@ The Survey System is a real-time, event-driven feedback collection system that a
    - `SurveyResponse`: Stores user responses to surveys
 
 2. **Actions** (`breathecode/feedback/actions.py`)
-   - `trigger_survey_for_user()`: Main function to trigger surveys
+   - `trigger_survey_for_user()`: Main function to trigger surveys (wrapper around SurveyManager)
    - `create_survey_response()`: Creates survey response and sends Pusher event
    - `save_survey_answers()`: Validates and saves user answers
+   - `has_active_survey_studies()`: Helper to check if active studies exist (optimization)
+   - `_find_module_for_asset_in_syllabus()`: Finds module index for an asset
+   - `_get_module_assets_from_syllabus()`: Gets all assets in a module
+   - `_is_module_complete()`: Checks if a module is complete
+   - `_is_syllabus_complete()`: Checks if entire syllabus is complete
+
+3. **SurveyManager** (`breathecode/feedback/utils/survey_manager.py`)
+   - `SurveyManager`: Centralized class for handling survey triggers and filtering logic
+   - Handles validation, academy resolution, filtering, deduplication, and response creation
 
 3. **Services** (`breathecode/feedback/services/pusher_service.py`)
    - `send_survey_event()`: Sends real-time events via Pusher
@@ -35,8 +45,9 @@ The Survey System is a real-time, event-driven feedback collection system that a
    - `SurveyConfigurationView`: Admin CRUD for survey configurations
    - `SurveyResponseView`: User endpoints to view and answer surveys
 
-5. **Signals & Receivers** (`breathecode/feedback/signals.py`, `receivers.py`)
+5. **Signals & Receivers** (`breathecode/feedback/signals.py`, `breathecode/admissions/receivers.py`)
    - `survey_response_answered`: Signal fired when user answers
+   - `trigger_module_survey_on_completion`: Receiver for `assignment_status_updated` signal that detects module/syllabus completion
    - Webhook integration via `HookManager`
 
 ---
@@ -48,18 +59,25 @@ The Survey System is a real-time, event-driven feedback collection system that a
 Defines when and how surveys are triggered.
 
 **Fields:**
-- `trigger_type`: Type of event that triggers the survey (`learnpack_completed`, `course_completed`)
+- `trigger_type`: Type of event that triggers the survey (`learnpack_completed`, `course_completed`, `module_completed`, `syllabus_completed`)
 - `template`: Optional FK to `SurveyQuestionTemplate`. If set, questions are sourced from the template.
 - `questions`: JSON structure containing survey questions
 - `is_active`: Whether this configuration is active
 - `academy`: Academy this survey applies to
 - `cohorts`: ManyToMany - If empty, applies to all cohorts. If set, only to specified cohorts
 - `asset_slugs`: JSON array - If empty, applies to all learnpacks. If set, only to specified learnpacks
-- `stats`: JSON aggregated stats for this configuration (sent/opened/partial/responses/email_opened)
+- `syllabus`: JSON field for filtering by syllabus/module. Shape: `{'syllabus': '<slug>', 'version': <int>, 'module': <int>, 'asset_slug': '<slug>'}`. All keys optional.
 - `created_by`: User who created the configuration
 - `created_at`, `updated_at`: Timestamps
 
-**Example:**
+**Important behavior (template vs inline questions):**
+- If `template != null`, then `questions` are sourced from the template and **must not be edited** via API (or Admin) to avoid divergence.
+- If `template == null`, then `questions` must be provided.
+
+**Stats:**
+- Aggregated stats are stored on `SurveyStudy.stats` (not on `SurveyConfiguration`).
+
+**Example (Learnpack Completion):**
 ```json
 {
   "trigger_type": "learnpack_completed",
@@ -82,6 +100,38 @@ Defines when and how surveys are triggered.
   },
   "is_active": true,
   "asset_slugs": ["learnpack-test"]
+}
+```
+
+**Example (Module Completion with Syllabus Filter):**
+```json
+{
+  "trigger_type": "module_completed",
+  "questions": {
+    "questions": [...]
+  },
+  "is_active": true,
+  "syllabus": {
+    "syllabus": "full-stack",
+    "version": 2,
+    "module": 3
+  },
+  "cohorts": []
+}
+```
+
+**Example (Syllabus Completion):**
+```json
+{
+  "trigger_type": "syllabus_completed",
+  "questions": {
+    "questions": [...]
+  },
+  "is_active": true,
+  "syllabus": {
+    "syllabus": "full-stack",
+    "version": 2
+  }
 }
 ```
 
@@ -166,6 +216,73 @@ Groups one or more SurveyConfigurations for a given academy.
 **Filtering:**
 - If `cohorts` is empty: applies to all cohorts
 - If `cohorts` has values: only applies to those specific cohorts
+
+### Module Completion
+
+**Trigger:** When a user completes all activities (QUIZ, LESSON, EXERCISE, PROJECT) in a specific module of a syllabus
+
+**Location:** `breathecode/admissions/receivers.py` → `trigger_module_survey_on_completion()`
+
+**How it works:**
+1. Triggered when ANY task (QUIZ, LESSON, EXERCISE, PROJECT) is marked as `DONE`
+2. System finds which module the task belongs to using `_find_module_for_asset_in_syllabus()`
+3. System checks if ALL activities in that module are complete using `_is_module_complete()`
+4. If complete, triggers the survey
+
+**Context:**
+```python
+{
+    "academy": academy_object,
+    "cohort": cohort_object,
+    "cohort_id": 123,
+    "cohort_slug": "web-dev-2024-01",
+    "syllabus_slug": "full-stack",
+    "syllabus_version": 2,
+    "module": 2,  # 0-based index (module 3)
+    "asset_slug": "javascript-basics",
+    "task_type": "EXERCISE",
+    "completed_at": "2024-01-15T10:30:00Z"
+}
+```
+
+**Filtering:**
+- `syllabus.syllabus`: Filter by syllabus slug
+- `syllabus.version`: Filter by syllabus version
+- `syllabus.module`: Filter by specific module (0-based index)
+- `cohorts`: Filter by specific cohorts (if set)
+
+**Note:** Module completion considers ALL activity types (QUIZ, LESSON, EXERCISE, PROJECT), not just learnpacks.
+
+### Syllabus Completion
+
+**Trigger:** When a user completes ALL modules in a syllabus
+
+**Location:** `breathecode/admissions/receivers.py` → `trigger_module_survey_on_completion()`
+
+**How it works:**
+1. Triggered when ANY task is marked as `DONE`
+2. System checks if ALL modules in the syllabus are complete using `_is_syllabus_complete()`
+3. If complete, triggers the survey
+
+**Context:**
+```python
+{
+    "academy": academy_object,
+    "cohort": cohort_object,
+    "cohort_id": 123,
+    "cohort_slug": "web-dev-2024-01",
+    "syllabus_slug": "full-stack",
+    "syllabus_version": 2,
+    "completed_at": "2024-01-15T10:30:00Z"
+}
+```
+
+**Filtering:**
+- `syllabus.syllabus`: Filter by syllabus slug
+- `syllabus.version`: Filter by syllabus version
+- `cohorts`: Filter by specific cohorts (if set)
+
+**Note:** Syllabus completion is checked on EVERY task completion, but only triggers once when all modules are complete.
 
 ---
 
@@ -317,7 +434,52 @@ And authentication is typically:
   },
   "is_active": true,
   "asset_slugs": [],
+  "cohorts": [],
+  "syllabus": {}
+}
+```
+
+**Request (Module Completion with Syllabus Filter):**
+```json
+{
+  "trigger_type": "module_completed",
+  "questions": {
+    "questions": [...]
+  },
+  "is_active": true,
+  "syllabus": {
+    "syllabus": "full-stack",
+    "version": 2,
+    "module": 3
+  },
   "cohorts": []
+}
+```
+
+**Request (Syllabus Completion):**
+```json
+{
+  "trigger_type": "syllabus_completed",
+  "questions": {
+    "questions": [...]
+  },
+  "is_active": true,
+  "syllabus": {
+    "syllabus": "full-stack",
+    "version": 2
+  },
+  "cohorts": []
+}
+```
+
+**Alternative: create using a template (no inline questions):**
+```json
+{
+  "trigger_type": "course_completed",
+  "template": {{template_id}},
+  "is_active": true,
+  "asset_slugs": [],
+  "cohorts": [{{cohort_id}}]
 }
 ```
 
@@ -366,6 +528,9 @@ And authentication is typically:
 
 First do a GET to copy the existing structure, then PUT the updated `questions`.
 
+**Important:**
+- If the configuration has `template != null`, you **cannot** send `"questions"` in the PUT (the API should reject it).
+
 ```json
 {
   "questions": {
@@ -387,18 +552,6 @@ First do a GET to copy the existing structure, then PUT the updated `questions`.
   }
 }
 ```
-
-#### Delete Survey Configuration
-
-**Method:** `DELETE`
-
-**URL:** `{{base_url}}/v1/feedback/academy/survey/configuration/{{configuration_id}}`
-
-**Permissions:** `crud_survey`
-
-**Headers:**
-- `Authorization: Token {{token}}`
-- `Academy: {{academy_id}}`
 
 #### List Survey Responses (Staff) with Filters
 
@@ -439,6 +592,65 @@ This endpoint is meant for staff/admin analytics and auditing.
 **Headers:**
 - `Authorization: Token {{token}}`
 - `Academy: {{academy_id}}`
+
+#### SurveyQuestionTemplate CRUD (Staff)
+
+Templates are global, but still require academy-scoped capability checks via the `Academy` header.
+
+- **List**: `GET {{base_url}}/v1/feedback/academy/survey/question_template`
+- **Retrieve**: `GET {{base_url}}/v1/feedback/academy/survey/question_template/{{template_id}}`
+- **Create**: `POST {{base_url}}/v1/feedback/academy/survey/question_template`
+- **Update (partial)**: `PUT {{base_url}}/v1/feedback/academy/survey/question_template/{{template_id}}`
+- **Delete**: `DELETE {{base_url}}/v1/feedback/academy/survey/question_template/{{template_id}}`
+
+Headers (all above):
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+- `Content-Type: application/json` (for POST/PUT)
+
+#### SurveyStudy CRUD + bulk email sending (Staff)
+
+- **List**: `GET {{base_url}}/v1/feedback/academy/survey/study`
+- **Retrieve**: `GET {{base_url}}/v1/feedback/academy/survey/study/{{study_id}}`
+- **Create**: `POST {{base_url}}/v1/feedback/academy/survey/study`
+- **Update (partial)**: `PUT {{base_url}}/v1/feedback/academy/survey/study/{{study_id}}`
+- **Delete**: `DELETE {{base_url}}/v1/feedback/academy/survey/study/{{study_id}}`
+
+Headers (all above):
+- `Authorization: Token {{token}}`
+- `Academy: {{academy_id}}`
+- `Content-Type: application/json` (for POST/PUT)
+
+**Bulk send (study → list of users)**:
+
+- **Method**: `POST`
+- **URL**: `{{base_url}}/v1/feedback/academy/survey/study/{{study_id}}/send_emails`
+- **Permissions**: `crud_survey`
+- **Body**:
+
+```json
+{
+  "user_ids": [8301, 8302, 8303],
+  "callback": "https://your-frontend.com/after-survey",
+  "dry_run": false
+}
+```
+
+**Bulk send (study → all students in a cohort)**:
+
+```json
+{
+  "cohort_id": {{cohort_id}},
+  "callback": "https://your-frontend.com/after-survey",
+  "dry_run": false
+}
+```
+
+Behavior:
+- Creates **one `SurveyResponse` per (study, user)** if missing.
+- If the study has multiple configs, assigns users **round-robin** across them.
+- Enqueues `send_survey_response_email` which sends an email containing the `SurveyResponse.token` link.
+- If `callback` is provided, it is stored in `SurveyResponse.trigger_context.callback` and appended to the email link as `?callback=...`.
 
 ### User Endpoints
 
@@ -639,25 +851,59 @@ When a user answers a survey:
 ### Survey Trigger Flow
 
 ```
-User completes action (learnpack/course)
+User completes action (learnpack/course/module/syllabus)
     ↓
-calculate_telemetry_indicator() or mark_saas_student_as_graduated()
+calculate_telemetry_indicator() or mark_saas_student_as_graduated() or trigger_module_survey_on_completion()
     ↓
 trigger_survey_for_user(user, trigger_type, context)
     ↓
+Create SurveyManager instance
+    ↓
+Validate user and trigger_type
+    ↓
+Resolve academy from context or user profile
+    ↓
 Find active SurveyConfiguration for trigger_type + academy
     ↓
-Apply filters (cohorts, asset_slugs)
+For each configuration:
     ↓
-Check for existing pending response (prevent duplicates)
+    Get active SurveyStudy
     ↓
-create_survey_response()
+    Apply filters (syllabus/module, cohorts, asset_slugs)
     ↓
-Create SurveyResponse (status: PENDING)
+    Check for existing response (deduplication)
     ↓
-send_survey_event() via Pusher
+    Create SurveyResponse (status: PENDING)
+    ↓
+    send_survey_event() via Pusher
     ↓
 Frontend receives event and shows survey
+```
+
+### Module/Syllabus Completion Detection Flow
+
+```
+User completes ANY task (QUIZ, LESSON, EXERCISE, PROJECT)
+    ↓
+Task.task_status = DONE
+    ↓
+assignment_status_updated signal fired
+    ↓
+trigger_module_survey_on_completion() receiver
+    ↓
+Early check: has_active_survey_studies() for MODULE/SYLLABUS triggers
+    ↓
+Find module index: _find_module_for_asset_in_syllabus()
+    ↓
+Check module completion: _is_module_complete()
+    ├─→ Get all assets in module (QUIZ, LESSON, EXERCISE, PROJECT)
+    ├─→ Check if ALL have Task with status=DONE
+    └─→ If complete → trigger MODULE_COMPLETION survey
+    ↓
+Check syllabus completion: _is_syllabus_complete()
+    ├─→ For each module in syllabus
+    ├─→ Check if module is complete
+    └─→ If ALL complete → trigger SYLLABUS_COMPLETION survey
 ```
 
 ### Survey Response Flow
@@ -688,31 +934,67 @@ n8n/external system receives payload
 
 ## Filtering Logic
 
-### Cohort Filtering (Course Completion)
+The filtering logic is centralized in the `SurveyManager` class (`breathecode/feedback/utils/survey_manager.py`).
+
+### Cohort Filtering (Course, Module, Syllabus Completion)
 
 ```python
-if trigger_type == "course_completed":
-    cohort = context.get("cohort")
-    if cohort:
-        if survey_config.cohorts.exists():
-            # Only apply if cohort is in the list
-            if cohort not in survey_config.cohorts.all():
-                continue  # Skip this config
-        # If cohorts is empty, apply to all cohorts
+# In SurveyManager._filter_by_cohort()
+cohort = context.get("cohort")
+if cohort:
+    if survey_config.cohorts.exists():
+        # Only apply if cohort is in the list
+        if cohort not in survey_config.cohorts.all():
+            return False  # Filtered out
+    # If cohorts is empty, apply to all cohorts
+return True
 ```
 
 ### Asset Slug Filtering (Learnpack Completion)
 
 ```python
-if trigger_type == "learnpack_completed":
-    asset_slug = context.get("asset_slug")
-    if asset_slug:
-        if survey_config.asset_slugs:
-            # Only apply if asset_slug is in the list
-            if asset_slug not in survey_config.asset_slugs:
-                continue  # Skip this config
-        # If asset_slugs is empty, apply to all learnpacks
+# In SurveyManager._filter_by_asset_slug()
+asset_slug = context.get("asset_slug")
+if asset_slug:
+    if survey_config.asset_slugs:
+        # Only apply if asset_slug is in the list
+        if asset_slug not in survey_config.asset_slugs:
+            return False  # Filtered out
+    # If asset_slugs is empty, apply to all learnpacks
+return True
 ```
+
+### Syllabus/Module Filtering (Module, Syllabus Completion)
+
+```python
+# In SurveyManager._filter_by_syllabus_module()
+syllabus_filter = survey_config.syllabus or {}
+
+# Filter by syllabus slug
+if syllabus_filter.get("syllabus") and context.get("syllabus_slug"):
+    if syllabus_filter["syllabus"] != context["syllabus_slug"]:
+        return False  # Filtered out
+
+# Filter by syllabus version
+if syllabus_filter.get("version") is not None and context.get("syllabus_version") is not None:
+    if syllabus_filter["version"] != context["syllabus_version"]:
+        return False  # Filtered out
+
+# Filter by module (only for MODULE_COMPLETION)
+if trigger_type == "module_completed":
+    if syllabus_filter.get("module") is not None and context.get("module") is not None:
+        if syllabus_filter["module"] != context["module"]:
+            return False  # Filtered out
+
+return True
+```
+
+**Filtering Rules:**
+- If `syllabus` field is empty: applies to all syllabi/modules
+- If `syllabus.syllabus` is set: only matches that syllabus slug
+- If `syllabus.version` is set: only matches that version
+- If `syllabus.module` is set (for MODULE_COMPLETION): only matches that specific module (0-based index)
+- All filters are AND conditions (all must match)
 
 ---
 
@@ -727,6 +1009,11 @@ if trigger_type == "learnpack_completed":
 5. Likert scale: `config.scale` must be >= 1
 6. Open question: `config.max_length` must be >= 1
 7. `asset_slugs` must be a list (if provided)
+8. `syllabus` must be a dictionary (if provided) with optional keys:
+   - `syllabus`: string (syllabus slug)
+   - `version`: integer >= 1
+   - `module`: integer >= 0 (0-based module index)
+   - `asset_slug`: string (not currently used for filtering)
 
 ### Survey Answers
 
@@ -744,21 +1031,36 @@ if trigger_type == "learnpack_completed":
 
 1. **Add to Model:**
    ```python
+   # In breathecode/feedback/models.py
    class TriggerType(models.TextChoices):
+       MODULE_COMPLETION = "module_completed", "Module Completion"
+       SYLLABUS_COMPLETION = "syllabus_completed", "Syllabus Completion"
        LEARNPACK_COMPLETION = "learnpack_completed", "Learnpack Completion"
        COURSE_COMPLETION = "course_completed", "Course Completion"
        NEW_TRIGGER = "new_trigger", "New Trigger"  # Add here
    ```
 
-2. **Add Filtering Logic:**
+2. **Add Filtering Logic in SurveyManager:**
    ```python
-   # In trigger_survey_for_user()
-   elif trigger_type == SurveyConfiguration.TriggerType.NEW_TRIGGER:
+   # In breathecode/feedback/utils/survey_manager.py
+   # In SurveyManager._apply_filters()
+   elif self.trigger_type == SurveyConfiguration.TriggerType.NEW_TRIGGER:
        # Add filtering logic here
-       pass
+       if not self._filter_by_custom_criteria(survey_config):
+           return False
    ```
 
-3. **Call from Your Code:**
+3. **Add Deduplication Logic (if needed):**
+   ```python
+   # In SurveyManager._check_deduplication()
+   elif self.trigger_type == SurveyConfiguration.TriggerType.NEW_TRIGGER:
+       # Add custom deduplication filters
+       custom_field = self.context.get("custom_field")
+       if custom_field is not None:
+           dedupe_query = dedupe_query.filter(trigger_context__custom_field=custom_field)
+   ```
+
+4. **Call from Your Code:**
    ```python
    from breathecode.feedback import actions
    from breathecode.feedback.models import SurveyConfiguration
@@ -818,14 +1120,27 @@ if trigger_type == "learnpack_completed":
 ### Query Optimization
 
 - `prefetch_related("cohorts")` used to avoid N+1 queries
+- `has_active_survey_studies()` early check before expensive module/syllabus completion logic
 - Indexes recommended on:
   - `SurveyResponse(user, status)`
   - `SurveyConfiguration(trigger_type, is_active, academy)`
+  - `Task(user, cohort, associated_slug, task_status)`
 
 ### Duplicate Prevention
 
 - Checks for existing pending responses before creating new ones
 - Prevents spam and duplicate surveys
+- Deduplication includes trigger-specific context fields:
+  - `COURSE_COMPLETION`: filters by `cohort_id`
+  - `SYLLABUS_COMPLETION`: filters by `syllabus_slug`, `syllabus_version`, `cohort_id`
+  - `MODULE_COMPLETION`: filters by `syllabus_slug`, `syllabus_version`, `module`, `cohort_id`
+
+### Early Exit Optimizations
+
+- `has_active_survey_studies()` checks if any active studies exist before running expensive completion checks
+- Used in:
+  - `calculate_telemetry_indicator()` for learnpack completion
+  - `trigger_module_survey_on_completion()` for module/syllabus completion
 
 ---
 
@@ -852,6 +1167,41 @@ if trigger_type == "learnpack_completed":
 See `docs/LLM-DOCS/SURVEYS_TESTING.md` for complete testing guide.
 
 ---
+
+## Helper Functions
+
+### Module/Syllabus Completion Helpers
+
+Located in `breathecode/feedback/actions.py`:
+
+- **`_find_module_for_asset_in_syllabus(syllabus_version, asset_slug)`**: Finds the 0-based module index where an asset appears in a syllabus. Returns `int | None`.
+
+- **`_get_module_assets_from_syllabus(syllabus_version, module_index)`**: Gets all asset slugs (QUIZ, LESSON, EXERCISE, PROJECT) from a specific module. Returns `list[str]`.
+
+- **`_is_module_complete(user, cohort, module_index)`**: Checks if ALL activities in a module are complete (all have Task with status=DONE). Returns `bool`.
+
+- **`_is_syllabus_complete(user, cohort)`**: Checks if ALL modules in a syllabus are complete. Returns `bool`.
+
+- **`has_active_survey_studies(academy, trigger_types)`**: Checks if there are any active SurveyStudy instances for the given academy and trigger types. Used for early optimization. Returns `bool`.
+
+### SurveyManager Class
+
+Located in `breathecode/feedback/utils/survey_manager.py`:
+
+The `SurveyManager` class centralizes all survey triggering logic:
+
+- **`__init__(user, trigger_type, context)`**: Initialize with user, trigger type, and context
+- **`trigger_survey_for_user()`**: Main method that orchestrates the entire trigger process
+- **`_validate_user()`**: Validates user is not None
+- **`_validate_trigger_type()`**: Validates trigger type is valid
+- **`_resolve_academy()`**: Resolves academy from context or user profile
+- **`_get_active_study(survey_config)`**: Gets active SurveyStudy for a configuration
+- **`_apply_filters(survey_config, active_study)`**: Applies all filters (syllabus/module, cohort, asset_slug)
+- **`_filter_by_syllabus_module(survey_config)`**: Filters by syllabus slug, version, and module
+- **`_filter_by_cohort(survey_config)`**: Filters by cohort
+- **`_filter_by_asset_slug(survey_config)`**: Filters by asset_slug
+- **`_check_deduplication(survey_config, active_study)`**: Checks for existing responses
+- **`_create_response(survey_config, active_study)`**: Creates SurveyResponse
 
 ## Related Documentation
 

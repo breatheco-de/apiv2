@@ -620,6 +620,8 @@ class AcademyFeedbackSettings(models.Model):
 
 class SurveyConfiguration(models.Model):
     class TriggerType(models.TextChoices):
+        MODULE_COMPLETION = "module_completed", "Module Completion"
+        SYLLABUS_COMPLETION = "syllabus_completed", "Syllabus Completion"
         LEARNPACK_COMPLETION = "learnpack_completed", "Learnpack Completion"
         COURSE_COMPLETION = "course_completed", "Course Completion"
 
@@ -630,8 +632,20 @@ class SurveyConfiguration(models.Model):
         blank=True,
         default=None,
         help_text=(
-            "Realtime trigger type for this configuration (learnpack_completed or course_completed). only for realtime studies where a modal appears after a user completes an activity"
+            "Realtime trigger type for this configuration (learnpack_completed, course_completed, "
+            "module_completed or syllabus_completed). "
+            "Only for realtime studies where a modal appears after a user completes an activity. "
             "For email/list-based studies, this can be null."
+        ),
+    )
+
+    syllabus = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Optional filter to scope surveys by syllabus/module. "
+            "Shape: {'syllabus': '<syllabus_slug>', 'version': <int>, 'module': <int>, 'asset_slug': '<slug>'}. "
+            "All keys are optional; if 'module' is omitted, it applies to the whole syllabus/version."
         ),
     )
 
@@ -666,6 +680,30 @@ class SurveyConfiguration(models.Model):
     def clean(self):
         if self.asset_slugs and not isinstance(self.asset_slugs, list):
             raise ValidationError("asset_slugs must be a list")
+
+        if self.syllabus and not isinstance(self.syllabus, dict):
+            raise ValidationError({"syllabus": "syllabus must be a dictionary"})
+
+        allowed_keys = {"syllabus", "version", "module", "asset_slug"}
+        for k in (self.syllabus or {}).keys():
+            if k not in allowed_keys:
+                raise ValidationError({"syllabus": f"Invalid key: {k}"})
+
+        syllabus_slug = (self.syllabus or {}).get("syllabus")
+        if syllabus_slug is not None and not isinstance(syllabus_slug, str):
+            raise ValidationError({"syllabus": "'syllabus' must be a string (syllabus slug)"})
+
+        version = (self.syllabus or {}).get("version")
+        if version is not None and (not isinstance(version, int) or version < 1):
+            raise ValidationError({"syllabus": "'version' must be an integer >= 1"})
+
+        module = (self.syllabus or {}).get("module")
+        if module is not None and (not isinstance(module, int) or module < 0):
+            raise ValidationError({"syllabus": "'module' must be an integer >= 0"})
+
+        asset_slug = (self.syllabus or {}).get("asset_slug")
+        if asset_slug is not None and not isinstance(asset_slug, str):
+            raise ValidationError({"syllabus": "'asset_slug' must be a string"})
 
     def save(self, *args, **kwargs):
         previous_template_id = None
