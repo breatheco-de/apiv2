@@ -2637,9 +2637,7 @@ class LearnpackPackagesView(APIView):
             async with Service("learnpack", user_id, proxy=True) as s:
                 # Forward query parameters to learnpack
                 params = dict(request.GET)
-                async with s.get("/v1/learnpack/packages", params=params) as response:
-                    data = await response.json()
-                    return Response(data, status=response.status)
+                return await s.get("/v1/learnpack/packages", params=params)
         except Exception as e:
             raise ValidationException(
                 translation(

@@ -89,5 +89,5 @@ urlpatterns = [
     ## Util endpoints
     path("code-compiler", CodeCompilerView.as_view(), name="code_compiler"),
     path("me/completion", CompletionView.as_view(), name="completion"),
-    path("me/learnpack/packages", LearnpackPackagesView.as_view(), name="learnpack_packages"),
+    path("learnpack/me/packages", LearnpackPackagesView.as_view(), name="learnpack_packages"),
 ]
