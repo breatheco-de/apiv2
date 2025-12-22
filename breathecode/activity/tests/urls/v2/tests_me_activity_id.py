@@ -52,7 +52,7 @@ def bigquery_client_mock(self, user_id=1):
 
     query = f"""
                 SELECT *
-                FROM `{project_id}.{dataset}.activity`
+                FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
                 WHERE id = @activity_id
                     AND user_id = @user_id
                 ORDER BY id DESC

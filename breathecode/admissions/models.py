@@ -115,6 +115,7 @@ class Academy(models.Model):
     logo_url = models.CharField(max_length=255)
     icon_url = models.CharField(max_length=255, help_text="It has to be a square", default="/static/icons/picture.png")
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    short_url = models.CharField(max_length=255, blank=True, null=True, default=None, help_text="Use for ShortLinks and redirects")
     white_label_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)

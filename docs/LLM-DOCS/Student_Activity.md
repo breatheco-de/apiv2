@@ -15,6 +15,7 @@ The Student Activity API provides comprehensive activity tracking and monitoring
 **Base Endpoints:**
 - V1: `/v1/activity/`
 - V2: `/v2/activity/`
+- V3: `/v3/activity/`
 
 ---
 
@@ -1047,11 +1048,321 @@ GET /v2/activity/academy/activity?user_id=123&date_start=2024-01-01T00:00:00Z&da
 
 ---
 
+## V3 Endpoints (BigQuery-based with Enhanced Filtering)
+
+V3 endpoints use BigQuery for storage and provide enhanced filtering capabilities, including support for multiple activity kinds in a single query.
+
+### GET - List Activity Kinds
+
+**Endpoint:** `GET /v3/activity/kinds`
+
+**Permissions:** `read_activity`
+
+**Description:** Returns all available activity kinds from ALLOWED_TYPES, grouped by related_type. This endpoint is useful for frontend filter configuration.
+
+**Response:**
+
+```json
+[
+  {
+    "related_type": "auth.User",
+    "kinds": ["login"]
+  },
+  {
+    "related_type": "assignments.Task",
+    "kinds": [
+      "open_syllabus_module",
+      "read_assignment",
+      "assignment_review_status_updated",
+      "assignment_status_updated"
+    ]
+  },
+  {
+    "related_type": "events.EventCheckin",
+    "kinds": [
+      "event_checkin_created",
+      "event_checkin_assisted"
+    ]
+  },
+  {
+    "related_type": "feedback.Answer",
+    "kinds": ["nps_answered"]
+  },
+  {
+    "related_type": "admissions.CohortUser",
+    "kinds": ["joined_cohort"]
+  },
+  {
+    "related_type": "payments.Bag",
+    "kinds": ["bag_created"]
+  },
+  {
+    "related_type": "payments.Subscription",
+    "kinds": ["checkout_completed"]
+  },
+  {
+    "related_type": "payments.PlanFinancing",
+    "kinds": ["checkout_completed"]
+  },
+  {
+    "related_type": "mentorship.MentorshipSession",
+    "kinds": [
+      "mentoring_session_scheduled",
+      "mentorship_session_checkin",
+      "mentorship_session_checkout"
+    ]
+  },
+  {
+    "related_type": "payments.Invoice",
+    "kinds": ["checkout_completed"]
+  }
+]
+```
+
+**Use Case:** Use this endpoint to populate filter dropdowns or UI components that allow users to select which activity kinds to query.
+
+**Example:**
+```bash
+GET /v3/activity/kinds
+```
+
+---
+
+### GET - Get Academy Activities (V3)
+
+**Endpoint:** `GET /v3/activity/academy/activity`
+
+**Permissions:** `read_activity`
+
+**Query Parameters:**
+- `user_id={user_id}` - Filter by user ID (defaults to authenticated user if not provided)
+- `kind={activity_kind1,activity_kind2,...}` - **Filter by one or more activity kinds (comma-separated)** ⭐ NEW
+- `cohort_id={cohort_id_or_slug}` - Filter by cohort (ID or slug)
+- `date_start={timestamp}` - Filter by start date (ISO timestamp)
+- `date_end={timestamp}` - Filter by end date (ISO timestamp)
+- `limit={number}` - Limit results (default: 100)
+- `page={number}` - Page number (default: 1)
+
+**Description:** Get activities for a specific user within an academy from BigQuery. **V3 supports filtering by multiple activity kinds in a single query**, making it ideal for frontend applications with multi-select filters.
+
+**Key Differences from V2:**
+- ✅ Supports multiple `kind` values: `?kind=login,open_syllabus_module,read_assignment`
+- ✅ Always uses BigQuery array parameters for consistent querying
+- ✅ Optimized for frontend filter UIs
+
+**Example - Single Kind (backward compatible):**
+```bash
+GET /v3/activity/academy/activity?user_id=123&kind=login&date_start=2024-01-01T00:00:00Z
+```
+
+**Example - Multiple Kinds:**
+```bash
+GET /v3/activity/academy/activity?user_id=123&kind=login,open_syllabus_module,read_assignment&date_start=2024-01-01T00:00:00Z
+```
+
+**Example - Multiple Kinds with Cohort:**
+```bash
+GET /v3/activity/academy/activity?kind=login,assignment_status_updated&cohort_id=web-dev-pt-01&limit=50
+```
+
+**Example - All Assignment-Related Activities:**
+```bash
+GET /v3/activity/academy/activity?user_id=123&kind=open_syllabus_module,read_assignment,assignment_review_status_updated,assignment_status_updated&date_start=2024-01-01T00:00:00Z&date_end=2024-01-31T23:59:59Z
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "activity-123",
+    "user_id": 123,
+    "kind": "login",
+    "related": {
+      "type": "auth.User",
+      "id": 123,
+      "slug": null
+    },
+    "meta": {
+      "email": "student@example.com",
+      "username": "student",
+      "cohort": "web-dev-pt-01",
+      "academy": 1
+    },
+    "timestamp": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": "activity-124",
+    "user_id": 123,
+    "kind": "open_syllabus_module",
+    "related": {
+      "type": "assignments.Task",
+      "id": 456,
+      "slug": "javascript-basics"
+    },
+    "meta": {
+      "email": "student@example.com",
+      "username": "student",
+      "cohort": "web-dev-pt-01",
+      "academy": 1
+    },
+    "timestamp": "2024-01-15T11:00:00Z"
+  }
+]
+```
+
+**Response:** Array of activity objects matching any of the specified kinds, ordered by timestamp (descending).
+
+---
+
+### GET - Get Single Academy Activity (V3)
+
+**Endpoint:** `GET /v3/activity/academy/activity/{activity_id}`
+
+**Parameters:**
+- `activity_id` - Activity ID
+
+**Permissions:** `read_activity`
+
+**Query Parameters:**
+- `user_id={user_id}` - Filter by user ID (defaults to authenticated user)
+
+**Description:** Get a specific activity by ID within an academy. Works identically to V2.
+
+**Example:**
+```bash
+GET /v3/activity/academy/activity/activity-123?user_id=123
+```
+
+**Response:**
+
+```json
+{
+  "id": "activity-123",
+  "user_id": 123,
+  "kind": "login",
+  "related": {
+    "type": "auth.User",
+    "id": 123,
+    "slug": null
+  },
+  "meta": {
+    "email": "student@example.com",
+    "username": "student",
+    "cohort": "web-dev-pt-01",
+    "academy": 1
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+### V3 Use Cases and Examples
+
+#### 1. Frontend Filter UI - Get Available Activity Types
+
+**Use Case:** Load all available activity kinds for filter dropdown/checkboxes
+
+**Step 1 - Get Activity Kinds:**
+```bash
+GET /v3/activity/kinds
+```
+
+**Step 2 - Build Filter UI:**
+Use the response to populate multi-select filters grouped by `related_type`:
+- Group: "User Activities" → Options: `login`
+- Group: "Task Activities" → Options: `open_syllabus_module`, `read_assignment`, `assignment_review_status_updated`, `assignment_status_updated`
+- Group: "Event Activities" → Options: `event_checkin_created`, `event_checkin_assisted`
+- etc.
+
+#### 2. Filter by Multiple Activity Kinds
+
+**Use Case:** Get all login and lesson activities for a user
+
+**Endpoint:**
+```bash
+GET /v3/activity/academy/activity?user_id=123&kind=login,open_syllabus_module,read_assignment&limit=100
+```
+
+**What it does:**
+- Returns activities where `kind` is `login` OR `open_syllabus_module` OR `read_assignment`
+- Results are ordered by timestamp (most recent first)
+
+#### 3. Combined Filters - Multiple Kinds + Cohort + Date Range
+
+**Use Case:** Get all assignment-related activities for a cohort in a specific month
+
+**Endpoint:**
+```bash
+GET /v3/activity/academy/activity?kind=open_syllabus_module,read_assignment,assignment_status_updated,assignment_review_status_updated&cohort_id=web-dev-pt-01&date_start=2024-01-01T00:00:00Z&date_end=2024-01-31T23:59:59Z&limit=200
+```
+
+**What it does:**
+- Filters by 4 different assignment-related kinds
+- Only includes activities from the specified cohort
+- Only includes activities within the date range
+- Returns up to 200 results
+
+#### 4. User Activity Dashboard
+
+**Use Case:** Show a comprehensive activity feed for a user
+
+**Endpoint:**
+```bash
+GET /v3/activity/academy/activity?user_id=123&kind=login,open_syllabus_module,read_assignment,assignment_status_updated,event_checkin_created,event_checkin_assisted&limit=50&page=1
+```
+
+**What it does:**
+- Shows multiple types of activities in a single query
+- Perfect for dashboard/activity feed UI
+- Supports pagination for large result sets
+
+#### 5. Analytics - All Payment-Related Activities
+
+**Use Case:** Track all payment-related activities for analysis
+
+**Endpoint:**
+```bash
+GET /v3/activity/academy/activity?kind=bag_created,checkout_completed&date_start=2024-01-01T00:00:00Z&date_end=2024-12-31T23:59:59Z&limit=1000
+```
+
+**Note:** `checkout_completed` appears in multiple related types (Subscription, PlanFinancing, Invoice), but the query will match all of them.
+
+---
+
+### V3 vs V2 Differences
+
+| Feature | V2 | V3 |
+|---------|----|----|
+| Multiple kind filtering | ❌ Single kind only | ✅ Comma-separated multiple kinds |
+| Kind parameter | `kind=login` | `kind=login,open_syllabus_module` |
+| Query pattern | `kind = @kind` | `kind IN UNNEST(@kinds)` |
+| Activity kinds endpoint | ❌ Not available | ✅ `/v3/activity/kinds` |
+| Backward compatible | N/A | ✅ Single kind still works |
+
+### When to Use V3
+
+✅ **Use V3 when:**
+- You need to filter by multiple activity kinds in a single query
+- You're building a frontend UI with multi-select filters
+- You want to get all available activity kinds programmatically
+- You're implementing activity dashboards or analytics views
+
+✅ **Use V2 when:**
+- You only need single kind filtering
+- You're working with existing V2 integrations
+- You need the report endpoint (V3 doesn't include it)
+
+---
+
 ## Migration Notes
 
 - V1 endpoints use Google Cloud Datastore (NDB)
 - V2 endpoints use Google Cloud BigQuery
+- V3 endpoints use Google Cloud BigQuery with enhanced filtering capabilities
 - V2 provides better querying capabilities and analytics
+- V3 adds support for multiple kind filtering and activity kinds listing
 - Some V1 endpoints are deprecated (see deprecation_list in v2 URLs)
-- V2 endpoints are recommended for new implementations
+- V3 endpoints are recommended for new frontend implementations requiring multi-kind filtering
 

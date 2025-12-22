@@ -60,6 +60,7 @@ from .views import (
     AcademyCohortUserView,
     AcademyCohortView,
     AcademyListView,
+    AcademyReportCSVView,
     AcademyReportView,
     AcademySyllabusScheduleTimeSlotView,
     AcademySyllabusScheduleView,
@@ -114,6 +115,11 @@ urlpatterns = [
     ),
     # new endpoints (replacing above)
     path("academy/cohort/user", AcademyCohortUserView.as_view(), name="academy_cohort_user"),
+    path(
+        "academy/cohort/user/<int:cohort_user_id>",
+        AcademyCohortUserView.as_view(),
+        name="academy_cohort_user_id",
+    ),
     path("academy/cohort/<str:cohort_id>/log", AcademyCohortHistoryView.as_view(), name="academy_cohort_id_history"),
     path(
         "academy/cohort/<int:cohort_id>/user/<int:user_id>",
@@ -229,6 +235,7 @@ urlpatterns = [
     path("catalog/countries", get_countries, name="countries_all"),
     path("catalog/cities", get_cities, name="cities_all"),
     path("report", AcademyReportView.as_view(), name="report_admissions"),
+    path("report.csv", AcademyReportCSVView.as_view(), name="report_admissions_csv"),
     # replaces an asset slug in all syllabus versions
     path("admin/syllabus/asset/<str:asset_slug>", SyllabusAssetView.as_view(), name="syllabus_asset"),
     # Public Endpoints anyone can call

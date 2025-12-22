@@ -304,7 +304,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
-    host_user = UserSerializer(required=False)
+    host_user = UserBigSerializer(required=False)
     author = UserSerializer(required=False)
     free_for_all = serpy.Field()
     asset = serpy.MethodField()

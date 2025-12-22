@@ -73,6 +73,7 @@ from breathecode.payments.serializers import (
     AcademyPaymentSettingsPUTSerializer,
     BillingTeamAutoRechargeSerializer,
     CohortSetSerializer,
+    CouponSerializer,
     CreditNoteSerializer,
     FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
@@ -307,6 +308,12 @@ class AcademyPlanView(APIView):
 
         if plan.currency:
             data["currency"] = plan.currency.id
+
+        # Include slug from URL or existing plan to satisfy serializer requirement
+        if plan_slug:
+            data["slug"] = plan_slug
+        elif plan.slug:
+            data["slug"] = plan.slug
 
         for key in request.data:
             if key in ["owner", "owner_id"]:
@@ -830,7 +837,7 @@ class ModelServiceView(APIView):
 
         # Add optional academy owner filter
         # Use academy_id from decorator, or fall back to query param
-        filter_academy_id = academy_id or request.GET.get("academy")
+        filter_academy_id = request.GET.get("academy", False)
         if filter_academy_id and str(filter_academy_id).isdigit():
             items = items.filter(Q(owner__id=int(filter_academy_id)) | Q(owner=None))
 
@@ -2311,6 +2318,284 @@ class AcademyInvoiceRefundView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+class AcademyCouponView(APIView):
+    """Manage coupons for an academy. Academies can manage coupons associated with their plans."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_subscription")
+    def get(self, request, coupon_slug=None, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+        _academy_id = int(academy_id) if academy_id is not None else None
+        # Filter coupons that have at least one plan associated with the academy
+        # Include both academy-owned plans and global plans (owner=None)
+        base_query = Q(plans__owner__id=_academy_id) | Q(plans__owner=None)
+        items = Coupon.objects.filter(base_query).distinct()
+
+        # Filter by specific plan if provided
+        plan_filter = request.GET.get("plan")
+        if plan_filter:
+            plan_kwargs = {}
+            if plan_filter.isdigit():
+                plan_kwargs["id"] = int(plan_filter)
+            else:
+                plan_kwargs["slug"] = plan_filter
+
+            plan = Plan.objects.filter(**plan_kwargs).first()
+            if not plan:
+                raise ValidationException(
+                    translation(lang, en="Plan not found", es="Plan no encontrado", slug="plan-not-found"), code=404
+                )
+
+            # Validate plan belongs to academy or is global
+            if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Plan {plan_filter} does not belong to this academy",
+                        es=f"El plan {plan_filter} no pertenece a esta academia",
+                        slug="plan-not-belonging-to-academy",
+                    ),
+                    code=403,
+                )
+
+            # Filter coupons that are associated with this specific plan
+            items = items.filter(plans__id=plan.id).distinct()
+
+        if coupon_slug:
+            item = items.filter(slug=coupon_slug).first()
+            if not item:
+                raise ValidationException(
+                    translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+                )
+
+            serializer = GetCouponSerializer(item, many=False)
+            return handler.response(serializer.data)
+
+        # Add "like" search filter for slug
+        if like := request.GET.get("like"):
+            items = items.filter(slug__icontains=like)
+
+        items = handler.queryset(items)
+        serializer = GetCouponSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("read_subscription")
+    def head(self, request, coupon_slug, academy_id=None):
+        """
+        Check if a coupon slug exists (checks globally, not just academy-specific).
+        Returns 200 if exists, 404 if not.
+        """
+        lang = get_user_language(request)
+
+        # Check globally (any academy, not filtered by academy_id)
+        coupon_exists = Coupon.objects.filter(slug=coupon_slug).exists()
+
+        if not coupon_exists:
+            raise ValidationException(
+                translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+            )
+
+        return Response(status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        data = request.data.copy()
+        _academy_id = int(academy_id) if academy_id is not None else None
+
+        # Validate plans if provided
+        plans_data = data.get("plans", [])
+        if plans_data:
+            # Convert plan IDs/slugs to Plan objects and validate they belong to academy
+            plan_objects = []
+            for plan_identifier in plans_data:
+                plan_kwargs = {}
+                if isinstance(plan_identifier, int):
+                    plan_kwargs["id"] = plan_identifier
+                elif isinstance(plan_identifier, str):
+                    if plan_identifier.isdigit():
+                        plan_kwargs["id"] = int(plan_identifier)
+                    else:
+                        plan_kwargs["slug"] = plan_identifier
+                else:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Invalid plan identifier. Must be an ID or slug",
+                            es="Identificador de plan inválido. Debe ser un ID o slug",
+                            slug="invalid-plan-identifier",
+                        ),
+                        code=400,
+                    )
+
+                plan = Plan.objects.filter(**plan_kwargs).first()
+                if not plan:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Plan not found: {plan_identifier}",
+                            es=f"Plan no encontrado: {plan_identifier}",
+                            slug="plan-not-found",
+                        ),
+                        code=404,
+                    )
+
+                # Validate plan belongs to academy or is global
+                if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Plan {plan_identifier} does not belong to this academy",
+                            es=f"El plan {plan_identifier} no pertenece a esta academia",
+                            slug="plan-not-belonging-to-academy",
+                        ),
+                        code=403,
+                    )
+
+                plan_objects.append(plan)
+
+            data["plans"] = [p.id for p in plan_objects]
+
+        # Validate referral type rules
+        referral_type = data.get("referral_type", Coupon.Referral.NO_REFERRAL)
+        if referral_type != Coupon.Referral.NO_REFERRAL and plans_data:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If referral_type is not NO_REFERRAL, plans must be empty",
+                    es="Si referral_type no es NO_REFERRAL, plans debe estar vacío",
+                    slug="invalid-referral-coupon-with-plans",
+                ),
+                code=400,
+            )
+
+        serializer = CouponSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        # Create coupon (serializer handles ManyToMany relationships)
+        coupon = serializer.save()
+
+        # Return using GET serializer for consistent response
+        response_serializer = GetCouponSerializer(coupon, many=False)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    @capable_of("crud_subscription")
+    def put(self, request, coupon_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        _academy_id = int(academy_id) if academy_id is not None else None
+        # Filter coupons that have at least one plan associated with the academy
+        base_query = Q(plans__owner__id=academy_id) | Q(plans__owner=None)
+        coupon = Coupon.objects.filter(base_query, slug=coupon_slug).distinct().first()
+
+        if not coupon:
+            raise ValidationException(
+                translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+            )
+
+        data = request.data.copy()
+
+        # Validate plans if provided
+        plans_data = data.get("plans")
+        if plans_data is not None:
+            # Convert plan IDs/slugs to Plan objects and validate they belong to academy
+            plan_objects = []
+            for plan_identifier in plans_data:
+                plan_kwargs = {}
+                if isinstance(plan_identifier, int):
+                    plan_kwargs["id"] = plan_identifier
+                elif isinstance(plan_identifier, str):
+                    if plan_identifier.isdigit():
+                        plan_kwargs["id"] = int(plan_identifier)
+                    else:
+                        plan_kwargs["slug"] = plan_identifier
+                else:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Invalid plan identifier. Must be an ID or slug",
+                            es="Identificador de plan inválido. Debe ser un ID o slug",
+                            slug="invalid-plan-identifier",
+                        ),
+                        code=400,
+                    )
+
+                plan = Plan.objects.filter(**plan_kwargs).first()
+                if not plan:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Plan not found: {plan_identifier}",
+                            es=f"Plan no encontrado: {plan_identifier}",
+                            slug="plan-not-found",
+                        ),
+                        code=404,
+                    )
+
+                # Validate plan belongs to academy or is global
+                if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Plan {plan_identifier} does not belong to this academy",
+                            es=f"El plan {plan_identifier} no pertenece a esta academia",
+                            slug="plan-not-belonging-to-academy",
+                        ),
+                        code=403,
+                    )
+
+                plan_objects.append(plan)
+
+            data["plans"] = [p.id for p in plan_objects]
+
+        # Validate referral type rules
+        referral_type = data.get("referral_type")
+        if referral_type is None:
+            referral_type = coupon.referral_type
+
+        if referral_type != Coupon.Referral.NO_REFERRAL and plans_data and len(plans_data) > 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If referral_type is not NO_REFERRAL, plans must be empty",
+                    es="Si referral_type no es NO_REFERRAL, plans debe estar vacío",
+                    slug="invalid-referral-coupon-with-plans",
+                ),
+                code=400,
+            )
+
+        serializer = CouponSerializer(coupon, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        # Serializer handles ManyToMany relationships
+        serializer.save()
+
+        # Refresh from DB to get updated relationships
+        coupon.refresh_from_db()
+
+        # Return using GET serializer for consistent response
+        response_serializer = GetCouponSerializer(coupon, many=False)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def delete(self, request, coupon_slug=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Filter coupons that have at least one plan associated with the academy
+        base_query = Q(plans__owner__id=academy_id) | Q(plans__owner=None)
+        coupon = Coupon.objects.filter(base_query, slug=coupon_slug).distinct().first()
+
+        if not coupon:
+            raise ValidationException(
+                translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+            )
+
+        coupon.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class CardView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
@@ -2838,6 +3123,41 @@ class BagCouponView(CouponBaseView):
                     slug="timeout",
                 ),
                 code=408,
+            )
+
+        serializer = GetBagSerializer(bag, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class BagByIdView(APIView):
+    def get(self, request, bag_id):
+        lang = get_user_language(request)
+
+        # Get bag and ensure it belongs to the authenticated user
+        bag = Bag.objects.filter(id=bag_id, user=request.user).first()
+
+        if not bag:
+            raise ValidationException(
+                translation(lang, en="Bag not found", es="Bolsa no encontrada", slug="bag-not-found"),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = GetBagSerializer(bag, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyBagByIdView(APIView):
+    @capable_of("read_subscription")
+    def get(self, request, bag_id, academy_id=None):
+        lang = get_user_language(request)
+
+        # Get bag and ensure it belongs to the academy
+        bag = Bag.objects.filter(id=bag_id, academy__id=academy_id).first()
+
+        if not bag:
+            raise ValidationException(
+                translation(lang, en="Bag not found", es="Bolsa no encontrada", slug="bag-not-found"),
+                code=status.HTTP_404_NOT_FOUND,
             )
 
         serializer = GetBagSerializer(bag, many=False)

@@ -10,6 +10,7 @@ from django.urls.base import reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 
+from breathecode.activity.models import ACTIVITY_TABLE_NAME
 from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils.attr_dict import AttrDict
 
@@ -50,7 +51,7 @@ def bigquery_client_mock(self, n=1, user_id=1, kind=None):
 
     query = f"""
             SELECT *
-            FROM `{project_id}.{dataset}.activity`
+            FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
             WHERE user_id = @user_id
                 {'AND kind = @kind' if kind else ''}
             ORDER BY timestamp DESC
