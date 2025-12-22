@@ -2618,6 +2618,38 @@ class CodeCompilerView(APIView):
             return await s.post(url, json=request.data)
 
 
+class LearnpackPackagesView(APIView):
+    """
+    Proxy endpoint to communicate with learnpack service to get packages.
+    """
+
+    permission_classes = [AllowAny]
+
+    async def get(self, request):
+        """
+        GET request to fetch packages from learnpack service.
+        Proxies the request to learnpack's /v1/learnpack/packages endpoint.
+        """
+        lang = await aget_user_language(request)
+        user_id = request.user.id if request.user.is_authenticated else None
+
+        try:
+            async with Service("learnpack", user_id, proxy=True) as s:
+                # Forward query parameters to learnpack
+                params = dict(request.GET)
+                return await s.get("/v1/learnpack/packages", params=params)
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error calling learnpack service: {str(e)}",
+                    es=f"Error al llamar al servicio learnpack: {str(e)}",
+                ),
+                code=500,
+                slug="learnpack-service-error",
+            )
+
+
 class CompletionView(APIView):
     """
     Proxy endpoint to communicate with rigobot for AI completion/messaging.
