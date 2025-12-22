@@ -468,6 +468,7 @@ class SurveyConfigurationForm(forms.ModelForm):
         widgets = {
             "questions": PrettyJSONWidget(),
             "asset_slugs": PrettyJSONWidget(),
+            "syllabus": PrettyJSONWidget(),
         }
 
 
@@ -571,8 +572,14 @@ class SurveyConfigurationAdmin(admin.ModelAdmin):
         (
             "Filters",
             {
-                "fields": ("cohorts", "asset_slugs"),
-                "description": "Cohorts: Leave empty to apply to all cohorts. Asset slugs: Leave empty to apply to all learnpacks.",
+                "fields": ("cohorts", "asset_slugs", "syllabus"),
+                "description": (
+                    "Cohorts: Leave empty to apply to all cohorts. "
+                    "Asset slugs: Leave empty to apply to all learnpacks. "
+                    "Syllabus: Optional filter to scope surveys by syllabus/module. "
+                    "Shape: {'syllabus': '<syllabus_slug>', 'version': <int>, 'module': <int>, 'asset_slug': '<slug>'}. "
+                    "All keys are optional; if 'module' is omitted, it applies to the whole syllabus/version."
+                ),
             },
         ),
         ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
@@ -584,21 +591,31 @@ class SurveyResponseAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = (
         "id",
         "survey_config",
+        "survey_study",
         "user",
         "status",
         "created_at",
         "answered_at",
         "has_answers",
     )
-    list_filter = ("status", "survey_config__trigger_type", "survey_config__academy", "created_at", "answered_at")
+    list_filter = (
+        "status",
+        "survey_config__trigger_type",
+        "survey_config__academy",
+        "survey_study",
+        "created_at",
+        "answered_at",
+    )
     search_fields = (
         "user__email",
         "user__first_name",
         "user__last_name",
         "survey_config__academy__name",
         "survey_config__academy__slug",
+        "survey_study__slug",
+        "survey_study__title",
     )
-    raw_id_fields = ("survey_config", "user")
+    raw_id_fields = ("survey_config", "survey_study", "user")
     readonly_fields = ("created_at", "answered_at", "trigger_context_display", "answers_display")
     actions = ["export_as_csv"]
     fieldsets = (
@@ -607,6 +624,7 @@ class SurveyResponseAdmin(admin.ModelAdmin, AdminExportCsvMixin):
             {
                 "fields": (
                     "survey_config",
+                    "survey_study",
                     "user",
                     "status",
                 )

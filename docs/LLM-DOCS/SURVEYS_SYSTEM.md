@@ -11,6 +11,8 @@ The Survey System is a real-time, event-driven feedback collection system that a
 - **Flexible Question Types**: Supports Likert scale, open-ended questions, and extensible JSON structure for future types
 - **Advanced Filtering**: Surveys can be filtered by specific cohorts, learnpacks, syllabi, modules, or academies
 - **Module & Syllabus Completion Detection**: Automatically detects when users complete modules or entire syllabi across all activity types (QUIZ, LESSON, EXERCISE, PROJECT)
+- **One Survey Per User Per Study**: Guarantees that each user receives only one survey per study, preventing duplicate surveys
+- **Equitable Distribution (Round-Robin)**: When a study has multiple configurations, users are distributed equitably across them using a round-robin algorithm based on the last N responses
 - **Webhook Integration**: Responses are automatically sent to n8n or other webhook subscribers
 - **Scalable Architecture**: Easy to add new trigger types without modifying existing code
 
@@ -140,8 +142,10 @@ Defines when and how surveys are triggered.
 Stores individual user responses to surveys.
 
 **Fields:**
-- `survey_config`: ForeignKey to SurveyConfiguration
-- `survey_study`: Optional FK to SurveyStudy
+- `survey_config`: ForeignKey to SurveyConfiguration (which configuration was used)
+- `survey_study`: ForeignKey to SurveyStudy (which study this response belongs to)
+  - **Important**: This field is always populated when a survey is triggered via `SurveyManager`
+  - Used for: round-robin distribution, ensuring 1 survey per user per study, and study-level analytics
 - `user`: ForeignKey to User
 - `token`: UUID token used for email links / direct navigation
 - `trigger_context`: JSON with context about what triggered the survey
@@ -152,6 +156,13 @@ Stores individual user responses to surveys.
 - `opened_at`: First time the user opened the survey (set once)
 - `email_opened_at`: First time the user opened the survey email (set once)
 - `answered_at`: When user answered (null until answered)
+
+**Key Relationships:**
+- Each `SurveyResponse` belongs to exactly one `SurveyConfiguration` and one `SurveyStudy`
+- The `survey_study` field is critical for:
+  - Ensuring only 1 survey per user per study
+  - Round-robin distribution across multiple configurations
+  - Study-level statistics and analytics
 
 ### SurveyQuestionTemplate
 
@@ -648,9 +659,11 @@ Headers (all above):
 
 Behavior:
 - Creates **one `SurveyResponse` per (study, user)** if missing.
-- If the study has multiple configs, assigns users **round-robin** across them.
+- If the study has multiple configs, assigns users **round-robin** across them (based on user_id modulo number of configs).
 - Enqueues `send_survey_response_email` which sends an email containing the `SurveyResponse.token` link.
 - If `callback` is provided, it is stored in `SurveyResponse.trigger_context.callback` and appended to the email link as `?callback=...`.
+
+**Note:** For real-time triggers (via `SurveyManager`), the round-robin algorithm is different and based on the last N responses (where N = number of configs), ensuring true rotation. See "Distribution and Round-Robin" section below.
 
 ### User Endpoints
 
@@ -865,18 +878,28 @@ Resolve academy from context or user profile
     ↓
 Find active SurveyConfiguration for trigger_type + academy
     ↓
-For each configuration:
+Group configurations by active SurveyStudy
     ↓
-    Get active SurveyStudy
+For each study:
     ↓
-    Apply filters (syllabus/module, cohorts, asset_slugs)
+    Check if user already has response for this study (1 per user per study)
     ↓
-    Check for existing response (deduplication)
-    ↓
-    Create SurveyResponse (status: PENDING)
-    ↓
-    send_survey_event() via Pusher
-    ↓
+    If no existing response:
+        ↓
+        Get last N responses for this study (N = number of configs)
+        ↓
+        Apply round-robin: select config not used in last N responses
+        ↓
+        If all configs were used: continue rotation from most recent
+        ↓
+        Apply filters (syllabus/module, cohorts, asset_slugs)
+        ↓
+        Check for existing response (trigger-specific deduplication)
+        ↓
+        Create SurveyResponse (status: PENDING)
+        ↓
+        send_survey_event() via Pusher
+        ↓
 Frontend receives event and shows survey
 ```
 
@@ -1128,12 +1151,12 @@ return True
 
 ### Duplicate Prevention
 
-- Checks for existing pending responses before creating new ones
-- Prevents spam and duplicate surveys
-- Deduplication includes trigger-specific context fields:
+- **One Survey Per User Per Study**: First check verifies if user already has any response (non-expired) for the study. If yes, no new survey is created.
+- **Trigger-Specific Deduplication**: Additional check for existing responses with same trigger context:
   - `COURSE_COMPLETION`: filters by `cohort_id`
   - `SYLLABUS_COMPLETION`: filters by `syllabus_slug`, `syllabus_version`, `cohort_id`
   - `MODULE_COMPLETION`: filters by `syllabus_slug`, `syllabus_version`, `module`, `cohort_id`
+- Prevents spam and duplicate surveys
 
 ### Early Exit Optimizations
 
@@ -1168,6 +1191,99 @@ See `docs/LLM-DOCS/SURVEYS_TESTING.md` for complete testing guide.
 
 ---
 
+## Distribution and Round-Robin
+
+### One Survey Per User Per Study
+
+The system guarantees that **each user receives only one survey per study**, regardless of how many configurations the study has. This is enforced by checking for existing responses before creating a new one:
+
+```python
+# In SurveyManager.trigger_survey_for_user()
+existing_study_response = SurveyResponse.objects.filter(
+    survey_study=active_study,
+    user=self.user,
+).exclude(status=SurveyResponse.Status.EXPIRED).first()
+
+if existing_study_response:
+    # User already has a survey for this study - skip
+    return None
+```
+
+### Round-Robin Distribution Algorithm
+
+When a study has multiple `SurveyConfiguration` instances, the system uses a **round-robin algorithm** to distribute users equitably across configurations.
+
+#### How It Works
+
+1. **Get Last N Responses**: Retrieves the last N responses for the study (where N = number of configurations)
+2. **Identify Used Configs**: Determines which configurations were used in those last N responses
+3. **Select Missing Config**: If a configuration wasn't used in the last N responses, it's selected
+4. **Continue Rotation**: If all configurations were used, continues rotation from the most recent response
+
+#### Example with 3 Configurations (A, B, C)
+
+```
+Configs: A (id=1), B (id=2), C (id=3)
+
+1. 0 responses:
+   last_responses = []
+   used = {}
+   → Assigns Config A ✅
+
+2. 1 response (A):
+   last_responses = [A]
+   used = {A}
+   → Assigns Config B ✅
+
+3. 2 responses (A, B):
+   last_responses = [B, A]
+   used = {A, B}
+   → Assigns Config C ✅
+
+4. 3 responses (A, B, C):
+   last_responses = [C, B, A]
+   used = {A, B, C}
+   → All used → Last was C → Next is A ✅
+
+5. 4 responses (A, B, C, A):
+   last_responses = [A, C, B]
+   used = {A, B, C}
+   → All used → Last was A → Next is B ✅
+```
+
+#### Implementation
+
+```python
+# In SurveyManager.trigger_survey_for_user()
+num_configs = len(configs_for_study)
+last_responses = SurveyResponse.objects.filter(
+    survey_study=active_study,
+).exclude(status=SurveyResponse.Status.EXPIRED)
+.order_by("-created_at")
+.values_list("survey_config_id", flat=True)[:num_configs]
+
+used_config_ids = set(last_responses)
+
+# Find first config not used in last N responses
+for config, study in config_study_pairs:
+    if config.id not in used_config_ids:
+        selected_config = config
+        break
+
+# If all were used, continue rotation from most recent
+if selected_config is None:
+    most_recent_config_id = last_responses[0]
+    # Get next config in rotation order
+    selected_config = next_config_after(most_recent_config_id)
+```
+
+#### Benefits
+
+- **True Rotation**: Ensures A → B → C → A → B → C... pattern
+- **Equitable Distribution**: Maintains balance even with non-consecutive user IDs
+- **Efficient**: Only queries last N responses, not all responses
+- **Works with Multiple Cohorts**: Each study maintains its own distribution independently
+
 ## Helper Functions
 
 ### Module/Syllabus Completion Helpers
@@ -1192,6 +1308,11 @@ The `SurveyManager` class centralizes all survey triggering logic:
 
 - **`__init__(user, trigger_type, context)`**: Initialize with user, trigger type, and context
 - **`trigger_survey_for_user()`**: Main method that orchestrates the entire trigger process
+  - Groups configurations by active study
+  - Checks for existing study response (1 per user per study)
+  - Applies round-robin distribution
+  - Applies filters and deduplication
+  - Creates survey response
 - **`_validate_user()`**: Validates user is not None
 - **`_validate_trigger_type()`**: Validates trigger type is valid
 - **`_resolve_academy()`**: Resolves academy from context or user profile
@@ -1200,7 +1321,7 @@ The `SurveyManager` class centralizes all survey triggering logic:
 - **`_filter_by_syllabus_module(survey_config)`**: Filters by syllabus slug, version, and module
 - **`_filter_by_cohort(survey_config)`**: Filters by cohort
 - **`_filter_by_asset_slug(survey_config)`**: Filters by asset_slug
-- **`_check_deduplication(survey_config, active_study)`**: Checks for existing responses
+- **`_check_deduplication(survey_config, active_study)`**: Checks for existing responses (trigger-specific)
 - **`_create_response(survey_config, active_study)`**: Creates SurveyResponse
 
 ## Related Documentation
