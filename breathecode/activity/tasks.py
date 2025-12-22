@@ -279,6 +279,7 @@ def add_activity(
     related_id: Optional[str | int] = None,
     related_slug: Optional[str] = None,
     timestamp: Optional[str] = None,
+    academy_id: Optional[int] = None,
     **_,
 ):
 
@@ -348,7 +349,7 @@ def add_activity(
 
             fields = []
 
-            meta = actions.get_activity_meta(kind, related_type, related_id, related_slug)
+            meta = actions.get_activity_meta(kind, related_type, related_id, related_slug, academy_id)
 
             for key in meta:
                 t = bigquery.enums.SqlTypeNames.STRING
