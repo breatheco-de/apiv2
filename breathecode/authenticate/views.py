@@ -1337,13 +1337,19 @@ class LoginView(ObtainAuthToken):
     schema = AutoSchema()
 
     def post(self, request, *args, **kwargs):
+        from breathecode.utils.request import get_current_academy
 
         serializer = AuthSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         token, created = Token.get_or_create(user=user, token_type="login")
 
-        tasks_activity.add_activity.delay(user.id, "login", related_type="auth.User", related_id=user.id)
+        # Get academy_id using the utility function
+        academy_id = get_current_academy(request, return_id=True)
+
+        tasks_activity.add_activity.delay(
+            user.id, "login", related_type="auth.User", related_id=user.id, academy_id=academy_id
+        )
 
         return Response({"token": token.key, "user_id": user.pk, "email": user.email, "expires_at": token.expires_at})
 
