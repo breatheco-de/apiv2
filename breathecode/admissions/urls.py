@@ -55,6 +55,7 @@ from django.urls import path
 
 from .views import (
     AcademyActivateView,
+    AcademyCohortAttendanceReportView,
     AcademyCohortHistoryView,
     AcademyCohortTimeSlotView,
     AcademyCohortUserView,
@@ -120,6 +121,16 @@ urlpatterns = [
         name="academy_cohort_user_id",
     ),
     path("academy/cohort/<str:cohort_id>/log", AcademyCohortHistoryView.as_view(), name="academy_cohort_id_history"),
+    path(
+        "academy/cohort/<int:cohort_id>/report/attendance.csv",
+        AcademyCohortAttendanceReportView.as_view(),
+        name="academy_cohort_id_attendance_csv",
+    ),
+    path(
+        "academy/cohort/<int:cohort_id>/report/attendance.json",
+        AcademyCohortAttendanceReportView.as_view(),
+        name="academy_cohort_id_attendance_json",
+    ),
     path(
         "academy/cohort/<int:cohort_id>/user/<int:user_id>",
         AcademyCohortUserView.as_view(),
