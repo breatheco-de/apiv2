@@ -39,6 +39,7 @@ from ..views import (
     GithubMeView,
     GithubUserView,
     GitpodUserView,
+    LearnpackOrganizationView,
     LoginView,
     LogoutView,
     MeInviteView,
@@ -205,4 +206,5 @@ urlpatterns = [
     path("app/webhook", app_webhook, name="app_webhook"),
     path("me/app/<str:app_slug>/sync", AppSync.as_view(), name="me_app_slug_sync"),
     path("app/token", AppTokenView.as_view(), name="app_token"),
+    path("academy/learnpack/me/organization", LearnpackOrganizationView.as_view(), name="academy_learnpack_me_organization"),
 ]

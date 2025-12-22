@@ -3934,6 +3934,34 @@ class AppSync(APIView):
             return await s.post("/v1/auth/app/user", data)
 
 
+class LearnpackOrganizationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @sync_to_async
+    def aget_user(self):
+        return self.request.user
+
+    async def get(self, request):
+        lang = await aget_user_language(request)
+        user = await self.aget_user()
+
+        try:
+            async with Service("learnpack", user.id, proxy=True) as s:
+                async with s.get("/v1/auth/organization/") as response:
+                    data = await response.json()
+                    return Response(data, status=response.status)
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error calling learnpack service: {str(e)}",
+                    es=f"Error al llamar al servicio learnpack: {str(e)}",
+                ),
+                code=500,
+                slug="learnpack-service-error",
+            )
+
+
 class AppTokenView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(paginate=True)
