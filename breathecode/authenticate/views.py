@@ -1346,7 +1346,6 @@ class LoginView(ObtainAuthToken):
 
         # Get academy_id using the utility function
         academy_id = get_current_academy(request, return_id=True)
-        print(f"academy_id: {academy_id}")
 
         tasks_activity.add_activity.delay(
             user.id, "login", related_type="auth.User", related_id=user.id, academy_id=academy_id

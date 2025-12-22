@@ -329,7 +329,7 @@ class FillActivityMeta:
 
     @classmethod
     def event_checkin(
-        cls, kind: str, related_id: Optional[str | int] = None, related_slug: Optional[str] = None
+        cls, kind: str, related_id: Optional[str | int] = None, related_slug: Optional[str] = None, academy_id: Optional[int] = None
     ) -> dict[str, Any]:
         from breathecode.events.models import EventCheckin
 
@@ -355,6 +355,9 @@ class FillActivityMeta:
 
         if instance.attended_at:
             obj["attended_at"] = instance.attended_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        if academy_id:
+            obj["academy"] = academy_id
 
         return obj
 
