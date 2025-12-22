@@ -37,6 +37,7 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import render_message
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
+from .actions import academy_student_progress_report_rows
 from .models import (
     DELETED,
     STUDENT,
@@ -465,6 +466,63 @@ class AcademyReportView(APIView):
 
         users = AcademyReportSerializer(academy)
         return Response(users.data)
+
+
+class AcademyReportCSVView(APIView):
+    """
+    Academy student progress report in CSV format.
+
+    Output columns:
+    - course_name
+    - student_full_name
+    - student_email
+    - enrollment_date
+    - student_start_date
+    - status (not_started / in_progress / completed / withdrawn)
+    - progress_percentage (0-100)
+    - completion_date
+    - certificate_url
+    - comments
+    """
+
+    @capable_of("academy_reporting")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                slug="academy-not-found",
+            )
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="academy_report.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "course_name",
+                "student_full_name",
+                "student_email",
+                "enrollment_date",
+                "student_start_date",
+                "status",
+                "progress_percentage",
+                "completion_date",
+                "certificate_url",
+                "comments",
+            ]
+        )
+
+        for row in academy_student_progress_report_rows(academy, lang=lang):
+            writer.writerow(row)
+
+        return response
 
 
 class AcademyActivateView(APIView):
