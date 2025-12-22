@@ -318,6 +318,117 @@ def trigger_course_survey_on_last_submission(sender: Type[Task], instance: Task,
         logger.error("[course-submitted] Error triggering survey: %s", str(e), exc_info=True)
 
 
+@receiver(assignment_status_updated, sender=Task, weak=False)
+def trigger_module_survey_on_completion(sender: Type[Task], instance: Task, **kwargs: Any):
+    """
+    Trigger module and syllabus completion surveys when any task (QUIZ, LESSON, EXERCISE, PROJECT) is marked as DONE.
+
+    This ensures that module completion is detected regardless of the task type, not just when learnpacks
+    (EXERCISE) are completed via telemetry.
+    """
+    logger.info(
+        "[module-completion] start | task_id=%s user_id=%s cohort_id=%s task_type=%s task_status=%s",
+        getattr(instance, "id", None),
+        getattr(instance.user, "id", None),
+        getattr(instance.cohort, "id", None),
+        getattr(instance, "task_type", None),
+        getattr(instance, "task_status", None),
+    )
+
+    # Only react to completion events.
+    if getattr(instance, "task_status", None) != "DONE":
+        logger.info("[module-completion] task_status is not DONE -> return")
+        return
+
+    if instance.cohort is None:
+        logger.info("[module-completion] task has no cohort -> return")
+        return
+
+    cohort = Cohort.objects.filter(id=instance.cohort.id).first()
+    if cohort is None:
+        logger.info("[module-completion] cohort not found (id=%s) -> return", getattr(instance.cohort, "id", None))
+        return
+
+    if not getattr(cohort, "syllabus_version", None):
+        logger.info("[module-completion] cohort has no syllabus_version -> return")
+        return
+
+    try:
+        from breathecode.feedback import actions
+        from breathecode.feedback.models import SurveyConfiguration
+
+        if not actions.has_active_survey_studies(
+            cohort.academy,
+            [
+                SurveyConfiguration.TriggerType.MODULE_COMPLETION,
+                SurveyConfiguration.TriggerType.SYLLABUS_COMPLETION,
+            ],
+        ):
+            logger.info(
+                "[module-completion] no active studies with module/syllabus triggers | user_id=%s cohort_id=%s academy_id=%s",
+                instance.user.id,
+                cohort.id,
+                cohort.academy.id,
+            )
+            return
+
+        # Find which module this task belongs to
+        module_index = actions._find_module_for_asset_in_syllabus(
+            cohort.syllabus_version, instance.associated_slug
+        )
+
+        # Check if module is complete (only if we found the module)
+        if module_index is not None:
+            if actions._is_module_complete(instance.user, cohort, module_index):
+                module_context = {
+                    "academy": cohort.academy,
+                    "cohort": cohort,
+                    "cohort_id": cohort.id,
+                    "cohort_slug": cohort.slug,
+                    "syllabus_slug": cohort.syllabus_version.syllabus.slug,
+                    "syllabus_version": cohort.syllabus_version.version,
+                    "module": module_index,
+                    "asset_slug": instance.associated_slug,
+                    "task_type": instance.task_type,
+                    "completed_at": timezone.now().isoformat(),
+                }
+
+                survey_response = actions.trigger_survey_for_user(
+                    instance.user, SurveyConfiguration.TriggerType.MODULE_COMPLETION, module_context
+                )
+                logger.info(
+                    "[module-completion] module survey trigger result | user_id=%s cohort_id=%s module_index=%s survey_response_id=%s",
+                    instance.user.id,
+                    cohort.id,
+                    module_index,
+                    getattr(survey_response, "id", None),
+                )
+
+        if actions._is_syllabus_complete(instance.user, cohort):
+            syllabus_context = {
+                "academy": cohort.academy,
+                "cohort": cohort,
+                "cohort_id": cohort.id,
+                "cohort_slug": cohort.slug,
+                "syllabus_slug": cohort.syllabus_version.syllabus.slug,
+                "syllabus_version": cohort.syllabus_version.version,
+                "completed_at": timezone.now().isoformat(),
+            }
+
+            survey_response = actions.trigger_survey_for_user(
+                instance.user, SurveyConfiguration.TriggerType.SYLLABUS_COMPLETION, syllabus_context
+            )
+            logger.info(
+                "[module-completion] syllabus survey trigger result | user_id=%s cohort_id=%s survey_response_id=%s",
+                instance.user.id,
+                cohort.id,
+                getattr(survey_response, "id", None),
+            )
+
+    except Exception as e:
+        logger.error("[module-completion] Error triggering survey: %s", str(e), exc_info=True)
+
+
 @receiver(syllabus_created, sender=Syllabus)
 def create_initial_syllabus_version(sender: Type[Syllabus], instance: Syllabus, **kwargs: Any):
     """Create an initial SyllabusVersion when a new Syllabus is created."""
