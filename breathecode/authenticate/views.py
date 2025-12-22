@@ -3980,7 +3980,7 @@ class LearnpackOrganizationView(APIView):
                 print(f"Direct query found app: {app.slug}, app_url: {app.app_url}")
 
         try:
-            async with Service("rigobot", user.id) as s:
+            async with Service("rigobot", user.id, proxy=True) as s:
                 params = dict(request.GET)
                 return await s.get("/v1/auth/organization/", params=params)
         except Exception as e:
