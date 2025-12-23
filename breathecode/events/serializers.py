@@ -334,7 +334,11 @@ class GetLiveClassSerializer(serpy.Serializer):
     skipped_reason = serpy.Field()
 
     def get_cohort(self, obj):
-        return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        if obj.cohort:
+            return CohortSmallSerializer(obj.cohort).data
+        elif obj.cohort_time_slot:
+            return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        return None
 
 
 class GetLiveClassJoinSerializer(GetLiveClassSerializer):
@@ -843,7 +847,7 @@ class LiveClassSerializer(serializers.ModelSerializer):
     def _validate_started_at(self, data: dict[str, Any]):
         utc_now = timezone.now()
 
-        if not self.instance and "started_at" in data:
+        if not self.instance and "started_at" in data and data["started_at"] is not None:
             raise ValidationException(
                 translation(
                     self.context["lang"],

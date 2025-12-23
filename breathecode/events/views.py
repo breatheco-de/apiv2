@@ -493,6 +493,11 @@ class AcademyLiveClassView(APIView):
 
         lang = get_user_language(request)
 
+        # Custom handler for cohort querystring to support both paths
+        def cohort_filter(value):
+            cohort_id = value
+            return Q(cohort_time_slot__cohort__id=cohort_id) | Q(cohort__id=cohort_id)
+
         query = handler.lookup.build(
             lang,
             strings={
@@ -513,9 +518,11 @@ class AcademyLiveClassView(APIView):
                 "cohort_time_slot__cohort",
                 "cohort_time_slot__cohort__academy",
                 "cohort_time_slot__cohort__syllabus_version__syllabus",
+                "cohort",  # Add direct cohort field
+                "cohort__academy",  # Add cohort academy path
             ],
             overwrite={
-                "cohort": "cohort_time_slot__cohort",
+                # Removed "cohort" from overwrite so custom_fields handler is used
                 "academy": "cohort_time_slot__cohort__academy",
                 "syllabus": "cohort_time_slot__cohort__syllabus_version__syllabus",
                 "start": "starting_at",
@@ -524,9 +531,16 @@ class AcademyLiveClassView(APIView):
                 "user": "cohort_time_slot__cohort__cohortuser__user",
                 "user_email": "cohort_time_slot__cohort__cohortuser__user__email",
             },
+            custom_fields={
+                "cohort": cohort_filter,  # Use custom handler for cohort to support both paths
+            },
         )
 
-        items = LiveClass.objects.filter(query, cohort_time_slot__cohort__academy__id=academy_id)
+        # Use Q object to include both cohort_time_slot and direct cohort paths for academy filter
+        academy_filter = Q(
+            Q(cohort_time_slot__cohort__academy__id=academy_id) | Q(cohort__academy__id=academy_id)
+        )
+        items = LiveClass.objects.filter(query & academy_filter)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
@@ -546,7 +560,8 @@ class AcademyLiveClassView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            response_serializer = GetLiveClassSerializer(serializer.instance)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_liveclass")
