@@ -508,6 +508,7 @@ class AcademyLiveClassView(APIView):
             },
             bools={
                 "is_null": ["ended_at"],
+                "exact": ["is_holiday", "is_skipped"],
             },
             datetimes={
                 "gte": ["starting_at"],
@@ -530,6 +531,8 @@ class AcademyLiveClassView(APIView):
                 "upcoming": "ended_at",
                 "user": "cohort_time_slot__cohort__cohortuser__user",
                 "user_email": "cohort_time_slot__cohort__cohortuser__user__email",
+                "holiday": "is_holiday",
+                "skipped": "is_skipped",
             },
             custom_fields={
                 "cohort": cohort_filter,  # Use custom handler for cohort to support both paths
