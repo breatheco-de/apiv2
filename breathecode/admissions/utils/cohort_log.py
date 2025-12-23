@@ -1,5 +1,6 @@
 import logging
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class CohortDayLog(object):
     created_at = None
     attendance_ids = []
     unattendance_ids = []
+    liveclass_date = None
 
     def __init__(
         self,
@@ -26,6 +28,7 @@ class CohortDayLog(object):
         attendance_ids: list = None,
         unattendance_ids: list = None,
         updated_at: datetime = None,
+        liveclass_date: datetime = None,
         allow_empty=False,
     ):
 
@@ -46,11 +49,20 @@ class CohortDayLog(object):
         if has_duplicates(unattendance_ids):
             raise Exception("Unattendance list has duplicate user ids")
 
+        # Parse liveclass_date if it's a string (from JSON payload)
+        if liveclass_date is not None and isinstance(liveclass_date, str):
+            parsed_date = parse_datetime(liveclass_date)
+            if parsed_date is None:
+                raise Exception(f"Invalid liveclass_date format: {liveclass_date}. Expected ISO datetime format.")
+            liveclass_date = parsed_date
+        # If it's already a datetime object, keep it as is
+
         self.current_module = current_module
         self.teacher_comments = teacher_comments
         self.attendance_ids = attendance_ids
         self.unattendance_ids = unattendance_ids
         self.updated_at = updated_at
+        self.liveclass_date = liveclass_date
 
     @staticmethod
     def empty():
@@ -61,6 +73,7 @@ class CohortDayLog(object):
                 "updated_at": None,
                 "attendance_ids": [],
                 "unattendance_ids": [],
+                "liveclass_date": None,
                 "allow_empty": True,
             }
         )
@@ -72,6 +85,7 @@ class CohortDayLog(object):
             "attendance_ids": self.attendance_ids,
             "unattendance_ids": self.unattendance_ids,
             "updated_at": str(self.updated_at),
+            "liveclass_date": str(self.liveclass_date) if self.liveclass_date else None,
         }
 
 
