@@ -567,6 +567,7 @@ class AcademyLiveClassView(APIView):
         serializer = LiveClassSerializer(
             already,
             data=request.data,
+            partial=True,
             context={
                 "lang": lang,
                 "academy_id": academy_id,
