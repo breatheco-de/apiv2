@@ -829,10 +829,16 @@ class EventTypePutSerializer(EventTypeSerializerMixin):
 
 
 class LiveClassSerializer(serializers.ModelSerializer):
+    hash = serializers.CharField(read_only=True)
+    cohort = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = LiveClass
         exclude = ()
+        extra_kwargs = {
+            "cohort_time_slot": {"required": False, "allow_null": True},
+            "remote_meeting_url": {"required": False, "allow_blank": True},
+        }
 
     def _validate_started_at(self, data: dict[str, Any]):
         utc_now = timezone.now()
@@ -952,19 +958,35 @@ class LiveClassSerializer(serializers.ModelSerializer):
             )
 
     def _validate_cohort(self, data: dict[str, Any]):
-        if "cohort" in data and data["cohort"].academy.id != int(self.context["academy_id"]):
-            raise ValidationException(
-                translation(
-                    self.context["lang"],
-                    en="This cohort does not belong to any of your academies.",
-                    es="Este cohort no pertenece a ninguna de tus academias.",
-                    slug="cohort-not-belong-to-academy",
+        from breathecode.admissions.models import Cohort
+
+        if "cohort" in data and data["cohort"] is not None:
+            cohort_id = data["cohort"]
+            try:
+                cohort = Cohort.objects.get(id=cohort_id, academy__id=int(self.context["academy_id"]))
+                data["cohort"] = cohort
+            except Cohort.DoesNotExist:
+                raise ValidationException(
+                    translation(
+                        self.context["lang"],
+                        en="This cohort does not belong to any of your academies.",
+                        es="Este cohort no pertenece a ninguna de tus academias.",
+                        slug="cohort-not-belong-to-academy",
+                    )
                 )
-            )
 
     def validate(self, data: dict[str, Any]):
         self._validate_started_at(data)
         self._validate_ended_at(data)
         self._validate_cohort(data)
+
+        # Set remote_meeting_url from cohort if not provided
+        if "remote_meeting_url" not in data or not data.get("remote_meeting_url"):
+            if "cohort" in data and data["cohort"] is not None:
+                cohort = data["cohort"]
+                data["remote_meeting_url"] = cohort.online_meeting_url or ""
+            elif not self.instance:
+                # If creating new and no cohort provided, default to empty string
+                data["remote_meeting_url"] = ""
 
         return data

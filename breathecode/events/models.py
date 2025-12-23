@@ -500,9 +500,10 @@ class LiveClass(models.Model):
         super(LiveClass, self).__init__(*args, **kwargs)
         self.__old_ended_at = self.ended_at
 
-    cohort_time_slot = models.ForeignKey(CohortTimeSlot, on_delete=models.CASCADE)
+    cohort_time_slot = models.ForeignKey(CohortTimeSlot, on_delete=models.CASCADE, blank=True, null=True)
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     log = models.JSONField(default=dict)
-    remote_meeting_url = models.URLField()
+    remote_meeting_url = models.URLField(blank=True, default="")
 
     is_holiday = models.BooleanField(default=False, help_text="We keep the class on recording even if it's a holiday, to avoid the timeslot and live class being re-added into the calendar)")
     is_skipped = models.BooleanField(default=False, help_text="Some classes are skipped, like the ones that are before the kickoff date, on holidays or after the ending date")
