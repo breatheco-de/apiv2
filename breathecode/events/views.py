@@ -593,6 +593,52 @@ class AcademyLiveClassView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of("crud_liveclass")
+    def delete(self, request, live_class_id, academy_id=None):
+        lang = get_user_language(request)
+
+        live_class = LiveClass.objects.filter(id=live_class_id).first()
+        if live_class is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Live class not found for this academy {academy_id}",
+                    es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                    slug="not-found",
+                )
+            )
+
+        # Check if live class belongs to the academy (either through cohort_time_slot or direct cohort)
+        belongs_to_academy = False
+        if live_class.cohort_time_slot and live_class.cohort_time_slot.cohort.academy.id == int(academy_id):
+            belongs_to_academy = True
+        elif live_class.cohort and live_class.cohort.academy.id == int(academy_id):
+            belongs_to_academy = True
+
+        if not belongs_to_academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Live class not found for this academy {academy_id}",
+                    es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                    slug="not-found",
+                )
+            )
+
+        # Only allow deletion if cohort_time_slot is null
+        if live_class.cohort_time_slot is not None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete live class because it is associated with a cohort timeslot. Live classes associated with timeslots are managed automatically.",
+                    es="No se puede eliminar la clase en vivo porque está asociada con un horario de cohorte. Las clases en vivo asociadas con horarios se gestionan automáticamente.",
+                    slug="cannot-delete-timeslot-associated",
+                )
+            )
+
+        live_class.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 
 class AcademyLiveClassJoinView(APIView):
 
