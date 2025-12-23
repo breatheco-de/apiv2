@@ -329,6 +329,10 @@ class GetLiveClassSerializer(serpy.Serializer):
     remote_meeting_url = serpy.Field()
     cohort = serpy.MethodField()
 
+    is_holiday = serpy.Field()
+    is_skipped = serpy.Field()
+    skipped_reason = serpy.Field()
+
     def get_cohort(self, obj):
         return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
 
