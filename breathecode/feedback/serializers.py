@@ -569,6 +569,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
             "academy",
             "cohorts",
             "asset_slugs",
+            "priority",
             "created_by",
             "created_at",
             "updated_at",
@@ -581,6 +582,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
             "trigger_type": {"required": False, "allow_null": True},
             "questions": {"required": False},
             "syllabus": {"required": False},
+            "priority": {"required": False, "allow_null": True},
         }
 
     def validate_syllabus(self, value):
@@ -608,7 +610,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
 
         if "asset_slug" in value and value["asset_slug"] is not None and not isinstance(value["asset_slug"], str):
             raise ValidationException("'asset_slug' must be a string", slug="invalid-syllabus-filter-asset-slug")
-
+        
         return value
 
     def validate_questions(self, value):

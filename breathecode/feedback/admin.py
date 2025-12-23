@@ -540,6 +540,7 @@ class SurveyConfigurationAdmin(admin.ModelAdmin):
         "template",
         "academy",
         "is_active",
+        "priority",
         "created_by",
         "created_at",
         "updated_at",
@@ -558,6 +559,7 @@ class SurveyConfigurationAdmin(admin.ModelAdmin):
                     "template",
                     "academy",
                     "is_active",
+                    "priority",
                     "created_by",
                 )
             },
