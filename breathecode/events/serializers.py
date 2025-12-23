@@ -994,3 +994,25 @@ class LiveClassSerializer(serializers.ModelSerializer):
                 data["remote_meeting_url"] = ""
 
         return data
+
+    def create(self, validated_data):
+        utc_now = timezone.now()
+
+        # If creating a live class with past dates, automatically set started_at and ended_at
+        starting_at = validated_data.get("starting_at")
+        ending_at = validated_data.get("ending_at")
+
+        # If starting_at is in the past, automatically set started_at
+        if starting_at and starting_at < utc_now:
+            validated_data["started_at"] = starting_at
+
+        # If ending_at is in the past, automatically set ended_at (but only if started_at is set)
+        if ending_at and ending_at < utc_now:
+            # Get started_at (either from validated_data or just set above)
+            started_at = validated_data.get("started_at")
+            if started_at is not None:
+                # Ensure ended_at is after or equal to started_at
+                if ending_at >= started_at:
+                    validated_data["ended_at"] = ending_at
+
+        return super().create(validated_data)
