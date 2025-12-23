@@ -2634,7 +2634,7 @@ class LearnpackPackagesView(APIView):
         user_id = request.user.id if request.user.is_authenticated else None
 
         try:
-            async with Service("learnpack", user_id, proxy=True) as s:
+            async with Service("rigobot", user_id, proxy=True) as s:
                 # Forward query parameters to learnpack
                 params = dict(request.GET)
                 return await s.get("/v1/learnpack/packages", params=params)

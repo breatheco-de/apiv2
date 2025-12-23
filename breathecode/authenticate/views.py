@@ -3945,25 +3945,9 @@ class LearnpackOrganizationView(APIView):
         lang = await aget_user_language(request)
         user = await self.aget_user()
 
-        try:
-            async with Service("rigobot", user.id, proxy=True) as s:
-                print(f"Service mode: {s.mode}")
-                print(f"App strategy: {s.app.strategy}")
-                print(f"App slug: {s.app.slug}")
-                print(f"App has private_key: {bool(s.app.private_key)}")
-                
-                params = dict(request.GET)
-                return await s.get("/v1/auth/organization/", params=params)
-        except Exception as e:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en=f"Error calling rigobot service: {str(e)}",
-                    es=f"Error al llamar al servicio rigobot: {str(e)}",
-                ),
-                code=500,
-                slug="rigobot-service-error",
-            )
+        async with Service("rigobot", user.id, proxy=True) as s:
+            params = dict(request.GET)
+            return await s.get("/v1/auth/me/organization", params=params)
 
 
 class AppTokenView(APIView):
