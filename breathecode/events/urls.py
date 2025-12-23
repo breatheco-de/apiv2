@@ -98,6 +98,7 @@ urlpatterns = [
     path("me/event/liveclass/join/<str:hash>", join_live_class, name="me_event_liveclass_join_hash"),
     path("public/event/liveclass", PublicLiveClassView.as_view(), name="public_event_liveclass"),
     path("academy/event/liveclass", AcademyLiveClassView.as_view(), name="academy_event_liveclass"),
+    path("academy/event/liveclass/<int:live_class_id>", AcademyLiveClassView.as_view(), name="academy_event_liveclass_id"),
     path(
         "academy/event/liveclass/join/<str:hash>",
         AcademyLiveClassJoinView.as_view(),

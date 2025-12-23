@@ -485,7 +485,7 @@ def join_live_class(request, token, live_class, lang):
 class AcademyLiveClassView(APIView):
     extensions = APIViewExtensions(sort="-starting_at", paginate=True)
 
-    @capable_of("start_or_end_class")
+    @capable_of("read_liveclass")
     def get(self, request, academy_id=None):
         from .models import LiveClass
 
@@ -533,7 +533,7 @@ class AcademyLiveClassView(APIView):
 
         return handler.response(serializer.data)
 
-    @capable_of("start_or_end_class")
+    @capable_of("crud_liveclass")
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
 
@@ -549,13 +549,11 @@ class AcademyLiveClassView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of("start_or_end_class")
-    def put(self, request, cohort_schedule_id, academy_id=None):
+    @capable_of("crud_liveclass")
+    def put(self, request, live_class_id, academy_id=None):
         lang = get_user_language(request)
 
-        already = LiveClass.objects.filter(
-            id=cohort_schedule_id, cohort_time_slot__cohort__academy__id=academy_id
-        ).first()
+        already = LiveClass.objects.filter(id=live_class_id).first()
         if already is None:
             raise ValidationException(
                 translation(
