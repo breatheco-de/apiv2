@@ -133,6 +133,25 @@ class CohortLog(object):
                 f"You cannot log activity for day {str(day)} because the cohort is currently at day {str(self.cohort.current_day)}"
             )
 
+        # Get existing day log if it exists
+        existing_day_log = None
+        if day - 1 < len(self.days):
+            existing_day_log = self.days[day - 1]
+
+        # Handle liveclass_date logic:
+        # - If not in payload and existing entry has liveclass_date, preserve it
+        # - If not in payload and existing entry doesn't have liveclass_date, set to updated_at
+        # - If in payload, use it (explicit override)
+        if "liveclass_date" not in payload:
+            if existing_day_log and existing_day_log.liveclass_date is not None:
+                # Preserve existing liveclass_date
+                payload["liveclass_date"] = existing_day_log.liveclass_date
+            else:
+                # Set to updated_at (will be timezone.now() if not provided)
+                if "updated_at" not in payload:
+                    payload["updated_at"] = timezone.now()
+                payload["liveclass_date"] = payload["updated_at"]
+
         try:
             self.days[day - 1] = CohortDayLog(**payload)
             logger.debug(f"Replaced cohort {self.cohort.slug} log for day {day}")
