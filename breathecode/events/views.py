@@ -524,7 +524,7 @@ class AcademyLiveClassView(APIView):
                     404,
                 )
 
-            serializer = GetLiveClassSerializer(live_class, many=False)
+            serializer = GetLiveClassBigSerializer(live_class, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         # Otherwise, return list of live classes
