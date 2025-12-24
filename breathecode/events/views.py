@@ -83,6 +83,7 @@ from .serializers import (
     GetLiveClassSerializer,
     LiveClassJoinSerializer,
     LiveClassSerializer,
+    GetLiveClassBigSerializer,
     OrganizationBigSerializer,
     OrganizationSerializer,
     OrganizerSmallSerializer,
