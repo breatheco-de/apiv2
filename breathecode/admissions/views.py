@@ -1136,6 +1136,9 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not timezone:
             raise ValidationException("Academy doesn't have a timezone assigned", slug="academy-without-timezone")
 
+        # Extract force_generation flag before preparing data
+        force_generation = request.data.pop("force_generation", False)
+
         data = {
             **request.data,
             "id": timeslot_id,
@@ -1149,9 +1152,15 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if "ending_at" in data:
             data["ending_at"] = DatetimeInteger.from_iso_string(timezone, data["ending_at"])
 
+        # Set temporary attribute before saving
+        item._force_generation = force_generation
+
         serializer = CohortTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
             serializer.save()
+            # Clear the attribute after save
+            if hasattr(item, "_force_generation"):
+                delattr(item, "_force_generation")
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

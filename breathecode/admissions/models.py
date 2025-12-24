@@ -827,7 +827,10 @@ class CohortTimeSlot(TimeSlot):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        signals.timeslot_saved.send_robust(instance=self, sender=self.__class__, created=created)
+        force_generation = getattr(self, "_force_generation", False)
+        signals.timeslot_saved.send_robust(
+            instance=self, sender=self.__class__, created=created, force_generation=force_generation
+        )
 
     def __str__(self):
         start_time = datetime.strptime(str(self.starting_at), "%Y%m%d%H%M").strftime("%d/%m/%Y %I%p")
