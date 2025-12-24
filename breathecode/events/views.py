@@ -486,12 +486,49 @@ class AcademyLiveClassView(APIView):
     extensions = APIViewExtensions(sort="-starting_at", paginate=True)
 
     @capable_of("read_liveclass")
-    def get(self, request, academy_id=None):
+    def get(self, request, live_class_id=None, academy_id=None):
         from .models import LiveClass
 
-        handler = self.extensions(request)
-
         lang = get_user_language(request)
+
+        # If live_class_id is provided, return a single live class
+        if live_class_id is not None:
+            live_class = LiveClass.objects.filter(id=live_class_id).first()
+
+            if not live_class:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Live class not found for this academy {academy_id}",
+                        es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                        slug="not-found",
+                    ),
+                    404,
+                )
+
+            # Check if live class belongs to the academy (either through cohort_time_slot or direct cohort)
+            belongs_to_academy = False
+            if live_class.cohort_time_slot and live_class.cohort_time_slot.cohort.academy.id == int(academy_id):
+                belongs_to_academy = True
+            elif live_class.cohort and live_class.cohort.academy.id == int(academy_id):
+                belongs_to_academy = True
+
+            if not belongs_to_academy:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Live class not found for this academy {academy_id}",
+                        es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                        slug="not-found",
+                    ),
+                    404,
+                )
+
+            serializer = GetLiveClassSerializer(live_class, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Otherwise, return list of live classes
+        handler = self.extensions(request)
 
         # Custom handler for cohort querystring to support both paths
         def cohort_filter(value):

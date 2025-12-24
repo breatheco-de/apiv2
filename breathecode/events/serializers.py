@@ -57,6 +57,12 @@ class ProfileSerializer(serpy.Serializer):
         translations = ProfileTranslation.objects.filter(profile=obj)
         return ProfileTranslationSerializer(translations, many=True).data
 
+class CohortTimeSlotSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    timezone = serpy.Field()
+
 
 class UserBigSerializer(UserSerializer):
     profile = serpy.MethodField()
@@ -321,6 +327,25 @@ class AcademyEventSmallSerializer(serpy.Serializer):
 
 class GetLiveClassSerializer(serpy.Serializer):
     id = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    remote_meeting_url = serpy.Field()
+    cohort = serpy.MethodField()
+
+    is_holiday = serpy.Field()
+    is_skipped = serpy.Field()
+
+    def get_cohort(self, obj):
+        if obj.cohort:
+            return CohortSmallSerializer(obj.cohort).data
+        elif obj.cohort_time_slot:
+            return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        return None
+
+class GetLiveClassBigSerializer(serpy.Serializer):
+    id = serpy.Field()
     hash = serpy.Field()
     started_at = serpy.Field()
     ended_at = serpy.Field()
@@ -332,6 +357,10 @@ class GetLiveClassSerializer(serpy.Serializer):
     is_holiday = serpy.Field()
     is_skipped = serpy.Field()
     skipped_reason = serpy.Field()
+
+    cohort_time_slot = CohortTimeSlotSmallSerializer(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
 
     def get_cohort(self, obj):
         if obj.cohort:
