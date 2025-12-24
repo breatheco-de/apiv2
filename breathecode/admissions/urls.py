@@ -57,6 +57,7 @@ from .views import (
     AcademyActivateView,
     AcademyCohortAttendanceReportView,
     AcademyCohortHistoryView,
+    AcademyCohortTimeSlotLiveClassesView,
     AcademyCohortTimeSlotView,
     AcademyCohortUserView,
     AcademyCohortView,
@@ -142,6 +143,11 @@ urlpatterns = [
         "academy/cohort/<int:cohort_id>/timeslot",
         AcademyCohortTimeSlotView.as_view(),
         name="academy_cohort_id_timeslot",
+    ),
+    path(
+        "academy/cohort/<int:cohort_id>/timeslot/<int:timeslot_id>/liveclasses",
+        AcademyCohortTimeSlotLiveClassesView.as_view(),
+        name="academy_cohort_id_timeslot_id_liveclasses",
     ),
     path(
         "academy/cohort/<int:cohort_id>/timeslot/<int:timeslot_id>",

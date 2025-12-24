@@ -1178,6 +1178,35 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+class AcademyCohortTimeSlotLiveClassesView(APIView):
+    @capable_of("crud_cohort")
+    def delete(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+        from breathecode.events.models import LiveClass
+
+        lang = get_user_language(request)
+
+        # Validate timeslot exists and belongs to academy/cohort
+        timeslot = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id, cohort__id=cohort_id, id=timeslot_id
+        ).first()
+
+        if not timeslot:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Time slot not found",
+                    es="Horario no encontrado",
+                    slug="time-slot-not-found",
+                ),
+                404,
+            )
+
+        # Delete all live classes associated with this timeslot
+        deleted_count, _ = LiveClass.objects.filter(cohort_time_slot=timeslot).delete()
+
+        return Response({"deleted": deleted_count}, status=status.HTTP_200_OK)
+
+
 class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
 
     @capable_of("crud_cohort")

@@ -61,13 +61,29 @@ class ImportCohortTimeSlots:
 
     def clean(self) -> None:
         from breathecode.admissions.models import CohortTimeSlot
+        from breathecode.events.models import LiveClass
+        from django.db.models import Q
 
+        if not self.cohort:
+            return
+
+        # Delete all timeslots for this cohort
         CohortTimeSlot.objects.filter(cohort=self.cohort).delete()
+
+        # Delete all live classes associated with this cohort
+        # This includes:
+        # 1. Live classes linked via cohort_time_slot (already deleted by CASCADE, but handle edge cases)
+        # 2. Live classes directly linked via cohort field
+        LiveClass.objects.filter(Q(cohort_time_slot__cohort=self.cohort) | Q(cohort=self.cohort)).delete()
 
     def sync(self) -> None:
         from breathecode.admissions.models import CohortTimeSlot, SyllabusScheduleTimeSlot
 
         if not self.cohort:
+            return
+
+        # Guard: If schedule is None, no timeslots to sync
+        if not self.cohort.schedule:
             return
 
         timezone = self.cohort.timezone or self.cohort.academy.timezone
