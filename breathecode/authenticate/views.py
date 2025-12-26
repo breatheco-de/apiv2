@@ -3371,18 +3371,10 @@ class AcademyAuthSettingsView(APIView, GenerateLookupsMixin):
 
     @capable_of("get_academy_auth_settings")
     def get(self, request, academy_id):
-        lang = get_user_language(request)
-
         settings = AcademyAuthSettings.objects.filter(academy_id=academy_id).first()
         if settings is None:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Academy has not github authentication settings",
-                    es="La academia no tiene configurada la integracion con github",
-                    slug="no-github-auth-settings",
-                )
-            )
+            settings = AcademyAuthSettings(academy_id=academy_id)
+            settings.save()
 
         serializer = AuthSettingsBigSerializer(settings, many=False)
         return Response(serializer.data)

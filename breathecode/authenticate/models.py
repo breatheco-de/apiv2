@@ -473,11 +473,6 @@ class AcademyAuthSettings(models.Model):
         default=None,
         help_text="LearnPack organization ID for this academy.",
     )
-    learnpack_org_slug = models.SlugField(
-        max_length=200,
-        blank=True,
-        help_text="LearnPack organization slug for this academy.",
-    )
 
     def clean(self):
         from django.core.exceptions import ValidationError
