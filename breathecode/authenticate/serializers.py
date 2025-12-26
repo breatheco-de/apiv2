@@ -623,6 +623,10 @@ class AuthSettingsBigSerializer(serpy.Serializer):
     github_is_sync = serpy.Field()
     github_error_log = serpy.Field()
 
+    learnpack_owner = UserTinySerializer(required=False)
+    learnpack_features = serpy.Field()
+    learnpack_org_id = serpy.Field()
+
 
 #
 # CRUD SERIALIZERS BELOW
