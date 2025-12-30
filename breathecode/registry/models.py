@@ -338,6 +338,8 @@ class Asset(models.Model):
         help_text="Brief for the copywriters, mainly used to describe what this lessons needs to be about",
     )
 
+    learnpack_id = models.IntegerField(null=True, blank=True, default=None, help_text="LearnPack ID of the asset, used for better integration")
+
     learnpack_deploy_url = models.URLField(
         null=True,
         blank=True,
