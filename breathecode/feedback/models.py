@@ -673,6 +673,18 @@ class SurveyConfiguration(models.Model):
             "Example: ['learnpack-1', 'learnpack-2']"
         ),
     )
+    priority = models.FloatField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            "Sampling probability: Probability of receiving this survey when the trigger condition is met (0-100). "
+            "P(Survey | Module) = priority%. "
+            "Example: 20.0 means 20% of users who complete this module will receive the survey. "
+            "100.0 means all users will receive it. "
+            "If null, defaults to 100% (all users receive the survey)."
+        ),
+    )
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
