@@ -909,9 +909,22 @@ class AssetView(APIView, GenerateLookupsMixin):
         lang = get_user_language(request)
 
         if asset_slug is not None:
-            asset = Asset.get_by_slug(asset_slug, request)
+            # Check if asset_slug is a number (ID) or a string (slug)
+            if asset_slug.isdigit():
+                asset = Asset.objects.filter(id=int(asset_slug)).first()
+            else:
+                asset = Asset.get_by_slug(asset_slug, request)
+            
             if asset is None:
-                raise ValidationException(f"Asset {asset_slug} not found", status.HTTP_404_NOT_FOUND)
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Asset {asset_slug} not found",
+                        es=f"Asset {asset_slug} no encontrado",
+                    ),
+                    status.HTTP_404_NOT_FOUND,
+                    slug="asset-not-found",
+                )
 
             serializer = AssetBigAndTechnologySerializer(asset)
             return handler.response(serializer.data)
