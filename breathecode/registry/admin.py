@@ -916,8 +916,8 @@ class AssetCategoryAdmin(admin.ModelAdmin):
 @admin.register(ContentSite)
 class ContentSiteAdmin(admin.ModelAdmin):
     search_fields = ["title", "domain_url"]
-    list_display = ("title", "domain_url", "academy", "category")
-    raw_id_fields = ["academy", "category"]
+    list_display = ("title", "domain_url", "academy")
+    raw_id_fields = ["academy"]
     list_filter = ["academy"]
 
 

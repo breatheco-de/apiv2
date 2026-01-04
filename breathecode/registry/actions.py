@@ -730,12 +730,8 @@ def clean_readme_asset_references(asset: Asset):
         base_url = None
         
         # 1. Try ContentSite.domain_url (if ContentSite exists)
-        try:
-            content_site = referenced_asset.category.content_site
-            if content_site and content_site.domain_url:
-                base_url = content_site.domain_url
-        except ContentSite.DoesNotExist:
-            pass
+        if referenced_asset.category.content_site and referenced_asset.category.content_site.domain_url:
+            base_url = referenced_asset.category.content_site.domain_url
         
         # 2. If ContentSite doesn't exist or domain_url is empty: try academy.white_label_url
         if not base_url and referenced_asset.category.academy:
