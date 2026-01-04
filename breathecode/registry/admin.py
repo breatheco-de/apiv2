@@ -29,6 +29,7 @@ from .models import (
     AssetImage,
     AssetKeyword,
     AssetTechnology,
+    ContentSite,
     ContentVariable,
     CredentialsOriginality,
     KeywordCluster,
@@ -909,6 +910,14 @@ class AssetCategoryAdmin(admin.ModelAdmin):
     search_fields = ["slug", "title"]
     list_display = ("slug", "title", "academy")
     raw_id_fields = ["academy"]
+    list_filter = ["academy"]
+
+
+@admin.register(ContentSite)
+class ContentSiteAdmin(admin.ModelAdmin):
+    search_fields = ["title", "domain_url"]
+    list_display = ("title", "domain_url", "academy", "category")
+    raw_id_fields = ["academy", "category"]
     list_filter = ["academy"]
 
 

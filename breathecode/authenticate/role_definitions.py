@@ -197,6 +197,10 @@ CAPABILITIES = [
         "description": "Allow upload the user's telemetry in a LearnPack assignment",
     },
     {
+        "slug": "crud_telemetry",
+        "description": "Create, update or delete assignment telemetry",
+    },
+    {
         "slug": "validate_assignment_flag",
         "description": "Ideal for CTFs and other assignments that require flag validation",
     },
@@ -739,6 +743,7 @@ def get_extended_roles():
                 "read_commission",
                 "crud_commission",
                 "crud_course",
+                "crud_telemetry",
             ],
         }
     )

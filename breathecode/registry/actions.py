@@ -22,7 +22,7 @@ from breathecode.media.models import Media, MediaResolution
 from breathecode.services.google_cloud.storage import Storage
 from breathecode.utils.views import set_query_parameter
 
-from .models import ASSET_STATUS, Asset, AssetImage, AssetTechnology, ContentVariable, OriginalityScan
+from .models import ASSET_STATUS, Asset, AssetImage, AssetTechnology, ContentSite, ContentVariable, OriginalityScan
 from .serializers import AssetBigSerializer
 from .utils import (
     ArticleValidator,
@@ -617,6 +617,8 @@ def clean_asset_readme(asset: Asset, silent=True):
         asset = clean_h1s(asset)
         logger.debug(f"Replacing content variables for {asset.slug}")
         asset = clean_content_variables(asset)
+        logger.debug(f"Replacing asset references for {asset.slug}")
+        asset = clean_readme_asset_references(asset)
 
         readme = asset.get_readme(parse=True, silent=silent)
         if "html" in readme:
@@ -678,6 +680,92 @@ def clean_content_variables(asset: Asset):
     replaced_text = re.sub(pattern, replace, markdown_text)
     # logger.debug("Replaced text:" + replaced_text)
     asset.set_readme(replaced_text)
+    return asset
+
+
+def clean_readme_asset_references(asset: Asset):
+    """
+    Replace markdown links with ref attributes with actual asset URLs.
+    
+    Processes links in the format: [Link Text]{ref="asset-slug"}
+    Replaces them with standard markdown links: [Link Text](url)
+    
+    URL format: base_url/asset.asset_type/asset.slug
+    Base URL is determined by: ContentSite.domain_url -> academy.white_label_url -> academy.website_url -> APP_URL
+    """
+    logger.debug(f"Cleaning asset references for readme for asset {asset.slug}")
+    readme = asset.get_readme()
+    content = readme["decoded"]
+    
+    # Pattern to match: [Link Text]{ref="asset-slug"}
+    pattern = r'\[([^\]]+)\]\{ref="([^"]+)"\}'
+    
+    def replace_ref_link(match):
+        link_text = match.group(1)  # The link text
+        asset_slug = match.group(2)  # The asset slug from ref attribute
+        
+        # Look up the referenced asset by slug or alias
+        referenced_asset = Asset.get_by_slug(asset_slug)
+        
+        if not referenced_asset:
+            # Asset not found - log error and keep original format
+            asset.log_error(
+                AssetErrorLogType.INVALID_SLUG_REFERENCE,
+                f"Asset reference not found: {asset_slug} in link [{link_text}]"
+            )
+            logger.warning(f"Asset reference '{asset_slug}' not found for asset {asset.slug}")
+            return match.group(0)  # Return original if asset not found
+        
+        # Get the category
+        if not referenced_asset.category:
+            # No category - log error and keep original format
+            asset.log_error(
+                AssetErrorLogType.EMPTY_CATEGORY,
+                f"Referenced asset '{asset_slug}' has no category"
+            )
+            logger.warning(f"Referenced asset '{asset_slug}' has no category for asset {asset.slug}")
+            return match.group(0)  # Return original if no category
+        
+        # Determine base URL using fallback logic
+        base_url = None
+        
+        # 1. Try ContentSite.domain_url (if ContentSite exists)
+        try:
+            content_site = referenced_asset.category.content_site
+            if content_site and content_site.domain_url:
+                base_url = content_site.domain_url
+        except ContentSite.DoesNotExist:
+            pass
+        
+        # 2. If ContentSite doesn't exist or domain_url is empty: try academy.white_label_url
+        if not base_url and referenced_asset.category.academy:
+            if referenced_asset.category.academy.white_label_url:
+                base_url = referenced_asset.category.academy.white_label_url
+        
+        # 3. If that's empty/None: try academy.website_url
+        if not base_url and referenced_asset.category.academy:
+            if referenced_asset.category.academy.website_url:
+                base_url = referenced_asset.category.academy.website_url
+        
+        # 4. If that's empty/None: use APP_URL environment variable (defaults to "https://4geeks.com")
+        if not base_url:
+            base_url = os.getenv("APP_URL", "https://4geeks.com")
+        
+        # Build the URL: base_url/asset_type/slug
+        # Normalize base_url (remove trailing slash if present)
+        base_url = base_url.rstrip('/')
+        asset_type = referenced_asset.asset_type.lower()
+        url = f"{base_url}/{asset_type}/{referenced_asset.slug}"
+        
+        # Return standard markdown link format
+        return f"[{link_text}]({url})"
+    
+    # Replace all matches
+    replaced_content = re.sub(pattern, replace_ref_link, content)
+    
+    if replaced_content != content:
+        asset.set_readme(replaced_content)
+    
     return asset
 
 
