@@ -2,6 +2,8 @@ import logging
 from datetime import timedelta
 from typing import Type
 
+from django.core.exceptions import ValidationError
+from django.db import models
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -12,7 +14,7 @@ from breathecode.events.signals import event_status_updated, liveclass_ended
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_saved
 
-from .models import AcademyFeedbackSettings, Answer, SurveyResponse
+from .models import AcademyFeedbackSettings, Answer, SurveyResponse, SurveyStudy
 from .signals import survey_answered, survey_response_answered
 from .tasks import (
     process_answer_received,
@@ -115,3 +117,22 @@ def post_survey_response_answered(sender: Type[SurveyResponse], instance: Survey
         )
     except Exception as e:
         logger.error(f"Error triggering webhook for survey response {instance.id}: {str(e)}", exc_info=True)
+
+
+@receiver(models.signals.m2m_changed, sender=SurveyStudy.survey_configurations.through)
+def validate_survey_study_configurations(sender, instance, action, pk_set, **kwargs):
+    """
+    Validate that all configurations in a study have the same trigger_type.
+    This signal is triggered when survey_configurations are added/removed from a study.
+    """
+    if action not in ("post_add", "post_remove", "post_clear"):
+        return
+
+    try:
+        instance._validate_trigger_type_consistency()
+    except ValidationError as e:
+        # Log the error but don't prevent the operation
+        # The serializer validation should catch this before it happens
+        logger.warning(
+            f"SurveyStudy {instance.id} has configurations with mixed trigger_types: {str(e)}"
+        )
