@@ -688,7 +688,7 @@ def _progress_percent(total_units: int, completed_units: int) -> tuple[int, bool
     return progress, is_completed
 
 
-def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
+def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Cohort] = None) -> Iterator[list]:
     """
     Build rows for the Academy student progress report (CSV).
 
@@ -717,6 +717,8 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
         )
 
     enrollments_qs = _get_enrollments_for_academy_student_progress_report(academy)
+    if cohort is not None:
+        enrollments_qs = enrollments_qs.filter(cohort=cohort)
     if not enrollments_qs.exists():
         return iter([])
 
@@ -724,7 +726,6 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
     user_ids = list({cu.user_id for cu in enrollments})
     cohort_ids = list({cu.cohort_id for cu in enrollments})
 
-    # Cache per cohort: syllabus-derived counts/slugs
     cohorts_by_id = {cu.cohort_id: cu.cohort for cu in enrollments if cu.cohort is not None}
 
     (
@@ -776,10 +777,8 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
 
         return total_units, completed_units
 
-    # Build prelim rows first (so we can batch-validate 100% against syllabus).
     rows_to_write: list[dict[str, Any]] = []
 
-    # Build started detection based on tasks existing for syllabus slugs (more reliable than history_log).
     expected_slugs_union: set[str] = set()
     for cid in cohort_ids:
         expected_slugs_union.update(lesson_slugs_by_cohort.get(cid, set()))
@@ -794,7 +793,6 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
         ).values("user_id", "cohort_id")
         tasks_any_by_pair = {(r["user_id"], r["cohort_id"]) for r in any_rows}
 
-    # Useful for macro cohorts: quickly know if user is enrolled in a micro cohort.
     cohort_ids_by_user: dict[int, set[int]] = {}
     for cu in enrollments:
         if cu.user_id not in cohort_ids_by_user:
@@ -842,7 +840,6 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
             progress, is_completed = _progress_percent(total_units, completed_units)
             started = macro_started
 
-            # Certificate eligibility: macros inherit from their micro cohorts.
             is_certificate_eligible = (
                 any(has_mandatory_projects_by_cohort.get(mid, False) for mid in micro_ids) if micro_ids else False
             )
@@ -852,7 +849,6 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
             started = bool((pair in tasks_any_by_pair) or started_by_pair.get(pair, False))
             is_certificate_eligible = bool(has_mandatory_projects_by_cohort.get(cu.cohort_id, False))
 
-        # If the user is graduated, we keep the progress as 100 but we still compute status from progress.
         if edu == "GRADUATED":
             progress = 100
             is_completed = True
@@ -874,7 +870,6 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
                 slug="no-lessons-or-telemetry",
             )
 
-        # Some cohorts do not issue certificates because they don't have mandatory projects in the syllabus.
         if not is_certificate_eligible:
             no_cert_msg = translation(
                 lang,
@@ -884,8 +879,6 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
             )
             comments = (comments + " | " if comments else "") + no_cert_msg
         else:
-            # The user can complete lessons/exercises but still miss mandatory projects, preventing certificate generation.
-            # Note: progress is lessons+exercises only (projects excluded by design).
             if progress >= 100 and cert is None:
                 pending_mandatory = 0
                 if is_macro:
@@ -919,7 +912,6 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
                 "student_start_date": student_start_date,
                 "status": status_value,
                 "progress": progress,
-                # completion_date will be computed later when progress is 100 (lesson/exercise completion only).
                 "completion_date": completion_date,
                 "certificate_url": certificate_url,
                 "comments": comments,
@@ -928,7 +920,6 @@ def academy_student_progress_report_rows(academy, lang: str) -> Iterator[list]:
         )
 
     for item in rows_to_write:
-        # completion_date when progress is 100 (lesson/exercise completion only)
         if item["progress"] >= 100:
             user_id, cohort_id = item["pair"]
             cohort = cohorts_by_id.get(cohort_id)
