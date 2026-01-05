@@ -879,7 +879,7 @@
         "model": "authenticate.role",
         "pk": "admin",
         "fields": {
-            "name": "Admin",
+            "name": "System Admin",
             "created_at": "2021-02-26T06:51:06.674Z",
             "updated_at": "2021-02-26T06:51:06.674Z",
             "capabilities": [
@@ -1160,7 +1160,7 @@
         "model": "authenticate.role",
         "pk": "country_manager",
         "fields": {
-            "name": "Country Manager",
+            "name": "Academy Admin",
             "created_at": "2021-02-26T06:51:06.860Z",
             "updated_at": "2021-02-26T06:51:06.860Z",
             "capabilities": [

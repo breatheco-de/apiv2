@@ -257,7 +257,7 @@ CAPABILITIES = [
 BASE_ROLES = [
     {
         "slug": "admin",
-        "name": "Admin",
+        "name": "System Admin",
         "caps": [c["slug"] for c in CAPABILITIES],
     },
     {
@@ -751,7 +751,7 @@ def get_extended_roles():
     roles.append(
         {
             "slug": "country_manager",
-            "name": "Country Manager",
+            "name": "Academy Admin",
             "extends": [
                 "academy_coordinator",
                 "student",
