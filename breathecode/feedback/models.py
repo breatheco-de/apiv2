@@ -866,9 +866,15 @@ class SurveyStudy(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def clean(self):
-        """Validate that all configurations have the same trigger_type."""
-        # Note: ManyToMany relationships are saved after the main object,
-        # so this validation is mainly for admin forms. API validation happens in serializer.
+        """
+        Validate that all configurations have the same trigger_type.
+        
+        Note: ManyToMany relationships are saved after the main object,
+        so this validation only works if the object already exists and M2M is saved.
+        For new objects or when M2M changes, validation happens in:
+        - Form.save_m2m() for Django admin
+        - Serializer.validate_survey_configurations() for API
+        """
         if self.pk:
             self._validate_trigger_type_consistency()
 
