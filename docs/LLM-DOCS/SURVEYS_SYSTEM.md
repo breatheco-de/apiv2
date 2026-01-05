@@ -69,6 +69,7 @@ Defines when and how surveys are triggered.
 - `cohorts`: ManyToMany - If empty, applies to all cohorts. If set, only to specified cohorts
 - `asset_slugs`: JSON array - If empty, applies to all learnpacks. If set, only to specified learnpacks
 - `syllabus`: JSON field for filtering by syllabus/module. Shape: `{'syllabus': '<slug>', 'version': <int>, 'module': <int>, 'asset_slug': '<slug>'}`. All keys optional.
+- `priority`: **CUMULATIVE TARGET (0-100)** - The percentage of ALL users who should have received a survey by the time they complete this module. This is NOT a direct probability, but a cumulative distribution target. **ONLY used for MODULE_COMPLETION triggers** - ignored for other trigger types. See "Module Completion Survey Distribution: Conditional Hazard-Based Sampling" section below for detailed explanation.
 - `created_by`: User who created the configuration
 - `created_at`, `updated_at`: Timestamps
 
@@ -294,6 +295,207 @@ Groups one or more SurveyConfigurations for a given academy.
 - `cohorts`: Filter by specific cohorts (if set)
 
 **Note:** Syllabus completion is checked on EVERY task completion, but only triggers once when all modules are complete.
+
+---
+
+## Module Completion Survey Distribution: Conditional Hazard-Based Sampling
+
+### Overview
+
+For `MODULE_COMPLETION` triggers, the system uses **Conditional Hazard-Based Sampling** with cumulative priorities to distribute surveys across different modules. This ensures that surveys are distributed according to target percentages while maintaining fairness and consistency.
+
+### Key Concepts
+
+1. **Priority Field (Cumulative Target)**: The `priority` field (0-100) represents the **cumulative target percentage** of users who should have received a survey by the time they complete a specific module. This is NOT a direct probability, but a cumulative distribution target.
+
+2. **Conditional Probability**: The system calculates conditional probabilities based on previous priorities to ensure the cumulative distribution is achieved.
+
+3. **Deterministic Hash**: Each user gets a deterministic "random" value based on their user ID, study ID, and module number. This ensures consistency - the same user will always get the same result for the same module.
+
+4. **One Survey Per User Per Study**: Each user can only receive ONE survey per study, regardless of how many modules they complete.
+
+### How It Works
+
+#### Step-by-Step Process
+
+When a user completes a module:
+
+1. **System identifies eligible configurations**: Only configurations for the current module or previous modules are considered.
+
+2. **For each configuration (sorted by module)**:
+   - Calculate conditional probability: `(current_priority - previous_priority) / (100.0 - previous_priority)`
+   - Generate deterministic hash: `hash(f"{user.id}_{study.id}_{module}")`
+   - Convert to 0-99 range: `abs(hash_value) % 100`
+   - Compare: If `random_value < conditional_probability_percent`, user receives survey
+   - If user receives survey, stop processing (1 survey per user per study)
+
+3. **Update previous_priority**: Even if user doesn't receive survey, update `previous_priority` for next iteration.
+
+#### Example Calculation
+
+**Configuration:**
+- Module 0: priority = 30%
+- Module 1: priority = 60%
+- Module 2: priority = 100%
+
+**User completes Module 0:**
+```
+previous_priority = 0%
+current_priority = 30%
+conditional_probability = (30 - 0) / (100 - 0) = 30%
+
+hash_input = f"{user.id}_{study.id}_0"
+random_value = abs(hash(hash_input)) % 100  # Example: 15
+
+Decision: 15 < 30? YES → User receives survey in Module 0
+```
+
+**User completes Module 1 (didn't receive survey in Module 0):**
+```
+previous_priority = 30%
+current_priority = 60%
+conditional_probability = (60 - 30) / (100 - 30) = 30/70 = 42.9%
+
+hash_input = f"{user.id}_{study.id}_1"
+random_value = abs(hash(hash_input)) % 100  # Example: 35
+
+Decision: 35 < 42.9? YES → User receives survey in Module 1
+```
+
+**User completes Module 2 (didn't receive survey in Module 0 or 1):**
+```
+previous_priority = 60%
+current_priority = 100%
+conditional_probability = (100 - 60) / (100 - 60) = 40/40 = 100%
+
+hash_input = f"{user.id}_{study.id}_2"
+random_value = abs(hash(hash_input)) % 100  # Example: 75
+
+Decision: 75 < 100? YES → User receives survey in Module 2
+```
+
+### Deterministic Hash Explained
+
+The `random_value` is **NOT truly random** - it's deterministic based on:
+- User ID
+- Study ID
+- Module number
+
+**Why deterministic?**
+- **Consistency**: Same user always gets same result for same module
+- **Reproducibility**: Can predict who will receive surveys
+- **No state needed**: Doesn't need to store which users were selected
+- **Uniform distribution**: Hash distributes values uniformly across 0-99
+
+**Hash Calculation:**
+```python
+hash_input = f"{user.id}_{study.id}_{module}"
+hash_value = hash(hash_input)  # Python's built-in hash function
+random_value = abs(hash_value) % 100  # Convert to 0-99 range
+```
+
+**Important**: Each module has a different hash input, so the same user can get different `random_value` for different modules.
+
+### Real-World Scenarios
+
+#### Scenario 1: Variable User Completion
+
+**Situation**: 50 users in cohort, but only 10 complete all modules.
+
+**How it works**:
+- System only evaluates users who complete modules
+- If only 10 users complete Module 2, all 10 will receive surveys (priority 100%)
+- The algorithm adapts automatically to the actual number of users completing modules
+
+**Key Point**: Priorities are **targets**, not guarantees. The system distributes surveys among users who actually complete modules, not a fixed total.
+
+#### Scenario 2: Users Joining at Different Times
+
+**Situation**: 30 users start at study beginning, 20 users join during study.
+
+**How it works**:
+- Users who join early complete modules earlier
+- Users who join late may not complete all modules by study end
+- System evaluates each user when they complete a module
+- Users who complete modules receive surveys according to priorities
+- Users who don't complete modules never receive surveys (no event to trigger)
+
+**Key Point**: The system is **reactive** - it only acts when users complete modules. It cannot send surveys to users who haven't completed modules.
+
+#### Scenario 3: Multiple Cohorts, Same Syllabus
+
+**Situation**: Same syllabus used in 5 different cohorts, 1000 total users.
+
+**How it works**:
+- Each user is evaluated independently when they complete a module
+- Hash is based on `user.id + study.id + module`, so same user in different cohorts gets different results
+- System doesn't need to know total users - it works user-by-user
+- Priorities are targets for distribution, not absolute numbers
+
+**Key Point**: The system doesn't require a "total expected users" - it works with whatever users actually complete modules.
+
+### Priority Field: Detailed Explanation
+
+The `priority` field is **ONLY used for MODULE_COMPLETION triggers**. For other trigger types (`COURSE_COMPLETION`, `LEARNPACK_COMPLETION`, `SYLLABUS_COMPLETION`), the priority field is ignored.
+
+**Important Rules:**
+1. All configurations in a study must have the same `trigger_type`
+2. Priorities should generally be non-decreasing (Module 0: 30%, Module 1: 60%, Module 2: 100%)
+3. Priority values are cumulative targets, not direct probabilities
+4. The system uses conditional probabilities to achieve cumulative distribution
+
+**Example Priority Configurations:**
+
+**Equitable Distribution (~33% per module):**
+- Module 0: priority = 33%
+- Module 1: priority = 66%
+- Module 2: priority = 100%
+- Result: ~33% in Module 0, ~33% in Module 1, ~34% in Module 2
+
+**Early Distribution (more surveys at start):**
+- Module 0: priority = 50%
+- Module 1: priority = 80%
+- Module 2: priority = 100%
+- Result: ~50% in Module 0, ~30% in Module 1, ~20% in Module 2
+
+**Late Distribution (more surveys at end):**
+- Module 0: priority = 20%
+- Module 1: priority = 50%
+- Module 2: priority = 100%
+- Result: ~20% in Module 0, ~30% in Module 1, ~50% in Module 2
+
+### Limitations and Considerations
+
+1. **No Fixed Total**: The system doesn't require knowing total expected users. It works with whatever users actually complete modules.
+
+2. **Reactive System**: Surveys are only sent when users complete modules. Users who don't complete modules never receive surveys.
+
+3. **Hash Variation**: The deterministic hash may cause slight variations from exact percentages (±5-10% is normal).
+
+4. **One Survey Per Study**: Once a user receives a survey in a study, they won't receive another survey in that study, even if they complete more modules.
+
+5. **Adaptive Distribution**: If few users complete modules, all will receive surveys. If many users complete modules, distribution follows priorities.
+
+### Testing
+
+Use the management command to test survey distribution:
+
+```bash
+python manage.py test_survey_distribution \
+  --study-id 14 \
+  --users 50 \
+  --new-users-during-study 20 \
+  --new-users-join-period-days 30 \
+  --module-completion-days 7
+```
+
+This simulates:
+- Initial users joining at study start
+- New users joining during study
+- Users completing modules at different times
+- Survey distribution according to priorities
+
+See `breathecode/feedback/management/commands/test_survey_distribution.py` for details.
 
 ---
 

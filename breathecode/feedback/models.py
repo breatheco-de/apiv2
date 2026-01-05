@@ -678,11 +678,12 @@ class SurveyConfiguration(models.Model):
         blank=True,
         default=None,
         help_text=(
-            "Sampling probability: Probability of receiving this survey when the trigger condition is met (0-100). "
-            "P(Survey | Module) = priority%. "
-            "Example: 20.0 means 20% of users who complete this module will receive the survey. "
-            "100.0 means all users will receive it. "
-            "If null, defaults to 100% (all users receive the survey)."
+            "Cumulative target: Proportion of users who should have answered the survey by this module (0-100). "
+            "Interpreted as cumulative distribution target, not direct probability. "
+            "Example: Module 1 priority=30, Module 3 priority=75, Module 5 priority=100 means: "
+            "30% should answer by module 1, 75% by module 3, 100% by module 5. "
+            "The system uses conditional hazard-based sampling to achieve this distribution. "
+            "If null, defaults to 100% (all users should answer by this module)."
         ),
     )
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -825,6 +826,16 @@ class SurveyQuestionTemplate(models.Model):
 class SurveyStudy(models.Model):
     """
     A study/campaign that groups one or more SurveyConfigurations and provides study-level constraints/stats.
+    
+    IMPORTANT: All configurations in a study must have the same trigger_type.
+    This ensures:
+    - MODULE_COMPLETION studies can use Conditional Hazard-Based Sampling with priorities
+    - Other trigger types (COURSE_COMPLETION, LEARNPACK_COMPLETION, SYLLABUS_COMPLETION) 
+      are independent and don't need cumulative priorities
+    
+    If you need surveys for different trigger types, create separate studies.
+    For example, to survey at the start and end of a course, use MODULE_COMPLETION 
+    with module 0 (start) and the last module (end) in the same study.
     """
 
     slug = models.SlugField(max_length=100, unique=True)
@@ -842,13 +853,45 @@ class SurveyStudy(models.Model):
         SurveyConfiguration,
         blank=True,
         related_name="survey_studies",
-        help_text="Survey configurations that belong to this study",
+        help_text=(
+            "Survey configurations that belong to this study. "
+            "All configurations must have the same trigger_type. "
+            "If you need different trigger types, create separate studies."
+        ),
     )
 
     stats = models.JSONField(default=dict, blank=True, help_text="Aggregated stats for this study")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        """Validate that all configurations have the same trigger_type."""
+        # Note: ManyToMany relationships are saved after the main object,
+        # so this validation is mainly for admin forms. API validation happens in serializer.
+        if self.pk:
+            self._validate_trigger_type_consistency()
+
+        super().clean()
+
+    def _validate_trigger_type_consistency(self):
+        """Validate that all configurations in study have the same trigger_type."""
+        configs = self.survey_configurations.filter(is_active=True)
+        if not configs.exists():
+            return
+
+        trigger_types = set()
+        for config in configs:
+            if config.trigger_type:
+                trigger_types.add(config.trigger_type)
+
+        if len(trigger_types) > 1:
+            trigger_types_str = ", ".join(sorted(trigger_types))
+            raise ValidationError(
+                f"All survey configurations in a study must have the same trigger_type. "
+                f"Found: {trigger_types_str}. "
+                f"Please create separate studies for different trigger types."
+            )
 
     def __str__(self):
         return f"{self.slug} ({self.academy.slug})"
