@@ -513,64 +513,6 @@ class SurveyStudyForm(forms.ModelForm):
             "stats": PrettyJSONWidget(),
         }
 
-    def clean(self):
-        """Validate that all survey configurations have the same trigger_type."""
-        cleaned_data = super().clean()
-        
-        survey_configurations = cleaned_data.get("survey_configurations")
-        if survey_configurations is not None:
-            # Validate if field is present
-            trigger_types = set()
-            for config in survey_configurations.filter(is_active=True):
-                if config.trigger_type:
-                    trigger_types.add(config.trigger_type)
-            
-            if len(trigger_types) > 1:
-                trigger_types_str = ", ".join(sorted(trigger_types))
-                raise forms.ValidationError(
-                    {
-                        "survey_configurations": (
-                            f"All survey configurations in a study must have the same trigger_type. "
-                            f"Found: {trigger_types_str}. "
-                            f"Please create separate studies for different trigger types."
-                        )
-                    }
-                )
-        
-        return cleaned_data
-    
-    def save_m2m(self):
-        """
-        Override save_m2m to validate BEFORE saving M2M relationships.
-        
-        This is necessary because ManyToMany with filter_horizontal in Django admin
-        doesn't include the field in cleaned_data during clean(), so we validate here.
-        """
-        selected_ids = self.data.getlist("survey_configurations")
-        
-        if selected_ids:
-            from breathecode.feedback.models import SurveyConfiguration
-            
-            final_configs = SurveyConfiguration.objects.filter(id__in=selected_ids, is_active=True)
-            final_trigger_types = set()
-            for config in final_configs:
-                if config.trigger_type:
-                    final_trigger_types.add(config.trigger_type)
-            
-            if len(final_trigger_types) > 1:
-                trigger_types_str = ", ".join(sorted(final_trigger_types))
-                raise forms.ValidationError(
-                    {
-                        "survey_configurations": (
-                            f"All survey configurations in a study must have the same trigger_type. "
-                            f"Found: {trigger_types_str}. "
-                            f"Please create separate studies for different trigger types."
-                        )
-                    }
-                )
-        
-        super().save_m2m()
-
 
 @admin.register(SurveyStudy)
 class SurveyStudyAdmin(admin.ModelAdmin):
