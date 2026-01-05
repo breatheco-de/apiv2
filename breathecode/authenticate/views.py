@@ -1337,13 +1337,19 @@ class LoginView(ObtainAuthToken):
     schema = AutoSchema()
 
     def post(self, request, *args, **kwargs):
+        from breathecode.utils.request import get_current_academy
 
         serializer = AuthSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         token, created = Token.get_or_create(user=user, token_type="login")
 
-        tasks_activity.add_activity.delay(user.id, "login", related_type="auth.User", related_id=user.id)
+        # Get academy_id using the utility function
+        academy_id = get_current_academy(request, return_id=True)
+
+        tasks_activity.add_activity.delay(
+            user.id, "login", related_type="auth.User", related_id=user.id, academy_id=academy_id
+        )
 
         return Response({"token": token.key, "user_id": user.pk, "email": user.email, "expires_at": token.expires_at})
 
@@ -3365,18 +3371,10 @@ class AcademyAuthSettingsView(APIView, GenerateLookupsMixin):
 
     @capable_of("get_academy_auth_settings")
     def get(self, request, academy_id):
-        lang = get_user_language(request)
-
         settings = AcademyAuthSettings.objects.filter(academy_id=academy_id).first()
         if settings is None:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Academy has not github authentication settings",
-                    es="La academia no tiene configurada la integracion con github",
-                    slug="no-github-auth-settings",
-                )
-            )
+            settings = AcademyAuthSettings(academy_id=academy_id)
+            settings.save()
 
         serializer = AuthSettingsBigSerializer(settings, many=False)
         return Response(serializer.data)
@@ -3926,6 +3924,22 @@ class AppSync(APIView):
                 }
 
             return await s.post("/v1/auth/app/user", data)
+
+
+class LearnpackOrganizationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @sync_to_async
+    def aget_user(self):
+        return self.request.user
+
+    async def get(self, request):
+        lang = await aget_user_language(request)
+        user = await self.aget_user()
+
+        async with Service("rigobot", user.id, proxy=True) as s:
+            params = dict(request.GET)
+            return await s.get("/v1/auth/me/organization", params=params)
 
 
 class AppTokenView(APIView):

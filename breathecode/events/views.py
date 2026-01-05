@@ -83,6 +83,7 @@ from .serializers import (
     GetLiveClassSerializer,
     LiveClassJoinSerializer,
     LiveClassSerializer,
+    GetLiveClassBigSerializer,
     OrganizationBigSerializer,
     OrganizationSerializer,
     OrganizerSmallSerializer,
@@ -485,13 +486,55 @@ def join_live_class(request, token, live_class, lang):
 class AcademyLiveClassView(APIView):
     extensions = APIViewExtensions(sort="-starting_at", paginate=True)
 
-    @capable_of("start_or_end_class")
-    def get(self, request, academy_id=None):
+    @capable_of("read_liveclass")
+    def get(self, request, live_class_id=None, academy_id=None):
         from .models import LiveClass
 
+        lang = get_user_language(request)
+
+        # If live_class_id is provided, return a single live class
+        if live_class_id is not None:
+            live_class = LiveClass.objects.filter(id=live_class_id).first()
+
+            if not live_class:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Live class not found for this academy {academy_id}",
+                        es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                        slug="not-found",
+                    ),
+                    404,
+                )
+
+            # Check if live class belongs to the academy (either through cohort_time_slot or direct cohort)
+            belongs_to_academy = False
+            if live_class.cohort_time_slot and live_class.cohort_time_slot.cohort.academy.id == int(academy_id):
+                belongs_to_academy = True
+            elif live_class.cohort and live_class.cohort.academy.id == int(academy_id):
+                belongs_to_academy = True
+
+            if not belongs_to_academy:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Live class not found for this academy {academy_id}",
+                        es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                        slug="not-found",
+                    ),
+                    404,
+                )
+
+            serializer = GetLiveClassBigSerializer(live_class, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Otherwise, return list of live classes
         handler = self.extensions(request)
 
-        lang = get_user_language(request)
+        # Custom handler for cohort querystring to support both paths
+        def cohort_filter(value):
+            cohort_id = value
+            return Q(cohort_time_slot__cohort__id=cohort_id) | Q(cohort__id=cohort_id)
 
         query = handler.lookup.build(
             lang,
@@ -503,6 +546,7 @@ class AcademyLiveClassView(APIView):
             },
             bools={
                 "is_null": ["ended_at"],
+                "exact": ["is_holiday", "is_skipped"],
             },
             datetimes={
                 "gte": ["starting_at"],
@@ -513,9 +557,11 @@ class AcademyLiveClassView(APIView):
                 "cohort_time_slot__cohort",
                 "cohort_time_slot__cohort__academy",
                 "cohort_time_slot__cohort__syllabus_version__syllabus",
+                "cohort",  # Add direct cohort field
+                "cohort__academy",  # Add cohort academy path
             ],
             overwrite={
-                "cohort": "cohort_time_slot__cohort",
+                # Removed "cohort" from overwrite so custom_fields handler is used
                 "academy": "cohort_time_slot__cohort__academy",
                 "syllabus": "cohort_time_slot__cohort__syllabus_version__syllabus",
                 "start": "starting_at",
@@ -523,17 +569,26 @@ class AcademyLiveClassView(APIView):
                 "upcoming": "ended_at",
                 "user": "cohort_time_slot__cohort__cohortuser__user",
                 "user_email": "cohort_time_slot__cohort__cohortuser__user__email",
+                "holiday": "is_holiday",
+                "skipped": "is_skipped",
+            },
+            custom_fields={
+                "cohort": cohort_filter,  # Use custom handler for cohort to support both paths
             },
         )
 
-        items = LiveClass.objects.filter(query, cohort_time_slot__cohort__academy__id=academy_id)
+        # Use Q object to include both cohort_time_slot and direct cohort paths for academy filter
+        academy_filter = Q(
+            Q(cohort_time_slot__cohort__academy__id=academy_id) | Q(cohort__academy__id=academy_id)
+        )
+        items = LiveClass.objects.filter(query & academy_filter)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
-    @capable_of("start_or_end_class")
+    @capable_of("crud_liveclass")
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
 
@@ -546,16 +601,15 @@ class AcademyLiveClassView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            response_serializer = GetLiveClassSerializer(serializer.instance)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of("start_or_end_class")
-    def put(self, request, cohort_schedule_id, academy_id=None):
+    @capable_of("crud_liveclass")
+    def put(self, request, live_class_id, academy_id=None):
         lang = get_user_language(request)
 
-        already = LiveClass.objects.filter(
-            id=cohort_schedule_id, cohort_time_slot__cohort__academy__id=academy_id
-        ).first()
+        already = LiveClass.objects.filter(id=live_class_id).first()
         if already is None:
             raise ValidationException(
                 translation(
@@ -569,6 +623,7 @@ class AcademyLiveClassView(APIView):
         serializer = LiveClassSerializer(
             already,
             data=request.data,
+            partial=True,
             context={
                 "lang": lang,
                 "academy_id": academy_id,
@@ -578,6 +633,52 @@ class AcademyLiveClassView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_liveclass")
+    def delete(self, request, live_class_id, academy_id=None):
+        lang = get_user_language(request)
+
+        live_class = LiveClass.objects.filter(id=live_class_id).first()
+        if live_class is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Live class not found for this academy {academy_id}",
+                    es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                    slug="not-found",
+                )
+            )
+
+        # Check if live class belongs to the academy (either through cohort_time_slot or direct cohort)
+        belongs_to_academy = False
+        if live_class.cohort_time_slot and live_class.cohort_time_slot.cohort.academy.id == int(academy_id):
+            belongs_to_academy = True
+        elif live_class.cohort and live_class.cohort.academy.id == int(academy_id):
+            belongs_to_academy = True
+
+        if not belongs_to_academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Live class not found for this academy {academy_id}",
+                    es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                    slug="not-found",
+                )
+            )
+
+        # Only allow deletion if cohort_time_slot is null
+        if live_class.cohort_time_slot is not None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete live class because it is associated with a cohort timeslot. Live classes associated with timeslots are managed automatically.",
+                    es="No se puede eliminar la clase en vivo porque está asociada con un horario de cohorte. Las clases en vivo asociadas con horarios se gestionan automáticamente.",
+                    slug="cannot-delete-timeslot-associated",
+                )
+            )
+
+        live_class.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class AcademyLiveClassJoinView(APIView):

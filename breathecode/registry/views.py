@@ -909,9 +909,22 @@ class AssetView(APIView, GenerateLookupsMixin):
         lang = get_user_language(request)
 
         if asset_slug is not None:
-            asset = Asset.get_by_slug(asset_slug, request)
+            # Check if asset_slug is a number (ID) or a string (slug)
+            if asset_slug.isdigit():
+                asset = Asset.objects.filter(id=int(asset_slug)).first()
+            else:
+                asset = Asset.get_by_slug(asset_slug, request)
+            
             if asset is None:
-                raise ValidationException(f"Asset {asset_slug} not found", status.HTTP_404_NOT_FOUND)
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Asset {asset_slug} not found",
+                        es=f"Asset {asset_slug} no encontrado",
+                    ),
+                    status.HTTP_404_NOT_FOUND,
+                    slug="asset-not-found",
+                )
 
             serializer = AssetBigAndTechnologySerializer(asset)
             return handler.response(serializer.data)
@@ -2616,6 +2629,38 @@ class CodeCompilerView(APIView):
                 url = "/v1/prompting/completion/code-compiler/"
 
             return await s.post(url, json=request.data)
+
+
+class LearnpackPackagesView(APIView):
+    """
+    Proxy endpoint to communicate with learnpack service to get packages.
+    """
+
+    permission_classes = [AllowAny]
+
+    async def get(self, request):
+        """
+        GET request to fetch packages from learnpack service.
+        Proxies the request to learnpack's /v1/learnpack/packages endpoint.
+        """
+        lang = await aget_user_language(request)
+        user_id = request.user.id if request.user.is_authenticated else None
+
+        try:
+            async with Service("rigobot", user_id, proxy=True) as s:
+                # Forward query parameters to learnpack
+                params = dict(request.GET)
+                return await s.get("/v1/learnpack/packages", params=params)
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error calling learnpack service: {str(e)}",
+                    es=f"Error al llamar al servicio learnpack: {str(e)}",
+                ),
+                code=500,
+                slug="learnpack-service-error",
+            )
 
 
 class CompletionView(APIView):

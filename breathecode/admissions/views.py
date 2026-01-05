@@ -1136,6 +1136,9 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not timezone:
             raise ValidationException("Academy doesn't have a timezone assigned", slug="academy-without-timezone")
 
+        # Extract force_generation flag before preparing data
+        force_generation = request.data.pop("force_generation", False)
+
         data = {
             **request.data,
             "id": timeslot_id,
@@ -1149,9 +1152,15 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if "ending_at" in data:
             data["ending_at"] = DatetimeInteger.from_iso_string(timezone, data["ending_at"])
 
+        # Set temporary attribute before saving
+        item._force_generation = force_generation
+
         serializer = CohortTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
             serializer.save()
+            # Clear the attribute after save
+            if hasattr(item, "_force_generation"):
+                delattr(item, "_force_generation")
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1167,6 +1176,35 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         item.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCohortTimeSlotLiveClassesView(APIView):
+    @capable_of("crud_cohort")
+    def delete(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+        from breathecode.events.models import LiveClass
+
+        lang = get_user_language(request)
+
+        # Validate timeslot exists and belongs to academy/cohort
+        timeslot = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id, cohort__id=cohort_id, id=timeslot_id
+        ).first()
+
+        if not timeslot:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Time slot not found",
+                    es="Horario no encontrado",
+                    slug="time-slot-not-found",
+                ),
+                404,
+            )
+
+        # Delete all live classes associated with this timeslot
+        deleted_count, _ = LiveClass.objects.filter(cohort_time_slot=timeslot).delete()
+
+        return Response({"deleted": deleted_count}, status=status.HTTP_200_OK)
 
 
 class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
@@ -2683,6 +2721,183 @@ class AcademyCohortHistoryView(APIView):
             raise ValidationException(str(e))
 
         return Response(cohort_log.serialize())
+
+
+class AcademyCohortAttendanceReportView(APIView):
+    """Generate attendance reports from cohort history_log in CSV or JSON format."""
+
+    @capable_of("read_cohort_log")
+    def get(self, request, cohort_id, academy_id):
+        lang = get_user_language(request)
+
+        # Fetch cohort by ID or slug
+        item = None
+        if str(cohort_id).isnumeric():
+            item = Cohort.objects.filter(id=int(cohort_id), academy__id=academy_id).first()
+        else:
+            item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
+
+        if item is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cohort not found on this academy",
+                    es="Cohorte no encontrada en esta academia",
+                    slug="cohort-not-found",
+                ),
+                code=404,
+            )
+
+        # Get all students in the cohort
+        students = CohortUser.objects.filter(cohort=item, role=STUDENT).select_related("user").order_by(
+            "user__first_name", "user__last_name"
+        )
+
+        if not students.exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="No students found in this cohort",
+                    es="No se encontraron estudiantes en esta cohorte",
+                    slug="no-students-found",
+                ),
+                code=404,
+            )
+
+        # Parse history_log
+        history_log = item.history_log or {}
+        if not isinstance(history_log, dict):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid history log format",
+                    es="Formato de historial inválido",
+                    slug="invalid-history-log",
+                ),
+                code=400,
+            )
+
+        # Determine format from request path
+        request_path = request.path
+        if request_path.endswith(".csv"):
+            return self._generate_csv_response(item, students, history_log)
+        elif request_path.endswith(".json"):
+            return self._generate_json_response(item, students, history_log)
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid format. Use .csv or .json",
+                    es="Formato inválido. Use .csv o .json",
+                    slug="invalid-format",
+                ),
+                code=400,
+            )
+
+    def _generate_csv_response(self, cohort, students, history_log):
+        """Generate CSV response with students as rows and days as columns."""
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="cohort_{cohort.slug}_attendance.csv"'
+
+        writer = csv.writer(response)
+
+        # Get all day numbers from history_log and sort them
+        day_numbers = sorted([int(day) for day in history_log.keys() if day.isdigit()], key=int)
+
+        # Build header row
+        headers = ["Student Name", "Email"]
+        headers.extend([f"Day {day}" for day in day_numbers])
+        writer.writerow(headers)
+
+        # Build attendance matrix: student_id -> {day: status}
+        attendance_matrix = {}
+        for day_str, day_data in history_log.items():
+            if not day_str.isdigit():
+                continue
+            day = int(day_str)
+            attendance_ids = day_data.get("attendance_ids", [])
+            unattendance_ids = day_data.get("unattendance_ids", [])
+
+            # Mark all students as not recorded initially
+            for student in students:
+                if student.user.id not in attendance_matrix:
+                    attendance_matrix[student.user.id] = {}
+                attendance_matrix[student.user.id][day] = "?"
+
+            # Mark present students
+            for user_id in attendance_ids:
+                if user_id in attendance_matrix:
+                    attendance_matrix[user_id][day] = "✓"
+
+            # Mark absent students
+            for user_id in unattendance_ids:
+                if user_id in attendance_matrix:
+                    attendance_matrix[user_id][day] = "✗"
+
+        # Write student rows
+        for student in students:
+            user = student.user
+            student_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+            row = [student_name, user.email]
+
+            # Add attendance status for each day
+            for day in day_numbers:
+                status = attendance_matrix.get(user.id, {}).get(day, "?")
+                row.append(status)
+
+            writer.writerow(row)
+
+        return response
+
+    def _generate_json_response(self, cohort, students, history_log):
+        """Generate JSON response with days array structure."""
+        # Get all day numbers from history_log and sort them
+        day_numbers = sorted([int(day) for day in history_log.keys() if day.isdigit()], key=int)
+
+        # Build days array
+        days_data = []
+        for day in day_numbers:
+            day_str = str(day)
+            day_data = history_log.get(day_str, {})
+            attendance_ids = set(day_data.get("attendance_ids", []))
+            unattendance_ids = set(day_data.get("unattendance_ids", []))
+
+            # Build students list for this day
+            students_list = []
+            for student in students:
+                user = student.user
+                user_id = user.id
+
+                # Determine status
+                if user_id in attendance_ids:
+                    status = "present"
+                elif user_id in unattendance_ids:
+                    status = "absent"
+                else:
+                    status = "not_recorded"
+
+                student_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+
+                students_list.append(
+                    {
+                        "user_id": user_id,
+                        "name": student_name,
+                        "email": user.email,
+                        "status": status,
+                    }
+                )
+
+            days_data.append(
+                {
+                    "day": day,
+                    "updated_at": day_data.get("updated_at", ""),
+                    "current_module": day_data.get("current_module"),
+                    "teacher_comments": day_data.get("teacher_comments", ""),
+                    "students": students_list,
+                }
+            )
+
+        return Response(days_data)
 
 
 class MeCohortUserHistoryView(APIView):
