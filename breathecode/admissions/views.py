@@ -525,6 +525,67 @@ class AcademyReportCSVView(APIView):
         return response
 
 
+class AcademyCohortReportCSVView(APIView):
+    """
+    Cohort student report in CSV format (same schema as admissions/report.csv).
+
+    It is intended for integrations that need the report split by cohort.
+    """
+
+    @capable_of("academy_reporting")
+    def get(self, request, cohort_id: int, academy_id: int):
+        lang = get_user_language(request)
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                slug="academy-not-found",
+            )
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
+        if cohort is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cohort not found on this academy",
+                    es="Cohorte no encontrada en esta academia",
+                    slug="cohort-not-found",
+                ),
+                code=404,
+                slug="cohort-not-found",
+            )
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="cohort_{cohort.slug}_report.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "course_name",
+                "student_full_name",
+                "student_email",
+                "enrollment_date",
+                "student_start_date",
+                "status",
+                "progress_percentage",
+                "completion_date",
+                "certificate_url",
+                "comments",
+            ]
+        )
+
+        for row in academy_student_progress_report_rows(academy, lang=lang, cohort=cohort):
+            writer.writerow(row)
+
+        return response
+
+
 class AcademyActivateView(APIView):
 
     @capable_of("academy_activate")
