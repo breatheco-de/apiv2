@@ -4,6 +4,7 @@ import logging
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
+from django.core.exceptions import ValidationError
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
@@ -511,6 +512,51 @@ class SurveyStudyForm(forms.ModelForm):
         widgets = {
             "stats": PrettyJSONWidget(),
         }
+
+    def clean(self):
+        """Validate that all survey configurations have the same trigger_type."""
+        cleaned_data = super().clean()
+        
+        survey_configurations = cleaned_data.get("survey_configurations")
+        if survey_configurations is not None:
+            # Validate trigger type consistency
+            trigger_types = set()
+            for config in survey_configurations.filter(is_active=True):
+                if config.trigger_type:
+                    trigger_types.add(config.trigger_type)
+            
+            if len(trigger_types) > 1:
+                trigger_types_str = ", ".join(sorted(trigger_types))
+                raise forms.ValidationError(
+                    {
+                        "survey_configurations": (
+                            f"All survey configurations in a study must have the same trigger_type. "
+                            f"Found: {trigger_types_str}. "
+                            f"Please create separate studies for different trigger types."
+                        )
+                    }
+                )
+        
+        return cleaned_data
+    
+    def save_m2m(self):
+        """
+        Override save_m2m to validate after M2M relationships are set.
+        
+        This is necessary because ManyToMany relationships are saved after the main object,
+        so we need to validate after the relationships are saved but before the form is considered valid.
+        """
+        super().save_m2m()
+        if self.instance.pk:
+            try:
+                self.instance._validate_trigger_type_consistency()
+            except ValidationError as e:
+                # Re-raise as form validation error to show in admin interface
+                raise forms.ValidationError(
+                    {
+                        "survey_configurations": str(e)
+                    }
+                )
 
 
 @admin.register(SurveyStudy)
