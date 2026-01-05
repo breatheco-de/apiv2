@@ -519,7 +519,7 @@ class SurveyStudyForm(forms.ModelForm):
         
         survey_configurations = cleaned_data.get("survey_configurations")
         if survey_configurations is not None:
-            # Validate trigger type consistency
+            # Validate if field is present
             trigger_types = set()
             for config in survey_configurations.filter(is_active=True):
                 if config.trigger_type:
@@ -541,22 +541,35 @@ class SurveyStudyForm(forms.ModelForm):
     
     def save_m2m(self):
         """
-        Override save_m2m to validate after M2M relationships are set.
+        Override save_m2m to validate BEFORE saving M2M relationships.
         
-        This is necessary because ManyToMany relationships are saved after the main object,
-        so we need to validate after the relationships are saved but before the form is considered valid.
+        This is necessary because ManyToMany with filter_horizontal in Django admin
+        doesn't include the field in cleaned_data during clean(), so we validate here.
         """
-        super().save_m2m()
-        if self.instance.pk:
-            try:
-                self.instance._validate_trigger_type_consistency()
-            except ValidationError as e:
-                # Re-raise as form validation error to show in admin interface
+        selected_ids = self.data.getlist("survey_configurations")
+        
+        if selected_ids:
+            from breathecode.feedback.models import SurveyConfiguration
+            
+            final_configs = SurveyConfiguration.objects.filter(id__in=selected_ids, is_active=True)
+            final_trigger_types = set()
+            for config in final_configs:
+                if config.trigger_type:
+                    final_trigger_types.add(config.trigger_type)
+            
+            if len(final_trigger_types) > 1:
+                trigger_types_str = ", ".join(sorted(final_trigger_types))
                 raise forms.ValidationError(
                     {
-                        "survey_configurations": str(e)
+                        "survey_configurations": (
+                            f"All survey configurations in a study must have the same trigger_type. "
+                            f"Found: {trigger_types_str}. "
+                            f"Please create separate studies for different trigger types."
+                        )
                     }
                 )
+        
+        super().save_m2m()
 
 
 @admin.register(SurveyStudy)
