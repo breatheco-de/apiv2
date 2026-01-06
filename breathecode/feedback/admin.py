@@ -4,6 +4,7 @@ import logging
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
+from django.core.exceptions import ValidationError
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
@@ -504,6 +505,23 @@ class SurveyQuestionTemplateAdmin(admin.ModelAdmin):
 
 class SurveyStudyForm(forms.ModelForm):
     """Form for SurveyStudy with formatted JSON fields."""
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        survey_configurations = cleaned_data.get("survey_configurations")
+        if not survey_configurations:
+            return cleaned_data
+
+        # ModelMultipleChoiceField returns a QuerySet-like object
+        trigger_types = {x.trigger_type for x in survey_configurations}
+        if len(trigger_types) <= 1:
+            return cleaned_data
+
+        trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
+        raise forms.ValidationError(
+            f"Todas las configuraciones del estudio deben tener el mismo trigger_type. Se encontró: {trigger_types_str}"
+        )
 
     class Meta:
         model = SurveyStudy

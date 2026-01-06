@@ -3,16 +3,20 @@
 from django.db import migrations
 
 
-def drop_pos_webhook_secret(apps, schema_editor):
+def drop_old_pos_fields_if_supported(apps, schema_editor):
+    """
+    Drop legacy POS fields if supported by the database engine.
+
+    Tests run with SQLite in-memory; SQLite doesn't support `DROP COLUMN IF EXISTS`,
+    so we skip on non-PostgreSQL engines.
+    """
+
     if schema_editor.connection.vendor != "postgresql":
         return
-    schema_editor.execute("ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_webhook_secret;")
 
-
-def drop_pos_publishable_key(apps, schema_editor):
-    if schema_editor.connection.vendor != "postgresql":
-        return
-    schema_editor.execute("ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_publishable_key;")
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_webhook_secret;")
+        cursor.execute("ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_publishable_key;")
 
 
 class Migration(migrations.Migration):
@@ -22,6 +26,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(drop_pos_webhook_secret, migrations.RunPython.noop),
-        migrations.RunPython(drop_pos_publishable_key, migrations.RunPython.noop),
+        migrations.RunPython(drop_old_pos_fields_if_supported, migrations.RunPython.noop),
     ]

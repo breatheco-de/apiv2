@@ -4,6 +4,7 @@ from typing import Type
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -14,7 +15,7 @@ from breathecode.events.signals import event_status_updated, liveclass_ended
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_saved
 
-from .models import AcademyFeedbackSettings, Answer, SurveyResponse, SurveyStudy
+from .models import AcademyFeedbackSettings, Answer, SurveyConfiguration, SurveyResponse, SurveyStudy
 from .signals import survey_answered, survey_response_answered
 from .tasks import (
     process_answer_received,
@@ -119,20 +120,23 @@ def post_survey_response_answered(sender: Type[SurveyResponse], instance: Survey
         logger.error(f"Error triggering webhook for survey response {instance.id}: {str(e)}", exc_info=True)
 
 
-@receiver(models.signals.m2m_changed, sender=SurveyStudy.survey_configurations.through)
-def validate_survey_study_configurations(sender, instance, action, pk_set, **kwargs):
+@receiver(m2m_changed, sender=SurveyStudy.survey_configurations.through)
+def enforce_survey_study_single_trigger_type(sender, instance: SurveyStudy, action, pk_set, **kwargs):
     """
-    Validate that all configurations in a study have the same trigger_type.
-    This signal is triggered when survey_configurations are added/removed from a study.
+    Prevent SurveyStudy from containing SurveyConfigurations with different trigger_type values.
+    This must hold across API, admin, and scripts.
     """
-    if action not in ("post_add", "post_remove", "post_clear"):
+
+    if action != "pre_add" or not pk_set:
         return
 
-    try:
-        instance._validate_trigger_type_consistency()
-    except ValidationError as e:
-        # Log the error but don't prevent the operation
-        # The serializer validation should catch this before it happens
-        logger.warning(
-            f"SurveyStudy {instance.id} has configurations with mixed trigger_types: {str(e)}"
-        )
+    existing_trigger_types = set(instance.survey_configurations.values_list("trigger_type", flat=True))
+    new_trigger_types = set(SurveyConfiguration.objects.filter(pk__in=pk_set).values_list("trigger_type", flat=True))
+
+    trigger_types = existing_trigger_types | new_trigger_types
+    if len(trigger_types) <= 1:
+        return
+
+    trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
+    raise ValidationError(f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}")
+

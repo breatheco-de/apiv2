@@ -57,6 +57,7 @@ from .views import (
     AcademyActivateView,
     AcademyCohortAttendanceReportView,
     AcademyCohortHistoryView,
+    AcademyCohortReportCSVView,
     AcademyCohortTimeSlotLiveClassesView,
     AcademyCohortTimeSlotView,
     AcademyCohortUserView,
@@ -132,6 +133,11 @@ urlpatterns = [
         "academy/cohort/<int:cohort_id>/report/attendance.json",
         AcademyCohortAttendanceReportView.as_view(),
         name="academy_cohort_id_attendance_json",
+    ),
+    path(
+        "academy/cohort/<int:cohort_id>/report.csv",
+        AcademyCohortReportCSVView.as_view(),
+        name="academy_cohort_id_report_csv",
     ),
     path(
         "academy/cohort/<int:cohort_id>/user/<int:user_id>",

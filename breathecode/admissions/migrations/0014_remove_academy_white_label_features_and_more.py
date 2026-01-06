@@ -13,7 +13,7 @@ def remove_white_label_features_if_exists(apps, schema_editor):
     """
     if schema_editor.connection.vendor != "postgresql":
         return
-    
+
     with schema_editor.connection.cursor() as cursor:
         # Check if column exists in the database
         cursor.execute("""

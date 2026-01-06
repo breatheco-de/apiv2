@@ -865,33 +865,6 @@ class SurveyStudy(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    def clean(self):
-        """Validate that all configurations have the same trigger_type."""
-        # Note: ManyToMany relationships are saved after the main object,
-        # so this validation is mainly for admin forms. API validation happens in serializer.
-        if self.pk:
-            self._validate_trigger_type_consistency()
-
-        super().clean()
-
-    def _validate_trigger_type_consistency(self):
-        """Validate that all configurations in study have the same trigger_type."""
-        configs = self.survey_configurations.filter(is_active=True)
-        if not configs.exists():
-            return
-
-        trigger_types = set()
-        for config in configs:
-            if config.trigger_type:
-                trigger_types.add(config.trigger_type)
-
-        if len(trigger_types) > 1:
-            trigger_types_str = ", ".join(sorted(trigger_types))
-            raise ValidationError(
-                f"All survey configurations in a study must have the same trigger_type. "
-                f"Found: {trigger_types_str}. "
-                f"Please create separate studies for different trigger types."
-            )
 
     def __str__(self):
         return f"{self.slug} ({self.academy.slug})"

@@ -1,3 +1,4 @@
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers
@@ -784,6 +785,25 @@ class SurveyQuestionTemplateSerializer(serializers.ModelSerializer):
 
 
 class SurveyStudySerializer(serializers.ModelSerializer):
+    def validate_survey_configurations(self, value):
+        """
+        All configurations inside a study must share the same trigger_type.
+        This prevents mixing realtime triggers in a single campaign.
+        """
+
+        trigger_types = {x.trigger_type for x in value}
+        if len(trigger_types) <= 1:
+            return value
+
+        trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
+        raise ValidationException(
+            translation(
+                en=f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}",
+                es=f"Todas las configuraciones de un estudio deben tener el mismo trigger_type, se encontró: {trigger_types_str}",
+            ),
+            slug="mixed-trigger-types",
+        )
+
     class Meta:
         model = SurveyStudy
         fields = [
@@ -802,42 +822,6 @@ class SurveyStudySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "academy", "stats", "created_at", "updated_at"]
 
-    def validate_survey_configurations(self, value):
-        """
-        Validate that all survey configurations in a study have the same trigger_type.
-        
-        This ensures consistency:
-        - MODULE_COMPLETION studies can use Conditional Hazard-Based Sampling with priorities
-        - Other trigger types (COURSE_COMPLETION, LEARNPACK_COMPLETION, SYLLABUS_COMPLETION) 
-          are independent and don't need cumulative priorities
-        
-        If you need surveys for different trigger types, create separate studies.
-        """
-        if not value:
-            return value
-
-        # Get all trigger types from the configurations
-        trigger_types = set()
-        for config in value:
-            if config.trigger_type:
-                trigger_types.add(config.trigger_type)
-            elif config.trigger_type is None:
-                # None trigger_type is allowed (for email/list-based studies)
-                trigger_types.add(None)
-
-        # If there are multiple different trigger types (excluding None), raise error
-        non_null_trigger_types = {t for t in trigger_types if t is not None}
-
-        if len(non_null_trigger_types) > 1:
-            trigger_types_str = ", ".join(sorted(non_null_trigger_types))
-            raise ValidationException(
-                f"All survey configurations in a study must have the same trigger_type. "
-                f"Found: {trigger_types_str}. "
-                f"Please create separate studies for different trigger types.",
-                slug="mixed-trigger-types-in-study"
-            )
-
-        return value
 
 class SurveyAnswerSerializer(serializers.Serializer):
     """Serializer for validating survey answers."""
