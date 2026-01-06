@@ -85,7 +85,7 @@ CAPABILITIES = [
 ROLES = [
     {
         "slug": "admin",
-        "name": "Admin",
+        "name": "System Admin",
         "caps": [c["slug"] for c in CAPABILITIES],
     },
     {
@@ -272,7 +272,7 @@ def extend_roles(roles: list):
     roles.append(
         {
             "slug": "country_manager",
-            "name": "Country Manager",
+            "name": "Academy Admin",
             "caps": create_academy_roles.extend(
                 roles,
                 [
@@ -341,7 +341,7 @@ class AcademyEventTestSuite(CypressTestCase):
             [
                 {
                     "slug": "admin",
-                    "name": "Admin",
+                    "name": "System Admin",
                 },
                 {
                     "slug": "academy_token",
@@ -397,7 +397,7 @@ class AcademyEventTestSuite(CypressTestCase):
                 },
                 {
                     "slug": "country_manager",
-                    "name": "Country Manager",
+                    "name": "Academy Admin",
                 },
             ],
         )

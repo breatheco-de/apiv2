@@ -673,6 +673,19 @@ class SurveyConfiguration(models.Model):
             "Example: ['learnpack-1', 'learnpack-2']"
         ),
     )
+    priority = models.FloatField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            "Cumulative target: Proportion of users who should have answered the survey by this module (0-100). "
+            "Interpreted as cumulative distribution target, not direct probability. "
+            "Example: Module 1 priority=30, Module 3 priority=75, Module 5 priority=100 means: "
+            "30% should answer by module 1, 75% by module 3, 100% by module 5. "
+            "The system uses conditional hazard-based sampling to achieve this distribution. "
+            "If null, defaults to 100% (all users should answer by this module)."
+        ),
+    )
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -813,6 +826,16 @@ class SurveyQuestionTemplate(models.Model):
 class SurveyStudy(models.Model):
     """
     A study/campaign that groups one or more SurveyConfigurations and provides study-level constraints/stats.
+    
+    IMPORTANT: All configurations in a study must have the same trigger_type.
+    This ensures:
+    - MODULE_COMPLETION studies can use Conditional Hazard-Based Sampling with priorities
+    - Other trigger types (COURSE_COMPLETION, LEARNPACK_COMPLETION, SYLLABUS_COMPLETION) 
+      are independent and don't need cumulative priorities
+    
+    If you need surveys for different trigger types, create separate studies.
+    For example, to survey at the start and end of a course, use MODULE_COMPLETION 
+    with module 0 (start) and the last module (end) in the same study.
     """
 
     slug = models.SlugField(max_length=100, unique=True)
@@ -830,13 +853,18 @@ class SurveyStudy(models.Model):
         SurveyConfiguration,
         blank=True,
         related_name="survey_studies",
-        help_text="Survey configurations that belong to this study",
+        help_text=(
+            "Survey configurations that belong to this study. "
+            "All configurations must have the same trigger_type. "
+            "If you need different trigger types, create separate studies."
+        ),
     )
 
     stats = models.JSONField(default=dict, blank=True, help_text="Aggregated stats for this study")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
 
     def __str__(self):
         return f"{self.slug} ({self.academy.slug})"
