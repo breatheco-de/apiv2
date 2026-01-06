@@ -1,6 +1,6 @@
 from __future__ import annotations
 import base64
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as py_timezone
 import random
 from faker import Faker
 import yaml
@@ -308,7 +308,23 @@ class Format:
         """Parse the object to a `dict`"""
 
         if isinstance(arg, Model):
-            return ModelsMixin.remove_dinamics_fields(None, vars(arg)).copy()
+            raw = ModelsMixin.remove_dinamics_fields(None, vars(arg)).copy()
+
+            def normalize(value):
+                if isinstance(value, datetime) and value.tzinfo is not None:
+                    # Normalize tzinfo to the stdlib UTC singleton to avoid mixer UTCZone vs datetime.timezone.utc
+                    # mismatches across the test suite.
+                    return value.astimezone(py_timezone.utc)
+
+                if isinstance(value, dict):
+                    return {k: normalize(v) for k, v in value.items()}
+
+                if isinstance(value, list):
+                    return [normalize(v) for v in value]
+
+                return value
+
+            return normalize(raw)
 
         if isinstance(arg, dict):
             return arg.copy()

@@ -3,6 +3,18 @@
 from django.db import migrations
 
 
+def drop_pos_webhook_secret(apps, schema_editor):
+    if schema_editor.connection.vendor != "postgresql":
+        return
+    schema_editor.execute("ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_webhook_secret;")
+
+
+def drop_pos_publishable_key(apps, schema_editor):
+    if schema_editor.connection.vendor != "postgresql":
+        return
+    schema_editor.execute("ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_publishable_key;")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,12 +22,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql="ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_webhook_secret;",
-            reverse_sql=migrations.RunSQL.noop,
-        ),
-        migrations.RunSQL(
-            sql="ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_publishable_key;",
-            reverse_sql=migrations.RunSQL.noop,
-        ),
+        migrations.RunPython(drop_pos_webhook_secret, migrations.RunPython.noop),
+        migrations.RunPython(drop_pos_publishable_key, migrations.RunPython.noop),
     ]
