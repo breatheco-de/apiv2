@@ -52,6 +52,7 @@ from django.urls import path
 from .syndication import LatestEventsFeed
 from .views import (
     AcademyEventCheckinView,
+    AcademyEventHostView,
     AcademyEventJoinView,
     AcademyEventSuspendView,
     AcademyEventTypeView,
@@ -97,6 +98,7 @@ urlpatterns = [
     path("me/event/liveclass/join/<str:hash>", join_live_class, name="me_event_liveclass_join_hash"),
     path("public/event/liveclass", PublicLiveClassView.as_view(), name="public_event_liveclass"),
     path("academy/event/liveclass", AcademyLiveClassView.as_view(), name="academy_event_liveclass"),
+    path("academy/event/liveclass/<int:live_class_id>", AcademyLiveClassView.as_view(), name="academy_event_liveclass_id"),
     path(
         "academy/event/liveclass/join/<str:hash>",
         AcademyLiveClassJoinView.as_view(),
@@ -112,6 +114,8 @@ urlpatterns = [
     path("academy/event/<int:event_id>", AcademyEventView.as_view(), name="academy_event_id"),
     path("academy/event/<int:event_id>/join", AcademyEventJoinView.as_view(), name="academy_event_id_join"),
     path("academy/event/<int:event_id>/suspend", AcademyEventSuspendView.as_view(), name="academy_event_id_suspend"),
+    path("academy/event/<int:event_id>/host", AcademyEventHostView.as_view(), name="academy_event_id_host"),
+    path("academy/event/<int:event_id>/host/<int:user_id>", AcademyEventHostView.as_view(), name="academy_event_id_host_user"),
     path("academy/organization", AcademyOrganizationView.as_view(), name="academy_organization"),
     path(
         "academy/organization/organizer",

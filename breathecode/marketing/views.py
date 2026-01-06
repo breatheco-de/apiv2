@@ -70,12 +70,15 @@ from .serializers import (
     FormEntryBigSerializer,
     FormEntryHookSerializer,
     FormEntrySerializer,
+    FormEntrySerializerV2,
     FormEntrySmallSerializer,
     GetCourseSerializer,
     CoursePUTSerializer,
     CourseTranslationPUTSerializer,
     LeadgenAppSmallSerializer,
     PostFormEntrySerializer,
+    PostFormEntrySerializerV2,
+    POSTTagSerializer,
     PUTAutomationSerializer,
     PUTTagSerializer,
     ShortLinkSerializer,
@@ -495,7 +498,15 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     def get(self, request, format=None, academy_id=None):
         handler = self.extensions(request)
 
-        items = Tag.objects.filter(ac_academy__academy__id=academy_id)
+        # Include tags with ac_academy OR direct academy relationship
+        items = Tag.objects.filter(
+            Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+        )
+        
+        # Optional filter: exclude tags without ActiveCampaign
+        exclude_without_ac = request.GET.get("exclude_without_ac", "false").lower() == "true"
+        if exclude_without_ac:
+            items = items.filter(ac_academy__isnull=False, acp_id__isnull=False)
 
         like = request.GET.get("like", None)
         if like is not None:
@@ -518,10 +529,23 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
     @capable_of("crud_tag")
+    def post(self, request, academy_id=None):
+        serializer = POSTTagSerializer(data=request.data, context={"request": request, "academy": academy_id})
+        if serializer.is_valid():
+            tag = serializer.save()
+            response_serializer = TagSmallSerializer(tag)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_tag")
     def put(self, request, tag_slug=None, academy_id=None):
         many = isinstance(request.data, list)
         if not many:
-            tag = Tag.objects.filter(slug=tag_slug, ac_academy__academy__id=academy_id).first()
+            tag = Tag.objects.filter(
+                slug=tag_slug
+            ).filter(
+                Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+            ).first()
             if tag is None:
                 raise ValidationException(f"Tag {tag_slug} not found for this academy", slug="tag-not-found")
         else:
@@ -533,7 +557,11 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
                 if "id" not in x:
                     raise ValidationException("Cannot determine tag in " f"index {index}", slug="without-id")
 
-                instance = Tag.objects.filter(id=x["id"], ac_academy__academy__id=academy_id).first()
+                instance = Tag.objects.filter(
+                    id=x["id"]
+                ).filter(
+                    Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+                ).first()
 
                 if not instance:
                     raise ValidationException(
@@ -965,6 +993,8 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     f"Shortlink with slug {slug} not found or its private and it belongs to another academy",
                     slug="shortlink-not-found",
                 )
+            serializer = ShortlinkSmallSerializer(link)
+            return Response(serializer.data, status=200)
 
         academy = Academy.objects.get(id=academy_id)
         items = ShortLink.objects.filter(Q(academy__id=academy.id) | Q(private=False))
@@ -973,6 +1003,57 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         private = request.GET.get("private", None)
         if private == "true":
             lookup["private"] = True
+
+        # Generate lookups for UTM parameters
+        filter_fields = [
+            "utm_content",
+            "utm_medium",
+            "utm_campaign",
+            "utm_source",
+            "utm_placement",
+            "utm_term",
+            "utm_plan",
+        ]
+        relationships = ["referrer_user"]
+        filter_lookups = self.generate_lookups(request, fields=filter_fields, relationships=relationships)
+        lookup.update(filter_lookups)
+
+        # Custom handling for traceability fields with <id:slug> format
+        # These fields store values like "<232:event_slug>"
+        traceability_fields = ["event", "course", "downloadable", "plan"]
+        for field in traceability_fields:
+            value = request.GET.get(field, None)
+            if value is not None:
+                value = value.strip()
+                # Check if it's the full format <id:slug>
+                if value.startswith("<") and value.endswith(">"):
+                    lookup[field] = value
+                # Check if it's numeric (ID) - search for "<{id}:" within the field
+                elif value.isdigit():
+                    lookup[f"{field}__contains"] = f"<{value}:"
+                # Otherwise treat as slug - search for ":{slug}>" within the field
+                else:
+                    lookup[f"{field}__contains"] = f":{value}>"
+
+        # Support "referrer" as an alias for "referrer_user" (only if referrer_user not already set)
+        if "referrer_user__pk" not in lookup:
+            referrer = request.GET.get("referrer", None)
+            if referrer is not None:
+                lookup["referrer_user__pk"] = referrer
+
+        # Search by traceability field slug or shortlink slug
+        # These search both the shortlink slug and the traceability field (event, course, downloadable, plan)
+        traceability_like_fields = ["event", "course", "downloadable", "plan"]
+        for field in traceability_like_fields:
+            like_value = request.GET.get(f"like_{field}", None)
+            if like_value is not None:
+                like_value = like_value.strip()
+                # Create Q object to search both slug and traceability field
+                # For traceability field: search for ":{search_term}>" to match the slug part in "<id:slug>" format
+                # Also search for the value anywhere in the field as fallback
+                field_q = Q(**{f"{field}__contains": f":{like_value}>"}) | Q(**{f"{field}__icontains": like_value})
+                slug_q = Q(slug__icontains=slugify(like_value))
+                items = items.filter(field_q | slug_q)
 
         sort_by = "-created_at"
         if "sort" in self.request.GET and self.request.GET["sort"] != "":
@@ -1832,3 +1913,142 @@ class CourseTranslationPrerequisiteView(APIView):
 
         payload = GetCourseTranslationSerializer(translation_instance, many=False).data
         return Response(payload, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# V2 Views - Use ppc_tracking_id instead of gclid
+# ============================================================================
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@validate_captcha_challenge(vendor="cloudflare")
+def create_lead_v2(request):
+    """
+    V2 endpoint for creating leads.
+    Accepts ppc_tracking_id instead of gclid - no backward compatibility.
+    """
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if "phone" in data:
+        data["phone"] = data["phone"].replace(" ", "")
+
+    if "utm_url" in data and ("//localhost:" in data["utm_url"] or "gitpod.io" in data["utm_url"]):
+        print("Ignoring lead because its coming from development team")
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    serializer = PostFormEntrySerializerV2(data=data)
+    if serializer.is_valid():
+        serializer.save()
+
+        persist_single_lead.delay(serializer.data)
+
+        # Return response with ppc_tracking_id instead of gclid
+        response_data = FormEntrySerializerV2(serializer.instance).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@validate_captcha
+def create_lead_captcha_v2(request):
+    """
+    V2 endpoint for creating leads with captcha.
+    Accepts ppc_tracking_id instead of gclid - no backward compatibility.
+    """
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if "phone" in data:
+        data["phone"] = data["phone"].replace(" ", "")
+
+    if "utm_url" in data and ("//localhost:" in data["utm_url"] or "gitpod.io" in data["utm_url"]):
+        print("Ignoring lead because its coming from development team")
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    serializer = PostFormEntrySerializerV2(data=data)
+    if serializer.is_valid():
+        serializer.save()
+
+        persist_single_lead.delay(serializer.data)
+
+        # Return response with ppc_tracking_id instead of gclid
+        response_data = FormEntrySerializerV2(serializer.instance).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def create_lead_from_app_v2(request, app_slug=None):
+    """
+    V2 endpoint for creating leads from app.
+    Accepts ppc_tracking_id instead of gclid - no backward compatibility.
+    """
+    app_id = request.GET.get("app_id", None)
+    if app_id is None:
+        raise ValidationException("Invalid app slug and/or id", code=400, slug="without-app-slug-or-app-id")
+
+    if app_slug is None:
+        # try get the slug from the encoded app_id
+        decoded_id = parse.unquote(app_id)
+        if ":" not in decoded_id:
+            raise ValidationException("Missing app slug", code=400, slug="without-app-slug-or-app-id")
+        else:
+            app_slug, app_id = decoded_id.split(":")
+
+    app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
+    if app is None:
+        raise ValidationException("App not found with those credentials", code=401, slug="without-app-id")
+
+    app.hits += 1
+    app.last_call_at = timezone.now()
+    app.last_request_data = json.dumps(request.data)
+
+    ## apply defaults from the app
+    payload = {
+        "location": app.location,
+        "language": app.language,
+        "utm_url": app.utm_url,
+        "utm_medium": app.utm_medium,
+        "utm_campaign": app.utm_campaign,
+        "utm_source": app.utm_source,
+        "utm_plan": app.utm_plan,
+        "academy": app.academy.id,
+        "lead_generation_app": app.id,
+    }
+    payload.update(request.data)
+
+    if "automations" not in request.data:
+        payload["automations"] = ",".join([str(auto.slug) for auto in app.default_automations.all()])
+
+    if "tags" not in request.data:
+        payload["tags"] = ",".join([tag.slug for tag in app.default_tags.all()])
+
+    # remove spaces from phone
+    if "phone" in request.data:
+        payload["phone"] = payload["phone"].replace(" ", "")
+
+    serializer = PostFormEntrySerializerV2(data=payload)
+    if serializer.is_valid():
+        serializer.save()
+
+        tasks.persist_single_lead.delay(serializer.data)
+
+        app.last_call_status = "OK"
+        app.save()
+
+        # Return response with ppc_tracking_id instead of gclid
+        response_data = FormEntrySerializerV2(serializer.instance).data
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    else:
+        app.last_call_status = "ERROR"
+        app.last_call_log = json.dumps(serializer.errors)
+        app.save()
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

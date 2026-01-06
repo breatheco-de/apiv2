@@ -22,8 +22,8 @@ from breathecode.activity import actions
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
-from breathecode.utils import NDB
-from breathecode.utils.decorators import TaskPriority
+from breathecode.utils.decorators.task import TaskPriority
+from breathecode.utils.ndb import NDB
 from breathecode.utils.redis import Lock
 
 from .models import StudentActivity
@@ -246,7 +246,9 @@ def upload_activities(self, task_manager_id: int, **_):
 
         raise AbortTask("No data to upload")
 
-    table = BigQuery.table("activity")
+    from breathecode.activity.models import ACTIVITY_TABLE_NAME
+
+    table = BigQuery.table(ACTIVITY_TABLE_NAME)
     schema = table.schema()
 
     rows = [x["data"] for x in res]
@@ -277,6 +279,7 @@ def add_activity(
     related_id: Optional[str | int] = None,
     related_slug: Optional[str] = None,
     timestamp: Optional[str] = None,
+    academy_id: Optional[int] = None,
     **_,
 ):
 
@@ -346,7 +349,7 @@ def add_activity(
 
             fields = []
 
-            meta = actions.get_activity_meta(kind, related_type, related_id, related_slug)
+            meta = actions.get_activity_meta(kind, related_type, related_id, related_slug, academy_id)
 
             for key in meta:
                 t = bigquery.enums.SqlTypeNames.STRING

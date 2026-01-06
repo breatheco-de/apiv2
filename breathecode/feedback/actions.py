@@ -1,20 +1,67 @@
 import json
 import logging
+import datetime
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
+from django.db import models as django_models
 from django.db.models import Avg, Q, QuerySet
 from django.utils import timezone
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import Cohort, CohortUser, SyllabusVersion
+from breathecode.assignments.models import Task
 from breathecode.authenticate.models import Token
+from breathecode.certificate.actions import syllabus_weeks_to_days
 
 from . import tasks
-from .models import AcademyFeedbackSettings, Answer, Review, ReviewPlatform, Survey
+from .models import (
+    AcademyFeedbackSettings,
+    Answer,
+    Review,
+    ReviewPlatform,
+    Survey,
+    SurveyConfiguration,
+    SurveyStudy,
+    SurveyResponse,
+)
+from .services.pusher_service import send_survey_event
 from .utils import strings
+from .utils.survey_manager import SurveyManager
 
 logger = logging.getLogger(__name__)
+
+
+def _update_stats_for_survey_study(survey_study) -> None:
+    """Recalculate and persist stats for a SurveyStudy (if present)."""
+    if not survey_study:
+        return
+
+    qs = SurveyResponse.objects.filter(survey_study=survey_study)
+    opened_statuses = [
+        SurveyResponse.Status.OPENED,
+        SurveyResponse.Status.PARTIAL,
+        SurveyResponse.Status.ANSWERED,
+    ]
+    stats = {
+        "sent": qs.count(),
+        "opened": qs.filter(Q(opened_at__isnull=False) | Q(status__in=opened_statuses)).count(),
+        "partial_responses": qs.filter(status=SurveyResponse.Status.PARTIAL).count(),
+        "responses": qs.filter(status=SurveyResponse.Status.ANSWERED).count(),
+        "email_opened": qs.filter(email_opened_at__isnull=False).count(),
+        "updated_at": timezone.now().isoformat(),
+    }
+
+    survey_study.stats = stats
+    survey_study.save(update_fields=["stats", "updated_at"])
+
+
+def update_survey_stats(survey_response: SurveyResponse) -> None:
+    """Update stats for related SurveyStudy (SurveyConfiguration does not store stats)."""
+    if not survey_response:
+        return
+
+    _update_stats_for_survey_study(getattr(survey_response, "survey_study", None))
 
 
 def send_cohort_survey_group(survey=None, cohort=None):
@@ -297,3 +344,400 @@ def calculate_survey_scores(survey_id: int) -> dict:
         "live_class": live_class,
         "mentors": sorted(mentors, key=lambda x: x["name"]),
     }
+
+
+def _find_module_for_asset_in_syllabus(syllabus_version: SyllabusVersion, asset_slug: str) -> int | None:
+    """
+    Find the module index (0-based) where an asset_slug appears in a syllabus_version.
+
+    Returns:
+        Module index (int) if found, None otherwise.
+    """
+    if not syllabus_version or not syllabus_version.json:
+        return None
+
+    if isinstance(syllabus_version.json, str):
+        syllabus_json = json.loads(syllabus_version.json)
+    else:
+        syllabus_json = syllabus_version.json
+
+    syllabus_json = syllabus_weeks_to_days(syllabus_json)
+
+    key_map = {
+        "QUIZ": "quizzes",
+        "LESSON": "lessons",
+        "EXERCISE": "replits",
+        "PROJECT": "assignments",
+    }
+
+    for module_index, day in enumerate(syllabus_json.get("days", [])):
+        for atype, day_key in key_map.items():
+            if day_key not in day:
+                continue
+
+            for asset in day[day_key]:
+                asset_slug_in_day = asset.get("slug") if isinstance(asset, dict) else asset
+                if asset_slug_in_day == asset_slug:
+                    return module_index
+
+    return None
+
+
+def _get_module_assets_from_syllabus(syllabus_version: SyllabusVersion, module_index: int) -> list[str]:
+    """
+    Get all asset slugs (learnpacks) from a specific module in a syllabus_version.
+
+    Returns:
+        List of asset slugs (strings).
+    """
+    if not syllabus_version or not syllabus_version.json:
+        return []
+
+    if isinstance(syllabus_version.json, str):
+        syllabus_json = json.loads(syllabus_version.json)
+    else:
+        syllabus_json = syllabus_version.json
+
+    syllabus_json = syllabus_weeks_to_days(syllabus_json)
+
+    days = syllabus_json.get("days", [])
+    if module_index < 0 or module_index >= len(days):
+        return []
+
+    day = days[module_index]
+    key_map = {
+        "QUIZ": "quizzes",
+        "LESSON": "lessons",
+        "EXERCISE": "replits",
+        "PROJECT": "assignments",
+    }
+
+    assets = []
+    for atype, day_key in key_map.items():
+        if day_key not in day:
+            continue
+
+        for asset in day[day_key]:
+            asset_slug = asset.get("slug") if isinstance(asset, dict) else asset
+            if asset_slug:
+                assets.append(asset_slug)
+
+    return assets
+
+
+def _is_module_complete(user: User, cohort: Cohort, module_index: int) -> bool:
+    """
+    Check if a user has completed all learnpacks in a specific module of their cohort's syllabus.
+
+    Returns:
+        True if all learnpacks in the module are DONE, False otherwise.
+    """
+    if not cohort or not cohort.syllabus_version:
+        return False
+
+    module_assets = _get_module_assets_from_syllabus(cohort.syllabus_version, module_index)
+    if not module_assets:
+        return False
+
+    # Check if all assets in this module have at least one DONE task for this user in this cohort
+    for asset_slug in module_assets:
+        has_done_task = Task.objects.filter(
+            user=user,
+            cohort=cohort,
+            associated_slug=asset_slug,
+            task_status=Task.TaskStatus.DONE,
+        ).exists()
+
+        if not has_done_task:
+            return False
+
+    return True
+
+
+def _is_syllabus_complete(user: User, cohort: Cohort) -> bool:
+    """
+    Check if a user has completed all modules in their cohort's syllabus.
+
+    Returns:
+        True if all modules are complete, False otherwise.
+    """
+    if not cohort or not cohort.syllabus_version:
+        return False
+
+    if isinstance(cohort.syllabus_version.json, str):
+        syllabus_json = json.loads(cohort.syllabus_version.json)
+    else:
+        syllabus_json = cohort.syllabus_version.json
+
+    syllabus_json = syllabus_weeks_to_days(syllabus_json)
+    total_modules = len(syllabus_json.get("days", []))
+
+    if total_modules == 0:
+        return False
+
+    # Check if all modules are complete
+    for module_index in range(total_modules):
+        if not _is_module_complete(user, cohort, module_index):
+            return False
+
+    return True
+
+
+def has_active_survey_studies(academy, trigger_types: list[str] | str) -> bool:
+    """
+    Check if there are any active SurveyStudy instances for the given academy and trigger types.
+
+    Args:
+        academy: Academy instance to check
+        trigger_types: Single trigger type string or list of trigger type strings
+
+    Returns:
+        True if there is at least one active study with the specified trigger types, False otherwise
+    """
+    if not academy:
+        return False
+
+    if isinstance(trigger_types, str):
+        trigger_types = [trigger_types]
+
+    utc_now = timezone.now()
+    active_studies = (
+        SurveyStudy.objects.filter(
+            academy=academy,
+            survey_configurations__trigger_type__in=trigger_types,
+            survey_configurations__is_active=True,
+        )
+        .filter(Q(starts_at__lte=utc_now) | Q(starts_at__isnull=True))
+        .filter(Q(ends_at__gte=utc_now) | Q(ends_at__isnull=True))
+        .distinct()
+        .exists()
+    )
+
+    return active_studies
+
+
+def trigger_survey_for_user(user: User, trigger_type: str, context: dict):
+    """
+    Trigger a survey for a user when a specific action is completed.
+
+    This is a convenience wrapper around SurveyManager for backward compatibility.
+
+    Args:
+        user: User who completed the action
+        trigger_type: Type of trigger (must be one of SurveyConfiguration.TriggerType values)
+        context: Context information about the trigger (e.g., {"asset_slug": "...", "cohort": ...})
+
+    Returns:
+        SurveyResponse instance if created, None otherwise
+    """
+    manager = SurveyManager(user, trigger_type, context)
+    return manager.trigger_survey_for_user()
+
+
+def create_survey_response(
+    survey_config: SurveyConfiguration,
+    user: User,
+    context: dict,
+    survey_study: SurveyStudy | None = None,
+    send_pusher: bool = True,
+):
+    """
+    Create a survey response and send Pusher event.
+
+    Args:
+        survey_config: SurveyConfiguration instance
+        user: User who should receive the survey
+        context: Context information about the trigger
+
+    Returns:
+        SurveyResponse instance if created successfully, None otherwise
+    """
+    try:
+        if context is None:
+            context = {}
+
+        logger.info(
+            "[survey-response] start | user_id=%s survey_config_id=%s academy_id=%s trigger_type=%s context_keys=%s",
+            getattr(user, "id", None),
+            getattr(survey_config, "id", None),
+            getattr(getattr(survey_config, "academy", None), "id", None),
+            getattr(survey_config, "trigger_type", None),
+            sorted(list(context.keys())),
+        )
+
+        def _serialize_trigger_context(value):
+            """
+            Convert values into JSON-serializable shapes for storage in JSONField.
+
+            `context` can include Django model instances for filtering, but the stored `trigger_context`
+            must be JSON-serializable.
+            """
+            if value is None:
+                return None
+
+            if isinstance(value, django_models.Model):
+                payload = {"id": value.pk, "model": value._meta.label_lower}
+                if hasattr(value, "slug"):
+                    payload["slug"] = getattr(value, "slug")
+                return payload
+
+            if isinstance(value, (datetime.datetime, datetime.date)):
+                return value.isoformat()
+
+            if isinstance(value, (str, int, float, bool)):
+                return value
+
+            if isinstance(value, dict):
+                return {str(k): _serialize_trigger_context(v) for k, v in value.items()}
+
+            if isinstance(value, list):
+                return [_serialize_trigger_context(v) for v in value]
+
+            return str(value)
+
+        # Prepare trigger context
+        trigger_context = {
+            "trigger_type": survey_config.trigger_type,
+            **_serialize_trigger_context(context),
+        }
+
+        # Create survey response
+        questions_snapshot = survey_config.questions
+        survey_response = SurveyResponse.objects.create(
+            survey_config=survey_config,
+            survey_study=survey_study,
+            user=user,
+            trigger_context=trigger_context,
+            questions_snapshot=questions_snapshot,
+            status=SurveyResponse.Status.PENDING,
+        )
+
+        logger.info(
+            "[survey-response] created | user_id=%s survey_response_id=%s survey_config_id=%s",
+            user.id,
+            survey_response.id,
+            survey_config.id,
+        )
+
+        # Update aggregated stats (best-effort)
+        try:
+            update_survey_stats(survey_response)
+        except Exception:
+            logger.exception("[survey-response] unable to update stats after create")
+
+        if send_pusher:
+            # Send Pusher event
+            questions = (questions_snapshot or {}).get("questions", [])
+            send_survey_event(user.id, survey_response.id, questions, trigger_context)
+
+            logger.info(
+                "[survey-response] pusher sent | user_id=%s survey_response_id=%s questions=%s",
+                user.id,
+                survey_response.id,
+                len(questions) if isinstance(questions, list) else None,
+            )
+        return survey_response
+
+    except Exception as e:
+        logger.error(
+            "[survey-response] error | user_id=%s survey_config_id=%s error=%s",
+            getattr(user, "id", None),
+            getattr(survey_config, "id", None),
+            str(e),
+            exc_info=True,
+        )
+        return None
+
+
+def save_survey_answers(response_id: int, answers: dict) -> SurveyResponse:
+    """
+    Save survey answers and update response status.
+
+    Args:
+        response_id: ID of the SurveyResponse
+        answers: Dictionary with question IDs as keys and answers as values
+
+    Returns:
+        Updated SurveyResponse instance
+
+    Raises:
+        ValidationException: If response not found, already answered, or validation fails
+    """
+    from django.db import transaction
+
+    # Use select_for_update to prevent race conditions
+    with transaction.atomic():
+        survey_response = SurveyResponse.objects.select_for_update().filter(id=response_id).first()
+
+        if not survey_response:
+            raise ValidationException("Survey response not found", code=404, slug="survey-response-not-found")
+
+        if survey_response.status == SurveyResponse.Status.ANSWERED:
+            raise ValidationException("Survey already answered", code=400, slug="survey-already-answered")
+
+        # Validate answers against survey configuration
+        questions = survey_response.survey_config.questions.get("questions", [])
+        question_ids = {q.get("id") for q in questions if q.get("id")}
+
+        # Check if all required questions are answered
+        for question in questions:
+            question_id = question.get("id")
+            if question_id and question_id not in answers:
+                # Check if question is required
+                if question.get("required", False):
+                    raise ValidationException(
+                        f"Required question '{question_id}' not answered", code=400, slug="missing-required-question"
+                    )
+
+        # Validate answer types and values
+        for question_id, answer_value in answers.items():
+            if question_id not in question_ids:
+                logger.warning(f"Answer for unknown question '{question_id}' will be saved but not validated")
+
+            # Find question config
+            question = next((q for q in questions if q.get("id") == question_id), None)
+            if question:
+                question_type = question.get("type")
+                config = question.get("config", {})
+
+                # Validate based on question type
+                if question_type == "likert_scale":
+                    scale = config.get("scale", 5)
+                    if not isinstance(answer_value, int) or answer_value < 1 or answer_value > scale:
+                        raise ValidationException(
+                            f"Answer for '{question_id}' must be an integer between 1 and {scale}",
+                            code=400,
+                            slug="invalid-likert-answer",
+                        )
+
+                elif question_type == "open_question":
+                    max_length = config.get("max_length", 500)
+                    if not isinstance(answer_value, str):
+                        raise ValidationException(
+                            f"Answer for '{question_id}' must be a string", code=400, slug="invalid-open-answer-type"
+                        )
+                    if len(answer_value) > max_length:
+                        raise ValidationException(
+                            f"Answer for '{question_id}' exceeds maximum length of {max_length} characters",
+                            code=400,
+                            slug="answer-too-long",
+                        )
+
+        # Save answers
+        survey_response.answers = answers
+        survey_response.status = SurveyResponse.Status.ANSWERED
+        survey_response.answered_at = timezone.now()
+        survey_response.save()
+
+    # Trigger signal for webhook
+    from breathecode.feedback.signals import survey_response_answered
+
+    survey_response_answered.send(sender=SurveyResponse, instance=survey_response)
+
+    try:
+        update_survey_stats(survey_response)
+    except Exception:
+        logger.exception("[survey-response] unable to update stats after answered")
+
+    logger.info(f"Survey response {survey_response.id} answered by user {survey_response.user.id}")
+    return survey_response

@@ -1,5 +1,6 @@
 import datetime
 import json
+import uuid as uuid_lib
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -14,7 +15,19 @@ from breathecode.feedback.utils import strings
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.registry.models import Asset
 
-__all__ = ["UserProxy", "CohortUserProxy", "CohortProxy", "Survey", "Answer", "SurveyTemplate", "FeedbackTag"]
+__all__ = [
+    "UserProxy",
+    "CohortUserProxy",
+    "CohortProxy",
+    "Survey",
+    "Answer",
+    "SurveyTemplate",
+    "FeedbackTag",
+    "SurveyQuestionTemplate",
+    "SurveyStudy",
+    "SurveyConfiguration",
+    "SurveyResponse",
+]
 
 
 class UserProxy(User):
@@ -603,3 +616,231 @@ class AcademyFeedbackSettings(models.Model):
     class Meta:
         verbose_name = "Academy Feedback Settings"
         verbose_name_plural = "Academy Feedback Settings"
+
+
+class SurveyConfiguration(models.Model):
+    class TriggerType(models.TextChoices):
+        MODULE_COMPLETION = "module_completed", "Module Completion"
+        SYLLABUS_COMPLETION = "syllabus_completed", "Syllabus Completion"
+        LEARNPACK_COMPLETION = "learnpack_completed", "Learnpack Completion"
+        COURSE_COMPLETION = "course_completed", "Course Completion"
+
+    trigger_type = models.CharField(
+        max_length=50,
+        choices=TriggerType.choices,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            "Realtime trigger type for this configuration (learnpack_completed, course_completed, "
+            "module_completed or syllabus_completed). "
+            "Only for realtime studies where a modal appears after a user completes an activity. "
+            "For email/list-based studies, this can be null."
+        ),
+    )
+
+    syllabus = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Optional filter to scope surveys by syllabus/module. "
+            "Shape: {'syllabus': '<syllabus_slug>', 'version': <int>, 'module': <int>, 'asset_slug': '<slug>'}. "
+            "All keys are optional; if 'module' is omitted, it applies to the whole syllabus/version."
+        ),
+    )
+
+    template = models.ForeignKey(
+        "feedback.SurveyQuestionTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="survey_configurations",
+        help_text="Optional questions template. If set, questions are sourced from the template.",
+    )
+    questions = models.JSONField(help_text="Questions JSON structure (flexible format)")
+    is_active = models.BooleanField(default=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, help_text="Used to scope configurations by academy")
+    cohorts = models.ManyToManyField(
+        Cohort,
+        blank=True,
+        help_text="If empty, applies to all cohorts. If set, applies only to those cohorts.",
+    )
+    asset_slugs = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "For learnpacks: if empty, applies to all. If set, applies only to those learnpacks. "
+            "Example: ['learnpack-1', 'learnpack-2']"
+        ),
+    )
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        if self.asset_slugs and not isinstance(self.asset_slugs, list):
+            raise ValidationError("asset_slugs must be a list")
+
+        if self.syllabus and not isinstance(self.syllabus, dict):
+            raise ValidationError({"syllabus": "syllabus must be a dictionary"})
+
+        allowed_keys = {"syllabus", "version", "module", "asset_slug"}
+        for k in (self.syllabus or {}).keys():
+            if k not in allowed_keys:
+                raise ValidationError({"syllabus": f"Invalid key: {k}"})
+
+        syllabus_slug = (self.syllabus or {}).get("syllabus")
+        if syllabus_slug is not None and not isinstance(syllabus_slug, str):
+            raise ValidationError({"syllabus": "'syllabus' must be a string (syllabus slug)"})
+
+        version = (self.syllabus or {}).get("version")
+        if version is not None and (not isinstance(version, int) or version < 1):
+            raise ValidationError({"syllabus": "'version' must be an integer >= 1"})
+
+        module = (self.syllabus or {}).get("module")
+        if module is not None and (not isinstance(module, int) or module < 0):
+            raise ValidationError({"syllabus": "'module' must be an integer >= 0"})
+
+        asset_slug = (self.syllabus or {}).get("asset_slug")
+        if asset_slug is not None and not isinstance(asset_slug, str):
+            raise ValidationError({"syllabus": "'asset_slug' must be a string"})
+
+    def save(self, *args, **kwargs):
+        previous_template_id = None
+        if self.pk:
+            previous_template_id = (
+                SurveyConfiguration.objects.filter(pk=self.pk).values_list("template_id", flat=True).first()
+            )
+
+        if self.template is not None:
+            if previous_template_id != self.template_id:
+                self.questions = self.template.questions
+
+            else:
+                # Template unchanged: questions must match template exactly
+                if self.questions != self.template.questions:
+                    raise ValidationError({"questions": "Questions cannot be modified when template is assigned"})
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Survey Configuration: {self.trigger_type} ({self.academy.name})"
+
+    class Meta:
+        verbose_name = "Survey Configuration"
+        verbose_name_plural = "Survey Configurations"
+
+
+class SurveyResponse(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        OPENED = "OPENED", "Opened"
+        PARTIAL = "PARTIAL", "Partial"
+        ANSWERED = "ANSWERED", "Answered"
+        EXPIRED = "EXPIRED", "Expired"
+
+    survey_config = models.ForeignKey(SurveyConfiguration, on_delete=models.CASCADE)
+    survey_study = models.ForeignKey(
+        "feedback.SurveyStudy",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="survey_responses",
+        help_text="Study/campaign that originated this survey response (optional).",
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.UUIDField(null=True, blank=True, editable=False, unique=True)
+    trigger_context = models.JSONField(
+        help_text="Context that originated the survey (e.g. learnpack_slug, course_slug, cohort_id, etc.)"
+    )
+    questions_snapshot = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Snapshot of questions used to render/validate this response.",
+    )
+    answers = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Respuestas del usuario guardadas en BD, null hasta que responda. Formato: {'q1': 5, 'q2': 4, 'q3': 'texto respuesta'}",
+    )
+    status = models.CharField(max_length=15, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    opened_at = models.DateTimeField(null=True, blank=True, default=None, help_text="First time the survey was opened")
+    email_opened_at = models.DateTimeField(
+        null=True, blank=True, default=None, help_text="First time the survey email was opened"
+    )
+    answered_at = models.DateTimeField(null=True, blank=True, default=None, help_text="When the survey was answered")
+
+    def save(self, *args, **kwargs):
+        if self.token is None:
+            self.token = uuid_lib.uuid4()
+
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Survey Response {self.id} - User: {self.user.email} - Status: {self.status}"
+
+    class Meta:
+        verbose_name = "Survey Response"
+        verbose_name_plural = "Survey Responses"
+
+
+class SurveyQuestionTemplate(models.Model):
+    """
+    Question template for the new SurveyConfiguration/SurveyResponse system.
+    NOTE: This is not the legacy `SurveyTemplate` used by the classic NPS Survey/Answer flows.
+    """
+
+    slug = models.SlugField(max_length=100, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True, default=None)
+    questions = models.JSONField(help_text="Questions JSON structure (same shape as SurveyConfiguration.questions)")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.slug} ({self.id})"
+
+    class Meta:
+        verbose_name = "Survey Question Template"
+        verbose_name_plural = "Survey Question Templates"
+
+
+class SurveyStudy(models.Model):
+    """
+    A study/campaign that groups one or more SurveyConfigurations and provides study-level constraints/stats.
+    """
+
+    slug = models.SlugField(max_length=100, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    starts_at = models.DateTimeField(null=True, blank=True, default=None)
+    ends_at = models.DateTimeField(null=True, blank=True, default=None)
+    max_responses = models.PositiveIntegerField(
+        null=True, blank=True, default=None, help_text="Max ANSWERED responses allowed (null = unlimited)"
+    )
+
+    survey_configurations = models.ManyToManyField(
+        SurveyConfiguration,
+        blank=True,
+        related_name="survey_studies",
+        help_text="Survey configurations that belong to this study",
+    )
+
+    stats = models.JSONField(default=dict, blank=True, help_text="Aggregated stats for this study")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.slug} ({self.academy.slug})"
+
+    class Meta:
+        verbose_name = "Survey Study"
+        verbose_name_plural = "Survey Studies"

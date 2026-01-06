@@ -195,8 +195,8 @@ class UserTinySerializer(serpy.Serializer):
     email = serpy.Field()
 
 
-class UserBigSerializer(serpy.Serializer):
-    """The serializer schema definition."""
+class UserSmallSerializer(serpy.Serializer):
+    """The serializer schema definition - minimal user data (id, email, first_name)."""
 
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
@@ -358,6 +358,7 @@ class UserInviteNoUrlSerializer(UserInviteShortSerializer):
     academy = AcademyTinySerializer(required=False)
     cohort = CohortTinySerializer(required=False)
     role = RoleSmallSerializer(required=False)
+    event_slug = serpy.Field(required=False)
 
 
 class UserInviteSerializer(UserInviteNoUrlSerializer):
@@ -420,8 +421,8 @@ class AcademySmallSerializer(serpy.Serializer):
     slug = serpy.Field()
 
 
-class UserSmallSerializer(serpy.Serializer):
-    """The serializer schema definition."""
+class UserBigSerializer(serpy.Serializer):
+    """The serializer schema definition - complete user data (id, email, first_name, last_name, github, profile)."""
 
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
@@ -438,10 +439,12 @@ class UserSmallSerializer(serpy.Serializer):
         return GithubSmallSerializer(obj.credentialsgithub).data
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
 
 class UserSuperSmallSerializer(serpy.Serializer):
@@ -455,10 +458,12 @@ class UserSuperSmallSerializer(serpy.Serializer):
     profile = serpy.MethodField()
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
 
 class GetProfileAcademySerializer(serpy.Serializer):
@@ -468,7 +473,7 @@ class GetProfileAcademySerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
-    user = UserSmallSerializer(required=False)
+    user = UserBigSerializer(required=False)
     academy = AcademySmallSerializer()
     role = RoleSmallSerializer()
     created_at = serpy.Field()
@@ -536,10 +541,12 @@ class AppUserSerializer(serpy.Serializer):
     profile = serpy.MethodField()
 
     def get_profile(self, obj):
-        if not hasattr(obj, "profile"):
+        try:
+            profile = obj.profile
+        except Profile.DoesNotExist:
             return None
 
-        return GetProfileSmallSerializer(obj.profile).data
+        return GetProfileSmallSerializer(profile).data
 
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
@@ -610,11 +617,15 @@ class AuthSettingsBigSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = AcademyTinySerializer()
     github_username = serpy.Field()
-    github_owner = UserSmallSerializer(required=False)
-    google_cloud_owner = UserSmallSerializer(required=False)
+    github_owner = UserBigSerializer(required=False)
+    google_cloud_owner = UserBigSerializer(required=False)
     github_default_team_ids = serpy.Field()
     github_is_sync = serpy.Field()
     github_error_log = serpy.Field()
+
+    learnpack_owner = UserTinySerializer(required=False)
+    learnpack_features = serpy.Field()
+    learnpack_org_id = serpy.Field()
 
 
 #
@@ -968,9 +979,6 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 # Add welcome video if available
                 if invite.welcome_video:
                     welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
-                    if isinstance(welcome_video, dict) and "url" in welcome_video:
-                        from breathecode.authenticate.actions import get_youtube_watch_url
-                        welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
                     email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(
@@ -1172,7 +1180,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 {
                     "subject": f"Invitation to study at {academy.name}",
                     "invites": [ProfileAcademySmallSerializer(profile_academy).data],
-                    "user": UserSmallSerializer(user).data,
+                    "user": UserBigSerializer(user).data,
                     "LINK": url,
                 },
                 academy=academy,
@@ -1283,10 +1291,6 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 # Add welcome video if available
                 if invite.welcome_video:
                     welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
-                    if isinstance(welcome_video, dict) and "url" in welcome_video:
-                        # For email, convert to YouTube watch URL (not embed) so users can click to watch on YouTube
-                        from breathecode.authenticate.actions import get_youtube_watch_url
-                        welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
                     email_data["WELCOME_VIDEO"] = welcome_video
 
                 notify_actions.send_email_message(

@@ -182,7 +182,7 @@ class FillActivityMeta:
 
     @classmethod
     def user(
-        cls, kind: str, related_id: Optional[str | int] = None, related_slug: Optional[str] = None
+        cls, kind: str, related_id: Optional[str | int] = None, related_slug: Optional[str] = None, academy_id: Optional[int] = None
     ) -> dict[str, Any]:
         from breathecode.authenticate.models import User
 
@@ -197,6 +197,9 @@ class FillActivityMeta:
             "email": instance.email,
             "username": instance.username,
         }
+
+        if academy_id:
+            obj["academy"] = academy_id
 
         return obj
 
@@ -326,7 +329,7 @@ class FillActivityMeta:
 
     @classmethod
     def event_checkin(
-        cls, kind: str, related_id: Optional[str | int] = None, related_slug: Optional[str] = None
+        cls, kind: str, related_id: Optional[str | int] = None, related_slug: Optional[str] = None, academy_id: Optional[int] = None
     ) -> dict[str, Any]:
         from breathecode.events.models import EventCheckin
 
@@ -352,6 +355,9 @@ class FillActivityMeta:
 
         if instance.attended_at:
             obj["attended_at"] = instance.attended_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        if academy_id:
+            obj["academy"] = academy_id
 
         return obj
 
@@ -582,6 +588,7 @@ def get_activity_meta(
     related_type: Optional[str] = None,
     related_id: Optional[str | int] = None,
     related_slug: Optional[str] = None,
+    academy_id: Optional[int] = None,
 ) -> dict[str, Any]:
 
     if not related_type:
@@ -602,7 +609,7 @@ def get_activity_meta(
         return FillActivityMeta.answer(*args)
 
     if related_type == "auth.User" and kind in ALLOWED_TYPES["auth.User"]:
-        return FillActivityMeta.user(*args)
+        return FillActivityMeta.user(kind, related_id, related_slug, academy_id)
 
     if related_type == "admissions.Cohort" and kind in ALLOWED_TYPES["admissions.Cohort"]:
         return FillActivityMeta.cohort(*args)

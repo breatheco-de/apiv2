@@ -13,6 +13,7 @@ from breathecode.payments.models import (
     AcademyService,
     Bag,
     CohortSet,
+    Coupon,
     Currency,
     FinancingOption,
     PaymentMethod,
@@ -120,6 +121,7 @@ class GetServiceSerializer(serpy.Serializer):
     owner = serpy.MethodField()
     private = serpy.Field()
     groups = serpy.MethodField()
+    is_model_service = serpy.Field()
 
     def get_owner(self, obj):
         if obj.owner:
@@ -599,6 +601,10 @@ class GetCouponSerializer(serpy.Serializer):
     allowed_user = GetUserSmallSerializer(many=False, required=False)
     offered_at = serpy.Field()
     expires_at = serpy.Field()
+    times_used = serpy.Field()
+    last_used_at = serpy.Field(required=False)
+    stats = serpy.Field(required=False)
+    stats_updated_at = serpy.Field(required=False)
 
 
 class GetCouponWithPlansSerializer(serpy.Serializer):
@@ -1345,3 +1351,92 @@ class AcademyPaymentSettingsPUTSerializer(serializers.ModelSerializer):
             "coinbase_api_key": {"required": False, "allow_blank": True, "allow_null": True},
             "coinbase_webhook_secret": {"required": False, "allow_blank": True, "allow_null": True},
         }
+
+
+class CouponSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating Coupon"""
+
+    class Meta:
+        model = Coupon
+        fields = [
+            "slug",
+            "discount_type",
+            "discount_value",
+            "referral_type",
+            "referral_value",
+            "auto",
+            "how_many_offers",
+            "plans",
+            "offered_at",
+            "expires_at",
+            "allowed_user",
+            "seller",
+            "referred_buyer",
+        ]
+        extra_kwargs = {
+            "slug": {"required": True},
+            "discount_type": {"required": True},
+            "discount_value": {"required": True},
+            "offered_at": {"required": False, "allow_null": True},
+            "expires_at": {"required": False, "allow_null": True},
+            "allowed_user": {"required": False, "allow_null": True},
+            "seller": {"required": False, "allow_null": True},
+            "referred_buyer": {"required": False, "allow_null": True},
+        }
+
+    def validate(self, attrs):
+        return attrs
+
+    def create(self, validated_data):
+        m2m_fields = {}
+
+        for key in list(validated_data.keys()):
+            try:
+                field = Coupon._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                continue
+
+            if field.many_to_many:
+                m2m_fields[key] = validated_data.pop(key)
+
+        instance = Coupon.objects.create(**validated_data)
+
+        for key, value in m2m_fields.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance
+
+    def update(self, instance, validated_data):
+        m2m_updates = {}
+
+        for key, value in validated_data.items():
+            try:
+                field = instance._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                setattr(instance, key, value)
+                continue
+
+            if field.many_to_many:
+                m2m_updates[key] = value
+                continue
+
+            setattr(instance, key, value)
+
+        instance.save()
+
+        for key, value in m2m_updates.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance

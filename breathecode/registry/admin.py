@@ -29,6 +29,7 @@ from .models import (
     AssetImage,
     AssetKeyword,
     AssetTechnology,
+    ContentSite,
     ContentVariable,
     CredentialsOriginality,
     KeywordCluster,
@@ -69,6 +70,16 @@ def add_gitpod(modeladmin, request, queryset):
 @admin.display(description="Remove GITPOD flag")
 def remove_gitpod(modeladmin, request, queryset):
     queryset.update(gitpod=False)
+
+
+@admin.display(description="Set graded to True")
+def set_graded_true(modeladmin, request, queryset):
+    queryset.update(graded=True)
+
+
+@admin.display(description="Set graded to False")
+def set_graded_false(modeladmin, request, queryset):
+    queryset.update(graded=False)
 
 
 @admin.display(description="Make it an EXTERNAL resource (new window)")
@@ -510,6 +521,7 @@ class AssetAdmin(admin.ModelAdmin):
         "test_status",
         "lang",
         "external",
+        "graded",
         AssessmentFilter,
         WithKeywordFilter,
         WithDescription,
@@ -524,6 +536,8 @@ class AssetAdmin(admin.ModelAdmin):
             async_test_asset_integrity,
             add_gitpod,
             remove_gitpod,
+            set_graded_true,
+            set_graded_false,
             process_config_object,
             pull_content_from_github,
             pull_content_from_github_override_meta,
@@ -895,6 +909,14 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
 class AssetCategoryAdmin(admin.ModelAdmin):
     search_fields = ["slug", "title"]
     list_display = ("slug", "title", "academy")
+    raw_id_fields = ["academy"]
+    list_filter = ["academy"]
+
+
+@admin.register(ContentSite)
+class ContentSiteAdmin(admin.ModelAdmin):
+    search_fields = ["title", "domain_url"]
+    list_display = ("title", "domain_url", "academy")
     raw_id_fields = ["academy"]
     list_filter = ["academy"]
 

@@ -20,11 +20,13 @@ from breathecode.monitoring import signals
 from breathecode.utils import GenerateLookupsMixin, capable_of
 from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 
-from .actions import add_github_webhook, add_stripe_webhook, add_stripe_webhook_error, get_admin_actions
-from .models import CSVDownload, CSVUpload, RepositorySubscription, RepositoryWebhook
+from .actions import add_github_webhook, add_stripe_webhook, add_stripe_webhook_error, get_admin_actions, run_script
+from .models import CSVDownload, CSVUpload, MonitorScript, RepositorySubscription, RepositoryWebhook
 from .serializers import (
     CSVDownloadSmallSerializer,
     CSVUploadSmallSerializer,
+    MonitoringErrorSerializer,
+    MonitorScriptSmallSerializer,
     RepositorySubscriptionSerializer,
     RepoSubscriptionSmallSerializer,
 )
@@ -33,6 +35,10 @@ from .tasks import async_unsubscribe_repo
 
 logger = logging.getLogger(__name__)
 
+async def _async_iter_from_list(items):
+    """Convert a list to an async generator for StreamingHttpResponse in ASGI mode"""
+    for item in items:
+        yield item
 
 def get_stripe_webhook_secret(payload=None):
     """
@@ -185,7 +191,7 @@ def get_download(request, download_id=None):
                 )
 
             return StreamingHttpResponse(
-                buffer.all(),
+                _async_iter_from_list(buffer.all()),
                 content_type="text/csv",
                 headers={"Content-Disposition": f"attachment; filename={download.name}"},
             )
@@ -418,7 +424,7 @@ class AcademyDownloadView(APIView):
                     )
 
                 return StreamingHttpResponse(
-                    buffer.all(),
+                    _async_iter_from_list(buffer.all()),
                     content_type="text/csv",
                     headers={"Content-Disposition": f"attachment; filename={download.name}"},
                 )
@@ -503,3 +509,67 @@ class AcademyDownloadSignedUrlView(APIView):
                 ),
                 code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class AcademyScriptView(APIView):
+    """
+    API endpoint to trigger and run monitoring scripts via POST.
+    Returns MonitorScript serialization with MonitoringErrors created during that run.
+    """
+
+    @capable_of("read_asset")
+    def post(self, request, academy_id=None, script_slug=None):
+        lang = get_user_language(request)
+
+        # Validate academy
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Find MonitorScript by slug and academy
+        script = MonitorScript.objects.filter(
+            script_slug=script_slug, application__academy=academy
+        ).first()
+
+        if not script:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Monitoring script '{script_slug}' not found for academy {academy_id}",
+                    es=f"Script de monitoreo '{script_slug}' no encontrado para la academia {academy_id}",
+                    slug="script-not-found",
+                ),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Execute the script
+        results = run_script(script)
+
+        # Refresh script from database to get updated fields
+        script.refresh_from_db()
+
+        # Get the errors created during this run
+        monitoring_errors = results.get("monitoring_errors", [])
+
+        # Serialize the script
+        script_serializer = MonitorScriptSmallSerializer(script)
+        script_data = script_serializer.data
+        
+        # Serialize the errors
+        errors_serializer = MonitoringErrorSerializer(monitoring_errors, many=True)
+        
+        # Combine script and errors
+        response_data = {
+            **script_data,
+            "monitoring_errors": errors_serializer.data,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)

@@ -27,13 +27,16 @@ from .tasks import async_add_to_organization, async_remove_from_organization
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
+@receiver(post_save, sender=User)
+@receiver(post_save, sender=ProfileAcademy)
+@receiver(post_save, sender=MentorProfile)
+@receiver(post_save, sender=SubscriptionSeat)
 def update_user_group(sender, instance, created: bool, **_):
     # redirect to other signal to be able to mock it
     user_info_updated.send_robust(sender=sender, instance=instance, created=created)
 
 
-@receiver(user_info_updated, sender=[User, ProfileAcademy, MentorProfile, SubscriptionSeat])
+@receiver(user_info_updated)
 def set_user_group(sender, instance, created: bool, **_):
     from breathecode.payments import actions as payments_actions
 
@@ -53,6 +56,9 @@ def set_user_group(sender, instance, created: bool, **_):
             )
             if not status_changed_to_active:
                 return
+        elif sender == SubscriptionSeat:
+            if not getattr(instance, "user", None):
+                return
         else:
             return
 
@@ -62,8 +68,11 @@ def set_user_group(sender, instance, created: bool, **_):
             group = Group.objects.filter(name="Student").first()
             groups = instance.user.groups
 
-            for plan in instance.billing_team.plans.all():
-                payments_actions.grant_student_capabilities(instance.user, plan)
+            # Only grant capabilities when the user is missing the Student group.
+            # This keeps the fix focused and avoids heavy re-processing on every seat update.
+            if group and not instance.user.groups.filter(name="Student").exists():
+                for plan in instance.billing_team.plans.all():
+                    payments_actions.grant_student_capabilities(instance.user, plan)
 
         if sender == User:
             group = Group.objects.filter(name="Default").first()

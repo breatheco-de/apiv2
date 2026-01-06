@@ -56,17 +56,32 @@ from .views import (
     AnswerMeView,
     GetAnswerView,
     ReviewView,
+    SurveyConfigurationView,
+    AcademySurveyResponseView,
+    SurveyResponseView,
+    SurveyResponseByTokenView,
+    SurveyResponseOpenedView,
+    SurveyResponsePartialView,
+    SurveyQuestionTemplateView,
+    SurveyStudyView,
+    SurveyStudySendEmailsView,
     get_review_platform,
     get_reviews,
     get_survey,
     get_survey_questions,
     track_survey_open,
+    track_survey_response_email_open,
 )
 
 app_name = "feedback"
 urlpatterns = [
     path("academy/answer", GetAnswerView.as_view(), name="answer"),
     path("answer/<int:answer_id>/tracker.png", track_survey_open, name="answer_id_tracker"),
+    path(
+        "survey/response/<uuid:token>/tracker.png",
+        track_survey_response_email_open,
+        name="survey_response_email_tracker",
+    ),
     path("user/me/answer/<int:answer_id>", AnswerMeView.as_view(), name="user_me_answer_id"),
     path("academy/survey", AcademySurveyView.as_view(), name="academy_survey"),
     path("academy/survey/template", AcademySurveyTemplateView.as_view(), name="academy_survey_template"),
@@ -84,4 +99,56 @@ urlpatterns = [
     # FeedbackTag endpoints
     path("academy/tag", AcademyFeedbackTagView.as_view(), name="academy_feedback_tag"),
     path("academy/tag/<int:tag_id>", AcademyFeedbackTagView.as_view(), name="academy_feedback_tag_id"),
+    # Survey Configuration endpoints
+    path("academy/survey/configuration", SurveyConfigurationView.as_view(), name="academy_survey_configuration"),
+    path(
+        "academy/survey/configuration/<int:configuration_id>",
+        SurveyConfigurationView.as_view(),
+        name="academy_survey_configuration_id",
+    ),
+    # Survey Response endpoints
+    path("user/me/survey/response/<int:response_id>", SurveyResponseView.as_view(), name="user_me_survey_response_id"),
+    path(
+        "user/me/survey/response/<int:response_id>/answer",
+        SurveyResponseView.as_view(),
+        name="user_me_survey_response_answer",
+    ),
+    path(
+        "survey/response/by_token/<uuid:token>",
+        SurveyResponseByTokenView.as_view(),
+        name="survey_response_by_token",
+    ),
+    path(
+        "survey/response/<int:response_id>/opened",
+        SurveyResponseOpenedView.as_view(),
+        name="survey_response_opened",
+    ),
+    path(
+        "survey/response/<int:response_id>/partial",
+        SurveyResponsePartialView.as_view(),
+        name="survey_response_partial",
+    ),
+    path("academy/survey/response", AcademySurveyResponseView.as_view(), name="academy_survey_response"),
+    path(
+        "academy/survey/response/<int:response_id>",
+        AcademySurveyResponseView.as_view(),
+        name="academy_survey_response_id",
+    ),
+    path(
+        "academy/survey/question_template",
+        SurveyQuestionTemplateView.as_view(),
+        name="academy_survey_question_template",
+    ),
+    path(
+        "academy/survey/question_template/<int:template_id>",
+        SurveyQuestionTemplateView.as_view(),
+        name="academy_survey_question_template_id",
+    ),
+    path("academy/survey/study", SurveyStudyView.as_view(), name="academy_survey_study"),
+    path("academy/survey/study/<int:study_id>", SurveyStudyView.as_view(), name="academy_survey_study_id"),
+    path(
+        "academy/survey/study/<int:study_id>/send_emails",
+        SurveyStudySendEmailsView.as_view(),
+        name="academy_survey_study_send_emails",
+    ),
 ]

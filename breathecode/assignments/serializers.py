@@ -86,6 +86,28 @@ class TaskGETSerializer(serpy.Serializer):
             return telemetry.telemetry
         return None
 
+class TaskUserSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    title = serpy.Field()
+    task_status = serpy.Field()
+    associated_slug = serpy.Field()
+    description = serpy.Field()
+    revision_status = serpy.Field()
+    github_url = serpy.Field()
+    live_url = serpy.Field()
+    task_type = serpy.Field()
+    opened_at = serpy.Field()
+    read_at = serpy.Field()
+    reviewed_at = serpy.Field()
+    delivered_at = serpy.Field()
+    cohort = CohortSmallSerializer(required=False)
+
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
 class TaskHookSerializer(serpy.Serializer):
     """The serializer schema definition."""
 
@@ -521,3 +543,57 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
                 )
 
         return data
+
+
+class POSTAssignmentTelemetrySerializer(serializers.ModelSerializer):
+    telemetry = serializers.JSONField(required=False, allow_null=True)
+    engagement_score = serializers.FloatField(required=False, allow_null=True)
+    frustration_score = serializers.FloatField(required=False, allow_null=True)
+    metrics_algo_version = serializers.FloatField(required=False, allow_null=True)
+    metrics = serializers.JSONField(required=False, allow_null=True)
+    total_time = serializers.DurationField(required=False, allow_null=True)
+    completion_rate = serializers.FloatField(required=False, allow_null=True)
+
+    class Meta:
+        model = AssignmentTelemetry
+        exclude = ("user", "asset_slug", "created_at", "updated_at")
+
+    def create(self, validated_data):
+        user = self.context.get("user")
+        asset_slug = self.context.get("asset_slug")
+
+        if not user:
+            raise ValidationException("User is required", slug="user-required")
+        if not asset_slug:
+            raise ValidationException("Asset slug is required", slug="asset-slug-required")
+
+        # Check if telemetry already exists (upsert behavior)
+        telemetry = AssignmentTelemetry.objects.filter(
+            asset_slug=asset_slug, user=user
+        ).first()
+
+        if telemetry:
+            # Update existing telemetry
+            for key, value in validated_data.items():
+                setattr(telemetry, key, value)
+            telemetry.save()
+            return telemetry
+        else:
+            # Create new telemetry
+            return AssignmentTelemetry.objects.create(
+                user=user, asset_slug=asset_slug, **validated_data
+            )
+
+
+class PUTAssignmentTelemetrySerializer(serializers.ModelSerializer):
+    telemetry = serializers.JSONField(required=False, allow_null=True)
+    engagement_score = serializers.FloatField(required=False, allow_null=True)
+    frustration_score = serializers.FloatField(required=False, allow_null=True)
+    metrics_algo_version = serializers.FloatField(required=False, allow_null=True)
+    metrics = serializers.JSONField(required=False, allow_null=True)
+    total_time = serializers.DurationField(required=False, allow_null=True)
+    completion_rate = serializers.FloatField(required=False, allow_null=True)
+
+    class Meta:
+        model = AssignmentTelemetry
+        exclude = ("user", "asset_slug", "created_at", "updated_at")

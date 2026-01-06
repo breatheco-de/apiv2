@@ -39,6 +39,7 @@ from ..views import (
     GithubMeView,
     GithubUserView,
     GitpodUserView,
+    LearnpackOrganizationView,
     LoginView,
     LogoutView,
     MeInviteView,
@@ -66,6 +67,7 @@ from ..views import (
     get_slack_token,
     get_token_info,
     get_user_by_id_or_email,
+    get_user_avatar_url,
     get_users,
     login_html_view,
     pick_password,
@@ -113,6 +115,7 @@ urlpatterns = [
     path("user/me/settings", UserSettingsView.as_view(), name="user_me_settings"),
     path("me/academy/<str:slug_or_id>/capabilities", AcademyCapabilitiesView.as_view(), name="me_academy_capabilities"),
     path("user/<str:id_or_email>", get_user_by_id_or_email),
+    path("user/<int:user_id>/avatar", get_user_avatar_url, name="user_avatar"),
     path("role", get_roles, name="role"),
     path("role/<str:role_slug>", get_roles, name="role_slug"),
     path("profile/<int:user_id>", ProfileView.as_view(), name="user_profile"),
@@ -203,4 +206,6 @@ urlpatterns = [
     path("app/webhook", app_webhook, name="app_webhook"),
     path("me/app/<str:app_slug>/sync", AppSync.as_view(), name="me_app_slug_sync"),
     path("app/token", AppTokenView.as_view(), name="app_token"),
+
+    path("learnpack/me/organization", LearnpackOrganizationView.as_view(), name="academy_learnpack_me_organization"),
 ]
