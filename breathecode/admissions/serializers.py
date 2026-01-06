@@ -269,6 +269,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     marketing_email = serpy.Field()
     street_address = serpy.Field()
     website_url = serpy.Field()
+    short_url = serpy.Field()
     marketing_phone = serpy.Field()
     twitter_handle = serpy.Field()
     facebook_handle = serpy.Field()
@@ -642,6 +643,30 @@ class GetCohortUserSerializer(serpy.Serializer):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
         return GetProfileAcademySmallSerializer(profile).data if profile else None
 
+class GetCohortUserBigSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    id = serpy.Field()
+    user = UserSerializer()
+    cohort = GetSmallCohortSerializer()
+    role = serpy.Field()
+    finantial_status = serpy.Field()
+    educational_status = serpy.Field()
+    watching = serpy.Field()
+    history_log = serpy.Field()
+    tasks = serpy.MethodField()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    profile_academy = serpy.MethodField()
+
+    def get_profile_academy(self, obj):
+        profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
+        return GetProfileAcademySmallSerializer(profile).data if profile else None
+
+    def get_tasks(self, obj):
+        tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort)
+        return TaskGETSmallSerializer(tasks, many=True).data
+
 
 class GetCohortUserTasksSerializer(GetCohortUserSerializer):
     """The serializer schema definition."""
@@ -944,6 +969,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
             "logo_url",
             "icon_url",
             "website_url",
+            "short_url",
             "white_label_url",
             "street_address",
             "marketing_email",
@@ -1719,6 +1745,7 @@ class AcademyReportSerializer(serpy.Serializer):
     slug = serpy.Field()
     logo_url = serpy.Field()
     website_url = serpy.Field()
+    short_url = serpy.Field()
     street_address = serpy.Field()
     latitude = serpy.Field()
     longitude = serpy.Field()

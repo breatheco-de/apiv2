@@ -1,4 +1,6 @@
+import base64
 import datetime
+import io
 import logging
 import os
 import random
@@ -9,6 +11,7 @@ from random import randint
 from typing import Any
 
 import aiohttp
+import requests
 from adrf.requests import AsyncRequest
 from asgiref.sync import sync_to_async
 from capyc.core.i18n import translation
@@ -37,62 +40,6 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def get_youtube_watch_url(url):
-    """
-    Convert any YouTube URL format to the standard watch URL.
-    This is useful for email links where we want users to go directly to YouTube.
-    
-    Args:
-        url: YouTube URL in any format (watch, embed, youtu.be, etc.)
-    
-    Returns:
-        str: Standard YouTube watch URL (https://www.youtube.com/watch?v=VIDEO_ID)
-    """
-    if not url:
-        return url
-    
-    url = url.strip()
-    
-    # Decode URL if needed
-    try:
-        url = urllib.parse.unquote(url)
-    except Exception:
-        pass
-    
-    # Extract video ID from various YouTube URL formats
-    video_id = None
-    
-    # Pattern 1: youtube.com/watch?v=VIDEO_ID
-    match = re.search(r"youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})", url)
-    if match:
-        video_id = match.group(1)
-    
-    # Pattern 2: youtube.com/embed/VIDEO_ID
-    if not video_id:
-        match = re.search(r"youtube\.com\/embed\/([a-zA-Z0-9_-]{11})", url)
-        if match:
-            video_id = match.group(1)
-    
-    # Pattern 3: youtu.be/VIDEO_ID
-    if not video_id:
-        match = re.search(r"youtu\.be\/([a-zA-Z0-9_-]{11})", url)
-        if match:
-            video_id = match.group(1)
-    
-    # Pattern 4: youtube.com/watch?other_params&v=VIDEO_ID
-    if not video_id:
-        match = re.search(r"youtube\.com\/watch\?.*[&?]v=([a-zA-Z0-9_-]{11})", url)
-        if match:
-            video_id = match.group(1)
-    
-    # If we found a video ID, return the standard watch URL
-    if video_id:
-        return f"https://www.youtube.com/watch?v={video_id}"
-    
-    # If it's not a YouTube URL or we couldn't extract the ID, return original
-    return url
 
 
 def convert_youtube_to_embed(url):
@@ -387,9 +334,6 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
         invite = UserInvite.objects.filter(id=invite_id).first()
         if invite and invite.welcome_video:
             welcome_video = invite.welcome_video.copy() if isinstance(invite.welcome_video, dict) else invite.welcome_video
-            if isinstance(welcome_video, dict) and "url" in welcome_video:
-                # For email, convert to YouTube watch URL (not embed) so users can click to watch on YouTube
-                welcome_video["url"] = get_youtube_watch_url(welcome_video["url"])
             data["WELCOME_VIDEO"] = welcome_video
 
     notify_actions.send_email_message(
@@ -1150,6 +1094,13 @@ def accept_invite_action(data=None, token=None, lang="en"):
     if user is None:
         user = User(email=invite.email, first_name=first_name, last_name=last_name, username=invite.email)
         user.save()
+    else:
+        # If user exists but is inactive (zombie), activate them
+        if not user.is_active:
+            user.is_active = True
+            user.first_name = first_name or user.first_name
+            user.last_name = last_name or user.last_name
+            user.save()
 
     # Only set/update the password if it's provided
     if password1:

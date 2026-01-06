@@ -2,9 +2,11 @@ from django.urls import path
 
 from ..views import (
     AcademyAcademyServiceView,
+    AcademyBagByIdView,
     AcademyCohortSetCohortView,
     AcademyCohortSetView,
     AcademyConsumableView,
+    AcademyCouponView,
     AcademyFinancingOptionView,
     AcademyInvoiceRefundView,
     AcademyInvoiceView,
@@ -23,6 +25,7 @@ from ..views import (
     AppConsumableView,
     AppConsumeView,
     BagCouponView,
+    BagByIdView,
     BagView,
     CancelConsumptionView,
     CardView,
@@ -141,6 +144,10 @@ urlpatterns = [
     path("academy/invoice", AcademyInvoiceView.as_view()),
     path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view()),
     path("academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"),
+    path("academy/bag/<int:bag_id>", AcademyBagByIdView.as_view(), name="academy_bag_id"),
+    path("academy/coupon", AcademyCouponView.as_view(), name="academy_coupon"),
+    path("academy/coupon/<str:coupon_slug>", AcademyCouponView.as_view(), name="academy_coupon_slug"),
+    path("academy/coupon/<str:coupon_slug>/exists", AcademyCouponView.as_view(), name="academy_coupon_exists"),
     path("coupon", CouponView.as_view(), name="coupon"),
     path("currency", CurrencyView.as_view(), name="currency"),
     path("currency/<str:currency_code>", CurrencyView.as_view(), name="currency_code"),
@@ -191,6 +198,7 @@ urlpatterns = [
     # payments endpoints
     path("card", CardView.as_view(), name="card"),
     path("bag", BagView.as_view(), name="bag"),
+    path("bag/<int:bag_id>", BagByIdView.as_view(), name="bag_id"),
     path("bag/<int:bag_id>/coupon", BagCouponView.as_view(), name="bag_id_coupon"),
     path("checking", CheckingView.as_view(), name="checking"),
     path("pay", PayView.as_view(), name="pay"),

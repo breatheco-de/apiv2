@@ -19,14 +19,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.authenticate.models import User
-from breathecode.payments.models import (
-    Consumable,
-    PlanFinancing,
-    PlanServiceItem,
-    Service,
-    Subscription,
-    SubscriptionServiceItem,
-)
+# Lazy imports for payments models to avoid circular dependency
+# These are imported inside functions where they're used
 from breathecode.payments.signals import consume_service
 
 from ..exceptions import ProgrammingError
@@ -220,6 +214,13 @@ def _has_unlimited_service_item(user: User, service: str) -> bool:
     Returns:
         True if user has unlimited service item, False otherwise
     """
+    from breathecode.payments.models import (
+        PlanFinancing,
+        PlanServiceItem,
+        Subscription,
+        SubscriptionServiceItem,
+    )
+    
     utc_now = timezone.now()
     
     # Normalize service filter
@@ -317,6 +318,7 @@ def consume(service: str, consumer: Optional[Consumer] = None, format: str = "js
             flags: Optional[FlagsParams] = None,
             **opts: Unpack[ServiceContext],
         ) -> ServiceContext:
+            from breathecode.payments.models import Consumable
 
             if flags is None:
                 flags = {}

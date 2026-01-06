@@ -22,7 +22,6 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, Country
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserInvite
@@ -1424,6 +1423,24 @@ class Coupon(models.Model):
 
     offered_at = models.DateTimeField(default=None, null=True, blank=True)
     expires_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    # Statistics tracking fields
+    times_used = models.IntegerField(
+        default=0, db_index=True, help_text="Number of times this coupon has been used"
+    )
+    last_used_at = models.DateTimeField(
+        null=True, blank=True, db_index=True, help_text="When this coupon was last used"
+    )
+    stats = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Detailed statistics (only calculated for recently active coupons)",
+    )
+    stats_updated_at = models.DateTimeField(
+        null=True, blank=True, help_text="When stats were last calculated"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1640,6 +1657,9 @@ class Bag(AbstractAmountByTime):
         super().save(*args, **kwargs)
 
         if created:
+            # Lazy import to avoid circular dependency
+            import breathecode.activity.tasks as tasks_activity
+
             tasks_activity.add_activity.delay(
                 self.user.id, "bag_created", related_type="payments.Bag", related_id=self.id
             )
@@ -3750,6 +3770,12 @@ class AcademyPaymentSettings(models.Model):
         default=2,
         validators=[MaxValueValidator(14)],
         help_text="Days before expiration when early renewal is allowed, 0 means it is not allowed",
+    )
+
+    feature_flags = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Feature flags and configuration settings for academy-specific features",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

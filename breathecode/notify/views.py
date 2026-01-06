@@ -710,8 +710,8 @@ class AcademyNotifyVariablesView(APIView):
 
         response_data = {
             "system_defaults": system_defaults,
-            "academy_values": academy_values,
             "global_overrides": global_overrides,
+            "academy_values": academy_values,
             "template_specific_overrides": template_specific_overrides,
         }
 

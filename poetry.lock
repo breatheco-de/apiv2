@@ -4003,6 +4003,23 @@ docs = ["myst-parser", "pydata-sphinx-theme", "sphinx", "sphinxcontrib-github-al
 test = ["pep440", "pre-commit", "pytest", "testpath"]
 
 [[package]]
+name = "ndg-httpsclient"
+version = "0.5.1"
+description = "Provides enhanced HTTPS support for httplib and urllib2 using PyOpenSSL"
+optional = false
+python-versions = ">=2.7,<3.0.dev0 || >=3.4.dev0"
+groups = ["main"]
+files = [
+    {file = "ndg_httpsclient-0.5.1-py2-none-any.whl", hash = "sha256:d2c7225f6a1c6cf698af4ebc962da70178a99bcde24ee6d1961c4f3338130d57"},
+    {file = "ndg_httpsclient-0.5.1-py3-none-any.whl", hash = "sha256:dd174c11d971b6244a891f7be2b32ca9853d3797a72edb34fa5d7b07d8fff7d4"},
+    {file = "ndg_httpsclient-0.5.1.tar.gz", hash = "sha256:d72faed0376ab039736c2ba12e30695e2788c4aa569c9c3e3d72131de2592210"},
+]
+
+[package.dependencies]
+pyasn1 = ">=0.1.1"
+PyOpenSSL = "*"
+
+[[package]]
 name = "newrelic"
 version = "10.11.0"
 description = "New Relic Python Agent"
@@ -4843,6 +4860,31 @@ files = [
     {file = "psycopg2-2.9.10-cp39-cp39-win_amd64.whl", hash = "sha256:88138c8dedcbfa96408023ea2b0c369eda40fe5d75002c0964c78f46f11fa442"},
     {file = "psycopg2-2.9.10.tar.gz", hash = "sha256:12ec0b40b0273f95296233e8750441339298e6a572f7039da5b260e3c8b60e11"},
 ]
+
+[[package]]
+name = "pusher"
+version = "3.3.3"
+description = "A Python library to interract with the Pusher Channels API"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pusher-3.3.3-py2.py3-none-any.whl", hash = "sha256:4810514510a4027d4dbdac8bd272742d9a921f342c885b85d72833c34324b4df"},
+    {file = "pusher-3.3.3.tar.gz", hash = "sha256:14a8c76e3f26ddac2e1fc5e0666fe550b4fbe2c9ff5ec138a1075f7081b2d5ff"},
+]
+
+[package.dependencies]
+ndg-httpsclient = "*"
+pyasn1 = "*"
+pynacl = "*"
+pyopenssl = "*"
+requests = ">=2.3.0"
+six = "*"
+urllib3 = "*"
+
+[package.extras]
+aiohttp = ["aiohttp (>=0.20.0)"]
+tornado = ["tornado (>=5.0.0)"]
 
 [[package]]
 name = "pyasn1"
@@ -7140,4 +7182,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "76de7583e55b9b458acf304587ebebdbc73e576700b3111f925f824c19f0ceec"
+content-hash = "3d59425f3d3e072887b8c1fb1793547d993a48480c75d730971b7fb6550075cc"

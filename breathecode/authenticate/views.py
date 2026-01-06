@@ -141,7 +141,7 @@ from .serializers import (
     UserMeSerializer,
     UserSerializer,
     UserSettingsSerializer,
-    UserSmallSerializer,
+    UserBigSerializer,
     UserTinySerializer,
 )
 
@@ -969,7 +969,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 {
                     "subject": f"Invitation to study at {profile_academy.academy.name}",
                     "invites": [ProfileAcademySmallSerializer(profile_academy).data],
-                    "user": UserSmallSerializer(profile_academy.user).data,
+                    "user": UserBigSerializer(profile_academy.user).data,
                     "LINK": os.getenv("API_URL") + "/v1/auth/academy/html/invite",
                 },
                 academy=profile_academy.academy,
@@ -1337,13 +1337,19 @@ class LoginView(ObtainAuthToken):
     schema = AutoSchema()
 
     def post(self, request, *args, **kwargs):
+        from breathecode.utils.request import get_current_academy
 
         serializer = AuthSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         token, created = Token.get_or_create(user=user, token_type="login")
 
-        tasks_activity.add_activity.delay(user.id, "login", related_type="auth.User", related_id=user.id)
+        # Get academy_id using the utility function
+        academy_id = get_current_academy(request, return_id=True)
+
+        tasks_activity.add_activity.delay(
+            user.id, "login", related_type="auth.User", related_id=user.id, academy_id=academy_id
+        )
 
         return Response({"token": token.key, "user_id": user.pk, "email": user.email, "expires_at": token.expires_at})
 
@@ -1512,7 +1518,7 @@ def get_users(request):
 
     query = query.exclude(email__contains="@token.com")
     query = query.order_by("-date_joined")
-    users = UserSmallSerializer(query, many=True)
+    users = UserBigSerializer(query, many=True)
     return Response(users.data)
 
 
@@ -1528,7 +1534,7 @@ def get_user_by_id_or_email(request, id_or_email):
     if query is None:
         raise ValidationException("User with that id or email does not exists", slug="user-dont-exists", code=404)
 
-    users = UserSmallSerializer(query, many=False)
+    users = UserBigSerializer(query, many=False)
     return Response(users.data)
 
 
@@ -2489,6 +2495,9 @@ def pick_password(request, token):
 
         else:
             user.set_password(password1)
+            # Activate zombie user if they were inactive
+            if not user.is_active:
+                user.is_active = True
             user.save()
 
             # destroy the token
@@ -3362,18 +3371,10 @@ class AcademyAuthSettingsView(APIView, GenerateLookupsMixin):
 
     @capable_of("get_academy_auth_settings")
     def get(self, request, academy_id):
-        lang = get_user_language(request)
-
         settings = AcademyAuthSettings.objects.filter(academy_id=academy_id).first()
         if settings is None:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Academy has not github authentication settings",
-                    es="La academia no tiene configurada la integracion con github",
-                    slug="no-github-auth-settings",
-                )
-            )
+            settings = AcademyAuthSettings(academy_id=academy_id)
+            settings.save()
 
         serializer = AuthSettingsBigSerializer(settings, many=False)
         return Response(serializer.data)
@@ -3495,6 +3496,84 @@ class ProfileView(APIView, GenerateLookupsMixin):
             item = serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_user_avatar_url(request, user_id):
+    """
+    Redirects to the user's avatar URL with caching.
+
+    Returns:
+    - 302 redirect to avatar_url if found
+    - 302 redirect to randomized default avatar (avatar-1.png to avatar-20.png) if avatar_url is None
+    - 404 if user/profile not found
+
+    Usage in HTML:
+    <img src="/v1/auth/user/123/avatar?token=YOUR_TOKEN&academy=1" alt="User avatar">
+
+    Authentication:
+    - Both 'token' and 'academy' query parameters are required
+    - Token must be valid and user must have 'read_member' capability for the specified academy
+    """
+    from django.core.cache import cache
+    from django.http import HttpResponseRedirect
+    from breathecode.authenticate.actions import get_api_url
+    from breathecode.authenticate.models import ProfileAcademy
+
+    # Both token and academy query parameters are required
+    token_query = request.GET.get("token", None)
+    academy_id = request.GET.get("academy", None)
+
+    # Validate required parameters
+    if not token_query:
+        raise ValidationException("Token query parameter is required", code=400, slug="token-required")
+
+    if not academy_id:
+        raise ValidationException("Academy query parameter is required", code=400, slug="academy-required")
+
+    # Validate academy_id format
+    if not str(academy_id).isdigit():
+        raise ValidationException(
+            f"Academy ID needs to be an integer: {str(academy_id)}", slug="invalid-academy-id"
+        )
+
+    # Validate token
+    valid_token = Token.get_valid(token_query)
+    if valid_token is None:
+        raise ValidationException("Invalid token", code=401, slug="invalid-token")
+
+    # Check if user has read_member capability for the specified academy
+    has_capability = ProfileAcademy.objects.filter(
+        user=valid_token.user.id, academy__id=academy_id, role__capabilities__slug="read_member"
+    ).exists()
+    if not has_capability:
+        raise PermissionDenied(
+            f"You (user: {valid_token.user.id}) don't have this capability: read_member for academy {academy_id}"
+        )
+
+    cache_key = f"user_avatar_{user_id}"
+
+    # Try cache first
+    avatar_url = cache.get(cache_key)
+
+    if avatar_url is None:
+        # Cache miss - query database
+        profile = Profile.objects.filter(user__id=user_id).select_related("user").first()
+        # Use avatar_url or default
+        avatar_url = profile.avatar_url if profile is not None else None
+        if avatar_url is None:
+            # Deterministic avatar selection based on user_id (1-20)
+            # Same user always gets the same default avatar for consistency
+            avatar_number = (user_id % 20) + 1
+            api_url = get_api_url()
+            avatar_url = f"{api_url}/static/img/avatar-{avatar_number}.png"
+
+        # Cache for 24 hours (86400 seconds)
+        cache.set(cache_key, avatar_url, 86400)
+
+    # Return 302 redirect
+    return HttpResponseRedirect(avatar_url)
 
 
 class ProfileMeView(APIView, GenerateLookupsMixin):
@@ -3845,6 +3924,22 @@ class AppSync(APIView):
                 }
 
             return await s.post("/v1/auth/app/user", data)
+
+
+class LearnpackOrganizationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @sync_to_async
+    def aget_user(self):
+        return self.request.user
+
+    async def get(self, request):
+        lang = await aget_user_language(request)
+        user = await self.aget_user()
+
+        async with Service("rigobot", user.id, proxy=True) as s:
+            params = dict(request.GET)
+            return await s.get("/v1/auth/me/organization", params=params)
 
 
 class AppTokenView(APIView):

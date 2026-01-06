@@ -13,7 +13,7 @@
         {
             "name": "user",
             "description": "Serialized user object (template accesses user.first_name)",
-            "source": "UserSmallSerializer(user).data",
+            "source": "UserBigSerializer(user).data",
             "example": "{\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@example.com\"}",
             "required": true
         },

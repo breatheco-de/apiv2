@@ -12,8 +12,8 @@ from breathecode.events.signals import event_status_updated, liveclass_ended
 from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.signals import mentorship_session_saved
 
-from .models import AcademyFeedbackSettings, Answer
-from .signals import survey_answered
+from .models import AcademyFeedbackSettings, Answer, SurveyResponse
+from .signals import survey_answered, survey_response_answered
 from .tasks import (
     process_answer_received,
     process_student_graduation,
@@ -86,3 +86,32 @@ def post_event_ended(sender: Type[Event], instance: Event, **kwargs):
                 logger.debug(
                     f"No event survey template configured for academy {instance.academy.name}, skipping survey"
                 )
+
+
+@receiver(survey_response_answered, sender=SurveyResponse)
+def post_survey_response_answered(sender: Type[SurveyResponse], instance: SurveyResponse, **kwargs):
+    """
+    Trigger webhook when a survey response is answered.
+    This receiver is called after answers are saved to database.
+    """
+    from breathecode.notify.utils.hook_manager import HookManager
+
+    try:
+        logger.info(f"Survey response {instance.id} answered, triggering webhook")
+        academy_override = None
+        if getattr(instance, "survey_config", None) and getattr(instance.survey_config, "academy", None):
+            academy_override = instance.survey_config.academy
+
+        from breathecode.feedback.serializers import SurveyResponseHookSerializer
+
+        def payload_override(hook, _instance):
+            return {"hook": hook.dict(), "data": SurveyResponseHookSerializer(_instance).data}
+
+        HookManager.find_and_fire_hook(
+            "survey.survey_answered",
+            instance,
+            payload_override=payload_override,
+            academy_override=academy_override,
+        )
+    except Exception as e:
+        logger.error(f"Error triggering webhook for survey response {instance.id}: {str(e)}", exc_info=True)

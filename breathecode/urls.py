@@ -70,6 +70,9 @@ versions = {
         path("payments/", include("breathecode.payments.urls.v2", namespace="payments")),
         path("marketing/", include("breathecode.marketing.urls.v2", namespace="marketing")),
     ],
+    "v3": [
+        path("activity/", include("breathecode.activity.urls.v3", namespace="activity")),
+    ],
 }
 
 apps = [

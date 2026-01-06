@@ -9,6 +9,7 @@ from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
+from django.db.models import F, Q
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -16,7 +17,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.actions import schedule_task
 from task_manager.django.decorators import task
 
-from breathecode.admissions.models import Cohort
+from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.media.models import File
@@ -1673,6 +1674,11 @@ def build_subscription(
     bag_coupons = bag.coupons.all()
     if bag_coupons.exists():
         subscription.coupons.set(bag_coupons)
+        # Increment usage counters for coupons
+        now = timezone.now()
+        Coupon.objects.filter(id__in=[c.id for c in bag_coupons]).update(
+            times_used=F("times_used") + 1, last_used_at=now
+        )
         logger.info(f"Added {bag_coupons.count()} coupons to subscription {subscription.id}")
 
     subscription.save()
@@ -1817,6 +1823,11 @@ def build_plan_financing(
     bag_coupons = bag.coupons.all()
     if bag_coupons.exists():
         financing.coupons.set(bag_coupons)
+        # Increment usage counters for coupons
+        now = timezone.now()
+        Coupon.objects.filter(id__in=[c.id for c in bag_coupons]).update(
+            times_used=F("times_used") + 1, last_used_at=now
+        )
         logger.info(f"Added {bag_coupons.count()} coupons to plan financing {financing.id}")
 
     financing.save()

@@ -11,11 +11,15 @@ from django.db.models.query_utils import Q
 from django.utils import timezone
 
 from breathecode.admissions.models import Cohort, CohortTimeSlot, CohortUser, TimeSlot
-from breathecode.authenticate.models import AcademyAuthSettings
+from breathecode.authenticate.models import AcademyAuthSettings, Profile, UserInvite
+from breathecode.authenticate.actions import get_app_url, get_invite_url
 from breathecode.payments.models import AbstractIOweYou, PlanFinancing, Subscription
 from breathecode.services.google_calendar.google_calendar import GoogleCalendar
 from breathecode.services.livekit.client import LiveKitAdmin
 from breathecode.utils.datetime_integer import DatetimeInteger
+from django.contrib.auth.models import User
+import secrets
+import breathecode.notify.actions as notify_actions
 
 from .models import Event, EventType, Organization, Organizer, Venue
 from .utils import Eventbrite
@@ -850,6 +854,33 @@ def build_room_name(event: Event) -> str:
     return f"event-{event.id}"
 
 
+def is_event_host(user, event):
+    """
+    Check if user is host of event via invite.
+    
+    Must check both conditions:
+    1. event.slug matches user_invite.event_slug
+    2. event.host_user matches user_invite.user
+    
+    Args:
+        user: User instance to check
+        event: Event instance to check
+    
+    Returns:
+        bool: True if user is the host of the event
+    """
+    # First check if user is set as host_user on the event
+    if not event.host_user or event.host_user != user:
+        return False
+    
+    # Then verify there's an accepted invite linking them to this event
+    return UserInvite.objects.filter(
+        user=user,
+        event_slug=event.slug,
+        status="ACCEPTED"
+    ).exists()
+
+
 def ensure_livekit_room_for_event(event: Event, empty_timeout: int = 900, max_participants: int = 300) -> str:
     """Ensure a LiveKit room exists for the given event and return the meeting URL.
 
@@ -868,3 +899,135 @@ def ensure_livekit_room_for_event(event: Event, empty_timeout: int = 900, max_pa
     if meet_base:
         return f"{meet_base}/rooms/{room_name}"
     return room_name
+
+
+def create_external_event_host(name: str, email: str, academy, **profile_data):
+    """
+    Create zombie user and profile for external event host.
+    
+    Args:
+        name: Full name of the host
+        email: Email address of the host
+        academy: Academy instance
+        **profile_data: Additional profile fields (avatar_url, bio, etc.)
+    
+    Returns:
+        User: The created zombie user (is_active=False)
+    """
+    # Parse name into first and last name
+    name_parts = name.strip().split()
+    first_name = name_parts[0] if name_parts else ""
+    last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+    
+    # Check if user already exists
+    user = User.objects.filter(email=email).first()
+    
+    if user:
+        # If user exists but is active, return it (not a zombie)
+        if user.is_active:
+            return user
+        # If user exists but is inactive (zombie), update name if needed
+        if first_name and not user.first_name:
+            user.first_name = first_name
+        if last_name and not user.last_name:
+            user.last_name = last_name
+        user.save()
+    else:
+        # Create new zombie user
+        user = User.objects.create(
+            username=email,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=False,  # Zombie user - can't login yet
+        )
+        user.set_unusable_password()
+        user.save()
+    
+    # Create or update profile - Profile is required for zombie users
+    try:
+        profile = Profile.objects.get(user=user)
+        # Update profile with new data
+        for key, value in profile_data.items():
+            if value is not None:
+                setattr(profile, key, value)
+        profile.save()
+    except Profile.DoesNotExist:
+        # Create new profile - always create profile for zombie users
+        profile = Profile.objects.create(user=user, **profile_data)
+    
+    return user
+
+
+def create_event_host_invite(user, event, academy, author=None):
+    """
+    Create UserInvite for event host and send custom email.
+    
+    Args:
+        user: User instance (zombie or regular)
+        event: Event instance
+        academy: Academy instance
+        author: User who created the invite (optional)
+    
+    Returns:
+        UserInvite: The created invite
+    """
+    # Check if invite already exists for this user and event
+    existing_invite = UserInvite.objects.filter(
+        user=user,
+        event_slug=event.slug,
+        status="PENDING"
+    ).first()
+    
+    if existing_invite:
+        # Resend existing invite
+        invite = existing_invite
+    else:
+        # Generate unique token
+        while True:
+            token = secrets.token_urlsafe(32)
+            if not UserInvite.objects.filter(token=token).exists():
+                break
+        
+        # Create new invite
+        invite = UserInvite.objects.create(
+            email=user.email,
+            user=user,  # Link invite to existing user
+            first_name=user.first_name or "",
+            last_name=user.last_name or "",
+            academy=academy,
+            event_slug=event.slug,
+            token=token,
+            status="PENDING",
+            is_email_validated=False,
+            author=author,
+        )
+    
+    # Send custom event host invite email using generic message template
+    callback_url = get_app_url(academy=academy)
+    url = get_invite_url(invite.token, academy=academy, callback_url=callback_url)
+    
+    message = f"Hi {user.first_name or 'there'}, you have been invited to host an event at {academy.name}. Accept the invite to update your profile bio and other information."
+    
+    email_data = {
+        "email": user.email,
+        "subject": f"You have been invited to host an event at {academy.name}",
+        "SUBJECT": f"You have been invited to host an event at {academy.name}",
+        "MESSAGE": message,
+        "BUTTON": "Accept Invite",
+        "LINK": url,
+        "TRACKER_URL": f"{os.getenv('API_URL', '')}/v1/auth/invite/track/open/{invite.id}",
+    }
+    
+    notify_actions.send_email_message(
+        "message",
+        user.email,
+        email_data,
+        academy=academy,
+    )
+    
+    # Update sent_at timestamp
+    invite.sent_at = timezone.now()
+    invite.save()
+    
+    return invite

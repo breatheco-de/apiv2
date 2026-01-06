@@ -115,6 +115,7 @@ class Academy(models.Model):
     logo_url = models.CharField(max_length=255)
     icon_url = models.CharField(max_length=255, help_text="It has to be a square", default="/static/icons/picture.png")
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    short_url = models.CharField(max_length=255, blank=True, null=True, default=None, help_text="Use for ShortLinks and redirects")
     white_label_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
@@ -826,7 +827,10 @@ class CohortTimeSlot(TimeSlot):
         self.full_clean()
         super().save(*args, **kwargs)
 
-        signals.timeslot_saved.send_robust(instance=self, sender=self.__class__, created=created)
+        force_generation = getattr(self, "_force_generation", False)
+        signals.timeslot_saved.send_robust(
+            instance=self, sender=self.__class__, created=created, force_generation=force_generation
+        )
 
     def __str__(self):
         start_time = datetime.strptime(str(self.starting_at), "%Y%m%d%H%M").strftime("%d/%m/%Y %I%p")

@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from google.cloud import bigquery
 
+from breathecode.activity.models import ACTIVITY_TABLE_NAME
 from breathecode.activity.tasks import upload_activities
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
@@ -269,7 +270,7 @@ def test_with_data_in_both_workers(bc: Breathecode, fake, apply_patch, get_schem
     assert get_cache(f"activity:backup:{task.id}") == None
 
     assert get_table_mock.call_args_list == [
-        call("dataset.activity"),
+        call(f"dataset.{ACTIVITY_TABLE_NAME}"),
     ]
 
     both_schema_are_equal(
