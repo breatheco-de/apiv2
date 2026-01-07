@@ -330,83 +330,104 @@ def test_syllabus(syl, validate_assets=False, ignore=None):
     return syllabus_log
 
 
-def _get_enrollments_for_academy_student_progress_report(academy):
-    return (
+def _get_enrollments(academy, cohort: Optional[Cohort] = None):
+    queryset = (
         CohortUser.objects.filter(cohort__academy=academy, role="STUDENT")
         .select_related("user", "cohort", "cohort__syllabus_version", "cohort__syllabus_version__syllabus")
         .prefetch_related("cohort__micro_cohorts")
         .order_by("cohort_id", "created_at")
     )
+    if cohort is not None:
+        queryset = queryset.filter(cohort=cohort)
+    return queryset
 
 
-def _build_syllabus_cache_by_cohort(cohorts: list[Cohort]) -> tuple[
+def _extract_syllabus_slugs(
+    cohorts: list[Cohort],
+    *,
+    include_lessons: bool = True,
+    include_exercises: bool = True,
+    include_projects: bool = True,
+) -> tuple[
     dict[int, set[str]],
     dict[int, set[str]],
-    dict[int, int],
     dict[int, set[str]],
-    dict[int, bool],
 ]:
+    """
+    Extrae slugs del syllabus agrupados por cohort.
+    
+    Args:
+        cohorts: Lista de cohorts
+        include_lessons: Si True, incluye lesson slugs
+        include_exercises: Si True, incluye exercise slugs
+        include_projects: Si True, incluye mandatory project slugs
+    
+    Returns:
+        Tuple con:
+        - lesson_slugs_by_cohort: dict[cohort_id, set[slugs]]
+        - exercise_slugs_by_cohort: dict[cohort_id, set[slugs]]
+        - mandatory_project_slugs_by_cohort: dict[cohort_id, set[slugs]]
+    """
     lesson_slugs_by_cohort: dict[int, set[str]] = {}
     exercise_slugs_by_cohort: dict[int, set[str]] = {}
-    total_lessons_by_cohort: dict[int, int] = {}
     mandatory_project_slugs_by_cohort: dict[int, set[str]] = {}
-    has_mandatory_projects_by_cohort: dict[int, bool] = {}
 
     for cohort in cohorts:
-        if cohort is None or cohort.syllabus_version is None:
-            # Defensive: cohort should never be None, but keep it safe.
+        if cohort is None:
             continue
-
+        
         if cohort.syllabus_version is None:
-            lesson_slugs_by_cohort[cohort.id] = set()
-            exercise_slugs_by_cohort[cohort.id] = set()
-            total_lessons_by_cohort[cohort.id] = 0
-            mandatory_project_slugs_by_cohort[cohort.id] = set()
-            has_mandatory_projects_by_cohort[cohort.id] = False
+            if include_lessons:
+                lesson_slugs_by_cohort[cohort.id] = set()
+            if include_exercises:
+                exercise_slugs_by_cohort[cohort.id] = set()
+            if include_projects:
+                mandatory_project_slugs_by_cohort[cohort.id] = set()
             continue
 
-        lesson_slugs = get_assets_from_syllabus(cohort.syllabus_version, task_types=["LESSON"], only_mandatory=False) or []
-        exercise_slugs = get_assets_from_syllabus(cohort.syllabus_version, task_types=["EXERCISE"], only_mandatory=False) or []
-        mandatory_project_slugs = (
-            get_assets_from_syllabus(cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True) or []
-        )
-
-        lesson_slugs_by_cohort[cohort.id] = set(lesson_slugs)
-        exercise_slugs_by_cohort[cohort.id] = set(exercise_slugs)
-        total_lessons_by_cohort[cohort.id] = len(lesson_slugs)
-        mandatory_project_slugs_by_cohort[cohort.id] = set(mandatory_project_slugs)
-        has_mandatory_projects_by_cohort[cohort.id] = len(mandatory_project_slugs) > 0
+        if include_lessons:
+            lesson_slugs = get_assets_from_syllabus(cohort.syllabus_version, task_types=["LESSON"], only_mandatory=False) or []
+            lesson_slugs_by_cohort[cohort.id] = set(lesson_slugs)
+        
+        if include_exercises:
+            exercise_slugs = get_assets_from_syllabus(cohort.syllabus_version, task_types=["EXERCISE"], only_mandatory=False) or []
+            exercise_slugs_by_cohort[cohort.id] = set(exercise_slugs)
+        
+        if include_projects:
+            mandatory_project_slugs = (
+                get_assets_from_syllabus(cohort.syllabus_version, task_types=["PROJECT"], only_mandatory=True) or []
+            )
+            mandatory_project_slugs_by_cohort[cohort.id] = set(mandatory_project_slugs)
 
     return (
         lesson_slugs_by_cohort,
         exercise_slugs_by_cohort,
-        total_lessons_by_cohort,
         mandatory_project_slugs_by_cohort,
-        has_mandatory_projects_by_cohort,
     )
 
 
-def _parse_history_log_for_report(enrollments: list[CohortUser]) -> tuple[dict[tuple[int, int], list[int]], dict[tuple[int, int], bool]]:
-    delivered_exercise_task_ids_by_pair: dict[tuple[int, int], list[int]] = {}
-    started_by_pair: dict[tuple[int, int], bool] = {}
+def _get_started_by_enrollment(enrollments: list[CohortUser]) -> dict[tuple[int, int], bool]:
+    """
+    Determina si un estudiante ha empezado basándose en el history_log.
+    
+    Un estudiante ha empezado si el history_log tiene keys (no está vacío).
+    El history_log siempre tiene las keys delivered_assignments y pending_assignments
+    cuando el estudiante ha comenzado.
+    
+    Args:
+        enrollments: Lista de CohortUser
+    
+    Returns:
+        dict[tuple[int, int], bool]: Flag de inicio por (user_id, cohort_id)
+    """
+    started_by_enrollment: dict[tuple[int, int], bool] = {}
 
-    for cu in enrollments:
-        h = cu.history_log or {}
-        delivered = h.get("delivered_assignments", []) or []
-        pending = h.get("pending_assignments", []) or []
+    for cohort_user in enrollments:
+        history_log = cohort_user.history_log or {}
+        enrollment_key = (cohort_user.user_id, cohort_user.cohort_id)
+        started_by_enrollment[enrollment_key] = bool(history_log)
 
-        pair = (cu.user_id, cu.cohort_id)
-        started_by_pair[pair] = bool(delivered or pending)
-
-        exercise_ids = [
-            int(x["id"])
-            for x in delivered
-            if isinstance(x, dict) and x.get("type") == "EXERCISE" and str(x.get("id", "")).isdigit()
-        ]
-        if exercise_ids:
-            delivered_exercise_task_ids_by_pair[pair] = exercise_ids
-
-    return delivered_exercise_task_ids_by_pair, started_by_pair
+    return started_by_enrollment
 
 
 def _get_delivered_tasks_by_id(task_ids: list[int], user_ids: list[int], cohort_ids: list[int]) -> dict[int, dict]:
@@ -420,62 +441,184 @@ def _get_delivered_tasks_by_id(task_ids: list[int], user_ids: list[int], cohort_
     return {r["id"]: r for r in rows}
 
 
-def _get_delivered_exercise_slugs_by_pair(
-    delivered_exercise_task_ids_by_pair: dict[tuple[int, int], list[int]],
+def _filter_delivered_slugs_by_syllabus(
+    delivered_task_ids_by_enrollment: dict[tuple[int, int], list[int]],
     delivered_tasks_by_id: dict[int, dict],
-    exercise_slugs_by_cohort: dict[int, set[str]],
+    syllabus_slugs_by_cohort: dict[int, set[str]],
 ) -> dict[tuple[int, int], set[str]]:
-    delivered_exercise_slugs_by_pair: dict[tuple[int, int], set[str]] = {}
+    """
+    Convierte task IDs a slugs y filtra solo los que están en el syllabus actual del cohort.
+    
+    Args:
+        delivered_task_ids_by_enrollment: Task IDs entregados agrupados por (user_id, cohort_id)
+        delivered_tasks_by_id: Información completa de las tareas por ID
+        syllabus_slugs_by_cohort: Slugs válidos del syllabus actual por cohort_id
+    
+    Returns:
+        Slugs entregados que están en el syllabus actual, agrupados por enrollment
+    """
+    delivered_slugs_by_enrollment: dict[tuple[int, int], set[str]] = {}
 
-    for pair, ids in delivered_exercise_task_ids_by_pair.items():
-        _user_id, cohort_id = pair
-        syllabus_exercise_slugs = exercise_slugs_by_cohort.get(cohort_id, set())
-        if not syllabus_exercise_slugs:
-            delivered_exercise_slugs_by_pair[pair] = set()
+    for enrollment_key, task_ids in delivered_task_ids_by_enrollment.items():
+        _user_id, cohort_id = enrollment_key
+        syllabus_slugs = syllabus_slugs_by_cohort.get(cohort_id, set())
+        if not syllabus_slugs:
+            delivered_slugs_by_enrollment[enrollment_key] = set()
             continue
 
         slugs: set[str] = set()
-        for tid in ids:
-            t = delivered_tasks_by_id.get(tid)
-            if not t:
+        for task_id in task_ids:
+            task = delivered_tasks_by_id.get(task_id)
+            if not task:
                 continue
-            if t["associated_slug"] in syllabus_exercise_slugs:
-                slugs.add(t["associated_slug"])
+            if task["associated_slug"] in syllabus_slugs:
+                slugs.add(task["associated_slug"])
 
-        delivered_exercise_slugs_by_pair[pair] = slugs
+        delivered_slugs_by_enrollment[enrollment_key] = slugs
 
-    return delivered_exercise_slugs_by_pair
+    return delivered_slugs_by_enrollment
 
 
-def _get_lesson_done_slugs_by_pair(
-    user_ids: list[int], cohort_ids: list[int], lesson_slugs_by_cohort: dict[int, set[str]]
+def _get_completed_task_slugs(
+    user_ids: list[int],
+    cohort_ids: list[int],
+    task_type: Task.TaskType,
+    slugs_by_cohort: dict[int, set[str]],
 ) -> dict[tuple[int, int], set[str]]:
-    all_lesson_slugs: set[str] = set()
-    for slugs in lesson_slugs_by_cohort.values():
-        all_lesson_slugs.update(slugs)
+    """
+    Obtiene los slugs de tareas completadas por tipo de tarea.
+    
+    Para LESSON: solo verifica task_status == DONE
+    Para EXERCISE: verifica:
+        1. revision_status == APPROVED → completo
+        2. task_status == DONE → completo
+    Para PROJECT: verifica:
+        1. revision_status == APPROVED o IGNORED → completo
+    
+    Args:
+        user_ids: Lista de user IDs
+        cohort_ids: Lista de cohort IDs
+        task_type: Tipo de tarea (LESSON, EXERCISE o PROJECT)
+        slugs_by_cohort: Slugs válidos del syllabus agrupados por cohort_id
+    
+    Returns:
+        dict[tuple[int, int], set[str]]: Slugs completados agrupados por (user_id, cohort_id)
+    """
+    all_slugs: set[str] = set()
+    for slugs in slugs_by_cohort.values():
+        all_slugs.update(slugs)
 
-    lesson_done_slugs_by_pair: dict[tuple[int, int], set[str]] = {}
-    if not all_lesson_slugs:
-        return lesson_done_slugs_by_pair
+    completed_slugs_by_pair: dict[tuple[int, int], set[str]] = {}
+    if not all_slugs:
+        return completed_slugs_by_pair
 
-    done_lessons = Task.objects.filter(
+    # Para EXERCISE: verificar revision_status == APPROVED
+    if task_type == Task.TaskType.EXERCISE:
+        approved_exercises = Task.objects.filter(
+            user_id__in=user_ids,
+            cohort_id__in=cohort_ids,
+            task_type=Task.TaskType.EXERCISE,
+            revision_status=Task.RevisionStatus.APPROVED,
+            associated_slug__in=list(all_slugs),
+        ).values("user_id", "cohort_id", "associated_slug")
+
+        for r in approved_exercises:
+            pair = (r["user_id"], r["cohort_id"])
+            if pair not in completed_slugs_by_pair:
+                completed_slugs_by_pair[pair] = set()
+            completed_slugs_by_pair[pair].add(r["associated_slug"])
+
+    # Para PROJECT: verificar revision_status == APPROVED o IGNORED
+    if task_type == Task.TaskType.PROJECT:
+        approved_projects = Task.objects.filter(
+            user_id__in=user_ids,
+            cohort_id__in=cohort_ids,
+            task_type=Task.TaskType.PROJECT,
+            revision_status__in=[Task.RevisionStatus.APPROVED, Task.RevisionStatus.IGNORED],
+            associated_slug__in=list(all_slugs),
+        ).values("user_id", "cohort_id", "associated_slug")
+
+        for r in approved_projects:
+            pair = (r["user_id"], r["cohort_id"])
+            if pair not in completed_slugs_by_pair:
+                completed_slugs_by_pair[pair] = set()
+            completed_slugs_by_pair[pair].add(r["associated_slug"])
+
+    # Para LESSON y EXERCISE: verificar task_status == DONE
+    if task_type in [Task.TaskType.LESSON, Task.TaskType.EXERCISE]:
+        done_tasks = Task.objects.filter(
+            user_id__in=user_ids,
+            cohort_id__in=cohort_ids,
+            task_type=task_type,
+            task_status=Task.TaskStatus.DONE,
+            associated_slug__in=list(all_slugs),
+        ).values("user_id", "cohort_id", "associated_slug")
+
+        for r in done_tasks:
+            pair = (r["user_id"], r["cohort_id"])
+            slug = r["associated_slug"]
+            if pair not in completed_slugs_by_pair:
+                completed_slugs_by_pair[pair] = set()
+            completed_slugs_by_pair[pair].add(slug)
+
+    return completed_slugs_by_pair
+
+
+def _get_exercise_telemetry_steps(
+    user_ids: list[int],
+    cohort_ids: list[int],
+    exercise_slugs_by_cohort: dict[int, set[str]],
+) -> dict[tuple[int, int, str], tuple[int, int]]:
+    """
+    Obtiene los pasos completados y totales de ejercicios PENDING con telemetría.
+    
+    Solo consulta ejercicios que:
+    - Tienen revision_status == PENDING
+    - Tienen telemetría disponible
+    - Están en el syllabus actual
+    
+    Esto se usa para el cálculo fraccionario de progreso (ej: 5/6 pasos completados).
+    
+    Args:
+        user_ids: Lista de user IDs
+        cohort_ids: Lista de cohort IDs
+        exercise_slugs_by_cohort: Slugs de ejercicios válidos del syllabus por cohort_id
+    
+    Returns:
+        dict[tuple[int, int, str], tuple[int, int]]: 
+        Key: (user_id, cohort_id, slug)
+        Value: (completed_steps, total_steps)
+    """
+    all_exercise_slugs: set[str] = set()
+    for slugs in exercise_slugs_by_cohort.values():
+        all_exercise_slugs.update(slugs)
+
+    telemetry_steps_by_key: dict[tuple[int, int, str], tuple[int, int]] = {}
+    if not all_exercise_slugs:
+        return telemetry_steps_by_key
+
+    pending_exercises_with_telemetry = Task.objects.filter(
         user_id__in=user_ids,
         cohort_id__in=cohort_ids,
-        task_type=Task.TaskType.LESSON,
-        task_status=Task.TaskStatus.DONE,
-        associated_slug__in=list(all_lesson_slugs),
-    ).values("user_id", "cohort_id", "associated_slug")
+        task_type=Task.TaskType.EXERCISE,
+        revision_status=Task.RevisionStatus.PENDING,
+        associated_slug__in=list(all_exercise_slugs),
+        telemetry__isnull=False,
+    ).values("user_id", "cohort_id", "associated_slug", "telemetry__telemetry")
 
-    for r in done_lessons:
-        pair = (r["user_id"], r["cohort_id"])
-        if pair not in lesson_done_slugs_by_pair:
-            lesson_done_slugs_by_pair[pair] = set()
-        lesson_done_slugs_by_pair[pair].add(r["associated_slug"])
+    for task in pending_exercises_with_telemetry:
+        key = (task["user_id"], task["cohort_id"], task["associated_slug"])
+        telemetry = task.get("telemetry__telemetry")
+        
+        if isinstance(telemetry, dict):
+            total_steps, completed_steps = _telemetry_to_steps(telemetry)
+            if total_steps > 0:
+                telemetry_steps_by_key[key] = (completed_steps, total_steps)
 
-    return lesson_done_slugs_by_pair
+    return telemetry_steps_by_key
 
 
-def _get_student_start_date_by_pair(
+def _get_student_start_dates(
     user_ids: list[int],
     cohort_ids: list[int],
     lesson_slugs_by_cohort: dict[int, set[str]],
@@ -530,72 +673,6 @@ def _telemetry_to_steps(telemetry: dict) -> tuple[int, int]:
     return 0, 0
 
 
-def _get_completed_exercise_slugs_by_pair(
-    user_ids: list[int],
-    cohort_ids: list[int],
-    exercise_slugs_by_cohort: dict[int, set[str]],
-    delivered_exercise_slugs_by_pair: dict[tuple[int, int], set[str]],
-) -> dict[tuple[int, int], set[str]]:
-    all_exercise_slugs: set[str] = set()
-    for slugs in exercise_slugs_by_cohort.values():
-        all_exercise_slugs.update(slugs)
-
-    completed_exercise_slugs_by_pair: dict[tuple[int, int], set[str]] = {}
-    if not all_exercise_slugs:
-        return completed_exercise_slugs_by_pair
-
-    # Telemetry-based completion (completion_rate == 100).
-    telemetry_rows = Task.objects.filter(
-        user_id__in=user_ids,
-        cohort_id__in=cohort_ids,
-        task_type=Task.TaskType.EXERCISE,
-        associated_slug__in=list(all_exercise_slugs),
-        telemetry__isnull=False,
-    ).values("user_id", "cohort_id", "associated_slug", "telemetry__telemetry")
-
-    telemetry_by_triplet: dict[tuple[int, int, str], dict] = {}
-    for t in telemetry_rows:
-        key = (t["user_id"], t["cohort_id"], t["associated_slug"])
-        if key in telemetry_by_triplet:
-            continue
-        telemetry = t.get("telemetry__telemetry")
-        if isinstance(telemetry, dict):
-            telemetry_by_triplet[key] = telemetry
-
-    for (user_id, cohort_id, slug), telemetry in telemetry_by_triplet.items():
-        total_steps, completed_steps = _telemetry_to_steps(telemetry)
-        if total_steps <= 0:
-            continue
-        if completed_steps >= total_steps:
-            pair = (user_id, cohort_id)
-            if pair not in completed_exercise_slugs_by_pair:
-                completed_exercise_slugs_by_pair[pair] = set()
-            completed_exercise_slugs_by_pair[pair].add(slug)
-
-    # Task status DONE.
-    done_exercises = Task.objects.filter(
-        user_id__in=user_ids,
-        cohort_id__in=cohort_ids,
-        task_type=Task.TaskType.EXERCISE,
-        task_status=Task.TaskStatus.DONE,
-        associated_slug__in=list(all_exercise_slugs),
-    ).values("user_id", "cohort_id", "associated_slug")
-
-    for r in done_exercises:
-        pair = (r["user_id"], r["cohort_id"])
-        if pair not in completed_exercise_slugs_by_pair:
-            completed_exercise_slugs_by_pair[pair] = set()
-        completed_exercise_slugs_by_pair[pair].add(r["associated_slug"])
-
-    # history_log delivered (best-effort).
-    for pair, slugs in delivered_exercise_slugs_by_pair.items():
-        if not slugs:
-            continue
-        if pair not in completed_exercise_slugs_by_pair:
-            completed_exercise_slugs_by_pair[pair] = set()
-        completed_exercise_slugs_by_pair[pair].update(slugs)
-
-    return completed_exercise_slugs_by_pair
 
 
 def _get_cert_by_pair(academy, user_ids: list[int], cohort_ids: list[int]) -> dict[tuple[int, int], dict]:
@@ -607,32 +684,6 @@ def _get_cert_by_pair(academy, user_ids: list[int], cohort_ids: list[int]) -> di
     return {(r["user_id"], r["cohort_id"]): r for r in cert_rows}
 
 
-def _get_approved_mandatory_project_slugs_by_pair(
-    user_ids: list[int], cohort_ids: list[int], mandatory_project_slugs_by_cohort: dict[int, set[str]]
-) -> dict[tuple[int, int], set[str]]:
-    mandatory_project_slugs_union: set[str] = set()
-    for slugs in mandatory_project_slugs_by_cohort.values():
-        mandatory_project_slugs_union.update(slugs)
-
-    approved_mandatory_project_slugs_by_pair: dict[tuple[int, int], set[str]] = {}
-    if not mandatory_project_slugs_union:
-        return approved_mandatory_project_slugs_by_pair
-
-    approved_rows = Task.objects.filter(
-        user_id__in=user_ids,
-        cohort_id__in=cohort_ids,
-        task_type=Task.TaskType.PROJECT,
-        associated_slug__in=list(mandatory_project_slugs_union),
-        revision_status__in=[Task.RevisionStatus.APPROVED, Task.RevisionStatus.IGNORED],
-    ).values("user_id", "cohort_id", "associated_slug")
-
-    for r in approved_rows:
-        pair = (r["user_id"], r["cohort_id"])
-        if pair not in approved_mandatory_project_slugs_by_pair:
-            approved_mandatory_project_slugs_by_pair[pair] = set()
-        approved_mandatory_project_slugs_by_pair[pair].add(r["associated_slug"])
-
-    return approved_mandatory_project_slugs_by_pair
 
 
 def _get_completion_date_by_pair(
@@ -716,9 +767,7 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
             slug="academy-not-found",
         )
 
-    enrollments_qs = _get_enrollments_for_academy_student_progress_report(academy)
-    if cohort is not None:
-        enrollments_qs = enrollments_qs.filter(cohort=cohort)
+    enrollments_qs = _get_enrollments(academy, cohort=cohort)
     if not enrollments_qs.exists():
         return iter([])
 
@@ -731,44 +780,91 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
     (
         lesson_slugs_by_cohort,
         exercise_slugs_by_cohort,
-        total_lessons_by_cohort,
         mandatory_project_slugs_by_cohort,
-        has_mandatory_projects_by_cohort,
-    ) = _build_syllabus_cache_by_cohort(list(cohorts_by_id.values()))
+    ) = _extract_syllabus_slugs(list(cohorts_by_id.values()))
 
-    delivered_exercise_task_ids_by_pair, started_by_pair = _parse_history_log_for_report(enrollments)
-    task_ids = [tid for ids in delivered_exercise_task_ids_by_pair.values() for tid in ids]
-    delivered_tasks_by_id = _get_delivered_tasks_by_id(task_ids, user_ids, cohort_ids)
-    delivered_exercise_slugs_by_pair = _get_delivered_exercise_slugs_by_pair(
-        delivered_exercise_task_ids_by_pair, delivered_tasks_by_id, exercise_slugs_by_cohort
+    # Get the flag of start by enrollment
+    started_by_enrollment = _get_started_by_enrollment(enrollments)
+
+    # Get the lessons that the student has completed
+    lesson_done_slugs_by_pair = _get_completed_task_slugs(
+        user_ids, cohort_ids, Task.TaskType.LESSON, lesson_slugs_by_cohort
     )
 
-    lesson_done_slugs_by_pair = _get_lesson_done_slugs_by_pair(user_ids, cohort_ids, lesson_slugs_by_cohort)
-    started_at_by_pair = _get_student_start_date_by_pair(user_ids, cohort_ids, lesson_slugs_by_cohort, exercise_slugs_by_cohort)
-    completed_exercise_slugs_by_pair = _get_completed_exercise_slugs_by_pair(
-        user_ids, cohort_ids, exercise_slugs_by_cohort, delivered_exercise_slugs_by_pair
+    # Get the exercises that the student has completed
+    completed_exercise_slugs_by_pair = _get_completed_task_slugs(
+        user_ids, cohort_ids, Task.TaskType.EXERCISE, exercise_slugs_by_cohort
     )
+
+    # Get the mandatory projects that the student has approved
+    approved_project_slugs_by_pair = _get_completed_task_slugs(
+        user_ids, cohort_ids, Task.TaskType.PROJECT, mandatory_project_slugs_by_cohort
+    )
+    
+    # Get the exercise telemetry steps
+    exercise_telemetry_steps_by_key = _get_exercise_telemetry_steps(
+        user_ids, cohort_ids, exercise_slugs_by_cohort
+    )
+
+    # Get the start date of the student in the cohort
+    started_at_by_pair = _get_student_start_dates(user_ids, cohort_ids, lesson_slugs_by_cohort, exercise_slugs_by_cohort)
+
+    # Get the certificates that the student has received by cohort and user
     cert_by_pair = _get_cert_by_pair(academy, user_ids, cohort_ids)
-    approved_mandatory_project_slugs_by_pair = _get_approved_mandatory_project_slugs_by_pair(
-        user_ids, cohort_ids, mandatory_project_slugs_by_cohort
-    )
+
+    # Get the completion date of the student in the cohort
     completion_date_by_pair = _get_completion_date_by_pair(user_ids, cohort_ids, lesson_slugs_by_cohort, exercise_slugs_by_cohort)
 
-    def _get_units_for(user_id: int, cohort_id: int) -> tuple[int, int]:
-        total_lessons = int(total_lessons_by_cohort.get(cohort_id, 0))
-        completed_lessons = len(
-            (lesson_done_slugs_by_pair.get((user_id, cohort_id), set()) or set())
-            & (lesson_slugs_by_cohort.get(cohort_id, set()) or set())
-        )
-        total_exercises = len(exercise_slugs_by_cohort.get(cohort_id, set()))
+    def _get_units_for(
+        user_id: int,
+        cohort_id: int,
+        *,
+        include_lessons: bool = True,
+        include_exercises: bool = True,
+        include_projects: bool = False,
+    ) -> tuple[int, int]:
+        """
+        Calcula unidades totales y completadas para un estudiante en un cohort.
+        
+        Args:
+            user_id: ID del usuario
+            cohort_id: ID del cohort
+            include_lessons: Si True, incluye lessons en el cálculo
+            include_exercises: Si True, incluye exercises en el cálculo
+            include_projects: Si True, incluye projects en el cálculo
+        
+        Returns:
+            tuple[int, int]: (total_units, completed_units)
+        """
+        total_units = 0
+        completed_units = 0
 
-        completed_exercises = len(
-            (completed_exercise_slugs_by_pair.get((user_id, cohort_id), set()) or set())
-            & (exercise_slugs_by_cohort.get(cohort_id, set()) or set())
-        )
+        if include_lessons:
+            total_lessons = len(lesson_slugs_by_cohort.get(cohort_id, set()))
+            completed_lessons = len(
+                (lesson_done_slugs_by_pair.get((user_id, cohort_id), set()) or set())
+                & (lesson_slugs_by_cohort.get(cohort_id, set()) or set())
+            )
+            total_units += total_lessons
+            completed_units += completed_lessons
 
-        total_units = total_lessons + total_exercises
-        completed_units = completed_lessons + completed_exercises
+        if include_exercises:
+            total_exercises = len(exercise_slugs_by_cohort.get(cohort_id, set()))
+            completed_exercises = len(
+                (completed_exercise_slugs_by_pair.get((user_id, cohort_id), set()) or set())
+                & (exercise_slugs_by_cohort.get(cohort_id, set()) or set())
+            )
+            total_units += total_exercises
+            completed_units += completed_exercises
+
+        if include_projects:
+            total_projects = len(mandatory_project_slugs_by_cohort.get(cohort_id, set()))
+            completed_projects = len(
+                (approved_project_slugs_by_pair.get((user_id, cohort_id), set()) or set())
+                & (mandatory_project_slugs_by_cohort.get(cohort_id, set()) or set())
+            )
+            total_units += total_projects
+            completed_units += completed_projects
 
         if total_units and completed_units > total_units:
             completed_units = total_units
@@ -777,21 +873,34 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
 
         return total_units, completed_units
 
+    def _build_task_slugs_union(
+        include_lessons: bool = True,
+        include_exercises: bool = True,
+        include_projects: bool = True,
+    ) -> set[str]:
+        """Build union of slugs for the specified task types."""
+        slugs: set[str] = set()
+        for cid in cohort_ids:
+            if include_lessons:
+                slugs.update(lesson_slugs_by_cohort.get(cid, set()))
+            if include_exercises:
+                slugs.update(exercise_slugs_by_cohort.get(cid, set()))
+            if include_projects:
+                slugs.update(mandatory_project_slugs_by_cohort.get(cid, set()))
+        return slugs
+    
     rows_to_write: list[dict[str, Any]] = []
 
-    expected_slugs_union: set[str] = set()
-    for cid in cohort_ids:
-        expected_slugs_union.update(lesson_slugs_by_cohort.get(cid, set()))
-        expected_slugs_union.update(exercise_slugs_by_cohort.get(cid, set()))
+    all_task_slugs = _build_task_slugs_union(include_lessons=True, include_exercises=True, include_projects=False)
 
-    tasks_any_by_pair: set[tuple[int, int]] = set()
-    if expected_slugs_union:
-        any_rows = Task.objects.filter(
+    enrollments_with_tasks: set[tuple[int, int]] = set()
+    if all_task_slugs:
+        task_rows = Task.objects.filter(
             user_id__in=user_ids,
             cohort_id__in=cohort_ids,
-            associated_slug__in=list(expected_slugs_union),
+            associated_slug__in=list(all_task_slugs),
         ).values("user_id", "cohort_id")
-        tasks_any_by_pair = {(r["user_id"], r["cohort_id"]) for r in any_rows}
+        enrollments_with_tasks = {(r["user_id"], r["cohort_id"]) for r in task_rows}
 
     cohort_ids_by_user: dict[int, set[int]] = {}
     for cu in enrollments:
@@ -829,7 +938,7 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
                 total_units += micro_total
                 completed_units += micro_completed
 
-                if (cu.user_id, micro_id) in tasks_any_by_pair or started_by_pair.get((cu.user_id, micro_id), False):
+                if (cu.user_id, micro_id) in enrollments_with_tasks or started_by_enrollment.get((cu.user_id, micro_id), False):
                     macro_started = True
 
                 micro_started_at = started_at_by_pair.get((cu.user_id, micro_id))
@@ -841,13 +950,13 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
             started = macro_started
 
             is_certificate_eligible = (
-                any(has_mandatory_projects_by_cohort.get(mid, False) for mid in micro_ids) if micro_ids else False
+                any(len(mandatory_project_slugs_by_cohort.get(mid, set())) > 0 for mid in micro_ids) if micro_ids else False
             )
         else:
             total_units, completed_units = _get_units_for(cu.user_id, cu.cohort_id)
             progress, is_completed = _progress_percent(total_units, completed_units)
-            started = bool((pair in tasks_any_by_pair) or started_by_pair.get(pair, False))
-            is_certificate_eligible = bool(has_mandatory_projects_by_cohort.get(cu.cohort_id, False))
+            started = bool((pair in enrollments_with_tasks) or started_by_enrollment.get(pair, False))
+            is_certificate_eligible = bool(len(mandatory_project_slugs_by_cohort.get(cu.cohort_id, set())) > 0)
 
         if edu == "GRADUATED":
             progress = 100
@@ -886,11 +995,11 @@ def academy_student_progress_report_rows(academy, lang: str, cohort: Optional[Co
                         required = mandatory_project_slugs_by_cohort.get(micro_id, set())
                         if not required:
                             continue
-                        approved = approved_mandatory_project_slugs_by_pair.get((cu.user_id, micro_id), set())
+                        approved = approved_project_slugs_by_pair.get((cu.user_id, micro_id), set())
                         pending_mandatory += len(required - approved)
                 else:
                     required = mandatory_project_slugs_by_cohort.get(cu.cohort_id, set())
-                    approved = approved_mandatory_project_slugs_by_pair.get(pair, set())
+                    approved = approved_project_slugs_by_pair.get(pair, set())
                     pending_mandatory = len(required - approved) if required else 0
 
                 if pending_mandatory > 0:
