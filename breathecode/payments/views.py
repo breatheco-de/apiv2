@@ -552,55 +552,59 @@ class AcademyCohortSetView(APIView):
         plan_to_clone = request.data.get("plan_to_clone")
         cohort_ids = request.data.get("cohort_ids")
 
+        if (plan_to_clone and not cohort_ids) or (not plan_to_clone and cohort_ids):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Both plan and additional cohorts are required to clone a cohort set",
+                    es="Se requiere tanto el plan como las cohortes adicionales para clonar un cohort set",
+                ),
+                slug="missing-clone-params",
+                code=400,
+            )
+
+        plan = None
+        if plan_to_clone:
+            plan = Plan.objects.filter(id=plan_to_clone, owner__id=academy_id).first()
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan not found",
+                        es="Plan no encontrado",
+                    ),
+                    slug="plan-not-found",
+                    code=404,
+                )
+
+        cohorts_to_add = None
+        if cohort_ids:
+            ids = [int(x.strip()) for x in cohort_ids.split(",")] if isinstance(cohort_ids, str) else cohort_ids
+            cohorts_to_add = Cohort.objects.filter(id__in=ids, academy__id=academy_id)
+            if not cohorts_to_add.exists() or cohorts_to_add.count() != len(ids):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"One or more cohorts don't exist or don't belong to academy {academy_id}",
+                        es=f"Una o más de las cohortes no existen o no pertenecen a la academia {academy_id}",
+                    ),
+                    slug="cohort-not-in-academy",
+                    code=400,
+                )
+
         serializer = CohortSetSerializer(data=data)
         if serializer.is_valid():
             with transaction.atomic():
                 cohort_set = serializer.save()
 
-                if plan_to_clone and cohort_ids:
-                    plan = Plan.objects.filter(id=plan_to_clone).first()
-                    if plan:
-                        if plan.cohort_set:
-                            cohort_set.cohorts.set(plan.cohort_set.cohorts.all())
+                if plan:
+                    if plan.cohort_set:
+                        cohort_set.cohorts.set(plan.cohort_set.cohorts.all())
+                    plan.cohort_set = cohort_set
+                    plan.save()
+                if cohorts_to_add:
+                    cohort_set.cohorts.add(*cohorts_to_add)
 
-                        plan.cohort_set = cohort_set
-                        plan.save()
-                        if isinstance(cohort_ids, str):
-                            ids = [int(x.strip()) for x in cohort_ids.split(",")]
-                        else:
-                            ids = cohort_ids
-
-                        cohorts_to_add = Cohort.objects.filter(id__in=ids, academy__id=academy_id)
-                        if cohorts_to_add.exists() and cohorts_to_add.count() == len(ids):
-                            cohort_set.cohorts.add(*cohorts_to_add)
-                        else:
-                            raise ValidationException(
-                                translation(
-                                    lang,
-                                    en=f"One or more cohorts don't exist or don't belong to academy {academy_id}",
-                                    es=f"Una o más de las cohortes no existen o no pertenecen a la academia {academy_id}",
-                                )
-                            )
-
-                    else:
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Plan not found",
-                                es="Plan no encontrado",
-                            ),
-                            slug="plan-not-found",
-                            code=404,
-                        )
-                elif (plan_to_clone and not cohort_ids) or (not plan_to_clone and cohort_ids):
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="Both plan and additional cohorts are required to clone a cohort set",
-                            es="Se requiere tanto el plan como las cohortes adicionales para clonar un cohort set",
-                        ),
-                        code=400,
-                    )
                 return Response(GetCohortSetSerializer(cohort_set, many=False).data, status=201)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -848,58 +852,66 @@ class AcademyMentorshipServiceSetView(APIView):
         plan_to_clone = request.data.get("plan_to_clone")
         mentorship_service_ids = request.data.get("mentorship_service_ids")
 
+        if (plan_to_clone and not mentorship_service_ids) or (not plan_to_clone and mentorship_service_ids):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Both plan and additional mentorship services are required to clone a mentorship service set",
+                    es="Se requiere tanto el plan como los servicios de mentoría adicionales para clonar un mentorship service set",
+                ),
+                slug="missing-clone-params",
+                code=400,
+            )
+
+        plan = None
+        if plan_to_clone:
+            plan = Plan.objects.filter(id=plan_to_clone, owner__id=academy_id).first()
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan not found",
+                        es="Plan no encontrado",
+                    ),
+                    slug="plan-not-found",
+                    code=404,
+                )
+
+        services_to_add = None
+        if mentorship_service_ids:
+            ids = (
+                [int(x.strip()) for x in mentorship_service_ids.split(",")]
+                if isinstance(mentorship_service_ids, str)
+                else mentorship_service_ids
+            )
+            services_to_add = MentorshipService.objects.filter(id__in=ids, academy__id=academy_id)
+            if not services_to_add.exists() or services_to_add.count() != len(ids):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"One or more mentorship services don't exist or don't belong to academy {academy_id}",
+                        es=f"Uno o más servicios de mentoría no existen o no pertenecen a la academia {academy_id}",
+                    ),
+                    slug="mentorship-service-not-in-academy",
+                    code=400,
+                )
+
         serializer = MentorshipServiceSetSerializer(data=data)
         if serializer.is_valid():
             with transaction.atomic():
                 mentorship_service_set = serializer.save()
 
-                if plan_to_clone and mentorship_service_ids:
-                    plan = Plan.objects.filter(id=plan_to_clone).first()
-                    if plan:
-                        if plan.mentorship_service_set:
-                            mentorship_service_set.mentorship_services.set(
-                                plan.mentorship_service_set.mentorship_services.all()
-                            )
-
-                        plan.mentorship_service_set = mentorship_service_set
-                        plan.save()
-
-                        if isinstance(mentorship_service_ids, str):
-                            ids = [int(x.strip()) for x in mentorship_service_ids.split(",")]
-                        else:
-                            ids = mentorship_service_ids
-
-                        services_to_add = MentorshipService.objects.filter(id__in=ids, academy__id=academy_id)
-                        if services_to_add.exists() and services_to_add.count() == len(ids):
-                            mentorship_service_set.mentorship_services.add(*services_to_add)
-                        else:
-                            raise ValidationException(
-                                translation(
-                                    lang,
-                                    en=f"One or more mentorship services don't exist or don't belong to academy {academy_id}",
-                                    es=f"Uno o más servicios de mentoría no existen o no pertenecen a la academia {academy_id}",
-                                )
-                            )
-
-                    else:
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Plan not found",
-                                es="Plan no encontrado",
-                            ),
-                            slug="plan-not-found",
-                            code=404,
+                if plan:
+                    if plan.mentorship_service_set:
+                        mentorship_service_set.mentorship_services.set(
+                            plan.mentorship_service_set.mentorship_services.all()
                         )
-                elif (plan_to_clone and not mentorship_service_ids) or (not plan_to_clone and mentorship_service_ids):
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="Both plan and additional mentorship services are required to clone a mentorship service set",
-                            es="Se requiere tanto el plan como los servicios de mentoría adicionales para clonar un mentorship service set",
-                        ),
-                        code=400,
-                    )
+                    plan.mentorship_service_set = mentorship_service_set
+                    plan.save()
+
+                if services_to_add:
+                    mentorship_service_set.mentorship_services.add(*services_to_add)
+
                 return Response(GetMentorshipServiceSetSerializer(mentorship_service_set, many=False).data, status=201)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1035,56 +1047,64 @@ class AcademyEventTypeSetView(APIView):
         plan_to_clone = request.data.get("plan_to_clone")
         event_type_ids = request.data.get("event_type_ids")
 
+        if (plan_to_clone and not event_type_ids) or (not plan_to_clone and event_type_ids):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Both plan and additional event types are required to clone an event type set",
+                    es="Se requiere tanto el plan como los tipos de evento adicionales para clonar un event type set",
+                ),
+                slug="missing-clone-params",
+                code=400,
+            )
+
+        plan = None
+        if plan_to_clone:
+            plan = Plan.objects.filter(id=plan_to_clone, owner__id=academy_id).first()
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan not found",
+                        es="Plan no encontrado",
+                    ),
+                    slug="plan-not-found",
+                    code=404,
+                )
+
+        event_types_to_add = None
+        if event_type_ids:
+            ids = (
+                [int(x.strip()) for x in event_type_ids.split(",")]
+                if isinstance(event_type_ids, str)
+                else event_type_ids
+            )
+            event_types_to_add = EventType.objects.filter(id__in=ids, academy__id=academy_id)
+            if not event_types_to_add.exists() or event_types_to_add.count() != len(ids):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"One or more event types don't exist or don't belong to academy {academy_id}",
+                        es=f"Uno o más tipos de evento no existen o no pertenecen a la academia {academy_id}",
+                    ),
+                    slug="event-type-not-in-academy",
+                    code=400,
+                )
+
         serializer = EventTypeSetSerializer(data=data)
         if serializer.is_valid():
             with transaction.atomic():
                 event_type_set = serializer.save()
 
-                if plan_to_clone and event_type_ids:
-                    plan = Plan.objects.filter(id=plan_to_clone).first()
-                    if plan:
-                        if plan.event_type_set:
-                            event_type_set.event_types.set(plan.event_type_set.event_types.all())
+                if plan:
+                    if plan.event_type_set:
+                        event_type_set.event_types.set(plan.event_type_set.event_types.all())
+                    plan.event_type_set = event_type_set
+                    plan.save()
 
-                        plan.event_type_set = event_type_set
-                        plan.save()
+                if event_types_to_add:
+                    event_type_set.event_types.add(*event_types_to_add)
 
-                        if isinstance(event_type_ids, str):
-                            ids = [int(x.strip()) for x in event_type_ids.split(",")]
-                        else:
-                            ids = event_type_ids
-
-                        event_types_to_add = EventType.objects.filter(id__in=ids, academy__id=academy_id)
-                        if event_types_to_add.exists() and event_types_to_add.count() == len(ids):
-                            event_type_set.event_types.add(*event_types_to_add)
-                        else:
-                            raise ValidationException(
-                                translation(
-                                    lang,
-                                    en=f"One or more event types don't exist or don't belong to academy {academy_id}",
-                                    es=f"Uno o más tipos de evento no existen o no pertenecen a la academia {academy_id}",
-                                )
-                            )
-
-                    else:
-                        raise ValidationException(
-                            translation(
-                                lang,
-                                en="Plan not found",
-                                es="Plan no encontrado",
-                            ),
-                            slug="plan-not-found",
-                            code=404,
-                        )
-                elif (plan_to_clone and not event_type_ids) or (not plan_to_clone and event_type_ids):
-                    raise ValidationException(
-                        translation(
-                            lang,
-                            en="Both plan and additional event types are required to clone an event type set",
-                            es="Se requiere tanto el plan como los tipos de evento adicionales para clonar un event type set",
-                        ),
-                        code=400,
-                    )
                 return Response(GetEventTypeSetSerializer(event_type_set, many=False).data, status=201)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
