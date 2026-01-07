@@ -23,7 +23,6 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.admissions.utils.cohort_log import CohortDayLog
 from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils.decorators.task import TaskPriority
-from breathecode.utils.ndb import NDB
 from breathecode.utils.redis import Lock
 
 from .models import StudentActivity
@@ -79,6 +78,8 @@ def get_attendancy_log(self, cohort_id: int):
     except Exception:
         logger.error(f"Cohort {cohort.slug} have syllabus with bad format")
         return
+
+    from breathecode.utils.ndb import NDB
 
     client = NDB(StudentActivity)
     attendance = client.fetch([StudentActivity.cohort == cohort.slug, StudentActivity.slug == "classroom_attendance"])

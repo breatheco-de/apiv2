@@ -94,7 +94,7 @@ class AcademyActivateTestSuite(AdmissionsTestCase):
         self.bc.check.calls(
             Logger.error.call_args_list,
             [
-                call("Role with slug None not found", exc_info=True),
+                call("Role with slug student not found", exc_info=True),
             ],
         )
 

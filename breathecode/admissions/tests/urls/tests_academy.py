@@ -19,6 +19,12 @@ def get_serializer(academy, country, city, data={}):
         "country": country.code,
         "city": city.id,
         "is_hidden_on_prework": academy.is_hidden_on_prework,
+        "available_as_saas": academy.available_as_saas,
+        "icon_url": academy.icon_url,
+        "logo_url": academy.logo_url,
+        "main_currency": academy.main_currency.code if academy.main_currency else None,
+        "welcome_video": academy.welcome_video or {"preview_image": "", "url": ""},
+        "white_label_params": academy.white_label_params or {"en": "", "es": ""},
         **data,
     }
 

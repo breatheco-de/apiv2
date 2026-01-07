@@ -60,7 +60,8 @@ def bigquery_client_mock(self, user_id=1):
                 LIMIT 1
             """
 
-    return (client_mock, result_mock, query, project_id, dataset, rows_to_insert[0])
+    expected = {**rows_to_insert[0], "academy": None}
+    return (client_mock, result_mock, query, project_id, dataset, expected)
 
 
 class MediaTestSuite(MediaTestCase):
