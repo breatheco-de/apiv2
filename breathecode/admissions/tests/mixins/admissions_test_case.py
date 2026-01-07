@@ -228,7 +228,9 @@ class AdmissionsTestCase(
                     "schedule": {
                         "id": model["cohort"].schedule.id,
                         "name": model["cohort"].schedule.name,
-                        "syllabus": model["cohort"].schedule.syllabus.id,
+                        "schedule_type": model["cohort"].schedule.schedule_type,
+                        "description": model["cohort"].schedule.description,
+                        "syllabus": model["cohort"].schedule.syllabus.id if model["cohort"].schedule.syllabus else None,
                     },
                     "syllabus_version": {
                         "name": model.syllabus.name,
@@ -248,15 +250,32 @@ class AdmissionsTestCase(
                         "slug": model["cohort"].academy.slug,
                         "name": model["cohort"].academy.name,
                         "country": {
+                            "id": model["cohort"].academy.country.code,
                             "code": model["cohort"].academy.country.code,
                             "name": model["cohort"].academy.country.name,
                         },
                         "city": {
+                            "id": model["cohort"].academy.city.id,
                             "name": model["cohort"].academy.city.name,
+                            "country": {
+                                "id": model["cohort"].academy.city.country.code,
+                                "code": model["cohort"].academy.city.country.code,
+                                "name": model["cohort"].academy.city.country.name,
+                            },
                         },
                         "logo_url": model["cohort"].academy.logo_url,
                         "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                        "main_currency": (
+                            {
+                                "code": model["cohort"].academy.main_currency.code,
+                                "name": model["cohort"].academy.main_currency.name,
+                            }
+                            if model["cohort"].academy.main_currency
+                            else None
+                        ),
                     },
+                    "shortcuts": model["cohort"].shortcuts,
+                    "micro_cohorts": [],
                 }
                 for model in models
             ]
@@ -354,7 +373,9 @@ class AdmissionsTestCase(
                     "schedule": {
                         "id": model["cohort"].schedule.id,
                         "name": model["cohort"].schedule.name,
-                        "syllabus": model["cohort"].schedule.syllabus.id,
+                        "schedule_type": model["cohort"].schedule.schedule_type,
+                        "description": model["cohort"].schedule.description,
+                        "syllabus": model["cohort"].schedule.syllabus.id if model["cohort"].schedule.syllabus else None,
                     },
                     "syllabus_version": {
                         "name": model.syllabus.name,
@@ -374,15 +395,32 @@ class AdmissionsTestCase(
                         "slug": model["cohort"].academy.slug,
                         "name": model["cohort"].academy.name,
                         "country": {
+                            "id": model["cohort"].academy.country.code,
                             "code": model["cohort"].academy.country.code,
                             "name": model["cohort"].academy.country.name,
                         },
                         "city": {
+                            "id": model["cohort"].academy.city.id,
                             "name": model["cohort"].academy.city.name,
+                            "country": {
+                                "id": model["cohort"].academy.city.country.code,
+                                "code": model["cohort"].academy.city.country.code,
+                                "name": model["cohort"].academy.city.country.name,
+                            },
                         },
                         "logo_url": model["cohort"].academy.logo_url,
                         "is_hidden_on_prework": model["cohort"].academy.is_hidden_on_prework,
+                        "main_currency": (
+                            {
+                                "code": model["cohort"].academy.main_currency.code,
+                                "name": model["cohort"].academy.main_currency.name,
+                            }
+                            if model["cohort"].academy.main_currency
+                            else None
+                        ),
                     },
+                    "shortcuts": model["cohort"].shortcuts,
+                    "micro_cohorts": [],
                 }
                 for model in models
             ]

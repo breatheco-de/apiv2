@@ -76,9 +76,15 @@ class SurveyManager:
                 study_configs_map[active_study.id] = []
             study_configs_map[active_study.id].append((survey_config, active_study))
 
-        # Sort configs within each study by config ID for consistent round-robin
         for study_id in study_configs_map:
-            study_configs_map[study_id].sort(key=lambda x: x[0].id)
+            def get_module_for_sorting(config_study_pair):
+                config = config_study_pair[0]
+                module = (config.syllabus or {}).get("module")
+                if module is None:
+                    return 0
+                return module
+            
+            study_configs_map[study_id].sort(key=get_module_for_sorting)
 
         if not study_configs_map:
             logger.info(
@@ -106,84 +112,132 @@ class SurveyManager:
                 )
                 continue
 
-            configs_for_study = [pair[0] for pair in config_study_pairs]
+            context_module = self.context.get("module") if isinstance(self.context, dict) else None
             
-            # Round-robin based on last N responses (where N = number of configs)
-            # This ensures true rotation: A → B → C → A → B → C...
-            # Get the last N responses for this study to see which configs were used
-            num_configs = len(configs_for_study)
-            last_responses = list(
-                SurveyResponse.objects.filter(
-                    survey_study=active_study,
-                )
-                .exclude(status=SurveyResponse.Status.EXPIRED)
-                .order_by("-created_at")
-                .values_list("survey_config_id", flat=True)[:num_configs]
-            )
+            def get_module(config_study_pair):
+                config = config_study_pair[0]
+                module = (config.syllabus or {}).get("module")
+                return module if module is not None else 0
             
-            # Get config IDs in order (sorted for consistency)
-            config_ids_ordered = sorted([config.id for config, _ in config_study_pairs])
+            if self.trigger_type == SurveyConfiguration.TriggerType.MODULE_COMPLETION:
+                all_study_configs = sorted(config_study_pairs, key=get_module)
+            else:
+                all_study_configs = config_study_pairs
             
-            # Create a mapping of config_id to (config, study) for easy lookup
-            config_map = {config.id: (config, study) for config, study in config_study_pairs}
-            
-            # Find which configs were used in the last N responses
-            used_config_ids = set(last_responses)
-            
-            # Find the first config (in order) that wasn't used in the last N responses
-            selected_config = None
-            selected_study = None
-            
-            for config_id in config_ids_ordered:
-                if config_id not in used_config_ids:
-                    # This config wasn't used in the last N responses
-                    selected_config, selected_study = config_map[config_id]
-                    break
-            
-            # If all configs were used (we have exactly N responses), continue rotation
-            # by selecting the next config after the most recent one
-            if selected_config is None:
-                # All configs were used, get the most recent response (first in last_responses)
-                most_recent_config_id = last_responses[0] if last_responses else None
+            eligible_configs = []
+            for config, study in all_study_configs:
+                if not self._apply_filters(config, study):
+                    continue
                 
-                if most_recent_config_id:
-                    # Find the index of the most recent config in the ordered list
-                    try:
-                        current_index = config_ids_ordered.index(most_recent_config_id)
-                        # Get the next config in rotation (wrap around if needed)
-                        next_index = (current_index + 1) % len(config_ids_ordered)
-                        next_config_id = config_ids_ordered[next_index]
-                        selected_config, selected_study = config_map[next_config_id]
-                    except ValueError:
-                        # Config ID not found (shouldn't happen, but safety check)
-                        first_config_id = config_ids_ordered[0]
-                        selected_config, selected_study = config_map[first_config_id]
-                else:
-                    # No responses yet, start with first config
-                    first_config_id = config_ids_ordered[0]
-                    selected_config, selected_study = config_map[first_config_id]
-
-            if self._check_deduplication(selected_config, selected_study):
+                config_module = get_module((config, study))
+                
+                if self.trigger_type == SurveyConfiguration.TriggerType.MODULE_COMPLETION:
+                    if context_module is not None:
+                        if config_module > context_module:
+                            continue
+                    elif config_module is not None:
+                        continue
+                
+                eligible_configs.append((config, study))
+            
+            if not eligible_configs:
                 logger.info(
-                    "[survey-trigger] skip: deduplication check failed | user_id=%s survey_config_id=%s survey_study_id=%s",
+                    "[survey-trigger] skip: no eligible configs for context | user_id=%s trigger_type=%s study_id=%s module=%s",
                     self.user.id,
-                    selected_config.id,
-                    selected_study.id,
+                    self.trigger_type,
+                    active_study.id,
+                    context_module,
                 )
                 continue
-
-            survey_response = self._create_response(selected_config, selected_study)
-            if survey_response:
-                logger.info(
-                    "[survey-trigger] created | user_id=%s survey_config_id=%s survey_study_id=%s survey_response_id=%s last_responses=%s total_configs=%s",
-                    self.user.id,
-                    selected_config.id,
-                    selected_study.id,
-                    survey_response.id,
-                    list(last_responses),
-                    len(configs_for_study),
-                )
-                return survey_response
+            
+            # Conditional Hazard-Based Sampling ONLY for MODULE_COMPLETION
+            # For other triggers, each configuration is independent
+            if self.trigger_type == SurveyConfiguration.TriggerType.MODULE_COMPLETION:
+                # Use conditional hazard-based sampling with cumulative priorities
+                previous_priority = 0.0
+                
+                for config, study in eligible_configs:
+                    config_module = get_module((config, study))
+                    
+                    current_priority = config.priority if config.priority is not None else 100.0
+                    
+                    if previous_priority >= 100.0:
+                        conditional_probability = 0.0
+                    elif previous_priority >= current_priority:
+                        conditional_probability = 0.0
+                    else:
+                        conditional_probability = (current_priority - previous_priority) / (100.0 - previous_priority)
+                    
+                    hash_input = f"{self.user.id}_{active_study.id}_{config_module}"
+                    hash_value = hash(hash_input)
+                    random_value = abs(hash_value) % 100
+                    
+                    conditional_probability_percent = conditional_probability * 100.0
+                    
+                    if random_value >= conditional_probability_percent:
+                        logger.info(
+                            "[survey-trigger] skip: conditional probability | user_id=%s survey_config_id=%s module=%s current_priority=%s prev_priority=%s conditional_prob=%s random_value=%s",
+                            self.user.id,
+                            config.id,
+                            config_module,
+                            current_priority,
+                            previous_priority,
+                            conditional_probability_percent,
+                            random_value,
+                        )
+                        previous_priority = current_priority
+                        continue
+                    
+                    if self._check_deduplication(config, active_study):
+                        logger.info(
+                            "[survey-trigger] skip: deduplication check failed | user_id=%s survey_config_id=%s survey_study_id=%s",
+                            self.user.id,
+                            config.id,
+                            active_study.id,
+                        )
+                        previous_priority = current_priority
+                        continue
+                    
+                    survey_response = self._create_response(config, active_study)
+                    if survey_response:
+                        logger.info(
+                            "[survey-trigger] created | user_id=%s survey_config_id=%s survey_study_id=%s survey_response_id=%s module=%s current_priority=%s prev_priority=%s conditional_prob=%s",
+                            self.user.id,
+                            config.id,
+                            active_study.id,
+                            survey_response.id,
+                            config_module,
+                            current_priority,
+                            previous_priority,
+                            conditional_probability_percent,
+                        )
+                        return survey_response
+                    
+                    previous_priority = current_priority
+            else:
+                # For non-module triggers: use first eligible config (each config is independent)
+                # Priority field is ignored for non-module triggers
+                for config, study in eligible_configs:
+                    if self._check_deduplication(config, active_study):
+                        logger.info(
+                            "[survey-trigger] skip: deduplication check failed | user_id=%s survey_config_id=%s survey_study_id=%s",
+                            self.user.id,
+                            config.id,
+                            active_study.id,
+                        )
+                        continue
+                    
+                    survey_response = self._create_response(config, active_study)
+                    if survey_response:
+                        logger.info(
+                            "[survey-trigger] created | user_id=%s survey_config_id=%s survey_study_id=%s survey_response_id=%s trigger_type=%s",
+                            self.user.id,
+                            config.id,
+                            active_study.id,
+                            survey_response.id,
+                            self.trigger_type,
+                        )
+                        return survey_response
 
         logger.info(
             "[survey-trigger] no response created | user_id=%s trigger_type=%s academy_id=%s studies_checked=%s filtered_out=%s",
@@ -407,6 +461,7 @@ class SurveyManager:
 
         return True
 
+
     def _check_deduplication(self, survey_config: SurveyConfiguration, active_study: SurveyStudy) -> bool:
         """
         Check if user already has a response for this config+trigger.
@@ -421,7 +476,6 @@ class SurveyManager:
             trigger_context__trigger_type=self.trigger_type,
         ).exclude(status=SurveyResponse.Status.EXPIRED)
 
-        # Add trigger-specific deduplication filters
         if self.trigger_type == SurveyConfiguration.TriggerType.COURSE_COMPLETION:
             cohort_id = self.context.get("cohort_id")
             cohort = self.context.get("cohort")
@@ -472,7 +526,6 @@ class SurveyManager:
 
     def _create_response(self, survey_config: SurveyConfiguration, active_study: SurveyStudy) -> SurveyResponse | None:
         """Create survey response for the user."""
-        # Import here to avoid circular import
         from breathecode.feedback.actions import create_survey_response
 
         return create_survey_response(survey_config, self.user, self.context, survey_study=active_study)

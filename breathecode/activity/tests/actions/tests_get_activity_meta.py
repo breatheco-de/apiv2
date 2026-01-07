@@ -95,5 +95,6 @@ class MediaTestSuite(MediaTestCase):
             with patch.object(FillActivityMeta, func, MagicMock(return_value=obj)) as mock:
                 meta = get_activity_meta(kind, related_type=path, related_id=1)
 
-                self.bc.check.calls(mock.call_args_list, [call(kind, 1, None)])
+                expected_call = call(kind, 1, None, None) if func == "user" else call(kind, 1, None)
+                self.bc.check.calls(mock.call_args_list, [expected_call])
                 self.assertEqual(meta, obj)

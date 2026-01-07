@@ -1,3 +1,4 @@
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers
@@ -569,6 +570,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
             "academy",
             "cohorts",
             "asset_slugs",
+            "priority",
             "created_by",
             "created_at",
             "updated_at",
@@ -581,6 +583,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
             "trigger_type": {"required": False, "allow_null": True},
             "questions": {"required": False},
             "syllabus": {"required": False},
+            "priority": {"required": False, "allow_null": True},
         }
 
     def validate_syllabus(self, value):
@@ -608,7 +611,7 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
 
         if "asset_slug" in value and value["asset_slug"] is not None and not isinstance(value["asset_slug"], str):
             raise ValidationException("'asset_slug' must be a string", slug="invalid-syllabus-filter-asset-slug")
-
+        
         return value
 
     def validate_questions(self, value):
@@ -782,6 +785,25 @@ class SurveyQuestionTemplateSerializer(serializers.ModelSerializer):
 
 
 class SurveyStudySerializer(serializers.ModelSerializer):
+    def validate_survey_configurations(self, value):
+        """
+        All configurations inside a study must share the same trigger_type.
+        This prevents mixing realtime triggers in a single campaign.
+        """
+
+        trigger_types = {x.trigger_type for x in value}
+        if len(trigger_types) <= 1:
+            return value
+
+        trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
+        raise ValidationException(
+            translation(
+                en=f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}",
+                es=f"Todas las configuraciones de un estudio deben tener el mismo trigger_type, se encontró: {trigger_types_str}",
+            ),
+            slug="mixed-trigger-types",
+        )
+
     class Meta:
         model = SurveyStudy
         fields = [
@@ -799,6 +821,7 @@ class SurveyStudySerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "academy", "stats", "created_at", "updated_at"]
+
 
 class SurveyAnswerSerializer(serializers.Serializer):
     """Serializer for validating survey answers."""
