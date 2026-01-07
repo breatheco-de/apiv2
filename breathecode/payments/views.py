@@ -22,10 +22,10 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.events.models import EventType
-from breathecode.mentorship.models import MentorshipService
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language, get_user_settings
 from breathecode.commission.tasks import register_referral_from_invoice
+from breathecode.events.models import EventType
+from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
@@ -76,9 +76,8 @@ from breathecode.payments.serializers import (
     BillingTeamAutoRechargeSerializer,
     CohortSetSerializer,
     CouponSerializer,
-    EventTypeSetSerializer,
-    MentorshipServiceSetSerializer,
     CreditNoteSerializer,
+    EventTypeSetSerializer,
     FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
@@ -103,6 +102,7 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
@@ -513,7 +513,7 @@ class AcademyCohortSetView(APIView):
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
-    @capable_of("read_plan")
+    @capable_of("crud_plan")
     def get(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
         """Get all cohort sets or a specific one."""
         handler = self.extensions(request)
@@ -650,7 +650,7 @@ class AcademyCohortSetCohortView(APIView):
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
-    @capable_of("read_plan")
+    @capable_of("crud_plan")
     def get(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
         """Get all cohorts in a CohortSet."""
         handler = self.extensions(request)
