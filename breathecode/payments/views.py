@@ -22,6 +22,8 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort
+from breathecode.events.models import EventType
+from breathecode.mentorship.models import MentorshipService
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language, get_user_settings
 from breathecode.commission.tasks import register_referral_from_invoice
 from breathecode.payments import actions, tasks
@@ -74,6 +76,8 @@ from breathecode.payments.serializers import (
     BillingTeamAutoRechargeSerializer,
     CohortSetSerializer,
     CouponSerializer,
+    EventTypeSetSerializer,
+    MentorshipServiceSetSerializer,
     CreditNoteSerializer,
     FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
@@ -546,7 +550,7 @@ class AcademyCohortSetView(APIView):
 
         # Parameters to clone a cohort set of a plan with additional cohorts
         plan_to_clone = request.data.get("plan_to_clone")
-        cohort_ids = request.data.get("cohorts_ids")
+        cohort_ids = request.data.get("cohort_ids")
 
         serializer = CohortSetSerializer(data=data)
         if serializer.is_valid():
@@ -793,6 +797,370 @@ class AcademyCohortSetCohortView(APIView):
         cohort_set.cohorts.remove(*items)
 
         return Response({"status": "ok"})
+
+
+class AcademyMentorshipServiceSetView(APIView):
+    """Manage MentorshipServiceSets for an academy."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_plan")
+    def get(self, request, mentorship_service_set_id=None, mentorship_service_set_slug=None, academy_id=None):
+        """Get all mentorship service sets or a specific one."""
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if mentorship_service_set_id or mentorship_service_set_slug:
+            # Get specific mentorship service set
+            mentorship_service_set = MentorshipServiceSet.objects.filter(
+                Q(id=mentorship_service_set_id) | Q(slug=mentorship_service_set_slug), academy__id=academy_id
+            ).first()
+            if not mentorship_service_set:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="MentorshipServiceSet not found",
+                        es="MentorshipServiceSet no encontrado",
+                        slug="not-found",
+                    ),
+                    code=404,
+                )
+
+            serializer = GetMentorshipServiceSetSerializer(mentorship_service_set, many=False)
+            return handler.response(serializer.data)
+
+        # Get all mentorship service sets
+        items = MentorshipServiceSet.objects.filter(academy__id=academy_id)
+        items = handler.queryset(items)
+        serializer = GetMentorshipServiceSetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        """Create a new MentorshipServiceSet."""
+        lang = get_user_language(request)
+
+        data = request.data.copy()
+        data["academy"] = academy_id
+
+        # Optional parameters to clone a mentorship service set of a plan with additional services
+        plan_to_clone = request.data.get("plan_to_clone")
+        mentorship_service_ids = request.data.get("mentorship_service_ids")
+
+        serializer = MentorshipServiceSetSerializer(data=data)
+        if serializer.is_valid():
+            with transaction.atomic():
+                mentorship_service_set = serializer.save()
+
+                if plan_to_clone and mentorship_service_ids:
+                    plan = Plan.objects.filter(id=plan_to_clone).first()
+                    if plan:
+                        if plan.mentorship_service_set:
+                            mentorship_service_set.mentorship_services.set(
+                                plan.mentorship_service_set.mentorship_services.all()
+                            )
+
+                        plan.mentorship_service_set = mentorship_service_set
+                        plan.save()
+
+                        if isinstance(mentorship_service_ids, str):
+                            ids = [int(x.strip()) for x in mentorship_service_ids.split(",")]
+                        else:
+                            ids = mentorship_service_ids
+
+                        services_to_add = MentorshipService.objects.filter(id__in=ids, academy__id=academy_id)
+                        if services_to_add.exists() and services_to_add.count() == len(ids):
+                            mentorship_service_set.mentorship_services.add(*services_to_add)
+                        else:
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en=f"One or more mentorship services don't exist or don't belong to academy {academy_id}",
+                                    es=f"Uno o más servicios de mentoría no existen o no pertenecen a la academia {academy_id}",
+                                )
+                            )
+
+                    else:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Plan not found",
+                                es="Plan no encontrado",
+                            ),
+                            slug="plan-not-found",
+                            code=404,
+                        )
+                elif (plan_to_clone and not mentorship_service_ids) or (not plan_to_clone and mentorship_service_ids):
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Both plan and additional mentorship services are required to clone a mentorship service set",
+                            es="Se requiere tanto el plan como los servicios de mentoría adicionales para clonar un mentorship service set",
+                        ),
+                        code=400,
+                    )
+                return Response(GetMentorshipServiceSetSerializer(mentorship_service_set, many=False).data, status=201)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_plan")
+    def put(self, request, mentorship_service_set_id=None, mentorship_service_set_slug=None, academy_id=None):
+        """Add mentorship services to a MentorshipServiceSet."""
+        lang = get_user_language(request)
+
+        errors = []
+        mentorship_service_set = MentorshipServiceSet.objects.filter(
+            Q(id=mentorship_service_set_id) | Q(slug=mentorship_service_set_slug), academy__id=academy_id
+        ).first()
+        if not mentorship_service_set:
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en="MentorshipServiceSet not found",
+                        es="MentorshipServiceSet no encontrado",
+                        slug="not-found",
+                    )
+                )
+            )
+
+        # Build query for mentorship services
+        service_ids = request.GET.get("id")
+        service_slugs = request.GET.get("slug")
+
+        query = Q()
+        if service_ids:
+            ids = [int(x.strip()) for x in service_ids.split(",")] if "," in service_ids else [int(service_ids)]
+            query |= Q(id__in=ids)
+
+        if service_slugs:
+            slugs = (
+                [x.strip().lower() for x in service_slugs.split(",")]
+                if "," in service_slugs
+                else [service_slugs.lower()]
+            )
+            query |= Q(slug__in=slugs)
+
+        if not query:
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en="Missing id or slug parameter",
+                        es="Falta el parámetro id o slug",
+                        slug="missing-params",
+                    )
+                )
+            )
+
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        # Filter mentorship services by academy
+        items = MentorshipService.objects.filter(query, academy__id=academy_id)
+
+        if not items.exists():
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en="MentorshipService not found",
+                        es="Servicio de mentoría no encontrado",
+                        slug="mentorship-service-not-found",
+                    )
+                )
+            )
+
+        if errors:
+            raise ValidationException(errors, code=404)
+
+        to_add = set()
+        for item in items:
+            if item not in mentorship_service_set.mentorship_services.all():
+                to_add.add(item)
+
+        if to_add:
+            mentorship_service_set.mentorship_services.add(*to_add)
+
+        return Response({"status": "ok"}, status=status.HTTP_201_CREATED if to_add else status.HTTP_200_OK)
+
+
+class AcademyEventTypeSetView(APIView):
+    """Manage EventTypeSets for an academy."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_plan")
+    def get(self, request, event_type_set_id=None, event_type_set_slug=None, academy_id=None):
+        """Get all event type sets or a specific one."""
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if event_type_set_id or event_type_set_slug:
+            # Get specific event type set
+            event_type_set = EventTypeSet.objects.filter(
+                Q(id=event_type_set_id) | Q(slug=event_type_set_slug), academy__id=academy_id
+            ).first()
+            if not event_type_set:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="EventTypeSet not found",
+                        es="EventTypeSet no encontrado",
+                        slug="not-found",
+                    ),
+                    code=404,
+                )
+
+            serializer = GetEventTypeSetSerializer(event_type_set, many=False)
+            return handler.response(serializer.data)
+
+        # Get all event type sets
+        items = EventTypeSet.objects.filter(academy__id=academy_id)
+        items = handler.queryset(items)
+        serializer = GetEventTypeSetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        """Create a new EventTypeSet."""
+        lang = get_user_language(request)
+
+        data = request.data.copy()
+        data["academy"] = academy_id
+
+        # Optional parameters to clone an event type set of a plan with additional event types
+        plan_to_clone = request.data.get("plan_to_clone")
+        event_type_ids = request.data.get("event_type_ids")
+
+        serializer = EventTypeSetSerializer(data=data)
+        if serializer.is_valid():
+            with transaction.atomic():
+                event_type_set = serializer.save()
+
+                if plan_to_clone and event_type_ids:
+                    plan = Plan.objects.filter(id=plan_to_clone).first()
+                    if plan:
+                        if plan.event_type_set:
+                            event_type_set.event_types.set(plan.event_type_set.event_types.all())
+
+                        plan.event_type_set = event_type_set
+                        plan.save()
+
+                        if isinstance(event_type_ids, str):
+                            ids = [int(x.strip()) for x in event_type_ids.split(",")]
+                        else:
+                            ids = event_type_ids
+
+                        event_types_to_add = EventType.objects.filter(id__in=ids, academy__id=academy_id)
+                        if event_types_to_add.exists() and event_types_to_add.count() == len(ids):
+                            event_type_set.event_types.add(*event_types_to_add)
+                        else:
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en=f"One or more event types don't exist or don't belong to academy {academy_id}",
+                                    es=f"Uno o más tipos de evento no existen o no pertenecen a la academia {academy_id}",
+                                )
+                            )
+
+                    else:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Plan not found",
+                                es="Plan no encontrado",
+                            ),
+                            slug="plan-not-found",
+                            code=404,
+                        )
+                elif (plan_to_clone and not event_type_ids) or (not plan_to_clone and event_type_ids):
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Both plan and additional event types are required to clone an event type set",
+                            es="Se requiere tanto el plan como los tipos de evento adicionales para clonar un event type set",
+                        ),
+                        code=400,
+                    )
+                return Response(GetEventTypeSetSerializer(event_type_set, many=False).data, status=201)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_plan")
+    def put(self, request, event_type_set_id=None, event_type_set_slug=None, academy_id=None):
+        """Add event types to an EventTypeSet."""
+        lang = get_user_language(request)
+
+        errors = []
+        event_type_set = EventTypeSet.objects.filter(
+            Q(id=event_type_set_id) | Q(slug=event_type_set_slug), academy__id=academy_id
+        ).first()
+        if not event_type_set:
+            errors.append(
+                C(translation(lang, en="EventTypeSet not found", es="EventTypeSet no encontrado", slug="not-found"))
+            )
+
+        # Build query for event types
+        event_type_ids = request.GET.get("id")
+        event_type_slugs = request.GET.get("slug")
+
+        query = Q()
+        if event_type_ids:
+            ids = (
+                [int(x.strip()) for x in event_type_ids.split(",")] if "," in event_type_ids else [int(event_type_ids)]
+            )
+            query |= Q(id__in=ids)
+
+        if event_type_slugs:
+            slugs = (
+                [x.strip().lower() for x in event_type_slugs.split(",")]
+                if "," in event_type_slugs
+                else [event_type_slugs.lower()]
+            )
+            query |= Q(slug__in=slugs)
+
+        if not query:
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en="Missing id or slug parameter",
+                        es="Falta el parámetro id o slug",
+                        slug="missing-params",
+                    )
+                )
+            )
+
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        # Filter event types by academy
+        items = EventType.objects.filter(query, academy__id=academy_id)
+
+        if not items.exists():
+            errors.append(
+                C(
+                    translation(
+                        lang, en="EventType not found", es="Tipo de evento no encontrado", slug="event-type-not-found"
+                    )
+                )
+            )
+
+        if errors:
+            raise ValidationException(errors, code=404)
+
+        to_add = set()
+        for item in items:
+            if item not in event_type_set.event_types.all():
+                to_add.add(item)
+
+        if to_add:
+            event_type_set.event_types.add(*to_add)
+
+        return Response({"status": "ok"}, status=status.HTTP_201_CREATED if to_add else status.HTTP_200_OK)
 
 
 class ServiceView(APIView):

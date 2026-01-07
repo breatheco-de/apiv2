@@ -19,11 +19,13 @@ import dj_database_url
 import django_heroku
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+from dotenv import load_dotenv
 from linked_services.core import settings
 
 from breathecode.setup import configure_redis
 
 settings.set_settings(app_name="breathecode")
+load_dotenv()
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

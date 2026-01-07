@@ -15,7 +15,9 @@ from breathecode.payments.models import (
     CohortSet,
     Coupon,
     Currency,
+    EventTypeSet,
     FinancingOption,
+    MentorshipServiceSet,
     PaymentMethod,
     Plan,
     PlanOffer,
@@ -756,10 +758,14 @@ class GetMentorshipServiceSetSmallSerializer(serpy.Serializer):
 
 class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
     academy_services = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_mentorship_service_sets=obj)
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
 
 
 class GetCohortSetSerializer(serpy.Serializer):
@@ -793,6 +799,22 @@ class CohortSetSerializer(serializers.ModelSerializer):
         fields = ("slug", "academy")
 
 
+class MentorshipServiceSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating MentorshipServiceSet."""
+
+    class Meta:
+        model = MentorshipServiceSet
+        fields = ("slug", "academy")
+
+
+class EventTypeSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating EventTypeSet."""
+
+    class Meta:
+        model = EventTypeSet
+        fields = ("slug", "academy")
+
+
 class GetEventTypeSerializer(serpy.Serializer):
 
     id = serpy.Field()
@@ -817,10 +839,14 @@ class GetEventTypeSetSmallSerializer(serpy.Serializer):
 
 class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
     academy_services = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_event_type_sets=obj)
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
 
 
 class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
