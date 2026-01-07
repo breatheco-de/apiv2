@@ -16,7 +16,7 @@ from linked_services.rest_framework.types import LinkedApp, LinkedHttpRequest, L
 from redis.exceptions import LockError
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
@@ -539,17 +539,65 @@ class AcademyCohortSetView(APIView):
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
         """Create a new CohortSet."""
-        # lang = get_user_language(request)
+        lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
 
+        # Parameters to clone a cohort set of a plan with additional cohorts
+        plan_to_clone = request.data.get("plan_to_clone")
+        cohort_ids = request.data.get("cohorts_ids")
+
         serializer = CohortSetSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            # Fetch the created cohort set with relationships
-            cohort_set = CohortSet.objects.get(id=serializer.data["id"])
-            return Response(GetCohortSetSerializer(cohort_set, many=False).data, status=201)
+            with transaction.atomic():
+                cohort_set = serializer.save()
+
+                if plan_to_clone and cohort_ids:
+                    plan = Plan.objects.filter(id=plan_to_clone).first()
+                    if plan:
+                        if plan.cohort_set:
+                            cohort_set.cohorts.set(plan.cohort_set.cohorts.all())
+
+                        plan.cohort_set = cohort_set
+                        plan.save()
+                        if isinstance(cohort_ids, str):
+                            ids = [int(x.strip()) for x in cohort_ids.split(",")]
+                        else:
+                            ids = cohort_ids
+
+                        cohorts_to_add = Cohort.objects.filter(id__in=ids, academy__id=academy_id)
+                        if cohorts_to_add.exists() and cohorts_to_add.count() == len(ids):
+                            cohort_set.cohorts.add(*cohorts_to_add)
+                        else:
+                            raise ValidationException(
+                                translation(
+                                    lang,
+                                    en=f"One or more cohorts don't exist or don't belong to academy {academy_id}",
+                                    es=f"Una o más de las cohortes no existen o no pertenecen a la academia {academy_id}",
+                                )
+                            )
+
+                    else:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Plan not found",
+                                es="Plan no encontrado",
+                            ),
+                            slug="plan-not-found",
+                            code=404,
+                        )
+                elif (plan_to_clone and not cohort_ids) or (not plan_to_clone and cohort_ids):
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Both plan and additional cohorts are required to clone a cohort set",
+                            es="Se requiere tanto el plan como las cohortes adicionales para clonar un cohort set",
+                        ),
+                        code=400,
+                    )
+                return Response(GetCohortSetSerializer(cohort_set, many=False).data, status=201)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -847,7 +895,10 @@ class ModelServiceView(APIView):
 
         items = handler.queryset(items)
         serializer = GetServiceSerializer(
-            items, many=True, context={"academy_id": academy_id or request.GET.get("academy")}, select=request.GET.get("select")
+            items,
+            many=True,
+            context={"academy_id": academy_id or request.GET.get("academy")},
+            select=request.GET.get("select"),
         )
 
         return handler.response(serializer.data)
@@ -4326,7 +4377,7 @@ class PayView(APIView):
                 invoice.amount_breakdown = actions.calculate_invoice_breakdown(
                     bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
                 )
-                invoice.save(update_fields=["amount_breakdown"])    
+                invoice.save(update_fields=["amount_breakdown"])
 
                 # Calculate is_recurrent based on:
                 # 1. If it's a free trial -> False
@@ -4648,9 +4699,9 @@ class CoinbaseChargeView(APIView):
                                 pass
 
                         transaction.savepoint_commit(sid)
-                        
+
                         has_plan_addons = bag.plan_addons.exists()
-                        
+
                         if original_price == 0:
                             tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
 
@@ -5561,7 +5612,7 @@ class CurrencyView(APIView):
     def get(self, request, currency_code=None):
         """
         Get currency or list of currencies.
-        
+
         Query parameters:
         - code: Filter by currency code (e.g., USD, EUR)
         - name: Filter by currency name
@@ -5948,7 +5999,6 @@ class AcademyPlanServiceItemView(APIView):
 class AcademyPlanSpecificServiceItemView(APIView):
     @capable_of("crud_plan")
     def delete(self, request, academy_id=None, plan_id=None, service_item_id=None):
-        lang = get_user_language(request)
 
         plan = (
             Plan.objects.filter(id=plan_id)

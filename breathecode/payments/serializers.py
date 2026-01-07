@@ -289,6 +289,8 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
     cohort_set = serpy.MethodField()
+    mentorship_service_set = serpy.MethodField()
+    event_type_set = serpy.MethodField()
 
     def get_has_available_cohorts(self, obj):
         return bool(obj.cohort_set)
@@ -297,6 +299,16 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
         if not obj.cohort_set:
             return None
         return GetTinyCohortSetSerializer(obj.cohort_set, many=False).data
+
+    def get_mentorship_service_set(self, obj):
+        if not obj.mentorship_service_set:
+            return None
+        return GetMentorshipServiceSetSmallSerializer(obj.mentorship_service_set, many=False).data
+
+    def get_event_type_set(self, obj):
+        if not obj.event_type_set:
+            return None
+        return GetEventTypeSetSmallSerializer(obj.event_type_set, many=False).data
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -755,9 +767,13 @@ class GetCohortSetSerializer(serpy.Serializer):
     slug = serpy.Field()
     academy = GetAcademySmallSerializer(many=False)
     cohorts = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_cohorts(self, obj):
         return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
 
 
 class GetTinyCohortSetSerializer(serpy.Serializer):
@@ -774,7 +790,7 @@ class CohortSetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CohortSet
-        fields = ("slug",)
+        fields = ("slug", "academy")
 
 
 class GetEventTypeSerializer(serpy.Serializer):
@@ -923,6 +939,7 @@ class GetBagSerializer(serpy.Serializer):
         _, total_after = actions.get_plan_addons_amounts_with_coupons(obj, coupons, lang="en")
         return total_after
 
+
 class CreditNoteSerializer(serpy.Serializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -943,13 +960,14 @@ class CreditNoteSerializer(serpy.Serializer):
         """Return all credit notes for the invoice associated with this credit note."""
         if not obj.invoice:
             return []
-        
+
         try:
             # Get all credit notes for this invoice, ordered by creation date
-            credit_notes = obj.invoice.credit_notes.all().order_by('created_at')
+            credit_notes = obj.invoice.credit_notes.all().order_by("created_at")
             return CreditNoteSerializer(credit_notes, many=True).data
         except Exception:
             return []
+
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
@@ -968,22 +986,26 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
 
     def get_credit_notes(self, obj):
         import logging
+
         logger = logging.getLogger(__name__)
-        
+
         # Refresh invoice to avoid stale RelatedManager issues
-        if hasattr(obj, 'refresh_from_db'):
+        if hasattr(obj, "refresh_from_db"):
             try:
                 logger.debug(f"GetInvoiceSerializer.get_credit_notes: Refreshing Invoice(id={obj.id})")
                 obj.refresh_from_db()
             except Exception as e:
                 logger.warning(f"GetInvoiceSerializer.get_credit_notes: Failed to refresh Invoice(id={obj.id}): {e}")
-        
+
         try:
             credit_notes_list = list(obj.credit_notes.all())
             return CreditNoteSerializer(credit_notes_list, many=True).data
         except TypeError as e:
-            logger.error(f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}")
+            logger.error(
+                f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}"
+            )
             return []
+
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
