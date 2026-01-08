@@ -103,7 +103,7 @@ class GetProvisioningBillDetailSerializer(serpy.Serializer):
     title = serpy.Field()
     academy = AcademyBillDetailSerializer(required=False)
     status_display = serpy.MethodField()
-    upload_task_status = serpy.MethodField()
+    upload_task = serpy.MethodField()
 
     def get_status_display(self, obj):
         status_map = {
@@ -114,7 +114,7 @@ class GetProvisioningBillDetailSerializer(serpy.Serializer):
         }
         return status_map.get(obj.status, obj.status)
 
-    def get_upload_task_status(self, obj):
+    def get_upload_task(self, obj):
         if not obj.hash:
             return None
 
@@ -129,7 +129,30 @@ class GetProvisioningBillDetailSerializer(serpy.Serializer):
         for task in tasks:
             if task.arguments and task.arguments.get("args") and len(task.arguments["args"]) > 0:
                 if task.arguments["args"][0] == obj.hash:
-                    return task.status
+                    # Format datetime fields to ISO format
+                    def format_datetime(dt):
+                        if dt is None:
+                            return None
+                        return dt.isoformat()
+
+                    return {
+                        "id": task.id,
+                        "status": task.status,
+                        "status_message": task.status_message,
+                        "task_id": task.task_id,
+                        "last_run": format_datetime(task.last_run),
+                        "started_at": format_datetime(task.started_at),
+                        "attempts": task.attempts,
+                        "current_page": task.current_page,
+                        "total_pages": task.total_pages,
+                        "priority": task.priority,
+                        "killed": task.killed,
+                        "fixed": task.fixed,
+                        "exception_module": task.exception_module,
+                        "exception_name": task.exception_name,
+                        "created_at": format_datetime(task.created_at),
+                        "updated_at": format_datetime(task.updated_at),
+                    }
 
         return None
 

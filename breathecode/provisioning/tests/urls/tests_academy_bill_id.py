@@ -240,7 +240,7 @@ class MarketingTestSuite(ProvisioningTestCase):
             "status": "DUE",
             "status_display": "UNDER_REVIEW",
             "status_details": None,
-            "upload_task_status": None,
+            "upload_task": None,
             "paid_at": None,
             "fee": "0.000000000",
             "stripe_url": None,
@@ -287,7 +287,9 @@ class MarketingTestSuite(ProvisioningTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        self.assertEqual(json["upload_task_status"], "DONE")
+        self.assertIsNotNone(json["upload_task"])
+        self.assertEqual(json["upload_task"]["status"], "DONE")
+        self.assertEqual(json["upload_task"]["id"], model.task_manager.id)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     # When: get bill detail with no matching TaskManager
@@ -312,7 +314,7 @@ class MarketingTestSuite(ProvisioningTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        self.assertIsNone(json["upload_task_status"])
+        self.assertIsNone(json["upload_task"])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     # When: get bill detail with bill hash but no TaskManager
@@ -336,5 +338,5 @@ class MarketingTestSuite(ProvisioningTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        self.assertIsNone(json["upload_task_status"])
+        self.assertIsNone(json["upload_task"])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
