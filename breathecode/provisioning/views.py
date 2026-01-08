@@ -24,9 +24,11 @@ from breathecode.authenticate.models import ProfileAcademy
 from breathecode.notify.actions import get_template_content
 from breathecode.provisioning import tasks
 from breathecode.provisioning.serializers import (
+    GetProvisioningBillDetailSerializer,
     GetProvisioningBillSerializer,
     GetProvisioningBillSmallSerializer,
     GetProvisioningProfile,
+    GetProvisioningUserConsumptionDetailSerializer,
     GetProvisioningUserConsumptionSerializer,
     ProvisioningBillHTMLSerializer,
     ProvisioningBillSerializer,
@@ -695,7 +697,7 @@ class AcademyBillView(APIView):
             if bill is None:
                 raise ValidationException("Provisioning Bill not found", code=404, slug="provisioning_bill-not-found")
 
-            serializer = GetProvisioningBillSerializer(bill, many=False)
+            serializer = GetProvisioningBillDetailSerializer(bill, many=False)
             return Response(serializer.data)
 
         items = ProvisioningBill.objects.filter(academy__id=academy_id)
@@ -703,6 +705,8 @@ class AcademyBillView(APIView):
         status = request.GET.get("status", None)
         if status is not None:
             items = items.filter(status__in=status.upper().split(","))
+
+        items = items.order_by(request.GET.get("sort", "-created_at"))
 
         items = handler.queryset(items)
         serializer = GetProvisioningBillSmallSerializer(items, many=True)
@@ -730,6 +734,35 @@ class AcademyBillView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyBillConsumptionsView(APIView):
+    """
+    Get paginated consumptions for a specific bill.
+    """
+
+    extensions = APIViewExtensions(paginate=True)
+
+    @capable_of("read_provisioning_bill")
+    def get(self, request, academy_id=None, bill_id=None):
+        handler = self.extensions(request)
+
+        if bill_id is None:
+            raise ValidationException("bill_id is required", code=400, slug="bill-id-required")
+
+        bill = ProvisioningBill.objects.filter(academy__id=academy_id, id=bill_id).first()
+
+        if bill is None:
+            raise ValidationException(
+                "Provisioning Bill not found", code=404, slug="provisioning_bill-not-found"
+            )
+
+        consumptions = ProvisioningUserConsumption.objects.filter(bills=bill).order_by("username")
+
+        consumptions = handler.queryset(consumptions)
+        serializer = GetProvisioningUserConsumptionDetailSerializer(consumptions, many=True)
+
+        return handler.response(serializer.data)
 
 
 class ProvisioningProfileView(APIView):

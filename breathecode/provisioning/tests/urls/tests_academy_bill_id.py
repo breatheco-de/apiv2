@@ -211,3 +211,130 @@ class MarketingTestSuite(ProvisioningTestCase):
                     self.bc.format.to_dict(model.provisioning_bill),
                 ],
             )
+
+    # When: get bill detail
+    # Then: should return bill with academy information and status display
+    def test_get_bill_detail__with_academy_info(self):
+
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="read_provisioning_bill",
+            provisioning_bill=1,
+            academy=1,
+        )
+        self.client.force_authenticate(model.user)
+
+        self.headers(academy=1)
+
+        url = reverse_lazy("provisioning:academy_bill_id", kwargs={"bill_id": 1})
+
+        response = self.client.get(url)
+
+        json = response.json()
+        expected = {
+            "id": 1,
+            "vendor": None,
+            "total_amount": "0.000000000",
+            "status": "DUE",
+            "status_display": "UNDER_REVIEW",
+            "status_details": None,
+            "upload_task_status": None,
+            "paid_at": None,
+            "fee": "0.000000000",
+            "stripe_url": None,
+            "created_at": self.bc.datetime.to_iso_string(model.provisioning_bill.created_at),
+            "title": None,
+            "academy": {
+                "id": 1,
+                "name": model.academy.name,
+                "slug": model.academy.slug,
+                "feedback_email": model.academy.feedback_email,
+                "legal_name": model.academy.legal_name,
+                "logo_url": model.academy.logo_url,
+            },
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # When: get bill detail with TaskManager upload task
+    # Then: should return upload_task_status
+    def test_get_bill_detail__with_upload_task_status(self):
+
+        hash_value = "test-hash-123"
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="read_provisioning_bill",
+            provisioning_bill={"hash": hash_value},
+            academy=1,
+            task_manager={
+                "task_module": "breathecode.provisioning.tasks",
+                "task_name": "upload",
+                "arguments": {"args": [hash_value]},
+                "status": "DONE",
+            },
+        )
+        self.client.force_authenticate(model.user)
+
+        self.headers(academy=1)
+
+        url = reverse_lazy("provisioning:academy_bill_id", kwargs={"bill_id": 1})
+
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertEqual(json["upload_task_status"], "DONE")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # When: get bill detail with no matching TaskManager
+    # Then: should return upload_task_status as None
+    def test_get_bill_detail__with_no_task_manager(self):
+
+        hash_value = "test-hash-123"
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="read_provisioning_bill",
+            provisioning_bill={"hash": hash_value},
+            academy=1,
+        )
+        self.client.force_authenticate(model.user)
+
+        self.headers(academy=1)
+
+        url = reverse_lazy("provisioning:academy_bill_id", kwargs={"bill_id": 1})
+
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertIsNone(json["upload_task_status"])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # When: get bill detail with bill hash but no TaskManager
+    # Then: should return upload_task_status as None
+    def test_get_bill_detail__with_hash_no_task_manager(self):
+
+        model = self.bc.database.create(
+            user=1,
+            profile_academy=1,
+            role=1,
+            capability="read_provisioning_bill",
+            provisioning_bill={"hash": None},
+            academy=1,
+        )
+        self.client.force_authenticate(model.user)
+
+        self.headers(academy=1)
+
+        url = reverse_lazy("provisioning:academy_bill_id", kwargs={"bill_id": 1})
+
+        response = self.client.get(url)
+
+        json = response.json()
+        self.assertIsNone(json["upload_task_status"])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
