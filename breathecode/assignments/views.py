@@ -912,6 +912,7 @@ class TaskMeView(APIView):
             tasks_activity.add_activity.delay(
                 request.user.id, "open_syllabus_module", related_type="assignments.Task", related_id=tasks[0].id
             )
+            tasks.sync_pending_tasks_to_history_log.delay(tasks[0].id)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
