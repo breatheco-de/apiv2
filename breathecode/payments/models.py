@@ -22,7 +22,6 @@ from django.db.models import Q, QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort, Country
 from breathecode.authenticate.actions import get_user_settings
 from breathecode.authenticate.models import UserInvite
@@ -282,6 +281,10 @@ class Service(AbstractAsset):
     )
     type = models.CharField(max_length=22, choices=Type, default=Type.COHORT_SET, help_text="Service type")
     consumer = models.CharField(max_length=15, choices=Consumer, default=Consumer.NO_SET, help_text="Service type")
+    is_model_service = models.BooleanField(
+        default=False,
+        help_text="If true, this service will be considered a model service and will be suggested to all academies at setup time"
+    )
 
     def __str__(self):
         return self.slug
@@ -1022,6 +1025,16 @@ class AcademyService(models.Model):
         if required_integer_fields and not self.max_items.is_integer():
             raise forms.ValidationError("max_items must be an integer")
 
+        if self.id and self.service.type == Service.Type.SEAT:
+            try:
+                original = type(self).objects.get(pk=self.pk)
+                if original.price_per_unit != self.price_per_unit:
+                    raise forms.ValidationError(
+                        _("Cannot change price_per_unit for SEAT services. Seat prices are immutable to maintain payment integrity.")
+                    )
+            except type(self).DoesNotExist:
+                pass
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
@@ -1112,6 +1125,14 @@ class Plan(AbstractPriceByTime):
         related_name="plans_with_add_ons",
     )
 
+    plan_addons = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        blank=True,
+        related_name="parent_plans",
+        help_text="Addon plans that can be attached to this main plan",
+    )
+
     consumption_strategy = models.CharField(
         max_length=8,
         help_text="Consumption strategy",
@@ -1120,7 +1141,15 @@ class Plan(AbstractPriceByTime):
     )
 
     owner = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True, help_text="Academy owner")
-    is_onboarding = models.BooleanField(default=False, help_text="Is onboarding plan?", db_index=True)
+    is_onboarding = models.BooleanField(
+        default=False,
+        help_text=(
+            "If the plan is tagged for onboarding, the front end will include it in the plans that are meant to be "
+            "used as first payment plans for users; other plans focus on upsell or cross-sell so they can be ignored "
+            "by first-time users"
+        ),
+        db_index=True,
+    )
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
 
     pricing_ratio_exceptions = models.JSONField(
@@ -1200,6 +1229,17 @@ class Plan(AbstractPriceByTime):
         if self.consumption_strategy == Plan.ConsumptionStrategy.BOTH:
             raise forms.ValidationError("Consumption strategy BOTH is not implemented yet")
 
+        if self.pk:
+            has_financing_options = self.financing_options.exists()
+            has_plan_addons = self.plan_addons.exists()
+            is_effectively_free = not have_price and not has_financing_options
+
+            if is_effectively_free and has_plan_addons:
+                raise forms.ValidationError(
+                    "Free plans or free trials cannot have plan addons configured; "
+                    "please remove plan_addons or set a price/financing option"
+                )
+
         return super().clean()
 
     def save(self, *args, **kwargs) -> None:
@@ -1237,7 +1277,7 @@ class PlanOffer(models.Model):
         related_name="plan_offer_to",
         help_text="Suggested plans",
         null=True,
-        blank=False,
+        blank=True,
         on_delete=models.CASCADE,
     )
     show_modal = models.BooleanField(default=False)
@@ -1383,6 +1423,24 @@ class Coupon(models.Model):
 
     offered_at = models.DateTimeField(default=None, null=True, blank=True)
     expires_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    # Statistics tracking fields
+    times_used = models.IntegerField(
+        default=0, db_index=True, help_text="Number of times this coupon has been used"
+    )
+    last_used_at = models.DateTimeField(
+        null=True, blank=True, db_index=True, help_text="When this coupon was last used"
+    )
+    stats = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Detailed statistics (only calculated for recently active coupons)",
+    )
+    stats_updated_at = models.DateTimeField(
+        null=True, blank=True, help_text="When stats were last calculated"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -1434,9 +1492,9 @@ class Coupon(models.Model):
         Ensures uniqueness in the database.
         Uses an ambiguity-free character set for readability.
         """
-        READABLE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # No I, O, 0, 1, S, 5, B, 8
+        readable_chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # No I, O, 0, 1, S, 5, B, 8
         while True:
-            key = "".join(random.choices(READABLE_CHARS, k=length))
+            key = "".join(random.choices(readable_chars, k=length))
             if prefix:
                 key = f"{prefix.upper()}{key}"
             if not cls.objects.filter(slug=key).exists():
@@ -1453,7 +1511,7 @@ def limit_coupon_choices():
 
 def _default_pricing_ratio_explanation():
     """Default empty pricing ratio explanation structure."""
-    return {"plans": [], "service_items": []}
+    return {"plans": [], "service_items": [], "plan_addons": []}
 
 
 class Bag(AbstractAmountByTime):
@@ -1505,9 +1563,18 @@ class Bag(AbstractAmountByTime):
     user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Customer")
     service_items = models.ManyToManyField(ServiceItem, blank=True, help_text="Service items")
     plans = models.ManyToManyField(Plan, blank=True, help_text="Plans")
+    plan_addons = models.ManyToManyField(
+        Plan,
+        blank=True,
+        related_name="bags_as_addon",
+        help_text="Addon plans associated to this bag",
+    )
 
     is_recurrent = models.BooleanField(default=False, help_text="will it be a recurrent payment?")
     was_delivered = models.BooleanField(default=False, help_text="Was it delivered to the user?")
+    plan_addons_amount = models.FloatField(
+        default=0, help_text="One-shot amount to be charged for all plan addons in this bag"
+    )
 
     pricing_ratio_explanation = models.JSONField(
         default=_default_pricing_ratio_explanation,
@@ -1590,6 +1657,9 @@ class Bag(AbstractAmountByTime):
         super().save(*args, **kwargs)
 
         if created:
+            # Lazy import to avoid circular dependency
+            import breathecode.activity.tasks as tasks_activity
+
             tasks_activity.add_activity.delay(
                 self.user.id, "bag_created", related_type="payments.Bag", related_id=self.id
             )
@@ -1711,6 +1781,7 @@ class Invoice(models.Model):
         FULFILLED = "FULFILLED", "Fulfilled"
         REJECTED = "REJECTED", "Rejected"
         PENDING = "PENDING", "Pending"
+        PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED", "Partially refunded"
         REFUNDED = "REFUNDED", "Refunded"
         DISPUTED_AS_FRAUD = "DISPUTED_AS_FRAUD", "Disputed as fraud"
 
@@ -1723,7 +1794,7 @@ class Invoice(models.Model):
         null=True, blank=True, default=None, help_text="Date when the invoice was refunded"
     )
     status = models.CharField(
-        max_length=17, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
+        max_length=18, choices=Status, default=Status.PENDING, db_index=True, help_text="Invoice status"
     )
 
     bag = models.ForeignKey("Bag", on_delete=models.CASCADE, help_text="Bag", related_name="invoices")
@@ -1774,6 +1845,13 @@ class Invoice(models.Model):
         default=0, help_text="Amount refunded, this field will only be set when the invoice is refunded"
     )
 
+    amount_breakdown = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Breakdown of how the invoice amount is divided across plans, plan addons, and service items",
+    )
+
     coinbase_charge_id = models.CharField(
         max_length=40, null=True, default=None, blank=True, help_text="Coinbase charge id"
     )
@@ -1819,6 +1897,60 @@ class Invoice(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.email} {self.amount} ({self.currency.code})"
+
+
+class CreditNote(models.Model):
+    """Represents a credit note (nota de crédito) for refunds."""
+
+    if TYPE_CHECKING:
+        objects: TypedManager["CreditNote"]
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        ISSUED = "ISSUED", "Issued"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.CASCADE,
+        related_name="credit_notes",
+        help_text="Original invoice being refunded",
+    )
+    amount = models.FloatField(help_text="Credit note amount")
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE, help_text="Currency of the credit note")
+    reason = models.TextField(help_text="Reason for credit note")
+    issued_at = models.DateTimeField(auto_now_add=True, help_text="Date when the credit note was issued")
+    status = models.CharField(
+        max_length=10, choices=Status, default=Status.DRAFT, db_index=True, help_text="Credit note status"
+    )
+    legal_text = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Country-specific legal text for refunds",
+    )
+    country_code = models.CharField(
+        max_length=2,
+        blank=True,
+        null=True,
+        help_text="Country code for legal compliance",
+    )
+    breakdown = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Breakdown of what is being refunded (main_plan, service_items, plan_addons)",
+    )
+    refund_stripe_id = models.CharField(
+        max_length=32, null=True, default=None, blank=True, help_text="Stripe refund id if applicable"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        db_table = "payments_credit_note"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"CreditNote {self.id} for Invoice {self.invoice.id} - {self.amount} {self.currency.code}"
 
 
 class AbstractIOweYou(models.Model):
@@ -2153,11 +2285,6 @@ class PlanFinancing(AbstractIOweYou):
         if self.seat_service_item and self.seat_service_item.service.type != Service.Type.SEAT:
             raise forms.ValidationError("Seat service item must be a seat service")
 
-        if not self.monthly_price:
-            raise forms.ValidationError(
-                translation(settings.lang, en="Monthly price is required", es="Precio mensual es requerido")
-            )
-
         if not self.plan_expires_at:
             raise forms.ValidationError(
                 translation(settings.lang, en="Plan expires at is required", es="Plan expires at es requerido")
@@ -2252,10 +2379,10 @@ class PlanFinancing(AbstractIOweYou):
 
         is_paid = is_plan_financing_paid(self)
 
-        if on_create:
-            signals.planfinancing_created.send_robust(instance=self, sender=self.__class__)
-            if is_paid:
-                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+        # planfinancing_created signal is now handled by m2m_changed receivers
+        # in breathecode.notify.receivers to ensure plans and invoices are present
+        if on_create and is_paid:
+            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
@@ -2278,7 +2405,9 @@ class PlanFinancingTeam(models.Model):
         PlanFinancing, on_delete=models.CASCADE, related_name="team", help_text="Plan financing"
     )
     name = models.CharField(max_length=80, help_text="Team name")
-    seats_log = models.JSONField(default=list, blank=True, help_text="Audit log of seat changes for this financing team")
+    seats_log = models.JSONField(
+        default=list, blank=True, help_text="Audit log of seat changes for this financing team"
+    )
     additional_seats = models.PositiveIntegerField(
         default=0, help_text="Additional seats for this team excluding the owner seat"
     )
@@ -2443,10 +2572,10 @@ class Subscription(AbstractIOweYou):
 
         is_paid = is_subscription_paid(self)
 
-        if on_create:
-            signals.subscription_created.send_robust(instance=self, sender=self.__class__)
-            if is_paid:
-                signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
+        # subscription_created signal is now handled by m2m_changed receivers
+        # in breathecode.notify.receivers to ensure plans and invoices are present
+        if on_create and is_paid:
+            signals.grant_plan_permissions.send_robust(instance=self, sender=self.__class__)
 
         if old_instance and old_instance.status != self.status:
             if self.status == self.Status.ACTIVE and is_paid:
@@ -2831,6 +2960,7 @@ class Consumable(AbstractServiceItem):
         plan_financing_team: Optional["PlanFinancingTeam" | int] = None,
         plan_financing_seat: Optional["PlanFinancingSeat" | int] = None,
         extra: Optional[dict] = None,
+        include_zero_balance: bool = False,
     ) -> QuerySet["Consumable"]:
 
         if extra is None:
@@ -2962,9 +3092,18 @@ class Consumable(AbstractServiceItem):
         elif plan_financing_seat:
             param["plan_financing_seat"] = plan_financing_seat
 
+        invalid_statuses = [
+            Subscription.Status.EXPIRED,
+            Subscription.Status.DEPRECATED,
+        ]
+
+        queryset = cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
+
+        if not include_zero_balance:
+            queryset = queryset.exclude(how_many=0)
+
         return (
-            cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
-            .exclude(how_many=0)
+            queryset.exclude(Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses))
             .order_by("id")
         )
 
@@ -2981,6 +3120,7 @@ class Consumable(AbstractServiceItem):
         subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
         subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: dict = None,
+        include_zero_balance: bool = False,
     ) -> QuerySet["Consumable"]:
 
         return cls.list(
@@ -2992,6 +3132,7 @@ class Consumable(AbstractServiceItem):
             subscription_billing_team=subscription_billing_team,
             subscription_seat=subscription_seat,
             extra=extra,
+            include_zero_balance=include_zero_balance,
         )
 
     @classmethod
@@ -3491,9 +3632,7 @@ class ServiceStockScheduler(models.Model):
             raise forms.ValidationError("A ServiceStockScheduler cannot mix subscription and plan financing seats")
 
         if self.subscription_billing_team and self.plan_financing_team:
-            raise forms.ValidationError(
-                "A ServiceStockScheduler cannot mix subscription and plan financing teams"
-            )
+            raise forms.ValidationError("A ServiceStockScheduler cannot mix subscription and plan financing teams")
 
         return super().clean()
 
@@ -3631,6 +3770,12 @@ class AcademyPaymentSettings(models.Model):
         default=2,
         validators=[MaxValueValidator(14)],
         help_text="Days before expiration when early renewal is allowed, 0 means it is not allowed",
+    )
+
+    feature_flags = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Feature flags and configuration settings for academy-specific features",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

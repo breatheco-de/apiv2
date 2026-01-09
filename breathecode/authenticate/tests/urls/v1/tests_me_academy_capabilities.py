@@ -65,7 +65,7 @@ def test_single_profile_academy_with_capabilities(client, database):
     database.create(capability={"slug": "crud_student"})
     
     # Create role without capabilities first
-    database.create(role={"slug": "admin", "name": "Admin"})
+    database.create(role={"slug": "admin", "name": "System Admin"})
     # Get the actual model instance and add capabilities
     role_instance = Role.objects.get(slug="admin")
     capability1 = Capability.objects.get(slug="read_student")
@@ -107,7 +107,7 @@ def test_single_profile_academy_by_slug(client, database):
     database.create(capability={"slug": "crud_student"})
     
     # Create role without capabilities first
-    database.create(role={"slug": "admin", "name": "Admin"})
+    database.create(role={"slug": "admin", "name": "System Admin"})
     # Get the actual model instance and add capabilities
     role_instance = Role.objects.get(slug="admin")
     capability1 = Capability.objects.get(slug="read_student")
@@ -197,7 +197,7 @@ def test_profile_academy_in_different_academy(client, database):
     database.create(capability={"slug": "read_student"})
     
     # Create role without capabilities first
-    database.create(role={"slug": "admin", "name": "Admin"})
+    database.create(role={"slug": "admin", "name": "System Admin"})
     role_instance = Role.objects.get(slug="admin")
     capability1 = Capability.objects.get(slug="read_student")
     role_instance.capabilities.set([capability1])
@@ -236,7 +236,7 @@ def test_sorted_capabilities(client, database):
     database.create(capability={"slug": "beta_capability"})
     
     # Create role without capabilities first
-    database.create(role={"slug": "admin", "name": "Admin"})
+    database.create(role={"slug": "admin", "name": "System Admin"})
     role_instance = Role.objects.get(slug="admin")
     capability1 = Capability.objects.get(slug="zebra_capability")
     capability2 = Capability.objects.get(slug="alpha_capability")

@@ -105,10 +105,15 @@ PERMISSIONS = [
         "description": "Admin permission to manage organizations",
         "codename": "manage_organizations",
     },
+    {
+        "name": "CRUD career path",
+        "description": "Permission to create, read, update, and delete career paths and related global models (job families, job roles) that have academy=None",
+        "codename": "crud_career_path",
+    },
 ]
 
 GROUPS = [
-    {"name": "Admin", "permissions": [x["codename"] for x in PERMISSIONS], "inherit": []},
+    {"name": "System Admin", "permissions": [x["codename"] for x in PERMISSIONS], "inherit": []},
     {
         "name": "Default",
         "permissions": [
@@ -193,6 +198,13 @@ class Command(BaseCommand):
         for group in groups:
             instance = Group.objects.filter(name=group["name"]).first()
 
+            if instance is None and group["name"] == "System Admin":
+                legacy = Group.objects.filter(name="Admin").first()
+                if legacy is not None:
+                    legacy.name = "System Admin"
+                    legacy.save()
+                    instance = legacy
+
             # reset permissions
             if instance:
                 instance.permissions.clear()
@@ -202,7 +214,7 @@ class Command(BaseCommand):
                 instance.save()
 
             # the admin have all the permissions
-            if group["name"] == "Admin":
+            if group["name"] == "System Admin":
                 instance.permissions.set(Permission.objects.filter().exclude(content_type=content_type))
 
             permissions = list(

@@ -162,7 +162,7 @@ def test_adding_the_resource_with_id_and_no_meta(bc: Breathecode, decompress_and
     assert logging.Logger.info.call_args_list == [call(f"Executing add_activity related to {kind}")]
     assert logging.Logger.error.call_args_list == []
 
-    assert actions.get_activity_meta.call_args_list == [call(kind, "auth.User", 1, None)]
+    assert actions.get_activity_meta.call_args_list == [call(kind, "auth.User", 1, None, None)]
 
     assert decompress_and_parse(cache.get("activity:worker-0")) == [
         {
@@ -218,7 +218,7 @@ def test_adding_the_resource_with_slug_and_no_meta(bc: Breathecode, decompress_a
     assert logging.Logger.info.call_args_list == [call(f"Executing add_activity related to {kind}")]
     assert logging.Logger.error.call_args_list == []
 
-    assert actions.get_activity_meta.call_args_list == [call(kind, "auth.User", None, related_slug)]
+    assert actions.get_activity_meta.call_args_list == [call(kind, "auth.User", None, related_slug, None)]
 
     assert decompress_and_parse(cache.get("activity:worker-0")) == [
         {
@@ -278,7 +278,7 @@ def test_adding_the_resource_with_meta(bc: Breathecode, set_activity_meta, decom
     add_activity.delay(1, kind, related_type="auth.User", related_id=1)
 
     assert actions.get_activity_meta.call_args_list == [
-        call(kind, "auth.User", 1, None),
+        call(kind, "auth.User", 1, None, None),
     ]
 
     assert logging.Logger.info.call_args_list == [call(f"Executing add_activity related to {kind}")]
@@ -343,7 +343,7 @@ def test_adding_the_resource_with_meta__it_fails(bc: Breathecode, set_activity_m
     add_activity.delay(1, kind, related_type="auth.User", related_id=1)
 
     assert actions.get_activity_meta.call_args_list == [
-        call(kind, "auth.User", 1, None),
+        call(kind, "auth.User", 1, None, None),
     ]
 
     assert logging.Logger.info.call_args_list == [call(f"Executing add_activity related to {kind}")]
@@ -388,8 +388,8 @@ def test_adding_the_resource_with_meta__called_two_times(
     assert logging.Logger.error.call_args_list == []
 
     assert actions.get_activity_meta.call_args_list == [
-        call(kind, "auth.User", 1, None),
-        call(kind, "auth.User", 1, None),
+        call(kind, "auth.User", 1, None, None),
+        call(kind, "auth.User", 1, None, None),
     ]
 
     assert logging.Logger.info.call_args_list == [

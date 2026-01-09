@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from breathecode.admissions.admin import CohortAdmin as AdmissionsCohortAdmin
 from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign, CohortProxy
 from .tasks import remove_screenshot, reset_screenshot, generate_cohort_certificates
-from .actions import generate_certificate
+from .actions import generate_certificate, generate_certificate_ignoring_tasks
 from django.http import HttpResponse
 import re
 
@@ -81,13 +81,65 @@ def export_user_specialty_csv(self, request, queryset):
     return response
 
 
+@admin.display(description="🎓 Generate Certificates (Ignore Pending Tasks)")
+def generate_certificates_ignoring_tasks(modeladmin, request, queryset):
+    from django.contrib import messages
+    from capyc.rest_framework.exceptions import ValidationException
+
+    success_count = 0
+    error_count = 0
+    errors = []
+
+    for user_specialty in queryset:
+        try:
+            if not user_specialty.user:
+                errors.append(f"UserSpecialty {user_specialty.id}: No user associated")
+                error_count += 1
+                continue
+
+            if not user_specialty.cohort:
+                errors.append(f"UserSpecialty {user_specialty.id}: No cohort associated")
+                error_count += 1
+                continue
+
+            logger.debug(
+                f"Generating certificate ignoring tasks for user {user_specialty.user.id} "
+                f"in cohort {user_specialty.cohort.id}"
+            )
+            generate_certificate_ignoring_tasks(user_specialty.user, user_specialty.cohort, user_specialty.layout)
+            success_count += 1
+
+        except ValidationException as e:
+            error_msg = f"UserSpecialty {user_specialty.id} (user: {user_specialty.user.email}): {str(e)}"
+            errors.append(error_msg)
+            error_count += 1
+            logger.exception(error_msg)
+        except Exception as e:
+            error_msg = f"UserSpecialty {user_specialty.id} (user: {user_specialty.user.email}): {str(e)}"
+            errors.append(error_msg)
+            error_count += 1
+            logger.exception(error_msg)
+
+    # Show results
+    if success_count > 0:
+        messages.success(
+            request, message=f"Successfully generated {success_count} certificate(s) ignoring pending tasks"
+        )
+
+    if error_count > 0:
+        error_message = f"Failed to generate {error_count} certificate(s). Errors: " + " | ".join(errors[:5])
+        if len(errors) > 5:
+            error_message += f" ... and {len(errors) - 5} more errors"
+        messages.error(request, message=error_message)
+
+
 @admin.register(UserSpecialty)
 class UserSpecialtyAdmin(admin.ModelAdmin):
     search_fields = ["user__email", "user__first_name", "user__last_name", "cohort__name", "cohort__slug"]
     list_display = ("user", "specialty", "current_status", "expires_at", "academy", "cohort", "pdf", "preview")
     list_filter = ["specialty", "academy__slug", "cohort__slug"]
     raw_id_fields = ["user"]
-    actions = [screenshot, delete_screenshot, export_user_specialty_csv]
+    actions = [screenshot, delete_screenshot, export_user_specialty_csv, generate_certificates_ignoring_tasks]
 
     def current_status(self, obj):
         colors = {

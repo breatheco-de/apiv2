@@ -55,11 +55,15 @@ from django.urls import path
 
 from .views import (
     AcademyActivateView,
+    AcademyCohortAttendanceReportView,
     AcademyCohortHistoryView,
+    AcademyCohortReportCSVView,
+    AcademyCohortTimeSlotLiveClassesView,
     AcademyCohortTimeSlotView,
     AcademyCohortUserView,
     AcademyCohortView,
     AcademyListView,
+    AcademyReportCSVView,
     AcademyReportView,
     AcademySyllabusScheduleTimeSlotView,
     AcademySyllabusScheduleView,
@@ -82,7 +86,6 @@ from .views import (
     UserMeView,
     UserMicroCohortsSyncView,
     UserView,
-    get_all_academies,
     get_cities,
     get_countries,
     get_public_syllabus,
@@ -115,7 +118,27 @@ urlpatterns = [
     ),
     # new endpoints (replacing above)
     path("academy/cohort/user", AcademyCohortUserView.as_view(), name="academy_cohort_user"),
+    path(
+        "academy/cohort/user/<int:cohort_user_id>",
+        AcademyCohortUserView.as_view(),
+        name="academy_cohort_user_id",
+    ),
     path("academy/cohort/<str:cohort_id>/log", AcademyCohortHistoryView.as_view(), name="academy_cohort_id_history"),
+    path(
+        "academy/cohort/<int:cohort_id>/report/attendance.csv",
+        AcademyCohortAttendanceReportView.as_view(),
+        name="academy_cohort_id_attendance_csv",
+    ),
+    path(
+        "academy/cohort/<int:cohort_id>/report/attendance.json",
+        AcademyCohortAttendanceReportView.as_view(),
+        name="academy_cohort_id_attendance_json",
+    ),
+    path(
+        "academy/cohort/<int:cohort_id>/report.csv",
+        AcademyCohortReportCSVView.as_view(),
+        name="academy_cohort_id_report_csv",
+    ),
     path(
         "academy/cohort/<int:cohort_id>/user/<int:user_id>",
         AcademyCohortUserView.as_view(),
@@ -126,6 +149,11 @@ urlpatterns = [
         "academy/cohort/<int:cohort_id>/timeslot",
         AcademyCohortTimeSlotView.as_view(),
         name="academy_cohort_id_timeslot",
+    ),
+    path(
+        "academy/cohort/<int:cohort_id>/timeslot/<int:timeslot_id>/liveclasses",
+        AcademyCohortTimeSlotLiveClassesView.as_view(),
+        name="academy_cohort_id_timeslot_id_liveclasses",
     ),
     path(
         "academy/cohort/<int:cohort_id>/timeslot/<int:timeslot_id>",
@@ -230,6 +258,7 @@ urlpatterns = [
     path("catalog/countries", get_countries, name="countries_all"),
     path("catalog/cities", get_cities, name="cities_all"),
     path("report", AcademyReportView.as_view(), name="report_admissions"),
+    path("report.csv", AcademyReportCSVView.as_view(), name="report_admissions_csv"),
     # replaces an asset slug in all syllabus versions
     path("admin/syllabus/asset/<str:asset_slug>", SyllabusAssetView.as_view(), name="syllabus_asset"),
     # Public Endpoints anyone can call

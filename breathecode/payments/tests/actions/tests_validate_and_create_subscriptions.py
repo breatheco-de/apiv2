@@ -352,3 +352,140 @@ def test_schedule_plan_financing(
     assert result[0].id == 1
 
     assert result[1] == []
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_currency_from_payment_method_takes_priority(
+    database: capy.Database, format: capy.Format, is_request: bool, utc_now: datetime
+) -> None:
+    """Test that payment_method.currency takes priority over academy.main_currency"""
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1},
+        academy=1,  # Has main_currency by default (id 1)
+        city=1,
+        country=1,
+        currency=(2, {"code": "EUR"}),  # Create two currencies
+        payment_method={"currency_id": 2},  # Payment method uses second currency
+    )
+    data = {"plans": [model.plan.slug], "user": model.user.id, "payment_method": model.payment_method.id}
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    result = validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+
+    # Should use payment_method's currency (currency id 2) not academy's main_currency (currency id 1)
+    assert database.list_of("payments.Bag") == [
+        serialize_bag(data={"currency_id": 2}),
+    ]
+    assert database.list_of("payments.Invoice") == [
+        serialize_invoice(
+            data={
+                "id": 1,
+                "paid_at": utc_now,
+                "payment_method_id": 1,
+                "currency_id": 2,
+            }
+        ),
+    ]
+
+    assert result[0].currency_id == 2  # Should be payment_method's currency
+
+    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[])]
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_currency_fallback_to_academy_when_payment_method_has_no_currency(
+    database: capy.Database, format: capy.Format, is_request: bool, utc_now: datetime
+) -> None:
+    """Test that academy.main_currency is used when payment_method.currency is None"""
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1},
+        academy=1,  # Has main_currency
+        city=1,
+        country=1,
+        payment_method={"currency_id": None},  # No currency in payment method
+    )
+    data = {"plans": [model.plan.slug], "user": model.user.id, "payment_method": model.payment_method.id}
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    result = validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+
+    assert database.list_of("payments.Bag") == [
+        serialize_bag(),
+    ]
+    assert database.list_of("payments.Invoice") == [
+        serialize_invoice(
+            data={
+                "id": 1,
+                "paid_at": utc_now,
+                "payment_method_id": 1,
+            }
+        ),
+    ]
+    assert database.list_of("payments.ProofOfPayment") == [
+        serialize_proof_of_payment(
+            data={
+                "id": 1,
+                "created_by_id": 1,
+                "status": "PENDING",
+            }
+        ),
+    ]
+
+    assert build_plan_financing.delay.call_args_list == [call(1, 1, conversion_info=None, cohorts=[])]
+
+    assert len(result) == 2
+    assert result[0].__module__ == "breathecode.payments.models"
+    assert result[0].__class__.__name__ == "Invoice"
+    assert result[0].id == 1
+    assert result[1] == []
+
+
+@pytest.mark.parametrize("is_request", [True, False])
+def test_no_currency_from_payment_method_or_academy(
+    database: capy.Database, format: capy.Format, is_request: bool
+) -> None:
+    """Test that error is raised when neither payment_method nor academy has a currency"""
+    model = database.create(
+        user=1,
+        proof_of_payment=1,
+        plan={"time_of_life": None, "time_of_life_unit": None},
+        financing_option={"how_many_months": 1},
+        academy={"main_currency_id": None},  # No main currency
+        city=1,
+        country=1,
+        payment_method={"currency_id": None},  # No currency in payment method either
+    )
+    data = {"plans": [model.plan.slug], "user": model.user.id, "payment_method": model.payment_method.id}
+    academy = 1
+
+    if is_request:
+        data = get_request(data, user=model.user)
+
+    with pytest.raises(ValidationException, match="currency-not-found"):
+        validate_and_create_subscriptions(data, model.user, model.proof_of_payment, academy, "en")
+
+    assert database.list_of("payments.Bag") == []
+    assert database.list_of("payments.Invoice") == []
+    assert database.list_of("payments.ProofOfPayment") == [
+        serialize_proof_of_payment(
+            data={
+                "id": 1,
+                "created_by_id": 1,
+                "status": "PENDING",
+            }
+        ),
+    ]
+
+    assert build_plan_financing.delay.call_args_list == []

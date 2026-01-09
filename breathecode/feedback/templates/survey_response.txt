@@ -1,0 +1,12 @@
+{% extends "base.txt" %}
+{% block content %}
+
+{{ SUBJECT }}
+
+{% if MESSAGE %}{{ MESSAGE }}{% endif %}
+
+Open survey: {{ LINK }}
+
+{% endblock %}
+
+

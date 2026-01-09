@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.db.models import Sum
 
 from breathecode.activity.actions import get_engagement_points, ENGAGEMENT_POINTS
+from breathecode.activity.models import ACTIVITY_TABLE_NAME
 from breathecode.admissions.models import Cohort
 from breathecode.assignments.models import Task
 from .models import GeekCreatorCohort
@@ -156,7 +157,7 @@ def compute_usage_rows_and_total(
             kind,
             SAFE_CAST(meta.cohort AS INT64) AS cohort_id,
             TIMESTAMP(timestamp) AS ts
-          FROM `{project_id}.{dataset}.activity`
+          FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
           WHERE related.type IN ({rtypes_in})
             AND TIMESTAMP(timestamp) >= TIMESTAMP('{start_dt.isoformat()}')
             AND TIMESTAMP(timestamp) <  TIMESTAMP('{end_dt.isoformat()}')

@@ -216,6 +216,8 @@ class UserInvite(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
+    opened_at = models.DateTimeField(default=None, null=True, blank=True)
+    clicked_at = models.DateTimeField(default=None, null=True, blank=True)
     expires_at = models.DateTimeField(default=None, null=True, blank=True)
 
     country = models.CharField(max_length=30, null=True, default=None, blank=True)
@@ -229,6 +231,13 @@ class UserInvite(models.Model):
 
     email_quality = models.FloatField(default=None, blank=True, null=True)
     email_status = models.JSONField(default=None, blank=True, null=True)
+
+    welcome_video = models.JSONField(
+        default=None,
+        blank=True,
+        null=True,
+        help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}"
+    )
 
     # link to team membership (optional)
     subscription_seat = models.ForeignKey(
@@ -247,6 +256,15 @@ class UserInvite(models.Model):
         default=None,
         blank=True,
         help_text="Related plan financing seat for team invitations",
+        db_index=True,
+    )
+    payment_method = models.ForeignKey(
+        "payments.PaymentMethod",
+        on_delete=models.SET_NULL,
+        null=True,
+        default=None,
+        blank=True,
+        help_text="Payment method to use when creating the invoice",
         db_index=True,
     )
 
@@ -435,6 +453,68 @@ class AcademyAuthSettings(models.Model):
     discord_settings = models.JSONField(
         default=None, blank=True, null=True, help_text="Discord variables for this academy"
     )
+    learnpack_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        default=None,
+        null=True,
+        related_name="learnpack_academy_auth_settings",
+        help_text="User who owns the LearnPack integration for this academy. Must have FirstPartyCredentials with rigobot id.",
+    )
+    learnpack_features = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="JSON configuration for LearnPack features. Structure to be defined later.",
+    )
+    learnpack_org_id = models.IntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="LearnPack organization ID for this academy.",
+    )
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from linked_services.django.models import FirstPartyCredentials
+
+        if self.learnpack_owner is not None:
+            try:
+                credentials = FirstPartyCredentials.objects.get(user=self.learnpack_owner)
+            except FirstPartyCredentials.DoesNotExist:
+                raise ValidationError("User must have FirstPartyCredentials when set as learnpack_owner")
+
+            if not isinstance(credentials.app, dict):
+                raise ValidationError(
+                    "FirstPartyCredentials app field must be a dictionary when user is set as learnpack_owner"
+                )
+
+            if "rigobot" not in credentials.app:
+                raise ValidationError(
+                    "FirstPartyCredentials must have rigobot id in app field when user is set as learnpack_owner"
+                )
+
+            rigobot_id = credentials.app.get("rigobot")
+            if rigobot_id is None:
+                raise ValidationError(
+                    "FirstPartyCredentials must have rigobot id in app field when user is set as learnpack_owner"
+                )
+
+            if isinstance(rigobot_id, str) and rigobot_id.strip() == "":
+                raise ValidationError(
+                    "FirstPartyCredentials must have rigobot id in app field when user is set as learnpack_owner"
+                )
+
+            if isinstance(rigobot_id, int) and rigobot_id <= 0:
+                raise ValidationError(
+                    "FirstPartyCredentials must have a valid rigobot id (> 0) in app field when user is set as learnpack_owner"
+                )
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def add_error(self, msg):
         if self.github_error_log is None:

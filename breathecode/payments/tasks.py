@@ -6,8 +6,10 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from capyc.core.i18n import translation
+from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
+from django.db.models import F, Q
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -15,7 +17,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.actions import schedule_task
 from task_manager.django.decorators import task
 
-from breathecode.admissions.models import Cohort
+from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.media.models import File
@@ -46,6 +48,7 @@ from .models import (
     PlanServiceItemHandler,
     ProofOfPayment,
     Service,
+    ServiceItem,
     ServiceStockScheduler,
     Subscription,
     SubscriptionBillingTeam,
@@ -1671,6 +1674,11 @@ def build_subscription(
     bag_coupons = bag.coupons.all()
     if bag_coupons.exists():
         subscription.coupons.set(bag_coupons)
+        # Increment usage counters for coupons
+        now = timezone.now()
+        Coupon.objects.filter(id__in=[c.id for c in bag_coupons]).update(
+            times_used=F("times_used") + 1, last_used_at=now
+        )
         logger.info(f"Added {bag_coupons.count()} coupons to subscription {subscription.id}")
 
     subscription.save()
@@ -1727,6 +1735,7 @@ def build_plan_financing(
     conversion_info: Optional[str] = "",
     cohorts: Optional[list[str]] = None,
     externally_managed: bool = False,
+    principal_amount: Optional[float] = None,
     **_: Any,
 ):
     logger.info(f"Starting build_plan_financing for bag {bag_id}")
@@ -1777,6 +1786,12 @@ def build_plan_financing(
     next_payment_at = invoice.paid_at + relativedelta(months=1)
 
     parsed_conversion_info = ast.literal_eval(conversion_info) if conversion_info not in [None, ""] else None
+    # principal_amount allows separating the recurring amount (plan base)
+    # from any one-shot components (like plan_addons) that were included
+    # in the first invoice. When provided, it is used as the monthly_price
+    # instead of the invoice.amount.
+    monthly_price = principal_amount if principal_amount is not None else invoice.amount
+
     financing = PlanFinancing.objects.create(
         user=bag.user,
         how_many_installments=bag.how_many_installments,
@@ -1787,7 +1802,7 @@ def build_plan_financing(
         selected_mentorship_service_set=mentorship_service_set,
         valid_until=invoice.paid_at + relativedelta(months=months - 1),
         plan_expires_at=invoice.paid_at + delta,
-        monthly_price=invoice.amount,
+        monthly_price=monthly_price,
         status="ACTIVE",
         conversion_info=parsed_conversion_info,
         currency=bag.currency or bag.academy.main_currency,  # Ensure currency is passed from bag
@@ -1808,6 +1823,11 @@ def build_plan_financing(
     bag_coupons = bag.coupons.all()
     if bag_coupons.exists():
         financing.coupons.set(bag_coupons)
+        # Increment usage counters for coupons
+        now = timezone.now()
+        Coupon.objects.filter(id__in=[c.id for c in bag_coupons]).update(
+            times_used=F("times_used") + 1, last_used_at=now
+        )
         logger.info(f"Added {bag_coupons.count()} coupons to plan financing {financing.id}")
 
     financing.save()

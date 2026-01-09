@@ -37,6 +37,7 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import render_message
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
+from .actions import academy_student_progress_report_rows
 from .models import (
     DELETED,
     STUDENT,
@@ -68,6 +69,7 @@ from .serializers import (
     GETCohortTimeSlotSerializer,
     GetCohortUserPlansSerializer,
     GetCohortUserSerializer,
+    GetCohortUserBigSerializer,
     GetCohortUserTasksSerializer,
     GetPublicCohortUserSerializer,
     GetSyllabusScheduleSerializer,
@@ -417,6 +419,18 @@ class PublicCohortView(APIView):
         if syllabus_slug_like:
             items = items.filter(syllabus_version__syllabus__slug__icontains=slugify(syllabus_slug_like))
 
+        # Filter by syllabus version number (comma-separated)
+        syllabus_version = request.GET.get("syllabus_version", None)
+        if syllabus_version is not None:
+            try:
+                versions = [int(x.strip()) for x in syllabus_version.split(",")]
+                items = items.filter(syllabus_version__version__in=versions)
+            except ValueError:
+                raise ValidationException(
+                    "Invalid syllabus_version format. Must be comma-separated integers.",
+                    slug="invalid-syllabus-version-format"
+                )
+
         plan = request.GET.get("plan", "")
         if plan == "true":
             items = items.filter(academy__main_currency__isnull=False, cohortset__isnull=False).distinct()
@@ -452,6 +466,124 @@ class AcademyReportView(APIView):
 
         users = AcademyReportSerializer(academy)
         return Response(users.data)
+
+
+class AcademyReportCSVView(APIView):
+    """
+    Academy student progress report in CSV format.
+
+    Output columns:
+    - course_name
+    - student_full_name
+    - student_email
+    - enrollment_date
+    - student_start_date
+    - status (not_started / in_progress / completed / withdrawn)
+    - progress_percentage (0-100)
+    - completion_date
+    - certificate_url
+    - comments
+    """
+
+    @capable_of("academy_reporting")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                slug="academy-not-found",
+            )
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="academy_report.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "course_name",
+                "student_full_name",
+                "student_email",
+                "enrollment_date",
+                "student_start_date",
+                "status",
+                "progress_percentage",
+                "completion_date",
+                "certificate_url",
+                "comments",
+            ]
+        )
+
+        for row in academy_student_progress_report_rows(academy, lang=lang):
+            writer.writerow(row)
+
+        return response
+
+
+class AcademyCohortReportCSVView(APIView):
+    """
+    Cohort student report in CSV format (same schema as admissions/report.csv).
+
+    It is intended for integrations that need the report split by cohort.
+    """
+
+    @capable_of("academy_reporting")
+    def get(self, request, cohort_id: int, academy_id: int):
+        lang = get_user_language(request)
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                slug="academy-not-found",
+            )
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
+        if cohort is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cohort not found on this academy",
+                    es="Cohorte no encontrada en esta academia",
+                    slug="cohort-not-found",
+                ),
+                code=404,
+                slug="cohort-not-found",
+            )
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="cohort_{cohort.slug}_report.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "course_name",
+                "student_full_name",
+                "student_email",
+                "enrollment_date",
+                "student_start_date",
+                "status",
+                "progress_percentage",
+                "completion_date",
+                "certificate_url",
+                "comments",
+            ]
+        )
+
+        for row in academy_student_progress_report_rows(academy, lang=lang, cohort=cohort):
+            writer.writerow(row)
+
+        return response
 
 
 class AcademyActivateView(APIView):
@@ -738,13 +870,24 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
 
     @capable_of("read_all_cohort")
-    def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
+    def get(self, request, format=None, cohort_id=None, user_id=None, cohort_user_id=None, academy_id=None):
 
         handler = self.extensions(request)
 
         cache = handler.cache.get()
         if cache is not None:
             return cache
+
+        # Handle direct cohort_user_id lookup
+        if cohort_user_id is not None:
+            item = CohortUser.objects.filter(
+                id=cohort_user_id, cohort__academy__id=academy_id
+            ).select_related('cohort', 'user').first()
+            if item is None:
+                raise ValidationException("Cohort user not found", 404)
+
+            serializer = GetCohortUserBigSerializer(item, many=False)
+            return Response(serializer.data)
 
         if user_id is not None:
             item = CohortUser.objects.filter(
@@ -1054,6 +1197,9 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not timezone:
             raise ValidationException("Academy doesn't have a timezone assigned", slug="academy-without-timezone")
 
+        # Extract force_generation flag before preparing data
+        force_generation = request.data.pop("force_generation", False)
+
         data = {
             **request.data,
             "id": timeslot_id,
@@ -1067,9 +1213,15 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if "ending_at" in data:
             data["ending_at"] = DatetimeInteger.from_iso_string(timezone, data["ending_at"])
 
+        # Set temporary attribute before saving
+        item._force_generation = force_generation
+
         serializer = CohortTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
             serializer.save()
+            # Clear the attribute after save
+            if hasattr(item, "_force_generation"):
+                delattr(item, "_force_generation")
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1085,6 +1237,35 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         item.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCohortTimeSlotLiveClassesView(APIView):
+    @capable_of("crud_cohort")
+    def delete(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+        from breathecode.events.models import LiveClass
+
+        lang = get_user_language(request)
+
+        # Validate timeslot exists and belongs to academy/cohort
+        timeslot = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id, cohort__id=cohort_id, id=timeslot_id
+        ).first()
+
+        if not timeslot:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Time slot not found",
+                    es="Horario no encontrado",
+                    slug="time-slot-not-found",
+                ),
+                404,
+            )
+
+        # Delete all live classes associated with this timeslot
+        deleted_count, _ = LiveClass.objects.filter(cohort_time_slot=timeslot).delete()
+
+        return Response({"deleted": deleted_count}, status=status.HTTP_200_OK)
 
 
 class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
@@ -1399,6 +1580,42 @@ class AcademyCohortView(APIView, GenerateLookupsMixin):
         if syllabus is not None:
             # Filter by syllabus slug
             items = items.filter(syllabus_version__syllabus__slug__in=syllabus.split(","))
+
+        # Filter by syllabus version ID (comma-separated)
+        syllabus_version_id = request.GET.get("syllabus_version_id", None)
+        if syllabus_version_id is not None:
+            try:
+                version_ids = [int(x.strip()) for x in syllabus_version_id.split(",")]
+                items = items.filter(syllabus_version__id__in=version_ids)
+            except ValueError:
+                lang = get_user_language(request)
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid syllabus_version_id format. Must be comma-separated integers.",
+                        es="Formato de syllabus_version_id inválido. Debe ser enteros separados por comas.",
+                        slug="invalid-syllabus-version-id-format",
+                    ),
+                    slug="invalid-syllabus-version-id-format",
+                )
+
+        # Filter by syllabus version number (comma-separated)
+        syllabus_version = request.GET.get("syllabus_version", None)
+        if syllabus_version is not None:
+            try:
+                versions = [int(x.strip()) for x in syllabus_version.split(",")]
+                items = items.filter(syllabus_version__version__in=versions)
+            except ValueError:
+                lang = get_user_language(request)
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Invalid syllabus_version format. Must be comma-separated integers.",
+                        es="Formato de syllabus_version inválido. Debe ser enteros separados por comas.",
+                        slug="invalid-syllabus-version-format",
+                    ),
+                    slug="invalid-syllabus-version-format",
+                )
 
         # Filter by live cohorts (has online_meeting_url)
         live = request.GET.get("live", None)
@@ -1804,7 +2021,7 @@ class SyllabusView(APIView):
         }
 
         if not syllabus:
-            raise ValidationException("Syllabus details not found", code=404, slug="syllabus-not-found")
+            raise ValidationException("Syllabus not found, maybe it exists in another academy?", code=404, slug="syllabus-not-found")
 
         serializer = SyllabusSerializer(syllabus, data=data, many=False)
         if serializer.is_valid():
@@ -2567,6 +2784,183 @@ class AcademyCohortHistoryView(APIView):
         return Response(cohort_log.serialize())
 
 
+class AcademyCohortAttendanceReportView(APIView):
+    """Generate attendance reports from cohort history_log in CSV or JSON format."""
+
+    @capable_of("read_cohort_log")
+    def get(self, request, cohort_id, academy_id):
+        lang = get_user_language(request)
+
+        # Fetch cohort by ID or slug
+        item = None
+        if str(cohort_id).isnumeric():
+            item = Cohort.objects.filter(id=int(cohort_id), academy__id=academy_id).first()
+        else:
+            item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
+
+        if item is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cohort not found on this academy",
+                    es="Cohorte no encontrada en esta academia",
+                    slug="cohort-not-found",
+                ),
+                code=404,
+            )
+
+        # Get all students in the cohort
+        students = CohortUser.objects.filter(cohort=item, role=STUDENT).select_related("user").order_by(
+            "user__first_name", "user__last_name"
+        )
+
+        if not students.exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="No students found in this cohort",
+                    es="No se encontraron estudiantes en esta cohorte",
+                    slug="no-students-found",
+                ),
+                code=404,
+            )
+
+        # Parse history_log
+        history_log = item.history_log or {}
+        if not isinstance(history_log, dict):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid history log format",
+                    es="Formato de historial inválido",
+                    slug="invalid-history-log",
+                ),
+                code=400,
+            )
+
+        # Determine format from request path
+        request_path = request.path
+        if request_path.endswith(".csv"):
+            return self._generate_csv_response(item, students, history_log)
+        elif request_path.endswith(".json"):
+            return self._generate_json_response(item, students, history_log)
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid format. Use .csv or .json",
+                    es="Formato inválido. Use .csv o .json",
+                    slug="invalid-format",
+                ),
+                code=400,
+            )
+
+    def _generate_csv_response(self, cohort, students, history_log):
+        """Generate CSV response with students as rows and days as columns."""
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="cohort_{cohort.slug}_attendance.csv"'
+
+        writer = csv.writer(response)
+
+        # Get all day numbers from history_log and sort them
+        day_numbers = sorted([int(day) for day in history_log.keys() if day.isdigit()], key=int)
+
+        # Build header row
+        headers = ["Student Name", "Email"]
+        headers.extend([f"Day {day}" for day in day_numbers])
+        writer.writerow(headers)
+
+        # Build attendance matrix: student_id -> {day: status}
+        attendance_matrix = {}
+        for day_str, day_data in history_log.items():
+            if not day_str.isdigit():
+                continue
+            day = int(day_str)
+            attendance_ids = day_data.get("attendance_ids", [])
+            unattendance_ids = day_data.get("unattendance_ids", [])
+
+            # Mark all students as not recorded initially
+            for student in students:
+                if student.user.id not in attendance_matrix:
+                    attendance_matrix[student.user.id] = {}
+                attendance_matrix[student.user.id][day] = "?"
+
+            # Mark present students
+            for user_id in attendance_ids:
+                if user_id in attendance_matrix:
+                    attendance_matrix[user_id][day] = "✓"
+
+            # Mark absent students
+            for user_id in unattendance_ids:
+                if user_id in attendance_matrix:
+                    attendance_matrix[user_id][day] = "✗"
+
+        # Write student rows
+        for student in students:
+            user = student.user
+            student_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+            row = [student_name, user.email]
+
+            # Add attendance status for each day
+            for day in day_numbers:
+                status = attendance_matrix.get(user.id, {}).get(day, "?")
+                row.append(status)
+
+            writer.writerow(row)
+
+        return response
+
+    def _generate_json_response(self, cohort, students, history_log):
+        """Generate JSON response with days array structure."""
+        # Get all day numbers from history_log and sort them
+        day_numbers = sorted([int(day) for day in history_log.keys() if day.isdigit()], key=int)
+
+        # Build days array
+        days_data = []
+        for day in day_numbers:
+            day_str = str(day)
+            day_data = history_log.get(day_str, {})
+            attendance_ids = set(day_data.get("attendance_ids", []))
+            unattendance_ids = set(day_data.get("unattendance_ids", []))
+
+            # Build students list for this day
+            students_list = []
+            for student in students:
+                user = student.user
+                user_id = user.id
+
+                # Determine status
+                if user_id in attendance_ids:
+                    status = "present"
+                elif user_id in unattendance_ids:
+                    status = "absent"
+                else:
+                    status = "not_recorded"
+
+                student_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+
+                students_list.append(
+                    {
+                        "user_id": user_id,
+                        "name": student_name,
+                        "email": user.email,
+                        "status": status,
+                    }
+                )
+
+            days_data.append(
+                {
+                    "day": day,
+                    "updated_at": day_data.get("updated_at", ""),
+                    "current_module": day_data.get("current_module"),
+                    "teacher_comments": day_data.get("teacher_comments", ""),
+                    "students": students_list,
+                }
+            )
+
+        return Response(days_data)
+
+
 class MeCohortUserHistoryView(APIView):
     """List all snippets, or create a new snippet."""
 
@@ -2755,7 +3149,6 @@ class UserMicroCohortsSyncView(APIView):
             )
 
         micro_cohorts = macro_cohort.micro_cohorts.all()
-        print(micro_cohorts)
 
         if not micro_cohorts.exists():
             return Response(
@@ -2771,41 +3164,72 @@ class UserMicroCohortsSyncView(APIView):
             )
 
         added_count = 0
+        updated_count = 0
         already_existing_count = 0
         micro_cohorts_added = []
 
         for micro_cohort in micro_cohorts:
-            micro_cohort_user = CohortUser.objects.filter(
-                user=user, cohort=micro_cohort, role=user_macro_cohort.role
-            ).first()
+            micro_cohort_user = CohortUser.objects.filter(user=user, cohort=micro_cohort).first()
 
-            if micro_cohort_user is None:
-                micro_cohort_user = CohortUser.objects.create(
-                    user=user,
-                    cohort=micro_cohort,
-                    role=user_macro_cohort.role,
-                    finantial_status=user_macro_cohort.finantial_status,
-                    educational_status=user_macro_cohort.educational_status,
-                )
-                added_count += 1
-                micro_cohorts_added.append(
-                    {
-                        "id": micro_cohort.id,
-                        "name": micro_cohort.name,
-                        "slug": micro_cohort.slug,
-                        "role": micro_cohort_user.role,
-                    }
-                )
-                logger.info(f"Added user {user.email} to micro-cohort {micro_cohort.name}")
-            else:
-                already_existing_count += 1
+            if micro_cohort_user:
+                fields_to_update: list[str] = []
+
+                if micro_cohort_user.role != user_macro_cohort.role:
+                    micro_cohort_user.role = user_macro_cohort.role
+                    fields_to_update.append("role")
+
+                if micro_cohort_user.finantial_status != user_macro_cohort.finantial_status:
+                    micro_cohort_user.finantial_status = user_macro_cohort.finantial_status
+                    fields_to_update.append("finantial_status")
+
+                if micro_cohort_user.educational_status != user_macro_cohort.educational_status:
+                    micro_cohort_user.educational_status = user_macro_cohort.educational_status
+                    fields_to_update.append("educational_status")
+
+                if fields_to_update:
+                    micro_cohort_user.save(update_fields=fields_to_update + ["updated_at"])
+                    updated_count += 1
+                    logger.info(
+                        "Updated user %s in micro-cohort %s (fields: %s)",
+                        user.email,
+                        micro_cohort.name,
+                        ", ".join(fields_to_update),
+                    )
+                else:
+                    already_existing_count += 1
+
+                continue
+
+            micro_cohort_user = CohortUser.objects.create(
+                user=user,
+                cohort=micro_cohort,
+                role=user_macro_cohort.role,
+                finantial_status=user_macro_cohort.finantial_status,
+                educational_status=user_macro_cohort.educational_status,
+            )
+            added_count += 1
+            micro_cohorts_added.append(
+                {
+                    "id": micro_cohort.id,
+                    "name": micro_cohort.name,
+                    "slug": micro_cohort.slug,
+                    "role": micro_cohort_user.role,
+                }
+            )
+            logger.info(f"Added user {user.email} to micro-cohort {micro_cohort.name}")
 
         return Response(
             {
                 "detail": translation(
                     lang,
-                    en=f"Successfully added to {added_count} micro-cohorts from '{macro_cohort.name}'. {already_existing_count} were already enrolled.",
-                    es=f"Agregado exitosamente a {added_count} micro-cohorts de '{macro_cohort.name}'. {already_existing_count} ya estaban inscritos.",
+                    en=(
+                        f"Successfully added to {added_count} micro-cohorts from '{macro_cohort.name}'. "
+                        f"{updated_count} were updated and {already_existing_count} were already enrolled."
+                    ),
+                    es=(
+                        f"Agregado exitosamente a {added_count} micro-cohorts de '{macro_cohort.name}'. "
+                        f"{updated_count} fueron actualizados y {already_existing_count} ya estaban inscritos."
+                    ),
                     slug="micro-cohorts-sync-success",
                 ),
                 "macro_cohort": {
@@ -2814,6 +3238,7 @@ class UserMicroCohortsSyncView(APIView):
                     "slug": macro_cohort.slug,
                 },
                 "added_count": added_count,
+                "updated_count": updated_count,
                 "already_existing_count": already_existing_count,
                 "micro_cohorts_added": micro_cohorts_added,
             },

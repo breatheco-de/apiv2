@@ -26,6 +26,7 @@ from ..views import (
     AcademyAuthSettingsView,
     AcademyCapabilitiesView,
     AcademyGithubSyncView,
+    AcademyInviteStatsView,
     AcademyInviteView,
     AcademyTokenView,
     AppSync,
@@ -38,6 +39,7 @@ from ..views import (
     GithubMeView,
     GithubUserView,
     GitpodUserView,
+    LearnpackOrganizationView,
     LoginView,
     LogoutView,
     MeInviteView,
@@ -65,6 +67,7 @@ from ..views import (
     get_slack_token,
     get_token_info,
     get_user_by_id_or_email,
+    get_user_avatar_url,
     get_users,
     login_html_view,
     pick_password,
@@ -73,8 +76,10 @@ from ..views import (
     render_academy_invite,
     render_google_connect,
     render_invite,
+    render_invite_with_tracking,
     render_user_invite,
     reset_password_view,
+    track_invite_open,
     save_facebook_token,
     save_github_token,
     save_google_token,
@@ -110,6 +115,7 @@ urlpatterns = [
     path("user/me/settings", UserSettingsView.as_view(), name="user_me_settings"),
     path("me/academy/<str:slug_or_id>/capabilities", AcademyCapabilitiesView.as_view(), name="me_academy_capabilities"),
     path("user/<str:id_or_email>", get_user_by_id_or_email),
+    path("user/<int:user_id>/avatar", get_user_avatar_url, name="user_avatar"),
     path("role", get_roles, name="role"),
     path("role/<str:role_slug>", get_roles, name="role_slug"),
     path("profile/<int:user_id>", ProfileView.as_view(), name="user_profile"),
@@ -117,7 +123,8 @@ urlpatterns = [
     path("profile/me/picture", ProfileMePictureView.as_view(), name="profile_me_picture"),
     path("profile/invite/me", ProfileInviteMeView.as_view(), name="profile_invite_me"),
     path("member/invite", render_user_invite, name="member_invite"),
-    path("member/invite/<str:token>", render_invite, name="member_invite_token"),
+    path("invite/track/open/<int:invite_id>", track_invite_open, name="track_invite_open"),
+    path("member/invite/<str:token>", render_invite_with_tracking, name="member_invite_token"),
     path(
         "member/<int:profile_academy_id>/token", TokenTemporalView.as_view(), name="profile_academy_reset_github_link"
     ),
@@ -141,6 +148,8 @@ urlpatterns = [
     ),
     path("academy/invite/<int:invite_id>", AcademyInviteView.as_view(), name="academy_invite_id"),
     path("academy/user/invite", AcademyInviteView.as_view(), name="academy_user_invite"),
+    path("academy/user/invite/stats", AcademyInviteStatsView.as_view(), name="academy_user_invite_stats"),
+    path("academy/<int:academy_id>/user/invite/stats", AcademyInviteStatsView.as_view(), name="academy_id_user_invite_stats"),
     path("academy/html/invite", render_academy_invite, name="academy_html_invite"),
     # path('group/', get_groups, name="group"),
     path("view/login", login_html_view, name="login_view"),  # html login form
@@ -197,4 +206,6 @@ urlpatterns = [
     path("app/webhook", app_webhook, name="app_webhook"),
     path("me/app/<str:app_slug>/sync", AppSync.as_view(), name="me_app_slug_sync"),
     path("app/token", AppTokenView.as_view(), name="app_token"),
+
+    path("learnpack/me/organization", LearnpackOrganizationView.as_view(), name="academy_learnpack_me_organization"),
 ]

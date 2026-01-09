@@ -37,17 +37,20 @@ from breathecode.utils.multi_status_response import MultiStatusResponse
 from .actions import deliver_task, sync_cohort_tasks
 from .caches import TaskCache
 from .forms import DeliverAssigntmentForm
-from .models import FinalProject, Task, UserAttachment, RepositoryDeletionOrder
+from .models import AssignmentTelemetry, FinalProject, Task, UserAttachment, RepositoryDeletionOrder
 from .serializers import (
     FinalProjectGETSerializer,
     PostFinalProjectSerializer,
     PostTaskSerializer,
+    POSTAssignmentTelemetrySerializer,
     PUTFinalProjectSerializer,
     PUTTaskSerializer,
+    PUTAssignmentTelemetrySerializer,
     TaskAttachmentSerializer,
     TaskGETDeliverSerializer,
     TaskGETSerializer,
     UserAttachmentSerializer,
+    TaskUserSmallSerializer,
     RepositoryDeletionOrderSerializer,
 )
 
@@ -205,6 +208,84 @@ class AssignmentTelemetryView(APIView, GenerateLookupsMixin):
             )
 
         return Response("ok", content_type="text/plain")
+
+
+class AcademyAssignmentTelemetryView(APIView, GenerateLookupsMixin):
+    """
+    Academy-specific endpoints for creating and updating AssignmentTelemetry.
+    Requires crud_telemetry capability in the academy.
+    """
+
+    @capable_of("crud_telemetry")
+    def post(self, request, asset_slug, user_id, academy_id=None):
+        """
+        Create or update (upsert) AssignmentTelemetry for a specific asset and user.
+        Academy ID is retrieved from the Academy header via @capable_of decorator.
+        """
+        lang = get_user_language(request)
+
+        # Get or validate user
+        from breathecode.authenticate.models import User
+
+        user = User.objects.filter(id=user_id).first()
+        if user is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"User with id {user_id} not found",
+                    es=f"Usuario con id {user_id} no encontrado",
+                ),
+                status.HTTP_404_NOT_FOUND,
+                slug="user-not-found",
+            )
+
+        # Check if telemetry already exists
+        telemetry = AssignmentTelemetry.objects.filter(
+            asset_slug=asset_slug, user__id=user_id
+        ).first()
+
+        serializer = POSTAssignmentTelemetrySerializer(
+            telemetry, data=request.data, context={"user": user, "asset_slug": asset_slug}, partial=True
+        )
+
+        if serializer.is_valid():
+            saved_telemetry = serializer.save()
+            status_code = status.HTTP_200_OK if telemetry else status.HTTP_201_CREATED
+            return Response(serializer.data, status=status_code)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_telemetry")
+    def put(self, request, asset_slug, user_id, academy_id=None):
+        """
+        Update existing AssignmentTelemetry for a specific asset and user.
+        Academy ID is retrieved from the Academy header via @capable_of decorator.
+        """
+        lang = get_user_language(request)
+
+        # Find the AssignmentTelemetry record
+        telemetry = AssignmentTelemetry.objects.filter(
+            asset_slug=asset_slug, user__id=user_id
+        ).first()
+
+        if telemetry is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Assignment telemetry not found for asset {asset_slug} and user {user_id}",
+                    es=f"Telemetría de tarea no encontrada para el recurso {asset_slug} y usuario {user_id}",
+                ),
+                status.HTTP_404_NOT_FOUND,
+                slug="telemetry-not-found",
+            )
+
+        serializer = PUTAssignmentTelemetrySerializer(telemetry, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FinalProjectScreenshotView(APIView):
@@ -764,7 +845,7 @@ class TaskMeView(APIView):
 
         items = handler.queryset(items)
 
-        serializer = TaskGETSerializer(items, many=True)
+        serializer = TaskUserSmallSerializer(items, many=True)
         return handler.response(serializer.data)
 
     def put(self, request, task_id=None):
@@ -831,6 +912,7 @@ class TaskMeView(APIView):
             tasks_activity.add_activity.delay(
                 request.user.id, "open_syllabus_module", related_type="assignments.Task", related_id=tasks[0].id
             )
+            tasks.sync_pending_tasks_to_history_log.delay(tasks[0].id)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -21,7 +21,7 @@ from breathecode.assessment.models import Assessment
 from .signals import asset_readme_modified, asset_saved, asset_slug_modified, asset_status_updated, asset_title_modified
 from .utils import AssetErrorLogType
 
-__all__ = ["AssetTechnology", "Asset", "AssetAlias", "AssetFlag"]
+__all__ = ["AssetTechnology", "Asset", "AssetAlias", "AssetFlag", "ContentSite"]
 logger = logging.getLogger(__name__)
 
 PUBLIC = "PUBLIC"
@@ -116,6 +116,36 @@ class AssetTechnology(models.Model):
             raise Exception("You cannot mark a technology as deprecated if it doesn't have a parent technology")
 
 
+class ContentSite(models.Model):
+    """
+    ContentSite defines the domain and configuration for a category's content site.
+    Used to generate URLs for asset references in markdown.
+    """
+    domain_url = models.URLField(
+        help_text="Base domain URL for the content site (e.g., https://content.4geeks.com)"
+    )
+    title = models.CharField(max_length=200)
+    auto_generate_previews = models.BooleanField(
+        default=False,
+        help_text="Whether to automatically generate preview images"
+    )
+    preview_generation_url = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="URL endpoint for generating preview images (will be POSTed to)"
+    )
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        help_text="The academy this content site belongs to"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.title} ({self.domain_url})"
+
 class AssetCategory(models.Model):
 
     def __init__(self, *args, **kwargs):
@@ -138,6 +168,16 @@ class AssetCategory(models.Model):
 
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
 
+    content_site = models.ForeignKey(
+        ContentSite,
+        on_delete=models.CASCADE,
+        related_name="categories",
+        help_text="The content site this category is associated with",
+        null=True,
+        blank=True,
+        default=None,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -153,7 +193,6 @@ class AssetCategory(models.Model):
                 raise Exception(f"Category with slug {self.slug} already exists on this academy")
 
         super().save(*args, **kwargs)
-
 
 class KeywordCluster(models.Model):
 
@@ -337,6 +376,8 @@ class Asset(models.Model):
         default=None,
         help_text="Brief for the copywriters, mainly used to describe what this lessons needs to be about",
     )
+
+    learnpack_id = models.IntegerField(null=True, blank=True, default=None, help_text="LearnPack ID of the asset, used for better integration")
 
     learnpack_deploy_url = models.URLField(
         null=True,

@@ -47,18 +47,19 @@ class PrettyJSONWidget(widgets.AdminTextareaWidget):
         return value
 
     def value_from_datadict(self, data, files, name):
-        """Parse the JSON string value from form data"""
+        """
+        Return the raw textarea string.
+
+        Important: Django's `forms.JSONField` (generated for `models.JSONField`) already parses JSON strings
+        into Python objects. If we parse here and return a Python list/dict, the form may try to parse again
+        and fail with: "the JSON object must be str, bytes or bytearray, not list".
+        """
         value = super().value_from_datadict(data, files, name)
-        if value:
-            if isinstance(value, str):
-                try:
-                    # Parse the JSON string to ensure it's valid and return the Python object
-                    return json.loads(value)
-                except json.JSONDecodeError:
-                    return value
-            elif isinstance(value, (dict, list)):
-                # Return the Python object directly
-                return value
+
+        # Defensive: if some integration passes a Python object, serialize back to a JSON string.
+        if isinstance(value, (dict, list)):
+            return json.dumps(value)
+
         return value
 
     def render(self, name, value, attrs=None, renderer=None):

@@ -18,6 +18,18 @@
 		</td>
 	</tr>
 
+	<!-- WELCOME VIDEO -->
+	{% if WELCOME_VIDEO and WELCOME_VIDEO.url and WELCOME_VIDEO.preview_image %}
+	<tr>
+		<td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+			padding-top: 15px;
+			padding-bottom: 5px;" class="video">
+			<a href="{{ WELCOME_VIDEO.url|safe }}" target="_blank" style="text-decoration: none; display: block;">
+				<img src="{{ WELCOME_VIDEO.preview_image|safe }}" alt="Welcome Video" style="max-width: 155px; width: auto; height: auto; display: block; border: 0;" />
+			</a>
+		</td>
+	</tr>
+	{% endif %}
 
 	<!-- PARAGRAPH -->
 	<!-- Set text color and font family ("sans-serif" or "Georgia, serif"). Duplicate all text styles in links, including line-height -->
@@ -26,7 +38,7 @@
 			padding-top: 25px;
 			color: #000000;
 			font-family: sans-serif;" class="paragraph">
-				Hi {{ FIRST_NAME }}, this is an exclusive invitation to the {{ COMPANY_NAME|default:'4Geeks' }} platform: A private community of software developers learning and improving their coding skills.
+				Hi {{ FIRST_NAME }}, this is an exclusive invitation to the {{ COMPANY_NAME|default:'4Geeks' }} platform: {{ PLATFORM_DESCRIPTION|default:'An award winning platform to learn and improve your AI related skills.' }}
 		</td>
 	</tr>
 

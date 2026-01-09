@@ -144,6 +144,8 @@ CAPABILITIES = [
     {"slug": "read_lead_gen_app", "description": "Read lead generation apps"},
     {"slug": "chatbot_message", "description": "Speak with a chatbot"},
     {"slug": "start_or_end_class", "description": "start or end a class"},
+    {"slug": "read_liveclass", "description": "Read live class information"},
+    {"slug": "crud_liveclass", "description": "Create, update or delete live class information"},
     {
         "slug": "get_academy_auth_settings",
         "description": "Settings related to authentication, for example the github auth integration",
@@ -159,6 +161,10 @@ CAPABILITIES = [
     {
         "slug": "crud_academy_feedback_settings",
         "description": "Settings related to feedback module, for example the chosen template for a cohort survey",
+    },
+    {
+        "slug": "crud_academy_payment_settings",
+        "description": "Update payment settings for the academy (Stripe, Coinbase API keys, webhooks, etc.)",
     },
     {"slug": "start_or_end_event", "description": "Start or end event"},
     {"slug": "read_provisioning_bill", "description": "Read provisioning activities and bills"},
@@ -191,6 +197,10 @@ CAPABILITIES = [
         "description": "Allow upload the user's telemetry in a LearnPack assignment",
     },
     {
+        "slug": "crud_telemetry",
+        "description": "Create, update or delete assignment telemetry",
+    },
+    {
         "slug": "validate_assignment_flag",
         "description": "Ideal for CTFs and other assignments that require flag validation",
     },
@@ -210,12 +220,44 @@ CAPABILITIES = [
         "slug": "read_consumable",
         "description": "Read user service consumables to understand how many units are available",
     },
+    {
+        "slug": "read_invoice",
+        "description": "Read invoice information",
+    },
+    {
+        "slug": "crud_invoice",
+        "description": "Create, update, delete invoices and process refunds",
+    },
+    {
+        "slug": "read_career_path",
+        "description": "Read career paths, job families, job roles, skills, competencies, and related talent development information",
+    },
+    {
+        "slug": "crud_career_path",
+        "description": "Create, update, or delete career paths, job families, job roles, skills, competencies, and related talent development information",
+    },
+    {
+        "slug": "read_notification",
+        "description": "View and preview notification templates",
+    },
+    {
+        "slug": "crud_notification",
+        "description": "Full CRUD access to notifications (future-proofing)",
+    },
+    {
+        "slug": "read_hook",
+        "description": "Read webhook subscriptions for academy token",
+    },
+    {
+        "slug": "crud_hook",
+        "description": "Create, update, and delete webhook subscriptions for academy token",
+    },
 ]
 
 BASE_ROLES = [
     {
         "slug": "admin",
-        "name": "Admin",
+        "name": "System Admin",
         "caps": [c["slug"] for c in CAPABILITIES],
     },
     {
@@ -452,6 +494,7 @@ def get_extended_roles():
                 "crud_cohort_log",
                 "start_or_end_class",
                 "start_or_end_event",
+                "read_liveclass",
                 "read_user_assessment",
             ],
         }
@@ -694,11 +737,13 @@ def get_extended_roles():
                 "crud_academy_feedback_settings",
                 "get_academy_auth_settings",
                 "crud_subscription",
+                "crud_liveclass",
                 "read_paymentmethod",
                 "crud_paymentmethod",
                 "read_commission",
                 "crud_commission",
                 "crud_course",
+                "crud_telemetry",
             ],
         }
     )
@@ -706,7 +751,7 @@ def get_extended_roles():
     roles.append(
         {
             "slug": "country_manager",
-            "name": "Country Manager",
+            "name": "Academy Admin",
             "extends": [
                 "academy_coordinator",
                 "student",
@@ -739,6 +784,11 @@ def get_extended_roles():
                 "crud_subscription",
                 "read_paymentmethod",
                 "crud_paymentmethod",
+                "read_notification",
+                "crud_notification",
+                "read_hook",
+                "crud_hook",
+                "crud_academy_payment_settings",
             ],
         }
     )
@@ -813,4 +863,3 @@ def get_all_role_priorities() -> dict[str, int]:
     """
     roles = get_extended_roles()
     return {role["slug"]: get_role_priority(role["slug"]) for role in roles}
-

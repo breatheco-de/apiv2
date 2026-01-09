@@ -3,14 +3,18 @@ import secrets
 import uuid
 from datetime import timedelta
 
+from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
+from django.forms import ValidationError
 
 from breathecode.admissions.models import Academy, Cohort, Syllabus
 from breathecode.authenticate.models import UserInvite
+from breathecode.payments.models import Plan
 from breathecode.utils.validators.language import validate_language_code
 
+from .schemas import validate_course_translation_field
 from .signals import form_entry_won_or_lost, new_form_entry_deal
 
 __all__ = [
@@ -22,6 +26,8 @@ __all__ = [
     "FormEntry",
     "ShortLink",
     "ActiveCampaignWebhook",
+    "EmailDomainValidation",
+    "CourseResaleSettings",
 ]
 
 
@@ -164,8 +170,18 @@ class Tag(models.Model):
         default=None,
         help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
     )
-    acp_id = models.IntegerField(help_text="The id coming from active campaign")
-    subscribers = models.IntegerField()
+    acp_id = models.IntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="The id coming from active campaign (optional)"
+    )
+    subscribers = models.IntegerField(
+        null=True,
+        blank=True,
+        default=0,
+        help_text="Number of subscribers in ActiveCampaign (optional)"
+    )
 
     # For better maintance the tags can be disputed for deletion
     disputed_at = models.DateTimeField(
@@ -188,6 +204,16 @@ class Tag(models.Model):
         blank=True,
         default=None,
         help_text="Leads that contain this tag will be asociated to this automation",
+    )
+
+    # Direct academy relationship (for tags without ActiveCampaign)
+    academy = models.ForeignKey(
+        "admissions.Academy",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Academy this tag belongs to (required if ac_academy is not set)",
     )
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)
@@ -672,6 +698,59 @@ class ShortLink(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
 
+    # Traceability fields
+    event = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Event reference in format '<id:slug>' (e.g., '<3434:event_slug>')"
+    )
+    course = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Course reference in format '<id:slug>' (e.g., '<123:course_slug>')"
+    )
+    downloadable = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Downloadable reference in format '<id:slug>' (e.g., '<567:downloadable_slug>')"
+    )
+    plan = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Plan reference in format '<id:slug>' (e.g., '<789:plan_slug>')"
+    )
+    referrer_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name='referral_shortlinks',
+        help_text="User who referred this link (for affiliate tracking)"
+    )
+    purpose = models.TextField(
+        max_length=500,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Internal description of what this link is used for"
+    )
+    notes = models.TextField(
+        max_length=1000,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Internal notes about this short link"
+    )
+
     lastclick_at = models.DateTimeField(
         blank=True, null=True, default=None, help_text="Last time a click was registered for this link"
     )
@@ -828,6 +907,9 @@ class Course(models.Model):
     has_waiting_list = models.BooleanField(default=False, help_text="Has waiting list?")
 
     invites = models.ManyToManyField(UserInvite, blank=True, help_text="Plan's invites", related_name="courses")
+    suggested_plan_addon = models.ManyToManyField(
+        Plan, blank=True, help_text="Suggested plan addons for this course", related_name="suggested_courses"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -908,15 +990,319 @@ class CourseTranslation(models.Model):
     def __str__(self) -> str:
         return f"{self.lang}: {self.title}"
 
-    def save(self, *args, **kwargs):
-        course_modules = self.course_modules or []
-        for course_module in course_modules:
-            if course_module["name"] is None or course_module["name"] == "":
-                raise Exception("The module does not have a name.")
-            if course_module["slug"] is None or course_module["slug"] == "":
-                raise Exception(f'The module {course_module["name"]} does not have a slug.')
-            if course_module["description"] is None or course_module["description"] == "":
-                raise Exception(f'The module {course_module["name"]} does not have a description.')
+    def clean(self):
+        errors = {}
 
-        result = super().save(*args, **kwargs)
-        return result
+        for field_name in ("course_modules", "landing_variables", "prerequisite"):
+            value = getattr(self, field_name)
+
+            try:
+                validate_course_translation_field(field_name, value)
+            except ValidationError as exc:
+                errors[field_name] = exc.messages
+
+        if errors:
+            raise forms.ValidationError(errors)
+
+        return super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class EmailDomainValidation(models.Model):
+    """
+    Almacena resultados de validación de DNS para dominios de email.
+    Incluye validaciones de MX, SPF, DMARC y detección de correos temporales.
+    
+    Los registros expirados se pueden limpiar periódicamente.
+    """
+
+    domain = models.CharField(max_length=255, db_index=True, unique=True, help_text="Dominio validado")
+    has_mx = models.BooleanField(default=False, help_text="True si el dominio tiene registros MX válidos")
+    mx_records = models.JSONField(
+        default=list, help_text="Lista de registros MX encontrados (ej: ['alt1.gmail-smtp-in.l.google.com'])"
+    )
+    spf = models.TextField(
+        null=True, blank=True, help_text="Registro SPF encontrado (ej: 'v=spf1 include:_spf.google.com ~all')"
+    )
+    dmarc = models.TextField(
+        null=True, blank=True, help_text="Registro DMARC encontrado (ej: 'v=DMARC1; p=reject; ...')"
+    )
+    disposable = models.BooleanField(
+        default=False, help_text="True si el dominio está en la lista de correos temporales"
+    )
+    last_checked_at = models.DateTimeField(
+        auto_now=True, db_index=True, help_text="Fecha de la última verificación"
+    )
+    next_check_at = models.DateTimeField(
+        db_index=True, help_text="Fecha de la próxima verificación recomendada", null=True, blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        db_table = "marketing_email_domain_validation"
+        indexes = [
+            models.Index(fields=["domain", "next_check_at"]),
+            models.Index(fields=["last_checked_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.domain} - MX: {self.has_mx} - Disposable: {self.disposable}"
+
+    def is_expired(self):
+        """Verifica si el resultado de validación ha expirado"""
+        from django.utils import timezone
+
+        return timezone.now() > self.next_check_at
+
+    @classmethod
+    def get_or_create_domain(cls, domain):
+        """
+        Obtiene o crea un registro de validación para el dominio.
+        
+        Args:
+            domain: Dominio a verificar
+        
+        Returns:
+            tuple: (EmailDomainValidation, created) - El objeto y si fue creado
+        """
+        domain_lower = domain.lower()
+        return cls.objects.get_or_create(domain=domain_lower)
+
+    @classmethod
+    def get_valid_domain(cls, domain):
+        """
+        Obtiene un resultado de validación válido (no expirado) si existe.
+        
+        Args:
+            domain: Dominio a verificar
+        
+        Returns:
+            EmailDomainValidation o None si no existe o está expirado
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+
+        try:
+            obj = cls.objects.get(domain=domain.lower())
+            if obj.next_check_at > utc_now:
+                return obj
+        except cls.DoesNotExist:
+            pass
+
+        return None
+
+    @classmethod
+    def update_domain_validation(
+        cls,
+        domain,
+        has_mx,
+        mx_records=None,
+        spf=None,
+        dmarc=None,
+        disposable=None,
+        valid_days=180,
+    ):
+        """
+        Actualiza o crea un registro de validación para el dominio.
+        
+        Args:
+            domain: Dominio validado
+            has_mx: True si el dominio tiene registros MX válidos
+            mx_records: Lista de registros MX encontrados
+            spf: Registro SPF encontrado
+            dmarc: Registro DMARC encontrado
+            disposable: True si el dominio está en la lista de correos temporales
+            valid_days: Días de validez del resultado (default: 180, 6 meses)
+        
+        Returns:
+            EmailDomainValidation creado o actualizado
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+        next_check_at = utc_now + timedelta(days=valid_days)
+
+        domain_lower = domain.lower()
+
+        obj, created = cls.get_or_create_domain(domain_lower)
+
+        obj.has_mx = has_mx
+        if mx_records is not None:
+            obj.mx_records = mx_records
+        if spf is not None:
+            obj.spf = spf
+        if dmarc is not None:
+            obj.dmarc = dmarc
+        if disposable is not None:
+            obj.disposable = disposable
+
+        obj.next_check_at = next_check_at
+        obj.save()
+
+        return obj
+
+    @classmethod
+    def clean_expired(cls):
+        """
+        Elimina registros expirados de la base de datos.
+        Debe ejecutarse periódicamente (por ejemplo, con un supervisor o tarea).
+        """
+        from django.utils import timezone
+
+        utc_now = timezone.now()
+        deleted_count, _ = cls.objects.filter(valid_until__lt=utc_now).delete()
+        return deleted_count
+
+
+class CourseResaleSettings(models.Model):
+    """
+    Allows an academy to resell a course from another academy.
+    This model stores reseller-specific settings while keeping the original course data intact.
+    
+    The reseller can customize almost everything except:
+    - slug: Unique identifier (belongs to original course)
+    - syllabus: Course content (belongs to original owner)
+    - cohort: Cohort configuration (belongs to original owner)
+    
+    All resale_* fields override the original course values when set.
+    If a resale_* field is null/blank, the original course value is used.
+    """
+
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, related_name="resale_settings", help_text="Original course being resold"
+    )
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        related_name="resale_courses",
+        help_text="Academy that is reselling the course",
+    )
+
+    # Reseller-specific overrides (same field names as Course model for consistency)
+    # If null/blank, the original course value is used
+    
+    # Pricing and plans
+    plan_slug = models.SlugField(
+        max_length=150,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom plan slug for the reseller (overrides course.plan_slug)",
+    )
+    plan_by_country_code = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom plan mapping by country code for the reseller (overrides course.plan_by_country_code)",
+    )
+    
+    # Visual customization
+    icon_url = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom icon for the reseller (overrides course.icon_url)",
+    )
+    banner_image = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom banner image for the reseller (overrides course.banner_image)",
+    )
+    color = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom color in hexadecimal format for the reseller (overrides course.color)",
+    )
+    technologies = models.CharField(
+        max_length=240,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom technologies list for the reseller (overrides course.technologies)",
+    )
+    
+    # Status and visibility
+    status = models.CharField(
+        max_length=15,
+        choices=COURSE_STATUS,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Status for the reseller (overrides course.status, defaults to ACTIVE if null)",
+    )
+    status_message = models.CharField(
+        max_length=250,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Custom status message for the reseller",
+    )
+    visibility = models.CharField(
+        max_length=15,
+        choices=VISIBILITY_STATUS,
+        default=UNLISTED,
+        help_text="Visibility status for the reseller (overrides course.visibility)",
+    )
+    is_listed = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Controls inclusion in reseller's listings and sitemaps (overrides course.is_listed)",
+    )
+    
+    # Features
+    has_waiting_list = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Whether the reseller has a waiting list (overrides course.has_waiting_list)",
+    )
+    
+    # Control
+    is_active = models.BooleanField(default=True, help_text="Whether the resale is currently active")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        unique_together = (("course", "academy"),)
+        db_table = "marketing_course_resale_settings"
+        verbose_name = "Course Resale Settings"
+        verbose_name_plural = "Course Resale Settings"
+
+    def __str__(self):
+        return f"{self.academy.slug} reselling {self.course.slug}"
+
+    def clean(self):
+        """Validate that the reseller academy has the required permissions."""
+        from breathecode.admissions.utils.academy_features import has_feature_flag
+
+        if self.academy.white_labeled is False:
+            raise ValidationError(
+                {"academy": "Academy must be white labeled to resell courses. Set academy.white_labeled=True"}
+            )
+
+        if has_feature_flag(self.academy, "reseller", default=False) is False:
+            raise ValidationError(
+                {
+                    "academy": "Academy must have the 'reseller' feature enabled in academy_features to resell courses"
+                }
+            )
+
+        if self.course.academy == self.academy:
+            raise ValidationError(
+                {"academy": "An academy cannot resell its own courses. The reseller academy must be different from the course owner."}
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

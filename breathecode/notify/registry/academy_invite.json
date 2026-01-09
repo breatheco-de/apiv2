@@ -1,0 +1,36 @@
+{
+    "slug": "academy_invite",
+    "name": "Academy Invitation",
+    "description": "Sent when a user is invited to join an academy with pending invitations to accept or reject",
+    "category": "academy",
+    "channels": {
+        "email": {
+            "template_path": "academy_invite",
+            "default_subject": "You've been invited to join an academy"
+        }
+    },
+    "variables": [
+        {
+            "name": "user",
+            "description": "Serialized user object (template accesses user.first_name)",
+            "source": "UserBigSerializer(user).data",
+            "example": "{\"first_name\": \"John\", \"last_name\": \"Doe\", \"email\": \"john@example.com\"}",
+            "required": true
+        },
+        {
+            "name": "LINK",
+            "description": "Base URL for accepting/rejecting invitations",
+            "source": "Generated invitation management URL",
+            "example": "https://app.4geeks.com/invite/manage",
+            "required": true
+        },
+        {
+            "name": "invites",
+            "description": "List of academy invitation objects with details",
+            "source": "ProfileAcademy invitation records",
+            "example": "[{academy: {name: 'Miami Academy'}, created_at: '2024-01-01', role: 'STUDENT', id: 123}]",
+            "required": true
+        }
+    ]
+}
+

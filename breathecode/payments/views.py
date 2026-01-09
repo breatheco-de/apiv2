@@ -24,11 +24,14 @@ import breathecode.activity.tasks as tasks_activity
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.actions import get_academy_from_body, get_user_language, get_user_settings
 from breathecode.commission.tasks import register_referral_from_invoice
+from breathecode.events.models import EventType
+from breathecode.mentorship.models import MentorshipService
 from breathecode.payments import actions, tasks
 from breathecode.payments.actions import (
     PlanFinder,
     add_items_to_bag,
     apply_pricing_ratio,
+    calculate_refund_breakdown,
     filter_consumables,
     filter_void_consumable_balance,
     get_amount,
@@ -37,6 +40,7 @@ from breathecode.payments.actions import (
     get_balance_by_resource,
     get_discounted_price,
     max_coupons_allowed,
+    process_refund,
 )
 from breathecode.payments.caches import PlanFinancingCache, PlanOfferCache, SubscriptionCache
 from breathecode.payments.models import (
@@ -68,8 +72,12 @@ from breathecode.payments.models import (
     SubscriptionSeat,
 )
 from breathecode.payments.serializers import (
+    AcademyPaymentSettingsPUTSerializer,
     BillingTeamAutoRechargeSerializer,
     CohortSetSerializer,
+    CouponSerializer,
+    CreditNoteSerializer,
+    EventTypeSetSerializer,
     FinancingOptionSerializer,
     GetAbstractIOweYouSmallSerializer,
     GetAcademyServiceSmallSerializer,
@@ -79,6 +87,7 @@ from breathecode.payments.serializers import (
     GetConsumptionSessionSerializer,
     GetCouponSerializer,
     GetCouponWithPlansSerializer,
+    GetCurrencySerializer,
     GetEventTypeSetSerializer,
     GetEventTypeSetSmallSerializer,
     GetFinancingOptionSerializer,
@@ -93,6 +102,7 @@ from breathecode.payments.serializers import (
     GetServiceItemWithFeaturesSerializer,
     GetServiceSerializer,
     GetSubscriptionSerializer,
+    MentorshipServiceSetSerializer,
     PaymentMethodSerializer,
     PlanSerializer,
     POSTAcademyServiceSerializer,
@@ -303,6 +313,12 @@ class AcademyPlanView(APIView):
         if plan.currency:
             data["currency"] = plan.currency.id
 
+        # Include slug from URL or existing plan to satisfy serializer requirement
+        if plan_slug:
+            data["slug"] = plan_slug
+        elif plan.slug:
+            data["slug"] = plan.slug
+
         for key in request.data:
             if key in ["owner", "owner_id"]:
                 continue
@@ -497,7 +513,7 @@ class AcademyCohortSetView(APIView):
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
-    @capable_of("read_plan")
+    @capable_of("crud_plan")
     def get(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
         """Get all cohort sets or a specific one."""
         handler = self.extensions(request)
@@ -527,17 +543,69 @@ class AcademyCohortSetView(APIView):
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
         """Create a new CohortSet."""
-        # lang = get_user_language(request)
+        lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
 
+        # Parameters to clone a cohort set of a plan with additional cohorts
+        plan_to_clone = request.data.get("plan_to_clone")
+        cohort_ids = request.data.get("cohort_ids")
+
+        if (plan_to_clone and not cohort_ids) or (not plan_to_clone and cohort_ids):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Both plan and additional cohorts are required to clone a cohort set",
+                    es="Se requiere tanto el plan como las cohortes adicionales para clonar un cohort set",
+                ),
+                slug="missing-clone-params",
+                code=400,
+            )
+
+        plan = None
+        if plan_to_clone:
+            plan = Plan.objects.filter(id=plan_to_clone, owner__id=academy_id).first()
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan not found",
+                        es="Plan no encontrado",
+                    ),
+                    slug="plan-not-found",
+                    code=404,
+                )
+
+        cohorts_to_add = None
+        if cohort_ids:
+            ids = [int(x.strip()) for x in cohort_ids.split(",")] if isinstance(cohort_ids, str) else cohort_ids
+            cohorts_to_add = Cohort.objects.filter(id__in=ids, academy__id=academy_id)
+            if not cohorts_to_add.exists() or cohorts_to_add.count() != len(ids):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"One or more cohorts don't exist or don't belong to academy {academy_id}",
+                        es=f"Una o más de las cohortes no existen o no pertenecen a la academia {academy_id}",
+                    ),
+                    slug="cohort-not-in-academy",
+                    code=400,
+                )
+
         serializer = CohortSetSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-            # Fetch the created cohort set with relationships
-            cohort_set = CohortSet.objects.get(id=serializer.data["id"])
-            return Response(GetCohortSetSerializer(cohort_set, many=False).data, status=201)
+            with transaction.atomic():
+                cohort_set = serializer.save()
+
+                if plan:
+                    if plan.cohort_set:
+                        cohort_set.cohorts.set(plan.cohort_set.cohorts.all())
+                    plan.cohort_set = cohort_set
+                    plan.save()
+                if cohorts_to_add:
+                    cohort_set.cohorts.add(*cohorts_to_add)
+
+                return Response(GetCohortSetSerializer(cohort_set, many=False).data, status=201)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -586,7 +654,7 @@ class AcademyCohortSetCohortView(APIView):
 
     extensions = APIViewExtensions(sort="-id", paginate=True)
 
-    @capable_of("read_plan")
+    @capable_of("crud_plan")
     def get(self, request, cohort_set_id=None, cohort_set_slug=None, academy_id=None):
         """Get all cohorts in a CohortSet."""
         handler = self.extensions(request)
@@ -735,6 +803,386 @@ class AcademyCohortSetCohortView(APIView):
         return Response({"status": "ok"})
 
 
+class AcademyMentorshipServiceSetView(APIView):
+    """Manage MentorshipServiceSets for an academy."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_plan")
+    def get(self, request, mentorship_service_set_id=None, mentorship_service_set_slug=None, academy_id=None):
+        """Get all mentorship service sets or a specific one."""
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if mentorship_service_set_id or mentorship_service_set_slug:
+            # Get specific mentorship service set
+            mentorship_service_set = MentorshipServiceSet.objects.filter(
+                Q(id=mentorship_service_set_id) | Q(slug=mentorship_service_set_slug), academy__id=academy_id
+            ).first()
+            if not mentorship_service_set:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="MentorshipServiceSet not found",
+                        es="MentorshipServiceSet no encontrado",
+                        slug="not-found",
+                    ),
+                    code=404,
+                )
+
+            serializer = GetMentorshipServiceSetSerializer(mentorship_service_set, many=False)
+            return handler.response(serializer.data)
+
+        # Get all mentorship service sets
+        items = MentorshipServiceSet.objects.filter(academy__id=academy_id)
+        items = handler.queryset(items)
+        serializer = GetMentorshipServiceSetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        """Create a new MentorshipServiceSet."""
+        lang = get_user_language(request)
+
+        data = request.data.copy()
+        data["academy"] = academy_id
+
+        # Optional parameters to clone a mentorship service set of a plan with additional services
+        plan_to_clone = request.data.get("plan_to_clone")
+        mentorship_service_ids = request.data.get("mentorship_service_ids")
+
+        if (plan_to_clone and not mentorship_service_ids) or (not plan_to_clone and mentorship_service_ids):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Both plan and additional mentorship services are required to clone a mentorship service set",
+                    es="Se requiere tanto el plan como los servicios de mentoría adicionales para clonar un mentorship service set",
+                ),
+                slug="missing-clone-params",
+                code=400,
+            )
+
+        plan = None
+        if plan_to_clone:
+            plan = Plan.objects.filter(id=plan_to_clone, owner__id=academy_id).first()
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan not found",
+                        es="Plan no encontrado",
+                    ),
+                    slug="plan-not-found",
+                    code=404,
+                )
+
+        services_to_add = None
+        if mentorship_service_ids:
+            ids = (
+                [int(x.strip()) for x in mentorship_service_ids.split(",")]
+                if isinstance(mentorship_service_ids, str)
+                else mentorship_service_ids
+            )
+            services_to_add = MentorshipService.objects.filter(id__in=ids, academy__id=academy_id)
+            if not services_to_add.exists() or services_to_add.count() != len(ids):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"One or more mentorship services don't exist or don't belong to academy {academy_id}",
+                        es=f"Uno o más servicios de mentoría no existen o no pertenecen a la academia {academy_id}",
+                    ),
+                    slug="mentorship-service-not-in-academy",
+                    code=400,
+                )
+
+        serializer = MentorshipServiceSetSerializer(data=data)
+        if serializer.is_valid():
+            with transaction.atomic():
+                mentorship_service_set = serializer.save()
+
+                if plan:
+                    if plan.mentorship_service_set:
+                        mentorship_service_set.mentorship_services.set(
+                            plan.mentorship_service_set.mentorship_services.all()
+                        )
+                    plan.mentorship_service_set = mentorship_service_set
+                    plan.save()
+
+                if services_to_add:
+                    mentorship_service_set.mentorship_services.add(*services_to_add)
+
+                return Response(GetMentorshipServiceSetSerializer(mentorship_service_set, many=False).data, status=201)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_plan")
+    def put(self, request, mentorship_service_set_id=None, mentorship_service_set_slug=None, academy_id=None):
+        """Add mentorship services to a MentorshipServiceSet."""
+        lang = get_user_language(request)
+
+        errors = []
+        mentorship_service_set = MentorshipServiceSet.objects.filter(
+            Q(id=mentorship_service_set_id) | Q(slug=mentorship_service_set_slug), academy__id=academy_id
+        ).first()
+        if not mentorship_service_set:
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en="MentorshipServiceSet not found",
+                        es="MentorshipServiceSet no encontrado",
+                        slug="not-found",
+                    )
+                )
+            )
+
+        # Build query for mentorship services
+        service_ids = request.GET.get("id")
+        service_slugs = request.GET.get("slug")
+
+        query = Q()
+        if service_ids:
+            ids = [int(x.strip()) for x in service_ids.split(",")] if "," in service_ids else [int(service_ids)]
+            query |= Q(id__in=ids)
+
+        if service_slugs:
+            slugs = (
+                [x.strip().lower() for x in service_slugs.split(",")]
+                if "," in service_slugs
+                else [service_slugs.lower()]
+            )
+            query |= Q(slug__in=slugs)
+
+        if not query:
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en="Missing id or slug parameter",
+                        es="Falta el parámetro id o slug",
+                        slug="missing-params",
+                    )
+                )
+            )
+
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        # Filter mentorship services by academy
+        items = MentorshipService.objects.filter(query, academy__id=academy_id)
+
+        if not items.exists():
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en="MentorshipService not found",
+                        es="Servicio de mentoría no encontrado",
+                        slug="mentorship-service-not-found",
+                    )
+                )
+            )
+
+        if errors:
+            raise ValidationException(errors, code=404)
+
+        to_add = set()
+        for item in items:
+            if item not in mentorship_service_set.mentorship_services.all():
+                to_add.add(item)
+
+        if to_add:
+            mentorship_service_set.mentorship_services.add(*to_add)
+
+        return Response({"status": "ok"}, status=status.HTTP_201_CREATED if to_add else status.HTTP_200_OK)
+
+
+class AcademyEventTypeSetView(APIView):
+    """Manage EventTypeSets for an academy."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("crud_plan")
+    def get(self, request, event_type_set_id=None, event_type_set_slug=None, academy_id=None):
+        """Get all event type sets or a specific one."""
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        if event_type_set_id or event_type_set_slug:
+            # Get specific event type set
+            event_type_set = EventTypeSet.objects.filter(
+                Q(id=event_type_set_id) | Q(slug=event_type_set_slug), academy__id=academy_id
+            ).first()
+            if not event_type_set:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="EventTypeSet not found",
+                        es="EventTypeSet no encontrado",
+                        slug="not-found",
+                    ),
+                    code=404,
+                )
+
+            serializer = GetEventTypeSetSerializer(event_type_set, many=False)
+            return handler.response(serializer.data)
+
+        # Get all event type sets
+        items = EventTypeSet.objects.filter(academy__id=academy_id)
+        items = handler.queryset(items)
+        serializer = GetEventTypeSetSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("crud_plan")
+    def post(self, request, academy_id=None):
+        """Create a new EventTypeSet."""
+        lang = get_user_language(request)
+
+        data = request.data.copy()
+        data["academy"] = academy_id
+
+        # Optional parameters to clone an event type set of a plan with additional event types
+        plan_to_clone = request.data.get("plan_to_clone")
+        event_type_ids = request.data.get("event_type_ids")
+
+        if (plan_to_clone and not event_type_ids) or (not plan_to_clone and event_type_ids):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Both plan and additional event types are required to clone an event type set",
+                    es="Se requiere tanto el plan como los tipos de evento adicionales para clonar un event type set",
+                ),
+                slug="missing-clone-params",
+                code=400,
+            )
+
+        plan = None
+        if plan_to_clone:
+            plan = Plan.objects.filter(id=plan_to_clone, owner__id=academy_id).first()
+            if not plan:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Plan not found",
+                        es="Plan no encontrado",
+                    ),
+                    slug="plan-not-found",
+                    code=404,
+                )
+
+        event_types_to_add = None
+        if event_type_ids:
+            ids = (
+                [int(x.strip()) for x in event_type_ids.split(",")]
+                if isinstance(event_type_ids, str)
+                else event_type_ids
+            )
+            event_types_to_add = EventType.objects.filter(id__in=ids, academy__id=academy_id)
+            if not event_types_to_add.exists() or event_types_to_add.count() != len(ids):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"One or more event types don't exist or don't belong to academy {academy_id}",
+                        es=f"Uno o más tipos de evento no existen o no pertenecen a la academia {academy_id}",
+                    ),
+                    slug="event-type-not-in-academy",
+                    code=400,
+                )
+
+        serializer = EventTypeSetSerializer(data=data)
+        if serializer.is_valid():
+            with transaction.atomic():
+                event_type_set = serializer.save()
+
+                if plan:
+                    if plan.event_type_set:
+                        event_type_set.event_types.set(plan.event_type_set.event_types.all())
+                    plan.event_type_set = event_type_set
+                    plan.save()
+
+                if event_types_to_add:
+                    event_type_set.event_types.add(*event_types_to_add)
+
+                return Response(GetEventTypeSetSerializer(event_type_set, many=False).data, status=201)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_plan")
+    def put(self, request, event_type_set_id=None, event_type_set_slug=None, academy_id=None):
+        """Add event types to an EventTypeSet."""
+        lang = get_user_language(request)
+
+        errors = []
+        event_type_set = EventTypeSet.objects.filter(
+            Q(id=event_type_set_id) | Q(slug=event_type_set_slug), academy__id=academy_id
+        ).first()
+        if not event_type_set:
+            errors.append(
+                C(translation(lang, en="EventTypeSet not found", es="EventTypeSet no encontrado", slug="not-found"))
+            )
+
+        # Build query for event types
+        event_type_ids = request.GET.get("id")
+        event_type_slugs = request.GET.get("slug")
+
+        query = Q()
+        if event_type_ids:
+            ids = (
+                [int(x.strip()) for x in event_type_ids.split(",")] if "," in event_type_ids else [int(event_type_ids)]
+            )
+            query |= Q(id__in=ids)
+
+        if event_type_slugs:
+            slugs = (
+                [x.strip().lower() for x in event_type_slugs.split(",")]
+                if "," in event_type_slugs
+                else [event_type_slugs.lower()]
+            )
+            query |= Q(slug__in=slugs)
+
+        if not query:
+            errors.append(
+                C(
+                    translation(
+                        lang,
+                        en="Missing id or slug parameter",
+                        es="Falta el parámetro id o slug",
+                        slug="missing-params",
+                    )
+                )
+            )
+
+        if errors:
+            raise ValidationException(errors, code=400)
+
+        # Filter event types by academy
+        items = EventType.objects.filter(query, academy__id=academy_id)
+
+        if not items.exists():
+            errors.append(
+                C(
+                    translation(
+                        lang, en="EventType not found", es="Tipo de evento no encontrado", slug="event-type-not-found"
+                    )
+                )
+            )
+
+        if errors:
+            raise ValidationException(errors, code=404)
+
+        to_add = set()
+        for item in items:
+            if item not in event_type_set.event_types.all():
+                to_add.add(item)
+
+        if to_add:
+            event_type_set.event_types.add(*to_add)
+
+        return Response({"status": "ok"}, status=status.HTTP_201_CREATED if to_add else status.HTTP_200_OK)
+
+
 class ServiceView(APIView):
     permission_classes = [AllowAny]
     extensions = APIViewExtensions(sort="-id", paginate=True)
@@ -800,6 +1248,45 @@ class ServiceView(APIView):
         items = handler.queryset(items)
         serializer = GetServiceSerializer(
             items, many=True, context={"academy_id": request.GET.get("academy")}, select=request.GET.get("select")
+        )
+
+        return handler.response(serializer.data)
+
+
+class ModelServiceView(APIView):
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_invite")
+    def get(self, request, academy_id=None):
+        """
+        Get all model services that are suggested to all academies at setup time.
+        This endpoint requires the read_invite capability in any academy.
+        The academy_id can be provided via URL, header, or query param, but any academy where
+        the user has the read_invite capability will work.
+        """
+        handler = self.extensions(request)
+        # lang = get_user_language(request)
+
+        # Get all services marked as model services
+        # Model services ignore the private field - they are always visible
+        items = Service.objects.filter(is_model_service=True)
+
+        # Add optional academy owner filter
+        # Use academy_id from decorator, or fall back to query param
+        filter_academy_id = request.GET.get("academy", False)
+        if filter_academy_id and str(filter_academy_id).isdigit():
+            items = items.filter(Q(owner__id=int(filter_academy_id)) | Q(owner=None))
+
+        # Add "like" search filter for slug or title
+        if like := request.GET.get("like"):
+            items = items.filter(Q(slug__icontains=like) | Q(title__icontains=like))
+
+        items = handler.queryset(items)
+        serializer = GetServiceSerializer(
+            items,
+            many=True,
+            context={"academy_id": academy_id or request.GET.get("academy")},
+            select=request.GET.get("select"),
         )
 
         return handler.response(serializer.data)
@@ -1170,7 +1657,7 @@ class AcademyServiceItemView(APIView):
 class MeConsumableView(APIView):
 
     def get(self, request):
-        items = Consumable.list(user=request.user)
+        items = Consumable.list(user=request.user, include_zero_balance=True)
 
         mentorship_services = MentorshipServiceSet.objects.none()
         mentorship_services = filter_consumables(request, items, mentorship_services, "mentorship_service_set")
@@ -2091,9 +2578,461 @@ class AcademyInvoiceView(APIView):
             items = items.filter(status__in=status.split(","))
 
         items = handler.queryset(items)
-        serializer = GetInvoiceSmallSerializer(items, many=True)
+        serializer = GetInvoiceSerializer(items, many=True)
 
         return handler.response(serializer.data)
+
+
+class AcademyInvoiceRefundView(APIView):
+    """
+    Process a refund for an invoice.
+    Creates a credit note and processes the refund through Stripe if applicable.
+    """
+
+    @capable_of("crud_invoice")
+    def post(self, request, invoice_id, academy_id=None):
+        lang = get_user_language(request)
+        invoice = Invoice.objects.filter(id=invoice_id, academy__id=academy_id).first()
+
+        if not invoice:
+            raise ValidationException(
+                translation(lang, en="Invoice not found", es="La factura no existe", slug="not-found"), code=404
+            )
+
+        # Validate invoice is not already fully refunded
+        already_refunded = invoice.amount_refunded or 0
+        available_to_refund = invoice.amount - already_refunded
+
+        if already_refunded >= invoice.amount:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Invoice has already been fully refunded. Total refunded: {already_refunded}, Invoice amount: {invoice.amount}",
+                    es=f"La factura ya ha sido completamente reembolsada. Total reembolsado: {already_refunded}, Monto de la factura: {invoice.amount}",
+                    slug="invoice-already-fully-refunded",
+                ),
+                code=400,
+            )
+
+        # refund_amount is required
+        refund_amount = request.data.get("refund_amount")
+        if refund_amount is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="refund_amount is required",
+                    es="refund_amount es requerido",
+                    slug="refund-amount-required",
+                ),
+                code=400,
+            )
+
+        try:
+            refund_amount = float(refund_amount)
+            if refund_amount <= 0:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Refund amount must be greater than 0",
+                        es="El monto del reembolso debe ser mayor que 0",
+                        slug="invalid-refund-amount",
+                    ),
+                    code=400,
+                )
+            if refund_amount > available_to_refund:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Refund amount ({refund_amount}) exceeds available amount to refund ({available_to_refund}). "
+                        f"Already refunded: {already_refunded}, Invoice total: {invoice.amount}",
+                        es=f"El monto del reembolso ({refund_amount}) excede el monto disponible para reembolsar ({available_to_refund}). "
+                        f"Ya reembolsado: {already_refunded}, Total de la factura: {invoice.amount}",
+                        slug="refund-amount-exceeds-available",
+                    ),
+                    code=400,
+                )
+        except ValueError:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid refund_amount. Must be a number.",
+                    es="refund_amount inválido. Debe ser un número.",
+                    slug="invalid-refund-amount",
+                ),
+                code=400,
+            )
+
+        reason = request.data.get("reason", "")
+
+        # items_to_refund is required - it's a dict mapping slugs to refund amounts
+        items_to_refund = request.data.get("items_to_refund")
+        if items_to_refund is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund is required. Must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
+                    es="items_to_refund es requerido. Debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
+                    slug="items-to-refund-required",
+                ),
+                code=400,
+            )
+
+        if not isinstance(items_to_refund, dict):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund must be an object mapping slugs to refund amounts (e.g., {'plan-slug': 100, 'service-slug': 50})",
+                    es="items_to_refund debe ser un objeto que mapee slugs a montos de reembolso (ej: {'plan-slug': 100, 'service-slug': 50})",
+                    slug="invalid-items-to-refund",
+                ),
+                code=400,
+            )
+
+        if len(items_to_refund) == 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="items_to_refund cannot be empty. Must contain at least one slug with its refund amount",
+                    es="items_to_refund no puede estar vacío. Debe contener al menos un slug con su monto de reembolso",
+                    slug="items-to-refund-empty",
+                ),
+                code=400,
+            )
+
+        # Validate that all values in items_to_refund are positive numbers
+        for slug, amount in items_to_refund.items():
+            try:
+                amount_float = float(amount)
+                if amount_float <= 0:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Refund amount for '{slug}' must be greater than 0, got {amount}",
+                            es=f"El monto del reembolso para '{slug}' debe ser mayor que 0, se obtuvo {amount}",
+                            slug="invalid-refund-amount-for-item",
+                        ),
+                        code=400,
+                    )
+            except (ValueError, TypeError):
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Refund amount for '{slug}' must be a number, got {type(amount).__name__}",
+                        es=f"El monto del reembolso para '{slug}' debe ser un número, se obtuvo {type(amount).__name__}",
+                        slug="invalid-refund-amount-type",
+                    ),
+                    code=400,
+                )
+
+        # Validate that refund_amount matches the sum of items_to_refund amounts
+        total_items_refund = sum(float(amount) for amount in items_to_refund.values())
+        if abs(refund_amount - total_items_refund) > 0.01:  # Allow small floating point differences
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Refund amount ({refund_amount}) does not match the sum of items_to_refund amounts ({total_items_refund}). "
+                    f"Items to refund: {items_to_refund}",
+                    es=f"El monto del reembolso ({refund_amount}) no coincide con la suma de los montos de items_to_refund ({total_items_refund}). "
+                    f"Items a reembolsar: {items_to_refund}",
+                    slug="refund-amount-mismatch",
+                ),
+                code=400,
+            )
+
+        refund_breakdown = None
+        if invoice.amount_breakdown and refund_amount is not None:
+            refund_breakdown = calculate_refund_breakdown(invoice, refund_amount, items_to_refund, lang=lang)
+
+        credit_note = process_refund(
+            invoice=invoice,
+            amount=refund_amount,
+            breakdown=refund_breakdown,
+            items_to_refund=items_to_refund,
+            reason=reason,
+            country_code=invoice.bag.country_code if invoice.bag else None,
+            lang=lang,
+        )
+
+        serializer = CreditNoteSerializer(credit_note, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AcademyCouponView(APIView):
+    """Manage coupons for an academy. Academies can manage coupons associated with their plans."""
+
+    extensions = APIViewExtensions(sort="-id", paginate=True)
+
+    @capable_of("read_subscription")
+    def get(self, request, coupon_slug=None, academy_id=None):
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+        _academy_id = int(academy_id) if academy_id is not None else None
+        # Filter coupons that have at least one plan associated with the academy
+        # Include both academy-owned plans and global plans (owner=None)
+        base_query = Q(plans__owner__id=_academy_id) | Q(plans__owner=None)
+        items = Coupon.objects.filter(base_query).distinct()
+
+        # Filter by specific plan if provided
+        plan_filter = request.GET.get("plan")
+        if plan_filter:
+            plan_kwargs = {}
+            if plan_filter.isdigit():
+                plan_kwargs["id"] = int(plan_filter)
+            else:
+                plan_kwargs["slug"] = plan_filter
+
+            plan = Plan.objects.filter(**plan_kwargs).first()
+            if not plan:
+                raise ValidationException(
+                    translation(lang, en="Plan not found", es="Plan no encontrado", slug="plan-not-found"), code=404
+                )
+
+            # Validate plan belongs to academy or is global
+            if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Plan {plan_filter} does not belong to this academy",
+                        es=f"El plan {plan_filter} no pertenece a esta academia",
+                        slug="plan-not-belonging-to-academy",
+                    ),
+                    code=403,
+                )
+
+            # Filter coupons that are associated with this specific plan
+            items = items.filter(plans__id=plan.id).distinct()
+
+        if coupon_slug:
+            item = items.filter(slug=coupon_slug).first()
+            if not item:
+                raise ValidationException(
+                    translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+                )
+
+            serializer = GetCouponSerializer(item, many=False)
+            return handler.response(serializer.data)
+
+        # Add "like" search filter for slug
+        if like := request.GET.get("like"):
+            items = items.filter(slug__icontains=like)
+
+        items = handler.queryset(items)
+        serializer = GetCouponSerializer(items, many=True)
+
+        return handler.response(serializer.data)
+
+    @capable_of("read_subscription")
+    def head(self, request, coupon_slug, academy_id=None):
+        """
+        Check if a coupon slug exists (checks globally, not just academy-specific).
+        Returns 200 if exists, 404 if not.
+        """
+        lang = get_user_language(request)
+
+        # Check globally (any academy, not filtered by academy_id)
+        coupon_exists = Coupon.objects.filter(slug=coupon_slug).exists()
+
+        if not coupon_exists:
+            raise ValidationException(
+                translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+            )
+
+        return Response(status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        data = request.data.copy()
+        _academy_id = int(academy_id) if academy_id is not None else None
+
+        # Validate plans if provided
+        plans_data = data.get("plans", [])
+        if plans_data:
+            # Convert plan IDs/slugs to Plan objects and validate they belong to academy
+            plan_objects = []
+            for plan_identifier in plans_data:
+                plan_kwargs = {}
+                if isinstance(plan_identifier, int):
+                    plan_kwargs["id"] = plan_identifier
+                elif isinstance(plan_identifier, str):
+                    if plan_identifier.isdigit():
+                        plan_kwargs["id"] = int(plan_identifier)
+                    else:
+                        plan_kwargs["slug"] = plan_identifier
+                else:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Invalid plan identifier. Must be an ID or slug",
+                            es="Identificador de plan inválido. Debe ser un ID o slug",
+                            slug="invalid-plan-identifier",
+                        ),
+                        code=400,
+                    )
+
+                plan = Plan.objects.filter(**plan_kwargs).first()
+                if not plan:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Plan not found: {plan_identifier}",
+                            es=f"Plan no encontrado: {plan_identifier}",
+                            slug="plan-not-found",
+                        ),
+                        code=404,
+                    )
+
+                # Validate plan belongs to academy or is global
+                if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Plan {plan_identifier} does not belong to this academy",
+                            es=f"El plan {plan_identifier} no pertenece a esta academia",
+                            slug="plan-not-belonging-to-academy",
+                        ),
+                        code=403,
+                    )
+
+                plan_objects.append(plan)
+
+            data["plans"] = [p.id for p in plan_objects]
+
+        # Validate referral type rules
+        referral_type = data.get("referral_type", Coupon.Referral.NO_REFERRAL)
+        if referral_type != Coupon.Referral.NO_REFERRAL and plans_data:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If referral_type is not NO_REFERRAL, plans must be empty",
+                    es="Si referral_type no es NO_REFERRAL, plans debe estar vacío",
+                    slug="invalid-referral-coupon-with-plans",
+                ),
+                code=400,
+            )
+
+        serializer = CouponSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        # Create coupon (serializer handles ManyToMany relationships)
+        coupon = serializer.save()
+
+        # Return using GET serializer for consistent response
+        response_serializer = GetCouponSerializer(coupon, many=False)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    @capable_of("crud_subscription")
+    def put(self, request, coupon_slug=None, academy_id=None):
+        lang = get_user_language(request)
+        _academy_id = int(academy_id) if academy_id is not None else None
+        # Filter coupons that have at least one plan associated with the academy
+        base_query = Q(plans__owner__id=academy_id) | Q(plans__owner=None)
+        coupon = Coupon.objects.filter(base_query, slug=coupon_slug).distinct().first()
+
+        if not coupon:
+            raise ValidationException(
+                translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+            )
+
+        data = request.data.copy()
+
+        # Validate plans if provided
+        plans_data = data.get("plans")
+        if plans_data is not None:
+            # Convert plan IDs/slugs to Plan objects and validate they belong to academy
+            plan_objects = []
+            for plan_identifier in plans_data:
+                plan_kwargs = {}
+                if isinstance(plan_identifier, int):
+                    plan_kwargs["id"] = plan_identifier
+                elif isinstance(plan_identifier, str):
+                    if plan_identifier.isdigit():
+                        plan_kwargs["id"] = int(plan_identifier)
+                    else:
+                        plan_kwargs["slug"] = plan_identifier
+                else:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en="Invalid plan identifier. Must be an ID or slug",
+                            es="Identificador de plan inválido. Debe ser un ID o slug",
+                            slug="invalid-plan-identifier",
+                        ),
+                        code=400,
+                    )
+
+                plan = Plan.objects.filter(**plan_kwargs).first()
+                if not plan:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Plan not found: {plan_identifier}",
+                            es=f"Plan no encontrado: {plan_identifier}",
+                            slug="plan-not-found",
+                        ),
+                        code=404,
+                    )
+
+                # Validate plan belongs to academy or is global
+                if plan.owner_id is not None and _academy_id is not None and plan.owner_id != _academy_id:
+                    raise ValidationException(
+                        translation(
+                            lang,
+                            en=f"Plan {plan_identifier} does not belong to this academy",
+                            es=f"El plan {plan_identifier} no pertenece a esta academia",
+                            slug="plan-not-belonging-to-academy",
+                        ),
+                        code=403,
+                    )
+
+                plan_objects.append(plan)
+
+            data["plans"] = [p.id for p in plan_objects]
+
+        # Validate referral type rules
+        referral_type = data.get("referral_type")
+        if referral_type is None:
+            referral_type = coupon.referral_type
+
+        if referral_type != Coupon.Referral.NO_REFERRAL and plans_data and len(plans_data) > 0:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If referral_type is not NO_REFERRAL, plans must be empty",
+                    es="Si referral_type no es NO_REFERRAL, plans debe estar vacío",
+                    slug="invalid-referral-coupon-with-plans",
+                ),
+                code=400,
+            )
+
+        serializer = CouponSerializer(coupon, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        # Serializer handles ManyToMany relationships
+        serializer.save()
+
+        # Refresh from DB to get updated relationships
+        coupon.refresh_from_db()
+
+        # Return using GET serializer for consistent response
+        response_serializer = GetCouponSerializer(coupon, many=False)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of("crud_subscription")
+    def delete(self, request, coupon_slug=None, academy_id=None):
+        lang = get_user_language(request)
+
+        # Filter coupons that have at least one plan associated with the academy
+        base_query = Q(plans__owner__id=academy_id) | Q(plans__owner=None)
+        coupon = Coupon.objects.filter(base_query, slug=coupon_slug).distinct().first()
+
+        if not coupon:
+            raise ValidationException(
+                translation(lang, en="Coupon not found", es="Cupón no encontrado", slug="not-found"), code=404
+            )
+
+        coupon.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CardView(APIView):
@@ -2531,7 +3470,9 @@ class PlanOfferView(APIView):
         items = items.distinct()
         items = handler.queryset(items)
         items = items.annotate(lang=Value(lang, output_field=CharField()))
-        serializer = GetPlanOfferSerializer(items, many=True)
+
+        country_code = request.GET.get("country_code")
+        serializer = GetPlanOfferSerializer(items, many=True, context={"country_code": country_code})
 
         return handler.response(serializer.data)
 
@@ -2621,6 +3562,41 @@ class BagCouponView(CouponBaseView):
                     slug="timeout",
                 ),
                 code=408,
+            )
+
+        serializer = GetBagSerializer(bag, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class BagByIdView(APIView):
+    def get(self, request, bag_id):
+        lang = get_user_language(request)
+
+        # Get bag and ensure it belongs to the authenticated user
+        bag = Bag.objects.filter(id=bag_id, user=request.user).first()
+
+        if not bag:
+            raise ValidationException(
+                translation(lang, en="Bag not found", es="Bolsa no encontrada", slug="bag-not-found"),
+                code=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = GetBagSerializer(bag, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyBagByIdView(APIView):
+    @capable_of("read_subscription")
+    def get(self, request, bag_id, academy_id=None):
+        lang = get_user_language(request)
+
+        # Get bag and ensure it belongs to the academy
+        bag = Bag.objects.filter(id=bag_id, academy__id=academy_id).first()
+
+        if not bag:
+            raise ValidationException(
+                translation(lang, en="Bag not found", es="Bolsa no encontrada", slug="bag-not-found"),
+                code=status.HTTP_404_NOT_FOUND,
             )
 
         serializer = GetBagSerializer(bag, many=False)
@@ -2905,6 +3881,10 @@ class CheckingView(APIView):
                         bag.token = Token.generate_key()
                         bag.expires_at = utc_now + timedelta(minutes=60)
 
+                        currency = bag.academy.main_currency
+                        if plan.currency != currency:
+                            currency = plan.currency
+
                         plan = bag.plans.filter(status="CHECKING").first()
 
                         # Initialize pricing_ratio_explanation
@@ -2914,7 +3894,7 @@ class CheckingView(APIView):
                         if not plan or plan.is_renewable:
                             bag.country_code = country_code
                             bag.amount_per_month, bag.amount_per_quarter, bag.amount_per_half, bag.amount_per_year = (
-                                get_amount(bag, bag.academy.main_currency, lang)
+                                get_amount(bag, currency, lang)
                             )
 
                         else:
@@ -3492,6 +4472,7 @@ class PayView(APIView):
 
                 how_many_installments = request.data.get("how_many_installments")
                 chosen_period = request.data.get("chosen_period", "").upper()
+                has_plan_addons = bag.plan_addons.exists()
 
                 available_for_free_trial = False
                 available_free = False
@@ -3574,7 +4555,7 @@ class PayView(APIView):
                 if not available_for_free_trial and not available_free and not chosen_period and how_many_installments:
                     bag.how_many_installments = how_many_installments
 
-                coupons = bag.coupons.none()
+                coupons = bag.coupons.all()
 
                 if not available_for_free_trial and not available_free and bag.how_many_installments > 0:
                     try:
@@ -3587,16 +4568,42 @@ class PayView(APIView):
                             bag.currency = c
                             bag.save()
 
-                        # Initialize add-ons to zero by default
+                        if bag.seat_service_item and bag.seat_service_item.how_many > 0:
+                            academy_service = AcademyService.objects.filter(
+                                service=bag.seat_service_item.service,
+                                academy=bag.academy,
+                            ).first()
+                            if not academy_service:
+                                raise ValidationException(
+                                    translation(
+                                        lang,
+                                        en="Price are not configured for per-seat purchases",
+                                        es="Precio no configurado para compras por asiento",
+                                        slug="price-not-configured-for-per-seat-purchases",
+                                    ),
+                                    code=400,
+                                )
+                            seat_cost = academy_service.price_per_unit * bag.seat_service_item.how_many
+                            adjusted_price += seat_cost
+                            original_price += seat_cost
+
                         add_ons_amount = 0
                         if request.data.get("add_ons"):
                             add_ons_amount = actions.manage_plan_financing_add_ons(request, bag, lang)
 
                         adjusted_price += add_ons_amount
 
-                        # Then apply coupons
-                        coupons = bag.coupons.all()
-                        amount = get_discounted_price(adjusted_price, coupons)
+                        base_coupons = actions.get_coupons_for_plan(plan, list(coupons))
+                        recurring_amount = get_discounted_price(adjusted_price, base_coupons)
+
+                        addons_before_total, plan_addons_amount = (
+                            actions.get_plan_addons_amounts_with_coupons(bag, list(coupons), lang)
+                            if has_plan_addons
+                            else (0.0, 0.0)
+                        )
+
+                        original_price = adjusted_price + addons_before_total
+                        amount = recurring_amount + plan_addons_amount
 
                     except Exception:
                         raise ValidationException(
@@ -3610,10 +4617,22 @@ class PayView(APIView):
                         )
 
                 elif not available_for_free_trial and not available_free:
-                    amount = get_amount_by_chosen_period(bag, chosen_period, lang)
-                    coupons = bag.coupons.all()
-                    original_price = amount
-                    amount = get_discounted_price(amount, coupons)
+                    base_amount = get_amount_by_chosen_period(bag, chosen_period, lang)
+                    plan = bag.plans.first()
+
+                    # Apply coupons only to the base subscription plan
+                    base_coupons = actions.get_coupons_for_plan(plan, list(coupons)) if plan else list(coupons)
+                    base_after = get_discounted_price(base_amount, base_coupons)
+
+                    # Apply coupons per addon, respecting coupon.plan scope
+                    addons_before_total, plan_addons_amount = (
+                        actions.get_plan_addons_amounts_with_coupons(bag, list(coupons), lang)
+                        if has_plan_addons
+                        else (0.0, 0.0)
+                    )
+
+                    original_price = base_amount + addons_before_total
+                    amount = base_after + plan_addons_amount
 
                 else:
                     original_price = 0
@@ -3652,7 +4671,7 @@ class PayView(APIView):
 
                 payment_method = request.data.get("payment_method")
 
-                if payment_method == "coinbase":
+                if amount > 0 and payment_method == "coinbase":
                     if amount < 0.001:
                         raise ValidationException(
                             translation(
@@ -3708,7 +4727,7 @@ class PayView(APIView):
                         status=status.HTTP_201_CREATED,
                     )
 
-                elif payment_method != "stripe":
+                if amount > 0 and payment_method != "stripe":
                     raise ValidationException(
                         translation(
                             lang,
@@ -3718,10 +4737,12 @@ class PayView(APIView):
                         ),
                         code=400,
                     )
+
                 if amount >= 0.50:
                     s = Stripe(academy=bag.academy)
                     s.set_language(lang)
                     invoice = s.pay(request.user, bag, amount, currency=bag.currency.code)
+                    invoice.refresh_from_db()
 
                 elif amount == 0:
                     invoice = Invoice(
@@ -3733,7 +4754,6 @@ class PayView(APIView):
                         currency=bag.currency,
                         academy=bag.academy,
                     )
-
                     invoice.save()
 
                 else:
@@ -3741,6 +4761,11 @@ class PayView(APIView):
                         translation(lang, en="Amount is too low", es="El monto es muy bajo", slug="amount-is-too-low"),
                         code=400,
                     )
+
+                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                )
+                invoice.save(update_fields=["amount_breakdown"])
 
                 # Calculate is_recurrent based on:
                 # 1. If it's a free trial -> False
@@ -3775,10 +4800,19 @@ class PayView(APIView):
                     tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
 
                 elif bag.how_many_installments > 0:
-                    tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info)
+                    tasks.build_plan_financing.delay(
+                        bag.id,
+                        invoice.id,
+                        conversion_info=conversion_info,
+                        principal_amount=recurring_amount,
+                    )
+                    if has_plan_addons:
+                        actions.build_plan_addons_financings(bag, invoice, lang, conversion_info=conversion_info)
 
                 else:
                     tasks.build_subscription.delay(bag.id, invoice.id, conversion_info=conversion_info)
+                    if has_plan_addons:
+                        actions.build_plan_addons_financings(bag, invoice, lang, conversion_info=conversion_info)
 
                 if plans := bag.plans.all():
                     for plan in plans:
@@ -3803,13 +4837,17 @@ class PayView(APIView):
                 )
 
                 data = serializer.data
-                serializer = GetCouponSerializer(coupons, many=True)
+                # Convert coupons QuerySet to list before serialization to avoid stale QuerySet issues
+                serializer = GetCouponSerializer(list(coupons), many=True)
                 data["coupons"] = serializer.data
 
                 return Response(data, status=201)
 
             except Exception as e:
-                transaction.savepoint_rollback(sid)
+                try:
+                    transaction.savepoint_rollback(sid)
+                except Exception:
+                    pass
                 raise e
 
 
@@ -3916,6 +4954,18 @@ class CoinbaseChargeView(APIView):
                     )
                 bag.status = "PAID"
                 bag.save()
+
+                # Calculate invoice breakdown after transaction is complete
+                how_many_installments = metadata.get("how_many_installments", 0)
+                how_many_installments = int(float(how_many_installments)) if how_many_installments else 0
+                chosen_period = metadata.get("chosen_period")
+                if chosen_period and chosen_period not in ["MONTH", "QUARTER", "HALF", "YEAR", "NO_SET"]:
+                    chosen_period = None
+
+                invoice.amount_breakdown = actions.calculate_invoice_breakdown(
+                    bag, invoice, lang, chosen_period=chosen_period, how_many_installments=how_many_installments
+                )
+                invoice.save(update_fields=["amount_breakdown"])
 
                 coupons = bag.coupons.all()
 
@@ -4037,6 +5087,9 @@ class CoinbaseChargeView(APIView):
                                 pass
 
                         transaction.savepoint_commit(sid)
+
+                        has_plan_addons = bag.plan_addons.exists()
+
                         if original_price == 0:
                             tasks.build_free_subscription.delay(bag.id, invoice.id, conversion_info="")
 
@@ -4044,11 +5097,15 @@ class CoinbaseChargeView(APIView):
                             tasks.build_plan_financing.delay(
                                 bag.id, invoice.id, conversion_info="", externally_managed=True
                             )
+                            if has_plan_addons:
+                                actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
 
                         else:
                             tasks.build_subscription.delay(
                                 bag.id, invoice.id, conversion_info="", externally_managed=True
                             )
+                            if has_plan_addons:
+                                actions.build_plan_addons_financings(bag, invoice, lang, conversion_info="")
 
                     if plans := bag.plans.all():
                         for plan in plans:
@@ -4932,6 +5989,57 @@ class AcademyPlanSubscriptionView(APIView):
         return Response(data)
 
 
+class CurrencyView(APIView):
+    """
+    Get all available currencies.
+    """
+
+    extensions = APIViewExtensions(sort="code", paginate=True)
+    permission_classes = [AllowAny]
+
+    def get(self, request, currency_code=None):
+        """
+        Get currency or list of currencies.
+
+        Query parameters:
+        - code: Filter by currency code (e.g., USD, EUR)
+        - name: Filter by currency name
+        """
+        handler = self.extensions(request)
+        lang = get_user_language(request)
+
+        # If specific currency code is requested
+        if currency_code:
+            currency = Currency.objects.filter(code=currency_code.upper()).first()
+            if not currency:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Currency not found",
+                        es="Moneda no encontrada",
+                        slug="currency-not-found",
+                    ),
+                    code=404,
+                )
+            serializer = GetCurrencySerializer(currency, many=False)
+            return Response(serializer.data)
+
+        # List currencies with optional filters
+        query = handler.lookup.build(
+            lang,
+            strings={
+                "exact": ["code"],
+                "icontains": ["name"],
+            },
+        )
+
+        currencies = Currency.objects.filter(query)
+        currencies = handler.queryset(currencies)
+        serializer = GetCurrencySerializer(currencies, many=True)
+
+        return handler.response(serializer.data)
+
+
 class PaymentMethodView(APIView):
     extensions = APIViewExtensions(sort="-id", paginate=True)
     permission_classes = [AllowAny]
@@ -5273,6 +6381,47 @@ class AcademyPlanServiceItemView(APIView):
 
         return handler.response(
             {"status": "ok", "deleted": True, "deleted_count": deleted_count, "deleted_ids": plan_service_item_ids}
+        )
+
+
+class AcademyPlanSpecificServiceItemView(APIView):
+    @capable_of("crud_plan")
+    def delete(self, request, academy_id=None, plan_id=None, service_item_id=None):
+
+        plan = (
+            Plan.objects.filter(id=plan_id)
+            .filter(Q(owner__id=academy_id) | Q(owner=None))
+            .exclude(status=Plan.Status.DELETED)
+            .first()
+        )
+        if not plan:
+            raise ValidationException(
+                translation(en="Plan not found", es="Plan no encontrado", slug="plan-not-found"),
+                code=404,
+            )
+
+        plan_service_item = PlanServiceItem.objects.filter(plan=plan, service_item_id=service_item_id).first()
+        if not plan_service_item:
+            raise ValidationException(
+                translation(
+                    en="This service item is not attached to the selected plan",
+                    es="Este service item no está asociado al plan seleccionado",
+                    slug="plan-service-item-not-found",
+                ),
+                code=404,
+            )
+
+        plan_service_item_id = plan_service_item.id
+        plan_service_item.delete()
+
+        return Response(
+            {
+                "status": "ok",
+                "deleted": True,
+                "plan_id": plan.id,
+                "service_item_id": service_item_id,
+                "plan_service_item_id": plan_service_item_id,
+            }
         )
 
 
@@ -5910,3 +7059,42 @@ class PlanFinancingSeatView(APIView):
 
         actions.deactivate_plan_financing_seat(seat)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyPaymentSettingsView(APIView):
+    @capable_of("crud_academy_payment_settings")
+    def put(self, request, academy_id=None):
+        """
+        Update payment settings for an academy.
+        Allows partial updates of payment gateway configuration. Only provided fields will be updated.
+        If payment settings don't exist for the academy, they will be created automatically.
+
+        Args:
+            academy_id: Academy ID (injected automatically by @capable_of decorator from URL or Academy header)
+
+        Request Body (all optional):
+            stripe_api_key (str): Stripe secret API key (e.g., "sk_test_...")
+            stripe_webhook_secret (str): Stripe webhook secret for signature verification (e.g., "whsec_...")
+            stripe_publishable_key (str): Stripe publishable key for frontend (e.g., "pk_test_...")
+            coinbase_api_key (str): Coinbase Commerce API key
+            coinbase_webhook_secret (str): Coinbase webhook secret for signature verification
+        """
+
+        payment_settings, created = AcademyPaymentSettings.objects.get_or_create(
+            academy_id=academy_id,
+            defaults={
+                "stripe_api_key": "",
+                "stripe_webhook_secret": "",
+                "stripe_publishable_key": "",
+                "coinbase_api_key": None,
+                "coinbase_webhook_secret": None,
+            },
+        )
+
+        serializer = AcademyPaymentSettingsPUTSerializer(payment_settings, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

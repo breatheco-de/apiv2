@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
+from breathecode.activity.models import ACTIVITY_TABLE_NAME
 from breathecode.services.google_cloud.big_query import BigQuery
 
 from breathecode.utils.attr_dict import AttrDict
@@ -52,14 +53,15 @@ def bigquery_client_mock(self, user_id=1):
 
     query = f"""
                 SELECT *
-                FROM `{project_id}.{dataset}.activity`
+                FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
                 WHERE id = @activity_id
                     AND user_id = @user_id
                 ORDER BY id DESC
                 LIMIT 1
             """
 
-    return (client_mock, result_mock, query, project_id, dataset, rows_to_insert[0])
+    expected = {**rows_to_insert[0], "academy": None}
+    return (client_mock, result_mock, query, project_id, dataset, expected)
 
 
 class MediaTestSuite(MediaTestCase):

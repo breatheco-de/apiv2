@@ -19,6 +19,8 @@ from ..views import (
     AssetThumbnailView,
     AssetView,
     CodeCompilerView,
+    CompletionView,
+    LearnpackPackagesView,
     AssetMeView,
     TechnologyView,
     forward_asset_url,
@@ -83,5 +85,9 @@ urlpatterns = [
     path("academy/technology/<str:tech_slug>", AcademyTechnologyView.as_view()),
     path("translation", get_translations),
     path("alias/redirect", get_alias_redirects),
+
+    ## Util endpoints
     path("code-compiler", CodeCompilerView.as_view(), name="code_compiler"),
+    path("me/completion", CompletionView.as_view(), name="completion"),
+    path("learnpack/me/packages", LearnpackPackagesView.as_view(), name="learnpack_packages"),
 ]

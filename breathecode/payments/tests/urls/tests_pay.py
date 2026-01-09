@@ -16,7 +16,7 @@ import breathecode.activity.tasks as activity_tasks
 from breathecode.admissions import tasks as admissions_tasks
 from breathecode.payments import tasks
 from breathecode.payments.actions import apply_pricing_ratio, calculate_relative_delta
-from breathecode.payments.models import ServiceItem
+from breathecode.payments.models import FinancingOption, Plan, Service, ServiceItem, SubscriptionServiceItem
 from breathecode.tests.mixins.breathecode_mixin.breathecode import Breathecode
 
 UTC_NOW = timezone.now()
