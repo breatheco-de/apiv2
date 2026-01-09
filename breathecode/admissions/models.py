@@ -28,7 +28,7 @@ def default_syllabus_version_json():
 
 def default_academy_features():
     """Default value for `Academy.academy_features` field.
-    
+
     Feature flags are now available for all academies, not just white label ones.
     All features default to True, except show_marketing_navigation which is only for white label academies.
     """
@@ -52,18 +52,12 @@ def default_academy_features():
 
 def default_welcome_video():
     """Default value for `Academy.welcome_video` field."""
-    return {
-        "url": "",
-        "preview_image": ""
-    }
+    return {"url": "", "preview_image": ""}
 
 
 def default_white_label_params():
     """Default value for `Academy.white_label_params` field."""
-    return {
-        "es": "",
-        "en": ""
-    }
+    return {"es": "", "en": ""}
 
 
 User.add_to_class("__str__", get_user_label)
@@ -108,7 +102,7 @@ class Academy(models.Model):
     def __init__(self, *args, **kwargs):
         super(Academy, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
-        self.__old_reseller = self.reseller
+        self.__old_reseller = self.get_academy_features()["features"]["reseller"]
 
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
     name = models.CharField(max_length=150, db_index=True)
@@ -116,7 +110,9 @@ class Academy(models.Model):
     logo_url = models.CharField(max_length=255)
     icon_url = models.CharField(max_length=255, help_text="It has to be a square", default="/static/icons/picture.png")
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
-    short_url = models.CharField(max_length=255, blank=True, null=True, default=None, help_text="Use for ShortLinks and redirects")
+    short_url = models.CharField(
+        max_length=255, blank=True, null=True, default=None, help_text="Use for ShortLinks and redirects"
+    )
     white_label_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
@@ -125,7 +121,10 @@ class Academy(models.Model):
     feedback_email = models.EmailField(blank=True, null=True, default=None)
 
     platform_description = models.TextField(
-        blank=True, null=True, default=None, help_text="Description of the platform shown in notification emails and meta description"
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Description of the platform shown in notification emails and meta description",
     )
 
     phone_regex = RegexValidator(
@@ -258,19 +257,21 @@ class Academy(models.Model):
         if not created and self.__old_slug != self.slug:
             raise Exception("Academy slug cannot be updated")
 
-        reseller_changed = not created and self.__old_reseller != self.reseller
+        reseller_changed = not created and self.__old_reseller != self.get_academy_features()["features"]["reseller"]
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
         if created:
             self.__old_slug = self.slug
-            self.__old_reseller = self.reseller
+            self.__old_reseller = self.get_academy_features()["features"]["reseller"]
 
         academy_saved.send_robust(instance=self, sender=self.__class__, created=created)
 
         if reseller_changed:
-            academy_reseller_changed.send_robust(instance=self, sender=self.__class__, value=self.reseller)
-            self.__old_reseller = self.reseller
+            academy_reseller_changed.send_robust(
+                instance=self, sender=self.__class__, value=self.get_academy_features()["features"]["reseller"]
+            )
+            self.__old_reseller = self.get_academy_features()["features"]["reseller"]
 
 
 PARTIME = "PART-TIME"

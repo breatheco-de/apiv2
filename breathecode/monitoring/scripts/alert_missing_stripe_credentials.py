@@ -8,7 +8,7 @@ Alert when a reseller academy doesn't have Stripe payment credentials configured
 from breathecode.payments.models import AcademyPaymentSettings
 from breathecode.utils import ScriptNotification
 
-if academy.status == "ACTIVE" and academy.reseller:
+if academy.status == "ACTIVE" and academy.get_academy_features()["features"]["reseller"]:
     payment_settings = AcademyPaymentSettings.objects.filter(academy__id=academy.id).first()
 
     missing_fields = []

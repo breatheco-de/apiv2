@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @receiver(signals.application_created, sender=Application)
 def application_created(sender, instance, **kwargs):
     missing_stripe_slug = "alert_missing_stripe_credentials"
-    if instance.academy.reseller:
+    if instance.academy.get_academy_features()["features"]["reseller"]:
         MonitorScript.objects.create(
             application=instance,
             script_slug=missing_stripe_slug,
