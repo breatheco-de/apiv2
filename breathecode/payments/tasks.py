@@ -454,7 +454,6 @@ def notify_subscription_renewal(self, subscription_id: int, **_: Any):
     params = {
         "plan": subscription.plans.first().slug,
         "subscription_id": subscription.id,
-        "early_renewal_window_days": early_renewal_window_days,
     }
 
     days_until_renewal = (subscription.next_payment_at - utc_now).days
