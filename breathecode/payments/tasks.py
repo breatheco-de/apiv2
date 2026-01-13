@@ -6,10 +6,9 @@ from typing import Any, Optional
 from urllib.parse import urlencode
 
 from capyc.core.i18n import translation
-from capyc.rest_framework.exceptions import ValidationException
 from dateutil.relativedelta import relativedelta
 from django.core.cache import cache
-from django.db.models import F, Q
+from django.db.models import F
 from django.utils import timezone
 from django_redis import get_redis_connection
 from redis.exceptions import LockError
@@ -17,7 +16,7 @@ from task_manager.core.exceptions import AbortTask, RetryTask
 from task_manager.django.actions import schedule_task
 from task_manager.django.decorators import task
 
-from breathecode.admissions.models import Academy, Cohort
+from breathecode.admissions.models import Cohort
 from breathecode.authenticate.actions import get_app_url, get_user_settings
 from breathecode.authenticate.models import AcademyAuthSettings
 from breathecode.media.models import File
@@ -48,7 +47,6 @@ from .models import (
     PlanServiceItemHandler,
     ProofOfPayment,
     Service,
-    ServiceItem,
     ServiceStockScheduler,
     Subscription,
     SubscriptionBillingTeam,
@@ -456,7 +454,6 @@ def notify_subscription_renewal(self, subscription_id: int, **_: Any):
     params = {
         "plan": subscription.plans.first().slug,
         "subscription_id": subscription.id,
-        "early_renewal_window_days": early_renewal_window_days,
     }
 
     days_until_renewal = (subscription.next_payment_at - utc_now).days
@@ -649,6 +646,13 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             settings = get_user_settings(subscription.user.id)
 
+            payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
+            early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 2
+            if early_renewal_window_days == 0:
+                cooldown_days = 5
+            else:
+                cooldown_days = early_renewal_window_days
+
             if subscription.status == Subscription.Status.DEPRECATED:
                 handle_deprecated_subscription()
 
@@ -665,6 +669,15 @@ def charge_subscription(self, subscription_id: int, **_: Any):
 
             if subscription.next_payment_at > utc_now:
                 raise AbortTask(f"The subscription with id {subscription_id} was paid this month")
+
+            last_invoice = (
+                subscription.invoices.filter(status=Invoice.Status.FULFILLED, bag__was_delivered=True)
+                .order_by("-paid_at")
+                .first()
+            )
+
+            if last_invoice and utc_now - last_invoice.paid_at < timedelta(days=cooldown_days):
+                raise AbortTask(f"Subscription with id {subscription_id} was paid earlier")
 
             invoice = (
                 subscription.invoices.filter(
@@ -820,6 +833,12 @@ def charge_subscription(self, subscription_id: int, **_: Any):
             if not manager.exists(subscription.id):
                 manager.call(subscription.id)
 
+            if early_renewal_window_days > 0 and days_until_next_payment > early_renewal_window_days:
+                notification_day = days_until_next_payment - early_renewal_window_days
+                manager = schedule_task(notify_subscription_renewal, f"{notification_day}d")
+                if not manager.exists(subscription.id):
+                    manager.call(subscription.id)
+
     except LockError:
         raise RetryTask("Could not acquire lock for activity, operation timed out.")
 
@@ -844,7 +863,7 @@ def notify_plan_financing_renewal(self, plan_financing_id: int, **_: Any):
     utc_now = timezone.now()
 
     if plan_financing.next_payment_at > utc_now:
-        period_timedelta = actions.calculate_relative_delta(plan_financing.pay_every, plan_financing.pay_every_unit)
+        period_timedelta = relativedelta(months=1)
         cycle_start = (plan_financing.next_payment_at - period_timedelta) + timedelta(days=1)
 
         recent_payment = (
@@ -1279,8 +1298,8 @@ def charge_plan_financing(self, plan_financing_id: int, **_: Any):
                 if not manager.exists(plan_financing_id):
                     manager.call(plan_financing_id)
 
-            if days_until_next_payment > 2:
-                notification_day = days_until_next_payment - 2
+            if early_renewal_window_days > 0 and days_until_next_payment > early_renewal_window_days:
+                notification_day = days_until_next_payment - early_renewal_window_days
                 manager = schedule_task(notify_plan_financing_renewal, f"{notification_day}d")
                 if not manager.exists(plan_financing_id):
                     manager.call(plan_financing_id)
@@ -1492,9 +1511,7 @@ def build_service_stock_scheduler_from_plan_financing(
         raise RetryTask(f"PlanFinancing with id {plan_financing_id} not found")
 
     team = getattr(plan_financing, "team", None)
-    per_team_strategy = (
-        team and team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM
-    )
+    per_team_strategy = team and team.consumption_strategy == PlanFinancingTeam.ConsumptionStrategy.PER_TEAM
 
     seat_scope: list[PlanFinancingSeat] = []
     if team:
@@ -1543,10 +1560,7 @@ def build_service_stock_scheduler_from_plan_financing(
         delta = actions.calculate_relative_delta(unit, unit_type)
         valid_until = plan_financing.created_at + delta
 
-        if (
-            plan_financing.status != PlanFinancing.Status.FULLY_PAID
-            and valid_until > plan_financing.next_payment_at
-        ):
+        if plan_financing.status != PlanFinancing.Status.FULLY_PAID and valid_until > plan_financing.next_payment_at:
             valid_until = plan_financing.next_payment_at
 
         if plan_financing.plan_expires_at and valid_until > plan_financing.plan_expires_at:
@@ -1718,8 +1732,11 @@ def build_subscription(
     if not manager.exists(subscription.id):
         manager.call(subscription.id)
 
-    if days_until_next_payment > 2:
-        notification_day = days_until_next_payment - 2
+    payment_settings = AcademyPaymentSettings.objects.filter(academy=subscription.academy).first()
+    early_renewal_window_days = payment_settings.early_renewal_window_days if payment_settings else 0
+
+    if early_renewal_window_days > 0 and days_until_next_payment > early_renewal_window_days:
+        notification_day = days_until_next_payment - early_renewal_window_days
         manager = schedule_task(notify_subscription_renewal, f"{notification_day}d")
         if not manager.exists(subscription.id):
             manager.call(subscription.id)
