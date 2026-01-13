@@ -17,7 +17,7 @@ from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.admissions.models import CohortUser
 from breathecode.admissions.serializers import CohortUserHookSerializer
 from breathecode.admissions.signals import student_edu_status_updated
 from breathecode.events.models import Event, EventCheckin
@@ -27,6 +27,9 @@ from breathecode.mentorship.models import MentorshipSession
 from breathecode.mentorship.serializers import SessionHookSerializer
 from breathecode.mentorship.signals import mentorship_session_status
 from breathecode.notify.models import HookError
+from breathecode.payments.models import PlanFinancing, Subscription
+from breathecode.payments.serializers import GetPlanFinancingSerializer, GetSubscriptionHookSerializer
+from breathecode.payments.signals import planfinancing_created, subscription_created
 
 from .tasks import send_mentorship_starting_notification
 from .utils.hook_manager import HookManager
@@ -110,6 +113,82 @@ def handle_event_rescheduled(sender, instance, **kwargs):
         email_list = [checkin.attendee.email for checkin in checkins]
         bulk_email_payload = {"event": serializer.data, "recipients": email_list}
         HookManager.process_model_event(instance, model_label, "event_rescheduled", payload_override=bulk_email_payload)
+
+
+@receiver(m2m_changed, sender=PlanFinancing.invoices.through)
+def planfinancing_invoices_added(sender, instance, action, **kwargs):
+    """
+    Detects when invoices are added to a PlanFinancing for the first time to call the planfinancing_created signal.
+    If plans are already assigned, dispatches planfinancing_created signal. (otherwise it will be dispatched whithout plans or invoices)
+    """
+    # Only execute after invoices are added
+    if action != "post_add":
+        return
+
+    invoices_count = instance.invoices.count()
+    pk_set = kwargs.get("pk_set", set())
+
+    # Check if this is the first time invoices are being added (was empty before)
+    # AND that plans already exist
+    if invoices_count == len(pk_set):
+        logger.debug(f"Invoices added to new PlanFinancing {instance.id}, dispatching planfinancing_created signal")
+        planfinancing_created.send_robust(sender=PlanFinancing, instance=instance)
+
+
+@receiver(planfinancing_created, sender=PlanFinancing)
+def new_planfinancing_created(sender, instance, **kwargs):
+    """
+    Manual receiver for new PlanFinancing creation.
+    Has custom logic: waits to be called after invoices are added to the PlanFinancing to ensure many to many relationships are set.
+    """
+    logger.debug("Sending new PlanFinancing to hook")
+    model_label = get_model_label(instance)
+    serializer = GetPlanFinancingSerializer(instance)
+    HookManager.process_model_event(
+        instance,
+        model_label,
+        "planfinancing_created",
+        payload_override=serializer.data,
+        academy_override=instance.academy,
+    )
+
+
+@receiver(m2m_changed, sender=Subscription.invoices.through)
+def subscription_invoices_added(sender, instance, action, **kwargs):
+    """
+    Detects when invoices are added to a Subscription for the first time to call the subscription_created signal.
+    If plans are already assigned, dispatches subscription_created signal. (otherwise it will be dispatched whithout plans or invoices)
+    """
+    # Only execute after invoices are added
+    if action != "post_add":
+        return
+
+    invoices_count = instance.invoices.count()
+    pk_set = kwargs.get("pk_set", set())
+
+    # Check if this is the first time invoices are being added (was empty before)
+    # AND that plans already exist
+    if invoices_count == len(pk_set):
+        logger.debug(f"Invoices added to new Subscription {instance.id}, dispatching subscription_created signal")
+        subscription_created.send_robust(sender=Subscription, instance=instance)
+
+
+@receiver(subscription_created, sender=Subscription)
+def new_subscription_created(sender, instance, **kwargs):
+    """
+    Manual receiver for new Subscription creation.
+    Has custom logic: waits to be called after invoices are added to the Subscription to ensure many to many relationships are set.
+    """
+    logger.debug("Sending new Subscription to hook")
+    model_label = get_model_label(instance)
+    serializer = GetSubscriptionHookSerializer(instance)
+    HookManager.process_model_event(
+        instance,
+        model_label,
+        "subscription_created",
+        payload_override=serializer.data,
+        academy_override=instance.academy,
+    )
 
 
 # =============================================================================
