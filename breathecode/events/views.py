@@ -32,10 +32,10 @@ import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
 from breathecode.authenticate.models import ACTIVE, Profile, ProfileAcademy
-from breathecode.services.daily.client import DailyClient
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
+from breathecode.services.daily.client import DailyClient
 from breathecode.services.eventbrite import Eventbrite
 from breathecode.utils import (
     DatetimeInteger,
@@ -52,6 +52,8 @@ from breathecode.utils.views import private_view, render_message
 from .actions import fix_datetime_weekday, update_timeslots_out_of_range  # get_my_event_types,
 from .models import (
     ACTIVE,
+    SUSPENDED,
+    AcademyEventSettings,
     Event,
     EventbriteWebhook,
     EventCheckin,
@@ -60,7 +62,6 @@ from .models import (
     LiveClass,
     Organization,
     Organizer,
-    SUSPENDED,
     Venue,
 )
 from .permissions.consumers import event_by_url_param, live_class_by_url_param
@@ -80,10 +81,10 @@ from .serializers import (
     EventTypePutSerializer,
     EventTypeSerializer,
     EventTypeVisibilitySettingSerializer,
+    GetLiveClassBigSerializer,
     GetLiveClassSerializer,
     LiveClassJoinSerializer,
     LiveClassSerializer,
-    GetLiveClassBigSerializer,
     OrganizationBigSerializer,
     OrganizationSerializer,
     OrganizerSmallSerializer,
@@ -578,9 +579,7 @@ class AcademyLiveClassView(APIView):
         )
 
         # Use Q object to include both cohort_time_slot and direct cohort paths for academy filter
-        academy_filter = Q(
-            Q(cohort_time_slot__cohort__academy__id=academy_id) | Q(cohort__academy__id=academy_id)
-        )
+        academy_filter = Q(Q(cohort_time_slot__cohort__academy__id=academy_id) | Q(cohort__academy__id=academy_id))
         items = LiveClass.objects.filter(query & academy_filter)
 
         items = handler.queryset(items)
@@ -863,13 +862,21 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                     and getattr(event, "online_event", False)
                     and not getattr(event, "live_stream_url", None)
                 ):
-                    provider = request.data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+                    provider = request.data.get("meeting_provider")
+
+                    if not provider:
+                        event_settings = AcademyEventSettings.objects.filter(academy=academy).first()
+                        if event_settings and event_settings.default_meeting_provider:
+                            provider = event_settings.default_meeting_provider
+                        else:
+                            provider = os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+
                     try:
                         if provider == "daily":
                             margin = timedelta(hours=1)
                             target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
                             exp_epoch = int(target_end.timestamp())
-                            room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                            room = DailyClient(academy=academy).create_room(exp_in_epoch=exp_epoch)
                             if room and room.get("url"):
                                 event.live_stream_url = room["url"]
                                 event.save(update_fields=["live_stream_url"])
@@ -976,22 +983,30 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 original_ending_at = all_events[idx].ending_at
                 event = serializer.save()
                 all_events_saved.append(event)
-                
+
                 data = data_list[idx] if idx < len(data_list) else {}
-                
+
                 create_meet = data.get("create_meet")
                 if isinstance(create_meet, str):
                     create_meet = create_meet.lower() in ["1", "true", "yes"]
 
                 if create_meet and getattr(event, "online_event", False):
-                    provider = data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+                    provider = data.get("meeting_provider")
+
+                    if not provider:
+                        event_settings = AcademyEventSettings.objects.filter(academy=event.academy).first()
+                        if event_settings and event_settings.default_meeting_provider:
+                            provider = event_settings.default_meeting_provider
+                        else:
+                            provider = os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+
                     try:
                         if provider == "daily":
                             margin = timedelta(hours=1)
                             target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
                             exp_epoch = int(target_end.timestamp())
 
-                            room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                            room = DailyClient(academy=event.academy).create_room(exp_in_epoch=exp_epoch)
                             if room and room.get("url"):
                                 event.live_stream_url = room["url"]
                                 event.save(update_fields=["live_stream_url"])
@@ -1010,10 +1025,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
                         )
                 elif not create_meet and getattr(event, "online_event", False):
-                    date_changed = (
-                        original_starting_at != event.starting_at
-                        or original_ending_at != event.ending_at
-                    )
+                    date_changed = original_starting_at != event.starting_at or original_ending_at != event.ending_at
                     live_stream_url = getattr(event, "live_stream_url", None)
                     if date_changed and live_stream_url and "daily.co" in live_stream_url.lower():
                         try:
@@ -1022,7 +1034,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             exp_epoch = int(target_end.timestamp())
                             parsed = urlparse(live_stream_url)
                             room_name = parsed.path.strip("/").split("/")[-1]
-                            DailyClient().extend_room(name=room_name, exp_in_epoch=exp_epoch)
+                            DailyClient(academy=event.academy).extend_room(name=room_name, exp_in_epoch=exp_epoch)
                             logger.info(
                                 f"Extended Daily.co room {room_name} for event {event.id} "
                                 f"(new expiration: {target_end.isoformat()})"
@@ -1235,18 +1247,23 @@ class AcademyEventHostView(APIView):
 
         # Get profile data if provided
         profile_data = {}
-        profile_fields = ["avatar_url", "bio", "phone", "twitter_username", "github_username", 
-                         "portfolio_url", "linkedin_url", "blog"]
+        profile_fields = [
+            "avatar_url",
+            "bio",
+            "phone",
+            "twitter_username",
+            "github_username",
+            "portfolio_url",
+            "linkedin_url",
+            "blog",
+        ]
         for field in profile_fields:
             if field in request.data:
                 profile_data[field] = request.data.get(field)
 
         # Create zombie user and profile
         host_user = actions.create_external_event_host(
-            name=host_name,
-            email=host_email,
-            academy=event.academy,
-            **profile_data
+            name=host_name, email=host_email, academy=event.academy, **profile_data
         )
 
         # Assign host to event
@@ -1256,25 +1273,24 @@ class AcademyEventHostView(APIView):
 
         # Create and send invite
         invite = actions.create_event_host_invite(
-            user=host_user,
-            event=event,
-            academy=event.academy,
-            author=request.user
+            user=host_user, event=event, academy=event.academy, author=request.user
         )
 
         # Refresh user to ensure profile relationship is loaded
         host_user.refresh_from_db()
 
         # Return the created user and invite info
-        from breathecode.authenticate.serializers import UserBigSerializer
-        from breathecode.authenticate.serializers import UserInviteSerializer
+        from breathecode.authenticate.serializers import UserBigSerializer, UserInviteSerializer
 
-        return Response({
-            "user": UserBigSerializer(host_user, many=False).data,
-            "invite": UserInviteSerializer(invite, many=False).data,
-            "event_id": event.id,
-            "message": "Host user created and invitation sent"
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "user": UserBigSerializer(host_user, many=False).data,
+                "invite": UserInviteSerializer(invite, many=False).data,
+                "event_id": event.id,
+                "message": "Host user created and invitation sent",
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     @capable_of("crud_event")
     def put(self, request, event_id, user_id, academy_id=None):
@@ -1323,10 +1339,7 @@ class AcademyEventHostView(APIView):
             )
 
         # Verify the user has a ProfileAcademy for this academy (is staff or student)
-        profile_academy = ProfileAcademy.objects.filter(
-            user_id=user_id,
-            academy_id=academy_id
-        ).first()
+        profile_academy = ProfileAcademy.objects.filter(user_id=user_id, academy_id=academy_id).first()
 
         if not profile_academy:
             raise ValidationException(
@@ -1344,8 +1357,8 @@ class AcademyEventHostView(APIView):
             raise ValidationException(
                 translation(
                     lang,
-                    en=f"Staff or student has not accepted the invitation to the academy and it's an active user in other academies",
-                    es=f"El personal o estudiante no ha aceptado la invitación a la academia y es un usuario activo en otras academias",
+                    en="Staff or student has not accepted the invitation to the academy and it's an active user in other academies",
+                    es="El personal o estudiante no ha aceptado la invitación a la academia y es un usuario activo en otras academias",
                     slug="user-not-accepted-invitation",
                 ),
                 code=403,
@@ -1355,14 +1368,22 @@ class AcademyEventHostView(APIView):
 
         # Update only profile fields (exclude user field from request data)
         profile_data = {}
-        profile_fields = ["avatar_url", "bio", "phone", "twitter_username", "github_username", 
-                         "portfolio_url", "linkedin_url", "blog"]
+        profile_fields = [
+            "avatar_url",
+            "bio",
+            "phone",
+            "twitter_username",
+            "github_username",
+            "portfolio_url",
+            "linkedin_url",
+            "blog",
+        ]
         for field in profile_fields:
             if field in request.data:
                 profile_data[field] = request.data.get(field)
 
         # Use ProfileSerializer from authenticate
-        from breathecode.authenticate.serializers import ProfileSerializer, GetProfileSerializer
+        from breathecode.authenticate.serializers import GetProfileSerializer, ProfileSerializer
 
         serializer = ProfileSerializer(profile, data=profile_data, partial=True)
         if serializer.is_valid():

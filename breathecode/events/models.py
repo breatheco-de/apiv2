@@ -505,9 +505,17 @@ class LiveClass(models.Model):
     log = models.JSONField(default=dict)
     remote_meeting_url = models.URLField(blank=True, default="")
 
-    is_holiday = models.BooleanField(default=False, help_text="We keep the class on recording even if it's a holiday, to avoid the timeslot and live class being re-added into the calendar)")
-    is_skipped = models.BooleanField(default=False, help_text="Some classes are skipped, like the ones that are before the kickoff date, on holidays or after the ending date")
-    skipped_reason = models.CharField(max_length=255, default=None, null=True, blank=True, help_text="Reason for skipping the class")
+    is_holiday = models.BooleanField(
+        default=False,
+        help_text="We keep the class on recording even if it's a holiday, to avoid the timeslot and live class being re-added into the calendar)",
+    )
+    is_skipped = models.BooleanField(
+        default=False,
+        help_text="Some classes are skipped, like the ones that are before the kickoff date, on holidays or after the ending date",
+    )
+    skipped_reason = models.CharField(
+        max_length=255, default=None, null=True, blank=True, help_text="Reason for skipping the class"
+    )
 
     # this should be use in the future to create automatically the permalinks
     hash = models.CharField(max_length=40, unique=True)
@@ -538,3 +546,39 @@ class LiveClass(models.Model):
             liveclass_ended.send_robust(instance=self, sender=LiveClass)
 
         return _result
+
+
+class AcademyEventSettings(models.Model):
+    class MeetingProvider(models.TextChoices):
+        DAILY = "daily", "Daily"
+        LIVEKIT = "livekit", "Livekit"
+
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+
+    default_meeting_provider = models.CharField(
+        max_length=20,
+        choices=MeetingProvider.choices,
+        default=MeetingProvider.DAILY,
+        help_text="Default provider used when creating meeting rooms for events if meeting_provider is not provided.",
+    )
+
+    daily_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="Daily API key",
+    )
+
+    livekit_http_url = models.URLField(blank=True, null=True, default=None)
+    livekit_api_key = models.CharField(max_length=255, blank=True, null=True, default=None)
+    livekit_api_secret = models.CharField(max_length=255, blank=True, null=True, default=None)
+
+    livekit_url = models.URLField(blank=True, null=True, default=None)
+    livekit_meet_url = models.URLField(blank=True, null=True, default=None)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"AcademyEventSettings(academy_id={self.academy_id})"
