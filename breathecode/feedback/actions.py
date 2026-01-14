@@ -1,6 +1,6 @@
+import datetime
 import json
 import logging
-import datetime
 
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
@@ -22,8 +22,8 @@ from .models import (
     ReviewPlatform,
     Survey,
     SurveyConfiguration,
-    SurveyStudy,
     SurveyResponse,
+    SurveyStudy,
 )
 from .services.pusher_service import send_survey_event
 from .utils import strings
@@ -163,6 +163,7 @@ def send_question(user, cohort=None):
 
     answer.cohort = cu.cohort
     answer.lang = answer.cohort.language.lower()
+    answer.academy = answer.cohort.academy
     answer.save()
 
     has_slackuser = hasattr(user, "slackuser")
