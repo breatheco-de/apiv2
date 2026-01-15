@@ -42,6 +42,18 @@ def default_academy_features():
             "allow_other_academy_events": True,  # allow other academy events
             "allow_other_academy_courses": True,  # allow other academy courses on dashboard
             "reseller": False,  # allow academy to resell courses from other academies (requires white_labeled=True)
+            "invites": {
+                # Enable/disable automatic resend of pending invites for this academy
+                "enabled": False,
+                # Days after the first invite to send the 1st reminder
+                "first_timedelta": 3,
+                # Days after the first reminder to send the 2nd reminder
+                "second_timedelta": 10,
+                # Notification template slug used to resend (defaults to the same template used by initial invite)
+                "template_slug": "welcome_academy",
+                # Optional template slug for the second reminder (defaults to template_slug)
+                "second_template_slug": None,
+            },
         },
         "navigation": {
             "custom_links": [],  # Additional links added to academy navbar (follow frontend structure)

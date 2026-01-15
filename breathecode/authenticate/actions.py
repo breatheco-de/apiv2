@@ -344,6 +344,33 @@ def resend_invite(token=None, email=None, first_name=None, extra=None, academy=N
     )
 
 
+def bump_user_invite_attempts(invite, *, save: bool = True):
+    """
+    Helper to maintain `UserInvite.how_many_attempts`.
+
+    Semantics:
+    - 0: legacy/unknown (invite created before we tracked attempts) or not sent yet
+    - 1: first invite email sent
+    - 2: first reminder email sent
+    - 3: second reminder email sent
+
+    Every time we send an invite email (initial or reminder), we should call this helper.
+    """
+
+    from django.utils import timezone
+
+    if invite.how_many_attempts is None:
+        invite.how_many_attempts = 0
+
+    invite.how_many_attempts += 1
+    invite.sent_at = timezone.now()
+
+    if save:
+        invite.save(update_fields=["how_many_attempts", "sent_at", "updated_at"])
+
+    return invite.how_many_attempts
+
+
 def server_id():
     key = DeviceId.objects.filter(name="server").values_list("key", flat=True).first()
 

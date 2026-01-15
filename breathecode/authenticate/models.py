@@ -239,6 +239,15 @@ class UserInvite(models.Model):
         help_text="Video de bienvenida con preview_image y url. Formato: {'preview_image': 'url', 'url': 'url'}"
     )
 
+    how_many_attempts = models.PositiveSmallIntegerField(
+        default=0,
+        help_text=(
+            "How many times we've attempted to deliver the invite email for this UserInvite. "
+            "This counter is used by the invite-resend cronjob to decide when to retry. "
+            "0 means 'unknown/legacy' (created before tracking) or 'not sent yet'."
+        ),
+    )
+
     # link to team membership (optional)
     subscription_seat = models.ForeignKey(
         "payments.SubscriptionSeat",
