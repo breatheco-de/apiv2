@@ -62,7 +62,7 @@ Academy
 
 **Query Parameters:**
 - `cohort={cohort_id}` - Filter by cohort
-- `syllabus={syllabus_slug}` - Filter by syllabus  
+- `syllabus={syllabus_slug}` - Filter by syllabus
 - `service_slug={slug}` - Filter by service
 - `currency__code={code}` - Filter by currency (e.g., "USD", "EUR")
 - `is_onboarding={true/false}` - Filter onboarding plans
@@ -170,7 +170,7 @@ Headers:
 
 ### 2. Get Single Plan
 
-**Endpoint:** `GET /v1/payments/academy/plan/{plan_id}`  
+**Endpoint:** `GET /v1/payments/academy/plan/{plan_id}`
 **Or:** `GET /v1/payments/academy/plan/{plan_slug}`
 
 **Authentication:** Required - `read_subscription` capability
@@ -260,7 +260,7 @@ Headers:
 
 ### 4. Update Plan
 
-**Endpoint:** `PUT /v1/payments/academy/plan/{plan_id}`  
+**Endpoint:** `PUT /v1/payments/academy/plan/{plan_id}`
 **Or:** `PUT /v1/payments/academy/plan/{plan_slug}`
 
 **Authentication:** Required - `crud_subscription` capability
@@ -300,7 +300,7 @@ Body:
 
 ### 5. Delete Plan (Soft Delete)
 
-**Endpoint:** `DELETE /v1/payments/academy/plan/{plan_id}`  
+**Endpoint:** `DELETE /v1/payments/academy/plan/{plan_id}`
 **Or:** `DELETE /v1/payments/academy/plan/{plan_slug}`
 
 **Authentication:** Required - `crud_subscription` capability
@@ -1042,7 +1042,7 @@ Body:
 
 **Endpoint:** `GET /v1/payments/academy/cohortset`
 
-**Authentication:** Required - `read_plan` capability
+**Authentication:** Required - `crud_plan` capability
 
 **Query Parameters:**
 - `limit={number}` - Results per page
@@ -1087,10 +1087,10 @@ Headers:
 
 #### Get a Single Cohort Set
 
-**Endpoint:** `GET /v1/payments/academy/cohortset/{cohort_set_id}`  
+**Endpoint:** `GET /v1/payments/academy/cohortset/{cohort_set_id}`
 **Or:** `GET /v1/payments/academy/cohortset/{cohort_set_slug}`
 
-**Authentication:** Required - `read_plan` capability
+**Authentication:** Required - `crud_plan` capability
 
 **Response:** Single cohort set object with all cohorts
 
@@ -1106,7 +1106,7 @@ Headers:
 
 #### Update a Cohort Set
 
-**Endpoint:** `PUT /v1/payments/academy/cohortset/{cohort_set_id}`  
+**Endpoint:** `PUT /v1/payments/academy/cohortset/{cohort_set_id}`
 **Or:** `PUT /v1/payments/academy/cohortset/{cohort_set_slug}`
 
 **Authentication:** Required - `crud_plan` capability
@@ -1137,7 +1137,7 @@ Body:
 
 #### Delete a Cohort Set
 
-**Endpoint:** `DELETE /v1/payments/academy/cohortset/{cohort_set_id}`  
+**Endpoint:** `DELETE /v1/payments/academy/cohortset/{cohort_set_id}`
 **Or:** `DELETE /v1/payments/academy/cohortset/{cohort_set_slug}`
 
 **Authentication:** Required - `crud_plan` capability
@@ -1160,10 +1160,10 @@ Headers:
 
 #### Get All Cohorts in a Cohort Set
 
-**Endpoint:** `GET /v1/payments/academy/cohortset/{cohort_set_id}/cohort`  
+**Endpoint:** `GET /v1/payments/academy/cohortset/{cohort_set_id}/cohort`
 **Or:** `GET /v1/payments/academy/cohortset/{cohort_set_slug}/cohort`
 
-**Authentication:** Required - `read_plan` capability
+**Authentication:** Required - `crud_plan` capability
 
 **Response:** Array of cohorts
 ```json
@@ -1198,7 +1198,7 @@ Headers:
 
 #### Add Cohorts to a Cohort Set
 
-**Endpoint:** `PUT /v1/payments/academy/cohortset/{cohort_set_id}/cohort`  
+**Endpoint:** `PUT /v1/payments/academy/cohortset/{cohort_set_id}/cohort`
 **Or:** `PUT /v1/payments/academy/cohortset/{cohort_set_slug}/cohort`
 
 **Authentication:** Required - `crud_plan` capability
@@ -1264,7 +1264,7 @@ Body:
 
 #### Remove Cohorts from a Cohort Set
 
-**Endpoint:** `DELETE /v1/payments/academy/cohortset/{cohort_set_id}/cohort`  
+**Endpoint:** `DELETE /v1/payments/academy/cohortset/{cohort_set_id}/cohort`
 **Or:** `DELETE /v1/payments/academy/cohortset/{cohort_set_slug}/cohort`
 
 **Authentication:** Required - `crud_plan` capability
@@ -3700,4 +3700,3 @@ Body: {"description": "Updated details..."}
 PUT /v1/payments/academy/paymentmethod/123
 Body: {"deprecated": true, "visibility": "HIDDEN"}
 ```
-
