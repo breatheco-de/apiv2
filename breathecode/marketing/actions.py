@@ -768,7 +768,9 @@ def register_new_lead(form_entry=None):
         pass
 
     if ac_academy is None:
-        ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry["location"]).first()
+        ac_academy = ActiveCampaignAcademy.objects.filter(
+            Q(academy__slug=form_entry["location"]) | Q(academy__academyalias__slug=form_entry["location"])
+        ).first()
 
     if ac_academy is None:
         raise RetryTask(

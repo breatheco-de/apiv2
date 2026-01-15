@@ -18,6 +18,17 @@ class AcademySerializer(serpy.Serializer):
     slug = serpy.Field()
 
 
+class AcademyBillDetailSerializer(serpy.Serializer):
+    """Enhanced academy serializer for bill detail view."""
+
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+    feedback_email = serpy.Field()
+    legal_name = serpy.Field()
+    logo_url = serpy.Field()
+
+
 class ContainerMeSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
 
@@ -79,6 +90,73 @@ class GetProvisioningBillSerializer(serpy.Serializer):
     title = serpy.Field()
 
 
+class GetProvisioningBillDetailSerializer(serpy.Serializer):
+    id = serpy.Field()
+    vendor = GetProvisioningVendorSerializer(required=False)
+    total_amount = serpy.Field()
+    status = serpy.Field()
+    status_details = serpy.Field()
+    paid_at = serpy.Field()
+    fee = serpy.Field()
+    stripe_url = serpy.Field()
+    created_at = serpy.Field()
+    title = serpy.Field()
+    academy = AcademyBillDetailSerializer(required=False)
+    status_display = serpy.MethodField()
+    upload_task = serpy.MethodField()
+
+    def get_status_display(self, obj):
+        status_map = {
+            "DUE": "UNDER_REVIEW",
+            "APPROVED": "READY_TO_PAY",
+            "PAID": "ALREADY PAID",
+            "PENDING": "PENDING",
+        }
+        return status_map.get(obj.status, obj.status)
+
+    def get_upload_task(self, obj):
+        if not obj.hash:
+            return None
+
+        from task_manager.models import TaskManager
+
+        # Filter by task module, name, and check if first argument matches hash
+        tasks = TaskManager.objects.filter(
+            task_module="breathecode.provisioning.tasks", task_name="upload"
+        )
+
+        # Check each task's arguments to find matching hash
+        for task in tasks:
+            if task.arguments and task.arguments.get("args") and len(task.arguments["args"]) > 0:
+                if task.arguments["args"][0] == obj.hash:
+                    # Format datetime fields to ISO format
+                    def format_datetime(dt):
+                        if dt is None:
+                            return None
+                        return dt.isoformat()
+
+                    return {
+                        "id": task.id,
+                        "status": task.status,
+                        "status_message": task.status_message,
+                        "task_id": task.task_id,
+                        "last_run": format_datetime(task.last_run),
+                        "started_at": format_datetime(task.started_at),
+                        "attempts": task.attempts,
+                        "current_page": task.current_page,
+                        "total_pages": task.total_pages,
+                        "priority": task.priority,
+                        "killed": task.killed,
+                        "fixed": task.fixed,
+                        "exception_module": task.exception_module,
+                        "exception_name": task.exception_name,
+                        "created_at": format_datetime(task.created_at),
+                        "updated_at": format_datetime(task.updated_at),
+                    }
+
+        return None
+
+
 class GetProvisioningProfile(serpy.Serializer):
     id = serpy.Field()
     vendor = GetProvisioningVendorSerializer(required=False)
@@ -99,6 +177,14 @@ class GetProvisioningUserConsumptionSerializer(serpy.Serializer):
     amount = serpy.Field()
     processed_at = serpy.Field()
     status = serpy.Field()
+
+
+class GetProvisioningUserConsumptionDetailSerializer(serpy.Serializer):
+    username = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    amount = serpy.Field()
+    kind = GetProvisioningConsumptionKindSerializer(required=False)
 
 
 class ProvisioningContainerSerializer(serializers.ModelSerializer):
