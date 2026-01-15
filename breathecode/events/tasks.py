@@ -1,5 +1,6 @@
 import logging
 
+import pytz
 from celery import shared_task
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
@@ -120,6 +121,8 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
         logger.error(f"{timeslot.recurrency_type} is not a valid or not implemented recurrency_type")
         return
 
+    tz = pytz.timezone(timeslot.timezone)
+
     while True:
 
         if ending_at > until_date:
@@ -138,8 +141,10 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
             if not timeslot.recurrent:
                 break
 
-        starting_at += delta
-        ending_at += delta
+        naive_starting = starting_at.replace(tzinfo=None) + delta
+        naive_ending = ending_at.replace(tzinfo=None) + delta
+        starting_at = tz.localize(naive_starting)
+        ending_at = tz.localize(naive_ending)
 
     live_classes.delete()
 
