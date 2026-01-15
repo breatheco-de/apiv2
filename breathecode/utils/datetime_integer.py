@@ -111,9 +111,10 @@ class DatetimeInteger:
             return None
 
         elements = matches.groups()
-        date = datetime(
-            int(elements[0]), int(elements[1]), int(elements[2]), int(elements[3]), int(elements[4]), 0, tzinfo=tz
+        naive_date = datetime(
+            int(elements[0]), int(elements[1]), int(elements[2]), int(elements[3]), int(elements[4]), 0
         )
+        date = tz.localize(naive_date)
 
         return date
 
@@ -125,8 +126,9 @@ class DatetimeInteger:
             return None
 
         elements = matches.groups()
-        date = datetime(
-            int(elements[0]), int(elements[1]), int(elements[2]), int(elements[3]), int(elements[4]), tzinfo=tz
+        naive_date = datetime(
+            int(elements[0]), int(elements[1]), int(elements[2]), int(elements[3]), int(elements[4]), 0
         )
+        date = tz.localize(naive_date)
 
         return date.astimezone(pytz.UTC)

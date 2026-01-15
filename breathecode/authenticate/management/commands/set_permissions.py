@@ -110,6 +110,11 @@ PERMISSIONS = [
         "description": "Permission to create, read, update, and delete career paths and related global models (job families, job roles) that have academy=None",
         "codename": "crud_career_path",
     },
+    {
+        "name": "Manage academy flags",
+        "description": "Permission to manage academy flags",
+        "codename": "manage_academy_flags",
+    },
 ]
 
 GROUPS = [
@@ -151,6 +156,7 @@ GROUPS = [
     {"name": "Classes", "permissions": ["live_class_join"], "inherit": []},
     {"name": "Legacy", "permissions": ["get_my_certificate"], "inherit": ["Classes", "Events", "Mentorships"]},
     {"name": "Paid Student", "permissions": ["get_private_link"], "inherit": []},
+    {"name": "Sysadmin", "permissions": ["manage_academy_flags"], "inherit": []},
 ]
 
 

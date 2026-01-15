@@ -51,6 +51,7 @@ Examples:
 
 from django.urls import path
 from .views import (
+    AcademyBillConsumptionsView,
     AcademyProvisioningUserConsumptionView,
     AcademyBillView,
     ProvisioningProfileView,
@@ -71,6 +72,11 @@ urlpatterns = [
     path("academy/userconsumption", AcademyProvisioningUserConsumptionView.as_view(), name="academy_userconsumption"),
     path("academy/bill", AcademyBillView.as_view(), name="academy_bill_id"),
     path("academy/bill/<int:bill_id>", AcademyBillView.as_view(), name="academy_bill_id"),
+    path(
+        "academy/bill/<int:bill_id>/consumptions",
+        AcademyBillConsumptionsView.as_view(),
+        name="academy_bill_consumptions",
+    ),
     path(
         "academy/<int:academy_id>/provisioningprofile",
         ProvisioningProfileView.as_view(),

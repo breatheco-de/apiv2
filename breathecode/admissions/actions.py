@@ -142,11 +142,34 @@ class ImportCohortTimeSlots:
         return cohort_timeslot
 
 
-def find_asset_on_json(asset_slug, asset_type=None):
+def find_asset_on_json(asset_slug, asset_type=None, user=None):
     from breathecode.certificate.actions import syllabus_weeks_to_days
+    from breathecode.authenticate.models import ProfileAcademy
+    from django.contrib.auth.models import AnonymousUser
 
     logger.debug(f"Searching slug {asset_slug} in all the syllabus and versions")
+    
+    # Start with all syllabus versions
     syllabus_list = SyllabusVersion.objects.all()
+    
+    # Filter by academies where user has read_syllabus capability
+    if user is not None and not isinstance(user, AnonymousUser):
+        # Get academy IDs where user has read_syllabus capability
+        capable_academies = ProfileAcademy.objects.filter(
+            user=user,
+            role__capabilities__slug="read_syllabus",
+            academy__status__in=["ACTIVE"]  # Only include active academies
+        ).values_list("academy__id", flat=True).distinct()
+        
+        if capable_academies:
+            # Only search in syllabus versions from academies where user has permission
+            # Include both private and public syllabi owned by those academies
+            syllabus_list = syllabus_list.filter(syllabus__academy_owner__id__in=capable_academies)
+        else:
+            # User has no academies with read_syllabus capability, return empty results
+            logger.debug(f"User {user.id} has no academies with read_syllabus capability")
+            return []
+    
     key_map = {
         "QUIZ": "quizzes",
         "LESSON": "lessons",

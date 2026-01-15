@@ -2068,18 +2068,20 @@ class SyllabusView(APIView):
 
 class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
 
-    # TODO: @has_permission('superadmin')
-    def get(self, request, asset_slug=None):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("read_syllabus")
+    def get(self, request, asset_slug=None, academy_id=None):
 
         if asset_slug is None or asset_slug == "":
             raise ValidationException("Please specify the asset slug you want to search", slug="invalid-asset-slug")
 
-        findings = find_asset_on_json(asset_slug=asset_slug, asset_type=request.GET.get("asset_type", None))
+        findings = find_asset_on_json(asset_slug=asset_slug, asset_type=request.GET.get("asset_type", None), user=request.user)
 
         return Response(findings, status=status.HTTP_200_OK)
 
-    # TODO: @has_permission('superadmin')
-    def put(self, request, asset_slug=None):
+    @capable_of("crud_syllabus")
+    def put(self, request, asset_slug=None, academy_id=None):
 
         if asset_slug is None or asset_slug == "":
             raise ValidationException("Please specify the asset slug you want to replace", slug="invalid-asset-slug")

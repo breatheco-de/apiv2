@@ -277,6 +277,7 @@ class AssetSerializer(serpy.Serializer):
     learnpack_deploy_url = serpy.Field()
     allow_contributions = serpy.Field()
     learnpack_deploy_url = serpy.Field()
+    learnpack_id = serpy.Field()
 
     translations = serpy.MethodField()
     technologies = serpy.MethodField()
