@@ -232,7 +232,6 @@ def generate_user_cohort_survey_answers(user, survey, status="OPENED", template_
 
         # ask for the platform and the content
         answer = Answer(question_by_slug="PLATFORM", academy=survey.cohort.academy, lang=survey.lang)
-        logger.info(f"Answer es: {answer}, academy: {survey.cohort.academy}")
         _answers.append(new_answer(answer))
 
     return _answers
