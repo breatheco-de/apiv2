@@ -789,6 +789,7 @@ def get_extended_roles():
                 "read_hook",
                 "crud_hook",
                 "crud_service",
+                "crud_plan",
                 "crud_academy_payment_settings",
             ],
         }
