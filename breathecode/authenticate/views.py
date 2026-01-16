@@ -1619,7 +1619,7 @@ def get_roles(request, role_slug=None):
         serializer = RoleBigSerializer(role)
         return Response(serializer.data)
 
-    queryset = Role.objects.all().exclude(slug__in=hidden_roles)
+    queryset = Role.objects.all().exclude(slug__in=hidden_roles).order_by('slug')
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)
 
