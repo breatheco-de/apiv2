@@ -1609,15 +1609,17 @@ def get_user_by_id_or_email(request, id_or_email):
 @permission_classes([AllowAny])
 def get_roles(request, role_slug=None):
 
+    hidden_roles = ['admin', 'academy_token', 'read_only', 'student']
+    
     if role_slug is not None:
-        role = Role.objects.filter(slug=role_slug).first()
+        role = Role.objects.filter(slug=role_slug).exclude(slug__in=hidden_roles).first()
         if role is None:
             raise ValidationException("Role not found", code=404)
 
         serializer = RoleBigSerializer(role)
         return Response(serializer.data)
 
-    queryset = Role.objects.all()
+    queryset = Role.objects.all().exclude(slug__in=hidden_roles)
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)
 
