@@ -818,7 +818,7 @@ def end_mentoring_session(request, session_id, token):
         {
             "form": form,
             "disabled": session.status not in ["PENDING", "STARTED"],
-            "btn_lable": (
+            "btn_label": (
                 "End Mentoring Session"
                 if session.status in ["PENDING", "STARTED"]
                 else "Mentoring session already ended"
