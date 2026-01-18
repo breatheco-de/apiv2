@@ -570,12 +570,30 @@ class AcademyEventSettings(models.Model):
         help_text="Daily API key",
     )
 
-    livekit_http_url = models.URLField(blank=True, null=True, default=None)
-    livekit_api_key = models.CharField(max_length=255, blank=True, null=True, default=None)
-    livekit_api_secret = models.CharField(max_length=255, blank=True, null=True, default=None)
-
-    livekit_url = models.URLField(blank=True, null=True, default=None)
-    livekit_meet_url = models.URLField(blank=True, null=True, default=None)
+    livekit_http_url = models.URLField(
+        blank=True, null=True, default=None, help_text="HTTP URL of the LiveKit server to make requests from the API"
+    )
+    livekit_api_key = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="API key to authenticate requests to the LiveKit server",
+    )
+    livekit_api_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="API secret to sign tokens for requests to the LiveKit server",
+    )
+    livekit_url = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text="URL of the LiveKit server for the WebSockets connection from the client",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

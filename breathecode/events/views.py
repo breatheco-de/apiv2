@@ -37,6 +37,7 @@ from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.daily.client import DailyClient
 from breathecode.services.eventbrite import Eventbrite
+from breathecode.services.livekit.client import LiveKitAdmin
 from breathecode.utils import (
     DatetimeInteger,
     GenerateLookupsMixin,
@@ -882,7 +883,9 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                                 event.save(update_fields=["live_stream_url"])
 
                         else:
-                            meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                            meet_base = (
+                                getattr(settings, "LIVEKIT_MEET_URL", os.getenv("LIVEKIT_MEET_URL")) or ""
+                            ).rstrip("/")
                             if meet_base:
                                 event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
                                 event.save(update_fields=["live_stream_url"])
@@ -1012,7 +1015,9 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                                 event.save(update_fields=["live_stream_url"])
 
                         elif provider == "livekit":
-                            meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                            meet_base = (
+                                getattr(settings, "LIVEKIT_MEET_URL", os.getenv("LIVEKIT_MEET_URL")) or ""
+                            ).rstrip("/")
                             if meet_base:
                                 event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
                                 event.save(update_fields=["live_stream_url"])
@@ -1651,27 +1656,28 @@ def join_event(request, token, event):
             first = (checkin.attendee.first_name or "").strip()
             last = (checkin.attendee.last_name or "").strip()
             name = f"{first} {last}".strip() or (getattr(checkin.attendee, "email", None) or "")
+            client = LiveKitAdmin(academy=event.academy)
 
             payload = {
-                "iss": settings.LIVEKIT_API_KEY,
+                "iss": client.get_api_key(),
                 "sub": identity,
                 "name": name,
                 "nbf": int((now - timedelta(seconds=5)).timestamp()),
                 "exp": int((now + timedelta(minutes=20)).timestamp()),
                 "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True},
             }
-            lk_token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
-
+            lk_token = jwt.encode(payload, client.get_api_secret(), algorithm="HS256")
             params = urlencode(
                 {
                     "token": lk_token,
-                    "serverUrl": settings.LIVEKIT_URL,
+                    "serverUrl": client.get_server_url(),
                     "participantName": name,
                 }
             )
             return redirect(f"{base_url}?{params}")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error joining livekit event: {str(e)}", exc_info=True)
+        raise ValidationException(f"Error joining livekit event: {str(e)}")
 
     return redirect(event.live_stream_url)
 
@@ -2545,21 +2551,22 @@ class LiveKitTokenView(APIView):
         first = (request.user.first_name or "").strip()
         last = (request.user.last_name or "").strip()
         name = f"{first} {last}".strip() or (request.user.email or "")
-
+        client = LiveKitAdmin(academy=event.academy)
         payload = {
-            "iss": settings.LIVEKIT_API_KEY,
+            "iss": client.get_api_key(),
             "sub": identity,
             "name": name,
             "nbf": int((now - timedelta(seconds=5)).timestamp()),
             "exp": int((now + timedelta(minutes=20)).timestamp()),
             "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True},
         }
+        logger.info(f"usando api url  en post token {client.get_api_key()}")
 
-        token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
-
+        token = jwt.encode(payload, client.get_api_secret(), algorithm="HS256")
+        logger.info(f"usando api secret en token {client.get_api_secret()}")
         return Response(
             {
-                "serverUrl": settings.LIVEKIT_URL,
+                "serverUrl": client.get_server_url(),
                 "token": token,
                 "identity": identity,
                 "room": room,

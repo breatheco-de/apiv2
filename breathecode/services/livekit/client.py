@@ -4,6 +4,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from breathecode.events.models import AcademyEventSettings
+
 __all__ = ["LiveKitAdmin"]
 
 
@@ -11,19 +13,43 @@ class LiveKitAdmin:
     def __init__(
         self,
         http_url: Optional[str] = None,
+        server_url: Optional[str] = None,
         api_key: Optional[str] = None,
         api_secret: Optional[str] = None,
         timeout: int = 10,
+        academy=None,
     ) -> None:
-        self.http_url = (http_url or os.getenv("LIVEKIT_HTTP_URL") or "").rstrip("/")
+
+        if academy and not http_url and not api_key and not api_secret and not server_url:
+            academy_settings = AcademyEventSettings.objects.filter(academy=academy).first()
+            if academy_settings:
+                http_url = academy_settings.livekit_http_url
+                api_key = academy_settings.livekit_api_key
+                api_secret = academy_settings.livekit_api_secret
+                server_url = academy_settings.livekit_url
+
+        self.http_url = (http_url.rstrip("/") if http_url else "") or os.getenv("LIVEKIT_HTTP_URL") or ""
         self.api_key = api_key or os.getenv("LIVEKIT_API_KEY") or ""
         self.api_secret = api_secret or os.getenv("LIVEKIT_API_SECRET") or ""
+        self.server_url = server_url or os.getenv("LIVEKIT_URL") or ""
         self.timeout = timeout
 
         if not self.http_url:
             raise Exception("LIVEKIT_HTTP_URL is not configured")
         if not self.api_key or not self.api_secret:
             raise Exception("LIVEKIT_API_KEY/LIVEKIT_API_SECRET are not configured")
+
+    def get_api_key(self):
+        return self.api_key
+
+    def get_api_secret(self):
+        return self.api_secret
+
+    def get_http_url(self):
+        return self.http_url
+
+    def get_server_url(self):
+        return self.server_url
 
     def _auth_headers(self) -> Dict[str, str]:
         token = base64.b64encode(f"{self.api_key}:{self.api_secret}".encode()).decode()
