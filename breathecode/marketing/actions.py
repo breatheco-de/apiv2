@@ -841,7 +841,13 @@ def register_new_lead(form_entry=None):
     }
 
     contact = set_optional(contact, "utm_url", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_location", form_entry, "location", crm_vendor=ac_academy.crm_vendor)
+    
+    # Ensure location sent to Active Campaign matches academy.active_campaign_slug
+    location_value = form_entry.get("location")
+    if ac_academy.academy and ac_academy.academy.active_campaign_slug:
+        location_value = ac_academy.academy.active_campaign_slug
+    
+    contact = set_optional(contact, "utm_location", {"location": location_value}, "location", crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "course", form_entry, crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "utm_language", form_entry, "language", crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "utm_country", form_entry, "country", crm_vendor=ac_academy.crm_vendor)
