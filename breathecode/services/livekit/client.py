@@ -1,7 +1,9 @@
 import base64
 import os
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
+import jwt
 import requests
 
 from breathecode.events.models import AcademyEventSettings
@@ -36,6 +38,8 @@ class LiveKitAdmin:
 
         if not self.http_url:
             raise Exception("LIVEKIT_HTTP_URL is not configured")
+        if not self.server_url:
+            raise Exception("LIVEKIT_URL is not configured")
         if not self.api_key or not self.api_secret:
             raise Exception("LIVEKIT_API_KEY/LIVEKIT_API_SECRET are not configured")
 
@@ -79,3 +83,42 @@ class LiveKitAdmin:
         # Raise for visibility; the caller may catch and ignore for idempotency
         resp.raise_for_status()
         return resp.json()
+
+    def validate_credentials(self, timeout: Optional[int] = None) -> bool:
+        """Validate LiveKit credentials by making a lightweight API call.
+
+        Returns:
+            True if credentials are valid, False otherwise
+        """
+
+        if timeout is None:
+            timeout = min(self.timeout, 3)
+
+        # Generate Bearer token for ListRooms endpoint
+        now = datetime.utcnow()
+        payload = {
+            "iss": self.api_key,
+            "sub": "admin",
+            "nbf": int((now - timedelta(seconds=5)).timestamp()),
+            "exp": int((now + timedelta(minutes=1)).timestamp()),
+            "video": {
+                "roomList": True,
+            },
+            "names": f"credentials_validation_{now.timestamp()}",  # Inexistent room name to make the request more efficient
+        }
+        token = jwt.encode(payload, self.api_secret, algorithm="HS256")
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            url = f"{self.http_url}/twirp/livekit.RoomService/ListRooms"
+            resp = requests.post(url, json={}, headers=headers, timeout=timeout)
+            if resp.status_code >= 300:
+                return False
+            return True
+        except requests.exceptions.Timeout:
+            return False
+        except requests.exceptions.RequestException:
+            raise

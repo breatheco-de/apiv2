@@ -886,10 +886,27 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             meet_base = (
                                 getattr(settings, "LIVEKIT_MEET_URL", os.getenv("LIVEKIT_MEET_URL")) or ""
                             ).rstrip("/")
-                            if meet_base:
-                                event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
-                                event.save(update_fields=["live_stream_url"])
+                            if not meet_base:
+                                raise ValidationException(
+                                    translation(
+                                        lang,
+                                        en="LIVEKIT_MEET_URL is not configured",
+                                        es="LIVEKIT_MEET_URL no está configurada",
+                                    ),
+                                    code=500,
+                                )
+                            event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
+                            event.save(update_fields=["live_stream_url"])
 
+                            if not LiveKitAdmin(academy=academy).validate_credentials():
+                                raise ValidationException(
+                                    translation(
+                                        lang,
+                                        en="Failed to validate LiveKit credentials",
+                                        es="Falló la validación de las credenciales de LiveKit",
+                                    ),
+                                    code=500,
+                                )
                             tasks_events.create_livekit_room_for_event.delay(event.id)
 
                         serializer = EventSerializer(event, many=False)

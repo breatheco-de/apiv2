@@ -3,6 +3,7 @@ import os
 import uuid as uuid_lib
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
 from slugify import slugify
 
@@ -598,5 +599,25 @@ class AcademyEventSettings(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def clean(self):
+        super().clean()
+
+        livekit_fields = {
+            "livekit_http_url": self.livekit_http_url,
+            "livekit_api_key": self.livekit_api_key,
+            "livekit_api_secret": self.livekit_api_secret,
+            "livekit_url": self.livekit_url,
+        }
+
+        has_any_livekit_field = any(value is not None and value != "" for value in livekit_fields.values())
+
+        if has_any_livekit_field:
+            if not all(value is not None and value != "" for value in livekit_fields.values()):
+                raise ValidationError("If any LiveKit field is configured, all LiveKit fields must be set.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"AcademyEventSettings(academy_id={self.academy_id})"
+        return f"AcademyEventSettings({str(self.academy)})"
