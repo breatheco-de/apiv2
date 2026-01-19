@@ -276,6 +276,8 @@ class Service(AbstractAsset):
         Group, blank=True, help_text="Groups that can access the customer that bought this service"
     )
 
+    description = models.CharField(max_length=255, default=None, null=True, blank=True, help_text="Description of the service")
+
     session_duration = models.DurationField(
         default=None, null=True, blank=True, help_text="Session duration, used in consumption sessions"
     )
