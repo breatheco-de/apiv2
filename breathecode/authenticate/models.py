@@ -311,9 +311,11 @@ class UserInvite(models.Model):
 
 INVITED = "INVITED"
 ACTIVE = "ACTIVE"
+DELETED = "DELETED"
 PROFILE_ACADEMY_STATUS = (
     (INVITED, "Invited"),
     (ACTIVE, "Active"),
+    (DELETED, "Deleted"),
 )
 
 

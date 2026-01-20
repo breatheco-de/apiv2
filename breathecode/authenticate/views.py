@@ -515,6 +515,10 @@ class MemberView(APIView, GenerateLookupsMixin):
         include = request.GET.get("include", "").split()
         if not "student" in include:
             items = items.exclude(role__slug="student")
+        
+        # Exclude deleted members by default unless explicitly included
+        if "deleted" not in include:
+            items = items.exclude(status="DELETED")
 
         roles = request.GET.get("roles", "")
         if roles != "":
@@ -539,6 +543,22 @@ class MemberView(APIView, GenerateLookupsMixin):
 
     @capable_of("crud_member")
     def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        
+        # Check if trying to create with student role
+        if "role" in request.data:
+            role_obj = Role.objects.filter(id=request.data["role"]).first() or Role.objects.filter(slug=request.data["role"]).first()
+            if role_obj and role_obj.slug == "student":
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="This endpoint cannot create student profiles.",
+                        es="Este endpoint no puede crear perfiles de estudiantes.",
+                        slug="cannot-create-student-role",
+                    ),
+                    code=400,
+                )
+        
         serializer = MemberPOSTSerializer(data=request.data, context={"academy_id": academy_id, "request": request})
         if serializer.is_valid():
             serializer.save()
@@ -549,26 +569,28 @@ class MemberView(APIView, GenerateLookupsMixin):
     def put(self, request, academy_id=None, user_id_or_email=None):
         lang = get_user_language(request)
 
-        user = ProfileAcademy.objects.filter(user__id=request.user.id, academy__id=academy_id).first()
-
-        if user.email is None or user.email.strip() == "":
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="This mentor does not have an email address",
-                    es="Este mentor no tiene una dirección de correo electrónico",
-                    slug="email-not-found",
-                ),
-                code=400,
-            )
-
         already = None
         if user_id_or_email.isnumeric():
-            already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
+            already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).exclude(role__slug="student").first()
         else:
             raise ValidationException("User id must be a numeric value", code=400, slug="user-id-is-not-numeric")
 
         request_data = {**request.data, "user": user_id_or_email, "academy": academy_id}
+        
+        # Check if trying to create or update with student role
+        if "role" in request_data:
+            role_obj = Role.objects.filter(id=request_data["role"]).first() or Role.objects.filter(slug=request_data["role"]).first()
+            if role_obj and role_obj.slug == "student":
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="This endpoint cannot update student profiles.",
+                        es="Este endpoint no puede crear o actualizar perfiles de estudiantes.",
+                        slug="cannot-update-student-role",
+                    ),
+                    code=400,
+                )
+        
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
@@ -584,9 +606,54 @@ class MemberView(APIView, GenerateLookupsMixin):
 
     @capable_of("crud_member")
     def delete(self, request, academy_id=None, user_id_or_email=None):
-        raise ValidationException(
-            "This functionality is under maintenance and it's not working", code=403, slug="delete-is-forbidden"
-        )
+        lang = get_user_language(request)
+
+        if user_id_or_email is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing user_id_or_email parameter",
+                    es="Falta el parámetro user_id_or_email",
+                    slug="missing-user-id",
+                ),
+                code=400,
+            )
+
+        # Find the ProfileAcademy record
+        profile_academy = None
+        if user_id_or_email.isnumeric():
+            profile_academy = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
+        else:
+            profile_academy = ProfileAcademy.objects.filter(user__email=user_id_or_email, academy_id=academy_id).first()
+
+        if profile_academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Profile academy not found for this user and academy",
+                    es="No se encontró el perfil de academia para este usuario y academia",
+                    slug="profile-academy-not-found",
+                ),
+                code=404,
+            )
+
+        # Validate that this is not a student role (students should use the /student endpoint)
+        if profile_academy.role.slug == "student":
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"This endpoint can only delete staff/member profiles (not {profile_academy.role.slug})",
+                    es=f"Este endpoint solo puede eliminar perfiles de personal/miembros (no {profile_academy.role.slug})",
+                    slug="trying-to-delete-student",
+                ),
+                code=400,
+            )
+
+        # Soft delete: set status to DELETED
+        profile_academy.status = "DELETED"
+        profile_academy.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -1552,15 +1619,17 @@ def get_user_by_id_or_email(request, id_or_email):
 @permission_classes([AllowAny])
 def get_roles(request, role_slug=None):
 
+    hidden_roles = ['academy_token', 'read_only', 'student']
+    
     if role_slug is not None:
-        role = Role.objects.filter(slug=role_slug).first()
+        role = Role.objects.filter(slug=role_slug).exclude(slug__in=hidden_roles).first()
         if role is None:
             raise ValidationException("Role not found", code=404)
 
         serializer = RoleBigSerializer(role)
         return Response(serializer.data)
 
-    queryset = Role.objects.all()
+    queryset = Role.objects.all().exclude(slug__in=hidden_roles + ['admin']).order_by('slug')
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)
 
