@@ -844,7 +844,9 @@ def register_new_lead(form_entry=None):
     
     # Ensure location sent to Active Campaign matches academy.active_campaign_slug
     location_value = form_entry.get("location")
-    if ac_academy.academy and ac_academy.academy.active_campaign_slug:
+    if alias and alias.active_campaign_slug:
+        location_value = alias.active_campaign_slug
+    elif ac_academy.academy and ac_academy.academy.active_campaign_slug:
         location_value = ac_academy.academy.active_campaign_slug
     
     contact = set_optional(contact, "utm_location", {"location": location_value}, "location", crm_vendor=ac_academy.crm_vendor)
