@@ -10,6 +10,7 @@ from breathecode.utils import AdminExportCsvMixin
 
 from .actions import sync_org_events, sync_org_venues
 from .models import (
+    AcademyEventSettings,
     Event,
     EventbriteWebhook,
     EventCheckin,
@@ -248,3 +249,14 @@ class EventContextAdmin(admin.ModelAdmin):
     list_filter = ["status"]
     search_fields = ["event__title", "event__slug", "status_text"]
     raw_id_fields = ["event"]
+
+
+@admin.register(AcademyEventSettings)
+class AcademyEventSettingsAdmin(admin.ModelAdmin):
+    list_display = (
+        "academy",
+        "default_meeting_provider",
+    )
+    list_filter = ["academy"]
+    search_fields = ["academy__slug", "academy__name"]
+    raw_id_fields = ["academy"]

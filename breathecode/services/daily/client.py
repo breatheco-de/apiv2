@@ -1,5 +1,11 @@
-import logging, os, urllib, time
+import logging
+import os
+import time
+import urllib
+
 from django.utils import timezone
+
+from breathecode.events.models import AcademyEventSettings
 
 logger = logging.getLogger(__name__)
 
@@ -7,8 +13,14 @@ logger = logging.getLogger(__name__)
 class DailyClient:
     headers = {}
 
-    def __init__(self, token=None):
-        if token is None:
+    def __init__(self, token=None, academy=None):
+
+        if academy and not token:
+            academy_settings = AcademyEventSettings.objects.filter(academy=academy).first()
+            if academy_settings:
+                token = academy_settings.daily_api_key
+
+        if not token:
             token = os.getenv("DAILY_API_KEY", "")
 
         self.host = os.getenv("DAILY_API_URL", "")
@@ -34,7 +46,7 @@ class DailyClient:
             raise Exception("Unknown error when requesting meeting room")
 
         if ("status_code" in result and result["status_code"] >= 400) or "error" in result:
-            raise Exception(result["error"] + ": " + result["info"])
+            raise Exception(result.get("error", "") + ": " + result.get("info", ""))
 
         # if 'pagination' in result:
         #     print('has more items?', result['pagination']['has_more_items'])
