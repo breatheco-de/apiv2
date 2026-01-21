@@ -5,6 +5,7 @@ from django.dispatch import receiver
 
 from breathecode.admissions.models import Academy
 from breathecode.admissions.signals import academy_reseller_changed
+from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.monitoring import signals
 from breathecode.monitoring.models import Application, MonitorScript
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 @receiver(signals.application_created, sender=Application)
 def application_created(sender, instance, **kwargs):
     missing_stripe_slug = "alert_missing_stripe_credentials"
-    if instance.academy.get_academy_features()["features"]["reseller"]:
+    if has_feature_flag(instance.academy, "commerce.reseller", default=False):
         MonitorScript.objects.create(
             application=instance,
             script_slug=missing_stripe_slug,
