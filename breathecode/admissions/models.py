@@ -10,6 +10,8 @@ from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 
+from breathecode.configurable_settings import ConfigurableSettingsMixin
+
 from . import signals
 from .signals import syllabus_version_json_updated
 
@@ -33,14 +35,41 @@ def default_academy_features():
     All features default to True, except show_marketing_navigation which is only for white label academies.
     """
     return {
-        "features": {
-            "allow_events": True,  # allow events
-            "allow_mentoring": True,  # allow mentoring
-            "allow_feedback_widget": True,  # allow feedback widget
-            "allow_community_widget": True,  # allow community widget
-            "allow_referral_program": True,  # allow referral program
+        "acl": {
+            "editable_paths_by_role": {
+                "country_manager": [],
+            }
+        },
+        # Segmented / nested feature flags (top-level groups).
+        "events": {
+            "enabled": True,  # allow events
             "allow_other_academy_events": True,  # allow other academy events
-            "allow_other_academy_courses": True,  # allow other academy courses on dashboard
+        },
+        "mentorship": {
+            "enabled": True,  # allow mentoring
+        },
+        "feedback": {
+            "widget": {
+                "enabled": True,  # allow feedback widget
+            },
+        },
+        "community": {
+            "widget": {
+                "enabled": True,  # allow community widget
+            },
+        },
+        "marketing": {
+            "referral_program": {
+                "enabled": True,  # allow referral program
+            },
+            "dashboard": {
+                "allow_other_academy_courses": True,  # allow other academy courses on dashboard
+            },
+        },
+        "certificate": {
+            "auto_ignore_projects_on_delivery": False,
+        },
+        "commerce": {
             "reseller": False,  # allow academy to resell courses from other academies (requires white_labeled=True)
         },
         "navigation": {
@@ -97,12 +126,12 @@ ACADEMY_STATUS = (
 )
 
 
-class Academy(models.Model):
+class Academy(ConfigurableSettingsMixin, models.Model):
 
     def __init__(self, *args, **kwargs):
         super(Academy, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
-        self.__old_reseller = self.get_academy_features()["features"]["reseller"]
+        self.__old_reseller = self.get_academy_features()["commerce"]["reseller"]
 
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
     name = models.CharField(max_length=150, db_index=True)
@@ -215,21 +244,12 @@ class Academy(models.Model):
         This ensures that if new fields are added to the default structure,
         existing academies will automatically get them.
         """
-        return self._deep_merge_dict(default_academy_features(), self.academy_features or {})
+        return self.get_effective_settings()
 
-    @staticmethod
-    def _deep_merge_dict(default, override):
-        """
-        Deep merge two dictionaries, with override taking precedence.
-        If a key exists in both and both values are dicts, merge recursively.
-        """
-        result = default.copy()
-        for key, value in override.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                result[key] = Academy._deep_merge_dict(result[key], value)
-            else:
-                result[key] = value
-        return result
+    # ConfigurableSettingsMixin configuration
+    SETTINGS_FIELD = "academy_features"
+    DEFAULT_SETTINGS = staticmethod(default_academy_features)
+    PARENT_LOOKUP = None
 
     def __str__(self):
         return self.name
@@ -257,21 +277,23 @@ class Academy(models.Model):
         if not created and self.__old_slug != self.slug:
             raise Exception("Academy slug cannot be updated")
 
-        reseller_changed = not created and self.__old_reseller != self.get_academy_features()["features"]["reseller"]
+        reseller_changed = not created and self.__old_reseller != self.get_academy_features()["commerce"]["reseller"]
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
         if created:
             self.__old_slug = self.slug
-            self.__old_reseller = self.get_academy_features()["features"]["reseller"]
+            self.__old_reseller = self.get_academy_features()["commerce"]["reseller"]
 
         academy_saved.send_robust(instance=self, sender=self.__class__, created=created)
 
         if reseller_changed:
             academy_reseller_changed.send_robust(
-                instance=self, sender=self.__class__, value=self.get_academy_features()["features"]["reseller"]
+                instance=self,
+                sender=self.__class__,
+                value=self.get_academy_features()["commerce"]["reseller"],
             )
-            self.__old_reseller = self.get_academy_features()["features"]["reseller"]
+            self.__old_reseller = self.get_academy_features()["commerce"]["reseller"]
 
 
 PARTIME = "PART-TIME"
