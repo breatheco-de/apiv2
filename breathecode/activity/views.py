@@ -17,7 +17,9 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import HeaderLimitOffsetPagination, capable_of, getLogger
+from breathecode.utils.request import get_current_academy
 
+from .tasks import add_activity
 from .utils import (
     generate_created_at,
     validate_activity_fields,
@@ -602,6 +604,58 @@ class V2MeActivityView(APIView):
         serializer = ActivitySerializer(results, many=True)
         return Response(serializer.data)
 
+    def post(self, request, activity_slug=None):
+        lang = get_user_language(request)
+        data = request.data
+
+        related_type = data.get("related_type")
+        related_id = data.get("related_id")
+        related_slug = data.get("related_slug")
+        timestamp = data.get("timestamp")
+        academy_id = get_current_academy(request, return_id=True)
+
+        if not activity_slug:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Activity slug is required",
+                    es="El slug de la actividad es requerido",
+                )
+            )
+        if related_type and not (bool(related_id) ^ bool(related_slug)):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If related_type is provided, either related_id or related_slug must be provided, but not both",
+                    es="Si related_type es proporcionado, debe proporcionarse related_id o related_slug, pero no ambos",
+                    slug="invalid-related-params",
+                ),
+                code=400,
+            )
+
+        if not related_type and (related_id or related_slug):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If related_type is not provided, both related_id and related_slug must also be absent",
+                    es="Si related_type no es proporcionado, related_id y related_slug también deben estar ausentes",
+                    slug="invalid-related-params",
+                ),
+                code=400,
+            )
+
+        add_activity.delay(
+            user_id=request.user.id,
+            kind=activity_slug,
+            related_type=related_type,
+            related_id=related_id,
+            related_slug=related_slug,
+            timestamp=timestamp,
+            academy_id=academy_id,
+        )
+
+        return Response(status=status.HTTP_200_OK)
+
 
 class V2AcademyActivityView(APIView):
 
@@ -767,10 +821,12 @@ class V3ActivityKindView(APIView):
         """
         result = []
         for related_type, kinds in ALLOWED_TYPES.items():
-            result.append({
-                "related_type": related_type,
-                "kinds": kinds,
-            })
+            result.append(
+                {
+                    "related_type": related_type,
+                    "kinds": kinds,
+                }
+            )
 
         return Response(result)
 
