@@ -3,7 +3,9 @@ import json
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db.models import Avg, Count, Q, Sum
+from django.utils import timezone
 from google.cloud import bigquery
 from google.cloud.ndb.query import OR
 from rest_framework import status
@@ -522,6 +524,117 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
         return Response(new_activities, status=status.HTTP_201_CREATED)
 
 
+class V2MeActivityReportView(APIView):
+
+    def post(self, request, activity_slug=None):
+        lang = get_user_language(request)
+        data = request.data
+
+        related_type = data.get("related_type")
+        related_id = data.get("related_id")
+        related_slug = data.get("related_slug")
+        timestamp = data.get("timestamp")
+        academy_id = get_current_academy(request, return_id=True)
+
+        if not activity_slug:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Activity slug is required",
+                    es="El slug de la actividad es requerido",
+                ),
+                code=400,
+            )
+        if related_type and not (bool(related_id) ^ bool(related_slug)):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If related_type is provided, either related_id or related_slug must be provided, but not both",
+                    es="Si related_type es proporcionado, debe proporcionarse related_id o related_slug, pero no ambos",
+                ),
+                code=400,
+            )
+
+        if not related_type and (related_id or related_slug):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If related_type is not provided, both related_id and related_slug must also be absent",
+                    es="Si related_type no es proporcionado, related_id y related_slug también deben estar ausentes",
+                ),
+                code=400,
+            )
+
+        # For read_dashboard and read_cohort_dashboard, check if the user has already reported the activity in the last 24 hours
+
+        if activity_slug == "read_dashboard":
+            cache_key = f"read_dashboard_reported_at-{request.user.id}"
+            recently_reported = cache.get(cache_key)
+            if recently_reported:
+                message = translation(
+                    lang,
+                    en="The user has already reported a read_dashboard activity in the last 24 hours",
+                    es="El usuario reportó una actividad de read_dashboard hace menos de 24 horas",
+                )
+                return Response(
+                    {"message": message, "last_reported_at": recently_reported}, status=status.HTTP_202_ACCEPTED
+                )
+
+            now = timezone.now().isoformat()
+            cache.set(cache_key, now, timeout=86400)
+            related_type = "auth.User"
+            related_id = request.user.id
+            related_slug = None
+            academy_id = None
+
+        elif activity_slug == "read_cohort_dashboard":
+            cache_key = f"read_cohort_dashboard_reported_at-{related_id}"
+            recently_reported = cache.get(cache_key)
+            if recently_reported:
+                message = translation(
+                    lang,
+                    en="The user has already reported a read_cohort_dashboard activity in the last 24 hours",
+                    es="El usuario reportó una actividad de read_cohort_dashboard hace menos de 24 horas",
+                )
+                return Response(
+                    {"message": message, "last_reported_at": recently_reported}, status=status.HTTP_202_ACCEPTED
+                )
+
+            cohort_user = CohortUser.objects.filter(
+                id=related_id,
+                user__id=request.user.id,
+            ).first()
+
+            if not cohort_user:
+                message = translation(
+                    lang,
+                    en="The user is not a student in this cohort",
+                    es="El usuario no es un estudiante en esta cohorte",
+                )
+                return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
+
+            now = timezone.now().isoformat()
+            cache.set(cache_key, now, timeout=86400)
+
+        add_activity.delay(
+            user_id=request.user.id,
+            kind=activity_slug,
+            related_type=related_type,
+            related_id=related_id,
+            related_slug=related_slug,
+            timestamp=timestamp,
+            academy_id=academy_id,
+        )
+
+        message = translation(
+            lang,
+            en="Activity reported successfully",
+            es="Actividad reportada correctamente",
+        )
+
+        return Response({"message": message}, status=status.HTTP_200_OK)
+
+
 class V2MeActivityView(APIView):
 
     def get(self, request, activity_id=None):
@@ -603,58 +716,6 @@ class V2MeActivityView(APIView):
 
         serializer = ActivitySerializer(results, many=True)
         return Response(serializer.data)
-
-    def post(self, request, activity_slug=None):
-        lang = get_user_language(request)
-        data = request.data
-
-        related_type = data.get("related_type")
-        related_id = data.get("related_id")
-        related_slug = data.get("related_slug")
-        timestamp = data.get("timestamp")
-        academy_id = get_current_academy(request, return_id=True)
-
-        if not activity_slug:
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="Activity slug is required",
-                    es="El slug de la actividad es requerido",
-                )
-            )
-        if related_type and not (bool(related_id) ^ bool(related_slug)):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="If related_type is provided, either related_id or related_slug must be provided, but not both",
-                    es="Si related_type es proporcionado, debe proporcionarse related_id o related_slug, pero no ambos",
-                    slug="invalid-related-params",
-                ),
-                code=400,
-            )
-
-        if not related_type and (related_id or related_slug):
-            raise ValidationException(
-                translation(
-                    lang,
-                    en="If related_type is not provided, both related_id and related_slug must also be absent",
-                    es="Si related_type no es proporcionado, related_id y related_slug también deben estar ausentes",
-                    slug="invalid-related-params",
-                ),
-                code=400,
-            )
-
-        add_activity.delay(
-            user_id=request.user.id,
-            kind=activity_slug,
-            related_type=related_type,
-            related_id=related_id,
-            related_slug=related_slug,
-            timestamp=timestamp,
-            academy_id=academy_id,
-        )
-
-        return Response(status=status.HTTP_200_OK)
 
 
 class V2AcademyActivityView(APIView):
