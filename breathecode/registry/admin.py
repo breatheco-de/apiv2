@@ -10,6 +10,7 @@ from django.utils.html import format_html
 # from breathecode.admissions.admin import SyllabusVersionAdmin
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.admin import change_field
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from .actions import (
     AssetThumbnailGenerator,
@@ -372,6 +373,9 @@ class AssetForm(forms.ModelForm):
     class Meta:
         model = Asset
         fields = "__all__"
+        widgets = {
+            "config": PrettyJSONWidget(),
+        }
 
     def __init__(self, *args, **kwargs):
         super(AssetForm, self).__init__(*args, **kwargs)

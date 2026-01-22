@@ -212,6 +212,9 @@ def handle_internal_link(request):
         _parsed = urlparse(file_path)
         _clean_path = _parsed.path
 
+        # Extract filename from path for Content-Disposition header
+        filename = Path(_clean_path).name
+
         # Construct the API URL for the file
         api_url = f"/repos/{org_name}/{repo_name}/contents/{_clean_path}"
         if branch_name:
@@ -242,14 +245,18 @@ def handle_internal_link(request):
         if response.get("content"):
             content_bytes = base64.b64decode(response["content"])
             content_type = ext_map.get(file_extension, "application/octet-stream")
-            return HttpResponse(content_bytes, content_type=content_type)
+            http_response = HttpResponse(content_bytes, content_type=content_type)
+            http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return http_response
 
         download_url = response.get("download_url")
         if download_url:
             r = requests.get(download_url, timeout=30)
             content_bytes = r.content
             content_type = ext_map.get(file_extension, "application/octet-stream")
-            return HttpResponse(content_bytes, content_type=content_type)
+            http_response = HttpResponse(content_bytes, content_type=content_type)
+            http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return http_response
 
         # 3) Fallback: fetch blob by sha via GitHub API
         sha = response.get("sha")
@@ -258,7 +265,9 @@ def handle_internal_link(request):
             if blob and blob.get("content"):
                 content_bytes = base64.b64decode(blob["content"])
                 content_type = ext_map.get(file_extension, "application/octet-stream")
-                return HttpResponse(content_bytes, content_type=content_type)
+                http_response = HttpResponse(content_bytes, content_type=content_type)
+                http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+                return http_response
 
         return render_message(request, "File content not found", status=404)
 
