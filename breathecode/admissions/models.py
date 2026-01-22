@@ -67,7 +67,7 @@ def default_academy_features():
             },
         },
         "certificate": {
-            "auto_ignore_projects_on_delivery": False,
+            "auto_ignore_projects_on_delivery": False, # Wether a student's project will be automatically ignored when it's delivered
         },
         "commerce": {
             "reseller": False,  # allow academy to resell courses from other academies (requires white_labeled=True)
