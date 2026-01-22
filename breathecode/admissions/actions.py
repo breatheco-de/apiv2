@@ -989,8 +989,8 @@ def academy_student_progress_report_rows(
         if is_macro:
             course_name = f"{course_name} (Macro cohort)"
 
-            user_cohorts = cohort_ids_by_user.get(cu.user_id, set())
-            micro_ids = [c.id for c in cohort.micro_cohorts.all() if c.id in user_cohorts]
+            all_micro_cohorts = cohort.micro_cohorts.all()
+            micro_ids = [c.id for c in all_micro_cohorts]
 
             total_units = 0
             completed_units = 0
