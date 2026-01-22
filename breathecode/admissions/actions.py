@@ -971,6 +971,18 @@ def academy_student_progress_report_rows(
         if cu.user_id not in cohort_ids_by_user:
             cohort_ids_by_user[cu.user_id] = set()
         cohort_ids_by_user[cu.user_id].add(cu.cohort_id)
+    
+    if is_macro and micro_cohort_ids:
+        micro_enrollments_for_user_cohorts = CohortUser.objects.filter(
+            cohort_id__in=micro_cohort_ids,
+            user_id__in=user_ids,
+            role="STUDENT"
+        ).values_list("user_id", "cohort_id")
+        
+        for user_id, micro_cohort_id in micro_enrollments_for_user_cohorts:
+            if user_id not in cohort_ids_by_user:
+                cohort_ids_by_user[user_id] = set()
+            cohort_ids_by_user[user_id].add(micro_cohort_id)
 
     for cu in enrollments:
         user = cu.user
