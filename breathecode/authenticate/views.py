@@ -134,6 +134,7 @@ from .serializers import (
     SmallAppUserAgreementSerializer,
     StudentPOSTSerializer,
     TokenSmallSerializer,
+    UserBigSerializer,
     UserInviteSerializer,
     UserInviteShortSerializer,
     UserInviteSmallSerializer,
@@ -141,7 +142,6 @@ from .serializers import (
     UserMeSerializer,
     UserSerializer,
     UserSettingsSerializer,
-    UserBigSerializer,
     UserTinySerializer,
 )
 
@@ -914,7 +914,9 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if profileacademy_id is not None:
             profile = ProfileAcademy.objects.filter(academy__id=academy_id, id=profileacademy_id).first()
             if profile is None:
-                raise ValidationException("Profile not found or does not belong to this academy", code=404, slug="profile-academy-not-found")
+                raise ValidationException(
+                    "Profile not found or does not belong to this academy", code=404, slug="profile-academy-not-found"
+                )
 
             invites = UserInvite.objects.filter(academy__id=academy_id, email=profile.email)
             status = request.GET.get("status", "")
@@ -1131,31 +1133,31 @@ class AcademyInviteStatsView(APIView):
     """
     GET /v1/auth/academy/user/invite/stats
     GET /v1/auth/academy/user/invite/stats?clean_cache=true
-    
+
     Returns aggregated statistics for academy invites.
-    
+
     Cache Configuration:
     - Expires after 24 hours automatically
     - Can be manually cleared with clean_cache=true parameter
     - Uses Redis cache via Django's cache framework
-    
+
     IMPORTANT: DO NOT add automatic cache invalidation on UserInvite model changes.
     The 24-hour TTL and manual refresh are intentional design decisions to reduce
     database load on dashboard views. Cache invalidation on every invite change
     would defeat the purpose of this endpoint.
     """
-    
+
     @capable_of("read_invite")
     def get(self, request, academy_id=None):
         from django.core.cache import cache
         from django.db.models import Count
-        
+
         # Cache key specific to this academy
         cache_key = f"academy_{academy_id}_invite_stats"
-        
+
         # Check if user wants to force refresh
-        clean_cache = request.GET.get('clean_cache', '').lower() == 'true'
-        
+        clean_cache = request.GET.get("clean_cache", "").lower() == "true"
+
         if clean_cache:
             cache.delete(cache_key)
         else:
@@ -1163,39 +1165,39 @@ class AcademyInviteStatsView(APIView):
             cached_stats = cache.get(cache_key)
             if cached_stats:
                 return Response(cached_stats)
-        
+
         # Generate fresh stats - single query with aggregation
         invites = UserInvite.objects.filter(academy__id=academy_id)
-        
+
         stats = invites.aggregate(
-            total=Count('id'),
-            pending=Count('id', filter=Q(status='PENDING')),
-            accepted=Count('id', filter=Q(status='ACCEPTED')),
-            waiting=Count('id', filter=Q(status='WAITING_LIST')),
-            rejected=Count('id', filter=Q(status='REJECTED')),
-            opened=Count('id', filter=Q(opened_at__isnull=False)),
-            clicked=Count('id', filter=Q(clicked_at__isnull=False))
+            total=Count("id"),
+            pending=Count("id", filter=Q(status="PENDING")),
+            accepted=Count("id", filter=Q(status="ACCEPTED")),
+            waiting=Count("id", filter=Q(status="WAITING_LIST")),
+            rejected=Count("id", filter=Q(status="REJECTED")),
+            opened=Count("id", filter=Q(opened_at__isnull=False)),
+            clicked=Count("id", filter=Q(clicked_at__isnull=False)),
         )
-        
+
         # Build response with engagement metrics
         result = {
-            'academy_id': academy_id,
-            'total_invitations': stats['total'],
-            'pending': stats['pending'],
-            'accepted': stats['accepted'],
-            'waiting': stats['waiting'],
-            'rejected': stats['rejected'],
-            'opened': stats['opened'],
-            'clicked': stats['clicked'],
-            'open_rate': round(stats['opened'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
-            'click_rate': round(stats['clicked'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
-            'conversion_rate': round(stats['accepted'] / stats['total'] * 100, 2) if stats['total'] > 0 else 0,
-            'generated_at': timezone.now().isoformat()
+            "academy_id": academy_id,
+            "total_invitations": stats["total"],
+            "pending": stats["pending"],
+            "accepted": stats["accepted"],
+            "waiting": stats["waiting"],
+            "rejected": stats["rejected"],
+            "opened": stats["opened"],
+            "clicked": stats["clicked"],
+            "open_rate": round(stats["opened"] / stats["total"] * 100, 2) if stats["total"] > 0 else 0,
+            "click_rate": round(stats["clicked"] / stats["total"] * 100, 2) if stats["total"] > 0 else 0,
+            "conversion_rate": round(stats["accepted"] / stats["total"] * 100, 2) if stats["total"] > 0 else 0,
+            "generated_at": timezone.now().isoformat(),
         }
-        
+
         # Cache for 24 hours (86400 seconds)
         cache.set(cache_key, result, 60 * 60 * 24)
-        
+
         return Response(result)
 
 
@@ -1208,14 +1210,14 @@ def track_invite_open(request, invite_id=None):
     Only tracks first open (most valuable metric).
     """
     from PIL import Image
-    
+
     if invite_id is not None:
         # Only track if not already opened
         invite = UserInvite.objects.filter(id=invite_id, opened_at__isnull=True).first()
         if invite is not None:
             invite.opened_at = timezone.now()
             invite.save()
-    
+
     # Return 1x1 transparent pixel
     image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))  # Creates fully transparent pixel ✅
     response = HttpResponse(content_type="image/png")
@@ -1235,9 +1237,9 @@ def render_invite_with_tracking(request, token, member_id=None):
     if invite is not None:
         invite.clicked_at = timezone.now()
         invite.save()
-    
-    original_request = getattr(request, '_request', request)
-    
+
+    original_request = getattr(request, "_request", request)
+
     # Delegate to existing render_invite function
     return render_invite(original_request, token, member_id)
 
@@ -1414,6 +1416,12 @@ class LoginView(ObtainAuthToken):
         # Get academy_id using the utility function
         academy_id = get_current_academy(request, return_id=True)
 
+        # If the academy is not white labeled, don't add it to the login activity
+        if academy_id:
+            academy = Academy.objects.filter(id=academy_id, white_labeled=True).first()
+            if not academy:
+                academy_id = None
+
         tasks_activity.add_activity.delay(
             user.id, "login", related_type="auth.User", related_id=user.id, academy_id=academy_id
         )
@@ -1512,9 +1520,11 @@ class AcademyCapabilitiesView(APIView):
             )
 
         # Get all ProfileAcademies for this user and academy
-        profile_academies = ProfileAcademy.objects.filter(
-            user=request.user, academy=academy
-        ).select_related("role").prefetch_related("role__capabilities")
+        profile_academies = (
+            ProfileAcademy.objects.filter(user=request.user, academy=academy)
+            .select_related("role")
+            .prefetch_related("role__capabilities")
+        )
 
         # Collect all capabilities using a set to avoid duplicates
         capabilities_set = set()
@@ -2752,19 +2762,24 @@ def render_invite(request, token, member_id=None):
 
             if "heading" not in obj:
                 obj["heading"] = invite.academy.name
-        
+
         welcome_video = None
         if invite and invite.welcome_video and isinstance(invite.welcome_video, dict):
             url = invite.welcome_video.get("url", "")
             preview_image = invite.welcome_video.get("preview_image", "")
             if url and preview_image:
                 welcome_video = invite.welcome_video.copy()
-        elif invite and invite.academy and invite.academy.welcome_video and isinstance(invite.academy.welcome_video, dict):
+        elif (
+            invite
+            and invite.academy
+            and invite.academy.welcome_video
+            and isinstance(invite.academy.welcome_video, dict)
+        ):
             url = invite.academy.welcome_video.get("url", "")
             preview_image = invite.academy.welcome_video.get("preview_image", "")
             if url and preview_image:
                 welcome_video = invite.academy.welcome_video.copy()
-        
+
         if welcome_video and isinstance(welcome_video, dict) and "url" in welcome_video:
             welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
             obj["WELCOME_VIDEO"] = welcome_video
@@ -2807,19 +2822,24 @@ def render_invite(request, token, member_id=None):
 
                 if "heading" not in obj:
                     obj["heading"] = invite.academy.name
-            
+
             welcome_video = None
             if invite and invite.welcome_video and isinstance(invite.welcome_video, dict):
                 url = invite.welcome_video.get("url", "")
                 preview_image = invite.welcome_video.get("preview_image", "")
                 if url and preview_image:
                     welcome_video = invite.welcome_video.copy()
-            elif invite and invite.academy and invite.academy.welcome_video and isinstance(invite.academy.welcome_video, dict):
+            elif (
+                invite
+                and invite.academy
+                and invite.academy.welcome_video
+                and isinstance(invite.academy.welcome_video, dict)
+            ):
                 url = invite.academy.welcome_video.get("url", "")
                 preview_image = invite.academy.welcome_video.get("preview_image", "")
                 if url and preview_image:
                     welcome_video = invite.academy.welcome_video.copy()
-            
+
             if welcome_video and isinstance(welcome_video, dict) and "url" in welcome_video:
                 welcome_video["url"] = convert_youtube_to_embed(welcome_video["url"])
                 obj["WELCOME_VIDEO"] = welcome_video
@@ -3587,6 +3607,7 @@ def get_user_avatar_url(request, user_id):
     """
     from django.core.cache import cache
     from django.http import HttpResponseRedirect
+
     from breathecode.authenticate.actions import get_api_url
     from breathecode.authenticate.models import ProfileAcademy
 
@@ -3603,9 +3624,7 @@ def get_user_avatar_url(request, user_id):
 
     # Validate academy_id format
     if not str(academy_id).isdigit():
-        raise ValidationException(
-            f"Academy ID needs to be an integer: {str(academy_id)}", slug="invalid-academy-id"
-        )
+        raise ValidationException(f"Academy ID needs to be an integer: {str(academy_id)}", slug="invalid-academy-id")
 
     # Validate token
     valid_token = Token.get_valid(token_query)
