@@ -17,6 +17,10 @@ CAPABILITIES = [
         "description": "Read, or update your academy information (very high level, almost the academy admin)",
     },
     {
+        "slug": "manage_academy_flags",
+        "description": "Manage which academy features/flags can be edited by academy roles",
+    },
+    {
         "slug": "crud_member",
         "description": "Create, update or delete academy members (very high level, almost the academy admin)",
     },

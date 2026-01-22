@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from breathecode.admissions.models import CohortUser
+from breathecode.admissions.utils.academy_features import has_feature_flag
 from breathecode.authenticate.models import User
 from breathecode.certificate.actions import get_assets_from_syllabus, how_many_pending_tasks
 from breathecode.assignments.models import Task
@@ -125,7 +126,29 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f"  First 10 projects: {', '.join(mandatory_projects[:10])}...")
 
-        # Check 5: Pending mandatory tasks
+        # Check 5: Feature flag for auto-ignore
+        academy = cohort.academy
+        auto_ignore_enabled = has_feature_flag(
+            academy, "certificate.auto_ignore_projects_on_delivery", default=False
+        )
+        if auto_ignore_enabled:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"✓ Auto-ignore feature flag is ENABLED for academy {academy.id} ({academy.name})"
+                )
+            )
+        else:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"⚠ Auto-ignore feature flag is DISABLED for academy {academy.id} ({academy.name})"
+                )
+            )
+            self.stdout.write(
+                "  Projects will NOT be auto-ignored when delivered. "
+                "They will need to be manually approved."
+            )
+
+        # Check 6: Pending mandatory tasks
         pending_tasks = how_many_pending_tasks(
             cohort.syllabus_version,
             user,
@@ -155,7 +178,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"✓ No pending mandatory PROJECT tasks (pending: {pending_tasks})")
 
-        # Check 6: Financial status (blocks manual graduation)
+        # Check 7: Financial status (blocks manual graduation)
         if cohort_user.finantial_status == "LATE":
             issues.append("Financial status is LATE (blocks manual graduation via API)")
             self.stdout.write(
@@ -164,7 +187,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"✓ Financial status: {cohort_user.finantial_status}")
 
-        # Check 7: Task status changes (receiver trigger)
+        # Check 8: Task status changes (receiver trigger)
         # Check if there are any tasks that should have triggered the receiver
         user_tasks_all = Task.objects.filter(user=user, cohort=cohort, task_type="PROJECT")
         tasks_with_revision = user_tasks_all.exclude(revision_status__in=["", None])
@@ -186,10 +209,28 @@ class Command(BaseCommand):
             
             # Show detailed task status
             approved_tasks = tasks_with_revision.filter(revision_status="APPROVED")
+            ignored_tasks = tasks_with_revision.filter(revision_status="IGNORED")
             pending_tasks_list = tasks_with_revision.exclude(revision_status__in=["APPROVED", "IGNORED"])
             
             self.stdout.write(f"  - Approved: {approved_tasks.count()}")
+            self.stdout.write(f"  - Ignored: {ignored_tasks.count()}")
             self.stdout.write(f"  - Pending/Other: {pending_tasks_list.count()}")
+            
+            # Check if tasks were auto-ignored or manually approved
+            if ignored_tasks.count() > 0 and auto_ignore_enabled:
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"  ✓ {ignored_tasks.count()} task(s) were auto-ignored (feature flag working)"
+                    )
+                )
+            elif approved_tasks.count() > 0 and auto_ignore_enabled:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"  ⚠ {approved_tasks.count()} task(s) are APPROVED, not IGNORED. "
+                        "This suggests they were manually approved after delivery, "
+                        "or auto-ignore didn't work when they were delivered."
+                    )
+                )
             
             # Check if all mandatory tasks are approved
             mandatory_tasks = user_tasks_all.filter(associated_slug__in=mandatory_projects)
