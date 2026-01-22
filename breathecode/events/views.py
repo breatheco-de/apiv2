@@ -1179,8 +1179,11 @@ class AcademyEventSuspendView(APIView):
         event.live_stream_url = None
         event.save()
 
-        # Queue email notification task
-        send_event_suspended_notification.delay(event.id)
+        # Extract optional suspension_reason from request payload
+        suspension_reason = request.data.get("suspension_reason", None)
+
+        # Queue email notification task with optional reason
+        send_event_suspended_notification.delay(event.id, suspension_reason=suspension_reason)
 
         serializer = EventSerializer(event, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
