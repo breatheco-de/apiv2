@@ -562,6 +562,8 @@ class AcademyCohortReportCSVView(APIView):
                 slug="cohort-not-found",
             )
 
+        include_micro_cohorts = request.query_params.get("include_micro_cohorts", "false").lower() == "true"
+
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="cohort_{cohort.slug}_report.csv"'
 
@@ -581,7 +583,9 @@ class AcademyCohortReportCSVView(APIView):
             ]
         )
 
-        for row in academy_student_progress_report_rows(academy, lang=lang, cohort=cohort):
+        for row in academy_student_progress_report_rows(
+            academy, lang=lang, cohort=cohort, include_micro_cohorts=include_micro_cohorts
+        ):
             writer.writerow(row)
 
         return response
