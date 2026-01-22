@@ -716,6 +716,7 @@ class AcademyFeaturesView(APIView):
             role__capabilities__slug="manage_academy_flags",
         ).exists()
 
+        allowed_paths = []
         if not is_system_admin:
             profile = ProfileAcademy.objects.filter(user=request.user.id, academy__id=academy_id).first()
             role_slug = profile.role.slug if profile and profile.role else None
@@ -761,7 +762,14 @@ class AcademyFeaturesView(APIView):
         academy.academy_features = merged
         academy.save(update_fields=["academy_features"])
 
-        return Response({"academy_features": academy.get_academy_features()}, status=status.HTTP_200_OK)
+        result = academy.get_academy_features()
+
+        if not is_system_admin:
+            allowed_paths = [p for p in allowed_paths if isinstance(p, str) and not p.startswith("acl")]
+            result = extract_allowed_tree(result, allowed_paths)
+            result.pop("acl", None)
+
+        return Response({"academy_features": result}, status=status.HTTP_200_OK)
 
     @capable_of("read_my_academy")
     def get(self, request, format=None, academy_id=None):
