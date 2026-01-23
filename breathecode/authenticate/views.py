@@ -3048,6 +3048,7 @@ def get_google_token(request, token=None):
                 )
 
             scopes.append("https://www.googleapis.com/auth/pubsub")
+            scopes.append("https://www.googleapis.com/auth/meetings.space.readonly")
 
     # Add academy_settings to state (avoiding duplication)
     state += f"&academysettings={academy_settings}"
