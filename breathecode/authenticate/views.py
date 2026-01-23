@@ -1416,15 +1416,26 @@ class LoginView(ObtainAuthToken):
         # Get academy_id using the utility function
         academy_id = get_current_academy(request, return_id=True)
 
-        # If the academy is not white labeled, don't add it to the login activity
+        # If the academy is None or not white labeled, report a different activity for each profile academy
+        academy = None
         if academy_id:
             academy = Academy.objects.filter(id=academy_id, white_labeled=True).first()
-            if not academy:
-                academy_id = None
 
-        tasks_activity.add_activity.delay(
-            user.id, "login", related_type="auth.User", related_id=user.id, academy_id=academy_id
-        )
+        if academy:
+            tasks_activity.add_activity.delay(
+                user.id, "login", related_type="auth.User", related_id=user.id, academy_id=academy_id
+            )
+
+        else:
+            profile_academies = ProfileAcademy.objects.filter(user=user, academy__white_labeled=False).all()
+            for profile_academy in profile_academies:
+                tasks_activity.add_activity.delay(
+                    user.id,
+                    "login",
+                    related_type="auth.User",
+                    related_id=user.id,
+                    academy_id=profile_academy.academy.id,
+                )
 
         return Response({"token": token.key, "user_id": user.pk, "email": user.email, "expires_at": token.expires_at})
 

@@ -643,6 +643,7 @@ class GetCohortUserSerializer(serpy.Serializer):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
         return GetProfileAcademySmallSerializer(profile).data if profile else None
 
+
 class GetCohortUserBigSerializer(serpy.Serializer):
     """The serializer schema definition."""
 
@@ -740,6 +741,7 @@ class GETCohortUserSmallSerializer(serpy.Serializer):
 
     # Use a Field subclass like IntField if you need more validation.
     cohort = GetMeCohortSerializer()
+    id = serpy.Field()
     role = serpy.Field()
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
@@ -893,10 +895,10 @@ class AcademySerializer(serializers.ModelSerializer):
         """Validate that the main_currency is a valid Currency by code or ID."""
         if value is None:
             return None
-            
+
         if not value:
             return None
-            
+
         from breathecode.payments.models import Currency
 
         # If value is a string, try to get currency by code
@@ -909,7 +911,7 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If value is an integer, try to get currency by ID
         if isinstance(value, int):
             currency = Currency.objects.filter(id=value).first()
@@ -920,9 +922,9 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If it's a Currency object (from nested serializers), validate it exists
-        if hasattr(value, 'id'):
+        if hasattr(value, "id"):
             if not Currency.objects.filter(id=value.id).exists():
                 raise ValidationException(
                     "Invalid currency",
@@ -930,7 +932,7 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return value
-        
+
         raise ValidationException(
             "main_currency must be a currency code (e.g., 'USD') or currency ID",
             slug="invalid-currency-format",
@@ -947,10 +949,10 @@ class AcademySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Extra safety: remove slug if somehow it made it through
         validated_data.pop("slug", None)
-        
+
         # Handle main_currency - it comes as Currency object from validation
         # No need to convert, it's already the right object
-        
+
         return super().update(instance, validated_data)
 
 
@@ -1014,10 +1016,10 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
         """Validate that the main_currency is a valid Currency by code or ID."""
         if value is None:
             return None
-            
+
         if not value:
             return None
-            
+
         from breathecode.payments.models import Currency
 
         # If value is a string, try to get currency by code
@@ -1030,7 +1032,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If value is an integer, try to get currency by ID
         if isinstance(value, int):
             currency = Currency.objects.filter(id=value).first()
@@ -1041,9 +1043,9 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If it's a Currency object (from nested serializers), validate it exists
-        if hasattr(value, 'id'):
+        if hasattr(value, "id"):
             if not Currency.objects.filter(id=value.id).exists():
                 raise ValidationException(
                     "Invalid currency",
@@ -1051,7 +1053,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return value
-        
+
         raise ValidationException(
             "main_currency must be a currency code (e.g., 'USD') or currency ID",
             slug="invalid-currency-format",
