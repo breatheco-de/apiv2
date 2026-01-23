@@ -5,8 +5,8 @@ from typing import Any, Optional, TypedDict
 
 from django.core.cache import cache
 from task_manager.core.exceptions import AbortTask, RetryTask
-from breathecode.assignments.models import Task
 
+from breathecode.assignments.models import Task
 
 ALLOWED_TYPES = {
     "auth.UserInvite": [
@@ -18,9 +18,11 @@ ALLOWED_TYPES = {
     ],
     "auth.User": [
         "login",
+        "read_dashboard",
     ],
     "admissions.CohortUser": [
         "joined_cohort",
+        "read_cohort_dashboard",
     ],
     "assignments.Task": [
         "open_syllabus_module",
@@ -182,7 +184,11 @@ class FillActivityMeta:
 
     @classmethod
     def user(
-        cls, kind: str, related_id: Optional[str | int] = None, related_slug: Optional[str] = None, academy_id: Optional[int] = None
+        cls,
+        kind: str,
+        related_id: Optional[str | int] = None,
+        related_slug: Optional[str] = None,
+        academy_id: Optional[int] = None,
     ) -> dict[str, Any]:
         from breathecode.authenticate.models import User
 
@@ -329,7 +335,11 @@ class FillActivityMeta:
 
     @classmethod
     def event_checkin(
-        cls, kind: str, related_id: Optional[str | int] = None, related_slug: Optional[str] = None, academy_id: Optional[int] = None
+        cls,
+        kind: str,
+        related_id: Optional[str | int] = None,
+        related_slug: Optional[str] = None,
+        academy_id: Optional[int] = None,
     ) -> dict[str, Any]:
         from breathecode.events.models import EventCheckin
 
