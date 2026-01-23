@@ -1156,9 +1156,11 @@ def accept_invite_action(data=None, token=None, lang="en"):
 
         plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
 
+        invite_user = invite.user or user
+
         if (
             plan
-            and invite.user
+            and invite_user
             and invite.cohort.academy.main_currency
             and (
                 invite.cohort.available_as_saas == True
@@ -1214,7 +1216,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
             invoice = Invoice(
                 amount=plan_price,
                 paid_at=utc_now,
-                user=invite.user,
+                user=invite_user,
                 bag=bag,
                 academy=bag.academy,
                 status="FULFILLED",
