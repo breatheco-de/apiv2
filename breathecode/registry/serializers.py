@@ -1224,6 +1224,31 @@ class AssetPUTSerializer(serializers.ModelSerializer):
 
                     async_remove_asset_preview_from_cloud.delay(hash)
 
+        # Sync asset fields to config if config exists
+        if instance.config:
+            from breathecode.registry.actions import sync_asset_fields_to_config
+            
+            # Only sync fields that are actually being updated
+            fields_to_sync = {
+                key: validated_data[key] 
+                for key in validated_data 
+                if key in [
+                    "solution_url", "preview", "title", "description", "template_url",
+                    "difficulty", "duration", "gitpod", "agent", "solution_video_url",
+                    "intro_video_url", "delivery_instructions", "delivery_formats",
+                    "delivery_regex_url", "technologies"
+                ]
+            }
+            
+            if fields_to_sync:
+                updated_config = sync_asset_fields_to_config(instance, fields_to_sync)
+                if updated_config:
+                    data["config"] = updated_config
+                    # Flag asset as needing resync to GitHub if it has a GitHub URL
+                    if instance.readme_url and "github.com" in instance.readme_url:
+                        data["sync_status"] = "NEEDS_RESYNC"
+                        data["status_text"] = "Config updated locally - needs to be pushed to GitHub"
+
         return super().update(instance, {**validated_data, **data})
 
 
@@ -1346,5 +1371,30 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
                     from .tasks import async_remove_asset_preview_from_cloud
 
                     async_remove_asset_preview_from_cloud.delay(hash)
+
+        # Sync asset fields to config if config exists
+        if instance.config:
+            from breathecode.registry.actions import sync_asset_fields_to_config
+            
+            # Only sync fields that are actually being updated
+            fields_to_sync = {
+                key: validated_data[key] 
+                for key in validated_data 
+                if key in [
+                    "solution_url", "preview", "title", "description", "template_url",
+                    "difficulty", "duration", "gitpod", "agent", "solution_video_url",
+                    "intro_video_url", "delivery_instructions", "delivery_formats",
+                    "delivery_regex_url", "technologies"
+                ]
+            }
+            
+            if fields_to_sync:
+                updated_config = sync_asset_fields_to_config(instance, fields_to_sync)
+                if updated_config:
+                    data["config"] = updated_config
+                    # Flag asset as needing resync to GitHub if it has a GitHub URL
+                    if instance.readme_url and "github.com" in instance.readme_url:
+                        data["sync_status"] = "NEEDS_RESYNC"
+                        data["status_text"] = "Config updated locally - needs to be pushed to GitHub"
 
         return super().update(instance, {**validated_data, **data})

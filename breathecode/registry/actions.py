@@ -1232,6 +1232,251 @@ def process_asset_config(asset, config):
     return asset
 
 
+def sync_asset_fields_to_config(asset: Asset, updated_fields: dict) -> dict:
+    """
+    Sync asset fields to asset.config when fields are updated via serializer.
+    This is the reverse of process_asset_config - keeps config in sync with asset fields.
+    
+    Args:
+        asset: The Asset instance
+        updated_fields: Dict of fields being updated (from validated_data in serializer)
+    
+    Returns:
+        Updated config dict (or None if no config exists)
+    """
+    if not asset.config:
+        # If no config exists, we can't sync to it
+        return None
+    
+    config = asset.config.copy()  # Work with a copy to avoid modifying original
+    
+    # Map asset fields to config paths
+    # solution_url -> config["solution"]
+    if "solution_url" in updated_fields:
+        solution_url = updated_fields["solution_url"]
+        if solution_url is None:
+            # Remove solution from config if URL is cleared
+            if "solution" in config:
+                if isinstance(config["solution"], dict):
+                    # Remove language-specific entry
+                    if asset.lang in config["solution"]:
+                        del config["solution"][asset.lang]
+                else:
+                    # Remove entire solution if it was a string
+                    del config["solution"]
+        else:
+            # Update solution in config (handle language-specific)
+            if "solution" not in config:
+                config["solution"] = {}
+            
+            if isinstance(config["solution"], str):
+                # Convert string to dict if needed
+                config["solution"] = {"en": config["solution"]}
+            
+            # Set solution for current language
+            if asset.lang in ["us", "en"]:
+                config["solution"]["us"] = solution_url
+                config["solution"]["en"] = solution_url
+            else:
+                config["solution"][asset.lang] = solution_url
+    
+    # preview -> config["preview"]
+    if "preview" in updated_fields:
+        config["preview"] = updated_fields["preview"]
+    
+    # title -> config["title"]
+    if "title" in updated_fields:
+        title = updated_fields["title"]
+        if "title" not in config:
+            config["title"] = {}
+        
+        if isinstance(config["title"], str):
+            # Convert string to dict if needed
+            config["title"] = {"en": config["title"]}
+        
+        # Set title for current language
+        if asset.lang in ["us", "en"]:
+            config["title"]["us"] = title
+            config["title"]["en"] = title
+        else:
+            config["title"][asset.lang] = title
+    
+    # description -> config["description"]
+    if "description" in updated_fields:
+        description = updated_fields["description"]
+        if "description" not in config:
+            config["description"] = {}
+        
+        if isinstance(config["description"], str):
+            # Convert string to dict if needed
+            config["description"] = {"en": config["description"]}
+        
+        # Set description for current language
+        if asset.lang in ["us", "en"]:
+            config["description"]["us"] = description
+            config["description"]["en"] = description
+        else:
+            config["description"][asset.lang] = description
+    
+    # template_url -> config["template_url"]
+    if "template_url" in updated_fields:
+        config["template_url"] = updated_fields["template_url"]
+    
+    # difficulty -> config["difficulty"]
+    if "difficulty" in updated_fields:
+        difficulty = updated_fields["difficulty"]
+        if difficulty:
+            config["difficulty"] = difficulty.upper() if isinstance(difficulty, str) else difficulty
+        else:
+            config["difficulty"] = None
+    
+    # duration -> config["duration"]
+    if "duration" in updated_fields:
+        config["duration"] = updated_fields["duration"]
+    
+    # gitpod -> config["gitpod"]
+    if "gitpod" in updated_fields:
+        config["gitpod"] = updated_fields["gitpod"]
+    
+    # agent -> config["editor"]["agent"]
+    if "agent" in updated_fields:
+        if "editor" not in config:
+            config["editor"] = {}
+        config["editor"]["agent"] = updated_fields["agent"]
+    
+    # solution_video_url -> config["video"]["solution"]
+    # Store full URL directly (no ID extraction needed)
+    if "solution_video_url" in updated_fields:
+        solution_video_url = updated_fields["solution_video_url"]
+        if "video" not in config:
+            config["video"] = {}
+        
+        if solution_video_url is None:
+            # Remove solution video if cleared
+            if "solution" in config["video"]:
+                if isinstance(config["video"]["solution"], dict):
+                    if asset.lang in config["video"]["solution"]:
+                        del config["video"]["solution"][asset.lang]
+                else:
+                    del config["video"]["solution"]
+        else:
+            # Store full URL directly in config
+            if "solution" not in config["video"]:
+                config["video"]["solution"] = {}
+            
+            if isinstance(config["video"]["solution"], str):
+                config["video"]["solution"] = {"en": config["video"]["solution"]}
+            
+            # Set solution video URL for current language
+            if asset.lang in ["us", "en"]:
+                config["video"]["solution"]["us"] = solution_video_url
+                config["video"]["solution"]["en"] = solution_video_url
+            else:
+                config["video"]["solution"][asset.lang] = solution_video_url
+    
+    # intro_video_url -> config["video"]["intro"]
+    # Store full URL directly (no ID extraction needed)
+    if "intro_video_url" in updated_fields:
+        intro_video_url = updated_fields["intro_video_url"]
+        if "video" not in config:
+            config["video"] = {}
+        
+        if intro_video_url is None:
+            # Remove intro video if cleared
+            if "intro" in config["video"]:
+                if isinstance(config["video"]["intro"], dict):
+                    if asset.lang in config["video"]["intro"]:
+                        del config["video"]["intro"][asset.lang]
+                else:
+                    del config["video"]["intro"]
+        else:
+            # Store full URL directly in config
+            if "intro" not in config["video"]:
+                config["video"]["intro"] = {}
+            
+            if isinstance(config["video"]["intro"], str):
+                config["video"]["intro"] = {"en": config["video"]["intro"]}
+            
+            # Set intro video URL for current language
+            if asset.lang in ["us", "en"]:
+                config["video"]["intro"]["us"] = intro_video_url
+                config["video"]["intro"]["en"] = intro_video_url
+            else:
+                config["video"]["intro"][asset.lang] = intro_video_url
+    
+    # delivery_instructions -> config["delivery"]["instructions"]
+    if "delivery_instructions" in updated_fields:
+        if "delivery" not in config:
+            config["delivery"] = {}
+        
+        instructions = updated_fields["delivery_instructions"]
+        if instructions is None:
+            if "instructions" in config["delivery"]:
+                if isinstance(config["delivery"]["instructions"], dict):
+                    if asset.lang in config["delivery"]["instructions"]:
+                        del config["delivery"]["instructions"][asset.lang]
+                else:
+                    del config["delivery"]["instructions"]
+        else:
+            if "instructions" not in config["delivery"]:
+                config["delivery"]["instructions"] = {}
+            
+            if isinstance(config["delivery"]["instructions"], str):
+                config["delivery"]["instructions"] = {"en": config["delivery"]["instructions"]}
+            
+            if asset.lang in ["us", "en"]:
+                config["delivery"]["instructions"]["us"] = instructions
+                config["delivery"]["instructions"]["en"] = instructions
+            else:
+                config["delivery"]["instructions"][asset.lang] = instructions
+    
+    # delivery_formats -> config["delivery"]["formats"]
+    if "delivery_formats" in updated_fields:
+        if "delivery" not in config:
+            config["delivery"] = {}
+        
+        formats = updated_fields["delivery_formats"]
+        if formats:
+            # Convert comma-separated string to list if needed
+            if isinstance(formats, str):
+                config["delivery"]["formats"] = [f.strip() for f in formats.split(",")]
+            else:
+                config["delivery"]["formats"] = formats
+        else:
+            config["delivery"]["formats"] = []
+    
+    # delivery_regex_url -> config["delivery"]["regex"]
+    if "delivery_regex_url" in updated_fields:
+        if "delivery" not in config:
+            config["delivery"] = {}
+        
+        regex = updated_fields["delivery_regex_url"]
+        if regex:
+            # Escape backslashes for JSON (reverse of the replace in process_asset_config)
+            config["delivery"]["regex"] = regex.replace("\\", "\\\\")
+        else:
+            config["delivery"]["regex"] = ""
+    
+    # technologies -> config["technologies"]
+    if "technologies" in updated_fields:
+        technologies = updated_fields["technologies"]
+        if technologies:
+            # If technologies is a list of objects, extract slugs
+            if isinstance(technologies, list) and len(technologies) > 0:
+                if hasattr(technologies[0], 'slug'):
+                    # It's a list of AssetTechnology objects
+                    config["technologies"] = [tech.slug for tech in technologies]
+                else:
+                    # It's already a list of slugs
+                    config["technologies"] = technologies
+            else:
+                config["technologies"] = []
+        else:
+            config["technologies"] = []
+    
+    return config
+
+
 def pull_learnpack_asset(github, asset: Asset, override_meta):
 
     if asset.readme_url is None:
