@@ -120,10 +120,11 @@ def redirect_new_container_public(request):
     if lang is not None:
         asset = asset.filter(lang=lang)
     asset = asset.first()
+
     if asset and asset.learnpack_deploy_url:
         buttons.append(
             {
-                "label": "Start tutorial",
+                "label": "Start now in the cloud",
                 "url": asset.learnpack_deploy_url,
                 "icon": "/static/img/learnpack.svg",
             }
@@ -149,8 +150,21 @@ def redirect_new_container_public(request):
     data = {
         # 'title': item.academy.name,
         "buttons": buttons,
+        "repo_url": "repo_url",
+        "repo_name": "repo_name",
+        "agent": "vscode",
         # 'COMPANY_INFO_EMAIL': item.academy.feedback_email,
     }
+
+    if asset and asset.url:
+        data["repo_url"] = asset.url + ".git"
+
+    if asset and asset.title:
+        data["repo_name"] = asset.title
+
+    if asset and asset.agent:
+        data["agent"] = asset.agent
+
     template = get_template_content("choose_vendor", data)
     return HttpResponse(template["html"])
 
