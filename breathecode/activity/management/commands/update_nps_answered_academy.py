@@ -22,9 +22,10 @@ class Command(BaseCommand):
 
         # Create mock results
         class MockRow:
-            def __init__(self, activity_id, survey_id):
+            def __init__(self, activity_id, survey_id, answer_id=None):
                 self.id = activity_id
                 self.survey_id = survey_id
+                self.answer_id = answer_id
 
         results = []
         for i, survey in enumerate(surveys):
@@ -138,7 +139,7 @@ class Command(BaseCommand):
         else:
             # Find activities with academy null
             query = f"""
-                SELECT id, SAFE_CAST(meta.survey AS INT64) AS survey_id
+                SELECT id, SAFE_CAST(meta.survey AS INT64) AS survey_id, SAFE_CAST(meta.id AS INT64) AS answer_id
                 FROM {table}
                 WHERE kind = 'nps_answered'
                   AND meta.academy IS NULL
@@ -181,7 +182,8 @@ class Command(BaseCommand):
                 continue
 
             if dry_run:
-                self.stdout.write(f"[DRY RUN] {row.id} -> academy {academy_id}")
+                answer_info = f" (Answer {row.answer_id})" if row.answer_id else ""
+                self.stdout.write(f"[DRY RUN] Activity {row.id}{answer_info} -> academy {academy_id}")
                 updated += 1
                 continue
 
