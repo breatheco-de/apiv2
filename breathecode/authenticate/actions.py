@@ -22,7 +22,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, CohortUser
+from breathecode.admissions.models import Academy, CohortUser, UP_TO_DATE
 from breathecode.authenticate.models import CredentialsDiscord
 from breathecode.services.github import Github
 
@@ -1151,7 +1151,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
 
         cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
         if cu is None:
-            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper())
+            cu = CohortUser(user=user, cohort=invite.cohort, role=role.upper(), finantial_status=UP_TO_DATE)
             cu.save()
 
         plan = Plan.objects.filter(cohort_set__cohorts=invite.cohort, invites=invite).first()
