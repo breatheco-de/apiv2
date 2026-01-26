@@ -542,17 +542,25 @@ class AcademyCohortSetView(APIView):
 
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
-        """Create a new CohortSet."""
+        """
+        Create a new CohortSet.
+
+        - slug: Slug for the cohort set
+        Optional parameters:
+        - plan_to_clone: Clone cohort set from a plan and add additional cohorts (requires cohort_ids)
+        - cohort_ids: Cohort IDs to add to the cohort set
+        """
         lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
 
-        # Parameters to clone a cohort set of a plan with additional cohorts
-        plan_to_clone = request.data.get("plan_to_clone")
         cohort_ids = request.data.get("cohort_ids")
 
-        if (plan_to_clone and not cohort_ids) or (not plan_to_clone and cohort_ids):
+        # Parameter to clone a cohort set of a plan with additional cohorts
+        plan_to_clone = request.data.get("plan_to_clone")
+
+        if plan_to_clone and not cohort_ids:
             raise ValidationException(
                 translation(
                     lang,
@@ -598,7 +606,7 @@ class AcademyCohortSetView(APIView):
                 cohort_set = serializer.save()
 
                 if plan:
-                    if plan.cohort_set:
+                    if plan.cohort_set and plan_to_clone:
                         cohort_set.cohorts.set(plan.cohort_set.cohorts.all())
                     plan.cohort_set = cohort_set
                     plan.save()
@@ -842,17 +850,25 @@ class AcademyMentorshipServiceSetView(APIView):
 
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
-        """Create a new MentorshipServiceSet."""
+        """
+        Create a new MentorshipServiceSet.
+
+        slug: Slug for the mentorship service set
+        Optional parameters:
+        - plan_to_clone: Clone mentorship service set from a plan and add additional services (requires mentorship_service_ids)
+        - mentorship_service_ids: Mentorship service IDs to add to the set
+        """
         lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
 
-        # Optional parameters to clone a mentorship service set of a plan with additional services
-        plan_to_clone = request.data.get("plan_to_clone")
         mentorship_service_ids = request.data.get("mentorship_service_ids")
 
-        if (plan_to_clone and not mentorship_service_ids) or (not plan_to_clone and mentorship_service_ids):
+        # Parameter to clone a mentorship service set of a plan with additional services
+        plan_to_clone = request.data.get("plan_to_clone")
+
+        if plan_to_clone and not mentorship_service_ids:
             raise ValidationException(
                 translation(
                     lang,
@@ -902,7 +918,7 @@ class AcademyMentorshipServiceSetView(APIView):
                 mentorship_service_set = serializer.save()
 
                 if plan:
-                    if plan.mentorship_service_set:
+                    if plan.mentorship_service_set and plan_to_clone:
                         mentorship_service_set.mentorship_services.set(
                             plan.mentorship_service_set.mentorship_services.all()
                         )
@@ -1037,17 +1053,25 @@ class AcademyEventTypeSetView(APIView):
 
     @capable_of("crud_plan")
     def post(self, request, academy_id=None):
-        """Create a new EventTypeSet."""
+        """
+        Create a new EventTypeSet.
+
+        slug: Slug for the event type set
+        Optional parameters:
+        - plan_to_clone: Clone event type set from a plan and add additional event types (requires event_type_ids)
+        - event_type_ids: Event type IDs to add to the set
+        """
         lang = get_user_language(request)
 
         data = request.data.copy()
         data["academy"] = academy_id
 
-        # Optional parameters to clone an event type set of a plan with additional event types
-        plan_to_clone = request.data.get("plan_to_clone")
         event_type_ids = request.data.get("event_type_ids")
 
-        if (plan_to_clone and not event_type_ids) or (not plan_to_clone and event_type_ids):
+        # Parameter to clone an event type set of a plan with additional event types
+        plan_to_clone = request.data.get("plan_to_clone")
+
+        if plan_to_clone and not event_type_ids:
             raise ValidationException(
                 translation(
                     lang,
@@ -1097,7 +1121,7 @@ class AcademyEventTypeSetView(APIView):
                 event_type_set = serializer.save()
 
                 if plan:
-                    if plan.event_type_set:
+                    if plan.event_type_set and plan_to_clone:
                         event_type_set.event_types.set(plan.event_type_set.event_types.all())
                     plan.event_type_set = event_type_set
                     plan.save()
