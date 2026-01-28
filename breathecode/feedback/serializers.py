@@ -848,20 +848,56 @@ class SurveyStudySerializer(serializers.ModelSerializer):
         """
         All configurations inside a study must share the same trigger_type.
         This prevents mixing realtime triggers in a single campaign.
+        
+        Also prevents configurations from being used in multiple studies.
         """
-
+        # Check trigger_type consistency
         trigger_types = {x.trigger_type for x in value}
-        if len(trigger_types) <= 1:
-            return value
+        if len(trigger_types) > 1:
+            trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
+            raise ValidationException(
+                translation(
+                    en=f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}",
+                    es=f"Todas las configuraciones de un estudio deben tener el mismo trigger_type, se encontró: {trigger_types_str}",
+                ),
+                slug="mixed-trigger-types",
+            )
 
-        trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
-        raise ValidationException(
-            translation(
-                en=f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}",
-                es=f"Todas las configuraciones de un estudio deben tener el mismo trigger_type, se encontró: {trigger_types_str}",
-            ),
-            slug="mixed-trigger-types",
-        )
+        # Check if any configuration is already part of another study
+        instance = self.instance  # None for create, SurveyStudy instance for update
+        config_ids = [config.id for config in value]
+        
+        # Find configurations that are already in other studies
+        existing_studies = SurveyStudy.objects.filter(
+            survey_configurations__id__in=config_ids
+        ).exclude(id=instance.id if instance else None).distinct()
+        
+        if existing_studies.exists():
+            # Find which configurations are in other studies
+            configs_in_other_studies = []
+            for config in value:
+                other_studies = config.survey_studies.exclude(id=instance.id if instance else None)
+                if other_studies.exists():
+                    study_slugs = list(other_studies.values_list("slug", flat=True))
+                    configs_in_other_studies.append({
+                        "config_id": config.id,
+                        "studies": study_slugs
+                    })
+            
+            if configs_in_other_studies:
+                config_info = ", ".join([
+                    f"config {c['config_id']} (in studies: {', '.join(c['studies'])})"
+                    for c in configs_in_other_studies
+                ])
+                raise ValidationException(
+                    translation(
+                        en=f"Survey configurations cannot be used in multiple studies: {config_info}",
+                        es=f"Las configuraciones de encuesta no pueden usarse en múltiples estudios: {config_info}",
+                    ),
+                    slug="configuration-in-multiple-studies",
+                )
+
+        return value
 
     class Meta:
         model = SurveyStudy

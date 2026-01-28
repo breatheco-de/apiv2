@@ -835,6 +835,88 @@ class SurveyConfigurationView(APIView, HeaderLimitOffsetPagination, GenerateLook
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of("crud_survey")
+    def delete(self, request, academy_id=None, configuration_id=None):
+        """Delete a survey configuration."""
+        lookups = self.generate_lookups(request, many_fields=["id"])
+
+        if lookups and configuration_id:
+            raise ValidationException(
+                "configuration_id was provided in url in bulk mode request, use querystring style instead",
+                code=400,
+                slug="configuration-id-and-lookups-together",
+            )
+
+        if not lookups and not configuration_id:
+            raise ValidationException(
+                "configuration_id was not provided in url", code=400, slug="without-configuration-id-and-lookups"
+            )
+
+        if lookups:
+            # Bulk delete
+            items = SurveyConfiguration.objects.filter(**lookups, academy__id=academy_id)
+            
+            ids = [item.id for item in items]
+            
+            # Check if any configurations have answered responses
+            if answered_responses := SurveyResponse.objects.filter(
+                survey_config__id__in=ids, status=SurveyResponse.Status.ANSWERED
+            ):
+                config_ids_with_answers = set(answered_responses.values_list("survey_config_id", flat=True))
+                raise ValidationException(
+                    f"Survey configurations with IDs {list(config_ids_with_answers)} cannot be deleted because they have answered responses",
+                    code=400,
+                    slug="configuration-cannot-be-deleted",
+                )
+
+            # Check if any configurations are part of any study (regardless of status)
+            studies = SurveyStudy.objects.filter(survey_configurations__id__in=ids).distinct()
+            
+            if studies.exists():
+                study_slugs = list(studies.values_list("slug", flat=True))
+                config_ids_in_studies = set(
+                    SurveyConfiguration.objects.filter(
+                        survey_studies__in=studies, id__in=ids
+                    ).values_list("id", flat=True)
+                )
+                raise ValidationException(
+                    f"Survey configurations with IDs {list(config_ids_in_studies)} cannot be deleted because they are part of studies: {', '.join(study_slugs)}",
+                    code=400,
+                    slug="configuration-in-study",
+                )
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        # Single delete
+        config = SurveyConfiguration.objects.filter(id=configuration_id, academy__id=academy_id).first()
+        if not config:
+            raise NotFound("Survey configuration not found")
+
+        # Check if configuration has answered responses
+        if SurveyResponse.objects.filter(survey_config=config, status=SurveyResponse.Status.ANSWERED).exists():
+            raise ValidationException(
+                "Survey configuration cannot be deleted because it has answered responses",
+                code=400,
+                slug="configuration-cannot-be-deleted",
+            )
+
+        # Check if configuration is part of any study (regardless of status)
+        studies = config.survey_studies.all()
+        
+        if studies.exists():
+            study_slugs = list(studies.values_list("slug", flat=True))
+            raise ValidationException(
+                f"Survey configuration cannot be deleted because it is part of studies: {', '.join(study_slugs)}",
+                code=400,
+                slug="configuration-in-study",
+            )
+
+        config.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 
 class SurveyQuestionTemplateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
