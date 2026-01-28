@@ -773,6 +773,19 @@ class SurveyConfigurationView(APIView, HeaderLimitOffsetPagination, GenerateLook
         if lookups:
             items = items.filter(**lookups)
 
+        # Filter by study_id or studys (comma-separated)
+        studys = request.GET.get("studys")
+        if studys:
+            try:
+                study_id_list = [int(x.strip()) for x in studys.split(",") if x.strip()]
+                items = items.filter(survey_studies__id__in=study_id_list).distinct()
+            except ValueError:
+                raise ValidationException(
+                    "studys must be comma-separated integers",
+                    code=400,
+                    slug="invalid-studys",
+                )
+
         items = items.order_by("-created_at")
 
         page = self.paginate_queryset(items, request)
@@ -852,6 +865,12 @@ class SurveyQuestionTemplateView(APIView, HeaderLimitOffsetPagination, GenerateL
         lookups = self.generate_lookups(request, many_fields=["id", "slug"])
         if lookups:
             items = items.filter(**lookups)
+
+        like = request.GET.get("like", None)
+        if like is not None:
+            items = items.filter(
+                Q(title__icontains=like) | Q(slug__icontains=like) | Q(description__icontains=like)
+            )
 
         page = self.paginate_queryset(items, request)
         if page is not None:

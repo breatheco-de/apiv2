@@ -510,6 +510,25 @@ class AcademySlugFilter(admin.SimpleListFilter):
         return queryset
 
 
+class SyncStatusFilter(admin.SimpleListFilter):
+
+    title = "Sync Status"
+
+    parameter_name = "sync_status_filter"
+
+    def lookups(self, request, model_admin):
+
+        from .models import ASSET_SYNC_STATUS
+
+        return ASSET_SYNC_STATUS
+
+    def queryset(self, request, queryset):
+
+        if self.value():
+            return queryset.filter(sync_status=self.value())
+        return queryset
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
@@ -521,7 +540,7 @@ class AssetAdmin(admin.ModelAdmin):
     list_filter = [
         "asset_type",
         "status",
-        "sync_status",
+        SyncStatusFilter,
         "test_status",
         "lang",
         "external",

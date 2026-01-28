@@ -1249,7 +1249,29 @@ class AssetPUTSerializer(serializers.ModelSerializer):
                         data["sync_status"] = "NEEDS_RESYNC"
                         data["status_text"] = "Config updated locally - needs to be pushed to GitHub"
 
-        return super().update(instance, {**validated_data, **data})
+        # Perform the update first
+        updated_instance = super().update(instance, {**validated_data, **data})
+        
+        # After successful update, trigger push for auto-subscribed assets if NEEDS_RESYNC was set
+        if updated_instance.sync_status == "NEEDS_RESYNC" and updated_instance.is_auto_subscribed:
+            owner_id = None
+            if updated_instance.owner:
+                owner_id = updated_instance.owner.id
+            elif updated_instance.author:
+                owner_id = updated_instance.author.id
+            
+            if owner_id and updated_instance.readme_url and "github.com" in updated_instance.readme_url:
+                if updated_instance.asset_type in ["LESSON", "ARTICLE", "QUIZ"]:
+                    from breathecode.registry.tasks import async_push_to_github_task
+                    async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+                elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
+                    from breathecode.registry.tasks import async_push_project_or_exercise_to_github
+                    async_push_project_or_exercise_to_github.delay(
+                        updated_instance.slug, 
+                        create_or_update=False
+                    )
+        
+        return updated_instance
 
 
 class AssetPUTMeSerializer(serializers.ModelSerializer):
@@ -1397,4 +1419,26 @@ class AssetPUTMeSerializer(serializers.ModelSerializer):
                         data["sync_status"] = "NEEDS_RESYNC"
                         data["status_text"] = "Config updated locally - needs to be pushed to GitHub"
 
-        return super().update(instance, {**validated_data, **data})
+        # Perform the update first
+        updated_instance = super().update(instance, {**validated_data, **data})
+        
+        # After successful update, trigger push for auto-subscribed assets if NEEDS_RESYNC was set
+        if updated_instance.sync_status == "NEEDS_RESYNC" and updated_instance.is_auto_subscribed:
+            owner_id = None
+            if updated_instance.owner:
+                owner_id = updated_instance.owner.id
+            elif updated_instance.author:
+                owner_id = updated_instance.author.id
+            
+            if owner_id and updated_instance.readme_url and "github.com" in updated_instance.readme_url:
+                if updated_instance.asset_type in ["LESSON", "ARTICLE", "QUIZ"]:
+                    from breathecode.registry.tasks import async_push_to_github_task
+                    async_push_to_github_task.delay(updated_instance.slug, owner_id=owner_id)
+                elif updated_instance.asset_type in ["PROJECT", "EXERCISE"]:
+                    from breathecode.registry.tasks import async_push_project_or_exercise_to_github
+                    async_push_project_or_exercise_to_github.delay(
+                        updated_instance.slug, 
+                        create_or_update=False
+                    )
+        
+        return updated_instance

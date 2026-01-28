@@ -1528,9 +1528,9 @@ class AcademyAssetActionView(APIView):
                     override_meta = data["override_meta"]
                 await apull_from_github(asset.slug, override_meta=override_meta)
             elif action_slug == "push":
-                if asset.asset_type not in ["ARTICLE", "LESSON"]:
+                if asset.asset_type not in ["ARTICLE", "LESSON", "QUIZ"]:
                     raise ValidationException(
-                        "Only lessons and articles and be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
+                        "Only lessons, articles, and quizzes can be pushed to github, please update the Github repository yourself and come back to pull the changes from here"
                     )
 
                 await apush_to_github(asset.slug, owner=user)

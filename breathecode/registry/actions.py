@@ -224,6 +224,13 @@ def push_to_github(asset_slug, owner=None):
                 f"Github credentials for user {owner.first_name} {owner.last_name} (id: {owner.id}) not found when synching asset {asset_slug}"
             )
 
+        # For QUIZ assets, regenerate config from Assessment before pushing
+        # This ensures we always push the latest config, even if async_generate_quiz_config
+        # hasn't run yet after recent Assessment updates
+        if asset.asset_type == "QUIZ" and asset.assessment:
+            asset.config = asset.generate_quiz_json()
+            asset.save()
+
         g = Github(credentials.token)
         asset = push_github_asset(g, asset)
 

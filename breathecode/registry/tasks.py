@@ -658,10 +658,48 @@ def async_generate_quiz_config(assessment_id):
     if assessment is None:
         raise Exception(f"Assessment {assessment_id} not found or its archived")
 
+    from django.core.cache import cache
+
     assets = assessment.asset_set.all()
     for a in assets:
         a.config = a.generate_quiz_json()
+        
+        # Flag asset as needing resync to GitHub if it has a GitHub URL
+        if a.readme_url and "github.com" in a.readme_url:
+            a.sync_status = "NEEDS_RESYNC"
+            a.status_text = "Quiz config updated locally - needs to be pushed to GitHub"
+        
         a.save()
+        
+        # After saving, trigger push for auto-subscribed assets if NEEDS_RESYNC was set
+        # Debounce: only schedule if no push task is already scheduled
+        if a.sync_status == "NEEDS_RESYNC" and a.is_auto_subscribed:
+            owner_id = None
+            if a.owner:
+                owner_id = a.owner.id
+            elif a.author:
+                owner_id = a.author.id
+            
+            if owner_id:
+                # Check if there's already a scheduled push task for this asset
+                cache_key = f"quiz_push_task:{a.slug}"
+                existing_task_id = cache.get(cache_key)
+                
+                # Only schedule if no task is already scheduled
+                if not existing_task_id:
+                    # Schedule push task with 15-minute delay
+                    result = async_push_to_github_task.apply_async(
+                        args=[a.slug],
+                        kwargs={"owner_id": owner_id},
+                        countdown=900  # 15 minutes in seconds
+                    )
+                    
+                    # Store task_id in cache with expiration slightly longer than countdown
+                    # This ensures the key exists for the full 15 minutes
+                    cache.set(cache_key, result.id, timeout=960)  # 16 minutes to be safe
+                    logger.debug(f"Scheduled push task {result.id} for asset {a.slug} with 15min delay")
+                else:
+                    logger.debug(f"Push task already scheduled for asset {a.slug}, skipping duplicate schedule")
 
     return True
 
@@ -790,6 +828,47 @@ def sync_asset_telemetry_stats(asset_id: int, **_: Any):
 
     logger.info(f"Finished sync_asset_telemetry_stats for asset {asset.slug}")
     return stats
+
+
+@shared_task(priority=TaskPriority.CONTENT.value)
+def async_push_to_github_task(asset_slug, owner_id=None):
+    """
+    Async task to push a LESSON/ARTICLE/QUIZ asset to GitHub.
+
+    Args:
+        asset_slug (str): The slug of the asset to push
+        owner_id (int, optional): The ID of the user who owns the asset (for GitHub credentials)
+
+    Returns:
+        int: Asset ID if successful, False otherwise
+    """
+    logger.debug(f"Async task: pushing asset {asset_slug} to GitHub")
+
+    try:
+        from breathecode.registry.actions import push_to_github
+        from django.contrib.auth.models import User
+        from django.core.cache import cache
+
+        # Clear the cache key when task starts executing
+        # This allows future updates to schedule new tasks
+        cache_key = f"quiz_push_task:{asset_slug}"
+        cache.delete(cache_key)
+
+        owner = None
+        if owner_id:
+            owner = User.objects.filter(id=owner_id).first()
+
+        asset = push_to_github(asset_slug, owner=owner)
+        if asset and hasattr(asset, 'id'):
+            logger.info(f"Successfully pushed asset {asset_slug} to GitHub")
+            return asset.id
+        return False
+    except Exception as e:
+        logger.exception(f"Error pushing asset {asset_slug} to GitHub: {str(e)}")
+        # Clear cache even on error so a new task can be scheduled
+        cache_key = f"quiz_push_task:{asset_slug}"
+        cache.delete(cache_key)
+        return False
 
 
 @shared_task(priority=TaskPriority.ACADEMY.value)
