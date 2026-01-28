@@ -544,10 +544,30 @@ class MemberView(APIView, GenerateLookupsMixin):
     @capable_of("crud_member")
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
+        request_data = request.data.copy()
         
         # Check if trying to create with student role
-        if "role" in request.data:
-            role_obj = Role.objects.filter(id=request.data["role"]).first() or Role.objects.filter(slug=request.data["role"]).first()
+        if "role" in request_data:
+            role_value = request_data["role"]
+            role_obj = None
+
+            if isinstance(role_value, int) or (isinstance(role_value, str) and role_value.isnumeric()):
+                role_obj = Role.objects.filter(pk=int(role_value)).first()
+
+            if role_obj is None and isinstance(role_value, str):
+                role_obj = Role.objects.filter(slug=role_value).first()
+
+            if role_obj is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Role not found",
+                        es="Rol no encontrado",
+                        slug="role-not-found",
+                    ),
+                    code=400,
+                )
+
             if role_obj and role_obj.slug == "student":
                 raise ValidationException(
                     translation(
@@ -558,8 +578,11 @@ class MemberView(APIView, GenerateLookupsMixin):
                     ),
                     code=400,
                 )
+
+            # Normalize slug -> id for serializers expecting PK
+            request_data["role"] = role_obj.pk
         
-        serializer = MemberPOSTSerializer(data=request.data, context={"academy_id": academy_id, "request": request})
+        serializer = MemberPOSTSerializer(data=request_data, context={"academy_id": academy_id, "request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -579,7 +602,26 @@ class MemberView(APIView, GenerateLookupsMixin):
         
         # Check if trying to create or update with student role
         if "role" in request_data:
-            role_obj = Role.objects.filter(id=request_data["role"]).first() or Role.objects.filter(slug=request_data["role"]).first()
+            role_value = request_data["role"]
+            role_obj = None
+
+            if isinstance(role_value, int) or (isinstance(role_value, str) and role_value.isnumeric()):
+                role_obj = Role.objects.filter(pk=int(role_value)).first()
+
+            if role_obj is None and isinstance(role_value, str):
+                role_obj = Role.objects.filter(slug=role_value).first()
+
+            if role_obj is None:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en="Role not found",
+                        es="Rol no encontrado",
+                        slug="role-not-found",
+                    ),
+                    code=400,
+                )
+
             if role_obj and role_obj.slug == "student":
                 raise ValidationException(
                     translation(
@@ -590,6 +632,9 @@ class MemberView(APIView, GenerateLookupsMixin):
                     ),
                     code=400,
                 )
+
+            # Normalize slug -> id for serializers expecting PK
+            request_data["role"] = role_obj.pk
         
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)

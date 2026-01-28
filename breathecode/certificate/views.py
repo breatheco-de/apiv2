@@ -239,11 +239,24 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
     def get(self, request, academy_id=None):
         items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
 
+        # Filter by user_id if provided
+        user_id = request.GET.get("user_id", None)
+        if user_id is not None and user_id != "":
+            try:
+                user_id = int(user_id)
+                items = items.filter(user__id=user_id)
+            except (ValueError, TypeError):
+                raise ValidationException(
+                    "user_id must be a valid integer", code=400, slug="invalid-user-id"
+                )
+
         like = request.GET.get("like", None)
         if like is not None and like != "":
             items = query_like_by_full_name(like=like, items=items, prefix="user__")
             if items.count() == 0:
                 items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
+                if user_id is not None:
+                    items = items.filter(user__id=user_id)
                 items = query_like_by_full_name(like=like, items=items, prefix="user__profileacademy__")
 
         sort = request.GET.get("sort", None)
