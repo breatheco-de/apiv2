@@ -1690,6 +1690,83 @@ class AssetSupersedesView(APIView, GenerateLookupsMixin):
         )
 
 
+class AcademyAssetNameView(APIView):
+    """
+    Update an asset title.
+    """
+
+    @staticmethod
+    def _get_asset_by_slug_or_id(asset_slug_or_id, academy_id, request=None):
+        if asset_slug_or_id.isdigit():
+            return (
+                Asset.objects.filter(id=int(asset_slug_or_id))
+                .filter(Q(academy__id=academy_id) | Q(academy__isnull=True))
+                .first()
+            )
+
+        asset = Asset.get_by_slug(asset_slug_or_id, request)
+        if asset is None or (
+            asset.academy is not None and academy_id is not None and int(academy_id) != asset.academy.id
+        ):
+            return None
+
+        return asset
+
+    @capable_of("crud_asset")
+    def put(self, request, asset_slug, academy_id=None):
+        lang = get_user_language(request)
+
+        if not asset_slug:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing asset slug",
+                    es="Falta el slug del asset",
+                    slug="missing-asset-slug",
+                ),
+                code=400,
+            )
+
+        title = request.data.get("title")
+        if title is None and "name" in request.data:
+            title = request.data.get("name")
+
+        if title is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Missing asset title",
+                    es="Falta el titulo del asset",
+                    slug="missing-title",
+                ),
+                code=400,
+            )
+
+        asset = self._get_asset_by_slug_or_id(asset_slug, academy_id, request)
+        if asset is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Asset {asset_slug} not found for this academy",
+                    es=f"Asset {asset_slug} no encontrado para esta academia",
+                    slug="asset-not-found",
+                ),
+                code=404,
+            )
+
+        serializer = AssetPUTSerializer(
+            asset,
+            data={"title": title},
+            context={"request": request, "academy_id": academy_id},
+            partial=True,
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        asset = serializer.save()
+        return Response(AcademyAssetSerializer(asset).data, status=status.HTTP_200_OK)
+
+
 class AcademyAssetView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
