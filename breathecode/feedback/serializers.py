@@ -812,6 +812,7 @@ class SurveyStudySerializer(serializers.ModelSerializer):
             "title",
             "description",
             "academy",
+            "status",
             "starts_at",
             "ends_at",
             "max_responses",

@@ -308,6 +308,7 @@ class SurveyManager:
             SurveyStudy.objects.filter(
                 academy=self.academy,
                 survey_configurations=survey_config,
+                status=SurveyStudy.Status.ACTIVE,
             )
             .filter(Q(starts_at__lte=utc_now) | Q(starts_at__isnull=True))
             .filter(Q(ends_at__gte=utc_now) | Q(ends_at__isnull=True))

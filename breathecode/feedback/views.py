@@ -935,7 +935,22 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             serializer = SurveyStudySerializer(item)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        items = SurveyStudy.objects.filter(academy__id=academy_id).order_by("-created_at")
+        items = SurveyStudy.objects.filter(academy__id=academy_id)
+        
+        # Filter out deleted studies by default (unless explicitly requested)
+        include_deleted = request.GET.get("include_deleted", "false").lower() == "true"
+        if not include_deleted:
+            items = items.exclude(status=SurveyStudy.Status.DELETED)
+        
+        # Optional: filter by status
+        status_filter = request.GET.get("status")
+        if status_filter:
+            statuses = [s.strip().upper() for s in status_filter.split(",") if s.strip()]
+            valid_statuses = [s[0] for s in SurveyStudy.Status.choices if s[0] in statuses]
+            if valid_statuses:
+                items = items.filter(status__in=valid_statuses)
+        
+        items = items.order_by("-created_at")
         lookups = self.generate_lookups(request, many_fields=["id", "slug"])
         if lookups:
             items = items.filter(**lookups)
@@ -957,6 +972,14 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if not item:
             raise NotFound("Survey study not found")
 
+        # Prevent editing of DELETED or FINISHED studies
+        if item.status in [SurveyStudy.Status.DELETED, SurveyStudy.Status.FINISHED]:
+            raise ValidationException(
+                f"Cannot edit a {item.status.lower()} study. Only DRAFT and ACTIVE studies can be modified.",
+                code=400,
+                slug="cannot-edit-study-status",
+            )
+
         serializer = SurveyStudySerializer(item, data=request.data, partial=True)
         if serializer.is_valid():
             item = serializer.save()
@@ -973,6 +996,39 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if not item:
             raise NotFound("Survey study not found")
 
+        # Check if study is active (status=ACTIVE or within time window)
+        utc_now = timezone.now()
+        is_active = (
+            item.status == SurveyStudy.Status.ACTIVE or
+            (
+                (item.starts_at is None or item.starts_at <= utc_now) and
+                (item.ends_at is None or item.ends_at >= utc_now) and
+                item.status == SurveyStudy.Status.DRAFT
+            )
+        )
+
+        if is_active:
+            raise ValidationException(
+                "Cannot delete an active study. Please end the study first by setting ends_at to a past date or changing status to FINISHED.",
+                code=400,
+                slug="cannot-delete-active-study",
+            )
+
+        # Check if study has any responses
+        has_responses = SurveyResponse.objects.filter(survey_study=item).exists()
+
+        if has_responses:
+            # Mark as deleted instead of actually deleting: set status to DELETED and ends_at to now
+            item.status = SurveyStudy.Status.DELETED
+            if item.ends_at is None or item.ends_at > utc_now:
+                item.ends_at = utc_now
+            item.save(update_fields=["status", "ends_at", "updated_at"])
+            return Response(
+                {"message": "Study has responses and cannot be deleted. It has been marked as deleted instead."},
+                status=status.HTTP_200_OK
+            )
+
+        # No responses and not active - safe to delete
         item.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
