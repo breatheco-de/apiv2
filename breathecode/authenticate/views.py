@@ -132,7 +132,6 @@ from .serializers import (
     RoleSmallSerializer,
     SettingsSerializer,
     SmallAppUserAgreementSerializer,
-    StudentPOSTSerializer,
     TokenSmallSerializer,
     UserBigSerializer,
     UserInviteSerializer,
@@ -1391,21 +1390,6 @@ class StudentView(APIView, GenerateLookupsMixin):
         serializer = GetProfileAcademySmallSerializer(items, many=True)
 
         return handler.response(serializer.data)
-
-    @capable_of("crud_student")
-    def post(self, request, academy_id=None):
-        # Detect if request data is an array for bulk creation
-        many = isinstance(request.data, list)
-
-        serializer = StudentPOSTSerializer(
-            data=request.data, many=many, context={"academy_id": academy_id, "request": request}
-        )
-
-        if serializer.is_valid():
-            result = serializer.save()
-            result = GetProfileAcademySmallSerializer(result, many=many)
-            return Response(result.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of("crud_student")
     def put(self, request, academy_id=None, user_id_or_email=None):

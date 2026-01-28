@@ -2,8 +2,9 @@
 Test cases for /academy/student
 """
 
-import os
 import datetime
+import os
+import unittest
 import urllib.parse
 from unittest.mock import MagicMock, call, patch
 
@@ -743,6 +744,7 @@ class StudentGetTestSuite(AuthTestCase):
         )
 
 
+@unittest.skip("Student creation endpoint removed")
 class StudentPostTestSuite(AuthTestCase):
 
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
