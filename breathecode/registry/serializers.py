@@ -332,6 +332,7 @@ class AcademyAssetSerializer(AssetSerializer):
     owner = UserSerializer(required=False)
     config = serpy.Field()
     flag_seed = serpy.Field()
+    dependencies = serpy.Field()
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
