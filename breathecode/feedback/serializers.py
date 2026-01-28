@@ -476,6 +476,65 @@ class FeedbackTagPUTSerializer(serializers.ModelSerializer):
         return data
 
 
+class SurveyConfigurationSmallSerializer(serpy.Serializer):
+    """Serpy serializer for SurveyConfiguration (GET requests)."""
+    id = serpy.Field()
+    trigger_type = serpy.Field()
+    syllabus = serpy.Field()
+    template = serpy.MethodField()
+    questions = serpy.Field()
+    is_active = serpy.Field()
+    academy = serpy.MethodField()
+    cohorts = serpy.MethodField()
+    asset_slugs = serpy.Field()
+    priority = serpy.Field()
+    created_by = serpy.MethodField()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_template(self, obj):
+        """Return template ID or None."""
+        return obj.template.id if obj.template else None
+
+    def get_academy(self, obj):
+        """Return academy ID."""
+        return obj.academy.id if obj.academy else None
+
+    def get_cohorts(self, obj):
+        """Return list of cohort IDs."""
+        return list(obj.cohorts.values_list("id", flat=True))
+
+    def get_created_by(self, obj):
+        """Return created_by user ID."""
+        return obj.created_by.id if obj.created_by else None
+
+
+class SurveyStudySmallSerializer(serpy.Serializer):
+    """Serpy serializer for SurveyStudy (GET requests)."""
+    id = serpy.Field()
+    slug = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    academy = serpy.MethodField()
+    status = serpy.Field()
+    starts_at = serpy.Field()
+    ends_at = serpy.Field()
+    max_responses = serpy.Field()
+    survey_configurations = serpy.MethodField()
+    stats = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_academy(self, obj):
+        """Return academy ID."""
+        return obj.academy.id if obj.academy else None
+
+    def get_survey_configurations(self, obj):
+        """Return survey configurations sorted by created_at (oldest to newest)."""
+        configs = obj.survey_configurations.all().order_by("created_at")
+        return SurveyConfigurationSmallSerializer(configs, many=True).data
+
+
 class SurveyResponseHookSerializer(serpy.Serializer):
     """Serializer for webhook payload when a survey response is answered."""
 

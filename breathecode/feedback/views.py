@@ -54,6 +54,7 @@ from .serializers import (
     SurveyPUTSerializer,
     SurveyResponseSerializer,
     SurveyStudySerializer,
+    SurveyStudySmallSerializer,
     SurveySerializer,
     SurveySmallSerializer,
     SurveyTemplateSerializer,
@@ -932,7 +933,7 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             if not item:
                 raise NotFound("Survey study not found")
 
-            serializer = SurveyStudySerializer(item)
+            serializer = SurveyStudySmallSerializer(item)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         items = SurveyStudy.objects.filter(academy__id=academy_id)
@@ -957,10 +958,10 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         page = self.paginate_queryset(items, request)
         if page is not None:
-            serializer = SurveyStudySerializer(page, many=True)
+            serializer = SurveyStudySmallSerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = SurveyStudySerializer(items, many=True)
+        serializer = SurveyStudySmallSerializer(items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of("crud_survey")
@@ -982,6 +983,56 @@ class SurveyStudyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         serializer = SurveyStudySerializer(item, data=request.data, partial=True)
         if serializer.is_valid():
+            # Check if status is being changed to ACTIVE
+            new_status = serializer.validated_data.get("status", item.status)
+            if new_status == SurveyStudy.Status.ACTIVE:
+                # Reload study with configurations to check
+                study_with_configs = SurveyStudy.objects.prefetch_related("survey_configurations__template").filter(
+                    id=item.id
+                ).first()
+                
+                # Check if study has configurations
+                configs = list(study_with_configs.survey_configurations.all())
+                if not configs:
+                    raise ValidationException(
+                        "Cannot activate a study without survey configurations. Please add at least one configuration.",
+                        code=400,
+                        slug="study-without-configurations",
+                    )
+                
+                # Check each configuration for questions
+                for config in configs:
+                    has_questions = False
+                    
+                    if config.template:
+                        # Check if template has questions
+                        template_questions = config.template.questions
+                        if (
+                            isinstance(template_questions, dict)
+                            and "questions" in template_questions
+                            and isinstance(template_questions["questions"], list)
+                            and len(template_questions["questions"]) > 0
+                        ):
+                            has_questions = True
+                    else:
+                        # Check if configuration has questions directly
+                        config_questions = config.questions
+                        if (
+                            isinstance(config_questions, dict)
+                            and "questions" in config_questions
+                            and isinstance(config_questions["questions"], list)
+                            and len(config_questions["questions"]) > 0
+                        ):
+                            has_questions = True
+                    
+                    if not has_questions:
+                        raise ValidationException(
+                            f"Configuration {config.id} has no questions. "
+                            "Please ensure all configurations have questions (either from a template or directly).",
+                            code=400,
+                            slug="configuration-without-questions",
+                        )
+            
             item = serializer.save()
             return Response(SurveyStudySerializer(item).data, status=status.HTTP_200_OK)
 
