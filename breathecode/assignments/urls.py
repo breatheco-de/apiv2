@@ -52,6 +52,7 @@ from .views import (
     AcademyAssignmentTelemetryView,
     AcademyCodeRevisionView,
     AcademyCommitFileView,
+    AcademyTaskView,
     CohortTaskView,
     FinalProjectMeView,
     FinalProjectScreenshotView,
@@ -103,6 +104,7 @@ urlpatterns = [
         "me/coderevision/<int:coderevision_id>/rate", MeCodeRevisionRateView.as_view(), name="me_coderevision_id_rate"
     ),
     path("academy/coderevision", AcademyCodeRevisionView.as_view(), name="academy_coderevision"),
+    path("academy/task", AcademyTaskView.as_view(), name="academy_task"),
     path(
         "academy/task/<int:task_id>/coderevision",
         AcademyCodeRevisionView.as_view(),

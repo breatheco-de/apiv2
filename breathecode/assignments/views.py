@@ -159,6 +159,61 @@ class TaskTeacherView(APIView):
         return Response(serializer.data)
 
 
+class AcademyTaskView(APIView):
+    """
+    List all assignment tasks for a single academy with optional filters and pagination.
+    """
+
+    extensions = APIViewExtensions(cache=TaskCache, sort="-created_at", paginate=True)
+
+    @capable_of("read_assignment")
+    def get(self, request, academy_id):
+        handler = self.extensions(request)
+
+        cache = handler.cache.get()
+        if cache is not None:
+            return cache
+
+        items = Task.objects.filter(cohort__academy__id=academy_id)
+
+        user_id = request.GET.get("user_id", None)
+        if user_id is not None:
+            items = items.filter(user__id__in=user_id.split(","))
+
+        revision_status = request.GET.get("revision_status", None)
+        if revision_status is not None:
+            items = items.filter(revision_status__in=revision_status.split(","))
+
+        task_type = request.GET.get("task_type", None)
+        if task_type is not None:
+            items = items.filter(task_type__in=task_type.split(","))
+
+        task_status = request.GET.get("task_status", None)
+        if task_status is not None:
+            items = items.filter(task_status__in=task_status.split(","))
+
+        cohort = request.GET.get("cohort", None)
+        if cohort is not None:
+            cohorts = cohort.split(",")
+            ids = [x for x in cohorts if x.strip().isnumeric()]
+            slugs = [x.strip() for x in cohorts if x.strip() and not x.strip().isnumeric()]
+            if ids and slugs:
+                items = items.filter(Q(cohort__id__in=ids) | Q(cohort__slug__in=slugs))
+            elif ids:
+                items = items.filter(cohort__id__in=ids)
+            elif slugs:
+                items = items.filter(cohort__slug__in=slugs)
+
+        associated_slug = request.GET.get("associated_slug", None)
+        if associated_slug is not None:
+            items = items.filter(associated_slug__in=[p.lower().strip() for p in associated_slug.split(",")])
+
+        items = handler.queryset(items)
+
+        serializer = TaskGETSerializer(items, many=True)
+        return handler.response(serializer.data)
+
+
 @api_view(["POST"])
 def sync_cohort_tasks_view(request, cohort_id=None):
     item = Cohort.objects.filter(id=cohort_id).first()

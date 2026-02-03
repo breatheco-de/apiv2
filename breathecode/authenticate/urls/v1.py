@@ -33,6 +33,7 @@ from ..views import (
     AppTokenView,
     AppUserAgreementView,
     AppUserView,
+    BulkStudentUploadView,
     CapabilityCheckView,
     ConfirmEmailView,
     EmailVerification,
@@ -135,6 +136,8 @@ urlpatterns = [
     path("academy/member/<str:user_id_or_email>", MemberView.as_view(), name="academy_member_id"),
     path("app/student", StudentView.as_view(), name="app_student"),
     path("app/student/<str:user_id_or_email>", StudentView.as_view(), name="app_student_id"),
+    path("academy/student/invite/bulk", BulkStudentUploadView.as_view(), name="academy_student_bulk"),
+    path("academy/student/invite/bulk/<str:job_id>", BulkStudentUploadView.as_view(), name="academy_student_bulk_id"),
     path("academy/student", StudentView.as_view(), name="academy_student"),
     path("academy/student/<str:user_id_or_email>", StudentView.as_view(), name="academy_student_id"),
     # TODO: these endpoints starts with academy but actually they are related to the user, not to the academy

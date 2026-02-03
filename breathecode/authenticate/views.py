@@ -10,6 +10,7 @@ import urllib.parse
 from datetime import timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
+import uuid
 
 import aiohttp
 import requests
@@ -61,6 +62,7 @@ from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExt
 from breathecode.utils.decorators import has_permission, superuser_required
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.shorteners import C
+from breathecode.utils.request import get_current_academy
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 
 from .actions import (
@@ -1350,6 +1352,135 @@ class V2AppCountryView(APIView):
             return serializer.get(code=country_id)
 
         return serializer.filter()
+
+
+class BulkStudentUploadView(APIView):
+    """
+    POST /v1/auth/academy/student/invite/bulk: start bulk upload (202 + job_id) or soft run (?soft=true, 200 + results).
+    GET /v1/auth/academy/student/invite/bulk/<job_id>: return job status and results from Redis.
+    """
+
+    @capable_of("crud_student")
+    def get(self, request, academy_id=None, job_id=None):
+        from breathecode.authenticate.utils.bulk_student_manager import get_bulk_job_state
+
+        academy_id = academy_id or get_current_academy(request, return_id=True)
+        if not academy_id:
+            raise ValidationException(
+                "Missing academy_id parameter expected in query string or 'Academy' header",
+                code=403,
+                slug="missing-academy-id",
+            )
+        if not job_id:
+            raise ValidationException("Missing job_id", code=400, slug="missing-job-id")
+        state = get_bulk_job_state(job_id)
+        if state is None:
+            raise ValidationException("Bulk job not found or expired", code=404, slug="job-not-found")
+        if state.get("academy_id") != academy_id:
+            raise ValidationException("Job does not belong to this academy", code=404, slug="job-not-found")
+        response_state = {k: v for k, v in state.items() if k != "students"}
+        return Response(response_state, status=status.HTTP_200_OK)
+
+    @capable_of("crud_student")
+    def post(self, request, academy_id=None):
+        from breathecode.authenticate import tasks as auth_tasks
+        from breathecode.authenticate.utils.bulk_student_manager import (
+            set_bulk_job_state,
+            validate_bulk_student_row,
+        )
+
+        academy_id = academy_id or get_current_academy(request, return_id=True)
+        if not academy_id:
+            raise ValidationException(
+                "Missing academy_id parameter expected in query string or 'Academy' header",
+                code=403,
+                slug="missing-academy-id",
+            )
+
+        data = request.data or {}
+        students = data.get("students") or []
+        if not isinstance(students, list) or len(students) == 0:
+            raise ValidationException("students must be a non-empty array", code=400, slug="students-required")
+
+        from breathecode.payments.models import PaymentMethod, Plan
+
+        for row in students:
+            if not (row.get("email") or "").strip():
+                raise ValidationException("Each student must have an email", code=400, slug="email-required")
+            cohort_id = row.get("cohort_id")
+            if not cohort_id:
+                raise ValidationException(
+                    "Each student must have a cohort_id",
+                    code=400,
+                    slug="cohort-id-required",
+                )
+            cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
+            if not cohort:
+                raise ValidationException(
+                    "Cohort not found or does not belong to this academy",
+                    slug="cohort-not-found",
+                    code=404,
+                )
+            if cohort.stage in ("INACTIVE", "DELETED", "ENDED"):
+                raise ValidationException(
+                    f"Cannot add students to a cohort that is {cohort.stage}",
+                    slug="cohort-not-available",
+                    code=400,
+                )
+            payment_method = row.get("payment_method")
+            if payment_method is not None and not PaymentMethod.objects.filter(
+                id=payment_method, academy_id=academy_id
+            ).exists():
+                raise ValidationException(
+                    "Payment method not found or does not belong to this academy",
+                    slug="payment-method-not-found",
+                    code=404,
+                )
+            plans = row.get("plans") or []
+            if plans:
+                for plan_id in plans:
+                    if not Plan.objects.filter(id=plan_id).exists():
+                        raise ValidationException("Plan not found", slug="plan-not-found", code=404)
+
+        soft = request.GET.get("soft") == "true"
+        if soft:
+            results = []
+            for index, row in enumerate(students):
+                result = validate_bulk_student_row(
+                    academy_id=academy_id,
+                    cohort_id=row.get("cohort_id"),
+                    row_data=row,
+                    payment_method=row.get("payment_method"),
+                    plans=row.get("plans") or [],
+                )
+                result["index"] = index
+                results.append(result)
+            return Response(
+                {"total": len(students), "results": results},
+                status=status.HTTP_200_OK,
+            )
+
+        job_id = str(uuid.uuid4())
+        set_bulk_job_state(
+            job_id=job_id,
+            status="pending",
+            academy_id=academy_id,
+            total=len(students),
+            processed=0,
+            results=[],
+            students=students,
+            author_user_id=request.user.id,
+        )
+        auth_tasks.process_bulk_student_upload.delay(job_id)
+        return Response(
+            {
+                "job_id": job_id,
+                "status": "pending",
+                "total": len(students),
+                "message": f"Bulk upload started. Poll GET /v1/auth/academy/student/invite/bulk/{job_id} for status.",
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class StudentView(APIView, GenerateLookupsMixin):

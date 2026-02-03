@@ -15,6 +15,8 @@ A comprehensive Django-based API for managing educational technology platforms, 
 - [Security](#security)
 - [Testing](#testing)
 - [Deployment](#deployment)
+- [Getting Started](#getting-started)
+  - [Running locally with Docker](#running-locally-with-docker)
 
 ## Overview
 
@@ -638,6 +640,86 @@ The API uses versioned URLs with clear namespace separation:
 - PostgreSQL 12+
 - Redis 6+
 - RabbitMQ 3.8+
+
+### Running locally with Docker
+
+You can run the API and its dependencies using Docker in two ways.
+
+**Option 1: Docker for dependencies only (run API on your machine)**
+
+Start only PostgreSQL, Redis, and RabbitMQ in Docker, then run the API locally with Poetry:
+
+```bash
+# From the project root — start only dependencies (not the api container)
+docker compose up -d postgres redis rabbitmq
+
+# Set up environment (if you don't have .env yet)
+cp .env.example .env
+# In .env set (so the API reaches the Docker services):
+#   DATABASE_URL=postgres://user:pass@localhost:5433/breathecode
+#   REDIS_URL=redis://localhost:6380
+#   CELERY_BROKER_URL=amqp://user:pass@localhost:5673//
+#   SECURE_SSL_REDIRECT=FALSE
+#   APP_URL=http://localhost:8000
+
+# Install dependencies and run the API on your machine
+poetry install
+poetry run migrate
+poetry run start
+```
+
+The `docker-compose.yml` exposes these ports on **localhost** (host ports may differ if 5432/6379 were in use):
+
+- **Postgres** on port **5433** (user: `user`, password: `pass`, database: `breathecode`)
+- **Redis** on port **6380**
+- **RabbitMQ** on ports **5673** (AMQP) and **15673** (management UI)
+
+**If `docker compose up -d` fails**
+
+- **Stack already running:** Check with `docker compose ps`. If postgres, redis, and rabbitmq are up, you can skip `docker compose up -d` and use the existing stack.
+- **Ports in use:** Another process (e.g. local Postgres or Redis) may be using 5432, 6379, 5673, or 15673. Stop that process or change the port mappings in `docker-compose.yml`.
+- **Stale or conflicting containers:** Run `docker compose down`, then `docker compose up -d` to tear down and recreate the stack.
+
+**Option 2: Run the API in a Docker container**
+
+Build the API image and run it on the same network as the Compose stack so it can reach Postgres, Redis, and RabbitMQ:
+
+```bash
+# Start dependencies
+docker compose up -d
+
+# Build the API image
+docker build -t apiv2 .
+
+# Find the Compose network name (e.g. apiv2_default)
+docker network ls
+
+# Run the API container (use the network name from the previous step)
+docker run --rm -p 8000:8000 \
+  --network apiv2_default \
+  -e DATABASE_URL="postgres://user:pass@postgres:5432/breathecode" \
+  -e REDIS_URL="redis://redis:6379/0" \
+  -e CELERY_BROKER_URL="amqp://user:pass@rabbitmq:5672//" \
+  apiv2
+```
+
+The container runs migrations, loads dev fixtures, and starts Gunicorn on port 8000. Add any other environment variables your app needs (e.g. from `.env.example`).
+
+**Viewing logs**
+
+```
+// All services (postgres, redis, rabbitmq, api):
+docker compose logs -f
+
+// Only the API:
+docker compose logs -f api
+
+// Only one other service:
+docker compose logs -f postgres
+docker compose logs -f redis
+docker compose logs -f rabbitmq
+
+```
 
 ### Installation
 ```bash

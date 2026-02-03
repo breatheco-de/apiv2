@@ -437,6 +437,66 @@ Add multiple existing users to a cohort at once:
 
 ---
 
+## Unified Bulk Upload (Recommended)
+
+A single endpoint handles all five bulk-upload scenarios server-side. You send a list of students; each student has their own `cohort_id` (and optional `payment_method`, `plans`). The backend classifies each row (new user, already in cohort, same academy different cohort, etc.) and creates/skips as needed. Job state is stored in Redis so you can poll for progress.
+
+> **Warning — Batch size:** There is no hard server-side limit on how many students you can send in one request, but very large payloads can hit HTTP request body size limits, Redis storage limits, or timeouts. For reliability, keep batches to **500 students or fewer** per request. For larger lists, split into multiple bulk requests and poll each `job_id` separately.
+
+**Endpoints:**
+- `POST /v1/auth/academy/student/invite/bulk` – Start bulk upload (returns `job_id`). With `?soft=true`: validate only, no DB writes (200 + results).
+- `GET /v1/auth/academy/student/invite/bulk/<job_id>` – Return job status and per-row results from Redis.
+
+**Headers:** `Authorization: Token {token}`, `Academy: {academy_id}`
+
+**POST request body:**
+```json
+{
+    "students": [
+        { "email": "a@example.com", "first_name": "A", "last_name": "B", "phone": "", "cohort_id": 1429, "payment_method": 1, "plans": [5] },
+        { "email": "b@example.com", "first_name": "B", "last_name": "C", "cohort_id": 1429 }
+    ]
+}
+```
+- `students` (required): array of student objects. Each student has:
+  - `email` (required), `first_name?`, `last_name?`, `phone?`
+  - `cohort_id` (required): target cohort for this student (must belong to academy).
+  - `payment_method` (optional): academy payment method ID; applied only when creating new users (Scenario 1).
+  - `plans` (optional): array of plan IDs; applied only when creating new users. Cannot be used for existing users.
+- Invitations are always sent for new users; no `invite` field in the payload.
+
+**POST response (normal):** 202 Accepted
+```json
+{
+    "job_id": "uuid",
+    "status": "pending",
+    "total": 2,
+    "message": "Bulk upload started. Poll GET /v1/auth/academy/student/invite/bulk/{job_id} for status."
+}
+```
+
+**POST response (soft run, `?soft=true`):** 200 OK
+```json
+{
+    "total": 2,
+    "results": [
+        { "index": 0, "email": "a@example.com", "first_name": "A", "last_name": "B", "phone": "", "classification": "NEW_USER", "status": "created" },
+        { "index": 1, "email": "b@example.com", "classification": "ALREADY_IN_COHORT", "status": "skipped", "message": "User is already in this cohort" }
+    ]
+}
+```
+Each result includes student fields from the request, `classification` (NEW_USER, ALREADY_IN_COHORT, SAME_ACADEMY_DIFFERENT_COHORT, DIFFERENT_ACADEMY_NO_PROFILE, DIFFERENT_ACADEMY_HAS_PROFILE), and `status` (created/skipped/failed).
+
+**GET response (job status):** 200 OK – same shape as Redis state: `status`, `total`, `processed`, `results[]`, `created_at`, `updated_at`, optional `error`. Each result includes `index`, student fields, `classification`, `status`, `message?`, `slug?`, `profile_academy_id?`, `cohort_user_id?`.
+
+**Client flow:**
+1. Optional: `POST .../invite/bulk?soft=true` with same body to preview results without persisting.
+2. `POST .../invite/bulk` (no querystring) → 202 + `job_id`.
+3. Poll `GET .../invite/bulk/{job_id}` until `status === "completed"`.
+4. Use `results` (student fields + classification + status) to show success/skip/failure. For failed rows, fix data and retry via a new `POST .../invite/bulk` or single-student endpoints.
+
+---
+
 ## Summary
 
 ### When to Use Each Method
