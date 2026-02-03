@@ -1376,7 +1376,9 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         ):
             raise ValidationException("The user must be staff member to this academy before it can be a teacher")
 
-        if is_post_method and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0:
+        role = data.get("role") or (instance.role if instance else None) or "STUDENT"
+
+        if is_post_method and role == "STUDENT" and cohort.schedule and self.count_certificates_by_cohort(cohort, user.id) > 0:
             raise ValidationException(
                 "This student is already in another cohort for the same certificate, please mark him/her hi "
                 "educational status on this prior cohort different than ACTIVE before cotinuing"
