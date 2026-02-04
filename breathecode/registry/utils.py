@@ -775,6 +775,11 @@ class AssetParser:
             # Has learn.json, so it's likely an EXERCISE or PROJECT
             metadata["asset_type"] = "EXERCISE_OR_PROJECT"
             metadata["note"] = "This file is part of an EXERCISE or PROJECT (has learn.json). Use standard import flow."
+            # Infer language from readme URL filename (e.g. some-name.es.md -> spanish)
+            filename = file_path.split("/")[-1]
+            lang = self._infer_language_from_filename(filename)
+            if lang:
+                metadata["lang"] = lang
             # Try to fetch and parse learn.json
             learn_config = self._fetch_learn_json(owner, repo, branch, directory)
             if learn_config:
@@ -888,14 +893,23 @@ class AssetParser:
             if isinstance(config["title"], str):
                 metadata["title"] = config["title"]
             elif isinstance(config["title"], dict):
-                # Multi-language title
-                metadata["title"] = config["title"].get("en") or config["title"].get("us")
+                # Multi-language title: prefer language from readme filename (e.g. .es.md)
+                preferred_lang = metadata.get("lang")
+                if preferred_lang and preferred_lang in config["title"]:
+                    metadata["title"] = config["title"][preferred_lang]
+                else:
+                    metadata["title"] = config["title"].get("en") or config["title"].get("us")
 
         if "description" in config:
             if isinstance(config["description"], str):
                 metadata["description"] = config["description"]
             elif isinstance(config["description"], dict):
-                metadata["description"] = config["description"].get("en") or config["description"].get("us")
+                # Multi-language description: prefer language from readme filename (e.g. .es.md)
+                preferred_lang = metadata.get("lang")
+                if preferred_lang and preferred_lang in config["description"]:
+                    metadata["description"] = config["description"][preferred_lang]
+                else:
+                    metadata["description"] = config["description"].get("en") or config["description"].get("us")
 
         if "difficulty" in config:
             metadata["difficulty"] = config["difficulty"]
