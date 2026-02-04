@@ -878,6 +878,12 @@ class AssetParser:
             config: Parsed learn.json configuration
             metadata: Dictionary to populate with extracted metadata
         """
+        if "projectType" in config:
+            pt = config["projectType"]
+            if pt == "project":
+                metadata["asset_type"] = "PROJECT"
+            elif pt == "exercise":
+                metadata["asset_type"] = "EXERCISE"
         if "title" in config:
             if isinstance(config["title"], str):
                 metadata["title"] = config["title"]
