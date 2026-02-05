@@ -1185,8 +1185,18 @@ def accept_invite_action(data=None, token=None, lang="en"):
             bag.save()
 
             bag.plans.add(plan)
-            
-            plan_price = plan.financing_options.filter(how_many_months=1).first().monthly_price
+
+            financing_option = plan.financing_options.filter(how_many_months=1).first()
+            if not financing_option:
+                raise ValidationException(
+                    translation(
+                        en="This plan does not have a one-month financing option configured. Please contact the academy.",
+                        es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
+                    ),
+                    slug="plan-without-one-month-financing-option",
+                    code=400,
+                )
+            plan_price = financing_option.monthly_price
             is_free = plan_price == 0
 
             externally_managed = invite.payment_method is not None

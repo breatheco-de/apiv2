@@ -168,15 +168,6 @@ class BulkStudentManager:
                 message="User is already in this cohort",
             )
 
-        if plans and classification != BulkStudentManager.Scenario.NEW_USER:
-            return BulkStudentManager._row_result(
-                classification,
-                row_data,
-                "failed",
-                message="Cannot add payment plans when user already exists.",
-                slug="cannot-add-plans-to-existing-user",
-            )
-
         cohort = Cohort.objects.filter(id=cohort_id, academy_id=academy_id).first()
         if not cohort:
             return BulkStudentManager._row_result(
@@ -315,6 +306,42 @@ class BulkStudentManager:
                     "educational_status": "ACTIVE",
                 },
             )
+            if plans:
+                from breathecode.payments.actions import create_invited_plan_financing_for_user
+                from breathecode.payments.models import PaymentMethod, Plan
+
+                academy = cohort.academy
+                pm = None
+                if payment_method is not None:
+                    pm = PaymentMethod.objects.filter(id=payment_method, academy_id=academy_id).first()
+                for plan_id in plans:
+                    plan = Plan.objects.filter(id=plan_id).first()
+                    if not plan:
+                        return BulkStudentManager._row_result(
+                            classification,
+                            row_data,
+                            "failed",
+                            message=f"Plan {plan_id} not found",
+                            slug="plan-not-found",
+                        )
+                    try:
+                        create_invited_plan_financing_for_user(
+                            user=user,
+                            plan=plan,
+                            academy=academy,
+                            cohort=cohort,
+                            payment_method=pm,
+                            author=author,
+                            lang="en",
+                        )
+                    except ValidationException as e:
+                        return BulkStudentManager._row_result(
+                            classification,
+                            row_data,
+                            "failed",
+                            message=str(getattr(e, "detail", e)),
+                            slug=getattr(e, "slug", None) or "plan-assignment-failed",
+                        )
             return BulkStudentManager._row_result(
                 classification,
                 row_data,
@@ -335,8 +362,10 @@ class BulkStudentManager:
             user = User.objects.filter(email__iexact=email).first()
             if user:
                 data["user"] = user.id
+                if payment_method is not None:
+                    data["payment_method"] = payment_method
                 if plans:
-                    data.pop("plans", None)
+                    data["plans"] = plans
             else:
                 if payment_method is not None:
                     data["payment_method"] = payment_method

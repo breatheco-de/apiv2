@@ -1438,9 +1438,21 @@ class BulkStudentUploadView(APIView):
                 )
             plans = row.get("plans") or []
             if plans:
+                lang = getattr(request, "LANG", None) or "en"
                 for plan_id in plans:
-                    if not Plan.objects.filter(id=plan_id).exists():
+                    plan = Plan.objects.filter(id=plan_id).first()
+                    if not plan:
                         raise ValidationException("Plan not found", slug="plan-not-found", code=404)
+                    if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Plan does not include this cohort. The plan's cohort_set must contain the cohort.",
+                                es="El plan no incluye este cohort. El cohort_set del plan debe contener el cohort.",
+                            ),
+                            slug="plan-cohort-mismatch",
+                            code=400,
+                        )
 
         soft = request.GET.get("soft") == "true"
         if soft:

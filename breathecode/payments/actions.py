@@ -3643,6 +3643,126 @@ def invite_user_to_plan_financing_team(
         )
 
 
+def create_invited_plan_financing_for_user(
+    user: User,
+    plan: Plan,
+    academy: Academy,
+    cohort: Cohort,
+    payment_method: PaymentMethod | None = None,
+    author: User | None = None,
+    lang: str = "en",
+) -> None:
+    """
+    Create PlanFinancing for an existing user (staff-assigned / bulk upload).
+    Replicates the invite-acceptance flow: Bag + Invoice + build_plan_financing.
+    """
+    if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
+        raise ValidationException(
+            translation(
+                lang,
+                en="Plan does not include this cohort. The plan's cohort_set must contain the cohort.",
+                es="El plan no incluye este cohort. El cohort_set del plan debe contener el cohort.",
+            ),
+            slug="plan-cohort-mismatch",
+            code=400,
+        )
+
+    if not academy.main_currency_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy must have main_currency set to assign plans",
+                es="La academia debe tener main_currency configurado para asignar planes",
+            ),
+            slug="academy-main-currency-required",
+            code=400,
+        )
+
+    if not (
+        cohort.available_as_saas is True
+        or (cohort.available_as_saas is None and academy.available_as_saas is True)
+    ):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Cohort or academy must have available_as_saas=true for plan assignment",
+                es="El cohort o la academia deben tener available_as_saas=true para asignar planes",
+            ),
+            slug="cohort-not-available-as-saas",
+            code=400,
+        )
+
+    financing_option = plan.financing_options.filter(how_many_months=1).first()
+    if not financing_option:
+        raise ValidationException(
+            translation(
+                lang,
+                en="This plan does not have a one-month financing option configured. Please contact the academy.",
+                es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
+            ),
+            slug="plan-without-one-month-financing-option",
+            code=400,
+        )
+
+    plan_price = financing_option.monthly_price
+    is_free = plan_price == 0
+    externally_managed = payment_method is not None
+
+    if payment_method and not payment_method.is_crypto and not author:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Author is required when payment method is set for staff-assigned plans.",
+                es="El autor es requerido cuando se establece un método de pago para planes asignados por staff.",
+            ),
+            slug="invite-author-required-for-payment-method",
+            code=400,
+        )
+
+    utc_now = timezone.now()
+
+    bag = Bag()
+    bag.chosen_period = "NO_SET"
+    bag.status = "PAID"
+    bag.type = "INVITED"
+    bag.how_many_installments = 1
+    bag.academy = academy
+    bag.user = user
+    bag.is_recurrent = False
+    bag.was_delivered = False
+    bag.token = None
+    bag.currency = academy.main_currency
+    bag.expires_at = None
+    bag.save()
+    bag.plans.add(plan)
+
+    proof = None
+    if payment_method and not payment_method.is_crypto and author:
+        proof = ProofOfPayment(
+            created_by=author,
+            status=ProofOfPayment.Status.DONE,
+            provided_payment_details=f"Staff-assigned plan via {payment_method.title}",
+            reference=f"STAFF-ASSIGNED-{user.id}-{plan.id}",
+        )
+        proof.save()
+
+    invoice = Invoice(
+        amount=plan_price,
+        paid_at=utc_now,
+        user=user,
+        bag=bag,
+        academy=academy,
+        status="FULFILLED",
+        currency=academy.main_currency,
+        payment_method=payment_method,
+        externally_managed=externally_managed,
+        proof=proof,
+    )
+    invoice.save()
+
+    tasks.build_plan_financing.delay(bag.id, invoice.id, is_free=is_free)
+
+
 def create_plan_financing_seat(
     email: str,
     user: User | None,

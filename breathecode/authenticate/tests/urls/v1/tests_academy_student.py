@@ -1163,15 +1163,28 @@ class StudentPostTestSuite(AuthTestCase):
     🔽🔽🔽 POST data with User and Cohort in body
     """
 
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     @patch("random.getrandbits", MagicMock(side_effect=getrandbits))
     @patch("django.utils.timezone.now", MagicMock(return_value=UTC_NOW))
-    def test_academy_student__post__with_user__it_ignore_the_param_plans(self):
-        """Test that adding plans to existing user throws error"""
+    def test_academy_student__post__with_user_and_plans_creates_bag_and_plan_financing(self):
+        """Test that adding plans to existing user creates Bag and PlanFinancing (no longer raises)."""
 
         roles = [{"name": "konan", "slug": "konan"}, {"name": "student", "slug": "student"}]
 
-        model = self.bc.database.create(role=roles, user=2, cohort=1, capability="crud_student", profile_academy=1)
+        model = self.bc.database.create(
+            role=roles,
+            user=2,
+            cohort={"available_as_saas": True},
+            capability="crud_student",
+            profile_academy=1,
+            currency=1,
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 0},
+            plan=1,
+        )
+        plan = self.bc.database.get("payments.Plan", 1, dict=False)
         self.bc.request.authenticate(model.user[0])
 
         url = reverse_lazy("authenticate:academy_student")
@@ -1182,36 +1195,22 @@ class StudentPostTestSuite(AuthTestCase):
             "email": "dude@dude.dude",
             "user": 2,
             "cohort": [1],
-            "plans": [1],
+            "plans": [plan.id],
         }
 
         response = self.client.post(url, data, format="json", headers={"academy": 1})
         json = response.json()
 
-        expected = {
-            "detail": "cannot-add-plans-to-existing-user",
-            "status_code": 400,
-        }
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("id", json)
+        self.assertEqual(json["email"], "dude@dude.dude")
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        
-        # Verify no new ProfileAcademy was created (only the original one from setup)
-        self.assertEqual(
-            self.bc.database.list_of("authenticate.ProfileAcademy"),
-            [
-                self.bc.format.to_dict(model.profile_academy),
-            ],
-        )
+        from breathecode.payments.models import Bag, Invoice
 
-        # Verify no UserInvite was created
-        self.assertEqual(self.bc.database.list_of("authenticate.UserInvite"), [])
-        
-        # Verify no email was sent
-        assert actions.send_email_message.call_args_list == []
-        
-        # Verify no plans were created
-        self.assertEqual(self.bc.database.list_of("payments.Plan"), [])
+        bags = Bag.objects.filter(user=model.user[1], type="INVITED")
+        self.assertEqual(bags.count(), 1)
+        invoices = Invoice.objects.filter(bag=bags.first())
+        self.assertEqual(invoices.count(), 1)
 
     """
     🔽🔽🔽 POST data without user

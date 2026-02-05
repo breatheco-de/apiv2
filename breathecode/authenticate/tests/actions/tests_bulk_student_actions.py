@@ -112,8 +112,8 @@ class ValidateBulkStudentRowTestSuite(AuthTestCase):
         self.assertIn(result["classification"], (BulkStudentScenario.NEW_USER.value, BulkStudentScenario.NEW_USER))
         self.assertIn(result["status"], ("created", "failed"))
 
-    def test_validate_soft_run_plans_with_existing_user_returns_failed(self):
-        """When plans are provided and row is existing user, status is failed with slug."""
+    def test_validate_soft_run_plans_with_existing_user_returns_created(self):
+        """When plans are provided and row is existing user, status is created (plans allowed for existing users)."""
         model = self.bc.database.create(
             user=1,
             academy=1,
@@ -128,8 +128,7 @@ class ValidateBulkStudentRowTestSuite(AuthTestCase):
             row_data=row,
             plans=[1],
         )
-        self.assertEqual(result["status"], "failed")
-        self.assertEqual(result["slug"], "cannot-add-plans-to-existing-user")
+        self.assertEqual(result["status"], "created")
         self.assertEqual(result["classification"], BulkStudentScenario.SAME_ACADEMY_DIFFERENT_COHORT.value)
 
     def test_validate_cohort_not_found_returns_failed(self):
@@ -233,6 +232,87 @@ class ProcessBulkStudentRowTestSuite(AuthTestCase):
         )
         self.assertEqual(result["status"], "failed")
         self.assertEqual(result["slug"], "cohort-not-found")
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    def test_process_same_academy_different_cohort_with_plans_creates_cohort_user_and_bag(self):
+        """When plans are provided for SAME_ACADEMY_DIFFERENT_COHORT, create CohortUser and plan financing."""
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            cohort=2,
+            profile_academy=1,
+            currency=1,
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 0},
+            plan=1,
+        )
+        cohort1 = self.bc.database.create(cohort=1, academy=model.academy).cohort
+        from breathecode.payments.models import CohortSetCohort, Plan
+
+        plan = Plan.objects.first()
+        CohortSetCohort.objects.get_or_create(cohort_set=plan.cohort_set, cohort=cohort1)
+        cohort1.academy.available_as_saas = True
+        cohort1.academy.save()
+        row = {"email": model.user.email, "first_name": "A", "last_name": "B"}
+        result = process_bulk_student_row(
+            academy_id=model.academy.id,
+            cohort_id=cohort1.id,
+            row_data=row,
+            author_user_id=model.user.id,
+            plans=[plan.id],
+        )
+        self.assertEqual(result["classification"], BulkStudentScenario.SAME_ACADEMY_DIFFERENT_COHORT.value)
+        self.assertEqual(result["status"], "created")
+        from breathecode.admissions.models import CohortUser
+        from breathecode.payments.models import Bag, Invoice
+
+        cu = CohortUser.objects.filter(cohort=cohort1, user=model.user).first()
+        self.assertIsNotNone(cu)
+        bags = Bag.objects.filter(user=model.user, type="INVITED")
+        self.assertEqual(bags.count(), 1)
+        invoices = Invoice.objects.filter(bag=bags.first())
+        self.assertEqual(invoices.count(), 1)
+
+    @patch("breathecode.payments.tasks.build_plan_financing.delay", MagicMock())
+    def test_process_different_academy_has_profile_with_plans_creates_cohort_user_and_bag(self):
+        """When plans are provided for DIFFERENT_ACADEMY_HAS_PROFILE, create CohortUser and plan financing."""
+        user = self.bc.database.create(user=1).user
+        academy1 = self.bc.database.create(academy=1).academy
+        m3 = self.bc.database.create(
+            academy=1,
+            currency=1,
+            cohort={"available_as_saas": True},
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 0},
+            plan=1,
+        )
+        academy2 = m3.academy
+        cohort2 = m3.cohort
+        plan = m3.plan
+        self.bc.database.create(profile_academy=1, user=user, academy=academy1)
+        self.bc.database.create(profile_academy=1, user=user, academy=academy2)
+        author = self.bc.database.create(user=1).user
+        row = {"email": user.email, "first_name": "A", "last_name": "B"}
+        result = process_bulk_student_row(
+            academy_id=academy2.id,
+            cohort_id=cohort2.id,
+            row_data=row,
+            author_user_id=author.id,
+            plans=[plan.id],
+        )
+        self.assertEqual(result["classification"], BulkStudentScenario.DIFFERENT_ACADEMY_HAS_PROFILE.value)
+        self.assertEqual(result["status"], "created")
+        from breathecode.admissions.models import CohortUser
+        from breathecode.payments.models import Bag, Invoice
+
+        cu = CohortUser.objects.filter(cohort=cohort2, user=user).first()
+        self.assertIsNotNone(cu)
+        bags = Bag.objects.filter(user=user, type="INVITED")
+        self.assertEqual(bags.count(), 1)
+        invoices = Invoice.objects.filter(bag=bags.first())
+        self.assertEqual(invoices.count(), 1)
 
     @patch("breathecode.notify.actions.send_email_message", MagicMock())
     def test_process_new_user_creates_profile_academy_and_cohort_user(self):
