@@ -271,7 +271,7 @@ class ProvisioningBillSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        if self.instance and "status" in data and self.instance.status in ["PAID", "ERROR"]:
+        if self.instance and "status" in data and self.instance.status in ["PENDING", "ERROR"]:
             status = data["status"].lower()
             raise ValidationException(
                 translation(
@@ -283,7 +283,7 @@ class ProvisioningBillSerializer(serializers.ModelSerializer):
                 code=400,
             )
 
-        if self.instance and "status" in data and data["status"] in ["PAID", "ERROR"]:
+        if self.instance and "status" in data and data["status"] in ["PENDING", "ERROR"]:
             status = data["status"].lower()
             raise ValidationException(
                 translation(
