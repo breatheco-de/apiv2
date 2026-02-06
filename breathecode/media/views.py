@@ -82,6 +82,9 @@ class MediaView(ViewSet, GenerateLookupsMixin):
     delete_id:
         Remove a Media by id.
 
+    claim:
+        Claim unclaimed media by id list (set current academy as owner). Payload: list of media ids.
+
     get_id:
         Media by id.
 
@@ -112,6 +115,11 @@ class MediaView(ViewSet, GenerateLookupsMixin):
             categories = categories.split(",")
             for category in categories:
                 items = items.filter(categories__pk=category)
+
+        academy_isnull = request.GET.get("academy_isnull")
+        if academy_isnull is not None:
+            val = academy_isnull.lower() in ("true", "1", "yes")
+            items = items.filter(academy__isnull=val)
 
         start = request.GET.get("start", None)
         if start is not None:
@@ -368,6 +376,37 @@ class MediaView(ViewSet, GenerateLookupsMixin):
                     resolution.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @capable_of("crud_media")
+    def claim(self, request, academy_id=None):
+        """
+        Claim unclaimed media: set the current academy as owner for each given id.
+        Payload: list of media ids, e.g. [1, 2, 3] or {"ids": [1, 2, 3]}.
+        Only media with academy_id null are claimed; others are skipped.
+        """
+        payload = request.data
+        if isinstance(payload, list):
+            ids = payload
+        else:
+            ids = (payload or {}).get("ids") or []
+        if not ids:
+            raise ValidationException(
+                "Payload must be a list of media ids or an object with key 'ids'",
+                slug="missing-ids",
+                code=400,
+            )
+        try:
+            ids = [int(i) for i in ids]
+        except (ValueError, TypeError):
+            raise ValidationException(
+                "All ids must be integers",
+                slug="invalid-ids",
+                code=400,
+            )
+        Media.objects.filter(id__in=ids, academy__isnull=True).update(academy_id=academy_id)
+        claimed = Media.objects.filter(id__in=ids, academy_id=academy_id)
+        serializer = GetMediaSerializer(claimed, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CategoryView(ViewSet):
