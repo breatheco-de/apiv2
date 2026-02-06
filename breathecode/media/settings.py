@@ -5,6 +5,7 @@ from typing import Any, Awaitable, Callable, Literal, Optional, Type, TypedDict
 from adrf.requests import AsyncRequest
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.db.models import Q
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from PIL import Image
 
@@ -206,7 +207,10 @@ def process_media(file: File) -> tuple[Literal["INFO", "WARNING", "ERROR"], str]
         thumbnail=url + "-thumbnail",
     )
 
-    categories = Category.objects.filter(slug__in=meta["categories"])
+    # Only assign categories visible to this academy (system or academy's own)
+    categories = Category.objects.filter(slug__in=meta["categories"]).filter(
+        Q(academy_id=academy_id) | Q(academy__isnull=True)
+    )
     media.categories.set(categories)
     return Notification.info("Media processed")
 

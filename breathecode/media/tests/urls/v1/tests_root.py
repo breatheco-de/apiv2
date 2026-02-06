@@ -146,6 +146,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -211,6 +213,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -266,6 +270,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -333,6 +339,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -380,6 +388,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -447,6 +457,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -494,6 +506,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -561,6 +575,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -606,6 +622,8 @@ class MediaTestSuite(MediaTestCase):
                         "medias": 1,
                         "name": model["category"].name,
                         "slug": model["category"].slug,
+                        "is_manageable_by_academy": False,
+                        "academy": None,
                     }
                 ],
                 "hash": model["media"].hash,
@@ -673,6 +691,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -720,6 +740,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -787,6 +809,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -940,6 +964,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -1012,6 +1038,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -1063,6 +1091,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,
@@ -1117,6 +1147,8 @@ class MediaTestSuite(MediaTestCase):
                             "medias": 1,
                             "name": model["category"].name,
                             "slug": model["category"].slug,
+                            "is_manageable_by_academy": False,
+                            "academy": None,
                         }
                     ],
                     "hash": model["media"].hash,

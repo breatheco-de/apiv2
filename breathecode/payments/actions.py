@@ -3656,6 +3656,17 @@ def create_invited_plan_financing_for_user(
     Create PlanFinancing for an existing user (staff-assigned / bulk upload).
     Replicates the invite-acceptance flow: Bag + Invoice + build_plan_financing.
     """
+    if plan.status == Plan.Status.DRAFT:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Cannot assign draft plans to students. Publish the plan first.",
+                es="No se pueden asignar planes en borrador a estudiantes. Publica el plan primero.",
+            ),
+            slug="plan-draft-not-assignable",
+            code=400,
+        )
+
     if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
         raise ValidationException(
             translation(
@@ -3697,7 +3708,7 @@ def create_invited_plan_financing_for_user(
         raise ValidationException(
             translation(
                 lang,
-                en="This plan does not have a one-month financing option configured. Please contact the academy.",
+                en="This plan does not have a one-installment financing option configured. Please contact the academy. In bulk invitation one installment is assumend.",
                 es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
             ),
             slug="plan-without-one-month-financing-option",

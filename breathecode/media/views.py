@@ -206,6 +206,19 @@ class MediaView(ViewSet, GenerateLookupsMixin):
                     "You can't edit media belonging to other academies", slug="different-academy-media-put"
                 )
 
+            # Ensure category IDs are visible to this academy (system or academy's own)
+            category_ids = x.get("categories") or []
+            if category_ids:
+                allowed = Category.objects.filter(
+                    Q(academy__isnull=True) | Q(academy_id=academy_id)
+                ).filter(id__in=category_ids)
+                if allowed.count() != len(category_ids):
+                    raise ValidationException(
+                        "One or more categories are not allowed for this academy",
+                        slug="categories-not-allowed",
+                        code=400,
+                    )
+
             current.append(media)
 
         serializer = MediaSerializer(current, data=request.data, context=context, many=many)
@@ -231,6 +244,18 @@ class MediaView(ViewSet, GenerateLookupsMixin):
             raise ValidationException(
                 "You can't edit media belonging to other academies", slug="different-academy-media-put"
             )
+
+        category_ids = (request.data or {}).get("categories") or []
+        if category_ids:
+            allowed = Category.objects.filter(
+                Q(academy__isnull=True) | Q(academy_id=academy_id)
+            ).filter(id__in=category_ids)
+            if allowed.count() != len(category_ids):
+                raise ValidationException(
+                    "One or more categories are not allowed for this academy",
+                    slug="categories-not-allowed",
+                    code=400,
+                )
 
         serializer = MediaSerializer(current, data=request.data, context=context, many=False)
         if serializer.is_valid():
@@ -375,7 +400,19 @@ class CategoryView(ViewSet):
     def get(self, request, category_id=None, category_slug=None, academy_id=None):
         handler = self.extensions(request)
 
-        items = Category.objects.filter()
+        # Base: visible to academy (system categories + academy's own)
+        items = Category.objects.filter(
+            Q(academy__isnull=True) | Q(academy_id=academy_id)
+        )
+        # Optional querystring filters
+        is_manageable = request.GET.get("is_manageable_by_academy")
+        if is_manageable is not None:
+            val = is_manageable.lower() in ("true", "1", "yes")
+            items = items.filter(is_manageable_by_academy=val)
+        academy_isnull = request.GET.get("academy_isnull")
+        if academy_isnull is not None:
+            val = academy_isnull.lower() in ("true", "1", "yes")
+            items = items.filter(academy__isnull=val)
         items = handler.queryset(items)
         serializer = GetCategorySerializer(items, many=True)
 
@@ -393,7 +430,11 @@ class CategoryView(ViewSet):
 
     @capable_of("read_media")
     def get_slug(self, request, category_slug=None, academy_id=None):
-        item = Category.objects.filter(slug=category_slug).first()
+        # Resolve by slug in academy scope: academy's own first, then system
+        items = Category.objects.filter(
+            slug=category_slug
+        ).filter(Q(academy_id=academy_id) | Q(academy__isnull=True))
+        item = items.filter(academy_id=academy_id).first() or items.first()
 
         if not item:
             raise ValidationException("Category not found", code=404)
@@ -403,7 +444,10 @@ class CategoryView(ViewSet):
 
     @capable_of("crud_media")
     def post(self, request, academy_id=None):
-        serializer = CategorySerializer(data=request.data, many=False)
+        data = {**request.data}
+        # Academies create only non-system categories; set academy from context
+        data.setdefault("academy", academy_id)
+        serializer = CategorySerializer(data=data, many=False)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -411,9 +455,19 @@ class CategoryView(ViewSet):
 
     @capable_of("crud_media")
     def put(self, request, category_slug=None, academy_id=None):
-        data = Category.objects.filter(slug=category_slug).first()
+        # Resolve in academy scope (same as get_slug)
+        items = Category.objects.filter(slug=category_slug).filter(
+            Q(academy_id=academy_id) | Q(academy__isnull=True)
+        )
+        data = items.filter(academy_id=academy_id).first() or items.first()
         if not data:
             raise ValidationException("Category not found", code=404)
+        if data.is_manageable_by_academy or data.academy_id != academy_id:
+            raise ValidationException(
+                "You cannot update this category",
+                code=403,
+                slug="category-not-manageable",
+            )
 
         serializer = CategorySerializer(data, data=request.data, many=False)
         if serializer.is_valid():
@@ -423,11 +477,20 @@ class CategoryView(ViewSet):
 
     @capable_of("crud_media")
     def delete(self, request, category_slug=None, academy_id=None):
-        data = Category.objects.filter(slug=category_slug).first()
+        items = Category.objects.filter(slug=category_slug).filter(
+            Q(academy_id=academy_id) | Q(academy__isnull=True)
+        )
+        data = items.filter(academy_id=academy_id).first() or items.first()
         if not data:
             raise ValidationException("Category not found", code=404)
+        if data.is_manageable_by_academy or data.academy_id != academy_id:
+            raise ValidationException(
+                "You cannot delete this category",
+                code=403,
+                slug="category-not-manageable",
+            )
 
-        if Media.objects.filter(categories__slug=category_slug).count():
+        if Media.objects.filter(categories__id=data.id).count():
             raise ValidationException("Category contain some medias", code=403)
 
         data.delete()
@@ -561,6 +624,22 @@ class UploadView(APIView):
                 data["categories"] = request.data["categories"].split(",")
             elif "Categories" in request.headers:
                 data["categories"] = request.headers["Categories"].split(",")
+
+            if data["categories"] and academy_id is not None:
+                try:
+                    cat_ids = [int(c.strip()) for c in data["categories"] if c.strip()]
+                except (ValueError, TypeError):
+                    cat_ids = []
+                if cat_ids:
+                    allowed = Category.objects.filter(
+                        Q(academy__isnull=True) | Q(academy_id=academy_id)
+                    ).filter(id__in=cat_ids)
+                    if allowed.count() != len(cat_ids):
+                        raise ValidationException(
+                            "One or more categories are not allowed for this academy",
+                            slug="categories-not-allowed",
+                            code=400,
+                        )
 
             media = Media.objects.filter(hash=hash, academy__id=academy_id).first()
             if media:

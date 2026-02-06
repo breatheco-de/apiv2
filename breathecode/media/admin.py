@@ -16,7 +16,8 @@ class MediaAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class MediaCategoryAdmin(admin.ModelAdmin):
-    list_display = ("slug", "name", "created_at")
+    list_display = ("slug", "name", "is_manageable_by_academy", "academy", "created_at")
+    list_filter = ["is_manageable_by_academy", "academy"]
 
 
 @admin.register(MediaResolution)

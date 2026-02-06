@@ -1190,7 +1190,7 @@ def accept_invite_action(data=None, token=None, lang="en"):
             if not financing_option:
                 raise ValidationException(
                     translation(
-                        en="This plan does not have a one-month financing option configured. Please contact the academy.",
+                        en="This plan does not have a one-installment financing option configured. Please contact the academy.",
                         es="Este plan no tiene configurada una opción de financiamiento de un mes. Por favor contacta a la academia.",
                     ),
                     slug="plan-without-one-month-financing-option",

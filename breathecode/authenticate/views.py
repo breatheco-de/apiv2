@@ -1443,6 +1443,16 @@ class BulkStudentUploadView(APIView):
                     plan = Plan.objects.filter(id=plan_id).first()
                     if not plan:
                         raise ValidationException("Plan not found", slug="plan-not-found", code=404)
+                    if plan.status == Plan.Status.DRAFT:
+                        raise ValidationException(
+                            translation(
+                                lang,
+                                en="Cannot assign draft plans to students. Publish the plan first.",
+                                es="No se pueden asignar planes en borrador a estudiantes. Publica el plan primero.",
+                            ),
+                            slug="plan-draft-not-assignable",
+                            code=400,
+                        )
                     if not plan.cohort_set or not plan.cohort_set.cohorts.filter(id=cohort.id).exists():
                         raise ValidationException(
                             translation(

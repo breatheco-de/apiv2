@@ -103,6 +103,34 @@ class CreateInvitedPlanFinancingForUserTestSuite(PaymentsTestCase):
             )
         self.assertEqual(getattr(cm.exception, "slug", None), "academy-main-currency-required")
 
+    def test_plan_draft_status_raises(self):
+        """Raises when plan status is DRAFT."""
+        model = self.bc.database.create(
+            user=1,
+            academy=1,
+            currency=1,
+            cohort={"available_as_saas": True},
+            cohort_set=1,
+            cohort_set_cohort=1,
+            financing_option={"how_many_months": 1, "monthly_price": 0},
+            plan=1,
+        )
+        from breathecode.payments.models import Plan
+
+        model.plan.status = Plan.Status.DRAFT
+        model.plan.save(update_fields=["status"])
+        with self.assertRaises(ValidationException) as cm:
+            create_invited_plan_financing_for_user(
+                user=model.user,
+                plan=model.plan,
+                academy=model.academy,
+                cohort=model.cohort,
+                payment_method=None,
+                author=None,
+                lang="en",
+            )
+        self.assertEqual(getattr(cm.exception, "slug", None), "plan-draft-not-assignable")
+
     def test_plan_without_one_month_financing_option_raises(self):
         """Raises when plan has no financing_option with how_many_months=1."""
         model = self.bc.database.create(
