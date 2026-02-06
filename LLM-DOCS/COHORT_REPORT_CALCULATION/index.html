@@ -1,0 +1,4750 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://breathecode.herokuapp.com/LLM-DOCS/COHORT_REPORT_CALCULATION/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
+    
+    
+      
+        <title>Cálculo de Valores del CohortReportCSV - Guía Detallada - 4geeks</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.2afb09e1.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#calculo-de-valores-del-cohortreportcsv-guia-detallada" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="4geeks" class="md-header__button md-logo" aria-label="4geeks" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            4geeks
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Cálculo de Valores del CohortReportCSV - Guía Detallada
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/breatheco-de/apiv2" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    breatheco-de/apiv2
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="4geeks" class="md-nav__button md-logo" aria-label="4geeks" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    4geeks
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/breatheco-de/apiv2" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    breatheco-de/apiv2
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Welcome
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../4geeks-libraries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4Geeks libraries
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Getting started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Set up
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            Set up
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_1" id="__nav_3_1_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Works locally
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_1">
+            <span class="md-nav__icon md-icon"></span>
+            Works locally
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-locally/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-locally/devcontainer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Devcontainer
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-locally/on-host-os/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on host Operative System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Works on the cloud
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            Works on the cloud
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-on-the-cloud/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-on-the-cloud/gitpod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on Gitpod
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/setup/works-on-the-cloud/codespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Works on Codespaces
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/available-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Available Commands
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Essential
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Essential
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Django
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            Django
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/urls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    URLs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Views
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Admin
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Django commands
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/signals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Signals and receivers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Templates
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Django Rest Framework
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Django Rest Framework
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django-rest-framework/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django-rest-framework/views/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Views
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django-rest-framework/serializers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Serializers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/django-rest-framework/validators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validators
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/serpy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Serpy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Celery
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Celery
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/celery/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/celery/tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tasks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/celery/calling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Calling
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    4geeks
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            4geeks
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Actions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_2" id="__nav_4_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Services
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/services/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_5_2_2" id="__nav_4_5_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    First-party
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_4_5_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            First-party
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/services/first-party/using-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Using services
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/services/first-party/writing-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Writing services
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../essential/4geeks/services/first-party/token/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Token
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Advanced
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Advanced
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Supervisor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Celery
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Celery
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/application/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Application
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/canvas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Canvas
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/periodic-tasks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Periodic tasks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Routing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/celery/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Program Manager
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Program Manager
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../program-manager/blocking-users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Blocking Users
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Payments
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Payments
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Payments Module
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Subscription Seats
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            Subscription Seats
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/subscription-seats-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Subscription Seats - Quick Start Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/subscription-seats-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Documentation &amp; Postman Collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            Auto-Recharge
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/auto-recharge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge System
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../payments/auto-recharge-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Auto-Recharge Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Testing
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Testing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/running-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Running tests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/parametrize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Multiple parameters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_3" id="__nav_8_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Mixins
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_3">
+            <span class="md-nav__icon md-icon"></span>
+            Mixins
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-fake/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.fake
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-request/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.request
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.database
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-datetime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.datetime
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.format
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-check/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.check
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-cache/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.cache
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mixins/bc-random/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    bc.random
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_8_4" id="__nav_8_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Mocks
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_8_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8_4">
+            <span class="md-nav__icon md-icon"></span>
+            Mocks
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mocks/using-mocks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Using mocks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/mocks/mock-requests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Mock requests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Troubleshooting
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Troubleshooting
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/check_task_status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Task Status Diagnostic Tool
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Workflows
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Workflows
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/file-uploading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    File uploading
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Infrastructure
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            Infrastructure
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/journal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Journal
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/web/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Web
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/infra-env/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_11_4" id="__nav_11_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Studies
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_11_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11_4">
+            <span class="md-nav__icon md-icon"></span>
+            Studies
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/studies/http-clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Better HTTP client
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/studies/django-workers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Better Django worker
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Not placed yet
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            Not placed yet
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/fixtures/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Fixtures
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_3" id="__nav_12_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Deployments
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_3">
+            <span class="md-nav__icon md-icon"></span>
+            Deployments
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment variables
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/configuring-the-github-secrets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuring the Github secrets
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_4" id="__nav_12_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Apps
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_4">
+            <span class="md-nav__icon md-icon"></span>
+            Apps
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_4_1" id="__nav_12_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Monitoring
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            Monitoring
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/monitoring/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Intro to monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/monitoring/scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Monitoring Scripts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/activities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Activities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../apps/admissions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4Geeks.Admissions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_5" id="__nav_12_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Security
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_5">
+            <span class="md-nav__icon md-icon"></span>
+            Security
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/authentication-class/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Authentication classes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Capabilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/schema-link/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Schema link
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6" id="__nav_12_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Services
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6_1" id="__nav_12_6_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Google Cloud
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            Google Cloud
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../services/google_cloud/google-cloud-functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google Cloud Functions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../services/google_cloud/storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Storage
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_6_2" id="__nav_12_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Slack
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_12_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Slack
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../services/slack%20integration/icons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Icons
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_12_7" id="__nav_12_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Signals
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_12_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12_7">
+            <span class="md-nav__icon md-icon"></span>
+            Signals
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../signals/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#columnas-del-csv" class="md-nav__link">
+    <span class="md-ellipsis">
+      📋 Columnas del CSV
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flujo-de-calculo-resumen-ejecutivo" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔄 Flujo de Cálculo (Resumen Ejecutivo)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flujo-de-calculo-detalle-por-fase" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔄 Flujo de Cálculo (Detalle por Fase)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔄 Flujo de Cálculo (Detalle por Fase)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fase-1-preparacion-de-datos-base" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 1: Preparación de Datos Base
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 1: Preparación de Datos Base">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-11-obtener-enrollments-del-cohort" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 1.1: Obtener Enrollments del Cohort
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-12-extraer-ids-unicos" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 1.2: Extraer IDs Únicos
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-2-extraccion-de-slugs-del-syllabus" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 2: Extracción de Slugs del Syllabus
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 2: Extracción de Slugs del Syllabus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-21-extraer-slugs-del-syllabus-actual" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 2.1: Extraer Slugs del Syllabus Actual
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-3-analisis-del-history-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 3: Análisis del History Log
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 3: Análisis del History Log">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-31-extraer-task-ids-del-history-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 3.1: Extraer Task IDs del History Log
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-4-consulta-de-tareas-entregadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 4: Consulta de Tareas Entregadas
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 4: Consulta de Tareas Entregadas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-41-obtener-detalles-de-tareas-por-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 4.1: Obtener Detalles de Tareas por ID
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-42-mapear-task-ids-a-slugs-de-ejercicios" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 4.2: Mapear Task IDs a Slugs de Ejercicios
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-5-calculo-de-lecciones-completadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 5: Cálculo de Lecciones Completadas
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 5: Cálculo de Lecciones Completadas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-51-obtener-lecciones-completadas" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 5.1: Obtener Lecciones Completadas
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-6-calculo-de-fecha-de-inicio" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 6: Cálculo de Fecha de Inicio
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 6: Cálculo de Fecha de Inicio">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-61-obtener-fecha-de-inicio-del-estudiante" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 6.1: Obtener Fecha de Inicio del Estudiante
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-7-calculo-de-ejercicios-completados" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 7: Cálculo de Ejercicios Completados
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 7: Cálculo de Ejercicios Completados">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-71-obtener-ejercicios-completados" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 7.1: Obtener Ejercicios Completados
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#711-telemetria-prioridad-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      7.1.1: Telemetría (Prioridad 1)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#712-task-status-done-prioridad-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      7.1.2: Task Status DONE (Prioridad 2)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#713-history-log-prioridad-3-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      7.1.3: History Log (Prioridad 3 - Fallback)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-8-calculo-de-certificados" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 8: Cálculo de Certificados
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 8: Cálculo de Certificados">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-81-obtener-certificados" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 8.1: Obtener Certificados
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-9-calculo-de-proyectos-obligatorios-aprobados" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 9: Cálculo de Proyectos Obligatorios Aprobados
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 9: Cálculo de Proyectos Obligatorios Aprobados">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-91-obtener-proyectos-obligatorios-aprobados" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 9.1: Obtener Proyectos Obligatorios Aprobados
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-10-calculo-de-fecha-de-finalizacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 10: Cálculo de Fecha de Finalización
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 10: Cálculo de Fecha de Finalización">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-101-obtener-fecha-de-finalizacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 10.1: Obtener Fecha de Finalización
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fase-11-calculo-final-por-estudiante" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fase 11: Cálculo Final por Estudiante
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 11: Cálculo Final por Estudiante">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#paso-111-funcion-interna-_get_units_for" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 11.1: Función Interna _get_units_for()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-112-calculo-del-porcentaje-de-progreso" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 11.2: Cálculo del Porcentaje de Progreso
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-113-determinacion-del-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 11.3: Determinación del Status
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paso-114-construccion-de-valores-finales" class="md-nav__link">
+    <span class="md-ellipsis">
+      Paso 11.4: Construcción de Valores Finales
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caso-especial-macro-cohorts" class="md-nav__link">
+    <span class="md-ellipsis">
+      🎯 Caso Especial: Macro Cohorts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resumen-del-flujo-completo-detallado" class="md-nav__link">
+    <span class="md-ellipsis">
+      📊 Resumen del Flujo Completo (Detallado)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#queries-sql-totales" class="md-nav__link">
+    <span class="md-ellipsis">
+      🔍 Queries SQL Totales
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notas-importantes" class="md-nav__link">
+    <span class="md-ellipsis">
+      📝 Notas Importantes
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="calculo-de-valores-del-cohortreportcsv-guia-detallada">Cálculo de Valores del CohortReportCSV - Guía Detallada</h1>
+<p>Este documento explica paso a paso cómo se calcula cada valor que aparece en el CSV generado por el endpoint <code>AcademyCohortReportCSVView</code>.</p>
+<p><strong>Endpoint:</strong> <code>GET /v1/admissions/academy/{academy_id}/cohort/{cohort_id}/report.csv</code></p>
+<hr />
+<h2 id="columnas-del-csv">📋 Columnas del CSV</h2>
+<p>El CSV contiene las siguientes columnas (en este orden):</p>
+<ol>
+<li><code>course_name</code> - Nombre del cohort</li>
+<li><code>student_full_name</code> - Nombre completo del estudiante</li>
+<li><code>student_email</code> - Email del estudiante</li>
+<li><code>enrollment_date</code> - Fecha de inscripción</li>
+<li><code>student_start_date</code> - Fecha en que el estudiante comenzó</li>
+<li><code>status</code> - Estado del estudiante</li>
+<li><code>progress_percentage</code> - Porcentaje de progreso (0-100, entero redondeado)</li>
+<li><code>completion_date</code> - Fecha de finalización</li>
+<li><code>certificate_url</code> - URL del certificado</li>
+<li><code>comments</code> - Comentarios adicionales</li>
+</ol>
+<hr />
+<h2 id="flujo-de-calculo-resumen-ejecutivo">🔄 Flujo de Cálculo (Resumen Ejecutivo)</h2>
+<p><strong>Concepto Clave</strong>: El progreso se calcula comparando lo que el estudiante ha completado vs. lo que está en el <strong>syllabus actual</strong> del cohort. Solo se cuentan tareas que están en el syllabus actual.</p>
+<p><strong>Flujo Simplificado</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>1. Obtener enrollments del cohort
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>   ↓
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>2. Extraer slugs del syllabus ACTUAL (lecciones, ejercicios, proyectos)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   ⚠️ IMPORTANTE: Solo cuenta tareas que están en el syllabus actual
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   ↓
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>3. Consultar qué ha completado cada estudiante (Task + history_log)
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>   ↓
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>4. Filtrar: solo lo que está en el syllabus actual
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   ↓
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>5. Calcular progreso = (completadas / total) * 100
+</code></pre></div></p>
+<p><strong>Nota sobre "Cache"</strong>: <code>_extract_syllabus_slugs</code> no es una cache persistente. Es un diccionario en memoria que se crea <strong>cada vez</strong> que se ejecuta el reporte. Se ejecuta una vez al inicio y contiene los slugs del syllabus actual del cohort.</p>
+<hr />
+<h2 id="flujo-de-calculo-detalle-por-fase">🔄 Flujo de Cálculo (Detalle por Fase)</h2>
+<h3 id="fase-1-preparacion-de-datos-base">Fase 1: Preparación de Datos Base</h3>
+<h4 id="paso-11-obtener-enrollments-del-cohort">Paso 1.1: Obtener Enrollments del Cohort</h4>
+<p><strong>Función:</strong> <code>_get_enrollments_for_academy_student_progress_report(academy, cohort=None)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 333</p>
+<p><strong>Qué hace:</strong>
+- Obtiene los <code>CohortUser</code> de la academia con rol <code>STUDENT</code>
+- <strong>Acepta parámetro <code>cohort</code> opcional</strong> - si se especifica, filtra directamente en la query
+- Hace <code>select_related</code> para optimizar queries (user, cohort, syllabus_version)
+- Hace <code>prefetch_related</code> para micro_cohorts</p>
+<p><strong>Query SQL equivalente:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">-- Si cohort es None (reporte de toda la academia):</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">admissions_cohortuser</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">cohort__academy_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{</span><span class="n">academy_id</span><span class="err">}</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="k">role</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;STUDENT&#39;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">cohort_id</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1">-- Si cohort se especifica (reporte de cohort específico):</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">admissions_cohortuser</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">cohort__academy_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{</span><span class="n">academy_id</span><span class="err">}</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="k">role</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;STUDENT&#39;</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{</span><span class="n">cohort_id</span><span class="err">}</span><span class="w">  </span><span class="c1">-- ✅ Filtrado optimizado en la query</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">cohort_id</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span>
+</code></pre></div></p>
+<p><strong>✅ Optimización:</strong>
+El filtrado por cohort se hace <strong>directamente en la query</strong> cuando se especifica el parámetro, evitando cargar enrollments innecesarios de otros cohorts. Esto mejora significativamente el rendimiento cuando se genera un reporte para un cohort específico.</p>
+<p><strong>Código:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_get_enrollments_for_academy_student_progress_report</span><span class="p">(</span><span class="n">academy</span><span class="p">,</span> <span class="n">cohort</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Cohort</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">queryset</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="n">CohortUser</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">cohort__academy</span><span class="o">=</span><span class="n">academy</span><span class="p">,</span> <span class="n">role</span><span class="o">=</span><span class="s2">&quot;STUDENT&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="o">.</span><span class="n">select_related</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;cohort&quot;</span><span class="p">,</span> <span class="s2">&quot;cohort__syllabus_version&quot;</span><span class="p">,</span> <span class="s2">&quot;cohort__syllabus_version__syllabus&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="o">.</span><span class="n">prefetch_related</span><span class="p">(</span><span class="s2">&quot;cohort__micro_cohorts&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">&quot;cohort_id&quot;</span><span class="p">,</span> <span class="s2">&quot;created_at&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="p">)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="k">if</span> <span class="n">cohort</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="n">queryset</span> <span class="o">=</span> <span class="n">queryset</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">cohort</span><span class="o">=</span><span class="n">cohort</span><span class="p">)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="k">return</span> <span class="n">queryset</span>
+</code></pre></div></p>
+<p><strong>Resultado:</strong> Lista de objetos <code>CohortUser</code> con sus relaciones cargadas (filtrados por cohort si se especifica)</p>
+<hr />
+<h4 id="paso-12-extraer-ids-unicos">Paso 1.2: Extraer IDs Únicos</h4>
+<p><strong>Código:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">enrollments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">enrollments_qs</span><span class="p">)</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">user_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="n">cu</span><span class="o">.</span><span class="n">user_id</span> <span class="k">for</span> <span class="n">cu</span> <span class="ow">in</span> <span class="n">enrollments</span><span class="p">})</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">cohort_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="n">cu</span><span class="o">.</span><span class="n">cohort_id</span> <span class="k">for</span> <span class="n">cu</span> <span class="ow">in</span> <span class="n">enrollments</span><span class="p">})</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">cohorts_by_id</span> <span class="o">=</span> <span class="p">{</span><span class="n">cu</span><span class="o">.</span><span class="n">cohort_id</span><span class="p">:</span> <span class="n">cu</span><span class="o">.</span><span class="n">cohort</span> <span class="k">for</span> <span class="n">cu</span> <span class="ow">in</span> <span class="n">enrollments</span> <span class="k">if</span> <span class="n">cu</span><span class="o">.</span><span class="n">cohort</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Qué hace:</strong>
+- Convierte el queryset a lista
+- Extrae todos los <code>user_id</code> únicos
+- Extrae todos los <code>cohort_id</code> únicos
+- Crea un diccionario para acceso rápido a cohorts por ID</p>
+<p><strong>Resultado:</strong>
+- <code>user_ids</code>: <code>[1, 2, 3, ...]</code>
+- <code>cohort_ids</code>: <code>[10]</code> (solo el cohort especificado)
+- <code>cohorts_by_id</code>: <code>{10: &lt;Cohort object&gt;}</code></p>
+<hr />
+<h3 id="fase-2-extraccion-de-slugs-del-syllabus">Fase 2: Extracción de Slugs del Syllabus</h3>
+<h4 id="paso-21-extraer-slugs-del-syllabus-actual">Paso 2.1: Extraer Slugs del Syllabus Actual</h4>
+<p><strong>Función:</strong> <code>_extract_syllabus_slugs(cohorts)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 345</p>
+<p><strong>⚠️ IMPORTANTE</strong>: Esta función NO es una cache persistente. Se ejecuta <strong>cada vez</strong> que se genera el reporte y crea un diccionario en memoria con los slugs del syllabus <strong>actual</strong> del cohort.</p>
+<p><strong>Qué hace:</strong>
+Para cada cohort, extrae del <code>syllabus_version.json</code> <strong>actual</strong>:</p>
+<ol>
+<li><strong>Slugs de lecciones</strong> - Usa <code>get_assets_from_syllabus()</code> con <code>task_types=["LESSON"]</code></li>
+<li><strong>Slugs de ejercicios</strong> - Usa <code>get_assets_from_syllabus()</code> con <code>task_types=["EXERCISE"]</code></li>
+<li><strong>Slugs de proyectos obligatorios</strong> - Usa <code>get_assets_from_syllabus()</code> con <code>task_types=["PROJECT"]</code> y <code>only_mandatory=True</code></li>
+<li><strong>Total de lecciones</strong> - Cuenta cuántas lecciones hay</li>
+<li><strong>Flag de proyectos obligatorios</strong> - Indica si el cohort tiene proyectos obligatorios</li>
+</ol>
+<p><strong>Estructura del Syllabus:</strong>
+El syllabus es un JSON con estructura:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;days&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Day 1&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span><span class="nt">&quot;lessons&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="p">{</span><span class="nt">&quot;slug&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;learn-react-hooks&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;LESSON&quot;</span><span class="p">},</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="p">{</span><span class="nt">&quot;slug&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;react-hooks-practice&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EXERCISE&quot;</span><span class="p">}</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="p">],</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">      </span><span class="nt">&quot;projects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">        </span><span class="p">{</span><span class="nt">&quot;slug&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;todo-app&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PROJECT&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mandatory&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">}</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">      </span><span class="p">]</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">lesson_slugs_by_cohort</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="mi">10</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;learn-react-hooks&quot;</span><span class="p">,</span> <span class="s2">&quot;learn-react-components&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>  <span class="c1"># set[str] - no duplicados</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="p">}</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">exercise_slugs_by_cohort</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="mi">10</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;react-hooks-practice&quot;</span><span class="p">,</span> <span class="s2">&quot;react-state-practice&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>  <span class="c1"># set[str] - no duplicados</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">total_lessons_by_cohort</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="mi">10</span><span class="p">:</span> <span class="mi">45</span>  <span class="c1"># int - cantidad total</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">}</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">mandatory_project_slugs_by_cohort</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="mi">10</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;todo-app&quot;</span><span class="p">,</span> <span class="s2">&quot;blog-app&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">}</span>  <span class="c1"># set[str] - no duplicados</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="p">}</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">has_mandatory_projects_by_cohort</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>    <span class="mi">10</span><span class="p">:</span> <span class="kc">True</span>  <span class="c1"># bool</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>¿Por qué <code>set</code> en lugar de <code>list</code>?</strong>
+- ✅ <strong>Elimina duplicados automáticamente</strong> - Si el syllabus tiene slugs duplicados, solo se cuenta una vez
+- ✅ <strong>Intersección eficiente</strong> - Se usa el operador <code>&amp;</code> para encontrar slugs comunes (línea 774, 780)
+- ✅ <strong>Búsqueda O(1)</strong> - Verificar si un slug está en el set es más rápido que en una lista
+- ✅ <strong>Operaciones eficientes</strong> - <code>.update()</code>, <code>.add()</code> son más rápidos que con listas</p>
+<hr />
+<h3 id="fase-3-analisis-del-history-log">Fase 3: Análisis del History Log</h3>
+<h4 id="paso-31-extraer-task-ids-del-history-log">Paso 3.1: Extraer Task IDs del History Log</h4>
+<p><strong>Función:</strong> <code>_get_delivered_task_ids_from_history_log(enrollments, task_type="EXERCISE")</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 391</p>
+<p><strong>Qué hace:</strong>
+Analiza el campo <code>history_log</code> (JSONField) de cada <code>CohortUser</code> para extraer:</p>
+<ol>
+<li><strong>IDs de tareas entregadas</strong> - Del array <code>delivered_assignments</code> filtradas por <code>task_type</code> (por defecto "EXERCISE")</li>
+<li><strong>Flag de inicio</strong> - Si tiene <code>delivered_assignments</code> o <code>pending_assignments</code>, el estudiante ha comenzado</li>
+</ol>
+<p><strong>Parámetros:</strong>
+- <code>enrollments</code>: Lista de CohortUser
+- <code>task_type</code>: Tipo de tarea a extraer ("EXERCISE", "LESSON", "PROJECT", etc.) - Por defecto "EXERCISE"</p>
+<p><strong>Nota:</strong> Esta función es genérica y reutilizable. Se puede usar para extraer cualquier tipo de tarea del history_log.</p>
+<p><strong>Estructura del History Log:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;delivered_assignments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EXERCISE&quot;</span><span class="p">},</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">124</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;LESSON&quot;</span><span class="p">}</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="p">],</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">&quot;pending_assignments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">delivered_exercise_task_ids_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">[</span><span class="mi">123</span><span class="p">,</span> <span class="mi">125</span><span class="p">,</span> <span class="mi">127</span><span class="p">],</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">[</span><span class="mi">124</span><span class="p">,</span> <span class="mi">126</span><span class="p">]</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">}</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">started_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="kc">True</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Nota:</strong> El <code>history_log</code> es un campo legacy. Se usa como fallback si no hay datos en la tabla <code>Task</code>.</p>
+<hr />
+<h3 id="fase-4-consulta-de-tareas-entregadas">Fase 4: Consulta de Tareas Entregadas</h3>
+<h4 id="paso-41-obtener-detalles-de-tareas-por-id">Paso 4.1: Obtener Detalles de Tareas por ID</h4>
+<p><strong>Función:</strong> <code>_get_delivered_tasks_by_id(task_ids, user_ids, cohort_ids)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 412</p>
+<p><strong>Qué hace:</strong>
+Hace una sola query a la tabla <code>Task</code> para obtener los detalles de todas las tareas entregadas encontradas en el history_log.</p>
+<p><strong>Query SQL equivalente:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">cohort_id</span><span class="p">,</span><span class="w"> </span><span class="n">task_type</span><span class="p">,</span><span class="w"> </span><span class="n">associated_slug</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">assignments_task</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="mi">124</span><span class="p">,</span><span class="w"> </span><span class="mi">125</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">delivered_tasks_by_id</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="mi">123</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>        <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>        <span class="s2">&quot;cohort_id&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        <span class="s2">&quot;task_type&quot;</span><span class="p">:</span> <span class="s2">&quot;EXERCISE&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>        <span class="s2">&quot;associated_slug&quot;</span><span class="p">:</span> <span class="s2">&quot;react-hooks-practice&quot;</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>    <span class="p">},</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="o">...</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h4 id="paso-42-mapear-task-ids-a-slugs-de-ejercicios">Paso 4.2: Mapear Task IDs a Slugs de Ejercicios</h4>
+<p><strong>Función:</strong> <code>_get_delivered_exercise_slugs(...)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 425</p>
+<p><strong>Qué hace:</strong>
+- Toma los task_ids del history_log
+- Los mapea a slugs usando <code>delivered_tasks_by_id</code>
+- Filtra solo los slugs que están en el syllabus del cohort</p>
+<p><strong>Lógica:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">for</span> <span class="n">pair</span><span class="p">,</span> <span class="n">task_ids</span> <span class="ow">in</span> <span class="n">delivered_exercise_task_ids_by_pair</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">user_id</span><span class="p">,</span> <span class="n">cohort_id</span> <span class="o">=</span> <span class="n">pair</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">syllabus_slugs</span> <span class="o">=</span> <span class="n">exercise_slugs_by_cohort</span><span class="p">[</span><span class="n">cohort_id</span><span class="p">]</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="k">for</span> <span class="n">task_id</span> <span class="ow">in</span> <span class="n">task_ids</span><span class="p">:</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>        <span class="n">task</span> <span class="o">=</span> <span class="n">delivered_tasks_by_id</span><span class="p">[</span><span class="n">task_id</span><span class="p">]</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>        <span class="k">if</span> <span class="n">task</span><span class="p">[</span><span class="s2">&quot;associated_slug&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">syllabus_slugs</span><span class="p">:</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>            <span class="n">slugs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">task</span><span class="p">[</span><span class="s2">&quot;associated_slug&quot;</span><span class="p">])</span>
+</code></pre></div></p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">delivered_exercise_slugs_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;react-hooks-practice&quot;</span><span class="p">,</span> <span class="s2">&quot;react-state-practice&quot;</span><span class="p">},</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;react-hooks-practice&quot;</span><span class="p">}</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="fase-5-calculo-de-lecciones-completadas">Fase 5: Cálculo de Lecciones Completadas</h3>
+<h4 id="paso-51-obtener-lecciones-completadas">Paso 5.1: Obtener Lecciones Completadas</h4>
+<p><strong>Función:</strong> <code>_get_completed_lesson_slugs(user_ids, cohort_ids, lesson_slugs_by_cohort)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 452</p>
+<p><strong>Qué hace:</strong>
+Consulta la tabla <code>Task</code> para encontrar todas las lecciones que el estudiante ha completado.</p>
+<p><strong>⚠️ FILTRO IMPORTANTE</strong>: Solo cuenta lecciones cuyo <code>associated_slug</code> está en <code>lesson_slugs_by_cohort</code> (syllabus actual). Si una lección fue completada pero ya no está en el syllabus actual, <strong>NO se cuenta</strong>.</p>
+<p><strong>Query SQL equivalente:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">cohort_id</span><span class="p">,</span><span class="w"> </span><span class="n">associated_slug</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">assignments_task</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;LESSON&#39;</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;DONE&#39;</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">associated_slug</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;learn-react-hooks&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;learn-react-components&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+</code></pre></div></p>
+<p><strong>Criterios de "completada":</strong>
+- <code>task_type = "LESSON"</code>
+- <code>task_status = "DONE"</code> (también se acepta "APPROVED" en algunos casos)</p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">lesson_done_slugs_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;learn-react-hooks&quot;</span><span class="p">,</span> <span class="s2">&quot;learn-react-components&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;learn-react-hooks&quot;</span><span class="p">}</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="fase-6-calculo-de-fecha-de-inicio">Fase 6: Cálculo de Fecha de Inicio</h3>
+<h4 id="paso-61-obtener-fecha-de-inicio-del-estudiante">Paso 6.1: Obtener Fecha de Inicio del Estudiante</h4>
+<p><strong>Función:</strong> <code>_get_student_start_dates(user_ids, cohort_ids, lesson_slugs_by_cohort, exercise_slugs_by_cohort)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 478</p>
+<p><strong>Qué hace:</strong>
+Encuentra la fecha más temprana en que el estudiante comenzó cualquier actividad (lección o ejercicio).</p>
+<p><strong>Query SQL equivalente:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">SELECT</span><span class="w"> </span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="n">cohort_id</span><span class="p">,</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="k">MIN</span><span class="p">(</span><span class="k">COALESCE</span><span class="p">(</span><span class="n">opened_at</span><span class="p">,</span><span class="w"> </span><span class="n">delivered_at</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">))</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">started_at</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="k">FROM</span><span class="w"> </span><span class="n">assignments_task</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">associated_slug</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="n">todos_los_slugs_del_syllabus</span><span class="p">)</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_type</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;LESSON&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;EXERCISE&#39;</span><span class="p">)</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">cohort_id</span>
+</code></pre></div></p>
+<p><strong>Lógica de fecha:</strong>
+- Usa <code>opened_at</code> si existe
+- Si no, usa <code>delivered_at</code>
+- Si no, usa <code>created_at</code>
+- Toma el mínimo (fecha más temprana)</p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">started_at_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">15</span> <span class="mi">10</span><span class="p">:</span><span class="mi">30</span><span class="p">:</span><span class="mi">00</span><span class="p">),</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">16</span> <span class="mi">14</span><span class="p">:</span><span class="mi">20</span><span class="p">:</span><span class="mi">00</span><span class="p">)</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="fase-7-calculo-de-ejercicios-completados">Fase 7: Cálculo de Ejercicios Completados</h3>
+<h4 id="paso-71-obtener-ejercicios-completados">Paso 7.1: Obtener Ejercicios Completados</h4>
+<p><strong>Función:</strong> <code>_get_completed_exercise_slugs(...)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 533</p>
+<p><strong>Qué hace:</strong>
+Determina qué ejercicios están completados usando <strong>tres fuentes de datos</strong> (en orden de prioridad):</p>
+<h4 id="711-telemetria-prioridad-1">7.1.1: Telemetría (Prioridad 1)</h4>
+<p>Consulta tareas con telemetría y verifica si <code>completion_rate == 100%</code>:</p>
+<p><strong>Query:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">cohort_id</span><span class="p">,</span><span class="w"> </span><span class="n">associated_slug</span><span class="p">,</span><span class="w"> </span><span class="n">telemetry__telemetry</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">assignments_task</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;EXERCISE&#39;</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">associated_slug</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="n">todos_los_slugs_de_ejercicios</span><span class="p">)</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">telemetry__telemetry</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</code></pre></div></p>
+<p><strong>Lógica de telemetría:</strong>
+La función <code>_telemetry_to_steps(telemetry)</code> extrae:
+- <code>total_steps</code> del campo <code>global_metrics.total_steps</code>
+- <code>completed_steps</code> calculado de <code>completion_rate</code> o <code>steps_not_completed</code></p>
+<p>Si <code>completed_steps &gt;= total_steps</code>, el ejercicio está completado.</p>
+<p><strong>Estructura de telemetría:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">&quot;global_metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">&quot;total_steps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">&quot;completion_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">100.0</span><span class="p">,</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="nt">&quot;steps_not_completed&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="p">}</span>
+</code></pre></div></p>
+<h4 id="712-task-status-done-prioridad-2">7.1.2: Task Status DONE (Prioridad 2)</h4>
+<p>Consulta tareas con <code>task_status = "DONE"</code>:</p>
+<p><strong>Query:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">cohort_id</span><span class="p">,</span><span class="w"> </span><span class="n">associated_slug</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">assignments_task</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;EXERCISE&#39;</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;DONE&#39;</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">associated_slug</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="n">todos_los_slugs_de_ejercicios</span><span class="p">)</span>
+</code></pre></div></p>
+<h4 id="713-history-log-prioridad-3-fallback">7.1.3: History Log (Prioridad 3 - Fallback)</h4>
+<p>Usa los slugs obtenidos del history_log (ya calculados en Paso 4.2).</p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">completed_exercise_slugs_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;react-hooks-practice&quot;</span><span class="p">,</span> <span class="s2">&quot;react-state-practice&quot;</span><span class="p">,</span> <span class="s2">&quot;react-forms-practice&quot;</span><span class="p">},</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;react-hooks-practice&quot;</span><span class="p">}</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Nota:</strong> Se combinan las tres fuentes (unión de sets), por lo que si un ejercicio está completado según cualquiera de las tres fuentes, se considera completado.</p>
+<hr />
+<h3 id="fase-8-calculo-de-certificados">Fase 8: Cálculo de Certificados</h3>
+<h4 id="paso-81-obtener-certificados">Paso 8.1: Obtener Certificados</h4>
+<p><strong>Función:</strong> <code>_get_cert_by_pair(academy, user_ids, cohort_ids)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 601</p>
+<p><strong>Qué hace:</strong>
+Consulta la tabla <code>UserSpecialty</code> para encontrar certificados emitidos.</p>
+<p><strong>Query SQL equivalente:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">cohort_id</span><span class="p">,</span><span class="w"> </span><span class="n">token</span><span class="p">,</span><span class="w"> </span><span class="n">issued_at</span><span class="p">,</span><span class="w"> </span><span class="n">preview_url</span><span class="p">,</span><span class="w"> </span><span class="n">status</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">certificate_userspecialty</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">academy_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{</span><span class="n">academy_id</span><span class="err">}</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s1">&#39;ERROR&#39;</span>
+</code></pre></div></p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">cert_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>        <span class="s2">&quot;token&quot;</span><span class="p">:</span> <span class="s2">&quot;abc123xyz&quot;</span><span class="p">,</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>        <span class="s2">&quot;issued_at&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">01</span><span class="p">),</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>        <span class="s2">&quot;preview_url&quot;</span><span class="p">:</span> <span class="s2">&quot;https://...&quot;</span><span class="p">,</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;PERSISTED&quot;</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>    <span class="p">}</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="fase-9-calculo-de-proyectos-obligatorios-aprobados">Fase 9: Cálculo de Proyectos Obligatorios Aprobados</h3>
+<h4 id="paso-91-obtener-proyectos-obligatorios-aprobados">Paso 9.1: Obtener Proyectos Obligatorios Aprobados</h4>
+<p><strong>Función:</strong> <code>_get_approved_mandatory_project_slugs_by_pair(...)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 610</p>
+<p><strong>Qué hace:</strong>
+Consulta la tabla <code>Task</code> para encontrar proyectos obligatorios que han sido aprobados.</p>
+<p><strong>Query SQL equivalente:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">cohort_id</span><span class="p">,</span><span class="w"> </span><span class="n">associated_slug</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">assignments_task</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PROJECT&#39;</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">associated_slug</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="n">slugs_de_proyectos_obligatorios</span><span class="p">)</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">revision_status</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;APPROVED&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;IGNORED&#39;</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Criterios:</strong>
+- <code>task_type = "PROJECT"</code>
+- <code>associated_slug</code> debe estar en <code>mandatory_project_slugs_by_cohort</code>
+- <code>revision_status = "APPROVED"</code> o <code>"IGNORED"</code></p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">approved_mandatory_project_slugs_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;todo-app&quot;</span><span class="p">,</span> <span class="s2">&quot;blog-app&quot;</span><span class="p">},</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="p">{</span><span class="s2">&quot;todo-app&quot;</span><span class="p">}</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="fase-10-calculo-de-fecha-de-finalizacion">Fase 10: Cálculo de Fecha de Finalización</h3>
+<h4 id="paso-101-obtener-fecha-de-finalizacion">Paso 10.1: Obtener Fecha de Finalización</h4>
+<p><strong>Función:</strong> <code>_get_completion_date_by_pair(...)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 638</p>
+<p><strong>Qué hace:</strong>
+Encuentra la fecha más reciente en que el estudiante completó todas las unidades (lecciones y ejercicios).</p>
+<p><strong>Query SQL equivalente:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">SELECT</span><span class="w"> </span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">    </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">    </span><span class="n">cohort_id</span><span class="p">,</span>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">    </span><span class="k">MAX</span><span class="p">(</span><span class="n">updated_at</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">completion_date</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="k">FROM</span><span class="w"> </span><span class="n">assignments_task</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">cohort_id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_type</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;LESSON&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;EXERCISE&#39;</span><span class="p">)</span>
+<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">task_status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;DONE&#39;</span>
+<a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">associated_slug</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="n">todos_los_slugs_del_syllabus</span><span class="p">)</span>
+<a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">cohort_id</span>
+</code></pre></div></p>
+<p><strong>Lógica:</strong>
+- Solo cuenta tareas con <code>task_status = "DONE"</code>
+- Toma el <code>MAX(updated_at)</code> - la fecha más reciente de finalización
+- Solo se calcula si el progreso es &gt;= 100%</p>
+<p><strong>Resultado:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">completion_date_by_pair</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">01</span> <span class="mi">15</span><span class="p">:</span><span class="mi">30</span><span class="p">:</span><span class="mi">00</span><span class="p">),</span>
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>    <span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cohort_id</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span> <span class="kc">None</span>  <span class="c1"># No ha completado</span>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="fase-11-calculo-final-por-estudiante">Fase 11: Cálculo Final por Estudiante</h3>
+<h4 id="paso-111-funcion-interna-_get_units_for">Paso 11.1: Función Interna <code>_get_units_for()</code></h4>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 757 (dentro de <code>academy_student_progress_report_rows</code>)</p>
+<p><strong>Qué hace:</strong>
+Calcula el total de unidades y unidades completadas para un estudiante específico.</p>
+<p><strong>Código:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_get_units_for</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">cohort_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>    <span class="c1"># Total de lecciones del syllabus</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>    <span class="n">total_lessons</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">total_lessons_by_cohort</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cohort_id</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>    <span class="c1"># Lecciones completadas (intersección entre completadas y del syllabus)</span>
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>    <span class="n">completed_lessons</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>        <span class="p">(</span><span class="n">lesson_done_slugs_by_pair</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">user_id</span><span class="p">,</span> <span class="n">cohort_id</span><span class="p">),</span> <span class="nb">set</span><span class="p">())</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">())</span>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>        <span class="o">&amp;</span> <span class="p">(</span><span class="n">lesson_slugs_by_cohort</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cohort_id</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">())</span>
+<a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>    <span class="p">)</span>
+<a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a>
+<a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a>    <span class="c1"># Total de ejercicios del syllabus</span>
+<a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a>    <span class="n">total_exercises</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">exercise_slugs_by_cohort</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cohort_id</span><span class="p">,</span> <span class="nb">set</span><span class="p">()))</span>
+<a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a>
+<a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a>    <span class="c1"># Ejercicios completados (intersección entre completados y del syllabus)</span>
+<a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a>    <span class="n">completed_exercises</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
+<a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a>        <span class="p">(</span><span class="n">completed_exercise_slugs_by_pair</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">user_id</span><span class="p">,</span> <span class="n">cohort_id</span><span class="p">),</span> <span class="nb">set</span><span class="p">())</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">())</span>
+<a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a>        <span class="o">&amp;</span> <span class="p">(</span><span class="n">exercise_slugs_by_cohort</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cohort_id</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">())</span>
+<a id="__codelineno-26-18" name="__codelineno-26-18" href="#__codelineno-26-18"></a>    <span class="p">)</span>
+<a id="__codelineno-26-19" name="__codelineno-26-19" href="#__codelineno-26-19"></a>
+<a id="__codelineno-26-20" name="__codelineno-26-20" href="#__codelineno-26-20"></a>    <span class="c1"># Total y completadas</span>
+<a id="__codelineno-26-21" name="__codelineno-26-21" href="#__codelineno-26-21"></a>    <span class="n">total_units</span> <span class="o">=</span> <span class="n">total_lessons</span> <span class="o">+</span> <span class="n">total_exercises</span>
+<a id="__codelineno-26-22" name="__codelineno-26-22" href="#__codelineno-26-22"></a>    <span class="n">completed_units</span> <span class="o">=</span> <span class="n">completed_lessons</span> <span class="o">+</span> <span class="n">completed_exercises</span>
+<a id="__codelineno-26-23" name="__codelineno-26-23" href="#__codelineno-26-23"></a>
+<a id="__codelineno-26-24" name="__codelineno-26-24" href="#__codelineno-26-24"></a>    <span class="c1"># Validaciones</span>
+<a id="__codelineno-26-25" name="__codelineno-26-25" href="#__codelineno-26-25"></a>    <span class="k">if</span> <span class="n">total_units</span> <span class="ow">and</span> <span class="n">completed_units</span> <span class="o">&gt;</span> <span class="n">total_units</span><span class="p">:</span>
+<a id="__codelineno-26-26" name="__codelineno-26-26" href="#__codelineno-26-26"></a>        <span class="n">completed_units</span> <span class="o">=</span> <span class="n">total_units</span>
+<a id="__codelineno-26-27" name="__codelineno-26-27" href="#__codelineno-26-27"></a>    <span class="k">if</span> <span class="n">completed_units</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-26-28" name="__codelineno-26-28" href="#__codelineno-26-28"></a>        <span class="n">completed_units</span> <span class="o">=</span> <span class="mi">0</span>
+<a id="__codelineno-26-29" name="__codelineno-26-29" href="#__codelineno-26-29"></a>
+<a id="__codelineno-26-30" name="__codelineno-26-30" href="#__codelineno-26-30"></a>    <span class="k">return</span> <span class="n">total_units</span><span class="p">,</span> <span class="n">completed_units</span>
+</code></pre></div></p>
+<p><strong>Ejemplo:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># Para user_id=1, cohort_id=10:</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="n">total_lessons</span> <span class="o">=</span> <span class="mi">45</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="n">completed_lessons</span> <span class="o">=</span> <span class="mi">40</span>  <span class="c1"># 40 de 45 lecciones completadas</span>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="n">total_exercises</span> <span class="o">=</span> <span class="mi">30</span>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="n">completed_exercises</span> <span class="o">=</span> <span class="mi">25</span>  <span class="c1"># 25 de 30 ejercicios completados</span>
+<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>
+<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a><span class="n">total_units</span> <span class="o">=</span> <span class="mi">45</span> <span class="o">+</span> <span class="mi">30</span> <span class="o">=</span> <span class="mi">75</span>
+<a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a><span class="n">completed_units</span> <span class="o">=</span> <span class="mi">40</span> <span class="o">+</span> <span class="mi">25</span> <span class="o">=</span> <span class="mi">65</span>
+<a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>
+<a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="k">return</span> <span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="mi">65</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h4 id="paso-112-calculo-del-porcentaje-de-progreso">Paso 11.2: Cálculo del Porcentaje de Progreso</h4>
+<p><strong>Función:</strong> <code>_progress_percent(total_units, completed_units)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 677</p>
+<p><strong>Código:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_progress_percent</span><span class="p">(</span><span class="n">total_units</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">completed_units</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>    <span class="k">if</span> <span class="n">total_units</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>        <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">False</span>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>    <span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span><span class="n">completed_units</span> <span class="o">/</span> <span class="n">total_units</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.0</span>
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>    <span class="n">is_completed</span> <span class="o">=</span> <span class="n">ratio</span> <span class="o">&gt;=</span> <span class="mf">99.99</span>
+<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>    <span class="n">progress</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">ratio</span><span class="p">))</span>
+<a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>    <span class="n">progress</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">progress</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">progress</span>
+<a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>    <span class="n">progress</span> <span class="o">=</span> <span class="mi">100</span> <span class="k">if</span> <span class="n">progress</span> <span class="o">&gt;</span> <span class="mi">100</span> <span class="k">else</span> <span class="n">progress</span>
+<a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a>    <span class="k">if</span> <span class="n">is_completed</span><span class="p">:</span>
+<a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a>        <span class="n">progress</span> <span class="o">=</span> <span class="mi">100</span>
+<a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a>    <span class="k">return</span> <span class="n">progress</span><span class="p">,</span> <span class="n">is_completed</span>
+</code></pre></div></p>
+<p><strong>Ejemplo:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1"># Con total_units=75, completed_units=65:</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span><span class="mi">65</span> <span class="o">/</span> <span class="mi">75</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.0</span> <span class="o">=</span> <span class="mf">86.666</span><span class="o">...</span>
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="n">is_completed</span> <span class="o">=</span> <span class="mf">86.666</span> <span class="o">&gt;=</span> <span class="mf">99.99</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="n">progress</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mf">86.666</span><span class="p">))</span> <span class="o">=</span> <span class="mi">87</span>
+<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="k">return</span> <span class="p">(</span><span class="mi">87</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>
+<a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="c1"># Con total_units=75, completed_units=75:</span>
+<a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a><span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span><span class="mi">75</span> <span class="o">/</span> <span class="mi">75</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.0</span> <span class="o">=</span> <span class="mf">100.0</span>
+<a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a><span class="n">is_completed</span> <span class="o">=</span> <span class="mf">100.0</span> <span class="o">&gt;=</span> <span class="mf">99.99</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a><span class="n">progress</span> <span class="o">=</span> <span class="mi">100</span>
+<a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a><span class="k">return</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Nota:</strong> Si <code>educational_status = "GRADUATED"</code>, el progreso se fuerza a 100% (línea 866).</p>
+<hr />
+<h4 id="paso-113-determinacion-del-status">Paso 11.3: Determinación del Status</h4>
+<p><strong>Función:</strong> <code>_map_status_for_student_progress(cu, started, is_completed)</code></p>
+<p><strong>Ubicación:</strong> <code>breathecode/admissions/actions.py</code> línea 666</p>
+<p><strong>Código:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_map_status_for_student_progress</span><span class="p">(</span><span class="n">cu</span><span class="p">:</span> <span class="n">CohortUser</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">started</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">is_completed</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>    <span class="n">edu</span> <span class="o">=</span> <span class="p">(</span><span class="n">cu</span><span class="o">.</span><span class="n">educational_status</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>    <span class="k">if</span> <span class="n">edu</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;DROPPED&quot;</span><span class="p">,</span> <span class="s2">&quot;NOT_COMPLETING&quot;</span><span class="p">,</span> <span class="s2">&quot;SUSPENDED&quot;</span><span class="p">):</span>
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>        <span class="k">return</span> <span class="s2">&quot;withdrawn&quot;</span>
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>    <span class="k">if</span> <span class="n">is_completed</span><span class="p">:</span>
+<a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>        <span class="k">return</span> <span class="s2">&quot;completed&quot;</span>
+<a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">started</span><span class="p">:</span>
+<a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a>        <span class="k">return</span> <span class="s2">&quot;not_started&quot;</span>
+<a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>    <span class="k">return</span> <span class="s2">&quot;in_progress&quot;</span>
+</code></pre></div></p>
+<p><strong>Lógica:</strong>
+1. Si <code>educational_status</code> es <code>DROPPED</code>, <code>NOT_COMPLETING</code>, o <code>SUSPENDED</code> → <code>"withdrawn"</code>
+2. Si <code>is_completed = True</code> → <code>"completed"</code>
+3. Si <code>started = False</code> → <code>"not_started"</code>
+4. En cualquier otro caso → <code>"in_progress"</code></p>
+<p><strong>Cómo se determina <code>started</code>:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1"># Línea 849</span>
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="n">started</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">((</span><span class="n">pair</span> <span class="ow">in</span> <span class="n">tasks_any_by_pair</span><span class="p">)</span> <span class="ow">or</span> <span class="n">started_by_pair</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pair</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+</code></pre></div></p>
+<p>Donde <code>tasks_any_by_pair</code> se calcula consultando si el estudiante tiene <strong>cualquier</strong> tarea relacionada con slugs del syllabus (línea 789-794).</p>
+<hr />
+<h4 id="paso-114-construccion-de-valores-finales">Paso 11.4: Construcción de Valores Finales</h4>
+<p>Para cada <code>CohortUser</code>, se construyen los valores finales:</p>
+<p><strong>1. course_name:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="n">course_name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">cohort</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">cohort</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="c1"># Si es macro cohort, se añade &quot;(Macro cohort)&quot;</span>
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a><span class="k">if</span> <span class="n">is_macro</span><span class="p">:</span>
+<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>    <span class="n">course_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">course_name</span><span class="si">}</span><span class="s2"> (Macro cohort)&quot;</span>
+</code></pre></div></p>
+<p><strong>2. student_full_name:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="n">full_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">first_name</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">last_name</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</code></pre></div></p>
+<p><strong>3. student_email:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="n">email</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="s2">&quot;email&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">user</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+</code></pre></div></p>
+<p><strong>4. enrollment_date:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="n">enrollment_date</span> <span class="o">=</span> <span class="n">cu</span><span class="o">.</span><span class="n">created_at</span>  <span class="c1"># Fecha de creación del CohortUser</span>
+</code></pre></div></p>
+<p><strong>5. student_start_date:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="n">student_start_date</span> <span class="o">=</span> <span class="n">started_at_by_pair</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span>  <span class="c1"># Calculado en Fase 6</span>
+</code></pre></div></p>
+<p><strong>6. status:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="n">status</span> <span class="o">=</span> <span class="n">_map_status_for_student_progress</span><span class="p">(</span><span class="n">cu</span><span class="p">,</span> <span class="n">started</span><span class="o">=</span><span class="n">started</span><span class="p">,</span> <span class="n">is_completed</span><span class="o">=</span><span class="n">is_completed</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>7. progress_percentage:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="n">progress</span><span class="p">,</span> <span class="n">is_completed</span> <span class="o">=</span> <span class="n">_progress_percent</span><span class="p">(</span><span class="n">total_units</span><span class="p">,</span> <span class="n">completed_units</span><span class="p">)</span>
+<a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="c1"># Si GRADUATED, se fuerza a 100</span>
+<a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a><span class="k">if</span> <span class="n">edu</span> <span class="o">==</span> <span class="s2">&quot;GRADUATED&quot;</span><span class="p">:</span>
+<a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a>    <span class="n">progress</span> <span class="o">=</span> <span class="mi">100</span>
+</code></pre></div></p>
+<p><strong>8. completion_date:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="c1"># Inicialmente None</span>
+<a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="n">completion_date</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>
+<a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="c1"># Se calcula después si progress &gt;= 100 (línea 922-937)</span>
+<a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;progress&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">100</span><span class="p">:</span>
+<a id="__codelineno-39-6" name="__codelineno-39-6" href="#__codelineno-39-6"></a>    <span class="n">completion_date</span> <span class="o">=</span> <span class="n">completion_date_by_pair</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">user_id</span><span class="p">,</span> <span class="n">cohort_id</span><span class="p">))</span>
+</code></pre></div></p>
+<p><strong>9. certificate_url:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="n">cert</span> <span class="o">=</span> <span class="n">cert_by_pair</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span>
+<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a><span class="n">certificate_url</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a><span class="k">if</span> <span class="n">cert</span> <span class="ow">and</span> <span class="n">cert</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token&quot;</span><span class="p">):</span>
+<a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a>    <span class="n">certificate_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://certificate.4geeks.com/</span><span class="si">{</span><span class="n">cert</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;token&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+</code></pre></div></p>
+<p><strong>10. comments:</strong>
+Se construye concatenando varios mensajes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="n">comments</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>
+<a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a><span class="c1"># Mensaje 1: Sin syllabus</span>
+<a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a><span class="k">if</span> <span class="n">total_units</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">status_value</span> <span class="o">!=</span> <span class="s2">&quot;completed&quot;</span><span class="p">:</span>
+<a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a>    <span class="n">comments</span> <span class="o">+=</span> <span class="s2">&quot;No syllabus lessons found and no learnpack telemetry; progress estimated as 0&quot;</span>
+<a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a>
+<a id="__codelineno-41-7" name="__codelineno-41-7" href="#__codelineno-41-7"></a><span class="c1"># Mensaje 2: Sin proyectos obligatorios</span>
+<a id="__codelineno-41-8" name="__codelineno-41-8" href="#__codelineno-41-8"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">is_certificate_eligible</span><span class="p">:</span>
+<a id="__codelineno-41-9" name="__codelineno-41-9" href="#__codelineno-41-9"></a>    <span class="n">comments</span> <span class="o">+=</span> <span class="s2">&quot; | This cohort does not include mandatory projects; certificates are not issued for it&quot;</span>
+<a id="__codelineno-41-10" name="__codelineno-41-10" href="#__codelineno-41-10"></a>
+<a id="__codelineno-41-11" name="__codelineno-41-11" href="#__codelineno-41-11"></a><span class="c1"># Mensaje 3: Proyectos obligatorios pendientes</span>
+<a id="__codelineno-41-12" name="__codelineno-41-12" href="#__codelineno-41-12"></a><span class="k">if</span> <span class="n">progress</span> <span class="o">&gt;=</span> <span class="mi">100</span> <span class="ow">and</span> <span class="n">cert</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-41-13" name="__codelineno-41-13" href="#__codelineno-41-13"></a>    <span class="n">required</span> <span class="o">=</span> <span class="n">mandatory_project_slugs_by_cohort</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cohort_id</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+<a id="__codelineno-41-14" name="__codelineno-41-14" href="#__codelineno-41-14"></a>    <span class="n">approved</span> <span class="o">=</span> <span class="n">approved_mandatory_project_slugs_by_pair</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pair</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+<a id="__codelineno-41-15" name="__codelineno-41-15" href="#__codelineno-41-15"></a>    <span class="n">pending_mandatory</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">required</span> <span class="o">-</span> <span class="n">approved</span><span class="p">)</span>
+<a id="__codelineno-41-16" name="__codelineno-41-16" href="#__codelineno-41-16"></a>
+<a id="__codelineno-41-17" name="__codelineno-41-17" href="#__codelineno-41-17"></a>    <span class="k">if</span> <span class="n">pending_mandatory</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-41-18" name="__codelineno-41-18" href="#__codelineno-41-18"></a>        <span class="n">comments</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; | Progress is 100% for lessons/exercises, but </span><span class="si">{</span><span class="n">pending_mandatory</span><span class="si">}</span><span class="s2"> mandatory project(s) are still pending; certificate not generated yet&quot;</span>
+</code></pre></div>
+<hr />
+<h2 id="caso-especial-macro-cohorts">🎯 Caso Especial: Macro Cohorts</h2>
+<p>Si el cohort es un "macro cohort" (tiene micro_cohorts), el cálculo es diferente:</p>
+<p><strong>Detección:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="n">is_macro</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">cohort</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cohort</span><span class="p">,</span> <span class="s2">&quot;micro_cohorts&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cohort</span><span class="o">.</span><span class="n">micro_cohorts</span><span class="o">.</span><span class="n">exists</span><span class="p">())</span>
+</code></pre></div></p>
+<p><strong>Cálculo:</strong>
+1. Se obtienen los micro_cohorts en los que el estudiante está inscrito
+2. Se suman los <code>total_units</code> y <code>completed_units</code> de todos los micro_cohorts
+3. Se calcula el progreso sobre el total sumado
+4. La fecha de inicio es la más temprana de todos los micro_cohorts
+5. La fecha de finalización es la más reciente de todos los micro_cohorts</p>
+<p><strong>Código:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="k">if</span> <span class="n">is_macro</span><span class="p">:</span>
+<a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a>    <span class="n">user_cohorts</span> <span class="o">=</span> <span class="n">cohort_ids_by_user</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cu</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+<a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a>    <span class="n">micro_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cohort</span><span class="o">.</span><span class="n">micro_cohorts</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">user_cohorts</span><span class="p">]</span>
+<a id="__codelineno-43-4" name="__codelineno-43-4" href="#__codelineno-43-4"></a>
+<a id="__codelineno-43-5" name="__codelineno-43-5" href="#__codelineno-43-5"></a>    <span class="n">total_units</span> <span class="o">=</span> <span class="mi">0</span>
+<a id="__codelineno-43-6" name="__codelineno-43-6" href="#__codelineno-43-6"></a>    <span class="n">completed_units</span> <span class="o">=</span> <span class="mi">0</span>
+<a id="__codelineno-43-7" name="__codelineno-43-7" href="#__codelineno-43-7"></a>
+<a id="__codelineno-43-8" name="__codelineno-43-8" href="#__codelineno-43-8"></a>    <span class="k">for</span> <span class="n">micro_id</span> <span class="ow">in</span> <span class="n">micro_ids</span><span class="p">:</span>
+<a id="__codelineno-43-9" name="__codelineno-43-9" href="#__codelineno-43-9"></a>        <span class="n">micro_total</span><span class="p">,</span> <span class="n">micro_completed</span> <span class="o">=</span> <span class="n">_get_units_for</span><span class="p">(</span><span class="n">cu</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span> <span class="n">micro_id</span><span class="p">)</span>
+<a id="__codelineno-43-10" name="__codelineno-43-10" href="#__codelineno-43-10"></a>        <span class="n">total_units</span> <span class="o">+=</span> <span class="n">micro_total</span>
+<a id="__codelineno-43-11" name="__codelineno-43-11" href="#__codelineno-43-11"></a>        <span class="n">completed_units</span> <span class="o">+=</span> <span class="n">micro_completed</span>
+<a id="__codelineno-43-12" name="__codelineno-43-12" href="#__codelineno-43-12"></a>
+<a id="__codelineno-43-13" name="__codelineno-43-13" href="#__codelineno-43-13"></a>    <span class="n">progress</span><span class="p">,</span> <span class="n">is_completed</span> <span class="o">=</span> <span class="n">_progress_percent</span><span class="p">(</span><span class="n">total_units</span><span class="p">,</span> <span class="n">completed_units</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h2 id="resumen-del-flujo-completo-detallado">📊 Resumen del Flujo Completo (Detallado)</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>1. Obtener enrollments del cohort
+<a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a>   ↓
+<a id="__codelineno-44-3" name="__codelineno-44-3" href="#__codelineno-44-3"></a>2. Extraer IDs únicos (user_ids, cohort_ids)
+<a id="__codelineno-44-4" name="__codelineno-44-4" href="#__codelineno-44-4"></a>   ↓
+<a id="__codelineno-44-5" name="__codelineno-44-5" href="#__codelineno-44-5"></a>3. Extraer slugs del syllabus ACTUAL (lecciones, ejercicios, proyectos)
+<a id="__codelineno-44-6" name="__codelineno-44-6" href="#__codelineno-44-6"></a>   ⚠️ Solo cuenta tareas que están en el syllabus actual
+<a id="__codelineno-44-7" name="__codelineno-44-7" href="#__codelineno-44-7"></a>   ↓
+<a id="__codelineno-44-8" name="__codelineno-44-8" href="#__codelineno-44-8"></a>4. Parsear history_log (tareas entregadas, flag de inicio)
+<a id="__codelineno-44-9" name="__codelineno-44-9" href="#__codelineno-44-9"></a>   ↓
+<a id="__codelineno-44-10" name="__codelineno-44-10" href="#__codelineno-44-10"></a>5. Consultar Task para detalles de tareas entregadas
+<a id="__codelineno-44-11" name="__codelineno-44-11" href="#__codelineno-44-11"></a>   ↓
+<a id="__codelineno-44-12" name="__codelineno-44-12" href="#__codelineno-44-12"></a>6. Mapear task_ids a slugs de ejercicios (filtrar por syllabus actual)
+<a id="__codelineno-44-13" name="__codelineno-44-13" href="#__codelineno-44-13"></a>   ↓
+<a id="__codelineno-44-14" name="__codelineno-44-14" href="#__codelineno-44-14"></a>7. Consultar Task para lecciones completadas (filtrar por syllabus actual)
+<a id="__codelineno-44-15" name="__codelineno-44-15" href="#__codelineno-44-15"></a>   ↓
+<a id="__codelineno-44-16" name="__codelineno-44-16" href="#__codelineno-44-16"></a>8. Consultar Task para fecha de inicio
+<a id="__codelineno-44-17" name="__codelineno-44-17" href="#__codelineno-44-17"></a>   ↓
+<a id="__codelineno-44-18" name="__codelineno-44-18" href="#__codelineno-44-18"></a>9. Consultar Task para ejercicios completados (telemetría + status + history_log)
+<a id="__codelineno-44-19" name="__codelineno-44-19" href="#__codelineno-44-19"></a>   ↓
+<a id="__codelineno-44-20" name="__codelineno-44-20" href="#__codelineno-44-20"></a>10. Consultar UserSpecialty para certificados
+<a id="__codelineno-44-21" name="__codelineno-44-21" href="#__codelineno-44-21"></a>   ↓
+<a id="__codelineno-44-22" name="__codelineno-44-22" href="#__codelineno-44-22"></a>11. Consultar Task para proyectos obligatorios aprobados
+<a id="__codelineno-44-23" name="__codelineno-44-23" href="#__codelineno-44-23"></a>   ↓
+<a id="__codelineno-44-24" name="__codelineno-44-24" href="#__codelineno-44-24"></a>12. Consultar Task para fecha de finalización
+<a id="__codelineno-44-25" name="__codelineno-44-25" href="#__codelineno-44-25"></a>   ↓
+<a id="__codelineno-44-26" name="__codelineno-44-26" href="#__codelineno-44-26"></a>13. Para cada estudiante:
+<a id="__codelineno-44-27" name="__codelineno-44-27" href="#__codelineno-44-27"></a>    - Calcular total_units (del syllabus actual)
+<a id="__codelineno-44-28" name="__codelineno-44-28" href="#__codelineno-44-28"></a>    - Calcular completed_units (solo las que están en syllabus actual)
+<a id="__codelineno-44-29" name="__codelineno-44-29" href="#__codelineno-44-29"></a>    - Calcular progress_percentage = (completed / total) * 100
+<a id="__codelineno-44-30" name="__codelineno-44-30" href="#__codelineno-44-30"></a>    - Determinar status
+<a id="__codelineno-44-31" name="__codelineno-44-31" href="#__codelineno-44-31"></a>    - Construir fila del CSV
+<a id="__codelineno-44-32" name="__codelineno-44-32" href="#__codelineno-44-32"></a>   ↓
+<a id="__codelineno-44-33" name="__codelineno-44-33" href="#__codelineno-44-33"></a>14. Generar CSV y retornar
+</code></pre></div>
+<hr />
+<h2 id="queries-sql-totales">🔍 Queries SQL Totales</h2>
+<p>En total, el proceso ejecuta aproximadamente <strong>7-8 queries SQL</strong>:</p>
+<ol>
+<li>Query de enrollments (con select_related)</li>
+<li>Query de tasks entregadas (del history_log)</li>
+<li>Query de lecciones completadas</li>
+<li>Query de fecha de inicio</li>
+<li>Query de ejercicios completados (telemetría)</li>
+<li>Query de ejercicios completados (status DONE)</li>
+<li>Query de certificados</li>
+<li>Query de proyectos obligatorios aprobados</li>
+<li>Query de fecha de finalización</li>
+<li>Query de tasks_any_by_pair (para determinar si empezó)</li>
+</ol>
+<p><strong>Optimización:</strong> Todas las queries usan <code>IN</code> con listas de IDs, por lo que son eficientes incluso con muchos estudiantes.</p>
+<hr />
+<h2 id="notas-importantes">📝 Notas Importantes</h2>
+<ol>
+<li><strong>Intersección de Slugs (CRÍTICO):</strong> Solo se cuentan como completadas las unidades cuyo <code>associated_slug</code> está en el <strong>syllabus actual</strong> del cohort. </li>
+<li>✅ Si una tarea está completada Y está en el syllabus actual → se cuenta</li>
+<li>❌ Si una tarea está completada pero NO está en el syllabus actual → NO se cuenta</li>
+<li>
+<p>Esto evita contar tareas de otros cohorts o tareas que fueron removidas del syllabus</p>
+</li>
+<li>
+<p><strong>Prioridad de Fuentes:</strong> Para ejercicios completados, se usa telemetría primero, luego task_status, y finalmente history_log como fallback.</p>
+</li>
+<li>
+<p><strong>Macro Cohorts:</strong> El cálculo es más complejo porque suma unidades de múltiples micro_cohorts.</p>
+</li>
+<li>
+<p><strong>Progreso 100%:</strong> Se considera completado si <code>ratio &gt;= 99.99%</code> (permite pequeños errores de redondeo).</p>
+</li>
+<li>
+<p><strong>GRADUATED:</strong> Si <code>educational_status = "GRADUATED"</code>, el progreso se fuerza a 100% independientemente del cálculo.</p>
+</li>
+<li>
+<p><strong>Certificados:</strong> Solo se generan si el cohort tiene proyectos obligatorios y el estudiante los ha aprobado todos.</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+    
+  </body>
+</html>
