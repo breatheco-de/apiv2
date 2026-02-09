@@ -113,6 +113,7 @@ from breathecode.payments.serializers import (
 from breathecode.payments.services.coinbase import CoinbaseCommerce
 from breathecode.payments.services.stripe import Stripe
 from breathecode.payments.signals import reimburse_service_units
+from breathecode.payments.utils import parse_date_range_from_request
 from breathecode.utils import APIViewExtensions, getLogger, validate_conversion_info
 from breathecode.utils.decorators.capable_of import capable_of
 from breathecode.utils.decorators.consume import discount_consumption_sessions
@@ -2192,12 +2193,15 @@ class AcademySubscriptionView(APIView):
     @capable_of("read_subscription")
     def get(self, request, subscription_id=None, academy_id=None):
         handler = self.extensions(request)
-
-        cache = handler.cache.get()
-        if cache is not None:
-            return cache
-
         lang = get_user_language(request)
+
+        # Bypass cache when date range params are present (ad-hoc range queries)
+        has_date_range = "date_start" in request.GET or "date_end" in request.GET
+        if not has_date_range:
+            cache = handler.cache.get()
+            if cache is not None:
+                return cache
+
         now = timezone.now()
 
         if subscription_id:
@@ -2262,6 +2266,12 @@ class AcademySubscriptionView(APIView):
         if user_id := request.GET.get("users"):
             items = items.filter(user__id=int(user_id))
 
+        date_start, date_end = parse_date_range_from_request(request, lang)
+        if date_start is not None:
+            items = items.filter(paid_at__gte=date_start)
+        if date_end is not None:
+            items = items.filter(paid_at__lte=date_end)
+
         # Optimize query to include billing team for seat information
         items = items.select_related("subscriptionbillingteam").prefetch_related("subscriptionbillingteam__seats")
 
@@ -2315,14 +2325,16 @@ class AcademyPlanFinancingView(APIView):
 
     def get(self, request, financing_id=None, academy_id=None):
         handler = self.extensions(request)
-
-        # Check cache first to avoid expensive database queries
-        cache = handler.cache.get()
-        if cache is not None:
-            logger.info(f"AcademyPlanFinancingView: Returning cached data for user {request.user.id}")
-            return cache
-
         lang = get_user_language(request)
+
+        # Bypass cache when date range params are present (ad-hoc range queries)
+        has_date_range = "date_start" in request.GET or "date_end" in request.GET
+        if not has_date_range:
+            cache = handler.cache.get()
+            if cache is not None:
+                logger.info(f"AcademyPlanFinancingView: Returning cached data for user {request.user.id}")
+                return cache
+
         now = timezone.now()
 
         if financing_id:
@@ -2365,6 +2377,12 @@ class AcademyPlanFinancingView(APIView):
                 items = items.filter(plans__id__in=[int(v) for v in values])
             else:
                 items = items.filter(plans__slug__in=values)
+
+        date_start, date_end = parse_date_range_from_request(request, lang)
+        if date_start is not None:
+            items = items.filter(created_at__gte=date_start)
+        if date_end is not None:
+            items = items.filter(created_at__lte=date_end)
 
         # Apply pagination and sorting
         items = handler.queryset(items)
@@ -2600,6 +2618,12 @@ class AcademyInvoiceView(APIView):
 
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
+
+        date_start, date_end = parse_date_range_from_request(request, lang)
+        if date_start is not None:
+            items = items.filter(paid_at__gte=date_start)
+        if date_end is not None:
+            items = items.filter(paid_at__lte=date_end)
 
         items = handler.queryset(items)
         serializer = GetInvoiceSerializer(items, many=True)

@@ -171,8 +171,8 @@ urlpatterns = [
     path("academy/subscription/<int:subscription_id>", AcademySubscriptionView.as_view()),
     path("me/invoice", MeInvoiceView.as_view()),
     path("me/invoice/<int:invoice_id>", MeInvoiceView.as_view()),
-    path("academy/invoice", AcademyInvoiceView.as_view()),
-    path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view()),
+    path("academy/invoice", AcademyInvoiceView.as_view(), name="academy_invoice"),
+    path("academy/invoice/<int:invoice_id>", AcademyInvoiceView.as_view(), name="academy_invoice_id"),
     path(
         "academy/invoice/<int:invoice_id>/refund", AcademyInvoiceRefundView.as_view(), name="academy_invoice_id_refund"
     ),

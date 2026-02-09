@@ -1,11 +1,14 @@
 import re
+from datetime import datetime
 from typing import Any, Optional, Type, TypedDict, Unpack, overload
 
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
+from django.utils import dateparse, timezone
 
 from breathecode.payments.models import CohortSet, EventTypeSet, MentorshipServiceSet, Service, ServiceItem
 
-__all__ = ["consumable", "service_item", "ConsumableType", "reset_cache"]
+__all__ = ["consumable", "service_item", "ConsumableType", "reset_cache", "parse_date_range_from_request"]
 
 
 class GenericType(TypedDict):
@@ -173,6 +176,62 @@ def reset_cache():
     EXISTS = {}
     SERVICES = {}
     SERVICE_ITEMS = {}
+
+
+def parse_date_range_from_request(request, lang: str, param_start: str = "date_start", param_end: str = "date_end"):
+    """
+    Parse optional date_start and date_end from request.GET (ISO 8601 or date-only).
+    Returns (start_dt, end_dt) as timezone-aware datetimes or (None, None).
+    Raises ValidationException with translation if a value is present but invalid.
+    """
+    tz = timezone.get_current_timezone()
+
+    def parse_dt(value: str):
+        if not value or not value.strip():
+            return None
+        value = value.strip()
+        dt = dateparse.parse_datetime(value)
+        if dt is not None:
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt, tz)
+            return dt
+        d = dateparse.parse_date(value)
+        if d is not None:
+            return timezone.make_aware(datetime.combine(d, datetime.min.time()), tz)
+        return None
+
+    start_raw = request.GET.get(param_start)
+    end_raw = request.GET.get(param_end)
+    start_dt = None
+    end_dt = None
+
+    if start_raw:
+        start_dt = parse_dt(start_raw)
+        if start_dt is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"{param_start} must be a valid datetime (ISO 8601 or date)",
+                    es=f"{param_start} debe ser un datetime válido (ISO 8601 o fecha)",
+                    slug="invalid-datetime",
+                ),
+                code=400,
+            )
+
+    if end_raw:
+        end_dt = parse_dt(end_raw)
+        if end_dt is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"{param_end} must be a valid datetime (ISO 8601 or date)",
+                    es=f"{param_end} debe ser un datetime válido (ISO 8601 o fecha)",
+                    slug="invalid-datetime",
+                ),
+                code=400,
+            )
+
+    return start_dt, end_dt
 
 
 def consumable(
