@@ -2604,7 +2604,7 @@ class AcademyInvoiceView(APIView):
         lang = get_user_language(request)
 
         if invoice_id:
-            item = Invoice.objects.filter(id=invoice_id, user=request.user, academy__id=academy_id).first()
+            item = Invoice.objects.filter(id=invoice_id, academy__id=academy_id).first()
 
             if not item:
                 raise ValidationException(
@@ -2614,7 +2614,7 @@ class AcademyInvoiceView(APIView):
             serializer = GetInvoiceSerializer(item, many=False)
             return handler.response(serializer.data)
 
-        items = Invoice.objects.filter(user=request.user, academy__id=academy_id)
+        items = Invoice.objects.filter(academy__id=academy_id)
 
         if status := request.GET.get("status"):
             items = items.filter(status__in=status.split(","))
