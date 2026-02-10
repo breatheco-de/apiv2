@@ -46,7 +46,7 @@ from rest_framework.schemas.openapi import AutoSchema
 import breathecode.activity.tasks as tasks_activity
 import breathecode.authenticate.tasks as auth_tasks
 import breathecode.notify.actions as notify_actions
-from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus
+from breathecode.admissions.models import Academy, Cohort, CohortUser, Syllabus, UP_TO_DATE
 from breathecode.authenticate.actions import get_user_settings, replace_user_email, sync_with_rigobot
 from breathecode.marketing.models import Course
 from breathecode.mentorship.models import MentorProfile
@@ -2793,6 +2793,21 @@ def pick_password(request, token):
                 token_instance.delete()
 
             UserInvite.objects.filter(email=user.email, is_email_validated=False).update(is_email_validated=True)
+
+            # Add user to cohort when invite has a cohort (e.g. subscribe-with-cohort flow)
+            if invite is not None and getattr(invite, "cohort", None) is not None:
+                role = "STUDENT"
+                if invite.role is not None and invite.role.slug != "student":
+                    role = invite.role.slug.upper()
+                cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+                if cu is None:
+                    CohortUser(
+                        user=user,
+                        cohort=invite.cohort,
+                        role=role,
+                        educational_status="ACTIVE",
+                        finantial_status=UP_TO_DATE,
+                    ).save()
 
             callback = request.POST.get("callback", None)
             if callback is not None and callback != "":
