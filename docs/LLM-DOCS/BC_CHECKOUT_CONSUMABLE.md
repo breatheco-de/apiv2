@@ -188,6 +188,35 @@ console.log('New balance:', balanceData);
 
 ---
 
+## Academy staff: grant consumables to a user
+
+Staff can grant consumables (e.g. mentorship or event access) to a user without the user paying by card. This uses the same proof-of-payment and externally-managed invoice pattern as staff-assigned plan financing.
+
+**Endpoint:** `POST /v1/payments/academy/user/consumable`  
+**Capability:** `crud_consumable`  
+**Headers:** `Academy: {academy_id}`, plus auth.
+
+**Restriction:** The payment method must **not** be a credit card or crypto. Use a method such as bank transfer or manual; proof of payment (file or reference) is required.
+
+**Request body:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `user` | Yes | User id or email |
+| `service` | Yes | Service id or slug (only `MENTORSHIP_SERVICE_SET` or `EVENT_TYPE_SET`) |
+| `how_many` | Yes | Positive integer |
+| `payment_method` | Yes | PaymentMethod id (must have `is_credit_card=False`, `is_crypto=False`) |
+| `mentorship_service_set` | If service is MENTORSHIP_SERVICE_SET | Set id for this academy |
+| `event_type_set` | If service is EVENT_TYPE_SET | Set id for this academy |
+| `amount` | No | Amount for the invoice (default 0) |
+| `reference` | One of file/reference | Proof of payment reference |
+| `file` | One of file/reference | Proof of payment file (upload id) |
+| `provided_payment_details` | No | Optional payment details text |
+
+**Response:** `201 Created` with the created invoice (serialized). The created consumable is linked to this invoice via `standalone_invoice`.
+
+---
+
 ## Key Points
 
 ✅ **Single endpoint**: `/v1/payments/consumable/checkout` handles the entire purchase  

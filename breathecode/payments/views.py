@@ -4429,6 +4429,7 @@ class ConsumableCheckoutView(APIView):
                     how_many=total_items,
                     mentorship_service_set=mentorship_service_set,
                     event_type_set=event_type_set,
+                    standalone_invoice=invoice,
                 )
 
                 consumable.save()
@@ -6035,6 +6036,25 @@ class AcademyPlanSubscriptionView(APIView):
         data["coupons"] = s2.data
 
         return Response(data)
+
+
+class AcademyGrantConsumableView(APIView):
+    """
+    Academy-only POST to grant consumables to a user.
+    Requires crud_consumable, proof of payment (file or reference), and a non-card/non-crypto payment method.
+    """
+
+    @capable_of("crud_consumable")
+    def post(self, request, academy_id=None):
+        lang = get_user_language(request)
+        proof = actions.validate_and_create_proof_of_payment(request, request.user, academy_id, lang)
+        try:
+            invoice = actions.grant_consumables_for_user(request, proof, academy_id, lang)
+        except Exception as e:
+            proof.delete()
+            raise e
+        serializer = GetInvoiceSerializer(invoice, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CurrencyView(APIView):

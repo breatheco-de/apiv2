@@ -2941,6 +2941,16 @@ class Consumable(AbstractServiceItem):
         help_text="Mentorship service set which the consumable belongs to",
     )
 
+    standalone_invoice = models.ForeignKey(
+        "Invoice",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name="standalone_consumables",
+        help_text="Invoice that generated this consumable when it was bought or granted standalone (e.g. user consumable checkout or staff grant). Null for consumables created from subscription or plan renewal.",
+    )
+
     valid_until = models.DateTimeField(
         null=True,
         blank=True,

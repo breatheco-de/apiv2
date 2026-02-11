@@ -1463,6 +1463,159 @@ def validate_and_create_proof_of_payment(
     return x
 
 
+def resolve_user_from_data(data: dict, lang: str) -> User:
+    """Resolve user by id or email from data; raise ValidationException if missing or not found."""
+    user_pk = data.get("user")
+    if user_pk is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="user must be provided",
+                es="user debe ser proporcionado",
+                slug="user-must-be-provided",
+            ),
+            code=400,
+        )
+    args = []
+    kwargs = {}
+    if isinstance(user_pk, int):
+        kwargs["id"] = user_pk
+    else:
+        args.append(Q(email=user_pk) | Q(username=user_pk))
+    user = User.objects.filter(*args, **kwargs).first()
+    if user is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en=f"User not found: {user_pk}",
+                es=f"Usuario no encontrado: {user_pk}",
+                slug="user-not-found",
+            ),
+            code=404,
+        )
+    return user
+
+
+def resolve_payment_method_for_staff(
+    data: dict,
+    academy_id: int,
+    lang: str,
+    allow_card_and_crypto: bool = False,
+) -> PaymentMethod:
+    """Resolve payment_method from data; must exist and belong to academy or global. When allow_card_and_crypto=False, raise if card or crypto."""
+    payment_method = data.get("payment_method")
+    if not payment_method or (
+        payment_method := PaymentMethod.objects.filter(
+            Q(academy__id=academy_id) | Q(academy__isnull=True), id=payment_method
+        ).first()
+    ) is None:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method not provided",
+                es="Método de pago no proporcionado",
+                slug="payment-method-not-provided",
+            ),
+            code=400,
+        )
+    if not allow_card_and_crypto and (payment_method.is_credit_card or payment_method.is_crypto):
+        raise ValidationException(
+            translation(
+                lang,
+                en="Payment method must not be credit card or crypto for this action",
+                es="El método de pago no debe ser tarjeta de crédito ni cripto para esta acción",
+                slug="payment-method-must-not-be-card-or-crypto",
+            ),
+            code=400,
+        )
+    return payment_method
+
+
+def resolve_currency_for_staff_payment(
+    payment_method: PaymentMethod,
+    academy: Academy,
+    lang: str,
+) -> Currency:
+    """Return payment_method.currency or academy.main_currency; raise if neither."""
+    currency = payment_method.currency or academy.main_currency
+    if not currency:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Currency cannot be determined. Please ensure the payment method has a currency assigned or set a main currency for the academy.",
+                es="No se puede determinar la moneda. Por favor, asegúrate de que el método de pago tenga una moneda asignada o establece una moneda principal para la academia.",
+                slug="currency-not-found",
+            ),
+            code=400,
+        )
+    return currency
+
+
+def create_externally_managed_bag_and_invoice(
+    user: User,
+    academy: Academy,
+    currency: Currency,
+    amount: float,
+    payment_method: PaymentMethod,
+    proof_of_payment: ProofOfPayment,
+    lang: str,
+    bag_type: str = Bag.Type.BAG,
+    plans: Optional[QuerySet] = None,
+    service_items: Optional[list] = None,
+    how_many_installments: int = 1,
+    chosen_period: Optional[str] = None,
+    amount_breakdown: Optional[dict] = None,
+    **bag_extra: Any,
+) -> Tuple[Bag, Invoice]:
+    """Create Bag and Invoice (externally_managed, proof, payment_method); attach plans or service_items. Return (bag, invoice)."""
+    utc_now = timezone.now()
+    bag = Bag()
+    bag.type = bag_type
+    bag.user = user
+    bag.currency = currency
+    bag.status = Bag.Status.PAID
+    bag.academy = academy
+    bag.is_recurrent = bool(plans)
+    bag.how_many_installments = how_many_installments
+    if chosen_period is not None:
+        bag.chosen_period = chosen_period
+    for key, value in bag_extra.items():
+        if hasattr(bag, key):
+            setattr(bag, key, value)
+    bag.save()
+    if plans is not None:
+        bag.plans.set(plans)
+    if service_items is not None:
+        bag.service_items.set(service_items)
+    if amount_breakdown is None and (bag.plans.exists() or bag.service_items.exists() or bag.plan_addons.exists()):
+        try:
+            amount_breakdown = calculate_invoice_breakdown(
+                bag=bag,
+                invoice=None,
+                lang=lang,
+                chosen_period=bag.chosen_period,
+                how_many_installments=bag.how_many_installments,
+            )
+        except Exception:
+            amount_breakdown = None
+    invoice = Invoice(
+        amount=amount,
+        paid_at=utc_now,
+        user=user,
+        bag=bag,
+        academy=academy,
+        status=Invoice.Status.FULFILLED,
+        currency=currency,
+        externally_managed=True,
+        proof=proof_of_payment,
+        payment_method=payment_method,
+        amount_breakdown=amount_breakdown,
+    )
+    invoice.amount_breakdown = calculate_invoice_breakdown(bag, invoice, lang)
+    invoice.save()
+    return bag, invoice
+
+
 def validate_and_create_subscriptions(
     request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
     staff_user: User,
@@ -1567,54 +1720,14 @@ def validate_and_create_subscriptions(
             code=404,
         )
 
-    user_pk = data.get("user", None)
-    if user_pk is None:
-        raise ValidationException(
-            translation(
-                lang,
-                en="user must be provided",
-                es="user debe ser proporcionado",
-                slug="user-must-be-provided",
-            ),
-            code=400,
-        )
-
-    payment_method = data.get("payment_method")
-    if not payment_method or (payment_method := PaymentMethod.objects.filter(id=payment_method).first()) is None:
-        raise ValidationException(
-            translation(
-                lang,
-                en="Payment method not provided",
-                es="Método de pago no proporcionado",
-                slug="payment-method-not-provided",
-            ),
-            code=400,
-        )
-
-    args = []
-    kwargs = {}
-    if isinstance(user_pk, int):
-        kwargs["id"] = user_pk
-    else:
-        args.append(Q(email=user_pk) | Q(username=user_pk))
-
-    if (user := User.objects.filter(*args, **kwargs).first()) is None:
-        ValidationException(
-            translation(
-                lang,
-                en=f"User not found: {user_pk}",
-                es=f"Usuario no encontrado: {user_pk}",
-                slug="user-not-found",
-            ),
-            code=404,
-        )
+    user = resolve_user_from_data(data, lang)
 
     if PlanFinancing.objects.filter(plans=plan, user=user, valid_until__gt=timezone.now()).exists():
         raise ValidationException(
             translation(
                 lang,
-                en=f"User already has a valid subscription for this plan: {user_pk}",
-                es=f"Usuario ya tiene una suscripción válida para este plan: {user_pk}",
+                en=f"User already has a valid subscription for this plan: {data.get('user')}",
+                es=f"Usuario ya tiene una suscripción válida para este plan: {data.get('user')}",
                 slug="user-already-has-valid-subscription",
             ),
             code=409,
@@ -1623,67 +1736,24 @@ def validate_and_create_subscriptions(
     # Get available coupons for this user (excluding their own coupons if they are a seller)
     coupons = get_available_coupons(plan, data.get("coupons", []), user=user)
 
-    # Determine currency: use payment_method's currency first, fall back to academy's main_currency
-    currency = payment_method.currency or academy.main_currency
-    if not currency:
-        raise ValidationException(
-            translation(
-                lang,
-                en="Currency cannot be determined. Please ensure the payment method has a currency assigned or set a main currency for the academy.",
-                es="No se puede determinar la moneda. Por favor, asegúrate de que el método de pago tenga una moneda asignada o establece una moneda principal para la academia.",
-                slug="currency-not-found",
-            ),
-            code=400,
-        )
+    payment_method = resolve_payment_method_for_staff(data, academy_id, lang, allow_card_and_crypto=True)
+    currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
 
-    bag = Bag()
-    bag.type = Bag.Type.BAG
-    bag.user = user
-    bag.currency = currency
-    bag.status = Bag.Status.PAID
-    bag.academy = academy
-    bag.is_recurrent = True
-
-    bag.how_many_installments = how_many_installments
     original_price = option.monthly_price
     amount = get_discounted_price(original_price, coupons)
 
-    bag.save()
-    bag.plans.set(plans)
-
-    utc_now = timezone.now()
-
-    # Calculate breakdown for externally managed invoices
-    amount_breakdown = None
-    if bag.plans.exists() or bag.service_items.exists() or bag.plan_addons.exists():
-        try:
-            amount_breakdown = calculate_invoice_breakdown(
-                bag=bag,
-                invoice=None,
-                lang=lang,
-                chosen_period=bag.chosen_period,
-                how_many_installments=bag.how_many_installments,
-            )
-        except Exception:
-            # If breakdown calculation fails, continue without it
-            pass
-
-    invoice = Invoice(
-        amount=amount,
-        paid_at=utc_now,
+    bag, invoice = create_externally_managed_bag_and_invoice(
         user=user,
-        bag=bag,
-        academy=bag.academy,
-        status="FULFILLED",
+        academy=academy,
         currency=currency,
-        externally_managed=True,
-        proof=proof_of_payment,
+        amount=amount,
         payment_method=payment_method,
-        amount_breakdown=amount_breakdown,
+        proof_of_payment=proof_of_payment,
+        lang=lang,
+        bag_type=Bag.Type.BAG,
+        plans=plans,
+        how_many_installments=how_many_installments,
     )
-
-    invoice.amount_breakdown = calculate_invoice_breakdown(bag, invoice, lang)
-    invoice.save()
 
     # Create reward coupons for sellers if coupons were used
     if coupons and original_price > 0:
@@ -1692,6 +1762,212 @@ def validate_and_create_subscriptions(
     tasks.build_plan_financing.delay(bag.id, invoice.id, conversion_info=conversion_info, cohorts=cohort)
 
     return invoice, coupons
+
+
+def grant_consumables_for_user(
+    request: dict | WSGIRequest | AsyncRequest | HttpRequest | Request,
+    proof_of_payment: ProofOfPayment,
+    academy_id: int,
+    lang: Optional[str] = None,
+) -> Invoice:
+    """
+    Staff grant consumables to a user (standalone purchase/grant).
+    Requires payment_method (non-card, non-crypto), proof, user, service, how_many.
+    Creates Bag, Invoice (externally_managed), and Consumable(s) with standalone_invoice set.
+    """
+    if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)):
+        data = request.data
+    else:
+        data = request
+
+    if lang is None:
+        if isinstance(request, (WSGIRequest, AsyncRequest, HttpRequest, Request)) and getattr(request, "user", None):
+            lang = get_user_settings(request.user.id).lang
+        else:
+            lang = "en"
+
+    academy = Academy.objects.filter(id=academy_id).first()
+    if not academy:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy not found",
+                es="Academia no encontrada",
+                slug="academy-not-found",
+            ),
+            code=404,
+        )
+
+    service_spec = data.get("service")
+    if not service_spec:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Service is required",
+                es="El servicio es requerido",
+                slug="service-is-required",
+            ),
+            code=400,
+        )
+    if isinstance(service_spec, int):
+        service = Service.objects.filter(id=service_spec).first()
+    else:
+        service = Service.objects.filter(slug=service_spec).first()
+    if not service:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Service not found",
+                es="El servicio no fue encontrado",
+                slug="service-not-found",
+            ),
+            code=404,
+        )
+
+    if service.type not in (Service.Type.MENTORSHIP_SERVICE_SET, Service.Type.EVENT_TYPE_SET):
+        raise ValidationException(
+            translation(
+                lang,
+                en="This service type is not allowed for staff grant. Use MENTORSHIP_SERVICE_SET or EVENT_TYPE_SET.",
+                es="Este tipo de servicio no está permitido para concesión por staff.",
+                slug="service-type-not-allowed-for-grant",
+            ),
+            code=400,
+        )
+
+    how_many = data.get("how_many")
+    if not how_many or (isinstance(how_many, (int, float)) and how_many <= 0):
+        raise ValidationException(
+            translation(
+                lang,
+                en="how_many is required and must be a positive number",
+                es="how_many es requerido y debe ser un número positivo",
+                slug="how-many-required",
+            ),
+            code=400,
+        )
+    how_many = int(how_many)
+
+    mentorship_service_set_id = data.get("mentorship_service_set")
+    event_type_set_id = data.get("event_type_set")
+    if mentorship_service_set_id and event_type_set_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Provide only one of mentorship_service_set or event_type_set, not both",
+                es="Proporcione solo uno de mentorship_service_set o event_type_set",
+                slug="only-one-set-allowed",
+            ),
+            code=400,
+        )
+    if service.type == Service.Type.MENTORSHIP_SERVICE_SET and not mentorship_service_set_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="mentorship_service_set is required for this service type",
+                es="mentorship_service_set es requerido para este tipo de servicio",
+                slug="mentorship-service-set-required",
+            ),
+            code=400,
+        )
+    if service.type == Service.Type.EVENT_TYPE_SET and not event_type_set_id:
+        raise ValidationException(
+            translation(
+                lang,
+                en="event_type_set is required for this service type",
+                es="event_type_set es requerido para este tipo de servicio",
+                slug="event-type-set-required",
+            ),
+            code=400,
+        )
+
+    kwargs_academy = {}
+    if mentorship_service_set_id:
+        mentorship_service_set = MentorshipServiceSet.objects.filter(
+            id=mentorship_service_set_id, academy_id=academy_id
+        ).first()
+        if not mentorship_service_set:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Mentorship service set not found",
+                    es="Conjunto de mentoría no encontrado",
+                    slug="mentorship-service-set-not-found",
+                ),
+                code=404,
+            )
+        kwargs_academy["available_mentorship_service_sets"] = mentorship_service_set_id
+    else:
+        mentorship_service_set = None
+
+    if event_type_set_id:
+        event_type_set = EventTypeSet.objects.filter(id=event_type_set_id, academy_id=academy_id).first()
+        if not event_type_set:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Event type set not found",
+                    es="Conjunto de tipo de evento no encontrado",
+                    slug="event-type-set-not-found",
+                ),
+                code=404,
+            )
+        kwargs_academy["available_event_type_sets"] = event_type_set_id
+    else:
+        event_type_set = None
+
+    academy_service = AcademyService.objects.filter(
+        academy_id=academy_id, service=service, **kwargs_academy
+    ).first()
+    if not academy_service:
+        raise ValidationException(
+            translation(
+                lang,
+                en="Academy service not found",
+                es="Servicio de academia no encontrado",
+                slug="academy-service-not-found",
+            ),
+            code=404,
+        )
+
+    user = resolve_user_from_data(data, lang)
+    payment_method = resolve_payment_method_for_staff(data, academy_id, lang, allow_card_and_crypto=False)
+    currency = resolve_currency_for_staff_payment(payment_method, academy, lang)
+
+    amount = data.get("amount")
+    if amount is None:
+        amount = 0.0
+    else:
+        amount = float(amount)
+
+    service_item, _ = ServiceItem.get_or_create_for_service(
+        service=service, how_many=how_many, is_team_allowed=False
+    )
+
+    bag, invoice = create_externally_managed_bag_and_invoice(
+        user=user,
+        academy=academy,
+        currency=currency,
+        amount=amount,
+        payment_method=payment_method,
+        proof_of_payment=proof_of_payment,
+        lang=lang,
+        bag_type=Bag.Type.CHARGE,
+        service_items=[service_item],
+        how_many_installments=0,
+    )
+
+    consumable = Consumable(
+        service_item=service_item,
+        user=user,
+        how_many=how_many,
+        mentorship_service_set=mentorship_service_set,
+        event_type_set=event_type_set,
+        standalone_invoice=invoice,
+    )
+    consumable.save()
+
+    return invoice
 
 
 class UnitBalance(TypedDict):
