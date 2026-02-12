@@ -66,6 +66,15 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     utm_term = serpy.Field()
     utm_plan = serpy.Field()
 
+    # New traceability fields
+    event = serpy.Field()
+    course = serpy.Field()
+    downloadable = serpy.Field()
+    plan = serpy.Field()
+    referrer_user = serpy.Field()
+    purpose = serpy.Field()
+    notes = serpy.Field()
+
 
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -713,6 +722,75 @@ class TagListSerializer(serializers.ListSerializer):
         result = [self.child.update(instance_hash[index], attrs) for index, attrs in enumerate(validated_data)]
 
         return result
+
+
+class POSTTagSerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=True, max_length=150)
+    description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = Tag
+        fields = ("slug", "tag_type", "description", "automation")
+        extra_kwargs = {
+            "tag_type": {"required": False, "allow_null": True},
+            "automation": {"required": False, "allow_null": True},
+        }
+
+    def create(self, validated_data):
+        from breathecode.services.activecampaign import ActiveCampaign
+        from breathecode.admissions.models import Academy
+
+        academy_id = self.context.get("academy")
+        if not academy_id:
+            raise ValidationException("Academy ID is required", slug="missing-academy-id")
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(f"Academy {academy_id} not found", slug="academy-not-found")
+
+        slug = validated_data.pop("slug")
+        description = validated_data.pop("description", "")
+
+        # Check if tag already exists for this academy (check both relationships)
+        existing_tag = Tag.objects.filter(slug=slug).filter(
+            Q(ac_academy__academy__id=academy_id) | Q(academy__id=academy_id)
+        ).first()
+        
+        if existing_tag:
+            raise ValidationException(
+                f"Tag with slug '{slug}' already exists for this academy", slug="tag-already-exists"
+            )
+
+        # Try to get ActiveCampaign Academy (optional)
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+        
+        acp_id = None
+        subscribers = 0
+        
+        # If ActiveCampaign is configured, create tag there
+        if ac_academy:
+            client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+            try:
+                ac_data = client.create_tag(slug, description=description or "")
+                acp_id = ac_data["id"]
+                subscribers = 0  # Will be updated on sync
+            except Exception as e:
+                # Log but don't fail - tag can still be created locally
+                logger.warning(f"Failed to create tag in ActiveCampaign: {str(e)}")
+
+        # Create local Tag object
+        tag = Tag(
+            slug=slug,
+            acp_id=acp_id,
+            ac_academy=ac_academy,
+            academy=academy,  # Direct academy relationship
+            subscribers=subscribers,
+            description=description,
+            **validated_data,
+        )
+        tag.save()
+
+        return tag
 
 
 class PUTTagSerializer(serializers.ModelSerializer):

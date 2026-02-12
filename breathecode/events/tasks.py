@@ -1,5 +1,6 @@
 import logging
 
+import pytz
 from celery import shared_task
 from dateutil.relativedelta import relativedelta
 from django.utils import timezone
@@ -120,6 +121,8 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
         logger.error(f"{timeslot.recurrency_type} is not a valid or not implemented recurrency_type")
         return
 
+    tz = pytz.timezone(timeslot.timezone)
+
     while True:
 
         if ending_at > until_date:
@@ -138,8 +141,10 @@ def build_live_classes_from_timeslot(self, timeslot_id: int):
             if not timeslot.recurrent:
                 break
 
-        starting_at += delta
-        ending_at += delta
+        naive_starting = starting_at.replace(tzinfo=None) + delta
+        naive_ending = ending_at.replace(tzinfo=None) + delta
+        starting_at = tz.localize(naive_starting)
+        ending_at = tz.localize(naive_ending)
 
     live_classes.delete()
 
@@ -304,9 +309,13 @@ def create_livekit_room_for_event(self, event_id: int):
 
 
 @task(priority=TaskPriority.NOTIFICATION.value)
-def send_event_suspended_notification(event_id: int, **kwargs):
+def send_event_suspended_notification(event_id: int, suspension_reason: str = None, **kwargs):
     """
     Send email notifications to all attendees when an event is suspended.
+    
+    Args:
+        event_id: The ID of the suspended event
+        suspension_reason: Optional reason for the suspension to include in the email
     """
     logger.info(f"Starting send_event_suspended_notification for event {event_id}")
 
@@ -330,18 +339,40 @@ def send_event_suspended_notification(event_id: int, **kwargs):
     if lang not in ["en", "es"]:
         lang = "en"
 
+    # Build message with optional reason
+    if suspension_reason:
+        # Include custom reason in message
+        base_message_en = f"We regret to inform you that the event '{event.title or f'Event {event.id}'}' has been suspended."
+        reason_section_en = f"<br><br><strong>Reason:</strong> {suspension_reason}<br><br>"
+        footer_en = "If you have any questions or concerns, please contact support for assistance.<br><br>We apologize for any inconvenience this may cause."
+        message_en = base_message_en + reason_section_en + footer_en
+
+        # Similar for Spanish
+        base_message_es = f"Lamentamos informarle que el evento '{event.title or f'Evento {event.id}'}' ha sido suspendido."
+        reason_section_es = f"<br><br><strong>Razón:</strong> {suspension_reason}<br><br>"
+        footer_es = "Si tiene alguna pregunta o inquietud, por favor contacte a soporte para asistencia.<br><br>Nos disculpamos por cualquier inconveniente que esto pueda causar."
+        message_es = base_message_es + reason_section_es + footer_es
+    else:
+        # Use default generic message
+        message_en = (
+            f"We regret to inform you that the event '{event.title or f'Event {event.id}'}' has been suspended for reasons that are out of our hands.<br><br>"
+            f"If you have any questions or concerns, please contact support for assistance.<br><br>"
+            f"We apologize for any inconvenience this may cause."
+        )
+        message_es = (
+            f"Lamentamos informarle que el evento '{event.title or f'Evento {event.id}'}' ha sido suspendido por razones fuera de nuestro control.<br><br>"
+            f"Si tiene alguna pregunta o inquietud, por favor contacte a soporte para asistencia.<br><br>"
+            f"Nos disculpamos por cualquier inconveniente que esto pueda causar."
+        )
+
     messages = {
         "en": {
             "subject": f"Event Suspended: {event.title or f'Event {event.id}'}",
-            "message": f"We regret to inform you that the event '{event.title or f'Event {event.id}'}' has been suspended for reasons that are out of our hands.<br><br>"
-            f"If you have any questions or concerns, please contact support for assistance.<br><br>"
-            f"We apologize for any inconvenience this may cause.",
+            "message": message_en,
         },
         "es": {
             "subject": f"Evento Suspendido: {event.title or f'Evento {event.id}'}",
-            "message": f"Lamentamos informarle que el evento '{event.title or f'Evento {event.id}'}' ha sido suspendido por razones fuera de nuestro control.<br><br>"
-            f"Si tiene alguna pregunta o inquietud, por favor contacte a soporte para asistencia.<br><br>"
-            f"Nos disculpamos por cualquier inconveniente que esto pueda causar.",
+            "message": message_es,
         },
     }
 

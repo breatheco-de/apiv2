@@ -212,6 +212,9 @@ def handle_internal_link(request):
         _parsed = urlparse(file_path)
         _clean_path = _parsed.path
 
+        # Extract filename from path for Content-Disposition header
+        filename = Path(_clean_path).name
+
         # Construct the API URL for the file
         api_url = f"/repos/{org_name}/{repo_name}/contents/{_clean_path}"
         if branch_name:
@@ -242,14 +245,18 @@ def handle_internal_link(request):
         if response.get("content"):
             content_bytes = base64.b64decode(response["content"])
             content_type = ext_map.get(file_extension, "application/octet-stream")
-            return HttpResponse(content_bytes, content_type=content_type)
+            http_response = HttpResponse(content_bytes, content_type=content_type)
+            http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return http_response
 
         download_url = response.get("download_url")
         if download_url:
             r = requests.get(download_url, timeout=30)
             content_bytes = r.content
             content_type = ext_map.get(file_extension, "application/octet-stream")
-            return HttpResponse(content_bytes, content_type=content_type)
+            http_response = HttpResponse(content_bytes, content_type=content_type)
+            http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return http_response
 
         # 3) Fallback: fetch blob by sha via GitHub API
         sha = response.get("sha")
@@ -258,7 +265,9 @@ def handle_internal_link(request):
             if blob and blob.get("content"):
                 content_bytes = base64.b64decode(blob["content"])
                 content_type = ext_map.get(file_extension, "application/octet-stream")
-                return HttpResponse(content_bytes, content_type=content_type)
+                http_response = HttpResponse(content_bytes, content_type=content_type)
+                http_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+                return http_response
 
         return render_message(request, "File content not found", status=404)
 
@@ -909,9 +918,22 @@ class AssetView(APIView, GenerateLookupsMixin):
         lang = get_user_language(request)
 
         if asset_slug is not None:
-            asset = Asset.get_by_slug(asset_slug, request)
+            # Check if asset_slug is a number (ID) or a string (slug)
+            if asset_slug.isdigit():
+                asset = Asset.objects.filter(id=int(asset_slug)).first()
+            else:
+                asset = Asset.get_by_slug(asset_slug, request)
+            
             if asset is None:
-                raise ValidationException(f"Asset {asset_slug} not found", status.HTTP_404_NOT_FOUND)
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Asset {asset_slug} not found",
+                        es=f"Asset {asset_slug} no encontrado",
+                    ),
+                    status.HTTP_404_NOT_FOUND,
+                    slug="asset-not-found",
+                )
 
             serializer = AssetBigAndTechnologySerializer(asset)
             return handler.response(serializer.data)
@@ -2616,6 +2638,38 @@ class CodeCompilerView(APIView):
                 url = "/v1/prompting/completion/code-compiler/"
 
             return await s.post(url, json=request.data)
+
+
+class LearnpackPackagesView(APIView):
+    """
+    Proxy endpoint to communicate with learnpack service to get packages.
+    """
+
+    permission_classes = [AllowAny]
+
+    async def get(self, request):
+        """
+        GET request to fetch packages from learnpack service.
+        Proxies the request to learnpack's /v1/learnpack/packages endpoint.
+        """
+        lang = await aget_user_language(request)
+        user_id = request.user.id if request.user.is_authenticated else None
+
+        try:
+            async with Service("rigobot", user_id, proxy=True) as s:
+                # Forward query parameters to learnpack
+                params = dict(request.GET)
+                return await s.get("/v1/learnpack/packages", params=params)
+        except Exception as e:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Error calling learnpack service: {str(e)}",
+                    es=f"Error al llamar al servicio learnpack: {str(e)}",
+                ),
+                code=500,
+                slug="learnpack-service-error",
+            )
 
 
 class CompletionView(APIView):

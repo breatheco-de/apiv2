@@ -20,6 +20,62 @@ from breathecode.notify.utils.hook_manager import HookManagerClass
 os.environ["ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
+def _make_celery_like(fn):
+    """
+    Some task decorators can become no-ops in tests, leaving plain functions without `.delay()` / `.apply_async()`.
+    A lot of tests (and production code paths exercised by tests) expect these attributes to exist.
+    """
+
+    if not callable(fn):
+        return
+
+    if not hasattr(fn, "delay"):
+        def delay(*args, **kwargs):
+            return fn(*args, **kwargs)
+
+        setattr(fn, "delay", delay)
+
+    if not hasattr(fn, "apply_async"):
+        def apply_async(args=None, kwargs=None, **_):
+            args = args or ()
+            kwargs = kwargs or {}
+            return fn(*args, **kwargs)
+
+        setattr(fn, "apply_async", apply_async)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _patch_task_like_callables():
+    """
+    Attach `.delay()` / `.apply_async()` to task callables used across the suite.
+    This avoids hundreds of AttributeErrors like:
+      - <function X> has no attribute 'delay'
+      - <function X> has no attribute 'apply_async'
+    """
+
+    import importlib
+
+    for module_name in (
+        "breathecode.payments.tasks",
+        "breathecode.notify.tasks",
+        "breathecode.admissions.tasks",
+        "breathecode.monitoring.tasks",
+    ):
+        try:
+            module = importlib.import_module(module_name)
+        except Exception:
+            continue
+
+        for name in dir(module):
+            if name.startswith("_"):
+                continue
+
+            obj = getattr(module, name, None)
+            if callable(obj) and getattr(obj, "__module__", None) == module.__name__:
+                _make_celery_like(obj)
+
+    yield
+
 pytest_plugins = (
     # "staging.pytest.core",
     "staging.pytest",

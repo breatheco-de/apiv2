@@ -24,6 +24,7 @@ from breathecode.admissions import tasks
 from breathecode.admissions.caches import CohortCache, CohortUserCache, SyllabusVersionCache, TeacherCache, UserCache
 from breathecode.authenticate.actions import get_user_language
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.configurable_settings import deep_merge_dict, extract_allowed_tree, is_path_allowed, iter_leaf_paths
 from breathecode.utils import (
     APIViewExtensions,
     DatetimeInteger,
@@ -37,6 +38,7 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import render_message
 
 from .actions import find_asset_on_json, test_syllabus, update_asset_on_json
+from .actions import academy_student_progress_report_rows
 from .models import (
     DELETED,
     STUDENT,
@@ -68,6 +70,7 @@ from .serializers import (
     GETCohortTimeSlotSerializer,
     GetCohortUserPlansSerializer,
     GetCohortUserSerializer,
+    GetCohortUserBigSerializer,
     GetCohortUserTasksSerializer,
     GetPublicCohortUserSerializer,
     GetSyllabusScheduleSerializer,
@@ -466,6 +469,128 @@ class AcademyReportView(APIView):
         return Response(users.data)
 
 
+class AcademyReportCSVView(APIView):
+    """
+    Academy student progress report in CSV format.
+
+    Output columns:
+    - course_name
+    - student_full_name
+    - student_email
+    - enrollment_date
+    - student_start_date
+    - status (not_started / in_progress / completed / withdrawn)
+    - progress_percentage (0-100)
+    - completion_date
+    - certificate_url
+    - comments
+    """
+
+    @capable_of("academy_reporting")
+    def get(self, request, academy_id=None):
+        lang = get_user_language(request)
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                slug="academy-not-found",
+            )
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="academy_report.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "course_name",
+                "student_full_name",
+                "student_email",
+                "enrollment_date",
+                "student_start_date",
+                "status",
+                "progress_percentage",
+                "completion_date",
+                "certificate_url",
+                "comments",
+            ]
+        )
+
+        for row in academy_student_progress_report_rows(academy, lang=lang):
+            writer.writerow(row)
+
+        return response
+
+
+class AcademyCohortReportCSVView(APIView):
+    """
+    Cohort student report in CSV format (same schema as admissions/report.csv).
+
+    It is intended for integrations that need the report split by cohort.
+    """
+
+    @capable_of("academy_reporting")
+    def get(self, request, cohort_id: int, academy_id: int):
+        lang = get_user_language(request)
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Academy {academy_id} not found",
+                    es=f"Academia {academy_id} no encontrada",
+                    slug="academy-not-found",
+                ),
+                slug="academy-not-found",
+            )
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
+        if cohort is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cohort not found on this academy",
+                    es="Cohorte no encontrada en esta academia",
+                    slug="cohort-not-found",
+                ),
+                code=404,
+                slug="cohort-not-found",
+            )
+
+        include_micro_cohorts = request.query_params.get("include_micro_cohorts", "false").lower() == "true"
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="cohort_{cohort.slug}_report.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "course_name",
+                "student_full_name",
+                "student_email",
+                "enrollment_date",
+                "student_start_date",
+                "status",
+                "progress_percentage",
+                "completion_date",
+                "certificate_url",
+                "comments",
+            ]
+        )
+
+        for row in academy_student_progress_report_rows(
+            academy, lang=lang, cohort=cohort, include_micro_cohorts=include_micro_cohorts
+        ):
+            writer.writerow(row)
+
+        return response
+
+
 class AcademyActivateView(APIView):
 
     @capable_of("academy_activate")
@@ -528,6 +653,163 @@ class AcademyView(APIView):
             response_serializer = GetBigAcademySerializer(academy)
             return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyFeatureACLView(APIView):
+    """
+    Configure per-academy allowlist of academy_features that can be edited by specific academy roles.
+
+    This endpoint is intended for System Admins only (capability: manage_academy_flags).
+    Currently only supports configuring the allowlist for the `country_manager` role.
+    """
+
+    @capable_of("manage_academy_flags")
+    def put(self, request, format=None, academy_id=None):
+        academy = Academy.objects.get(id=academy_id)
+
+        editable_paths = request.data.get("editable_paths", None)
+        if not isinstance(editable_paths, list) or not all(isinstance(x, str) for x in editable_paths):
+            raise ValidationException(
+                translation(
+                    en="editable_paths must be a list of strings",
+                    es="editable_paths debe ser una lista de strings",
+                ),
+                slug="invalid-editable-paths",
+                code=400,
+            )
+
+        merged = academy.get_academy_features()
+        merged.setdefault("acl", {}).setdefault("editable_paths_by_role", {})["country_manager"] = editable_paths
+
+        academy.academy_features = merged
+        academy.save(update_fields=["academy_features"])
+
+        return Response({"acl": merged.get("acl")}, status=status.HTTP_200_OK)
+
+
+class AcademyFeaturesView(APIView):
+    """
+    Patch academy_features with per-role allowlist enforcement.
+
+    - System Admins (capability: manage_academy_flags) can patch any academy_features key.
+    - Academy Admins (`country_manager`) can patch only paths enabled by System Admin in:
+      academy_features.acl.editable_paths_by_role.country_manager
+    """
+
+    @capable_of("crud_my_academy")
+    def patch(self, request, format=None, academy_id=None):
+        academy = Academy.objects.get(id=academy_id)
+
+        if not isinstance(request.data, dict):
+            raise ValidationException(
+                translation(
+                    en="Payload must be a JSON object",
+                    es="El payload debe ser un objeto JSON",
+                ),
+                slug="invalid-payload",
+                code=400,
+            )
+
+        patch_data = request.data
+        changed_paths = list(iter_leaf_paths(patch_data))
+
+        # Determine if the user is a System Admin for this academy by capability
+        is_system_admin = ProfileAcademy.objects.filter(
+            user=request.user.id,
+            academy__id=academy_id,
+            role__capabilities__slug="manage_academy_flags",
+        ).exists()
+
+        allowed_paths = []
+        if not is_system_admin:
+            profile = ProfileAcademy.objects.filter(user=request.user.id, academy__id=academy_id).first()
+            role_slug = profile.role.slug if profile and profile.role else None
+
+            if role_slug != "country_manager":
+                raise ValidationException(
+                    translation(
+                        en="You are not allowed to edit academy features",
+                        es="No tienes permisos para editar los academy features",
+                    ),
+                    slug="academy-features-not-allowed",
+                    code=403,
+                )
+
+            cfg = academy.get_academy_features()
+            allowed_paths = (
+                (cfg.get("acl") or {}).get("editable_paths_by_role") or {}
+            ).get("country_manager") or []
+
+            # Always forbid editing ACL itself for non-system admins
+            for path in changed_paths:
+                if path.startswith("acl"):
+                    raise ValidationException(
+                        translation(
+                            en="You cannot edit ACL settings",
+                            es="No puedes editar la configuración de ACL",
+                        ),
+                        slug="acl-not-editable",
+                        code=403,
+                    )
+
+                if not is_path_allowed(path, allowed_paths):
+                    raise ValidationException(
+                        translation(
+                            en=f"You are not allowed to edit '{path}'",
+                            es=f"No tienes permisos para editar '{path}'",
+                        ),
+                        slug="academy-feature-path-not-allowed",
+                        code=403,
+                    )
+
+        merged = deep_merge_dict(academy.get_academy_features(), patch_data)
+        academy.academy_features = merged
+        academy.save(update_fields=["academy_features"])
+
+        result = academy.get_academy_features()
+
+        if not is_system_admin:
+            allowed_paths = [p for p in allowed_paths if isinstance(p, str) and not p.startswith("acl")]
+            result = extract_allowed_tree(result, allowed_paths)
+            result.pop("acl", None)
+
+        return Response({"academy_features": result}, status=status.HTTP_200_OK)
+
+    @capable_of("read_my_academy")
+    def get(self, request, format=None, academy_id=None):
+        academy = Academy.objects.get(id=academy_id)
+        cfg = academy.get_academy_features()
+
+        is_system_admin = ProfileAcademy.objects.filter(
+            user=request.user.id,
+            academy__id=academy_id,
+            role__capabilities__slug="manage_academy_flags",
+        ).exists()
+
+        if is_system_admin:
+            return Response({"academy_features": cfg}, status=status.HTTP_200_OK)
+
+        profile = ProfileAcademy.objects.filter(user=request.user.id, academy__id=academy_id).first()
+        role_slug = profile.role.slug if profile and profile.role else None
+
+        if role_slug != "country_manager":
+            raise ValidationException(
+                translation(
+                    en="You are not allowed to read academy features",
+                    es="No tienes permisos para leer los academy features",
+                ),
+                slug="academy-features-not-allowed",
+                code=403,
+            )
+
+        allowed_paths = ((cfg.get("acl") or {}).get("editable_paths_by_role") or {}).get("country_manager") or []
+        allowed_paths = [p for p in allowed_paths if isinstance(p, str) and not p.startswith("acl")]
+
+        filtered = extract_allowed_tree(cfg, allowed_paths)
+        # Never expose ACL to non-system admins (even if misconfigured)
+        filtered.pop("acl", None)
+
+        return Response({"academy_features": filtered}, status=status.HTTP_200_OK)
 
 
 class UserView(APIView):
@@ -750,13 +1032,24 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(cache=CohortUserCache, paginate=True)
 
     @capable_of("read_all_cohort")
-    def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
+    def get(self, request, format=None, cohort_id=None, user_id=None, cohort_user_id=None, academy_id=None):
 
         handler = self.extensions(request)
 
         cache = handler.cache.get()
         if cache is not None:
             return cache
+
+        # Handle direct cohort_user_id lookup
+        if cohort_user_id is not None:
+            item = CohortUser.objects.filter(
+                id=cohort_user_id, cohort__academy__id=academy_id
+            ).select_related('cohort', 'user').first()
+            if item is None:
+                raise ValidationException("Cohort user not found", 404)
+
+            serializer = GetCohortUserBigSerializer(item, many=False)
+            return Response(serializer.data)
 
         if user_id is not None:
             item = CohortUser.objects.filter(
@@ -1066,6 +1359,9 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not timezone:
             raise ValidationException("Academy doesn't have a timezone assigned", slug="academy-without-timezone")
 
+        # Extract force_generation flag before preparing data
+        force_generation = request.data.pop("force_generation", False)
+
         data = {
             **request.data,
             "id": timeslot_id,
@@ -1079,9 +1375,15 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if "ending_at" in data:
             data["ending_at"] = DatetimeInteger.from_iso_string(timezone, data["ending_at"])
 
+        # Set temporary attribute before saving
+        item._force_generation = force_generation
+
         serializer = CohortTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
             serializer.save()
+            # Clear the attribute after save
+            if hasattr(item, "_force_generation"):
+                delattr(item, "_force_generation")
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1097,6 +1399,35 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         item.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCohortTimeSlotLiveClassesView(APIView):
+    @capable_of("crud_cohort")
+    def delete(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+        from breathecode.events.models import LiveClass
+
+        lang = get_user_language(request)
+
+        # Validate timeslot exists and belongs to academy/cohort
+        timeslot = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id, cohort__id=cohort_id, id=timeslot_id
+        ).first()
+
+        if not timeslot:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Time slot not found",
+                    es="Horario no encontrado",
+                    slug="time-slot-not-found",
+                ),
+                404,
+            )
+
+        # Delete all live classes associated with this timeslot
+        deleted_count, _ = LiveClass.objects.filter(cohort_time_slot=timeslot).delete()
+
+        return Response({"deleted": deleted_count}, status=status.HTTP_200_OK)
 
 
 class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
@@ -1899,18 +2230,20 @@ class SyllabusView(APIView):
 
 class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
 
-    # TODO: @has_permission('superadmin')
-    def get(self, request, asset_slug=None):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of("read_syllabus")
+    def get(self, request, asset_slug=None, academy_id=None):
 
         if asset_slug is None or asset_slug == "":
             raise ValidationException("Please specify the asset slug you want to search", slug="invalid-asset-slug")
 
-        findings = find_asset_on_json(asset_slug=asset_slug, asset_type=request.GET.get("asset_type", None))
+        findings = find_asset_on_json(asset_slug=asset_slug, asset_type=request.GET.get("asset_type", None), user=request.user)
 
         return Response(findings, status=status.HTTP_200_OK)
 
-    # TODO: @has_permission('superadmin')
-    def put(self, request, asset_slug=None):
+    @capable_of("crud_syllabus")
+    def put(self, request, asset_slug=None, academy_id=None):
 
         if asset_slug is None or asset_slug == "":
             raise ValidationException("Please specify the asset slug you want to replace", slug="invalid-asset-slug")
@@ -2613,6 +2946,183 @@ class AcademyCohortHistoryView(APIView):
             raise ValidationException(str(e))
 
         return Response(cohort_log.serialize())
+
+
+class AcademyCohortAttendanceReportView(APIView):
+    """Generate attendance reports from cohort history_log in CSV or JSON format."""
+
+    @capable_of("read_cohort_log")
+    def get(self, request, cohort_id, academy_id):
+        lang = get_user_language(request)
+
+        # Fetch cohort by ID or slug
+        item = None
+        if str(cohort_id).isnumeric():
+            item = Cohort.objects.filter(id=int(cohort_id), academy__id=academy_id).first()
+        else:
+            item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
+
+        if item is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cohort not found on this academy",
+                    es="Cohorte no encontrada en esta academia",
+                    slug="cohort-not-found",
+                ),
+                code=404,
+            )
+
+        # Get all students in the cohort
+        students = CohortUser.objects.filter(cohort=item, role=STUDENT).select_related("user").order_by(
+            "user__first_name", "user__last_name"
+        )
+
+        if not students.exists():
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="No students found in this cohort",
+                    es="No se encontraron estudiantes en esta cohorte",
+                    slug="no-students-found",
+                ),
+                code=404,
+            )
+
+        # Parse history_log
+        history_log = item.history_log or {}
+        if not isinstance(history_log, dict):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid history log format",
+                    es="Formato de historial inválido",
+                    slug="invalid-history-log",
+                ),
+                code=400,
+            )
+
+        # Determine format from request path
+        request_path = request.path
+        if request_path.endswith(".csv"):
+            return self._generate_csv_response(item, students, history_log)
+        elif request_path.endswith(".json"):
+            return self._generate_json_response(item, students, history_log)
+        else:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Invalid format. Use .csv or .json",
+                    es="Formato inválido. Use .csv o .json",
+                    slug="invalid-format",
+                ),
+                code=400,
+            )
+
+    def _generate_csv_response(self, cohort, students, history_log):
+        """Generate CSV response with students as rows and days as columns."""
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="cohort_{cohort.slug}_attendance.csv"'
+
+        writer = csv.writer(response)
+
+        # Get all day numbers from history_log and sort them
+        day_numbers = sorted([int(day) for day in history_log.keys() if day.isdigit()], key=int)
+
+        # Build header row
+        headers = ["Student Name", "Email"]
+        headers.extend([f"Day {day}" for day in day_numbers])
+        writer.writerow(headers)
+
+        # Build attendance matrix: student_id -> {day: status}
+        attendance_matrix = {}
+        for day_str, day_data in history_log.items():
+            if not day_str.isdigit():
+                continue
+            day = int(day_str)
+            attendance_ids = day_data.get("attendance_ids", [])
+            unattendance_ids = day_data.get("unattendance_ids", [])
+
+            # Mark all students as not recorded initially
+            for student in students:
+                if student.user.id not in attendance_matrix:
+                    attendance_matrix[student.user.id] = {}
+                attendance_matrix[student.user.id][day] = "?"
+
+            # Mark present students
+            for user_id in attendance_ids:
+                if user_id in attendance_matrix:
+                    attendance_matrix[user_id][day] = "✓"
+
+            # Mark absent students
+            for user_id in unattendance_ids:
+                if user_id in attendance_matrix:
+                    attendance_matrix[user_id][day] = "✗"
+
+        # Write student rows
+        for student in students:
+            user = student.user
+            student_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+            row = [student_name, user.email]
+
+            # Add attendance status for each day
+            for day in day_numbers:
+                status = attendance_matrix.get(user.id, {}).get(day, "?")
+                row.append(status)
+
+            writer.writerow(row)
+
+        return response
+
+    def _generate_json_response(self, cohort, students, history_log):
+        """Generate JSON response with days array structure."""
+        # Get all day numbers from history_log and sort them
+        day_numbers = sorted([int(day) for day in history_log.keys() if day.isdigit()], key=int)
+
+        # Build days array
+        days_data = []
+        for day in day_numbers:
+            day_str = str(day)
+            day_data = history_log.get(day_str, {})
+            attendance_ids = set(day_data.get("attendance_ids", []))
+            unattendance_ids = set(day_data.get("unattendance_ids", []))
+
+            # Build students list for this day
+            students_list = []
+            for student in students:
+                user = student.user
+                user_id = user.id
+
+                # Determine status
+                if user_id in attendance_ids:
+                    status = "present"
+                elif user_id in unattendance_ids:
+                    status = "absent"
+                else:
+                    status = "not_recorded"
+
+                student_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+
+                students_list.append(
+                    {
+                        "user_id": user_id,
+                        "name": student_name,
+                        "email": user.email,
+                        "status": status,
+                    }
+                )
+
+            days_data.append(
+                {
+                    "day": day,
+                    "updated_at": day_data.get("updated_at", ""),
+                    "current_module": day_data.get("current_module"),
+                    "teacher_comments": day_data.get("teacher_comments", ""),
+                    "students": students_list,
+                }
+            )
+
+        return Response(days_data)
 
 
 class MeCohortUserHistoryView(APIView):

@@ -10,6 +10,7 @@ from django.utils.html import format_html
 # from breathecode.admissions.admin import SyllabusVersionAdmin
 from breathecode.services.seo import SEOAnalyzer
 from breathecode.utils.admin import change_field
+from breathecode.utils.admin.widgets import PrettyJSONWidget
 
 from .actions import (
     AssetThumbnailGenerator,
@@ -29,6 +30,7 @@ from .models import (
     AssetImage,
     AssetKeyword,
     AssetTechnology,
+    ContentSite,
     ContentVariable,
     CredentialsOriginality,
     KeywordCluster,
@@ -371,6 +373,9 @@ class AssetForm(forms.ModelForm):
     class Meta:
         model = Asset
         fields = "__all__"
+        widgets = {
+            "config": PrettyJSONWidget(),
+        }
 
     def __init__(self, *args, **kwargs):
         super(AssetForm, self).__init__(*args, **kwargs)
@@ -908,6 +913,14 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
 class AssetCategoryAdmin(admin.ModelAdmin):
     search_fields = ["slug", "title"]
     list_display = ("slug", "title", "academy")
+    raw_id_fields = ["academy"]
+    list_filter = ["academy"]
+
+
+@admin.register(ContentSite)
+class ContentSiteAdmin(admin.ModelAdmin):
+    search_fields = ["title", "domain_url"]
+    list_display = ("title", "domain_url", "academy")
     raw_id_fields = ["academy"]
     list_filter = ["academy"]
 

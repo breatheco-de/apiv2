@@ -17,6 +17,10 @@ CAPABILITIES = [
         "description": "Read, or update your academy information (very high level, almost the academy admin)",
     },
     {
+        "slug": "manage_academy_flags",
+        "description": "Manage which academy features/flags can be edited by academy roles",
+    },
+    {
         "slug": "crud_member",
         "description": "Create, update or delete academy members (very high level, almost the academy admin)",
     },
@@ -144,6 +148,8 @@ CAPABILITIES = [
     {"slug": "read_lead_gen_app", "description": "Read lead generation apps"},
     {"slug": "chatbot_message", "description": "Speak with a chatbot"},
     {"slug": "start_or_end_class", "description": "start or end a class"},
+    {"slug": "read_liveclass", "description": "Read live class information"},
+    {"slug": "crud_liveclass", "description": "Create, update or delete live class information"},
     {
         "slug": "get_academy_auth_settings",
         "description": "Settings related to authentication, for example the github auth integration",
@@ -193,6 +199,10 @@ CAPABILITIES = [
     {
         "slug": "upload_assignment_telemetry",
         "description": "Allow upload the user's telemetry in a LearnPack assignment",
+    },
+    {
+        "slug": "crud_telemetry",
+        "description": "Create, update or delete assignment telemetry",
     },
     {
         "slug": "validate_assignment_flag",
@@ -251,7 +261,7 @@ CAPABILITIES = [
 BASE_ROLES = [
     {
         "slug": "admin",
-        "name": "Admin",
+        "name": "System Admin",
         "caps": [c["slug"] for c in CAPABILITIES],
     },
     {
@@ -488,6 +498,7 @@ def get_extended_roles():
                 "crud_cohort_log",
                 "start_or_end_class",
                 "start_or_end_event",
+                "read_liveclass",
                 "read_user_assessment",
             ],
         }
@@ -730,11 +741,13 @@ def get_extended_roles():
                 "crud_academy_feedback_settings",
                 "get_academy_auth_settings",
                 "crud_subscription",
+                "crud_liveclass",
                 "read_paymentmethod",
                 "crud_paymentmethod",
                 "read_commission",
                 "crud_commission",
                 "crud_course",
+                "crud_telemetry",
             ],
         }
     )
@@ -742,7 +755,7 @@ def get_extended_roles():
     roles.append(
         {
             "slug": "country_manager",
-            "name": "Country Manager",
+            "name": "Academy Admin",
             "extends": [
                 "academy_coordinator",
                 "student",
@@ -779,6 +792,8 @@ def get_extended_roles():
                 "crud_notification",
                 "read_hook",
                 "crud_hook",
+                "crud_service",
+                "crud_plan",
                 "crud_academy_payment_settings",
             ],
         }

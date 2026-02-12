@@ -199,6 +199,79 @@ def set_cohort_user_assignments(task_id: int, **_: Any):
 
 
 @task(bind=False, priority=TaskPriority.STUDENT.value)
+def sync_pending_tasks_to_history_log(task_id: int = None, cohort_user_id: int = None, **_: Any):
+    """
+    Sincroniza todas las tareas pendientes del usuario al history log cuando se abre un módulo.
+    Esto asegura que el history log incluya todas las pending tasks en el momento en que el usuario abre el módulo.
+    Reutiliza la lógica de set_cohort_user_assignments pero hace una sola actualización al final.
+    
+    Args:
+        task_id: ID de la tarea (opcional, se usa para obtener cohort_user si cohort_user_id no se proporciona)
+        cohort_user_id: ID del cohort_user (opcional, si se proporciona se salta la búsqueda del task)
+    """
+    if cohort_user_id is not None:
+        logger.info(f"Executing sync_pending_tasks_to_history_log for cohort_user {cohort_user_id}")
+        cohort_user = CohortUser.objects.filter(id=cohort_user_id, role="STUDENT").first()
+        if not cohort_user:
+            logger.error("CohortUser not found")
+            return
+    else:
+        if task_id is None:
+            logger.error("Either task_id or cohort_user_id must be provided")
+            return
+        
+        logger.info(f"Executing sync_pending_tasks_to_history_log for task {task_id}")
+        task = Task.objects.filter(id=task_id).first()
+
+        if not task:
+            logger.error("Task not found")
+            return
+
+        if not task.cohort:
+            logger.error("Task has no cohort")
+            return
+
+        cohort_user = CohortUser.objects.filter(cohort=task.cohort, user=task.user, role="STUDENT").first()
+        if not cohort_user:
+            logger.error("CohortUser not found")
+            return
+
+    if not cohort_user.cohort:
+        logger.error("CohortUser has no cohort")
+        return
+
+    pending_tasks = Task.objects.filter(
+        user=cohort_user.user,
+        cohort=cohort_user.cohort,
+        task_status="PENDING",
+    ).exclude(revision_status="IGNORED")
+
+    user_history_log = cohort_user.history_log or {}
+    user_history_log["delivered_assignments"] = user_history_log.get("delivered_assignments", [])
+    user_history_log["pending_assignments"] = user_history_log.get("pending_assignments", [])
+
+    def serialize_task(task):
+        return {
+            "id": task.id,
+            "type": task.task_type,
+        }
+
+    existing_pending_ids = {task_data["id"] for task_data in user_history_log["pending_assignments"]}
+
+    added_count = 0
+    for pending_task in pending_tasks:
+        if pending_task.id not in existing_pending_ids:
+            user_history_log["pending_assignments"].append(serialize_task(pending_task))
+            added_count += 1
+
+    cohort_user.history_log = user_history_log
+    cohort_user.save()
+    logger.info(
+        f"History log updated: {added_count} new pending tasks added out of {len(pending_tasks)} total pending tasks"
+    )
+
+
+@task(bind=False, priority=TaskPriority.STUDENT.value)
 def sync_cohort_user_tasks(cohort_user_id: int, **_: Any):
     logger.info(f"Executing sync_cohort_user_tasks for cohort user {cohort_user_id}")
     cohort_user = CohortUser.objects.filter(id=cohort_user_id).first()

@@ -35,6 +35,10 @@ from .tasks import async_unsubscribe_repo
 
 logger = logging.getLogger(__name__)
 
+async def _async_iter_from_list(items):
+    """Convert a list to an async generator for StreamingHttpResponse in ASGI mode"""
+    for item in items:
+        yield item
 
 def get_stripe_webhook_secret(payload=None):
     """
@@ -187,7 +191,7 @@ def get_download(request, download_id=None):
                 )
 
             return StreamingHttpResponse(
-                buffer.all(),
+                _async_iter_from_list(buffer.all()),
                 content_type="text/csv",
                 headers={"Content-Disposition": f"attachment; filename={download.name}"},
             )
@@ -420,7 +424,7 @@ class AcademyDownloadView(APIView):
                     )
 
                 return StreamingHttpResponse(
-                    buffer.all(),
+                    _async_iter_from_list(buffer.all()),
                     content_type="text/csv",
                     headers={"Content-Disposition": f"attachment; filename={download.name}"},
                 )

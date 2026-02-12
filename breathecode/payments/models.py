@@ -276,6 +276,8 @@ class Service(AbstractAsset):
         Group, blank=True, help_text="Groups that can access the customer that bought this service"
     )
 
+    description = models.CharField(max_length=255, default=None, null=True, blank=True, help_text="Description of the service")
+
     session_duration = models.DurationField(
         default=None, null=True, blank=True, help_text="Session duration, used in consumption sessions"
     )
@@ -1423,6 +1425,24 @@ class Coupon(models.Model):
 
     offered_at = models.DateTimeField(default=None, null=True, blank=True)
     expires_at = models.DateTimeField(default=None, null=True, blank=True)
+
+    # Statistics tracking fields
+    times_used = models.IntegerField(
+        default=0, db_index=True, help_text="Number of times this coupon has been used"
+    )
+    last_used_at = models.DateTimeField(
+        null=True, blank=True, db_index=True, help_text="When this coupon was last used"
+    )
+    stats = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Detailed statistics (only calculated for recently active coupons)",
+    )
+    stats_updated_at = models.DateTimeField(
+        null=True, blank=True, help_text="When stats were last calculated"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -2942,6 +2962,7 @@ class Consumable(AbstractServiceItem):
         plan_financing_team: Optional["PlanFinancingTeam" | int] = None,
         plan_financing_seat: Optional["PlanFinancingSeat" | int] = None,
         extra: Optional[dict] = None,
+        include_zero_balance: bool = False,
     ) -> QuerySet["Consumable"]:
 
         if extra is None:
@@ -3078,10 +3099,13 @@ class Consumable(AbstractServiceItem):
             Subscription.Status.DEPRECATED,
         ]
 
+        queryset = cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
+
+        if not include_zero_balance:
+            queryset = queryset.exclude(how_many=0)
+
         return (
-            cls.objects.filter(*args, Q(valid_until__gte=utc_now) | Q(valid_until=None), **{**param, **extra})
-            .exclude(how_many=0)
-            .exclude(Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses))
+            queryset.exclude(Q(subscription__status__in=invalid_statuses) | Q(plan_financing__status__in=invalid_statuses))
             .order_by("id")
         )
 
@@ -3098,6 +3122,7 @@ class Consumable(AbstractServiceItem):
         subscription_billing_team: Optional["SubscriptionBillingTeam" | int] = None,
         subscription_seat: Optional["SubscriptionSeat" | int] = None,
         extra: dict = None,
+        include_zero_balance: bool = False,
     ) -> QuerySet["Consumable"]:
 
         return cls.list(
@@ -3109,6 +3134,7 @@ class Consumable(AbstractServiceItem):
             subscription_billing_team=subscription_billing_team,
             subscription_seat=subscription_seat,
             extra=extra,
+            include_zero_balance=include_zero_balance,
         )
 
     @classmethod
@@ -3746,6 +3772,12 @@ class AcademyPaymentSettings(models.Model):
         default=2,
         validators=[MaxValueValidator(14)],
         help_text="Days before expiration when early renewal is allowed, 0 means it is not allowed",
+    )
+
+    feature_flags = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Feature flags and configuration settings for academy-specific features",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

@@ -15,7 +15,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
 from django.db import transaction
-from django.db.models import Q, QuerySet, Sum
+from django.db.models import F, Q, QuerySet, Sum
 from django.http import HttpRequest
 from django.utils import timezone
 from django_redis import get_redis_connection
@@ -1161,8 +1161,9 @@ def get_balance_by_resource(
         units = {x[0] for x in SERVICE_UNITS}
         for unit in units:
             per_unit = current.filter(unit_type=unit)
+            sum_result = per_unit.aggregate(Sum("how_many"))["how_many__sum"]
             balance[unit.lower()] = (
-                -1 if per_unit.filter(how_many=-1).exists() else per_unit.aggregate(Sum("how_many"))["how_many__sum"]
+                -1 if per_unit.filter(how_many=-1).exists() else (sum_result if sum_result is not None else 0)
             )
 
         for x in queryset:
@@ -1196,6 +1197,49 @@ def get_balance_by_resource(
             }
         )
     return result
+
+
+# Default configuration for coupon statistics
+DEFAULT_COUPON_STATS_CONFIG = {
+    "coupons": {
+        "stats_hours_threshold": 24,
+        "stats_top_n": 100,
+        "stats_min_usage": 2,
+        "stats_cleanup_threshold": 24 * 730,  # 2 years in hours
+    }
+}
+
+
+def get_coupon_stats_config(academy_id: Optional[int] = None) -> dict:
+    """
+    Get coupon statistics configuration for an academy.
+    
+    Merges academy-specific feature_flags.coupons with defaults.
+    Academy values override defaults, missing values use defaults.
+    
+    Args:
+        academy_id: Optional academy ID. If None, returns defaults only.
+    
+    Returns:
+        dict: Merged configuration dictionary with coupon stats settings.
+    """
+    config = DEFAULT_COUPON_STATS_CONFIG.copy()
+    
+    if academy_id is None:
+        return config
+    
+    try:
+        payment_settings = AcademyPaymentSettings.objects.filter(academy_id=academy_id).first()
+        if payment_settings and payment_settings.feature_flags:
+            academy_coupons_config = payment_settings.feature_flags.get("coupons", {})
+            if academy_coupons_config:
+                # Merge academy config into defaults (academy values override)
+                config["coupons"].update(academy_coupons_config)
+    except Exception:
+        # If there's any error, return defaults
+        pass
+    
+    return config
 
 
 @lru_cache(maxsize=1)
@@ -3119,6 +3163,11 @@ def build_plan_addons_financings(bag: Bag, invoice: Invoice, lang: str, conversi
         bag_coupons = bag.coupons.all()
         if bag_coupons.exists():
             financing.coupons.set(bag_coupons)
+            # Increment usage counters for coupons
+            now = timezone.now()
+            Coupon.objects.filter(id__in=[c.id for c in bag_coupons]).update(
+                times_used=F("times_used") + 1, last_used_at=now
+            )
 
         financing.invoices.add(invoice)
         
@@ -4225,3 +4274,196 @@ def process_auto_recharge(
     finally:
         # Always release the lock
         lock.release()
+
+
+def calculate_single_coupon_stats(coupon: Coupon) -> dict:
+    """
+    Calculate detailed statistics for a single coupon.
+    
+    Args:
+        coupon: Coupon instance to calculate stats for
+    
+    Returns:
+        dict: Statistics dictionary with revenue, users, plans, referral, time_periods, payment_methods
+    """
+    from datetime import timedelta
+    from django.db.models import Count, Min, Max, Sum, Avg
+    
+    now = timezone.now()
+    stats = {
+        "times_used": coupon.times_used,
+        "last_used_at": coupon.last_used_at.isoformat() if coupon.last_used_at else None,
+    }
+    
+    # Get all invoices that used this coupon (via subscriptions and plan financings)
+    # The relationship is: Subscription/PlanFinancing -> invoices (ManyToMany) -> bag -> coupons
+    # So we query invoices where the subscription/planfinancing has this coupon
+    # and the invoice's bag also has this coupon (to ensure it was used in that transaction)
+    sub_invoices = Invoice.objects.filter(
+        subscription__coupons=coupon,
+        bag__coupons=coupon,
+        status=Invoice.Status.FULFILLED,
+    ).select_related("currency", "payment_method", "bag__user").distinct()
+    
+    pf_invoices = Invoice.objects.filter(
+        planfinancing__coupons=coupon,
+        bag__coupons=coupon,
+        status=Invoice.Status.FULFILLED,
+    ).select_related("currency", "payment_method", "bag__user").distinct()
+    
+    # Combine both querysets
+    all_invoices = list(sub_invoices) + list(pf_invoices)
+    
+    if not all_invoices:
+        # Return minimal stats if no usage
+        stats.update({
+            "first_used_at": None,
+            "revenue": {
+                "total_revenue_generated": 0.0,
+                "total_discount_given": 0.0,
+                "average_order_value": 0.0,
+                "currency": None,
+            },
+            "users": {
+                "unique_users": 0,
+                "repeat_users": 0,
+                "new_users": 0,
+            },
+            "plans": {},
+            "referral": None,
+            "time_periods": {
+                "last_7_days": {"times_used": 0, "revenue_generated": 0.0},
+                "last_30_days": {"times_used": 0, "revenue_generated": 0.0},
+                "last_90_days": {"times_used": 0, "revenue_generated": 0.0},
+            },
+            "payment_methods": {},
+        })
+        return stats
+    
+    # Calculate first_used_at (earliest invoice paid_at)
+    first_used_at = min(inv.paid_at for inv in all_invoices)
+    stats["first_used_at"] = first_used_at.isoformat()
+    
+    # Revenue calculations
+    total_revenue = sum(inv.amount for inv in all_invoices)
+    # Calculate discount given (this is approximate - would need original price)
+    # For now, we'll calculate based on coupon discount type and value
+    total_discount = 0.0
+    if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
+        # Approximate: assume average discount
+        total_discount = total_revenue * coupon.discount_value / (1 - coupon.discount_value)
+    elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
+        total_discount = coupon.discount_value * len(all_invoices)
+    
+    avg_order_value = total_revenue / len(all_invoices) if all_invoices else 0.0
+    primary_currency = all_invoices[0].currency.code if all_invoices else None
+    
+    stats["revenue"] = {
+        "total_revenue_generated": round(total_revenue, 2),
+        "total_discount_given": round(total_discount, 2),
+        "average_order_value": round(avg_order_value, 2),
+        "currency": primary_currency,
+    }
+    
+    # User statistics
+    user_ids = [inv.bag.user_id for inv in all_invoices if inv.bag and inv.bag.user_id]
+    unique_users = len(set(user_ids))
+    user_counts = {}
+    for user_id in user_ids:
+        user_counts[user_id] = user_counts.get(user_id, 0) + 1
+    repeat_users = sum(1 for count in user_counts.values() if count > 1)
+    
+    stats["users"] = {
+        "unique_users": unique_users,
+        "repeat_users": repeat_users,
+        "new_users": unique_users - repeat_users,  # Approximation
+    }
+    
+    # Plan breakdown
+    plan_stats = {}
+    for inv in all_invoices:
+        if not inv.bag:
+            continue
+        bag_plans = inv.bag.plans.all()
+        for plan in bag_plans:
+            plan_id = str(plan.id)
+            if plan_id not in plan_stats:
+                plan_stats[plan_id] = {
+                    "times_used": 0,
+                    "last_used_at": None,
+                    "revenue_generated": 0.0,
+                    "discount_given": 0.0,
+                }
+            plan_stats[plan_id]["times_used"] += 1
+            plan_stats[plan_id]["revenue_generated"] += inv.amount
+            if inv.paid_at:
+                if plan_stats[plan_id]["last_used_at"] is None or inv.paid_at > plan_stats[plan_id]["last_used_at"]:
+                    plan_stats[plan_id]["last_used_at"] = inv.paid_at.isoformat()
+    
+    # Calculate discount per plan
+    for plan_id, plan_stat in plan_stats.items():
+        if coupon.discount_type == Coupon.Discount.PERCENT_OFF:
+            plan_stat["discount_given"] = round(
+                plan_stat["revenue_generated"] * coupon.discount_value / (1 - coupon.discount_value), 2
+            )
+        elif coupon.discount_type == Coupon.Discount.FIXED_PRICE:
+            plan_stat["discount_given"] = round(coupon.discount_value * plan_stat["times_used"], 2)
+        plan_stat["revenue_generated"] = round(plan_stat["revenue_generated"], 2)
+    
+    stats["plans"] = plan_stats
+    
+    # Referral statistics (if applicable)
+    if coupon.referral_type != Coupon.Referral.NO_REFERRAL:
+        # Calculate commissions paid
+        if coupon.referral_type == Coupon.Referral.PERCENTAGE:
+            total_commissions = total_revenue * coupon.referral_value
+        else:  # FIXED_PRICE
+            total_commissions = coupon.referral_value * len(all_invoices)
+        
+        unique_sellers = 1 if coupon.seller else 0
+        unique_buyers = unique_users
+        
+        stats["referral"] = {
+            "total_commissions_paid": round(total_commissions, 2),
+            "unique_sellers": unique_sellers,
+            "unique_buyers": unique_buyers,
+        }
+    else:
+        stats["referral"] = None
+    
+    # Time period breakdowns
+    seven_days_ago = now - timedelta(days=7)
+    thirty_days_ago = now - timedelta(days=30)
+    ninety_days_ago = now - timedelta(days=90)
+    
+    last_7_days = [inv for inv in all_invoices if inv.paid_at >= seven_days_ago]
+    last_30_days = [inv for inv in all_invoices if inv.paid_at >= thirty_days_ago]
+    last_90_days = [inv for inv in all_invoices if inv.paid_at >= ninety_days_ago]
+    
+    stats["time_periods"] = {
+        "last_7_days": {
+            "times_used": len(last_7_days),
+            "revenue_generated": round(sum(inv.amount for inv in last_7_days), 2),
+        },
+        "last_30_days": {
+            "times_used": len(last_30_days),
+            "revenue_generated": round(sum(inv.amount for inv in last_30_days), 2),
+        },
+        "last_90_days": {
+            "times_used": len(last_90_days),
+            "revenue_generated": round(sum(inv.amount for inv in last_90_days), 2),
+        },
+    }
+    
+    # Payment method distribution
+    payment_methods = {}
+    for inv in all_invoices:
+        if inv.payment_method:
+            method_name = inv.payment_method.name or "unknown"
+            payment_methods[method_name] = payment_methods.get(method_name, 0) + 1
+        else:
+            payment_methods["unknown"] = payment_methods.get("unknown", 0) + 1
+    
+    stats["payment_methods"] = payment_methods
+    
+    return stats

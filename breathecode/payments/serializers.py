@@ -13,8 +13,11 @@ from breathecode.payments.models import (
     AcademyService,
     Bag,
     CohortSet,
+    Coupon,
     Currency,
+    EventTypeSet,
     FinancingOption,
+    MentorshipServiceSet,
     PaymentMethod,
     Plan,
     PlanOffer,
@@ -115,7 +118,7 @@ class GetServiceSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
     slug = serpy.Field()
-    # description = serpy.Field()
+    description = serpy.Field()
 
     owner = serpy.MethodField()
     private = serpy.Field()
@@ -288,6 +291,8 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
     financing_options = serpy.MethodField()
     has_available_cohorts = serpy.MethodField()
     cohort_set = serpy.MethodField()
+    mentorship_service_set = serpy.MethodField()
+    event_type_set = serpy.MethodField()
 
     def get_has_available_cohorts(self, obj):
         return bool(obj.cohort_set)
@@ -296,6 +301,16 @@ class GetPlanSmallSerializer(GetPlanSmallTinySerializer):
         if not obj.cohort_set:
             return None
         return GetTinyCohortSetSerializer(obj.cohort_set, many=False).data
+
+    def get_mentorship_service_set(self, obj):
+        if not obj.mentorship_service_set:
+            return None
+        return GetMentorshipServiceSetSmallSerializer(obj.mentorship_service_set, many=False).data
+
+    def get_event_type_set(self, obj):
+        if not obj.event_type_set:
+            return None
+        return GetEventTypeSetSmallSerializer(obj.event_type_set, many=False).data
 
     def get_service_items(self, obj):
         return GetServiceItemSerializer(obj.service_items.all(), many=True).data
@@ -600,6 +615,10 @@ class GetCouponSerializer(serpy.Serializer):
     allowed_user = GetUserSmallSerializer(many=False, required=False)
     offered_at = serpy.Field()
     expires_at = serpy.Field()
+    times_used = serpy.Field()
+    last_used_at = serpy.Field(required=False)
+    stats = serpy.Field(required=False)
+    stats_updated_at = serpy.Field(required=False)
 
 
 class GetCouponWithPlansSerializer(serpy.Serializer):
@@ -739,10 +758,14 @@ class GetMentorshipServiceSetSmallSerializer(serpy.Serializer):
 
 class GetMentorshipServiceSetSerializer(GetMentorshipServiceSetSmallSerializer):
     academy_services = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_mentorship_service_sets=obj)
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
 
 
 class GetCohortSetSerializer(serpy.Serializer):
@@ -750,9 +773,13 @@ class GetCohortSetSerializer(serpy.Serializer):
     slug = serpy.Field()
     academy = GetAcademySmallSerializer(many=False)
     cohorts = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_cohorts(self, obj):
         return GetCohortSerializer(obj.cohorts.filter(), many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
 
 
 class GetTinyCohortSetSerializer(serpy.Serializer):
@@ -769,7 +796,23 @@ class CohortSetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CohortSet
-        fields = ("slug",)
+        fields = ("slug", "academy")
+
+
+class MentorshipServiceSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating MentorshipServiceSet."""
+
+    class Meta:
+        model = MentorshipServiceSet
+        fields = ("slug", "academy")
+
+
+class EventTypeSetSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating EventTypeSet."""
+
+    class Meta:
+        model = EventTypeSet
+        fields = ("slug", "academy")
 
 
 class GetEventTypeSerializer(serpy.Serializer):
@@ -796,10 +839,14 @@ class GetEventTypeSetSmallSerializer(serpy.Serializer):
 
 class GetEventTypeSetSerializer(GetEventTypeSetSmallSerializer):
     academy_services = serpy.MethodField()
+    plans = serpy.MethodField()
 
     def get_academy_services(self, obj):
         items = AcademyService.objects.filter(available_event_type_sets=obj)
         return GetAcademyServiceSmallReverseSerializer(items, many=True).data
+
+    def get_plans(self, obj):
+        return GetPlanSmallTinySerializer(obj.plan_set.all(), many=True).data
 
 
 class GetAbstractIOweYouSmallSerializer(serpy.Serializer):
@@ -918,6 +965,7 @@ class GetBagSerializer(serpy.Serializer):
         _, total_after = actions.get_plan_addons_amounts_with_coupons(obj, coupons, lang="en")
         return total_after
 
+
 class CreditNoteSerializer(serpy.Serializer):
     id = serpy.Field()
     amount = serpy.Field()
@@ -938,13 +986,14 @@ class CreditNoteSerializer(serpy.Serializer):
         """Return all credit notes for the invoice associated with this credit note."""
         if not obj.invoice:
             return []
-        
+
         try:
             # Get all credit notes for this invoice, ordered by creation date
-            credit_notes = obj.invoice.credit_notes.all().order_by('created_at')
+            credit_notes = obj.invoice.credit_notes.all().order_by("created_at")
             return CreditNoteSerializer(credit_notes, many=True).data
         except Exception:
             return []
+
 
 class GetInvoiceSerializer(GetInvoiceSmallSerializer):
     id = serpy.Field()
@@ -963,22 +1012,26 @@ class GetInvoiceSerializer(GetInvoiceSmallSerializer):
 
     def get_credit_notes(self, obj):
         import logging
+
         logger = logging.getLogger(__name__)
-        
+
         # Refresh invoice to avoid stale RelatedManager issues
-        if hasattr(obj, 'refresh_from_db'):
+        if hasattr(obj, "refresh_from_db"):
             try:
                 logger.debug(f"GetInvoiceSerializer.get_credit_notes: Refreshing Invoice(id={obj.id})")
                 obj.refresh_from_db()
             except Exception as e:
                 logger.warning(f"GetInvoiceSerializer.get_credit_notes: Failed to refresh Invoice(id={obj.id}): {e}")
-        
+
         try:
             credit_notes_list = list(obj.credit_notes.all())
             return CreditNoteSerializer(credit_notes_list, many=True).data
         except TypeError as e:
-            logger.error(f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}")
+            logger.error(
+                f"GetInvoiceSerializer.get_credit_notes: RelatedManager error for Invoice(id={obj.id}).credit_notes: {e}"
+            )
             return []
+
 
 class GetAbstractIOweYouSerializer(serpy.Serializer):
 
@@ -1346,3 +1399,92 @@ class AcademyPaymentSettingsPUTSerializer(serializers.ModelSerializer):
             "coinbase_api_key": {"required": False, "allow_blank": True, "allow_null": True},
             "coinbase_webhook_secret": {"required": False, "allow_blank": True, "allow_null": True},
         }
+
+
+class CouponSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating Coupon"""
+
+    class Meta:
+        model = Coupon
+        fields = [
+            "slug",
+            "discount_type",
+            "discount_value",
+            "referral_type",
+            "referral_value",
+            "auto",
+            "how_many_offers",
+            "plans",
+            "offered_at",
+            "expires_at",
+            "allowed_user",
+            "seller",
+            "referred_buyer",
+        ]
+        extra_kwargs = {
+            "slug": {"required": True},
+            "discount_type": {"required": True},
+            "discount_value": {"required": True},
+            "offered_at": {"required": False, "allow_null": True},
+            "expires_at": {"required": False, "allow_null": True},
+            "allowed_user": {"required": False, "allow_null": True},
+            "seller": {"required": False, "allow_null": True},
+            "referred_buyer": {"required": False, "allow_null": True},
+        }
+
+    def validate(self, attrs):
+        return attrs
+
+    def create(self, validated_data):
+        m2m_fields = {}
+
+        for key in list(validated_data.keys()):
+            try:
+                field = Coupon._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                continue
+
+            if field.many_to_many:
+                m2m_fields[key] = validated_data.pop(key)
+
+        instance = Coupon.objects.create(**validated_data)
+
+        for key, value in m2m_fields.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance
+
+    def update(self, instance, validated_data):
+        m2m_updates = {}
+
+        for key, value in validated_data.items():
+            try:
+                field = instance._meta.get_field(key)
+            except FieldDoesNotExist:  # pragma: no cover - defensive safeguard
+                setattr(instance, key, value)
+                continue
+
+            if field.many_to_many:
+                m2m_updates[key] = value
+                continue
+
+            setattr(instance, key, value)
+
+        instance.save()
+
+        for key, value in m2m_updates.items():
+            relation = getattr(instance, key)
+
+            if value is None:
+                relation.clear()
+                continue
+
+            relation.set(value)
+
+        return instance

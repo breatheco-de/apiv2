@@ -49,6 +49,7 @@ Examples:
 from django.urls import path
 
 from .views import (
+    AcademyAssignmentTelemetryView,
     AcademyCodeRevisionView,
     AcademyCommitFileView,
     CohortTaskView,
@@ -131,4 +132,9 @@ urlpatterns = [
     path("academy/flag", FlagView.as_view(), name="flag"),
     path("academy/asset/flag", AssetFlagView.as_view(), name="flag_asset"),
     path("academy/asset/<str:asset_id>/flag/legacy", LegacyFlagAssetView.as_view(), name="flag_asset_legacy"),
+    path(
+        "academy/asset/<str:asset_slug>/user/<int:user_id>/telemetry",
+        AcademyAssignmentTelemetryView.as_view(),
+        name="academy_asset_slug_user_id_telemetry",
+    ),
 ]

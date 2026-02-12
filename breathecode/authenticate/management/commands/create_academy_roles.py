@@ -34,6 +34,10 @@ class Command(BaseCommand):
             if _r is None:
                 _r = Role(slug=r["slug"], name=r["name"])
                 _r.save()
+            else:
+                if _r.name != r["name"]:
+                    _r.name = r["name"]
+                    _r.save()
 
             _r.capabilities.clear()
             r["caps"] = remove_duplicates(r["caps"])

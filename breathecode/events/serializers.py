@@ -57,6 +57,12 @@ class ProfileSerializer(serpy.Serializer):
         translations = ProfileTranslation.objects.filter(profile=obj)
         return ProfileTranslationSerializer(translations, many=True).data
 
+class CohortTimeSlotSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    timezone = serpy.Field()
+
 
 class UserBigSerializer(UserSerializer):
     profile = serpy.MethodField()
@@ -304,7 +310,7 @@ class AcademyEventSmallSerializer(serpy.Serializer):
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
     tags = serpy.Field()
-    host_user = UserSerializer(required=False)
+    host_user = UserBigSerializer(required=False)
     author = UserSerializer(required=False)
     free_for_all = serpy.Field()
     asset = serpy.MethodField()
@@ -321,6 +327,25 @@ class AcademyEventSmallSerializer(serpy.Serializer):
 
 class GetLiveClassSerializer(serpy.Serializer):
     id = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    remote_meeting_url = serpy.Field()
+    cohort = serpy.MethodField()
+
+    is_holiday = serpy.Field()
+    is_skipped = serpy.Field()
+
+    def get_cohort(self, obj):
+        if obj.cohort:
+            return CohortSmallSerializer(obj.cohort).data
+        elif obj.cohort_time_slot:
+            return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        return None
+
+class GetLiveClassBigSerializer(serpy.Serializer):
+    id = serpy.Field()
     hash = serpy.Field()
     started_at = serpy.Field()
     ended_at = serpy.Field()
@@ -329,8 +354,20 @@ class GetLiveClassSerializer(serpy.Serializer):
     remote_meeting_url = serpy.Field()
     cohort = serpy.MethodField()
 
+    is_holiday = serpy.Field()
+    is_skipped = serpy.Field()
+    skipped_reason = serpy.Field()
+
+    cohort_time_slot = CohortTimeSlotSmallSerializer(required=False)
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
     def get_cohort(self, obj):
-        return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        if obj.cohort:
+            return CohortSmallSerializer(obj.cohort).data
+        elif obj.cohort_time_slot:
+            return CohortSmallSerializer(obj.cohort_time_slot.cohort).data
+        return None
 
 
 class GetLiveClassJoinSerializer(GetLiveClassSerializer):
@@ -825,15 +862,21 @@ class EventTypePutSerializer(EventTypeSerializerMixin):
 
 
 class LiveClassSerializer(serializers.ModelSerializer):
+    hash = serializers.CharField(read_only=True)
+    cohort = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = LiveClass
         exclude = ()
+        extra_kwargs = {
+            "cohort_time_slot": {"required": False, "allow_null": True},
+            "remote_meeting_url": {"required": False, "allow_blank": True},
+        }
 
     def _validate_started_at(self, data: dict[str, Any]):
         utc_now = timezone.now()
 
-        if not self.instance and "started_at" in data:
+        if not self.instance and "started_at" in data and data["started_at"] is not None:
             raise ValidationException(
                 translation(
                     self.context["lang"],
@@ -948,19 +991,57 @@ class LiveClassSerializer(serializers.ModelSerializer):
             )
 
     def _validate_cohort(self, data: dict[str, Any]):
-        if "cohort" in data and data["cohort"].academy.id != int(self.context["academy_id"]):
-            raise ValidationException(
-                translation(
-                    self.context["lang"],
-                    en="This cohort does not belong to any of your academies.",
-                    es="Este cohort no pertenece a ninguna de tus academias.",
-                    slug="cohort-not-belong-to-academy",
+        from breathecode.admissions.models import Cohort
+
+        if "cohort" in data and data["cohort"] is not None:
+            cohort_id = data["cohort"]
+            try:
+                cohort = Cohort.objects.get(id=cohort_id, academy__id=int(self.context["academy_id"]))
+                data["cohort"] = cohort
+            except Cohort.DoesNotExist:
+                raise ValidationException(
+                    translation(
+                        self.context["lang"],
+                        en="This cohort does not belong to any of your academies.",
+                        es="Este cohort no pertenece a ninguna de tus academias.",
+                        slug="cohort-not-belong-to-academy",
+                    )
                 )
-            )
 
     def validate(self, data: dict[str, Any]):
         self._validate_started_at(data)
         self._validate_ended_at(data)
         self._validate_cohort(data)
 
+        # Set remote_meeting_url from cohort if not provided
+        if "remote_meeting_url" not in data or not data.get("remote_meeting_url"):
+            if "cohort" in data and data["cohort"] is not None:
+                cohort = data["cohort"]
+                data["remote_meeting_url"] = cohort.online_meeting_url or ""
+            elif not self.instance:
+                # If creating new and no cohort provided, default to empty string
+                data["remote_meeting_url"] = ""
+
         return data
+
+    def create(self, validated_data):
+        utc_now = timezone.now()
+
+        # If creating a live class with past dates, automatically set started_at and ended_at
+        starting_at = validated_data.get("starting_at")
+        ending_at = validated_data.get("ending_at")
+
+        # If starting_at is in the past, automatically set started_at
+        if starting_at and starting_at < utc_now:
+            validated_data["started_at"] = starting_at
+
+        # If ending_at is in the past, automatically set ended_at (but only if started_at is set)
+        if ending_at and ending_at < utc_now:
+            # Get started_at (either from validated_data or just set above)
+            started_at = validated_data.get("started_at")
+            if started_at is not None:
+                # Ensure ended_at is after or equal to started_at
+                if ending_at >= started_at:
+                    validated_data["ended_at"] = ending_at
+
+        return super().create(validated_data)

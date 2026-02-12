@@ -362,10 +362,38 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                 related_id=instance.id,
             )
 
+        # Auto-ignore projects on delivery if feature flag is enabled
         if (
             "task_status" in validated_data
             and validated_data["task_status"] == "DONE"
-            and validated_data["revision_status"] != "APPROVED"
+            and instance.task_status != "DONE"
+            and instance.task_type == "PROJECT"
+            and instance.cohort
+            and instance.user.id == self.context["request"].user.id
+        ):
+            from breathecode.admissions.utils.academy_features import has_feature_flag
+            from django.utils import timezone
+
+            revision_status_set = "revision_status" in validated_data
+            revision_status_value = validated_data.get("revision_status")
+            
+            should_auto_ignore = (
+                not revision_status_set or revision_status_value in (None, "PENDING", "")
+            )
+            
+            if should_auto_ignore:
+                auto_ignore_enabled = has_feature_flag(
+                    instance.cohort.academy, "certificate.auto_ignore_projects_on_delivery", default=False
+                )
+                
+                if auto_ignore_enabled:
+                    validated_data["revision_status"] = "IGNORED"
+                    validated_data["reviewed_at"] = timezone.now()
+
+        if (
+            "task_status" in validated_data
+            and validated_data["task_status"] == "DONE"
+            and validated_data.get("revision_status") != "APPROVED"
             and "flags" in validated_data
         ):
             print(validated_data)
@@ -373,7 +401,9 @@ class PUTTaskSerializer(serializers.ModelSerializer):
 
             async_validate_flags.delay(instance.id, instance.associated_slug, validated_data["flags"])
 
-        return super().update(instance, validated_data)
+        result = super().update(instance, validated_data)
+        
+        return result
 
 
 class FinalProjectGETSerializer(serpy.Serializer):
@@ -543,3 +573,57 @@ class PUTFinalProjectSerializer(serializers.ModelSerializer):
                 )
 
         return data
+
+
+class POSTAssignmentTelemetrySerializer(serializers.ModelSerializer):
+    telemetry = serializers.JSONField(required=False, allow_null=True)
+    engagement_score = serializers.FloatField(required=False, allow_null=True)
+    frustration_score = serializers.FloatField(required=False, allow_null=True)
+    metrics_algo_version = serializers.FloatField(required=False, allow_null=True)
+    metrics = serializers.JSONField(required=False, allow_null=True)
+    total_time = serializers.DurationField(required=False, allow_null=True)
+    completion_rate = serializers.FloatField(required=False, allow_null=True)
+
+    class Meta:
+        model = AssignmentTelemetry
+        exclude = ("user", "asset_slug", "created_at", "updated_at")
+
+    def create(self, validated_data):
+        user = self.context.get("user")
+        asset_slug = self.context.get("asset_slug")
+
+        if not user:
+            raise ValidationException("User is required", slug="user-required")
+        if not asset_slug:
+            raise ValidationException("Asset slug is required", slug="asset-slug-required")
+
+        # Check if telemetry already exists (upsert behavior)
+        telemetry = AssignmentTelemetry.objects.filter(
+            asset_slug=asset_slug, user=user
+        ).first()
+
+        if telemetry:
+            # Update existing telemetry
+            for key, value in validated_data.items():
+                setattr(telemetry, key, value)
+            telemetry.save()
+            return telemetry
+        else:
+            # Create new telemetry
+            return AssignmentTelemetry.objects.create(
+                user=user, asset_slug=asset_slug, **validated_data
+            )
+
+
+class PUTAssignmentTelemetrySerializer(serializers.ModelSerializer):
+    telemetry = serializers.JSONField(required=False, allow_null=True)
+    engagement_score = serializers.FloatField(required=False, allow_null=True)
+    frustration_score = serializers.FloatField(required=False, allow_null=True)
+    metrics_algo_version = serializers.FloatField(required=False, allow_null=True)
+    metrics = serializers.JSONField(required=False, allow_null=True)
+    total_time = serializers.DurationField(required=False, allow_null=True)
+    completion_rate = serializers.FloatField(required=False, allow_null=True)
+
+    class Meta:
+        model = AssignmentTelemetry
+        exclude = ("user", "asset_slug", "created_at", "updated_at")

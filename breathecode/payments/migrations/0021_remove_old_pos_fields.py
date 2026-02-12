@@ -3,6 +3,22 @@
 from django.db import migrations
 
 
+def drop_old_pos_fields_if_supported(apps, schema_editor):
+    """
+    Drop legacy POS fields if supported by the database engine.
+
+    Tests run with SQLite in-memory; SQLite doesn't support `DROP COLUMN IF EXISTS`,
+    so we skip on non-PostgreSQL engines.
+    """
+
+    if schema_editor.connection.vendor != "postgresql":
+        return
+
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_webhook_secret;")
+        cursor.execute("ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_publishable_key;")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,12 +26,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql="ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_webhook_secret;",
-            reverse_sql=migrations.RunSQL.noop,
-        ),
-        migrations.RunSQL(
-            sql="ALTER TABLE payments_academypaymentsettings DROP COLUMN IF EXISTS pos_publishable_key;",
-            reverse_sql=migrations.RunSQL.noop,
-        ),
+        migrations.RunPython(drop_old_pos_fields_if_supported, migrations.RunPython.noop),
     ]

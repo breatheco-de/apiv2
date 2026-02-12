@@ -14,11 +14,20 @@ def batch(self, webhook: LearnPackWebhook):
     asset = None
     if "asset_id" in webhook.payload:
         _id = webhook.payload["asset_id"]
-        asset = Asset.objects.filter(id=_id).first()
+        asset = Asset.objects.filter(id=int(_id)).first()
+        if asset is not None and asset.learnpack_id is None and "package_id" in webhook.payload:
+            asset.learnpack_id = int(webhook.payload["package_id"])
+            asset.save()
 
     if asset is None:
-        _slug = webhook.payload["slug"]
-        asset = Asset.get_by_slug(_slug)
+        _slug = None
+        if "slug" in webhook.payload:
+            _slug = webhook.payload["slug"]
+        elif "package_slug" in webhook.payload:
+            _slug = webhook.payload["package_slug"]
+
+        if _slug is not None:
+            asset = Asset.get_by_slug(_slug)
 
     if asset is None:
         raise Exception(

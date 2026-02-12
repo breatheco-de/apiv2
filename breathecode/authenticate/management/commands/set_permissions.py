@@ -110,10 +110,20 @@ PERMISSIONS = [
         "description": "Permission to create, read, update, and delete career paths and related global models (job families, job roles) that have academy=None",
         "codename": "crud_career_path",
     },
+    {
+        "name": "Manage academy flags",
+        "description": "Permission to manage academy flags",
+        "codename": "manage_academy_flags",
+    },
+    {
+        "name": "Bill internal academies",
+        "description": "Allows creating and managing bills about bootcamp users and provisioning vendors",
+        "codename": "bill_internal_academies",
+    },
 ]
 
 GROUPS = [
-    {"name": "Admin", "permissions": [x["codename"] for x in PERMISSIONS], "inherit": []},
+    {"name": "System Admin", "permissions": [x["codename"] for x in PERMISSIONS], "inherit": []},
     {
         "name": "Default",
         "permissions": [
@@ -151,6 +161,7 @@ GROUPS = [
     {"name": "Classes", "permissions": ["live_class_join"], "inherit": []},
     {"name": "Legacy", "permissions": ["get_my_certificate"], "inherit": ["Classes", "Events", "Mentorships"]},
     {"name": "Paid Student", "permissions": ["get_private_link"], "inherit": []},
+    {"name": "Sysadmin", "permissions": ["manage_academy_flags", "bill_internal_academies"], "inherit": []},
 ]
 
 
@@ -198,6 +209,13 @@ class Command(BaseCommand):
         for group in groups:
             instance = Group.objects.filter(name=group["name"]).first()
 
+            if instance is None and group["name"] == "System Admin":
+                legacy = Group.objects.filter(name="Admin").first()
+                if legacy is not None:
+                    legacy.name = "System Admin"
+                    legacy.save()
+                    instance = legacy
+
             # reset permissions
             if instance:
                 instance.permissions.clear()
@@ -207,7 +225,7 @@ class Command(BaseCommand):
                 instance.save()
 
             # the admin have all the permissions
-            if group["name"] == "Admin":
+            if group["name"] == "System Admin":
                 instance.permissions.set(Permission.objects.filter().exclude(content_type=content_type))
 
             permissions = list(

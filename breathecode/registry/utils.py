@@ -47,6 +47,7 @@ class AssetErrorLogType:
     POOR_DESCRIPTION = "poor-description"
     EMPTY_HTML = "empty-html"
     INVALID_URL = "invalid-url"
+    INVALID_SLUG_REFERENCE = "invalid-slug-reference"
     INVALID_LANGUAGE = "invalid-language"
     INVALID_README_URL = "invalid-readme-url"
     INVALID_IMAGE = "invalid-image"

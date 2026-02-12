@@ -269,6 +269,7 @@ class GetBigAcademySerializer(serpy.Serializer):
     marketing_email = serpy.Field()
     street_address = serpy.Field()
     website_url = serpy.Field()
+    short_url = serpy.Field()
     marketing_phone = serpy.Field()
     twitter_handle = serpy.Field()
     facebook_handle = serpy.Field()
@@ -643,6 +644,31 @@ class GetCohortUserSerializer(serpy.Serializer):
         return GetProfileAcademySmallSerializer(profile).data if profile else None
 
 
+class GetCohortUserBigSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+
+    id = serpy.Field()
+    user = UserSerializer()
+    cohort = GetSmallCohortSerializer()
+    role = serpy.Field()
+    finantial_status = serpy.Field()
+    educational_status = serpy.Field()
+    watching = serpy.Field()
+    history_log = serpy.Field()
+    tasks = serpy.MethodField()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    profile_academy = serpy.MethodField()
+
+    def get_profile_academy(self, obj):
+        profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
+        return GetProfileAcademySmallSerializer(profile).data if profile else None
+
+    def get_tasks(self, obj):
+        tasks = Task.objects.filter(user=obj.user, cohort=obj.cohort)
+        return TaskGETSmallSerializer(tasks, many=True).data
+
+
 class GetCohortUserTasksSerializer(GetCohortUserSerializer):
     """The serializer schema definition."""
 
@@ -715,6 +741,7 @@ class GETCohortUserSmallSerializer(serpy.Serializer):
 
     # Use a Field subclass like IntField if you need more validation.
     cohort = GetMeCohortSerializer()
+    id = serpy.Field()
     role = serpy.Field()
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
@@ -868,10 +895,10 @@ class AcademySerializer(serializers.ModelSerializer):
         """Validate that the main_currency is a valid Currency by code or ID."""
         if value is None:
             return None
-            
+
         if not value:
             return None
-            
+
         from breathecode.payments.models import Currency
 
         # If value is a string, try to get currency by code
@@ -884,7 +911,7 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If value is an integer, try to get currency by ID
         if isinstance(value, int):
             currency = Currency.objects.filter(id=value).first()
@@ -895,9 +922,9 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If it's a Currency object (from nested serializers), validate it exists
-        if hasattr(value, 'id'):
+        if hasattr(value, "id"):
             if not Currency.objects.filter(id=value.id).exists():
                 raise ValidationException(
                     "Invalid currency",
@@ -905,7 +932,7 @@ class AcademySerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return value
-        
+
         raise ValidationException(
             "main_currency must be a currency code (e.g., 'USD') or currency ID",
             slug="invalid-currency-format",
@@ -922,10 +949,10 @@ class AcademySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # Extra safety: remove slug if somehow it made it through
         validated_data.pop("slug", None)
-        
+
         # Handle main_currency - it comes as Currency object from validation
         # No need to convert, it's already the right object
-        
+
         return super().update(instance, validated_data)
 
 
@@ -944,6 +971,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
             "logo_url",
             "icon_url",
             "website_url",
+            "short_url",
             "white_label_url",
             "street_address",
             "marketing_email",
@@ -988,10 +1016,10 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
         """Validate that the main_currency is a valid Currency by code or ID."""
         if value is None:
             return None
-            
+
         if not value:
             return None
-            
+
         from breathecode.payments.models import Currency
 
         # If value is a string, try to get currency by code
@@ -1004,7 +1032,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If value is an integer, try to get currency by ID
         if isinstance(value, int):
             currency = Currency.objects.filter(id=value).first()
@@ -1015,9 +1043,9 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return currency
-        
+
         # If it's a Currency object (from nested serializers), validate it exists
-        if hasattr(value, 'id'):
+        if hasattr(value, "id"):
             if not Currency.objects.filter(id=value.id).exists():
                 raise ValidationException(
                     "Invalid currency",
@@ -1025,7 +1053,7 @@ class AcademyPOSTSerializer(serializers.ModelSerializer):
                     code=400,
                 )
             return value
-        
+
         raise ValidationException(
             "main_currency must be a currency code (e.g., 'USD') or currency ID",
             slug="invalid-currency-format",
@@ -1719,6 +1747,7 @@ class AcademyReportSerializer(serpy.Serializer):
     slug = serpy.Field()
     logo_url = serpy.Field()
     website_url = serpy.Field()
+    short_url = serpy.Field()
     street_address = serpy.Field()
     latitude = serpy.Field()
     longitude = serpy.Field()

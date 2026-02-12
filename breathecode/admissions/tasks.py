@@ -95,9 +95,9 @@ def build_cohort_user(cohort_id: int, user_id: int, role: str = "STUDENT", **_: 
     if not created and profile.status != "ACTIVE":
         profile.status = "ACTIVE"
         profile.save()
-        logger.info("ProfileAcademy reactivated")
+        logger.info("ProfileAcademy mark as active")
     elif created:
-        logger.info("ProfileAcademy created")
+        logger.info("ProfileAcademy added")
     else:
         logger.info("ProfileAcademy already exists and is active")
 
@@ -111,12 +111,15 @@ def build_profile_academy(academy_id: int, user_id: int, role: str = "student", 
     logger.info(f"Starting build_profile_academy for cohort {academy_id} and user {user_id}")
 
     if not (user := User.objects.filter(id=user_id, is_active=True).first()):
+        logger.error(f"User with id {user_id} not found", exc_info=True)
         raise AbortTask(f"User with id {user_id} not found")
 
     if not (academy := Academy.objects.filter(id=academy_id).first()):
+        logger.error(f"Academy with id {academy_id} not found", exc_info=True)
         raise AbortTask(f"Academy with id {academy_id} not found")
 
     if not (role_obj := Role.objects.filter(slug=role).first()):
+        logger.error(f"Role with slug {role} not found", exc_info=True)
         raise AbortTask(f"Role with slug {role} not found")
 
     # Check if user already has a ProfileAcademy for this specific role in this academy
@@ -138,8 +141,8 @@ def build_profile_academy(academy_id: int, user_id: int, role: str = "student", 
     if not created and profile.status != "ACTIVE":
         profile.status = "ACTIVE"
         profile.save()
-        logger.info("ProfileAcademy reactivated")
+        logger.info("ProfileAcademy mark as active")
     elif created:
-        logger.info("ProfileAcademy created")
+        logger.info("ProfileAcademy added")
     else:
         logger.info("ProfileAcademy already exists and is active")

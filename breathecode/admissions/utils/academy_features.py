@@ -31,10 +31,19 @@ def has_feature_flag(academy: Optional[Academy], feature_key: str, default: bool
         return default
     
     features = academy.get_academy_features()
-    
-    # Check in features dict
-    if feature_key in features.get("features", {}):
-        return features["features"][feature_key]
+
+    # Prefer dot-notation paths, e.g. "commerce.reseller", "events.enabled".
+    path = feature_key
+    if isinstance(path, str) and "." in path:
+        current = features
+        for part in path.split("."):
+            if not isinstance(current, dict) or part not in current:
+                current = None
+                break
+            current = current[part]
+
+        if isinstance(current, bool):
+            return current
     
     # Check in navigation dict
     if feature_key in features.get("navigation", {}):
@@ -66,10 +75,19 @@ def get_feature_flag(academy: Optional[Academy], feature_key: str, default=None)
         return default
     
     features = academy.get_academy_features()
-    
-    # Check in features dict
-    if feature_key in features.get("features", {}):
-        return features["features"][feature_key]
+
+    # Prefer dot-notation paths, e.g. "commerce.reseller", "events.enabled", "navigation.custom_links".
+    path = feature_key
+    if isinstance(path, str) and "." in path:
+        current = features
+        for part in path.split("."):
+            if not isinstance(current, dict) or part not in current:
+                current = None
+                break
+            current = current[part]
+
+        if current is not None:
+            return current
     
     # Check in navigation dict
     if feature_key in features.get("navigation", {}):

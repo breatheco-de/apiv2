@@ -768,7 +768,9 @@ def register_new_lead(form_entry=None):
         pass
 
     if ac_academy is None:
-        ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry["location"]).first()
+        ac_academy = ActiveCampaignAcademy.objects.filter(
+            Q(academy__slug=form_entry["location"]) | Q(academy__academyalias__slug=form_entry["location"])
+        ).first()
 
     if ac_academy is None:
         raise RetryTask(
@@ -839,7 +841,15 @@ def register_new_lead(form_entry=None):
     }
 
     contact = set_optional(contact, "utm_url", form_entry, crm_vendor=ac_academy.crm_vendor)
-    contact = set_optional(contact, "utm_location", form_entry, "location", crm_vendor=ac_academy.crm_vendor)
+    
+    # Ensure location sent to Active Campaign matches academy.active_campaign_slug
+    location_value = form_entry.get("location")
+    if alias and alias.active_campaign_slug:
+        location_value = alias.active_campaign_slug
+    elif ac_academy.academy and ac_academy.academy.active_campaign_slug:
+        location_value = ac_academy.academy.active_campaign_slug
+    
+    contact = set_optional(contact, "utm_location", {"location": location_value}, "location", crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "course", form_entry, crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "utm_language", form_entry, "language", crm_vendor=ac_academy.crm_vendor)
     contact = set_optional(contact, "utm_country", form_entry, "country", crm_vendor=ac_academy.crm_vendor)
@@ -1051,13 +1061,30 @@ def sync_tags(ac_academy):
         tags = tags + response["tags"]
 
     for tag in tags:
-        t = Tag.objects.filter(slug=tag["tag"], ac_academy=ac_academy).first()
-        if t is None:
+        # Look for existing tag by slug - check both ac_academy relationship AND direct academy
+        # This handles tags created locally without ActiveCampaign
+        existing_tag = Tag.objects.filter(
+            slug=tag["tag"]
+        ).filter(
+            Q(ac_academy=ac_academy) | 
+            Q(academy=ac_academy.academy)
+        ).first()
+        
+        if existing_tag is None:
+            # Tag doesn't exist locally - create new one
             t = Tag(
                 slug=tag["tag"],
                 acp_id=tag["id"],
                 ac_academy=ac_academy,
+                academy=ac_academy.academy,  # Set direct academy relationship too
             )
+        else:
+            # Tag exists locally - update it with ActiveCampaign data
+            t = existing_tag
+            t.acp_id = tag["id"]
+            t.ac_academy = ac_academy  # Ensure ac_academy is set
+            if not t.academy:
+                t.academy = ac_academy.academy  # Set academy if not already set
 
         t.subscribers = tag["subscriber_count"]
         t.save()

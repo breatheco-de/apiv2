@@ -170,8 +170,18 @@ class Tag(models.Model):
         default=None,
         help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
     )
-    acp_id = models.IntegerField(help_text="The id coming from active campaign")
-    subscribers = models.IntegerField()
+    acp_id = models.IntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="The id coming from active campaign (optional)"
+    )
+    subscribers = models.IntegerField(
+        null=True,
+        blank=True,
+        default=0,
+        help_text="Number of subscribers in ActiveCampaign (optional)"
+    )
 
     # For better maintance the tags can be disputed for deletion
     disputed_at = models.DateTimeField(
@@ -194,6 +204,16 @@ class Tag(models.Model):
         blank=True,
         default=None,
         help_text="Leads that contain this tag will be asociated to this automation",
+    )
+
+    # Direct academy relationship (for tags without ActiveCampaign)
+    academy = models.ForeignKey(
+        "admissions.Academy",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Academy this tag belongs to (required if ac_academy is not set)",
     )
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)
@@ -677,6 +697,59 @@ class ShortLink(models.Model):
     # Status
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    # Traceability fields
+    event = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Event reference in format '<id:slug>' (e.g., '<3434:event_slug>')"
+    )
+    course = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Course reference in format '<id:slug>' (e.g., '<123:course_slug>')"
+    )
+    downloadable = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Downloadable reference in format '<id:slug>' (e.g., '<567:downloadable_slug>')"
+    )
+    plan = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Plan reference in format '<id:slug>' (e.g., '<789:plan_slug>')"
+    )
+    referrer_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+        related_name='referral_shortlinks',
+        help_text="User who referred this link (for affiliate tracking)"
+    )
+    purpose = models.TextField(
+        max_length=500,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Internal description of what this link is used for"
+    )
+    notes = models.TextField(
+        max_length=1000,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Internal notes about this short link"
+    )
 
     lastclick_at = models.DateTimeField(
         blank=True, null=True, default=None, help_text="Last time a click was registered for this link"
@@ -1218,7 +1291,7 @@ class CourseResaleSettings(models.Model):
                 {"academy": "Academy must be white labeled to resell courses. Set academy.white_labeled=True"}
             )
 
-        if has_feature_flag(self.academy, "reseller", default=False) is False:
+        if has_feature_flag(self.academy, "commerce.reseller", default=False) is False:
             raise ValidationError(
                 {
                     "academy": "Academy must have the 'reseller' feature enabled in academy_features to resell courses"

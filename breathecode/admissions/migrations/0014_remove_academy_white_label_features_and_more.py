@@ -11,6 +11,9 @@ def remove_white_label_features_if_exists(apps, schema_editor):
     without errors. This is important for production environments where
     the column might have been removed manually or in a different way.
     """
+    if schema_editor.connection.vendor != "postgresql":
+        return
+
     with schema_editor.connection.cursor() as cursor:
         # Check if column exists in the database
         cursor.execute("""

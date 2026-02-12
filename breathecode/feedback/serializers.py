@@ -1,3 +1,4 @@
+from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.utils import timezone
 from rest_framework import serializers
@@ -8,7 +9,17 @@ from breathecode.admissions.models import CohortUser
 from breathecode.utils import serpy
 
 from .actions import send_cohort_survey_group
-from .models import AcademyFeedbackSettings, Answer, FeedbackTag, Review, Survey, SurveyConfiguration, SurveyResponse
+from .models import (
+    AcademyFeedbackSettings,
+    Answer,
+    FeedbackTag,
+    Review,
+    Survey,
+    SurveyConfiguration,
+    SurveyQuestionTemplate,
+    SurveyResponse,
+    SurveyStudy,
+)
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -552,20 +563,56 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "trigger_type",
+            "syllabus",
+            "template",
             "questions",
             "is_active",
             "academy",
             "cohorts",
             "asset_slugs",
+            "priority",
             "created_by",
             "created_at",
             "updated_at",
         ]
+        # academy and created_by are set by the view based on the Academy header and the authenticated user
         read_only_fields = ["id", "created_at", "updated_at", "created_by", "academy"]
 
         extra_kwargs = {
             "academy": {"required": False},
+            "trigger_type": {"required": False, "allow_null": True},
+            "questions": {"required": False},
+            "syllabus": {"required": False},
+            "priority": {"required": False, "allow_null": True},
         }
+
+    def validate_syllabus(self, value):
+        if value is None:
+            return {}
+
+        if not isinstance(value, dict):
+            raise ValidationException("syllabus must be a dictionary", slug="invalid-syllabus-filter")
+
+        allowed_keys = {"syllabus", "version", "module", "asset_slug"}
+        for k in value.keys():
+            if k not in allowed_keys:
+                raise ValidationException(f"Invalid syllabus key: {k}", slug="invalid-syllabus-filter-key")
+
+        if "syllabus" in value and value["syllabus"] is not None and not isinstance(value["syllabus"], str):
+            raise ValidationException("'syllabus' must be a string", slug="invalid-syllabus-filter-syllabus")
+
+        if "version" in value and value["version"] is not None:
+            if not isinstance(value["version"], int) or value["version"] < 1:
+                raise ValidationException("'version' must be an integer >= 1", slug="invalid-syllabus-filter-version")
+
+        if "module" in value and value["module"] is not None:
+            if not isinstance(value["module"], int) or value["module"] < 0:
+                raise ValidationException("'module' must be an integer >= 0", slug="invalid-syllabus-filter-module")
+
+        if "asset_slug" in value and value["asset_slug"] is not None and not isinstance(value["asset_slug"], str):
+            raise ValidationException("'asset_slug' must be a string", slug="invalid-syllabus-filter-asset-slug")
+        
+        return value
 
     def validate_questions(self, value):
         """Validate questions structure."""
@@ -616,6 +663,28 @@ class SurveyConfigurationSerializer(serializers.ModelSerializer):
 
         return value
 
+    def validate(self, data):
+        """
+        Enforce mutual exclusivity:
+        - If template is provided, questions may be omitted (it will be sourced from template on save()).
+        - If template is not provided, questions must exist.
+        """
+        template = data.get("template", getattr(self.instance, "template", None) if self.instance else None)
+        questions = data.get("questions", getattr(self.instance, "questions", None) if self.instance else None)
+
+        # If template is set, questions must not be provided/edited via API to avoid divergence and confusion.
+        if template is not None and "questions" in data:
+            raise ValidationException(
+                "questions cannot be modified when template is assigned",
+                code=400,
+                slug="questions-not-editable-with-template",
+            )
+
+        if template is None and not questions:
+            raise ValidationException("questions is required when template is not provided", slug="missing-questions")
+
+        return data
+
 
 class SurveyResponseSerializer(serializers.ModelSerializer):
     """Serializer for survey responses."""
@@ -627,15 +696,33 @@ class SurveyResponseSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "survey_config",
+            "survey_study",
             "user",
+            "token",
             "trigger_context",
+            "questions_snapshot",
             "answers",
             "answers_detail",
             "status",
             "created_at",
+            "opened_at",
+            "email_opened_at",
             "answered_at",
         ]
-        read_only_fields = ["id", "user", "survey_config", "trigger_context", "status", "created_at", "answered_at"]
+        read_only_fields = [
+            "id",
+            "user",
+            "survey_config",
+            "survey_study",
+            "token",
+            "trigger_context",
+            "questions_snapshot",
+            "status",
+            "created_at",
+            "opened_at",
+            "email_opened_at",
+            "answered_at",
+        ]
 
     def get_answers_detail(self, obj):
         """
@@ -671,6 +758,70 @@ class SurveyResponseSerializer(serializers.ModelSerializer):
                 ordered_ids.append(qid)
 
         return [{"id": qid, "question": questions_by_id.get(qid), "answer": answers.get(qid)} for qid in ordered_ids]
+
+
+class SurveyQuestionTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveyQuestionTemplate
+        fields = ["id", "slug", "title", "description", "questions", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def validate_questions(self, value):
+        # Reuse the same shape as SurveyConfiguration.questions
+        if not isinstance(value, dict):
+            raise ValidationException("questions must be a dictionary", slug="invalid-questions-structure")
+
+        if "questions" not in value:
+            raise ValidationException("questions must contain a 'questions' key", slug="missing-questions-key")
+
+        questions = value.get("questions", [])
+        if not isinstance(questions, list):
+            raise ValidationException("questions.questions must be a list", slug="invalid-questions-list")
+
+        if len(questions) == 0:
+            raise ValidationException("questions.questions must contain at least one question", slug="empty-questions-list")
+
+        return value
+
+
+class SurveyStudySerializer(serializers.ModelSerializer):
+    def validate_survey_configurations(self, value):
+        """
+        All configurations inside a study must share the same trigger_type.
+        This prevents mixing realtime triggers in a single campaign.
+        """
+
+        trigger_types = {x.trigger_type for x in value}
+        if len(trigger_types) <= 1:
+            return value
+
+        trigger_types_str = ", ".join(sorted([str(x) for x in trigger_types]))
+        raise ValidationException(
+            translation(
+                en=f"All survey configurations in a study must have the same trigger_type, got: {trigger_types_str}",
+                es=f"Todas las configuraciones de un estudio deben tener el mismo trigger_type, se encontró: {trigger_types_str}",
+            ),
+            slug="mixed-trigger-types",
+        )
+
+    class Meta:
+        model = SurveyStudy
+        fields = [
+            "id",
+            "slug",
+            "title",
+            "description",
+            "academy",
+            "starts_at",
+            "ends_at",
+            "max_responses",
+            "survey_configurations",
+            "stats",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "academy", "stats", "created_at", "updated_at"]
+
 
 class SurveyAnswerSerializer(serializers.Serializer):
     """Serializer for validating survey answers."""

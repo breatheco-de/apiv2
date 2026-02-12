@@ -11,9 +11,12 @@ from django.db.models import Q
 from django.utils import timezone
 
 from breathecode.admissions.models import Academy
+from breathecode.monitoring import signals
 from breathecode.notify.models import SlackChannel
 
-__all__ = ["Application", "Endpoint", "MonitorScript", "MonitoringError"]
+from breathecode.monitoring.reports.churn.models import ChurnAlert, ChurnRiskReport
+
+__all__ = ["Application", "Endpoint", "MonitorScript", "MonitoringError", "ChurnRiskReport", "ChurnAlert"]
 
 GITHUB_URL_PATTERN = re.compile(r"https:\/\/github\.com\/(?P<user>[^\/]+)\/(?P<repo>[^\/]+)\/?")
 
@@ -57,6 +60,14 @@ class Application(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs) -> None:
+        on_create = self.pk is None
+
+        super().save(*args, **kwargs)
+
+        if on_create:
+            signals.application_created.send_robust(instance=self, sender=self.__class__)
 
 
 class Endpoint(models.Model):

@@ -3,20 +3,25 @@ import json
 from capyc.core.i18n import translation
 from capyc.rest_framework.exceptions import ValidationException
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db.models import Avg, Count, Q, Sum
+from django.utils import timezone
 from google.cloud import bigquery
 from google.cloud.ndb.query import OR
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from breathecode.activity.models import StudentActivity
+from breathecode.activity.actions import ALLOWED_TYPES
+from breathecode.activity.models import ACTIVITY_TABLE_NAME, StudentActivity
 from breathecode.activity.serializers import ActivitySerializer
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.actions import get_user_language
 from breathecode.services.google_cloud.big_query import BigQuery
 from breathecode.utils import HeaderLimitOffsetPagination, capable_of, getLogger
+from breathecode.utils.request import get_current_academy
 
+from .tasks import add_activity
 from .utils import (
     generate_created_at,
     validate_activity_fields,
@@ -519,6 +524,117 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
         return Response(new_activities, status=status.HTTP_201_CREATED)
 
 
+class V2MeActivityReportView(APIView):
+
+    def post(self, request, activity_slug=None):
+        lang = get_user_language(request)
+        data = request.data
+
+        related_type = data.get("related_type")
+        related_id = data.get("related_id")
+        related_slug = data.get("related_slug")
+        timestamp = data.get("timestamp")
+        academy_id = get_current_academy(request, return_id=True)
+
+        if not activity_slug:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Activity slug is required",
+                    es="El slug de la actividad es requerido",
+                ),
+                code=400,
+            )
+        if related_type and not (bool(related_id) ^ bool(related_slug)):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If related_type is provided, either related_id or related_slug must be provided, but not both",
+                    es="Si related_type es proporcionado, debe proporcionarse related_id o related_slug, pero no ambos",
+                ),
+                code=400,
+            )
+
+        if not related_type and (related_id or related_slug):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="If related_type is not provided, both related_id and related_slug must also be absent",
+                    es="Si related_type no es proporcionado, related_id y related_slug también deben estar ausentes",
+                ),
+                code=400,
+            )
+
+        # For read_dashboard and read_cohort_dashboard, check if the user has already reported the activity in the last 24 hours
+
+        if activity_slug == "read_dashboard":
+            cache_key = f"read_dashboard_reported_at-{request.user.id}"
+            recently_reported = cache.get(cache_key)
+            if recently_reported:
+                message = translation(
+                    lang,
+                    en="The user has already reported a read_dashboard activity in the last 24 hours",
+                    es="El usuario reportó una actividad de read_dashboard hace menos de 24 horas",
+                )
+                return Response(
+                    {"message": message, "last_reported_at": recently_reported}, status=status.HTTP_202_ACCEPTED
+                )
+
+            now = timezone.now().isoformat()
+            cache.set(cache_key, now, timeout=86400)
+            related_type = "auth.User"
+            related_id = request.user.id
+            related_slug = None
+            academy_id = None
+
+        elif activity_slug == "read_cohort_dashboard":
+            cache_key = f"read_cohort_dashboard_reported_at-{related_id}"
+            recently_reported = cache.get(cache_key)
+            if recently_reported:
+                message = translation(
+                    lang,
+                    en="The user has already reported a read_cohort_dashboard activity in the last 24 hours",
+                    es="El usuario reportó una actividad de read_cohort_dashboard hace menos de 24 horas",
+                )
+                return Response(
+                    {"message": message, "last_reported_at": recently_reported}, status=status.HTTP_202_ACCEPTED
+                )
+
+            cohort_user = CohortUser.objects.filter(
+                id=related_id,
+                user__id=request.user.id,
+            ).first()
+
+            if not cohort_user:
+                message = translation(
+                    lang,
+                    en="The user is not a student in this cohort",
+                    es="El usuario no es un estudiante en esta cohorte",
+                )
+                return Response({"message": message}, status=status.HTTP_400_BAD_REQUEST)
+
+            now = timezone.now().isoformat()
+            cache.set(cache_key, now, timeout=86400)
+
+        add_activity.delay(
+            user_id=request.user.id,
+            kind=activity_slug,
+            related_type=related_type,
+            related_id=related_id,
+            related_slug=related_slug,
+            timestamp=timestamp,
+            academy_id=academy_id,
+        )
+
+        message = translation(
+            lang,
+            en="Activity reported successfully",
+            es="Actividad reportada correctamente",
+        )
+
+        return Response({"message": message}, status=status.HTTP_200_OK)
+
+
 class V2MeActivityView(APIView):
 
     def get(self, request, activity_id=None):
@@ -529,7 +645,7 @@ class V2MeActivityView(APIView):
             # Define a query
             query = f"""
                 SELECT *
-                FROM `{project_id}.{dataset}.activity`
+                FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
                 WHERE id = @activity_id
                     AND user_id = @user_id
                 ORDER BY id DESC
@@ -564,7 +680,7 @@ class V2MeActivityView(APIView):
 
         query = f"""
             SELECT *
-            FROM `{project_id}.{dataset}.activity`
+            FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
             WHERE user_id = @user_id
                 {'AND kind = @kind' if kind else ''}
                 {'AND (meta.cohort = @cohort_slug OR meta.cohort = @cohort_id)' if cohort else ''}
@@ -617,7 +733,7 @@ class V2AcademyActivityView(APIView):
             # Define a query
             query = f"""
                 SELECT *
-                FROM `{project_id}.{dataset}.activity`
+                FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
                 WHERE id = @activity_id
                     AND user_id = @user_id
                     AND meta.academy = @academy_id
@@ -656,7 +772,7 @@ class V2AcademyActivityView(APIView):
 
         query = f"""
             SELECT *
-            FROM `{project_id}.{dataset}.activity`
+            FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
             WHERE user_id = @user_id
                 AND meta.academy = @academy_id
                 {'AND kind = @kind' if kind else ''}
@@ -709,7 +825,7 @@ class V2AcademyActivityReportView(APIView):
         query = request.GET.get("query", "{}")
 
         query = json.loads(query)
-        result = BigQuery.table("activity")
+        result = BigQuery.table(ACTIVITY_TABLE_NAME)
 
         fields = request.GET.get("fields", None)
         if fields is not None:
@@ -754,3 +870,135 @@ class V2AcademyActivityReportView(APIView):
             data.append(dict(r.items()))
 
         return Response(data)
+
+
+class V3ActivityKindView(APIView):
+
+    @capable_of("read_activity")
+    def get(self, request, academy_id=None):
+        """
+        Returns all activity kinds from ALLOWED_TYPES grouped by related_type.
+        Useful for frontend filter configuration.
+        """
+        result = []
+        for related_type, kinds in ALLOWED_TYPES.items():
+            result.append(
+                {
+                    "related_type": related_type,
+                    "kinds": kinds,
+                }
+            )
+
+        return Response(result)
+
+
+class V3AcademyActivityView(APIView):
+
+    @capable_of("read_activity")
+    def get(self, request, activity_id=None, academy_id=None):
+        lang = get_user_language(request)
+        client, project_id, dataset = BigQuery.client()
+
+        user_id = request.GET.get("user_id", None)
+        if user_id:
+            try:
+                user_id = int(user_id)
+            except (ValueError, TypeError):
+                raise ValidationException("user_id is not an integer", slug="bad-user-id")
+
+        if activity_id:
+            # Define a query
+            query = f"""
+                SELECT *
+                FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
+                WHERE id = @activity_id
+                    {'AND user_id = @user_id' if user_id else ''}
+                    AND (meta.academy = @academy_id OR meta.academy IS NULL)
+                ORDER BY id DESC
+                LIMIT 1
+            """
+
+            query_parameters = [
+                bigquery.ScalarQueryParameter("activity_id", "STRING", activity_id),
+                bigquery.ScalarQueryParameter("academy_id", "INT64", academy_id),
+            ]
+
+            if user_id:
+                query_parameters.append(bigquery.ScalarQueryParameter("user_id", "INT64", user_id))
+
+            job_config = bigquery.QueryJobConfig(query_parameters=query_parameters)
+
+            # Run the query
+            query_job = client.query(query, job_config=job_config)
+            results = query_job.result()
+
+            result = next(results)
+            if not result:
+                raise ValidationException(
+                    translation(lang, en="activity not found", es="actividad no encontrada", slug="activity-not-found"),
+                    code=404,
+                )
+
+            serializer = ActivitySerializer(result, many=False)
+            return Response(serializer.data)
+
+        limit = int(request.GET.get("limit", 100))
+        offset = (int(request.GET.get("page", 1)) - 1) * limit
+        kind_param = request.GET.get("kind", "")
+        date_start = request.GET.get("date_start", None)
+        date_end = request.GET.get("date_end", None)
+        cohort = request.GET.get("cohort_id", None)
+
+        # Parse comma-separated kind values
+        kinds = []
+        if kind_param:
+            kinds = [k.strip() for k in kind_param.split(",") if k.strip()]
+
+        query = f"""
+            SELECT *
+            FROM `{project_id}.{dataset}.{ACTIVITY_TABLE_NAME}`
+            WHERE (meta.academy = @academy_id OR meta.academy IS NULL)
+                {'AND user_id = @user_id' if user_id else ''}
+                {'AND kind IN UNNEST(@kinds)' if kinds else ''}
+                {'AND timestamp >= @date_start' if date_start else ''}
+                {'AND timestamp <= @date_end' if date_end else ''}
+                {'AND meta.cohort = @cohort_id' if cohort else ''}
+            ORDER BY timestamp DESC
+            LIMIT @limit
+            OFFSET @offset
+        """
+
+        data = [
+            bigquery.ScalarQueryParameter("academy_id", "INT64", int(academy_id)),
+            bigquery.ScalarQueryParameter("limit", "INT64", limit),
+            bigquery.ScalarQueryParameter("offset", "INT64", offset),
+        ]
+
+        if user_id:
+            data.append(bigquery.ScalarQueryParameter("user_id", "INT64", user_id))
+
+        if kinds:
+            data.append(bigquery.ArrayQueryParameter("kinds", "STRING", kinds))
+
+        if date_start:
+            data.append(bigquery.ScalarQueryParameter("date_start", "TIMESTAMP", date_start))
+
+        if date_end:
+            data.append(bigquery.ScalarQueryParameter("date_end", "TIMESTAMP", date_end))
+
+        if cohort:
+            # Try to convert cohort to integer for ID comparison, fallback to slug
+            try:
+                cohort_id = int(cohort)
+                data.append(bigquery.ScalarQueryParameter("cohort_id", "INT64", cohort_id))
+            except (ValueError, TypeError):
+                data.append(bigquery.ScalarQueryParameter("cohort_id", "INT64", 0))
+
+        job_config = bigquery.QueryJobConfig(query_parameters=data)
+
+        # Run the query
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+
+        serializer = ActivitySerializer(results, many=True)
+        return Response(serializer.data)

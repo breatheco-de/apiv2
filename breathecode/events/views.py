@@ -31,11 +31,13 @@ import breathecode.activity.tasks as tasks_activity
 import breathecode.events.tasks as tasks_events
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser, Syllabus
 from breathecode.authenticate.actions import get_user_language, server_id
-from breathecode.services.daily.client import DailyClient
+from breathecode.authenticate.models import ACTIVE, Profile, ProfileAcademy
 from breathecode.events import actions
 from breathecode.events.caches import EventCache, LiveClassCache
 from breathecode.renderers import PlainTextRenderer
+from breathecode.services.daily.client import DailyClient
 from breathecode.services.eventbrite import Eventbrite
+from breathecode.services.livekit.client import LiveKitAdmin
 from breathecode.utils import (
     DatetimeInteger,
     GenerateLookupsMixin,
@@ -51,6 +53,8 @@ from breathecode.utils.views import private_view, render_message
 from .actions import fix_datetime_weekday, update_timeslots_out_of_range  # get_my_event_types,
 from .models import (
     ACTIVE,
+    SUSPENDED,
+    AcademyEventSettings,
     Event,
     EventbriteWebhook,
     EventCheckin,
@@ -59,7 +63,6 @@ from .models import (
     LiveClass,
     Organization,
     Organizer,
-    SUSPENDED,
     Venue,
 )
 from .permissions.consumers import event_by_url_param, live_class_by_url_param
@@ -79,6 +82,7 @@ from .serializers import (
     EventTypePutSerializer,
     EventTypeSerializer,
     EventTypeVisibilitySettingSerializer,
+    GetLiveClassBigSerializer,
     GetLiveClassSerializer,
     LiveClassJoinSerializer,
     LiveClassSerializer,
@@ -484,13 +488,55 @@ def join_live_class(request, token, live_class, lang):
 class AcademyLiveClassView(APIView):
     extensions = APIViewExtensions(sort="-starting_at", paginate=True)
 
-    @capable_of("start_or_end_class")
-    def get(self, request, academy_id=None):
+    @capable_of("read_liveclass")
+    def get(self, request, live_class_id=None, academy_id=None):
         from .models import LiveClass
 
+        lang = get_user_language(request)
+
+        # If live_class_id is provided, return a single live class
+        if live_class_id is not None:
+            live_class = LiveClass.objects.filter(id=live_class_id).first()
+
+            if not live_class:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Live class not found for this academy {academy_id}",
+                        es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                        slug="not-found",
+                    ),
+                    404,
+                )
+
+            # Check if live class belongs to the academy (either through cohort_time_slot or direct cohort)
+            belongs_to_academy = False
+            if live_class.cohort_time_slot and live_class.cohort_time_slot.cohort.academy.id == int(academy_id):
+                belongs_to_academy = True
+            elif live_class.cohort and live_class.cohort.academy.id == int(academy_id):
+                belongs_to_academy = True
+
+            if not belongs_to_academy:
+                raise ValidationException(
+                    translation(
+                        lang,
+                        en=f"Live class not found for this academy {academy_id}",
+                        es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                        slug="not-found",
+                    ),
+                    404,
+                )
+
+            serializer = GetLiveClassBigSerializer(live_class, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Otherwise, return list of live classes
         handler = self.extensions(request)
 
-        lang = get_user_language(request)
+        # Custom handler for cohort querystring to support both paths
+        def cohort_filter(value):
+            cohort_id = value
+            return Q(cohort_time_slot__cohort__id=cohort_id) | Q(cohort__id=cohort_id)
 
         query = handler.lookup.build(
             lang,
@@ -502,6 +548,7 @@ class AcademyLiveClassView(APIView):
             },
             bools={
                 "is_null": ["ended_at"],
+                "exact": ["is_holiday", "is_skipped"],
             },
             datetimes={
                 "gte": ["starting_at"],
@@ -512,9 +559,11 @@ class AcademyLiveClassView(APIView):
                 "cohort_time_slot__cohort",
                 "cohort_time_slot__cohort__academy",
                 "cohort_time_slot__cohort__syllabus_version__syllabus",
+                "cohort",  # Add direct cohort field
+                "cohort__academy",  # Add cohort academy path
             ],
             overwrite={
-                "cohort": "cohort_time_slot__cohort",
+                # Removed "cohort" from overwrite so custom_fields handler is used
                 "academy": "cohort_time_slot__cohort__academy",
                 "syllabus": "cohort_time_slot__cohort__syllabus_version__syllabus",
                 "start": "starting_at",
@@ -522,17 +571,24 @@ class AcademyLiveClassView(APIView):
                 "upcoming": "ended_at",
                 "user": "cohort_time_slot__cohort__cohortuser__user",
                 "user_email": "cohort_time_slot__cohort__cohortuser__user__email",
+                "holiday": "is_holiday",
+                "skipped": "is_skipped",
+            },
+            custom_fields={
+                "cohort": cohort_filter,  # Use custom handler for cohort to support both paths
             },
         )
 
-        items = LiveClass.objects.filter(query, cohort_time_slot__cohort__academy__id=academy_id)
+        # Use Q object to include both cohort_time_slot and direct cohort paths for academy filter
+        academy_filter = Q(Q(cohort_time_slot__cohort__academy__id=academy_id) | Q(cohort__academy__id=academy_id))
+        items = LiveClass.objects.filter(query & academy_filter)
 
         items = handler.queryset(items)
         serializer = GetLiveClassSerializer(items, many=True)
 
         return handler.response(serializer.data)
 
-    @capable_of("start_or_end_class")
+    @capable_of("crud_liveclass")
     def post(self, request, academy_id=None):
         lang = get_user_language(request)
 
@@ -545,16 +601,15 @@ class AcademyLiveClassView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            response_serializer = GetLiveClassSerializer(serializer.instance)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of("start_or_end_class")
-    def put(self, request, cohort_schedule_id, academy_id=None):
+    @capable_of("crud_liveclass")
+    def put(self, request, live_class_id, academy_id=None):
         lang = get_user_language(request)
 
-        already = LiveClass.objects.filter(
-            id=cohort_schedule_id, cohort_time_slot__cohort__academy__id=academy_id
-        ).first()
+        already = LiveClass.objects.filter(id=live_class_id).first()
         if already is None:
             raise ValidationException(
                 translation(
@@ -568,6 +623,7 @@ class AcademyLiveClassView(APIView):
         serializer = LiveClassSerializer(
             already,
             data=request.data,
+            partial=True,
             context={
                 "lang": lang,
                 "academy_id": academy_id,
@@ -577,6 +633,52 @@ class AcademyLiveClassView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of("crud_liveclass")
+    def delete(self, request, live_class_id, academy_id=None):
+        lang = get_user_language(request)
+
+        live_class = LiveClass.objects.filter(id=live_class_id).first()
+        if live_class is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Live class not found for this academy {academy_id}",
+                    es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                    slug="not-found",
+                )
+            )
+
+        # Check if live class belongs to the academy (either through cohort_time_slot or direct cohort)
+        belongs_to_academy = False
+        if live_class.cohort_time_slot and live_class.cohort_time_slot.cohort.academy.id == int(academy_id):
+            belongs_to_academy = True
+        elif live_class.cohort and live_class.cohort.academy.id == int(academy_id):
+            belongs_to_academy = True
+
+        if not belongs_to_academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Live class not found for this academy {academy_id}",
+                    es=f"Clase en vivo no encontrada para esta academia {academy_id}",
+                    slug="not-found",
+                )
+            )
+
+        # Only allow deletion if cohort_time_slot is null
+        if live_class.cohort_time_slot is not None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Cannot delete live class because it is associated with a cohort timeslot. Live classes associated with timeslots are managed automatically.",
+                    es="No se puede eliminar la clase en vivo porque está asociada con un horario de cohorte. Las clases en vivo asociadas con horarios se gestionan automáticamente.",
+                    slug="cannot-delete-timeslot-associated",
+                )
+            )
+
+        live_class.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class AcademyLiveClassJoinView(APIView):
@@ -761,23 +863,50 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                     and getattr(event, "online_event", False)
                     and not getattr(event, "live_stream_url", None)
                 ):
-                    provider = request.data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+                    provider = request.data.get("meeting_provider")
+
+                    if not provider:
+                        event_settings = AcademyEventSettings.objects.filter(academy=academy).first()
+                        if event_settings and event_settings.default_meeting_provider:
+                            provider = event_settings.default_meeting_provider
+                        else:
+                            provider = os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+
                     try:
                         if provider == "daily":
                             margin = timedelta(hours=1)
                             target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
                             exp_epoch = int(target_end.timestamp())
-                            room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                            room = DailyClient(academy=academy).create_room(exp_in_epoch=exp_epoch)
                             if room and room.get("url"):
                                 event.live_stream_url = room["url"]
                                 event.save(update_fields=["live_stream_url"])
 
                         else:
-                            meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
-                            if meet_base:
-                                event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
-                                event.save(update_fields=["live_stream_url"])
+                            meet_base = (
+                                getattr(settings, "LIVEKIT_MEET_URL", os.getenv("LIVEKIT_MEET_URL")) or ""
+                            ).rstrip("/")
+                            if not meet_base:
+                                raise ValidationException(
+                                    translation(
+                                        lang,
+                                        en="LIVEKIT_MEET_URL is not configured",
+                                        es="LIVEKIT_MEET_URL no está configurada",
+                                    ),
+                                    code=500,
+                                )
+                            event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
+                            event.save(update_fields=["live_stream_url"])
 
+                            if not LiveKitAdmin(academy=academy).validate_credentials():
+                                raise ValidationException(
+                                    translation(
+                                        lang,
+                                        en="Failed to validate LiveKit credentials",
+                                        es="Falló la validación de las credenciales de LiveKit",
+                                    ),
+                                    code=500,
+                                )
                             tasks_events.create_livekit_room_for_event.delay(event.id)
 
                         serializer = EventSerializer(event, many=False)
@@ -874,28 +1003,38 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                 original_ending_at = all_events[idx].ending_at
                 event = serializer.save()
                 all_events_saved.append(event)
-                
+
                 data = data_list[idx] if idx < len(data_list) else {}
-                
+
                 create_meet = data.get("create_meet")
                 if isinstance(create_meet, str):
                     create_meet = create_meet.lower() in ["1", "true", "yes"]
 
                 if create_meet and getattr(event, "online_event", False):
-                    provider = data.get("meeting_provider") or os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+                    provider = data.get("meeting_provider")
+
+                    if not provider:
+                        event_settings = AcademyEventSettings.objects.filter(academy=event.academy).first()
+                        if event_settings and event_settings.default_meeting_provider:
+                            provider = event_settings.default_meeting_provider
+                        else:
+                            provider = os.getenv("DEFAULT_MEETING_PROVIDER", "daily")
+
                     try:
                         if provider == "daily":
                             margin = timedelta(hours=1)
                             target_end = (event.ending_at or (event.starting_at + timedelta(hours=3))) + margin
                             exp_epoch = int(target_end.timestamp())
 
-                            room = DailyClient().create_room(exp_in_epoch=exp_epoch)
+                            room = DailyClient(academy=event.academy).create_room(exp_in_epoch=exp_epoch)
                             if room and room.get("url"):
                                 event.live_stream_url = room["url"]
                                 event.save(update_fields=["live_stream_url"])
 
                         elif provider == "livekit":
-                            meet_base = (getattr(settings, "LIVEKIT_MEET_URL", "") or "").rstrip("/")
+                            meet_base = (
+                                getattr(settings, "LIVEKIT_MEET_URL", os.getenv("LIVEKIT_MEET_URL")) or ""
+                            ).rstrip("/")
                             if meet_base:
                                 event.live_stream_url = f"{meet_base}/rooms/event-{event.id}"
                                 event.save(update_fields=["live_stream_url"])
@@ -908,10 +1047,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             f"Failed to auto-create/extend meeting room on PUT for academy {academy_id}: {str(e)}"
                         )
                 elif not create_meet and getattr(event, "online_event", False):
-                    date_changed = (
-                        original_starting_at != event.starting_at
-                        or original_ending_at != event.ending_at
-                    )
+                    date_changed = original_starting_at != event.starting_at or original_ending_at != event.ending_at
                     live_stream_url = getattr(event, "live_stream_url", None)
                     if date_changed and live_stream_url and "daily.co" in live_stream_url.lower():
                         try:
@@ -920,7 +1056,7 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
                             exp_epoch = int(target_end.timestamp())
                             parsed = urlparse(live_stream_url)
                             room_name = parsed.path.strip("/").split("/")[-1]
-                            DailyClient().extend_room(name=room_name, exp_in_epoch=exp_epoch)
+                            DailyClient(academy=event.academy).extend_room(name=room_name, exp_in_epoch=exp_epoch)
                             logger.info(
                                 f"Extended Daily.co room {room_name} for event {event.id} "
                                 f"(new expiration: {target_end.isoformat()})"
@@ -1077,8 +1213,11 @@ class AcademyEventSuspendView(APIView):
         event.live_stream_url = None
         event.save()
 
-        # Queue email notification task
-        send_event_suspended_notification.delay(event.id)
+        # Extract optional suspension_reason from request payload
+        suspension_reason = request.data.get("suspension_reason", None)
+
+        # Queue email notification task with optional reason
+        send_event_suspended_notification.delay(event.id, suspension_reason=suspension_reason)
 
         serializer = EventSerializer(event, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1133,18 +1272,23 @@ class AcademyEventHostView(APIView):
 
         # Get profile data if provided
         profile_data = {}
-        profile_fields = ["avatar_url", "bio", "phone", "twitter_username", "github_username", 
-                         "portfolio_url", "linkedin_url", "blog"]
+        profile_fields = [
+            "avatar_url",
+            "bio",
+            "phone",
+            "twitter_username",
+            "github_username",
+            "portfolio_url",
+            "linkedin_url",
+            "blog",
+        ]
         for field in profile_fields:
             if field in request.data:
                 profile_data[field] = request.data.get(field)
 
         # Create zombie user and profile
         host_user = actions.create_external_event_host(
-            name=host_name,
-            email=host_email,
-            academy=event.academy,
-            **profile_data
+            name=host_name, email=host_email, academy=event.academy, **profile_data
         )
 
         # Assign host to event
@@ -1154,22 +1298,125 @@ class AcademyEventHostView(APIView):
 
         # Create and send invite
         invite = actions.create_event_host_invite(
-            user=host_user,
-            event=event,
-            academy=event.academy,
-            author=request.user
+            user=host_user, event=event, academy=event.academy, author=request.user
         )
 
-        # Return the created user and invite info
-        from breathecode.authenticate.serializers import UserBigSerializer
-        from breathecode.authenticate.serializers import UserInviteSerializer
+        # Refresh user to ensure profile relationship is loaded
+        host_user.refresh_from_db()
 
-        return Response({
-            "user": UserBigSerializer(host_user, many=False).data,
-            "invite": UserInviteSerializer(invite, many=False).data,
-            "event_id": event.id,
-            "message": "Host user created and invitation sent"
-        }, status=status.HTTP_201_CREATED)
+        # Return the created user and invite info
+        from breathecode.authenticate.serializers import UserBigSerializer, UserInviteSerializer
+
+        return Response(
+            {
+                "user": UserBigSerializer(host_user, many=False).data,
+                "invite": UserInviteSerializer(invite, many=False).data,
+                "event_id": event.id,
+                "message": "Host user created and invitation sent",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @capable_of("crud_event")
+    def put(self, request, event_id, user_id, academy_id=None):
+        """
+        Update the profile of an event host.
+        Only updates profile fields (avatar_url, bio, phone, social media, etc.)
+        """
+        lang = get_user_language(request)
+
+        # Get the event
+        event = Event.objects.filter(academy__id=int(academy_id), id=event_id).first()
+
+        if not event:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"Event not found for this academy {academy_id}",
+                    es=f"Evento no encontrado para esta academia {academy_id}",
+                    slug="event-not-found",
+                )
+            )
+
+        # Get the user
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"User {user_id} not found",
+                    es=f"Usuario {user_id} no encontrado",
+                    slug="user-not-found",
+                ),
+                code=404,
+            )
+
+        # Verify the user is the host of this event
+        if not event.host_user or event.host_user.id != int(user_id):
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"User {user_id} is not the host of event {event_id}",
+                    es=f"El usuario {user_id} no es el host del evento {event_id}",
+                    slug="user-not-event-host",
+                ),
+                code=403,
+            )
+
+        # Verify the user has a ProfileAcademy for this academy (is staff or student)
+        profile_academy = ProfileAcademy.objects.filter(user_id=user_id, academy_id=academy_id).first()
+
+        if not profile_academy:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en=f"User {user_id} is not a staff or student in this academy",
+                    es=f"El usuario {user_id} no es personal o estudiante de esta academia",
+                    slug="user-not-in-academy",
+                ),
+                code=403,
+            )
+
+        # Verify the ProfileAcademy is ACTIVE or the user is a zombie (inactive)
+        if profile_academy.status != ACTIVE and user.is_active:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="Staff or student has not accepted the invitation to the academy and it's an active user in other academies",
+                    es="El personal o estudiante no ha aceptado la invitación a la academia y es un usuario activo en otras academias",
+                    slug="user-not-accepted-invitation",
+                ),
+                code=403,
+            )
+
+        profile, created = Profile.objects.get_or_create(user_id=user_id)
+
+        # Update only profile fields (exclude user field from request data)
+        profile_data = {}
+        profile_fields = [
+            "avatar_url",
+            "bio",
+            "phone",
+            "twitter_username",
+            "github_username",
+            "portfolio_url",
+            "linkedin_url",
+            "blog",
+        ]
+        for field in profile_fields:
+            if field in request.data:
+                profile_data[field] = request.data.get(field)
+
+        # Use ProfileSerializer from authenticate
+        from breathecode.authenticate.serializers import GetProfileSerializer, ProfileSerializer
+
+        serializer = ProfileSerializer(profile, data=profile_data, partial=True)
+        if serializer.is_valid():
+            updated_profile = serializer.save()
+            response_serializer = GetProfileSerializer(updated_profile, many=False)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EventTypeView(APIView):
@@ -1429,27 +1676,28 @@ def join_event(request, token, event):
             first = (checkin.attendee.first_name or "").strip()
             last = (checkin.attendee.last_name or "").strip()
             name = f"{first} {last}".strip() or (getattr(checkin.attendee, "email", None) or "")
+            client = LiveKitAdmin(academy=event.academy)
 
             payload = {
-                "iss": settings.LIVEKIT_API_KEY,
+                "iss": client.get_api_key(),
                 "sub": identity,
                 "name": name,
                 "nbf": int((now - timedelta(seconds=5)).timestamp()),
                 "exp": int((now + timedelta(minutes=20)).timestamp()),
                 "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True},
             }
-            lk_token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
-
+            lk_token = jwt.encode(payload, client.get_api_secret(), algorithm="HS256")
             params = urlencode(
                 {
                     "token": lk_token,
-                    "serverUrl": settings.LIVEKIT_URL,
+                    "serverUrl": client.get_server_url(),
                     "participantName": name,
                 }
             )
             return redirect(f"{base_url}?{params}")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error joining livekit event: {str(e)}", exc_info=True)
+        raise ValidationException(f"Error joining livekit event: {str(e)}")
 
     return redirect(event.live_stream_url)
 
@@ -2323,21 +2571,22 @@ class LiveKitTokenView(APIView):
         first = (request.user.first_name or "").strip()
         last = (request.user.last_name or "").strip()
         name = f"{first} {last}".strip() or (request.user.email or "")
-
+        client = LiveKitAdmin(academy=event.academy)
         payload = {
-            "iss": settings.LIVEKIT_API_KEY,
+            "iss": client.get_api_key(),
             "sub": identity,
             "name": name,
             "nbf": int((now - timedelta(seconds=5)).timestamp()),
             "exp": int((now + timedelta(minutes=20)).timestamp()),
             "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True},
         }
+        logger.info(f"usando api url  en post token {client.get_api_key()}")
 
-        token = jwt.encode(payload, settings.LIVEKIT_API_SECRET, algorithm="HS256")
-
+        token = jwt.encode(payload, client.get_api_secret(), algorithm="HS256")
+        logger.info(f"usando api secret en token {client.get_api_secret()}")
         return Response(
             {
-                "serverUrl": settings.LIVEKIT_URL,
+                "serverUrl": client.get_server_url(),
                 "token": token,
                 "identity": identity,
                 "room": room,
