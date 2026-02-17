@@ -1062,10 +1062,7 @@ class AssetView(APIView, GenerateLookupsMixin):
         expand = self.request.GET.get("expand")
 
         if "big" in self.request.GET:
-            expand_fields = ["readme"]
-            if expand is not None:
-                expand_fields = list(set(expand_fields + expand.split(",")))
-            serializer = AssetExpandableSerializer(items, many=True, expand=expand_fields)
+            serializer = AssetMidSerializer(items, many=True)
         elif expand is not None:
             serializer = AssetExpandableSerializer(items, many=True, expand=expand.split(","))
         else:
