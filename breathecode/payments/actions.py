@@ -1199,6 +1199,254 @@ def get_balance_by_resource(
     return result
 
 
+def check_scheduler_renewal_issues(scheduler, utc_now):
+    """
+    Return a list of issue strings describing why renewal might be blocked for this scheduler.
+    Mirrors diagnose_scheduler check_renewal_conditions; used by get_service_stock_status_for_user.
+    """
+    from breathecode.payments.models import (
+        PlanFinancing,
+        ServiceStockScheduler,
+        Subscription,
+    )
+
+    issues: list[str] = []
+    if not isinstance(scheduler, ServiceStockScheduler):
+        return issues
+
+    if scheduler.plan_handler and scheduler.plan_handler.subscription_id:
+        sub = scheduler.plan_handler.subscription
+        if sub.valid_until and sub.valid_until < utc_now:
+            issues.append(f"Subscription {sub.id} is expired (valid_until: {sub.valid_until})")
+        if sub.next_payment_at < utc_now:
+            issues.append(f"Subscription {sub.id} needs to be paid (next_payment_at: {sub.next_payment_at})")
+        if sub.status in (Subscription.Status.DEPRECATED, Subscription.Status.EXPIRED, Subscription.Status.PAYMENT_ISSUE):
+            issues.append(f"Subscription {sub.id} has invalid status: {sub.status}")
+        if scheduler.plan_handler.handler:
+            si = scheduler.plan_handler.handler.service_item
+            if not si.is_renewable:
+                issues.append(f"Service item {si.id} is not renewable (is_renewable=False)")
+            if si.service.type != "VOID":
+                key = si.service.type.lower()
+                if not getattr(sub, f"selected_{key}", None):
+                    issues.append(f"Subscription has no linked resource for service {si.service.slug} (type: {si.service.type})")
+
+    elif scheduler.plan_handler and scheduler.plan_handler.plan_financing_id:
+        pf = (
+            PlanFinancing.objects.select_related(
+                "selected_mentorship_service_set", "selected_cohort_set", "selected_event_type_set"
+            )
+            .prefetch_related("plans")
+            .filter(id=scheduler.plan_handler.plan_financing_id)
+            .first()
+        )
+        if pf:
+            if pf.plan_expires_at and pf.plan_expires_at < utc_now:
+                issues.append(f"Plan financing {pf.id} is expired (plan_expires_at: {pf.plan_expires_at})")
+            if pf.status == PlanFinancing.Status.ACTIVE and pf.next_payment_at < utc_now:
+                issues.append(f"Plan financing {pf.id} needs to be paid (next_payment_at: {pf.next_payment_at})")
+            if pf.status in (PlanFinancing.Status.CANCELLED, PlanFinancing.Status.DEPRECATED, PlanFinancing.Status.EXPIRED):
+                issues.append(f"Plan financing {pf.id} has invalid status: {pf.status}")
+            if scheduler.plan_handler.handler:
+                si = scheduler.plan_handler.handler.service_item
+                if not si.is_renewable:
+                    issues.append(
+                        f"Service item {si.id} is not renewable; first consumable may still be created."
+                    )
+                if si.service.type != "VOID":
+                    key = si.service.type.lower()
+                    if not getattr(pf, f"selected_{key}", None):
+                        plans_have = [p.id for p in pf.plans.all() if getattr(p, key, None)]
+                        if plans_have:
+                            issues.append(
+                                f"Plan financing {pf.id} has no linked resource for {si.service.slug}, "
+                                f"but plans {plans_have} do; resource should be copied to plan financing."
+                            )
+                        else:
+                            issues.append(
+                                f"Plan financing {pf.id} has no linked resource for service {si.service.slug} "
+                                "(consumable cannot be created without it)."
+                            )
+
+    elif scheduler.subscription_handler_id:
+        sub = scheduler.subscription_handler.subscription
+        if sub.valid_until and sub.valid_until < utc_now:
+            issues.append(f"Subscription {sub.id} is expired (valid_until: {sub.valid_until})")
+        if sub.next_payment_at < utc_now:
+            issues.append(f"Subscription {sub.id} needs to be paid (next_payment_at: {sub.next_payment_at})")
+        if sub.status in (Subscription.Status.DEPRECATED, Subscription.Status.EXPIRED, Subscription.Status.PAYMENT_ISSUE):
+            issues.append(f"Subscription {sub.id} has invalid status: {sub.status}")
+    else:
+        issues.append("Scheduler has no plan_handler or subscription_handler")
+
+    if scheduler.valid_until and scheduler.valid_until > utc_now:
+        issues.append(
+            f"Scheduler does not need renewal yet (valid_until={scheduler.valid_until} > now)"
+        )
+
+    return issues
+
+
+def get_service_stock_status_for_user(
+    user_id: int,
+    academy_id: int,
+    include_balance: bool = False,
+    request: Optional[WSGIRequest] = None,
+) -> Optional[dict]:
+    """
+    Build service stock status payload for a user in an academy: schedulers, issues, optional balance.
+    Returns None if user not found or has no link to the academy.
+    """
+    from breathecode.payments.models import (
+        PlanFinancing,
+        PlanServiceItemHandler,
+        ServiceStockScheduler,
+        Subscription,
+    )
+
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return None
+
+    utc_now = timezone.now()
+
+    user_q = (
+        Q(plan_handler__subscription__user_id=user_id)
+        | Q(plan_handler__plan_financing__user_id=user_id)
+        | Q(subscription_handler__subscription__user_id=user_id)
+        | Q(subscription_seat__user_id=user_id)
+        | Q(plan_financing_seat__user_id=user_id)
+        | Q(subscription_billing_team__subscription__user_id=user_id)
+        | Q(plan_financing_team__financing__user_id=user_id)
+    )
+    academy_q = (
+        Q(plan_handler__subscription__academy_id=academy_id)
+        | Q(plan_handler__plan_financing__academy_id=academy_id)
+        | Q(subscription_handler__subscription__academy_id=academy_id)
+        | Q(subscription_seat__billing_team__subscription__academy_id=academy_id)
+        | Q(plan_financing_seat__team__financing__academy_id=academy_id)
+        | Q(plan_financing_team__financing__academy_id=academy_id)
+        | Q(subscription_billing_team__subscription__academy_id=academy_id)
+    )
+
+    schedulers_qs = (
+        ServiceStockScheduler.objects.filter(user_q, academy_q)
+        .select_related(
+            "plan_handler__subscription",
+            "plan_handler__plan_financing",
+            "plan_handler__handler__service_item__service",
+            "subscription_handler__subscription",
+            "subscription_handler__service_item__service",
+            "subscription_seat",
+            "plan_financing_seat",
+        )
+        .prefetch_related("consumables")
+    )
+
+    schedulers_payload: list[dict] = []
+    for s in schedulers_qs:
+        if s.plan_handler_id:
+            service_item = s.plan_handler.handler.service_item if s.plan_handler.handler_id else None
+            subscription = getattr(s.plan_handler, "subscription", None)
+            plan_financing = getattr(s.plan_handler, "plan_financing", None)
+            source_type = "subscription" if subscription else "plan_financing"
+            source_id = subscription.id if subscription else (plan_financing.id if plan_financing else None)
+        else:
+            service_item = s.subscription_handler.service_item if s.subscription_handler_id else None
+            subscription = s.subscription_handler.subscription if s.subscription_handler_id else None
+            plan_financing = None
+            source_type = "subscription"
+            source_id = subscription.id if subscription else None
+
+        resource = None
+        if subscription:
+            resource = subscription
+        elif plan_financing:
+            resource = plan_financing
+
+        resource_linked = True
+        if service_item and resource and service_item.service.type != "VOID":
+            key = service_item.service.type.lower()
+            resource_linked = bool(getattr(resource, f"selected_{key}", None))
+
+        consumables_list = list(s.consumables.all().order_by("-id")[:5])
+        consumables_sample = []
+        for c in consumables_list:
+            v = c.valid_until
+            if v:
+                v = re.sub(r"\+00:00$", "Z", v.replace(tzinfo=UTC).isoformat())
+            consumables_sample.append({
+                "id": c.id,
+                "how_many": c.how_many,
+                "valid_until": v,
+                "user_id": c.user_id,
+            })
+
+        scheduler_valid_until = s.valid_until
+        if scheduler_valid_until:
+            scheduler_valid_until = re.sub(
+                r"\+00:00$", "Z", scheduler_valid_until.replace(tzinfo=UTC).isoformat()
+            )
+
+        seat_id = None
+        if s.subscription_seat_id:
+            seat_id = s.subscription_seat_id
+        elif s.plan_financing_seat_id:
+            seat_id = s.plan_financing_seat_id
+
+        schedulers_payload.append({
+            "id": s.id,
+            "source_type": source_type,
+            "source_id": source_id,
+            "seat_id": seat_id,
+            "service": service_item.service.slug if service_item else None,
+            "service_item_id": service_item.id if service_item else None,
+            "renew_at": getattr(service_item, "renew_at", None) if service_item else None,
+            "renew_at_unit": getattr(service_item, "renew_at_unit", None) if service_item else None,
+            "is_renewable": getattr(service_item, "is_renewable", None) if service_item else None,
+            "scheduler_valid_until": scheduler_valid_until,
+            "resource_linked": resource_linked,
+            "consumables_count": s.consumables.count(),
+            "consumables_sample": consumables_sample,
+            "issues": check_scheduler_renewal_issues(s, utc_now),
+        })
+
+    if not schedulers_payload and not (
+        Subscription.objects.filter(user_id=user_id, academy_id=academy_id).exists()
+        or PlanFinancing.objects.filter(user_id=user_id, academy_id=academy_id).exists()
+    ):
+        from breathecode.payments.models import SubscriptionSeat, PlanFinancingSeat
+
+        has_seat = (
+            SubscriptionSeat.objects.filter(user_id=user_id, billing_team__subscription__academy_id=academy_id)
+            .exists()
+            or PlanFinancingSeat.objects.filter(user_id=user_id, team__financing__academy_id=academy_id).exists()
+        )
+        if not has_seat:
+            return None
+
+    payload = {
+        "user": {"id": user.id, "email": user.email},
+        "academy_id": academy_id,
+        "schedulers": schedulers_payload,
+    }
+
+    if include_balance:
+        items = Consumable.list(user=user, include_zero_balance=True)
+        mentorship_services = items.filter(mentorship_service_set__isnull=False)
+        cohorts = items.filter(cohort_set__isnull=False)
+        event_types = items.filter(event_type_set__isnull=False)
+        balance = {
+            "mentorship_service_sets": get_balance_by_resource(mentorship_services, "mentorship_service_set"),
+            "cohort_sets": get_balance_by_resource(cohorts, "cohort_set"),
+            "event_type_sets": get_balance_by_resource(event_types, "event_type_set"),
+            "voids": filter_void_consumable_balance(request, items) if request else [],
+        }
+        payload["consumables_balance"] = balance
+
+    return payload
+
+
 # Default configuration for coupon statistics
 DEFAULT_COUPON_STATS_CONFIG = {
     "coupons": {

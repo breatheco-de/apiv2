@@ -629,6 +629,7 @@ class GetInvoiceSmallSerializer(serpy.Serializer):
     user = GetUserSmallSerializer(many=False)
     standalone_consumables = serpy.MethodField()
     payment_method = GetPaymentMethodSmallSerializer(required=False, many=False)
+    created_at = serpy.Field()
 
     def get_standalone_consumables(self, obj):
         return list(obj.standalone_consumables.values_list("id", flat=True))

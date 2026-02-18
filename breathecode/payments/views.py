@@ -1733,10 +1733,12 @@ class AcademyConsumableView(APIView):
         lang = get_user_language(request)
         utc_now = timezone.now()
 
-        # Start with consumables that belong to the academy through subscriptions or plan_financings
+        # Start with consumables that belong to the academy through subscriptions, plan_financings, or staff grant
         items = Consumable.objects.filter(
             Q(valid_until__gte=utc_now) | Q(valid_until=None),
-            Q(subscription__academy_id=academy_id) | Q(plan_financing__academy_id=academy_id),
+            Q(subscription__academy_id=academy_id)
+            | Q(plan_financing__academy_id=academy_id)
+            | Q(standalone_invoice__bag__academy_id=academy_id),
         ).exclude(how_many=0)
 
         # Filter by users if provided (comma-separated list of user IDs)
@@ -1778,6 +1780,35 @@ class AcademyConsumableView(APIView):
         }
 
         return Response(balance)
+
+
+class AcademyServiceStockStatusView(APIView):
+    """
+    Academy GET endpoint to debug service stock (scheduler) status for a user.
+    Returns schedulers that should issue consumables, their health/diagnosis, and optional balance.
+    """
+
+    @capable_of("read_consumable")
+    def get(self, request, user_id, academy_id=None):
+        lang = get_user_language(request)
+        include_balance = request.GET.get("include_balance", "").lower() in ("true", "1", "y")
+        data = actions.get_service_stock_status_for_user(
+            user_id=user_id,
+            academy_id=academy_id,
+            include_balance=include_balance,
+            request=request if include_balance else None,
+        )
+        if data is None:
+            raise ValidationException(
+                translation(
+                    lang,
+                    en="User not found or has no link to this academy",
+                    es="Usuario no encontrado o no tiene vínculo con esta academia",
+                    slug="user-not-found",
+                ),
+                code=404,
+            )
+        return Response(data)
 
 
 class MentorshipServiceSetView(APIView):
