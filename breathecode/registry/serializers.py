@@ -501,6 +501,13 @@ class AssetExpandableSerializer(AssetMidSerializer):
                 if "telemetry_stats" in self.expand:
                     elem["telemetry_stats"] = obj.telemetry_stats if hasattr(obj, "telemetry_stats") else None
 
+                if "cluster" in self.expand:
+                    first_kw = obj.seo_keywords.first()
+                    if first_kw and first_kw.cluster:
+                        elem["cluster"] = KeywordClusterSmallSerializer(first_kw.cluster).data
+                    else:
+                        elem["cluster"] = None
+
                 if "readme" in self.expand:
                     url = obj.readme_url
                     if url is None and obj.asset_type == "LESSON":
