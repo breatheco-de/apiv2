@@ -1788,7 +1788,7 @@ class AcademyServiceStockStatusView(APIView):
     Returns schedulers that should issue consumables, their health/diagnosis, and optional balance.
     """
 
-    @capable_of("read_consumable")
+    @capable_of("read_service_stock_status")
     def get(self, request, user_id, academy_id=None):
         lang = get_user_language(request)
         include_balance = request.GET.get("include_balance", "").lower() in ("true", "1", "y")
