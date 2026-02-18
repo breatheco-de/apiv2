@@ -1824,11 +1824,15 @@ def grant_consumables_for_user(
             code=404,
         )
 
-    if service.type not in (Service.Type.MENTORSHIP_SERVICE_SET, Service.Type.EVENT_TYPE_SET):
+    if service.type not in (
+        Service.Type.MENTORSHIP_SERVICE_SET,
+        Service.Type.EVENT_TYPE_SET,
+        Service.Type.VOID,
+    ):
         raise ValidationException(
             translation(
                 lang,
-                en="This service type is not allowed for staff grant. Use MENTORSHIP_SERVICE_SET or EVENT_TYPE_SET.",
+                en="This service type is not allowed for staff grant. Use MENTORSHIP_SERVICE_SET, EVENT_TYPE_SET, or VOID.",
                 es="Este tipo de servicio no está permitido para concesión por staff.",
                 slug="service-type-not-allowed-for-grant",
             ),

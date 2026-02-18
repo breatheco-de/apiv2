@@ -203,11 +203,12 @@ Staff can grant consumables (e.g. mentorship or event access) to a user without 
 | Field | Required | Description |
 |-------|----------|-------------|
 | `user` | Yes | User id or email |
-| `service` | Yes | Service id or slug (only `MENTORSHIP_SERVICE_SET` or `EVENT_TYPE_SET`) |
+| `service` | Yes | Service id or slug (`MENTORSHIP_SERVICE_SET`, `EVENT_TYPE_SET`, or `VOID`) |
 | `how_many` | Yes | Positive integer |
 | `payment_method` | Yes | PaymentMethod id (must have `is_credit_card=False`, `is_crypto=False`) |
 | `mentorship_service_set` | If service is MENTORSHIP_SERVICE_SET | Set id for this academy |
 | `event_type_set` | If service is EVENT_TYPE_SET | Set id for this academy |
+| _(for VOID, omit both set fields)_ | | |
 | `amount` | No | Amount for the invoice (default 0) |
 | `reference` | One of file/reference | Proof of payment reference |
 | `file` | One of file/reference | Proof of payment file (upload id) |
